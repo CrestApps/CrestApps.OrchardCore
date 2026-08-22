@@ -1,0 +1,72 @@
+namespace CrestApps.OrchardCore.Telephony.Core.Models
+{
+    public enum VoiceCallLifecyclePhase
+    {
+        Planned = 0,
+        Alerting = 1,
+        Established = 2,
+        Ending = 3,
+        Terminal = 4,
+    }
+    public sealed class VoiceStreamDelivery
+    {
+        public VoiceStreamDelivery() { }
+        public System.DateTime OccurredUtc { get; set; }
+        public CrestApps.OrchardCore.Telephony.Core.Models.VoiceCallLifecyclePhase Phase { get; set; }
+        public long? SequenceNumber { get; set; }
+    }
+    public sealed class VoiceStreamWatermark
+    {
+        public VoiceStreamWatermark() { }
+        public long? HighWaterSequence { get; set; }
+        public System.DateTime? LastEventUtc { get; set; }
+        public CrestApps.OrchardCore.Telephony.Core.Models.VoiceCallLifecyclePhase Phase { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Core.Services
+{
+    public interface INormalizedVoiceEventHandler
+    {
+        int Order { get; }
+        System.Threading.Tasks.Task<bool> HandleAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface INormalizedVoiceEventIngestor
+    {
+        System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IProviderIdentityResolver
+    {
+        string Canonicalize(string providerName);
+    }
+    public interface IVoiceIngressGate
+    {
+        System.Threading.Tasks.Task<System.IAsyncDisposable> AcquireAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+        bool IsHeld(string providerName, string providerCallId);
+    }
+    public sealed class NormalizedVoiceEventIngestor : CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventIngestor
+    {
+        public NormalizedVoiceEventIngestor(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler> handlers, CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver providerIdentityResolver, CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate ingressGate, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Core.Services.NormalizedVoiceEventIngestor> logger) { }
+        public System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderIdentityResolver : CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver
+    {
+        public ProviderIdentityResolver(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IProviderIdentityProvider> identityProviders) { }
+        public string Canonicalize(string providerName) { }
+    }
+    public sealed class VoiceIngressGate : CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate
+    {
+        public VoiceIngressGate(OrchardCore.Locking.Distributed.IDistributedLock distributedLock) { }
+        public System.Threading.Tasks.Task<System.IAsyncDisposable> AcquireAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+        public bool IsHeld(string providerName, string providerCallId) { }
+    }
+    public static class VoiceIngressKeys
+    {
+        public static string BuildEventIdempotencyKey(string providerName, string idempotencyKey) { }
+        public static string BuildIngestionLockKey(string providerName, string providerCallId) { }
+    }
+    public static class VoiceStreamOrdering
+    {
+        public static void Advance(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
+        public static bool ShouldDiscard(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
+    }
+}

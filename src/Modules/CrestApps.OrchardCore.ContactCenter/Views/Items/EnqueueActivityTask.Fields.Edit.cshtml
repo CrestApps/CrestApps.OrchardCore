@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+
+@model EnqueueActivityTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ActivityItemId">
+    <label class="ocat-label" asp-for="ActivityItemId">@T["Activity"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ActivityItemId" />
+        <span asp-validation-for="ActivityItemId"></span>
+        <span class="hint">@T["A Liquid expression resolving the CRM activity identifier to enqueue, for example <code>{{ Workflow.Input.AggregateId }}</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="QueueId">
+    <label class="ocat-label" asp-for="QueueId">@T["Queue"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="QueueId" />
+        <span asp-validation-for="QueueId"></span>
+        <span class="hint">@T["A Liquid expression resolving the target queue identifier."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Priority">
+    <label class="ocat-label" asp-for="Priority">@T["Priority"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Priority" asp-items="Model.Priorities"></select>
+        <span asp-validation-for="Priority"></span>
+        <span class="hint">@T["The routing priority to apply, or the queue default."]</span>
+    </div>
+</div>

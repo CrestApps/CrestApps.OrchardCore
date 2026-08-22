@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Reports.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Navigation;
 
@@ -29,7 +28,7 @@ public sealed class ReportsAdminMenu : AdminNavigationProvider
     /// <inheritdoc/>
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
-        var reports = _reportManager.ListReports();
+        var reports = _reportManager.GetReports();
 
         if (reports.Count == 0)
         {

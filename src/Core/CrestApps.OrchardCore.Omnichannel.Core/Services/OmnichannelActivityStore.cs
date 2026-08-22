@@ -162,7 +162,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<OmnichannelActivity>> ListByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<OmnichannelActivity>> GetByIdsAsync(IReadOnlyCollection<string> itemIds, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(itemIds);
 
@@ -183,7 +183,7 @@ public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivi
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<OmnichannelActivity>> ListBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<OmnichannelActivity>> GetBulkManageableAsync(BulkManageActivityFilter filter, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(filter);
 

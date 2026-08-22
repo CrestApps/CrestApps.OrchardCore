@@ -223,6 +223,27 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-zmSxq8xjduh+c9LYQCwKvFI7Q3Glzkdm2t62FEZ0T+aPhd1443w9QLqX4YFq6yRF",
                 "sha384-FdYuaXg9bZPa49HOFPWlxiUurpAlJZFOLCVAV/d8BUFdIjEh98n1FtwpIje1FGQK")
             .SetVersion("25.12.4");
+
+        // SIP.js is distributed as ES modules only from 0.16+; this is a browser IIFE bundle
+        // (esbuild, --global-name=SIP) of sip.js@0.21.2 exposing window.SIP for the soft phone's
+        // WebRTC adapter. No public CDN serves this exact bundle, so it is vendored locally only.
+        _manifest
+            .DefineScript("sip.js")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/sip.js/sip.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/sip.js/sip.js")
+            .SetVersion("0.21.2");
+
+        // The Telnyx WebRTC SDK ships as CommonJS/ESM only; this is a browser IIFE bundle
+        // (esbuild, --global-name=TelnyxWebRTC) of @telnyx/webrtc@2.27.9 exposing window.TelnyxWebRTC
+        // (with TelnyxRTC, Call, TELNYX_ICE_SERVERS, ...) for the soft phone's Telnyx browser audio
+        // adapter. No public CDN serves this exact bundle, so it is vendored locally only.
+        _manifest
+            .DefineScript("telnyx-webrtc")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/telnyx-webrtc/telnyx-webrtc.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/telnyx-webrtc/telnyx-webrtc.js")
+            .SetVersion("2.27.9");
     }
 
     /// <summary>

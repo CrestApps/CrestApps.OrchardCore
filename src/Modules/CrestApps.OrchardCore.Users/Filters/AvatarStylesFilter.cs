@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Users.Filters;
 public sealed class AvatarStylesFilter : IAsyncResultFilter
 {
     private readonly IResourceManager _resourceManager;
-    private readonly UserAvatarOptions _avatarOptions;
+    private readonly IOptionsMonitor<UserAvatarOptions> _avatarOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AvatarStylesFilter"/> class.
@@ -20,10 +20,10 @@ public sealed class AvatarStylesFilter : IAsyncResultFilter
     /// <param name="options">The options.</param>
     public AvatarStylesFilter(
         IResourceManager resourceManager,
-        IOptions<UserAvatarOptions> options)
+        IOptionsMonitor<UserAvatarOptions> options)
     {
         _resourceManager = resourceManager;
-        _avatarOptions = options.Value;
+        _avatarOptions = options;
     }
 
     /// <summary>
@@ -33,7 +33,7 @@ public sealed class AvatarStylesFilter : IAsyncResultFilter
     /// <param name="next">The next.</param>
     public async Task OnResultExecutionAsync(ResultExecutingContext context, ResultExecutionDelegate next)
     {
-        if (_avatarOptions.UseDefaultStyle &&
+        if (_avatarOptions.CurrentValue.UseDefaultStyle &&
             context.HttpContext.User.Identity.IsAuthenticated &&
                 context.IsViewOrPageResult())
         {

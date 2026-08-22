@@ -1,0 +1,180 @@
+{
+  "description": "Every Dialpad call state, recording state, and answer classification token the webhook normalizer interprets, paired with the Contact Center value it must normalize to. The coverage floor test proves this table names exactly the tokens the production switch handles, so a new provider token cannot be added without a recorded expectation.",
+  "callStates": [
+    {
+      "token": "calling",
+      "contactCenterCallState": "Dialing"
+    },
+    {
+      "token": "dialing",
+      "contactCenterCallState": "Dialing"
+    },
+    {
+      "token": "connecting",
+      "contactCenterCallState": "Dialing"
+    },
+    {
+      "token": "preanswer",
+      "contactCenterCallState": "Dialing"
+    },
+    {
+      "token": "ringing",
+      "contactCenterCallState": "Ringing"
+    },
+    {
+      "token": "connected",
+      "contactCenterCallState": "Connected"
+    },
+    {
+      "token": "active",
+      "contactCenterCallState": "Connected"
+    },
+    {
+      "token": "human",
+      "contactCenterCallState": "Connected",
+      "answerClassification": "Human"
+    },
+    {
+      "token": "live",
+      "contactCenterCallState": "Connected",
+      "answerClassification": "Human"
+    },
+    {
+      "token": "hold",
+      "contactCenterCallState": "OnHold"
+    },
+    {
+      "token": "on_hold",
+      "contactCenterCallState": "OnHold"
+    },
+    {
+      "token": "parked",
+      "contactCenterCallState": "OnHold"
+    },
+    {
+      "token": "hangup",
+      "contactCenterCallState": "Ended"
+    },
+    {
+      "token": "ended",
+      "contactCenterCallState": "Ended"
+    },
+    {
+      "token": "disconnected",
+      "contactCenterCallState": "Ended"
+    },
+    {
+      "token": "completed",
+      "contactCenterCallState": "Ended"
+    },
+    {
+      "token": "voicemail",
+      "contactCenterCallState": "Ended",
+      "answerClassification": "Machine"
+    },
+    {
+      "token": "voicemail_greeting",
+      "contactCenterCallState": "Ended",
+      "answerClassification": "Machine"
+    },
+    {
+      "token": "machine",
+      "contactCenterCallState": "Ended",
+      "answerClassification": "Machine"
+    },
+    {
+      "token": "answering_machine",
+      "contactCenterCallState": "Ended",
+      "answerClassification": "Machine"
+    },
+    {
+      "token": "fax",
+      "contactCenterCallState": "Ended",
+      "answerClassification": "Fax"
+    },
+    {
+      "token": "fax_detected",
+      "contactCenterCallState": "Ended",
+      "answerClassification": "Fax"
+    },
+    {
+      "token": "missed",
+      "contactCenterCallState": "NoAnswer"
+    },
+    {
+      "token": "no_answer",
+      "contactCenterCallState": "NoAnswer"
+    },
+    {
+      "token": "noanswer",
+      "contactCenterCallState": "NoAnswer"
+    },
+    {
+      "token": "rejected",
+      "contactCenterCallState": "Rejected"
+    },
+    {
+      "token": "declined",
+      "contactCenterCallState": "Rejected"
+    },
+    {
+      "token": "busy",
+      "contactCenterCallState": "Rejected"
+    },
+    {
+      "token": "canceled",
+      "contactCenterCallState": "Canceled"
+    },
+    {
+      "token": "cancelled",
+      "contactCenterCallState": "Canceled"
+    },
+    {
+      "token": "abandoned",
+      "contactCenterCallState": "Canceled"
+    },
+    {
+      "token": "transferred",
+      "contactCenterCallState": "Transferred"
+    }
+  ],
+  "recordingStates": [
+    {
+      "token": "recording",
+      "recordingState": "Recording"
+    },
+    {
+      "token": "started",
+      "recordingState": "Recording"
+    },
+    {
+      "token": "active",
+      "recordingState": "Recording"
+    },
+    {
+      "token": "paused",
+      "recordingState": "Paused"
+    },
+    {
+      "token": "stopped",
+      "recordingState": "Stopped"
+    },
+    {
+      "token": "completed",
+      "recordingState": "Stopped"
+    },
+    {
+      "token": "none",
+      "recordingState": "None"
+    },
+    {
+      "token": "not_recording",
+      "recordingState": "None"
+    }
+  ],
+  "unmappedTokens": [
+    "",
+    "unknown_state",
+    "queued"
+  ]
+}

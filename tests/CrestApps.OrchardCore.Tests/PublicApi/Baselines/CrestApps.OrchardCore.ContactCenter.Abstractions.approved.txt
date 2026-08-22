@@ -1,0 +1,818 @@
+namespace CrestApps.OrchardCore.ContactCenter
+{
+    public static class ContactCenterConstants
+    {
+        public const string SystemActor = "system";
+        public static bool IsDirectRoutingQueue(string queueId) { }
+        public static class AggregateTypes
+        {
+            public const string ManualCall = "ManualCall";
+        }
+        public static class AttendedTransferMetadata
+        {
+            public const string AgentUserId = "attendedTransferAgentUserId";
+        }
+        public static class CommandMetadata
+        {
+            public const string CommandId = "providerCommandId";
+            public const string FenceToken = "providerCommandFence";
+            public const string InteractionId = "providerCommandInteractionId";
+        }
+        public static class Components
+        {
+            public const string Agents = "Agents";
+            public const string CallSessions = "CallSessions";
+            public const string Dialer = "Dialer";
+            public const string Interactions = "Interactions";
+            public const string Queues = "Queues";
+            public const string RealTime = "RealTime";
+            public const string Routing = "Routing";
+            public const string SecureCapture = "SecureCapture";
+            public const string Voice = "Voice";
+        }
+        public static class ConferenceMetadata
+        {
+            public const string AgentUserId = "conferenceAgentUserId";
+        }
+        public static class DirectRouting
+        {
+            public const int DefaultRingTimeoutSeconds = 30;
+            public const int MaximumRingTimeoutSeconds = 300;
+            public const int MinimumRingTimeoutSeconds = 5;
+            public const string QueueId = "__cc-direct-routing__";
+            public const string RingTimeoutMetadataKey = "directRingTimeoutSeconds";
+            public const string TargetAgentMetadataKey = "directTargetAgentId";
+        }
+        public static class Events
+        {
+            public const string ActivityAssignmentChanged = "ActivityAssignmentChanged";
+            public const string ActivityDispositionApplied = "ActivityDispositionApplied";
+            public const string ActivityReserved = "ActivityReserved";
+            public const string AgentEntitlementsChanged = "AgentEntitlementsChanged";
+            public const string AgentPresenceChanged = "AgentPresenceChanged";
+            public const string AgentReleased = "AgentReleased";
+            public const string AgentReserved = "AgentReserved";
+            public const string AgentSignedIn = "AgentSignedIn";
+            public const string AgentSignedOut = "AgentSignedOut";
+            public const string CallConferenceChanged = "CallConferenceChanged";
+            public const string CallConnected = "CallConnected";
+            public const string CallEnded = "CallEnded";
+            public const string CallHeld = "CallHeld";
+            public const string CallMuted = "CallMuted";
+            public const string CallResumed = "CallResumed";
+            public const string CallSentToVoicemail = "CallSentToVoicemail";
+            public const string CallSessionCreated = "CallSessionCreated";
+            public const string CallSessionUpdated = "CallSessionUpdated";
+            public const string CallUnmuted = "CallUnmuted";
+            public const string CallbackCompleted = "CallbackCompleted";
+            public const string CallbackPromoted = "CallbackPromoted";
+            public const string CallbackScheduled = "CallbackScheduled";
+            public const string DialSuppressed = "DialSuppressed";
+            public const string DialerAttemptCompleted = "DialerAttemptCompleted";
+            public const string DialerAttemptScheduled = "DialerAttemptScheduled";
+            public const string DialerAttemptStarted = "DialerAttemptStarted";
+            public const string DialerRunStarted = "DialerRunStarted";
+            public const string InteractionCreated = "InteractionCreated";
+            public const string InteractionEnded = "InteractionEnded";
+            public const string InteractionFailed = "InteractionFailed";
+            public const string InteractionLinkedToActivity = "InteractionLinkedToActivity";
+            public const string InteractionStarted = "InteractionStarted";
+            public const string InteractionTransferDenied = "InteractionTransferDenied";
+            public const string InteractionTransferred = "InteractionTransferred";
+            public const string InteractionUpdated = "InteractionUpdated";
+            public const string ManualDialSuppressed = "ManualDialSuppressed";
+            public const string OfferAccepted = "OfferAccepted";
+            public const string OfferDeclined = "OfferDeclined";
+            public const string OfferRequeued = "OfferRequeued";
+            public const string QueueItemAdded = "QueueItemAdded";
+            public const string QueueItemAssigned = "QueueItemAssigned";
+            public const string QueueItemDequeued = "QueueItemDequeued";
+            public const string QueueItemOverflowed = "QueueItemOverflowed";
+            public const string QueueItemReserved = "QueueItemReserved";
+            public const string RecordingAccessed = "RecordingAccessed";
+            public const string RecordingAutoResumed = "RecordingAutoResumed";
+            public const string RecordingDenied = "RecordingDenied";
+            public const string RecordingErased = "RecordingErased";
+            public const string RecordingErasureDenied = "RecordingErasureDenied";
+            public const string RecordingMediaDeleted = "RecordingMediaDeleted";
+            public const string RecordingPaused = "RecordingPaused";
+            public const string RecordingResumed = "RecordingResumed";
+            public const string RecordingStarted = "RecordingStarted";
+            public const string RecordingStopped = "RecordingStopped";
+            public const string RoutingDecisionMade = "RoutingDecisionMade";
+            public const string SecureCaptureCancelled = "SecureCaptureCancelled";
+            public const string SecureCaptureCompleted = "SecureCaptureCompleted";
+            public const string SecureCaptureStarted = "SecureCaptureStarted";
+            public const string SupervisorMonitorStarted = "SupervisorMonitorStarted";
+            public const string SupervisorMonitorStopped = "SupervisorMonitorStopped";
+        }
+        public static class Feature
+        {
+            public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
+            public const string Area = "CrestApps.OrchardCore.ContactCenter";
+            public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
+            public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
+            public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";
+            public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
+            public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
+            public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
+            public const string RecordingCore = "CrestApps.OrchardCore.ContactCenter.Recording.Core";
+            public const string SecureCapture = "CrestApps.OrchardCore.ContactCenter.SecureCapture";
+            public const string Supervision = "CrestApps.OrchardCore.ContactCenter.Supervision";
+            public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
+            public const string VoiceMedia = "CrestApps.OrchardCore.ContactCenter.Voice.Media";
+        }
+        public static class HealthChecks
+        {
+            public const string ActiveCallsCheckName = "contactcenter-active-calls";
+            public const string AreaTag = "contactcenter";
+            public const string BackplaneCheckName = "contactcenter-backplane";
+            public const string BaseVoiceVerificationCheckName = "contactcenter-base-voice-verification";
+            public const string DependenciesRoute = "api/contact-center/health/dependencies";
+            public const string DependencyTag = "contactcenter-dependency";
+            public const string DistributedLockCheckName = "contactcenter-distributed-lock";
+            public const string NodeCheckName = "contactcenter-node";
+            public const string NodeServingCheckName = "contactcenter-node-serving";
+            public const string OutboxCheckName = "contactcenter-outbox";
+            public const string ProcessLivenessPath = "/health/process";
+            public const string ProviderIngressCheckName = "contactcenter-provider-ingress";
+            public const string QueueBacklogCheckName = "contactcenter-queue-backlog";
+            public const string ReadinessRoute = "api/contact-center/health/ready";
+            public const string ReadyTag = "contactcenter-ready";
+            public const string RedisConnectivityCheckName = "contactcenter-redis";
+            public const string SharedEndpointCheckName = "contactcenter-shared-endpoint";
+            public const string StorageCheckName = "contactcenter-storage";
+            public const string TopologyCheckName = "contactcenter-topology";
+        }
+        public static class RecordingErasureDenyReason
+        {
+            public const string LegalHold = "legalHold";
+            public const string NoRecording = "noRecording";
+        }
+        public static class RecordingErasureReason
+        {
+            public const string Retention = "retention";
+        }
+        public static class RecordingGovernanceDenyReason
+        {
+            public const string ConsentRequired = "consentRequired";
+            public const string RecordingDisabled = "recordingDisabled";
+        }
+        public static class RecordingMetadata
+        {
+            public const string DurationSeconds = "durationSeconds";
+            public const string Format = "format";
+            public const string ProviderRecordingId = "providerRecordingId";
+            public const string RetrievalPath = "retrievalPath";
+            public const string StorageReference = "storageReference";
+        }
+        public static class Settings
+        {
+            public const string GroupId = "contactcenter";
+        }
+        public static class TelephonyMetadata
+        {
+            public const string AnswerClassification = "amd_answer_classification";
+        }
+        public static class TransferMetadata
+        {
+            public const string AgentUserId = "transferAgentUserId";
+        }
+        public static class Voicemail
+        {
+            public const string EntryPointGreetingTextMetadataKey = "voicemailEntryPointGreetingText";
+            public const string GreetingMediaNameMetadataKey = "voicemailGreetingMediaName";
+            public const string GreetingMediaUrlMetadataKey = "voicemailGreetingMediaUrl";
+            public const string GreetingTextMetadataKey = "voicemailGreetingText";
+            public const string ProjectionMetadataKey = "agentVoicemailProjection";
+            public const string RecipientAgentMetadataKey = "agentVoicemailRecipientAgentId";
+        }
+    }
+    public sealed class ContactCenterFeatureLifecycleOptions
+    {
+        public const int DefaultDrainTimeoutSeconds = 30;
+        public ContactCenterFeatureLifecycleOptions() { }
+        public int DrainTimeoutSeconds { get; set; }
+    }
+    public enum ContactCenterHandlerReplaySafety
+    {
+        Unspecified = 0,
+        NaturallyIdempotent = 1,
+        DeduplicatedByEventId = 2,
+        GuardedByDurableStore = 3,
+    }
+    public static class ContactCenterProcessHealthApplicationBuilderExtensions
+    {
+        public static void ThrowIfShadowsSharedHealthEndpoint(string livenessPath, string sharedEndpointRoute, string tenantName) { }
+        public static Microsoft.AspNetCore.Builder.IApplicationBuilder UseContactCenterProcessLiveness(this Microsoft.AspNetCore.Builder.IApplicationBuilder app) { }
+    }
+    public static class ContactCenterProcessHealthServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddContactCenterProcessLiveness(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddContactCenterProcessLiveness(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string path) { }
+    }
+    public sealed class ContactCenterProcessLivenessOptions
+    {
+        public ContactCenterProcessLivenessOptions() { }
+        public string Path { get; set; }
+    }
+    public sealed class ContactCenterProcessLivenessPathValidator : Microsoft.Extensions.Hosting.IHostedService
+    {
+        public ContactCenterProcessLivenessPathValidator(OrchardCore.Environment.Shell.IShellSettingsManager shellSettingsManager, CrestApps.OrchardCore.ContactCenter.ContactCenterProcessLivenessOptions options) { }
+        public System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken cancellationToken) { }
+        public System.Threading.Tasks.Task StopAsync(System.Threading.CancellationToken cancellationToken) { }
+    }
+    public interface IContactCenterFeatureLifecycleParticipant
+    {
+        string FeatureId { get; }
+        System.Threading.Tasks.Task DrainAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task QuiesceAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterFeatureWorkLease : System.IDisposable { }
+    public interface IContactCenterFeatureWorkManager
+    {
+        void Activate(string featureId);
+        System.Threading.Tasks.Task DrainAsync(string featureId, System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken = default);
+        bool IsQuiescing(string featureId);
+        void Quiesce(string featureId);
+        CrestApps.OrchardCore.ContactCenter.IContactCenterFeatureWorkLease TryEnter(string featureId);
+    }
+    public interface IContactCenterRealTimeNotifier
+    {
+        System.Threading.Tasks.Task NotifyAgentMembershipChangedAsync(string userId, System.Collections.Generic.IEnumerable<string> removedQueueIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyOfferReceivedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyOfferRevokedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferRevokedNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyPresenceChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyQueueStatsChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.QueueStatsNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyRecordingStateChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.RecordingStateNotification notification, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceAttendedTransferProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> BeginConsultAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceAttendedTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> CancelConsultAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceAttendedTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> CompleteConsultAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceAttendedTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceCallControlProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> ConnectToAgentAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterConnectRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> DialAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterDialRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceCommandReconciler
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceCommandReconciliationResult> ReconcileCommandAsync(string commandId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceConferenceProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> ConferenceAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceConferenceRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceMediaProvider
+    {
+        string TechnicalName { get; }
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaSession> OpenSessionAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaSessionRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceMediaProviderResolver
+    {
+        CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaProvider Get(string technicalName = null);
+        System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaProvider> GetAll();
+    }
+    public interface IContactCenterVoiceMediaSession : System.IAsyncDisposable
+    {
+        CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat IncomingFormat { get; }
+        CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat OutgoingFormat { get; }
+        string ProviderCallId { get; }
+        string SessionId { get; }
+        System.Collections.Generic.IAsyncEnumerable<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFrame> ReadIncomingAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StopAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask WriteOutgoingAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFrame frame, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceMonitoringProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> EngageAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMonitoringRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> StopAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMonitoringRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceProvider
+    {
+        CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderCapabilities Capabilities { get; }
+        CrestApps.OrchardCore.ContactCenter.Models.VoiceProviderDeliveryModel DeliveryModel { get; }
+        Microsoft.Extensions.Localization.LocalizedString Name { get; }
+        string TechnicalName { get; }
+    }
+    public interface IContactCenterVoiceProviderResolver
+    {
+        CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProvider Get(string technicalName = null);
+        System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProvider> GetAll();
+    }
+    public interface IContactCenterVoiceQueueAssignmentProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> AssignCallAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterCallAssignmentRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> QueueCallAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterQueueCallRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceRecordingProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> SetRecordingStateAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceRecordingRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterVoiceTransferProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> TransferAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IInboundVoiceEventSink
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.InboundVoiceRouteOutcome> RouteAsync(CrestApps.OrchardCore.ContactCenter.Models.InboundVoiceEvent inboundEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IInboundVoiceInteractionProbe
+    {
+        System.Threading.Tasks.Task<bool> HasActiveInteractionAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IProviderCallStateReconciler
+    {
+        System.Threading.Tasks.Task<int> ReconcileAsync(string providerName, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IProviderVoiceEventSink
+    {
+        System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IProviderWebhookInbox
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxAcceptanceResult> AcceptAsync(CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxDelivery delivery, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> DispatchAsync(string messageId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> DispatchDueAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DispatchHandlerAsync(string handlerName, string payload, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> SettleClaimAsync(string messageId, string ownerToken, long fenceToken, bool succeeded, string errorType, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IProviderWebhookInboxHandler
+    {
+        CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
+        string TechnicalName { get; }
+        System.Threading.Tasks.Task HandleAsync(string payload, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IProviderWebhookIngressLimiter
+    {
+        System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireConcurrencyAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireRateAsync(string provider, System.Threading.CancellationToken cancellationToken = default);
+        bool IsFresh(System.DateTime? occurredUtc);
+    }
+    public interface IRecordingErasureGuard
+    {
+        System.Threading.Tasks.Task<bool> IsRecordingErasedAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISecureCaptureTokenSink
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult> TokenizeAsync(CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureField field, string rawValue, string idempotencyKey, System.Threading.CancellationToken cancellationToken = default);
+    }
+}
+namespace CrestApps.OrchardCore.ContactCenter.Models
+{
+    public sealed class AgentOfferNotification
+    {
+        public AgentOfferNotification() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public bool AutoOpenActivity { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public string QueueId { get; set; }
+        public string QueueItemId { get; set; }
+        public string ReservationId { get; set; }
+        public System.DateTime ServerTimeUtc { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AgentOfferRevokedNotification
+    {
+        public AgentOfferRevokedNotification() { }
+        public string AgentId { get; set; }
+        public string QueueId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentOfferRevokedReason Reason { get; set; }
+        public string ReservationId { get; set; }
+        public string UserId { get; set; }
+    }
+    public enum AgentOfferRevokedReason
+    {
+        Expired = 0,
+        Released = 1,
+        Accepted = 2,
+    }
+    public sealed class AgentPresenceNotification
+    {
+        public AgentPresenceNotification() { }
+        public string AgentId { get; set; }
+        public System.DateTime ChangedUtc { get; set; }
+        public string DisplayName { get; set; }
+        public System.Collections.Generic.IList<string> QueueIds { get; set; }
+        public string Reason { get; set; }
+        public string RequestedStatus { get; set; }
+        public string Status { get; set; }
+        public string UserId { get; set; }
+    }
+    public enum AgentPresenceStatus
+    {
+        Offline = 0,
+        Available = 1,
+        Reserved = 2,
+        Busy = 3,
+        WrapUp = 4,
+        Break = 5,
+        RequestBreak = 6,
+        Away = 7,
+        DoNotDisturb = 8,
+        Meeting = 9,
+        Training = 10,
+        AfterHoursUnavailable = 11,
+    }
+    public enum CallbackRequestStatus
+    {
+        Pending = 0,
+        Scheduled = 1,
+        InProgress = 2,
+        Completed = 3,
+        Canceled = 4,
+        Failed = 5,
+    }
+    public sealed class ContactCenterCallAssignmentRequest
+    {
+        public ContactCenterCallAssignmentRequest() { }
+        public string ActivityId { get; set; }
+        public string AgentId { get; set; }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string ProviderCallId { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class ContactCenterConnectRequest
+    {
+        public ContactCenterConnectRequest() { }
+        public string ActivityId { get; set; }
+        public string AgentEndpoint { get; set; }
+        public string AgentId { get; set; }
+        public string AgentUserId { get; set; }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string ProviderCallId { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class ContactCenterDialRequest
+    {
+        public ContactCenterDialRequest() { }
+        public string ActivityId { get; set; }
+        public string AgentId { get; set; }
+        public string AgentUserId { get; set; }
+        public string CallerId { get; set; }
+        public string CampaignId { get; set; }
+        public string CommandId { get; set; }
+        public string Destination { get; set; }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class ContactCenterQueueCallRequest
+    {
+        public ContactCenterQueueCallRequest() { }
+        public string ActivityId { get; set; }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public int Priority { get; set; }
+        public string ProviderCallId { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class ContactCenterVoiceAttendedTransferRequest
+    {
+        public ContactCenterVoiceAttendedTransferRequest() { }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string ProviderCallId { get; set; }
+    }
+    public enum ContactCenterVoiceCommandReconciliationOutcome
+    {
+        Confirmed = 0,
+        NotExecuted = 1,
+        Unknown = 2,
+    }
+    public sealed class ContactCenterVoiceCommandReconciliationResult
+    {
+        public ContactCenterVoiceCommandReconciliationResult() { }
+        public string Message { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceCommandReconciliationOutcome Outcome { get; set; }
+        public string ProviderCallId { get; set; }
+    }
+    public sealed class ContactCenterVoiceConferenceRequest
+    {
+        public ContactCenterVoiceConferenceRequest() { }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public System.Collections.Generic.IList<string> ProviderCallIds { get; set; }
+    }
+    public enum ContactCenterVoiceMediaEncoding
+    {
+        Unknown = 0,
+        LinearPcm = 1,
+        MuLaw = 2,
+        ALaw = 3,
+    }
+    public sealed class ContactCenterVoiceMediaFormat
+    {
+        public ContactCenterVoiceMediaFormat() { }
+        public int Channels { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaEncoding Encoding { get; set; }
+        public int FrameDurationMilliseconds { get; set; }
+        public int SampleRate { get; set; }
+    }
+    public sealed class ContactCenterVoiceMediaFrame
+    {
+        public ContactCenterVoiceMediaFrame() { }
+        public System.ReadOnlyMemory<byte> Data { get; set; }
+        public long SequenceNumber { get; set; }
+    }
+    public sealed class ContactCenterVoiceMediaSessionRequest
+    {
+        public ContactCenterVoiceMediaSessionRequest() { }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat PreferredIncomingFormat { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat PreferredOutgoingFormat { get; set; }
+        public string ProviderCallId { get; set; }
+    }
+    public sealed class ContactCenterVoiceMonitoringRequest
+    {
+        public ContactCenterVoiceMonitoringRequest() { }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.MonitorMode Mode { get; set; }
+        public string ProviderCallId { get; set; }
+        public string SupervisorId { get; set; }
+    }
+    [System.Flags]
+    public enum ContactCenterVoiceProviderCapabilities
+    {
+        None = 0,
+        DialerDial = 1,
+        AgentCallAssignment = 2,
+        ProviderQueue = 4,
+        QueueEvents = 8,
+        AgentPresenceSync = 16,
+        AgentConnect = 32,
+        CallTransfer = 64,
+        Conference = 128,
+        Recording = 256,
+        Monitor = 512,
+        Whisper = 1024,
+        Barge = 2048,
+        RecordingPause = 4096,
+        SecureCapture = 8192,
+        SecureCaptureMasking = 16384,
+    }
+    public sealed class ContactCenterVoiceProviderResult
+    {
+        public ContactCenterVoiceProviderResult() { }
+        public string ErrorCode { get; set; }
+        public string ErrorMessage { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public bool OutcomeUnknown { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderLegId { get; set; }
+        public string ProviderName { get; set; }
+        public bool Succeeded { get; set; }
+    }
+    public sealed class ContactCenterVoiceRecordingRequest
+    {
+        public ContactCenterVoiceRecordingRequest() { }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string ProviderCallId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.RecordingState State { get; set; }
+    }
+    public sealed class ContactCenterVoiceTransferRequest
+    {
+        public ContactCenterVoiceTransferRequest() { }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string ProviderCallId { get; set; }
+        public string Target { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.InteractionTransferTargetType TargetType { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.InteractionTransferType TransferType { get; set; }
+    }
+    public enum DialerMode
+    {
+        Manual = 0,
+        Preview = 1,
+        Power = 2,
+        Progressive = 3,
+        Predictive = 4,
+    }
+    public static class DialerModeExtensions
+    {
+        public static bool IsAutomated(this CrestApps.OrchardCore.ContactCenter.Models.DialerMode mode) { }
+        public static bool RequiresPacedDialerFeature(this CrestApps.OrchardCore.ContactCenter.Models.DialerMode mode) { }
+    }
+    public enum DialerSuppressionReason
+    {
+        None = 0,
+        NoDestination = 1,
+        MaxAttemptsReached = 2,
+        RetryCoolDown = 3,
+        DoNotCall = 4,
+        NationalDoNotCallRegistry = 5,
+        OutsideCallingWindow = 6,
+        AbandonmentRateExceeded = 7,
+        ComplianceScreeningUnavailable = 8,
+    }
+    public enum EntryPointClosedAction
+    {
+        HoldInQueue = 0,
+        Voicemail = 1,
+        Overflow = 2,
+        Reject = 3,
+    }
+    public enum EntryPointTargetType
+    {
+        Queue = 0,
+        Agent = 1,
+    }
+    public sealed class InboundVoiceEvent
+    {
+        public InboundVoiceEvent() { }
+        public string CallerName { get; set; }
+        public string FromAddress { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public System.DateTime? ReceivedUtc { get; set; }
+        public string ToAddress { get; set; }
+    }
+    public sealed class InboundVoiceRouteOutcome
+    {
+        public InboundVoiceRouteOutcome() { }
+        public bool HasInteraction { get; }
+        public string InteractionId { get; set; }
+    }
+    public enum InteractionChannel
+    {
+        Voice = 0,
+        Sms = 1,
+        Email = 2,
+        Chat = 3,
+    }
+    public enum InteractionDirection
+    {
+        Inbound = 0,
+        Outbound = 1,
+    }
+    public enum InteractionParticipantRole
+    {
+        Customer = 0,
+        Agent = 1,
+        Supervisor = 2,
+        System = 3,
+        External = 4,
+    }
+    public enum InteractionPriority
+    {
+        Lowest = 0,
+        Low = 1,
+        Normal = 2,
+        High = 3,
+        Highest = 4,
+    }
+    public enum InteractionStatus
+    {
+        Created = 0,
+        Ringing = 1,
+        Connected = 2,
+        Held = 3,
+        Transferring = 4,
+        Conferenced = 5,
+        Ended = 6,
+        Failed = 7,
+    }
+    public static class InteractionStatuses
+    {
+        public static readonly System.Collections.Immutable.ImmutableArray<CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus> OccupyingAgent;
+        public static readonly System.Collections.Immutable.ImmutableArray<CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus> Settled;
+        public static readonly System.Collections.Immutable.ImmutableArray<CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus> Unsettled;
+    }
+    public enum InteractionTransferTargetType
+    {
+        Agent = 0,
+        Queue = 1,
+        External = 2,
+        EntryPoint = 3,
+    }
+    public enum InteractionTransferType
+    {
+        Blind = 0,
+        Consultative = 1,
+    }
+    public enum MonitorMode
+    {
+        Monitor = 0,
+        Whisper = 1,
+        Barge = 2,
+    }
+    public sealed class ProviderWebhookInboxAcceptanceResult
+    {
+        public ProviderWebhookInboxAcceptanceResult() { }
+        public string MessageId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookInboxAcceptanceStatus Status { get; set; }
+    }
+    public enum ProviderWebhookInboxAcceptanceStatus
+    {
+        Accepted = 0,
+        Duplicate = 1,
+        Busy = 2,
+    }
+    public sealed class ProviderWebhookInboxDelivery
+    {
+        public ProviderWebhookInboxDelivery() { }
+        public string DeliveryId { get; set; }
+        public string HandlerName { get; set; }
+        public string Payload { get; set; }
+        public string ProviderName { get; set; }
+    }
+    public sealed class ProviderWebhookIngressLease : System.IDisposable
+    {
+        public ProviderWebhookIngressLease(System.Threading.RateLimiting.RateLimitLease lease) { }
+        public bool IsAcquired { get; }
+        public System.TimeSpan? RetryAfter { get; }
+        public void Dispose() { }
+    }
+    public enum QueueAfterHoursAction
+    {
+        HoldInQueue = 0,
+        Overflow = 1,
+    }
+    public enum QueueItemStatus
+    {
+        Waiting = 0,
+        Reserved = 1,
+        Assigned = 2,
+        Completed = 3,
+        Removed = 4,
+    }
+    public enum QueueRoutingStrategy
+    {
+        LongestIdle = 0,
+        RoundRobin = 1,
+        LeastBusy = 2,
+    }
+    public sealed class QueueStatsNotification
+    {
+        public QueueStatsNotification() { }
+        public System.DateTime ChangedUtc { get; set; }
+        public string QueueId { get; set; }
+        public int WaitingCount { get; set; }
+    }
+    public sealed class RecordingStateNotification
+    {
+        public RecordingStateNotification() { }
+        public string AgentId { get; set; }
+        public string InteractionId { get; set; }
+        public bool IsSecurePauseActive { get; set; }
+        public string RecordingState { get; set; }
+        public System.DateTime ServerTimeUtc { get; set; }
+        public string UserId { get; set; }
+    }
+    public enum ReservationStatus
+    {
+        Pending = 0,
+        Accepted = 1,
+        Rejected = 2,
+        Expired = 3,
+        Canceled = 4,
+    }
+    public enum SecureCaptureField
+    {
+        CreditCardNumber = 0,
+        CardExpiry = 1,
+        CardSecurityCode = 2,
+        BankAccountNumber = 3,
+        NationalId = 4,
+        Custom = 5,
+    }
+    public enum SecureCaptureState
+    {
+        Collecting = 0,
+        Completed = 1,
+        Cancelled = 2,
+        Expired = 3,
+    }
+    public sealed class SecureCaptureTokenResult
+    {
+        public SecureCaptureTokenResult() { }
+        public string ErrorMessage { get; set; }
+        public bool IsRetainable { get; set; }
+        public string MaskedValue { get; set; }
+        public bool Succeeded { get; set; }
+        public string Token { get; set; }
+        public static CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult Failure(string errorMessage) { }
+        public static CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult Success(string token, string maskedValue) { }
+        public static CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult SuccessNonRetainable() { }
+    }
+    public enum UnansweredOfferAction
+    {
+        Requeue = 0,
+        Voicemail = 1,
+        Reject = 2,
+    }
+    public enum VoiceProviderDeliveryModel
+    {
+        AgentDeviceNative = 0,
+        ServerSideAcd = 1,
+    }
+}

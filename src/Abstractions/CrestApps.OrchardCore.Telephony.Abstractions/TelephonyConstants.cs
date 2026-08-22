@@ -43,6 +43,13 @@ public static class TelephonyConstants
         /// Identifies the monotonic fence token associated with an idempotent provider command.
         /// </summary>
         public const string FenceToken = "commandFenceToken";
+
+        /// <summary>
+        /// Identifies the authenticated user placing a soft phone command. Providers that deliver audio to a
+        /// per-user browser endpoint (such as Telnyx WebRTC) use it to resolve the caller's live soft-phone
+        /// registration so an outbound call can be bridged to their browser.
+        /// </summary>
+        public const string SoftPhoneUserId = "softPhoneUserId";
     }
 
     /// <summary>
@@ -51,7 +58,7 @@ public static class TelephonyConstants
     public static class AuthenticationSchemes
     {
         /// <summary>
-        /// The OAuth 2.0 authorization code scheme, used by providers such as Dialpad.
+        /// The OAuth 2.0 authorization code scheme, used by providers that authenticate over OAuth 2.0.
         /// </summary>
         public const string OAuth2 = "oauth2";
     }
@@ -91,10 +98,5 @@ public static class TelephonyConstants
         /// The identifier of the soft phone feature.
         /// </summary>
         public const string SoftPhone = "CrestApps.OrchardCore.Telephony.SoftPhone";
-
-        /// <summary>
-        /// The identifier of the Telephony administration feature.
-        /// </summary>
-        public const string Admin = "CrestApps.OrchardCore.Telephony.Admin";
     }
 }

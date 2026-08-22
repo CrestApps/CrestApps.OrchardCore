@@ -174,6 +174,7 @@ public sealed class AvatarStartup : StartupBase
         services.AddPermissionProvider<AvatarPermissionsProvider>();
         services.AddNavigationProvider<AvatarAdminMenu>();
         services.AddTransient<IConfigureOptions<UserAvatarOptions>, UserAvatarOptionsConfiguration>();
+        services.AddSignalOptionsChangeTokenSource<UserAvatarOptions>();
         services.AddSiteDisplayDriver<UserAvatarOptionsDisplayDriver>();
     }
 }

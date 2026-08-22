@@ -41,6 +41,7 @@ using OrchardCore.Modules.Manifest;
     [
         OmnichannelConstants.Features.Activities,
         "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Resources",
         "OrchardCore.ContentTypes",
     ]
 )]

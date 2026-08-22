@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <Sdk Name="Aspire.AppHost.Sdk" Version="13.2.2" />
+  <Sdk Name="Aspire.AppHost.Sdk" Version="13.5.0" />
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../CrestApps.OrchardCore.Cms.Web/CrestApps.OrchardCore.Cms.Web.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Asterisk.Web/CrestApps.OrchardCore.Asterisk.Web.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Samples.A2AClient/CrestApps.OrchardCore.Samples.A2AClient.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Samples.McpClient/CrestApps.OrchardCore.Samples.McpClient.csproj" />
   </ItemGroup>

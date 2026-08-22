@@ -15,7 +15,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = DialpadConstants.Feature.Area,
     Name = "Dialpad",
-    Description = "Provides the Dialpad telephony provider and its settings.",
+    Description = "Provides the Dialpad telephony provider and its settings. When Contact Center Voice is also enabled, the Dialpad provider automatically participates in contact center call orchestration.",
     Category = "Telephony",
     Dependencies =
     [

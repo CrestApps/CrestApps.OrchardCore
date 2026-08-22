@@ -21,6 +21,8 @@ public sealed class TelephonyInteractionMigrations : DataMigration
             .Column<CallDirection>("Direction")
             .Column<CallOutcome>("Outcome")
             .Column<DateTime>("StartedUtc")
+            .Column<bool>("IsVoicemail")
+            .Column<DateTime>("VoicemailReadUtc", column => column.Nullable())
         );
 
         await SchemaBuilder.AlterIndexTableAsync<TelephonyInteractionIndex>(table => table
@@ -46,6 +48,37 @@ public sealed class TelephonyInteractionMigrations : DataMigration
                 "DocumentId")
         );
 
-        return 1;
+        await SchemaBuilder.AlterIndexTableAsync<TelephonyInteractionIndex>(table => table
+            .CreateIndex("IDX_TelephonyInteractionIndex_Voicemail",
+                "UserId",
+                "IsVoicemail",
+                "VoicemailReadUtc",
+                "DocumentId")
+        );
+
+        return 2;
+    }
+
+    // Adds the voicemail columns to an existing telephony interaction index so a call sent to voicemail can be
+    // surfaced (and its unread state tracked) in the soft phone's history.
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TelephonyInteractionIndex>(table => table
+            .AddColumn<bool>("IsVoicemail", column => column.WithDefault(false))
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<TelephonyInteractionIndex>(table => table
+            .AddColumn<DateTime>("VoicemailReadUtc", column => column.Nullable())
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<TelephonyInteractionIndex>(table => table
+            .CreateIndex("IDX_TelephonyInteractionIndex_Voicemail",
+                "UserId",
+                "IsVoicemail",
+                "VoicemailReadUtc",
+                "DocumentId")
+        );
+
+        return 2;
     }
 }

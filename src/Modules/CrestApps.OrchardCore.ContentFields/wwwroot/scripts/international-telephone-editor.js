@@ -39,12 +39,12 @@
         return;
       }
       var e164Number = telephoneInput.getNumber();
-      var countryData = telephoneInput.getSelectedCountryData();
+      var countryData = telephoneInput.getSelectedCountry();
       if (e164Input) {
         e164Input.value = e164Number || '';
       }
       if (countryInput) {
-        countryInput.value = (countryData.iso2 || '').toUpperCase();
+        countryInput.value = ((countryData && countryData.iso2) || '').toUpperCase();
       }
       if (nationalInput) {
         nationalInput.value = telInput.value || '';

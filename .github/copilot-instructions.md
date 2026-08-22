@@ -10,6 +10,17 @@ CrestApps.OrchardCore is a collection of open-source modules for **Orchard Core 
 **Target Framework**: .NET 10.0 (net10.0)  
 **Architecture**: Modular, multi-tenant application framework
 
+## Contact Center module (active, multi-phase project)
+
+The **Contact Center** module set is a large, multi-phase orchestration layer built between the CRM (Omnichannel) and Telephony modules. The planning scaffolding (the multi-phase plan documents, their release-tracking ledgers, and the machine-readable governance ledgers that used to live under `.github/contact-center/`) has been retired now that the work has landed. Treat the shipped code and its tests as the source of truth for scope and boundaries before doing Contact Center work (anything under `src/**/CrestApps.OrchardCore.ContactCenter*`).
+
+Key rules for this module set:
+
+- Respect the layer boundary: **CRM (Omnichannel) owns business work data, Contact Center owns orchestration, Telephony owns media execution.** `OmnichannelActivity` remains the universal work item; `Interaction` is communication history for one attempt and never owns workflow or disposition.
+- **Never** write competitor product names in code, comments, identifiers, or public docs. Adopt only generic, industry-standard terminology.
+- Group related capabilities into separate, feature-gated Orchard modules/features, the way commercial platforms separate licensed capabilities.
+- The shipped deployment topologies live in code as `ContactCenterTopologyProfiles`; the tenant/provider profiles and feature-set expectations live in the Contact Center tests. Keep these in sync with the modules they describe.
+
 ## Working Effectively
 
 ### Prerequisites and Environment Setup
@@ -136,6 +147,7 @@ dotnet run
 #### Documentation
 
 * Keep public docs and comments accurate and aligned with the code.
+* In Markdown docs, do not manually hard-wrap prose at a fixed column. Keep each paragraph or list item on a single line and let the editor/viewer wrap it visually.
 * Always document:
 
   * Every public method (including constructors) with XML `<summary>` and `<param>` tags.

@@ -1,0 +1,304 @@
+[assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ProvideApplicationPartFactory("Microsoft.AspNetCore.Mvc.ApplicationParts.ConsolidatedAssemblyApplicationPartFact" +
+    "ory, Microsoft.AspNetCore.Mvc.Razor")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Telephony",
+        "CrestApps.OrchardCore.Resources"}, Description="Injects the floating soft phone experience into the admin dashboard, front end, o" +
+    "r both.", Id="CrestApps.OrchardCore.Telephony.SoftPhone", Name="Telephony Soft Phone")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Telephony", Dependencies=new string[] {
+        "OrchardCore.Users",
+        "OrchardCore.SignalR"}, Description="Provides the provider-agnostic telephony services, SignalR hub, and site settings" +
+    ".", Id="CrestApps.OrchardCore.Telephony", Name="Telephony")]
+[assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Telephony", Description="Provides a provider-agnostic soft phone and SignalR hub for integrating telephony" +
+    " providers.", Name="Telephony", Version="2.0.0", Website="https://www.crestapps.com")]
+[assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Telephony", "Module")]
+namespace CrestApps.OrchardCore.Telephony.BackgroundTasks
+{
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Reconciles in-progress soft-phone calls against the current provider state.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Telephony Interaction Reconciliation")]
+    public sealed class TelephonyInteractionReconciliationBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public TelephonyInteractionReconciliationBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Controllers
+{
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public sealed class TelephonyOAuthController : Microsoft.AspNetCore.Mvc.Controller
+    {
+        public TelephonyOAuthController(CrestApps.OrchardCore.Telephony.ITelephonyAuthenticationService authenticationService, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Controllers.TelephonyOAuthController> logger) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Callback(string code = null, string state = null, string error = null) { }
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Connect(string returnUrl = null) { }
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [Microsoft.AspNetCore.Mvc.ValidateAntiForgeryToken]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Disconnect() { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Drivers
+{
+    public sealed class SoftPhoneWidgetSettingsDisplayDriver : OrchardCore.DisplayManagement.Entities.SiteDisplayDriver<CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidgetSettings>
+    {
+        public SoftPhoneWidgetSettingsDisplayDriver(Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Drivers.SoftPhoneWidgetSettingsDisplayDriver> stringLocalizer) { }
+        protected override string SettingsGroupId { get; }
+        public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidgetSettings settings, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
+        public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidgetSettings settings, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
+    }
+    public sealed class TelephonySettingsDisplayDriver : OrchardCore.DisplayManagement.Entities.SiteDisplayDriver<CrestApps.OrchardCore.Telephony.TelephonySettings>
+    {
+        public TelephonySettingsDisplayDriver(OrchardCore.Environment.Shell.IShellReleaseManager shellReleaseManager, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Telephony.TelephonyProviderOptions> providerOptions, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Drivers.TelephonySettingsDisplayDriver> stringLocalizer) { }
+        protected override string SettingsGroupId { get; }
+        public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.TelephonySettings settings, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
+        public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.TelephonySettings settings, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Filters
+{
+    public sealed class SoftPhoneWidgetFilter : Microsoft.AspNetCore.Mvc.Filters.IAsyncResultFilter, Microsoft.AspNetCore.Mvc.Filters.IFilterMetadata
+    {
+        public SoftPhoneWidgetFilter(OrchardCore.DisplayManagement.Layout.ILayoutAccessor layoutAccessor, OrchardCore.Settings.ISiteService siteService, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver providerResolver, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidget> displayManager, OrchardCore.ResourceManagement.IResourceManager resourceManager, Microsoft.Extensions.Options.IOptions<OrchardCore.Admin.AdminOptions> adminOptions) { }
+        public System.Threading.Tasks.Task OnResultExecutionAsync(Microsoft.AspNetCore.Mvc.Filters.ResultExecutingContext context, Microsoft.AspNetCore.Mvc.Filters.ResultExecutionDelegate next) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Hubs
+{
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public sealed class TelephonyHub : Microsoft.AspNetCore.SignalR.Hub<CrestApps.OrchardCore.Telephony.ITelephonyClient>
+    {
+        public TelephonyHub(Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub> stringLocalizer, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Answer(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Dial(CrestApps.OrchardCore.Telephony.Models.DialRequest request) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCallLookupResult> GetActiveCall() { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCallListLookupResult> GetActiveCalls() { }
+        public System.Threading.Tasks.Task<int> GetCapabilities() { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyConnectionStatus> GetConnectionStatus() { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyClientCredentials> GetCredentials() { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyDirectoryResult> GetDirectory() { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetInteractions(int count) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Hangup(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Hold(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Merge(CrestApps.OrchardCore.Telephony.Models.MergeRequest request) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Mute(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+        public override System.Threading.Tasks.Task OnConnectedAsync() { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Reject(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Resume(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> SendDigits(CrestApps.OrchardCore.Telephony.Models.SendDigitsRequest request) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Transfer(CrestApps.OrchardCore.Telephony.Models.TransferRequest request) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Unmute(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Voicemail(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Indexes
+{
+    public sealed class TelephonyInteractionIndex : YesSql.Indexes.MapIndex
+    {
+        public TelephonyInteractionIndex() { }
+        public string CallId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallDirection Direction { get; set; }
+        public string InteractionId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallOutcome Outcome { get; set; }
+        public string ProviderName { get; set; }
+        public System.DateTime StartedUtc { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+    }
+    public sealed class TelephonyInteractionIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>
+    {
+        public TelephonyInteractionIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> context) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Migrations
+{
+    public sealed class TelephonyInteractionMigrations : OrchardCore.Data.Migration.DataMigration
+    {
+        public TelephonyInteractionMigrations() { }
+        public System.Threading.Tasks.Task<int> CreateAsync() { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Models
+{
+    public sealed class SoftPhoneWidgetSettings
+    {
+        public const string DefaultAccentColor = "#2f6fed";
+        public const int DefaultRecentCallsCount = 30;
+        public SoftPhoneWidgetSettings() { }
+        public string AccentColor { get; set; }
+        public string DefaultCountryCode { get; set; }
+        public bool DisplayOnAdmin { get; set; }
+        public bool DisplayOnFrontend { get; set; }
+        public int RecentCallsCount { get; set; }
+    }
+    public sealed class TelephonyCoordinationOptions
+    {
+        public TelephonyCoordinationOptions() { }
+        public System.TimeSpan InteractionLockExpiration { get; set; }
+        public System.TimeSpan InteractionLockTimeout { get; set; }
+        public System.TimeSpan NewInteractionGracePeriod { get; set; }
+        public System.TimeSpan TokenRefreshLockExpiration { get; set; }
+        public System.TimeSpan TokenRefreshLockTimeout { get; set; }
+    }
+    public sealed class TelephonyUserConnections
+    {
+        public TelephonyUserConnections() { }
+        public System.Collections.Generic.Dictionary<string, CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> Connections { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Services
+{
+    public sealed class DefaultIncomingCallDispatcher : CrestApps.OrchardCore.Telephony.IIncomingCallDispatcher
+    {
+        public DefaultIncomingCallDispatcher(Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.OrchardCore.Telephony.ITelephonyClient> hubContext, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IIncomingCallContextProvider> contextProviders, CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore interactionStore, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultIncomingCallDispatcher> logger, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
+        public System.Threading.Tasks.Task DispatchAsync(string userId, CrestApps.OrchardCore.Telephony.Models.TelephonyCall call, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultOutboundCallScreeningService : CrestApps.OrchardCore.Telephony.IOutboundCallScreeningService
+    {
+        public DefaultOutboundCallScreeningService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.IOutboundCallScreener> screeners) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult> ScreenAsync(CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultTelephonyAuthenticationService : CrestApps.OrchardCore.Telephony.ITelephonyAuthenticationService
+    {
+        public DefaultTelephonyAuthenticationService(OrchardCore.Settings.ISiteService siteService, CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver providerResolver, CrestApps.OrchardCore.Telephony.ITelephonyUserTokenStore tokenStore, CrestApps.OrchardCore.Telephony.Services.ITelephonyUserAccessor userAccessor, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Telephony.Models.TelephonyCoordinationOptions> coordinationOptions, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyAuthenticationService> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DisconnectAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyAuthorizationRequest> GetAuthorizationUrlAsync(string redirectUri, string state, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyConnectionStatus> GetStatusAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> GetValidTokensAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultTelephonyCommandExecutor : CrestApps.OrchardCore.Telephony.ITelephonyCommandExecutor
+    {
+        public DefaultTelephonyCommandExecutor(Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Telephony.TelephonyCommandOptions> options, Microsoft.Extensions.Hosting.IHostApplicationLifetime hostApplicationLifetime) { }
+        public System.Threading.Tasks.Task<TResult> ExecuteAsync<TResult>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> operation) { }
+    }
+    public sealed class DefaultTelephonyInteractionStore : CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore
+    {
+        public DefaultTelephonyInteractionStore(YesSql.ISession session, YesSql.IStore store, CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver providerIdentityResolver) { }
+        public System.Threading.Tasks.Task CreateAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> FindActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> FindByCallIdAsync(string userId, string callId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> FindByProviderCallIdAsync(string providerName, string callId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetActiveAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetActiveAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetRecentAsync(string userId, int count, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task UpdateAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> UpdateByIdAsync(string interactionId, System.Func<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction, bool> mutate, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> UpdateByProviderCallIdAsync(string providerName, string callId, System.Func<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction, bool> mutate, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultTelephonyProviderResolver : CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver
+    {
+        public DefaultTelephonyProviderResolver(OrchardCore.Settings.ISiteService siteService, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Telephony.TelephonyProviderOptions> providerOptions, System.IServiceProvider serviceProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyProviderResolver> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.ITelephonyProvider> GetAsync(string name = null) { }
+    }
+    public sealed class DefaultTelephonyService : CrestApps.OrchardCore.Telephony.ITelephonyService
+    {
+        public DefaultTelephonyService(CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver resolver, CrestApps.OrchardCore.Telephony.IOutboundCallScreeningService screeningService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyService> stringLocalizer) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AnswerAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialAsync(CrestApps.OrchardCore.Telephony.Models.DialRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities> GetCapabilitiesAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyClientCredentials> GetClientCredentialsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyDirectoryResult> GetDirectoryAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> HangupAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> HoldAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> MergeAsync(CrestApps.OrchardCore.Telephony.Models.MergeRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> MuteAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> RejectAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> ResumeAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> SendDigitsAsync(CrestApps.OrchardCore.Telephony.Models.SendDigitsRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> SendToVoicemailAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> TransferAsync(CrestApps.OrchardCore.Telephony.Models.TransferRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> UnmuteAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultTelephonyUserAccessor : CrestApps.OrchardCore.Telephony.Services.ITelephonyUserAccessor
+    {
+        public DefaultTelephonyUserAccessor(Microsoft.AspNetCore.Identity.UserManager<OrchardCore.Users.IUser> userManager, Microsoft.AspNetCore.Http.IHttpContextAccessor httpContextAccessor, YesSql.ISession session, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyUserAccessor> logger) { }
+        public System.Threading.Tasks.Task<OrchardCore.Users.IUser> GetCurrentUserAsync() { }
+        public System.Threading.Tasks.Task PersistCurrentUserAsync(System.Func<OrchardCore.Users.IUser, bool> mutate) { }
+        public System.Threading.Tasks.Task<OrchardCore.Users.IUser> ReloadCurrentUserAsync() { }
+    }
+    public sealed class DefaultTelephonyUserTokenStore : CrestApps.OrchardCore.Telephony.ITelephonyUserTokenStore
+    {
+        public DefaultTelephonyUserTokenStore(CrestApps.OrchardCore.Telephony.Services.ITelephonyUserAccessor userAccessor, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> GetAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RemoveAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StoreAsync(string providerName, CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens tokens, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public interface ITelephonyUserAccessor
+    {
+        System.Threading.Tasks.Task<OrchardCore.Users.IUser> GetCurrentUserAsync();
+        System.Threading.Tasks.Task PersistCurrentUserAsync(System.Func<OrchardCore.Users.IUser, bool> mutate);
+        System.Threading.Tasks.Task<OrchardCore.Users.IUser> ReloadCurrentUserAsync();
+    }
+    public sealed class LocalEncryptedRecordingMediaStore : CrestApps.OrchardCore.Telephony.IRecordingMediaStore, CrestApps.OrchardCore.Telephony.ISupportsTenantMediaPurge
+    {
+        public LocalEncryptedRecordingMediaStore(OrchardCore.FileStorage.IFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
+        public System.Threading.Tasks.Task<bool> DeleteAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class TelephonyAdminMenu : OrchardCore.Navigation.AdminNavigationProvider
+    {
+        public TelephonyAdminMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.TelephonyAdminMenu> stringLocalizer) { }
+        protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
+    }
+    public sealed class TelephonyCallHistoryVoiceEventHandler : CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler
+    {
+        public TelephonyCallHistoryVoiceEventHandler(CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore telephonyInteractionStore, Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.OrchardCore.Telephony.ITelephonyClient> hubContext, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.TelephonyCallHistoryVoiceEventHandler> logger, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
+        public int Order { get; }
+        public System.Threading.Tasks.Task<bool> HandleAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class TelephonyInteractionSynchronizationService : CrestApps.OrchardCore.Telephony.ITelephonyInteractionSynchronizationService
+    {
+        public TelephonyInteractionSynchronizationService(CrestApps.OrchardCore.Telephony.ITelephonyInteractionStore interactionStore, CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver providerResolver, Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.OrchardCore.Telephony.ITelephonyClient> hubContext, OrchardCore.Locking.Distributed.IDistributedLock distributedLock, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.TelephonyInteractionSynchronizationService> logger, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Telephony.Models.TelephonyCoordinationOptions> coordinationOptions) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCallLookupResult> GetActiveCallAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCallListLookupResult> GetActiveCallsAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> ReconcileActiveInteractionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> ReconcileProviderInteractionsAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class TelephonyPkceGenerator
+    {
+        public const string Sha256Method = "S256";
+        public static string CreateCodeChallenge(string codeVerifier) { }
+        public static string CreateCodeVerifier() { }
+    }
+    public sealed class TelephonySettingsConfiguration : Microsoft.Extensions.Options.IPostConfigureOptions<CrestApps.OrchardCore.Telephony.TelephonySettings>
+    {
+        public TelephonySettingsConfiguration(OrchardCore.Settings.ISiteService siteService) { }
+        public void PostConfigure(string name, CrestApps.OrchardCore.Telephony.TelephonySettings options) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony
+{
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony.SoftPhone")]
+    public sealed class SoftPhoneWidgetStartup : OrchardCore.Modules.StartupBase
+    {
+        public SoftPhoneWidgetStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    public sealed class Startup : OrchardCore.Modules.StartupBase
+    {
+        public Startup(OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
+        public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.ViewModels
+{
+    public class SoftPhoneWidgetSettingsViewModel
+    {
+        public SoftPhoneWidgetSettingsViewModel() { }
+        public string AccentColor { get; set; }
+        public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Countries { get; set; }
+        public string DefaultCountryCode { get; set; }
+        public bool DisplayOnAdmin { get; set; }
+        public bool DisplayOnFrontend { get; set; }
+        public int RecentCallsCount { get; set; }
+    }
+    public class TelephonySettingsViewModel
+    {
+        public TelephonySettingsViewModel() { }
+        public string DefaultProvider { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public Microsoft.AspNetCore.Mvc.Rendering.SelectListItem[] Providers { get; set; }
+    }
+}

@@ -87,7 +87,18 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The dial request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Dial(DialRequest request)
-        => ExecuteAsync("Dial", () => DescribeDialRequest(request), (service, token) => service.DialAsync(request, token));
+    {
+        if (request is not null && !string.IsNullOrEmpty(Context.UserIdentifier))
+        {
+            // Stamp the caller's identity so a provider that delivers audio to a per-user browser endpoint
+            // (Telnyx WebRTC) can resolve this agent's live soft-phone registration and bridge the outbound
+            // call to their browser. Providers without browser audio ignore the key.
+            request.Metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
+        }
+
+        return ExecuteAsync("Dial", () => DescribeDialRequest(request), (service, token) => service.DialAsync(request, token));
+    }
 
     /// <summary>
     /// Ends an active call.
@@ -302,6 +313,104 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         }
 
         return interactions;
+    }
+
+    /// <summary>
+    /// Gets the number of the current user's unread voicemails, for the soft phone's voicemail badge.
+    /// </summary>
+    /// <returns>The unread voicemail count.</returns>
+    public async Task<int> GetUnreadVoicemailCount()
+    {
+        var count = 0;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("GetUnreadVoicemailCount");
+                return;
+            }
+
+            var store = scope.ServiceProvider.GetService<ITelephonyInteractionStore>();
+            var userId = Context.UserIdentifier;
+
+            if (store is null || string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
+        });
+
+        return count;
+    }
+
+    /// <summary>
+    /// Marks the voicemail identified by its provider call id as read for the current user.
+    /// </summary>
+    /// <param name="callId">The provider call id of the voicemail.</param>
+    /// <returns>The remaining unread voicemail count after the mark.</returns>
+    public async Task<int> MarkVoicemailRead(string callId)
+    {
+        var count = 0;
+
+        if (string.IsNullOrEmpty(callId))
+        {
+            return count;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("MarkVoicemailRead");
+                return;
+            }
+
+            var store = scope.ServiceProvider.GetService<ITelephonyInteractionStore>();
+            var userId = Context.UserIdentifier;
+
+            if (store is null || string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            await store.MarkVoicemailReadAsync(userId, callId, DateTime.UtcNow, Context.ConnectionAborted);
+            count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
+        });
+
+        return count;
+    }
+
+    /// <summary>
+    /// Marks all of the current user's voicemails as read (for example when they open the voicemail tab).
+    /// </summary>
+    /// <returns>The remaining unread voicemail count, which is zero on success.</returns>
+    public async Task<int> MarkAllVoicemailsRead()
+    {
+        var count = 0;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("MarkAllVoicemailsRead");
+                return;
+            }
+
+            var store = scope.ServiceProvider.GetService<ITelephonyInteractionStore>();
+            var userId = Context.UserIdentifier;
+
+            if (store is null || string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            await store.MarkAllVoicemailsReadAsync(userId, DateTime.UtcNow, Context.ConnectionAborted);
+            count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
+        });
+
+        return count;
     }
 
     /// <summary>

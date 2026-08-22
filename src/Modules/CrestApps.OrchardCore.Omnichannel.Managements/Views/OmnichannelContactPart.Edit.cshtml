@@ -3,13 +3,23 @@
 
 @model OmnichannelContactPartViewModel
 
+@{
+    var timeZoneRequired = !Model.AutoDetectTimeZone && Model.RequireTimeZone;
+}
+
 <div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
-    <label asp-for="TimeZoneId" class="ocat-label">@T["Contact time zone"]</label>
+    <label asp-for="TimeZoneId" class="ocat-label @(timeZoneRequired ? "ocat-label-required" : "")">@T["Contact time zone"]</label>
     <div class="ocat-end">
         <div class="mb-3">
-            <select asp-for="TimeZoneId" asp-items="Model.AvailableTimeZones" class="form-select"></select>
+            <select asp-for="TimeZoneId" asp-items="Model.AvailableTimeZones" class="form-select">
+                <option value="">@(Model.AutoDetectTimeZone ? T["Timezone (Automatic)"] : T["Select a timezone"])</option>
+            </select>
             <span asp-validation-for="TimeZoneId"></span>
-            @if (Model.RequireTimeZone)
+            @if (Model.AutoDetectTimeZone)
+            {
+                <span class="hint dashed">@T["Choose the contact's local time zone so agents can call during appropriate local hours. When left automatic, it is detected from the contact's phone number."]</span>
+            }
+            else if (Model.RequireTimeZone)
             {
                 <span class="hint dashed">@T["Choose the contact's local time zone so agents can call during appropriate local hours. This field is required."]</span>
             }

@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.Reports;
-
 namespace CrestApps.OrchardCore.Reports.Services;
 
 /// <summary>
@@ -15,17 +13,31 @@ public sealed class ReportManager : IReportManager
     /// </summary>
     /// <param name="reports">The registered reports.</param>
     public ReportManager(IEnumerable<IReport> reports)
+        : this(reports, [])
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReportManager"/> class.
+    /// </summary>
+    /// <param name="reports">The reports registered individually.</param>
+    /// <param name="reportProviders">The providers that each contribute a family of reports.</param>
+    public ReportManager(
+        IEnumerable<IReport> reports,
+        IEnumerable<IReportProvider> reportProviders)
     {
         _byName = new Dictionary<string, IReport>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var report in reports)
         {
-            if (!string.IsNullOrEmpty(report.Name))
+            AddReport(report);
+        }
+
+        foreach (var reportProvider in reportProviders)
+        {
+            foreach (var report in reportProvider.GetReports())
             {
-                if (!_byName.TryAdd(report.Name, report))
-                {
-                    throw new InvalidOperationException($"A report named '{report.Name}' is already registered.");
-                }
+                AddReport(report);
             }
         }
 
@@ -36,7 +48,7 @@ public sealed class ReportManager : IReportManager
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<IReport> ListReports()
+    public IReadOnlyList<IReport> GetReports()
     {
         return _reports;
     }
@@ -50,5 +62,18 @@ public sealed class ReportManager : IReportManager
         }
 
         return _byName.GetValueOrDefault(name);
+    }
+
+    private void AddReport(IReport report)
+    {
+        if (string.IsNullOrEmpty(report.Name))
+        {
+            return;
+        }
+
+        if (!_byName.TryAdd(report.Name, report))
+        {
+            throw new InvalidOperationException($"A report named '{report.Name}' is already registered.");
+        }
     }
 }

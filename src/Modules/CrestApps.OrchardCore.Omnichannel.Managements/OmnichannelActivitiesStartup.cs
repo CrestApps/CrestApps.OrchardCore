@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
@@ -62,7 +63,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<IActivityBatchLoadCoordinator, DefaultActivityBatchLoadCoordinator>();
         services.AddScoped<DefaultContactActivityBatchLoader>();
 
-        services.AddSingleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>());
 
         services
             .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
@@ -92,8 +93,8 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddScoped<IActivityDispositionService, DefaultActivityDispositionService>()
             .AddScoped<IAutomatedActivityCompletionService, AutomatedActivityCompletionService>();
 
-        services.AddScoped<OmnichannelContentTypeProvider>();
-        services.AddScoped<IContentDefinitionEventHandler, OmnichannelContentTypeCacheInvalidator>();
+        services.AddSingleton<OmnichannelContentTypeProvider>();
+        services.AddSingleton<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
 
         services.AddScoped<ISubjectFlowSettingsService, SubjectFlowSettingsService>();
 

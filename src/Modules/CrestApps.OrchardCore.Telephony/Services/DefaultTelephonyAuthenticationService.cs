@@ -1,4 +1,7 @@
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -13,7 +16,12 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     private readonly ISiteService _siteService;
     private readonly ITelephonyProviderResolver _providerResolver;
     private readonly ITelephonyUserTokenStore _tokenStore;
+    private readonly ITelephonyUserAccessor _userAccessor;
+    private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
+    private readonly TimeSpan _tokenRefreshLockTimeout;
+    private readonly TimeSpan _tokenRefreshLockExpiration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyAuthenticationService"/> class.
@@ -21,17 +29,30 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <param name="siteService">The site service used to read the default provider name.</param>
     /// <param name="providerResolver">The telephony provider resolver.</param>
     /// <param name="tokenStore">The user token store.</param>
+    /// <param name="userAccessor">The accessor used to identify the current user when serializing token refreshes.</param>
+    /// <param name="distributedLock">The distributed lock used to serialize concurrent token refreshes per user and provider.</param>
     /// <param name="clock">The clock used to evaluate token expiration.</param>
+    /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
+    /// <param name="logger">The logger used to record incomplete remote revocations.</param>
     public DefaultTelephonyAuthenticationService(
         ISiteService siteService,
         ITelephonyProviderResolver providerResolver,
         ITelephonyUserTokenStore tokenStore,
-        IClock clock)
+        ITelephonyUserAccessor userAccessor,
+        IDistributedLock distributedLock,
+        IClock clock,
+        IOptions<TelephonyCoordinationOptions> coordinationOptions,
+        ILogger<DefaultTelephonyAuthenticationService> logger)
     {
         _siteService = siteService;
         _providerResolver = providerResolver;
         _tokenStore = tokenStore;
+        _userAccessor = userAccessor;
+        _distributedLock = distributedLock;
         _clock = clock;
+        _logger = logger;
+        _tokenRefreshLockTimeout = coordinationOptions.Value.TokenRefreshLockTimeout;
+        _tokenRefreshLockExpiration = coordinationOptions.Value.TokenRefreshLockExpiration;
     }
 
     /// <inheritdoc/>
@@ -69,8 +90,23 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         status.AuthenticationScheme = authenticationProvider.AuthenticationScheme;
 
         // Attempt to obtain valid tokens, refreshing them automatically when possible, so the user is
-        // only asked to authenticate when there are no usable tokens.
-        var tokens = string.IsNullOrEmpty(name) ? null : await GetValidTokensAsync(name, cancellationToken);
+        // only asked to authenticate when there are no usable tokens. A persistence failure while
+        // refreshing must not fault the status probe; it degrades to "not connected" and is logged by
+        // the user accessor.
+        TelephonyUserTokens tokens = null;
+
+        if (!string.IsNullOrEmpty(name))
+        {
+            try
+            {
+                tokens = await GetValidTokensAsync(name, cancellationToken);
+            }
+            catch (TelephonyUserPersistenceException)
+            {
+                tokens = null;
+            }
+        }
+
         status.IsConnected = tokens is not null && !string.IsNullOrEmpty(tokens.AccessToken);
 
         return status;
@@ -146,37 +182,69 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         }
 
         tokens.ProviderName = name;
+        tokens = await EnsureConnectionMetadataAsync(name, provider, tokens, persistChanges: false, cancellationToken);
 
-        await _tokenStore.StoreAsync(name, tokens, cancellationToken);
+        try
+        {
+            await _tokenStore.StoreAsync(name, tokens, cancellationToken);
+        }
+        catch (TelephonyUserPersistenceException)
+        {
+            return TelephonyResult.Failed("The telephony connection could not be saved. Please try connecting again.");
+        }
 
         return TelephonyResult.Success();
     }
 
     /// <inheritdoc/>
-    public async Task DisconnectAsync(CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> DisconnectAsync(CancellationToken cancellationToken = default)
     {
         var name = await GetDefaultProviderNameAsync();
 
         if (string.IsNullOrEmpty(name))
         {
-            return;
+            return TelephonyResult.Success();
         }
 
         var tokens = await _tokenStore.GetAsync(name, cancellationToken);
 
-        if (tokens is not null && !string.IsNullOrEmpty(tokens.AccessToken))
-        {
-            var provider = await _providerResolver.GetAsync(name);
+        // Clear the local interactive credentials first and durably before attempting the remote revocation,
+        // so the user is disconnected locally immediately, concurrent requests can no longer observe the
+        // credentials, and a canceled or failing remote call cannot leave the local tokens behind. The token
+        // store commits the removal on its own isolated unit of work.
+        await _tokenStore.RemoveAsync(name, cancellationToken);
 
-            if (provider is ITelephonyAuthenticationProvider authenticationProvider)
-            {
-                // Revoke the tokens at the provider before removing them locally so the provider does
-                // not keep issuing API keys on behalf of the disconnected user.
-                await authenticationProvider.RevokeTokensAsync(tokens, cancellationToken);
-            }
+        if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken))
+        {
+            return TelephonyResult.Success();
         }
 
-        await _tokenStore.RemoveAsync(name, cancellationToken);
+        var provider = await _providerResolver.GetAsync(name);
+
+        if (provider is not ITelephonyAuthenticationProvider authenticationProvider)
+        {
+            // A live token existed but the provider is no longer available to revoke it, so the remote
+            // grant may still be active. Report the indeterminate outcome instead of a false success.
+            _logger.LogWarning(
+                "Telephony provider '{ProviderName}' is unavailable to revoke the disconnected user's grant. The local connection was cleared, but the remote grant may still be active.",
+                name);
+
+            return TelephonyResult.Unknown("The telephony provider was unavailable to revoke the remote grant.");
+        }
+
+        // Revoke the tokens at the provider after the local copy is removed so the provider does not keep
+        // issuing API keys on behalf of the disconnected user.
+        var revocation = await authenticationProvider.RevokeTokensAsync(tokens, cancellationToken);
+
+        if (!revocation.Succeeded)
+        {
+            _logger.LogWarning(
+                "Telephony provider '{ProviderName}' did not confirm revocation of the disconnected user's grant. The local connection was cleared, but the remote grant may still be active. Reason: {Reason}",
+                name,
+                revocation.Error);
+        }
+
+        return revocation;
     }
 
     /// <inheritdoc/>
@@ -194,9 +262,11 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             return null;
         }
 
+        var provider = await _providerResolver.GetAsync(providerName);
+
         if (!IsExpired(tokens))
         {
-            return tokens;
+            return await EnsureConnectionMetadataAsync(providerName, provider, tokens, persistChanges: true, cancellationToken);
         }
 
         if (string.IsNullOrEmpty(tokens.RefreshToken))
@@ -204,14 +274,65 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             return null;
         }
 
-        var provider = await _providerResolver.GetAsync(providerName);
-
         if (provider is not ITelephonyAuthenticationProvider authenticationProvider)
         {
             return null;
         }
 
-        var refreshed = await authenticationProvider.RefreshTokensAsync(tokens, cancellationToken);
+        return await RefreshTokensUnderLockAsync(providerName, provider, authenticationProvider, tokens, cancellationToken);
+    }
+
+    private async Task<TelephonyUserTokens> RefreshTokensUnderLockAsync(
+        string providerName,
+        ITelephonyProvider provider,
+        ITelephonyAuthenticationProvider authenticationProvider,
+        TelephonyUserTokens expiredTokens,
+        CancellationToken cancellationToken)
+    {
+        var user = await _userAccessor.GetCurrentUserAsync();
+        var lockKey = $"Telephony:TokenRefresh:{providerName}:{user?.UserName ?? providerName}";
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            lockKey,
+            _tokenRefreshLockTimeout,
+            _tokenRefreshLockExpiration);
+
+        if (!locked)
+        {
+            // A peer holds the refresh lock and did not release it within the wait window. Reload the user from
+            // the database (bypassing this scope's cached copy) in case the peer just committed a refresh;
+            // otherwise give up rather than starting a competing refresh that would rotate the peer's
+            // replacement refresh token out from under it.
+            await _userAccessor.ReloadCurrentUserAsync();
+            var contended = await _tokenStore.GetAsync(providerName, cancellationToken);
+
+            return IsUsable(contended) ? contended : null;
+        }
+
+        await using var acquiredLock = locker;
+
+        // Reload the user from the database before the re-read so a peer's committed refresh is observed rather
+        // than the stale tokens this request loaded before waiting for the lock. Without this the identity map
+        // would keep serving the pre-refresh copy and the double-check below could rotate the token again.
+        await _userAccessor.ReloadCurrentUserAsync();
+
+        var current = await _tokenStore.GetAsync(providerName, cancellationToken);
+
+        if (IsUsable(current))
+        {
+            return current;
+        }
+
+        // Refresh from the newest stored refresh token when one exists, falling back to the tokens the caller
+        // already read, so a concurrent partial update is never ignored.
+        var source = current is not null && !string.IsNullOrEmpty(current.RefreshToken) ? current : expiredTokens;
+
+        if (string.IsNullOrEmpty(source.RefreshToken))
+        {
+            return null;
+        }
+
+        var refreshed = await authenticationProvider.RefreshTokensAsync(source, cancellationToken);
 
         if (refreshed is null || string.IsNullOrEmpty(refreshed.AccessToken))
         {
@@ -219,10 +340,67 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         }
 
         refreshed.ProviderName = providerName;
+        refreshed = await EnsureConnectionMetadataAsync(providerName, provider, refreshed, persistChanges: false, cancellationToken);
 
+        // Store the refreshed tokens. The token store commits them durably on its own isolated unit of work,
+        // so a waiting peer that reloads the user before this method releases the lock observes them and reuses
+        // them instead of rotating the refresh token a second time, without this write depending on the ambient
+        // request scope committing.
         await _tokenStore.StoreAsync(providerName, refreshed, cancellationToken);
 
         return refreshed;
+    }
+
+    private async Task<TelephonyUserTokens> EnsureConnectionMetadataAsync(
+        string providerName,
+        ITelephonyProvider provider,
+        TelephonyUserTokens tokens,
+        bool persistChanges,
+        CancellationToken cancellationToken)
+    {
+        if (tokens is null || string.IsNullOrEmpty(tokens.AccessToken) || HasConnectionMetadata(tokens))
+        {
+            return tokens;
+        }
+
+        if (provider is not ITelephonyUserConnectionMetadataProvider metadataProvider)
+        {
+            return tokens;
+        }
+
+        var enriched = await metadataProvider.EnrichTokensAsync(tokens, cancellationToken);
+
+        if (enriched is null || string.IsNullOrEmpty(enriched.AccessToken))
+        {
+            return tokens;
+        }
+
+        enriched.ProviderName ??= providerName;
+
+        if (persistChanges && ConnectionMetadataChanged(tokens, enriched))
+        {
+            await _tokenStore.StoreAsync(providerName, enriched, cancellationToken);
+        }
+
+        return enriched;
+    }
+
+    private bool IsUsable(TelephonyUserTokens tokens)
+        => tokens is not null && !string.IsNullOrEmpty(tokens.AccessToken) && !IsExpired(tokens);
+
+    private static bool ConnectionMetadataChanged(TelephonyUserTokens original, TelephonyUserTokens enriched)
+    {
+        return !string.Equals(original.RemoteUserId, enriched.RemoteUserId, StringComparison.Ordinal) ||
+            !string.Equals(original.RemoteUserName, enriched.RemoteUserName, StringComparison.Ordinal) ||
+            !string.Equals(original.RemoteUserEmail, enriched.RemoteUserEmail, StringComparison.Ordinal) ||
+            !string.Equals(original.RemotePhoneNumber, enriched.RemotePhoneNumber, StringComparison.Ordinal);
+    }
+
+    private static bool HasConnectionMetadata(TelephonyUserTokens tokens)
+    {
+        return !string.IsNullOrWhiteSpace(tokens.RemoteUserId) ||
+            !string.IsNullOrWhiteSpace(tokens.RemoteUserEmail) ||
+            !string.IsNullOrWhiteSpace(tokens.RemotePhoneNumber);
     }
 
     private bool IsExpired(TelephonyUserTokens tokens)

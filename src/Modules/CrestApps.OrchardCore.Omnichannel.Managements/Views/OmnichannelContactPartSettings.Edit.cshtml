@@ -5,9 +5,15 @@
 <div class="ocat-wrapper" asp-validation-class-for="RequireTimeZone">
     <div class="ocat-end-offset">
         <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AutoDetectTimeZone" />
+            <label class="form-check-label" asp-for="AutoDetectTimeZone">@T["Auto detect time zone"]</label>
+            <span class="hint dashed">@T["Automatically detect the contact time zone from the contact's phone number when one was not selected. Enabled by default."]</span>
+        </div>
+
+        <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="RequireTimeZone" />
             <label class="form-check-label" asp-for="RequireTimeZone">@T["Require time zone"]</label>
-            <span class="hint dashed">@T["Require editors to select a contact time zone before saving."]</span>
+            <span class="hint dashed">@T["Require editors to select a contact time zone before saving. Only enforced when auto detect is disabled."]</span>
         </div>
     </div>
 </div>

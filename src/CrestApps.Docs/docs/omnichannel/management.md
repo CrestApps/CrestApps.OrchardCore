@@ -21,7 +21,7 @@ The screencast below enables **Omnichannel Management**, opens the **Management*
 
 The module ships as two features. `CrestApps.OrchardCore.Omnichannel.Activities` is the headless half: contact, subject, campaign, and activity catalogs, their stores and managers, the content parts and indexes, the migrations, the permissions, and the subject-disposition endpoint. `CrestApps.OrchardCore.Omnichannel.Managements` adds the CRM administration experience on top of it - the screens, display drivers, and admin menus described below - and enabling it brings the headless feature with it.
 
-The split exists so that a headless consumer of the activity model can depend on the work-item data without dragging an administration experience into a tenant that serves no user interface.
+The split exists so that a headless consumer of the activity model, such as the [Contact Center](../contact-center/index.md), can depend on the work-item data without dragging an administration experience into a tenant that serves no user interface.
 
 ## Overview
 
@@ -157,7 +157,7 @@ The loader runs as a background process to avoid overloading the system and to a
 
 The **Load Inventory** list is ordered by creation date with the newest inventory loads first, so a load you just created appears at the top. The list is paged and supports the standard admin bulk-selection controls (the header checkbox selects every row on the page).
 
-Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when no dialer contributor is enabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
+Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Outbound Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
 
 #### Loading Automated SMS Activities with an AI Profile
 
@@ -516,7 +516,7 @@ The page also includes a **Page size** selector so managers can review more than
 | **Change Subject** | Change the subject content type for all selected activities. |
 | **Clear Assignment** | Remove the current assignee and clear reservation state so the activity can be re-routed or dialed again. |
 | **Change Source** | Change the activity source and optionally clear assignment and reservation state. This is useful when reclassifying inventory between manual, automatic, and dialer-style workflows. |
-| **Change Dialer Profile** | When a dialer contributor feature is available, update the activity campaign and dialer source to match a selected dialer profile. This can also clear assignment and reservation state so the dialer can pick the activity up again. |
+| **Change Dialer Profile** | When the Contact Center dialer feature is available, update the activity campaign and dialer source to match a selected dialer profile. This can also clear assignment and reservation state so the dialer can pick the activity up again. |
 
 Use **Change Source** and **Clear Assignment** together when you need to convert assigned manual work back into dialer-ready inventory. Use **Change Dialer Profile** when you want to move selected outbound inventory to a different dialer campaign path without recreating the activities.
 
@@ -541,3 +541,11 @@ On import, entries are matched by their identifier: an entry that already exists
 When a plan carries several of these steps, order them so that referenced entities import first: dispositions and channel endpoints, then campaign groups, then campaigns, and finally subject actions.
 
 Subject flow configuration is stored on the `OmnichannelSubjectPart` content-type part settings, so it travels with the content type definition through the standard **Content Definition** deployment step rather than a dedicated omnichannel step.
+
+## Data at rest and privacy
+
+The omnichannel/CRM layer stores customer communication content and contact addresses as **plaintext** in the tenant SQL database. `OmnichannelMessage.Content` (the message body), `OmnichannelMessage.CustomerAddress`, and `OmnichannelMessage.ServiceAddress` are persisted unencrypted in the YesSql document, and the two addresses are additionally projected — still in plaintext — into the `OmnichannelMessageIndex` table so they can be queried. No application-level encryption is applied to this data.
+
+This is a deliberate contrast with telephony **recording media**, which the media-execution layer encrypts at rest through the data protection provider. That asymmetry matters operationally: encrypting the recording bytes does not encrypt the message bodies or the phone numbers/addresses that the CRM stores alongside them. Protecting this content at rest is therefore a **deployment responsibility** — enable database- or disk-level encryption (for example, transparent data encryption) and restrict access to the database and its backups accordingly. Treat message content and contact addresses as personal data.
+
+There is currently **no automated per-contact subject erasure** (right-to-be-forgotten) across the CRM. The activity **Purge** action marks an activity as `Purged` and removes it from the work queue, but it does **not** delete the underlying message content, the customer/service addresses, or the contact record — that data remains in the database and its index. Comprehensive per-contact erasure across omnichannel activities, messages, and contacts is a known limitation and a general-availability blocker; until it ships, satisfy erasure requests through direct, audited database operations against the tenant store.
