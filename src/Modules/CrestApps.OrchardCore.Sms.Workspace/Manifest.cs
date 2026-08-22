@@ -16,12 +16,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = SmsWorkspaceConstants.Feature.Workspace,
     Name = "SMS Workspace",
-    Description = "Adds the human two-way SMS inbox and conversation workspace: channel-endpoint routing to agents/queues, the per-number provider dispatcher, two-way send/receive over the shared Omnichannel message store, and its own SignalR hub for real-time messaging. Reuses Contact Center agents and work distribution for operator identity and queue membership (without Voice or the Contact Center real-time hub) and the Omnichannel channel endpoints (without the full Omnichannel management screens).",
+    Description = "Adds the human two-way SMS inbox and conversation workspace: channel-endpoint routing to agents/queues, the per-number provider dispatcher, two-way send/receive over the shared Omnichannel message store, and its own SignalR hub for real-time messaging. Reuses only the shared Contact Center agent-profile services for operator identity (via the dependency-only Agent Services feature — not the Agents, Work Distribution, or Omnichannel Management administration) and the Omnichannel channel endpoints (via the dependency-only Channel Endpoints feature).",
     Category = "Communication",
     Dependencies =
     [
         OmnichannelConstants.Features.ChannelEndpoints,
-        ContactCenterConstants.Feature.Queues,
+        ContactCenterConstants.Feature.AgentServices,
         "OrchardCore.Sms",
         "OrchardCore.SignalR",
     ]

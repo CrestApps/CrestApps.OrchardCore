@@ -22,6 +22,7 @@ using OrchardCore.ContentManagement.Records;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using YesSql;
 using YesSql.Services;
 
@@ -47,6 +48,7 @@ public sealed class SmsPortalController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
     private readonly ISession _session;
+    private readonly IClock _clock;
 
     private readonly IHtmlLocalizer H;
     private readonly IStringLocalizer S;
@@ -64,6 +66,7 @@ public sealed class SmsPortalController : Controller
         IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
         ISession session,
+        IClock clock,
         IHtmlLocalizer<SmsPortalController> htmlLocalizer,
         IStringLocalizer<SmsPortalController> stringLocalizer)
     {
@@ -79,6 +82,7 @@ public sealed class SmsPortalController : Controller
         _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
         _session = session;
+        _clock = clock;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -504,12 +508,38 @@ public sealed class SmsPortalController : Controller
         return conversations.Values;
     }
 
-    private Task<AgentProfile> GetCurrentAgentAsync()
+    // Resolves the current user's operator identity, reusing the shared Contact Center agent-profile directory.
+    // When the SMS Workspace runs without the full Contact Center Agents/Work Distribution administration (its
+    // only hard dependency is the Agent Services directory), there is no entitlements screen to onboard operators,
+    // so a bare agent profile is provisioned on first access for any user permitted to use the workspace. When the
+    // Contact Center administration is also enabled, that same profile is enriched with queues and entitlements.
+    private async Task<AgentProfile> GetCurrentAgentAsync()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        return string.IsNullOrEmpty(userId)
-            ? Task.FromResult<AgentProfile>(null)
-            : _agentProfileManager.FindByUserIdAsync(userId);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return null;
+        }
+
+        var agent = await _agentProfileManager.FindByUserIdAsync(userId);
+
+        if (agent is not null)
+        {
+            return agent;
+        }
+
+        var userName = User.Identity?.Name;
+
+        agent = await _agentProfileManager.NewAsync();
+        agent.UserId = userId;
+        agent.UserName = userName;
+        agent.DisplayName = userName;
+        agent.Name = userId;
+        agent.CreatedUtc = _clock.UtcNow;
+
+        await _agentProfileManager.CreateAsync(agent);
+
+        return agent;
     }
 }

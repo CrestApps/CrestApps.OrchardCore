@@ -26,6 +26,14 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.AgentServices,
+    Name = "Contact Center Agent Services",
+    Description = "Provides only the shared agent-profile directory services (profile store, manager, index, and storage collection) that resolve an operator's agent identity. It carries no administration screens. Enabled automatically as a dependency of the Agents feature and of any module that reuses agent identity, such as the SMS Workspace.",
+    Category = "Contact Center",
+    EnabledByDependencyOnly = true
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Agents,
     Name = "Contact Center Agents",
     Description = "Adds agent profiles, skills, queue/campaign sign-in, and the durable agent availability, presence, heartbeat, and after-call recovery that track who is working, together with their administration screens.",
@@ -33,6 +41,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Area,
+        ContactCenterConstants.Feature.AgentServices,
         UsersConstants.Feature.Area,
     ]
 )]

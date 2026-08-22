@@ -50,15 +50,13 @@ public sealed class AgentsStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        // The agent-profile directory (store, manager, index) is provided by the Agent Services feature this
+        // feature depends on, so it is not registered again here.
         services
-            .AddScoped<IAgentProfileStore, AgentProfileStore>()
-            .AddScoped<IAgentProfileManager, AgentProfileManager>()
             .AddScoped<IAgentStateReasonCodeStore, AgentStateReasonCodeStore>()
             .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
 
         services
-            .AddIndexProvider<AgentProfileIndexProvider>()
-            .AddDataMigration<AgentProfileIndexMigrations>()
             .AddIndexProvider<AgentQueueMembershipIndexProvider>()
             .AddDataMigration<AgentQueueMembershipIndexMigrations>();
 

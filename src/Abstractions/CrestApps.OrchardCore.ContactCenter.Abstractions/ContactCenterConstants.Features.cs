@@ -13,6 +13,16 @@ public static partial class ContactCenterConstants
         public const string Area = "CrestApps.OrchardCore.ContactCenter";
 
         /// <summary>
+        /// The identifier of the dependency-only feature that provides just the shared agent-profile directory
+        /// services (the profile store, manager, index, and its storage collection). It carries no administration
+        /// screens, presence, availability, reason codes, or queue concepts, so a module that only needs to resolve
+        /// an operator's agent profile — such as the SMS Workspace — can depend on it without pulling in the full
+        /// Agents and Work Distribution administration. Enabled automatically by the Agents feature and by any
+        /// module that reuses agent identity.
+        /// </summary>
+        public const string AgentServices = "CrestApps.OrchardCore.ContactCenter.AgentServices";
+
+        /// <summary>
         /// The identifier of the agents feature that adds agent profiles, skills, availability, presence, and durable agent sessions.
         /// </summary>
         public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";

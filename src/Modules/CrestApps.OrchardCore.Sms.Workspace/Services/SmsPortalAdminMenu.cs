@@ -20,9 +20,9 @@ public sealed class SmsPortalAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["SMS Portal"], "15", portal => portal
-                .AddClass("sms-portal")
-                .Id("smsPortal")
+            .Add(S["SMS Workspace"], "15", portal => portal
+                .AddClass("sms-workspace")
+                .Id("smsWorkspace")
                 .Add(S["Conversations"], "1", conversations => conversations
                     .Action("Index", "SmsPortal", "CrestApps.OrchardCore.Sms.Workspace")
                     .Permission(SmsWorkspacePermissions.UseSmsPortal)
