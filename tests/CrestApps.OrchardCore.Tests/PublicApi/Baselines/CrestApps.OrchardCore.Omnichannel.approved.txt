@@ -7,7 +7,7 @@
     "unications.", Id="CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices", Name="Omnichannel - Azure Communication Services")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Description="Provides shared omnichannel messages, endpoints, preferences, and processing cont" +
     "racts across communication channels.", Id="CrestApps.OrchardCore.Omnichannel", Name="Omnichannel")]
-[assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Contact Center", Name="Omnichannel", Version="2.0.0", Website="https://www.crestapps.com")]
+[assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Contact Center", Name="Omnichannel", Version="3.0.0", Website="https://crestapps.com")]
 [assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Omnichannel", "Module")]
 namespace CrestApps.OrchardCore.Omnichannel
 {
