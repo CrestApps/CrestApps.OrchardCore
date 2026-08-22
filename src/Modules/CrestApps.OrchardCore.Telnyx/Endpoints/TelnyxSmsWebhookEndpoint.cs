@@ -1,18 +1,15 @@
-using System.Security.Cryptography;
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
-using CrestApps.OrchardCore.Telnyx.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 using YesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Telnyx.Endpoints;
@@ -38,19 +35,18 @@ internal static class TelnyxSmsWebhookEndpoint
 
     internal static async Task<IResult> HandleAsync(
         HttpContext httpContext,
-        ISiteService siteService,
-        IDataProtectionProvider dataProtectionProvider,
+        IOptionsMonitor<TelnyxSmsOptions> optionsMonitor,
         IEnumerable<IOmnichannelEventHandler> handlers,
         ISmsConversationService conversationService,
         YesSqlSession session,
         IClock clock,
         ILogger<TelnyxSmsProvider> logger)
     {
-        var settings = await siteService.GetSettingsAsync<TelnyxSettings>();
+        var options = optionsMonitor.CurrentValue;
 
-        if (!settings.IsEnabled)
+        if (!options.IsEnabled)
         {
-            logger.LogWarning("Rejected a Telnyx SMS webhook because the Telnyx provider is disabled.");
+            logger.LogWarning("Rejected a Telnyx SMS webhook because the Telnyx SMS provider is disabled.");
 
             return TypedResults.NotFound();
         }
@@ -69,20 +65,14 @@ internal static class TelnyxSmsWebhookEndpoint
 
         var body = read.Body;
 
-        if (string.IsNullOrEmpty(settings.WebhookPublicKey))
+        if (string.IsNullOrEmpty(options.WebhookPublicKey))
         {
             logger.LogWarning("Rejected a Telnyx SMS webhook because no webhook public key is configured.");
 
             return TypedResults.Unauthorized();
         }
 
-        if (!TryUnprotect(dataProtectionProvider, settings.WebhookPublicKey, out var publicKey))
-        {
-            logger.LogError("Rejected a Telnyx SMS webhook because the configured webhook public key could not be unprotected.");
-
-            return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
-        }
-
+        var publicKey = options.WebhookPublicKey;
         var signature = httpContext.Request.Headers[TelnyxConstants.SignatureHeaderName].ToString();
         var timestamp = httpContext.Request.Headers[TelnyxConstants.TimestampHeaderName].ToString();
 
@@ -151,21 +141,5 @@ internal static class TelnyxSmsWebhookEndpoint
         };
 
         await handlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, logger);
-    }
-
-    private static bool TryUnprotect(IDataProtectionProvider dataProtectionProvider, string protectedSecret, out string secret)
-    {
-        secret = null;
-
-        try
-        {
-            secret = dataProtectionProvider.CreateProtector(TelnyxConstants.WebhookProtectorName).Unprotect(protectedSecret);
-
-            return !string.IsNullOrEmpty(secret);
-        }
-        catch (CryptographicException)
-        {
-            return false;
-        }
     }
 }

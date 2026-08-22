@@ -1,0 +1,34 @@
+@model CrestApps.OrchardCore.Telnyx.ViewModels.TelnyxSmsSettingsViewModel
+
+<fieldset class="mb-3">
+    <div class="form-check">
+        <input asp-for="IsEnabled" class="form-check-input" />
+        <label asp-for="IsEnabled" class="form-check-label">@T["Enable the Telnyx SMS provider"]</label>
+        <span class="hint">@T["When enabled and configured, Telnyx becomes selectable as the tenant SMS provider."]</span>
+    </div>
+</fieldset>
+
+<div class="mb-3">
+    <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+    <input asp-for="ApiKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasApiKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx API v2 key"].Value)" />
+    <span class="hint">@T["The Telnyx account API key used as the bearer token on the Messaging API."]</span>
+    <span asp-validation-for="ApiKey" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="MessagingProfileId" class="form-label">@T["Messaging profile id"]</label>
+    <input asp-for="MessagingProfileId" class="form-control" />
+    <span class="hint">@T["Optional. Sends through a specific Telnyx messaging profile; leave empty to send using only the From number."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="WebhookPublicKey" class="form-label">@T["Webhook public key"]</label>
+    <input asp-for="WebhookPublicKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasWebhookPublicKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx Ed25519 public key (base64)"].Value)" />
+    <span class="hint">@T["Used to verify inbound and delivery-receipt webhooks. Register the webhook at /api/telnyx/webhook/sms in the Telnyx portal."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ApiBaseUrl" class="form-label">@T["API base URL"]</label>
+    <input asp-for="ApiBaseUrl" class="form-control" placeholder="https://api.telnyx.com/v2/" />
+    <span class="hint">@T["Optional override for the Telnyx REST API base address."]</span>
+</div>

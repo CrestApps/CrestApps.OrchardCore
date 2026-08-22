@@ -1,28 +1,24 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
 using System.Text.Json;
-using CrestApps.OrchardCore.Telnyx.Models;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Infrastructure;
-using OrchardCore.Settings;
 using OrchardCore.Sms;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
 /// The Telnyx implementation of <see cref="ISmsProvider"/>. It sends outbound messages through the Telnyx
-/// Messaging API (<c>POST /v2/messages</c>) authenticated with the account API key already stored (protected)
-/// in the Telnyx provider settings. Registered under the technical name "Telnyx" so the SMS portal's
-/// dispatcher can resolve it per number.
+/// Messaging API (<c>POST /v2/messages</c>), reading its resolved credentials from
+/// <see cref="IOptionsMonitor{TOptions}"/> of <see cref="TelnyxSmsOptions"/> (merged appsettings + UI settings),
+/// mirroring OrchardCore's Twilio provider structure. Registered under the technical name "Telnyx".
 /// </summary>
 public sealed class TelnyxSmsProvider : ISmsProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ISiteService _siteService;
-    private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly IOptionsMonitor<TelnyxSmsOptions> _options;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -32,14 +28,12 @@ public sealed class TelnyxSmsProvider : ISmsProvider
     /// </summary>
     public TelnyxSmsProvider(
         IHttpClientFactory httpClientFactory,
-        ISiteService siteService,
-        IDataProtectionProvider dataProtectionProvider,
+        IOptionsMonitor<TelnyxSmsOptions> options,
         ILogger<TelnyxSmsProvider> logger,
         IStringLocalizer<TelnyxSmsProvider> stringLocalizer)
     {
         _httpClientFactory = httpClientFactory;
-        _siteService = siteService;
-        _dataProtectionProvider = dataProtectionProvider;
+        _options = options;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -57,21 +51,14 @@ public sealed class TelnyxSmsProvider : ISmsProvider
             return Failed("Both the sending number (From) and the recipient (To) are required.");
         }
 
-        var settings = await _siteService.GetSettingsAsync<TelnyxSettings>();
+        var options = _options.CurrentValue;
 
-        if (!settings.IsEnabled)
+        if (!options.IsValid)
         {
-            return Failed("The Telnyx provider is disabled.");
+            _logger.LogError("Unable to send a Telnyx SMS because the Telnyx SMS provider is not configured or enabled.");
+
+            return Failed("The Telnyx SMS provider is not configured.");
         }
-
-        if (string.IsNullOrEmpty(settings.ApiKey) || !TryUnprotect(settings.ApiKey, out var apiKey))
-        {
-            _logger.LogError("Unable to send a Telnyx SMS because the API key is missing or could not be unprotected.");
-
-            return Failed("The Telnyx API key is not configured.");
-        }
-
-        var smsSettings = await _siteService.GetSettingsAsync<TelnyxSmsSettings>();
 
         var payload = new Dictionary<string, object>
         {
@@ -80,16 +67,14 @@ public sealed class TelnyxSmsProvider : ISmsProvider
             ["text"] = message.Body ?? string.Empty,
         };
 
-        if (!string.IsNullOrEmpty(smsSettings.MessagingProfileId))
+        if (!string.IsNullOrEmpty(options.MessagingProfileId))
         {
-            payload["messaging_profile_id"] = smsSettings.MessagingProfileId;
+            payload["messaging_profile_id"] = options.MessagingProfileId;
         }
 
         using var client = _httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
-        client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(settings.ApiBaseUrl)
-            ? TelnyxConstants.DefaultApiBaseUrl
-            : settings.ApiBaseUrl);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
+        client.BaseAddress = new Uri(string.IsNullOrWhiteSpace(options.ApiBaseUrl) ? TelnyxConstants.DefaultApiBaseUrl : options.ApiBaseUrl);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
 
         try
         {
@@ -104,9 +89,6 @@ public sealed class TelnyxSmsProvider : ISmsProvider
                 return Failed($"The Telnyx messaging API returned {(int)response.StatusCode}: {Truncate(errorBody)}");
             }
 
-            // The Telnyx message id (data.id) correlates delivery receipts. The ISmsProvider contract returns
-            // only a Result, so the id is logged here; the SMS portal's delivery webhook correlates receipts by
-            // (from, to, latest non-terminal outbound) and pins the id on first receipt.
             var providerMessageId = await TryReadMessageIdAsync(response, cancellationToken);
 
             if (_logger.IsEnabled(LogLevel.Information) && !string.IsNullOrEmpty(providerMessageId))
@@ -139,22 +121,6 @@ public sealed class TelnyxSmsProvider : ISmsProvider
         catch (JsonException)
         {
             return null;
-        }
-    }
-
-    private bool TryUnprotect(string protectedValue, out string value)
-    {
-        value = null;
-
-        try
-        {
-            value = _dataProtectionProvider.CreateProtector(TelnyxConstants.ProtectorName).Unprotect(protectedValue);
-
-            return !string.IsNullOrEmpty(value);
-        }
-        catch (CryptographicException)
-        {
-            return false;
         }
     }
 

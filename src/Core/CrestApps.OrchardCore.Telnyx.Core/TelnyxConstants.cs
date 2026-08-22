@@ -173,6 +173,22 @@ public static class TelnyxConstants
     public const string SmsWebhookPath = "api/telnyx/webhook/sms";
 
     /// <summary>
+    /// The appsettings/configuration section that supplies the Telnyx SMS provider's default (config-driven)
+    /// credentials, mirroring OrchardCore's <c>OrchardCore_Sms_Twilio</c> convention.
+    /// </summary>
+    public const string SmsConfigurationSection = "OrchardCore_Sms_Telnyx";
+
+    /// <summary>
+    /// The data protector used to protect the Telnyx SMS API key stored in the UI settings.
+    /// </summary>
+    public const string SmsApiKeyProtectorName = "Telnyx.Sms.ApiKey";
+
+    /// <summary>
+    /// The data protector used to protect the Telnyx SMS webhook public key stored in the UI settings.
+    /// </summary>
+    public const string SmsWebhookProtectorName = "Telnyx.Sms.Webhook";
+
+    /// <summary>
     /// The relative path (against the v2 API base) of the Telnyx Messaging API used to send outbound messages.
     /// </summary>
     public const string MessagesPath = "messages";
