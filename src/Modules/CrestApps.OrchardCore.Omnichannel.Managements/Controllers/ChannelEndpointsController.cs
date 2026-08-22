@@ -13,6 +13,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using QueryContext = CrestApps.Core.Models.QueryContext;
@@ -23,6 +24,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 /// Provides endpoints for managing channel endpoints resources.
 /// </summary>
 [Admin]
+[Feature(OmnichannelConstants.Features.ChannelEndpoints)]
 public sealed class ChannelEndpointsController : Controller
 {
     private const string _optionsSearch = "Options.Search";

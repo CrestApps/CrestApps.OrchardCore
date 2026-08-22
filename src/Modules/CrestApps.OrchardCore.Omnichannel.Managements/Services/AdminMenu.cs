@@ -106,13 +106,6 @@ internal sealed class AdminMenu : AdminNavigationProvider
                         .Action("Index", "Dispositions", "CrestApps.OrchardCore.Omnichannel.Managements")
                         .Permission(OmnichannelConstants.Permissions.ManageDispositions)
                         .LocalNav())
-                    .Add(S["Channel Endpoints"], S["Channel Endpoints"].PrefixPosition(), endpoints => endpoints
-                        .AddClass("channel-endpoints")
-                        .Id("channelEndpoints")
-                        .Action("Index", "ChannelEndpoints", "CrestApps.OrchardCore.Omnichannel.Managements")
-                        .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
-                        .LocalNav()
-                    )
                 ),
                 priority: 1);
     }

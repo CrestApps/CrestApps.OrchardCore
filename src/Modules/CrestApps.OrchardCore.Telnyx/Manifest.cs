@@ -28,8 +28,8 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = TelnyxConstants.Feature.Sms,
     Name = "Telnyx SMS",
-    Description = "Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text messages through the SMS Communication Portal. Reuses the Telnyx account API key and webhook public key from the Telnyx provider settings.",
-    Category = "Telephony",
+    Description = "Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text messages through the SMS Communication Portal. Configured from the OrchardCore_Sms_Telnyx appsettings section or the Telnyx SMS settings on the SMS settings screen.",
+    Category = "Communication",
     Dependencies =
     [
         TelnyxConstants.Feature.Area,

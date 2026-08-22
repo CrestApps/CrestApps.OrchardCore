@@ -99,6 +99,8 @@ public static class OmnichannelConstants
 
         public const string Activities = "CrestApps.OrchardCore.Omnichannel.Activities";
 
+        public const string ChannelEndpoints = "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints";
+
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
 
     }
