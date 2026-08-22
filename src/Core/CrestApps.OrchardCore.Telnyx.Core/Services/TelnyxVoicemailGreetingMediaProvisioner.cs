@@ -14,9 +14,10 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 public sealed class TelnyxVoicemailGreetingMediaProvisioner : IVoicemailGreetingMediaProvisioner
 {
-    // Keep the greeting for the maximum Telnyx retention (20 years) so it is effectively permanent: a greeting is
-    // long-lived configuration, not a transient recording, and the default 2-day TTL would silently delete it.
-    private const string MaxTtlSeconds = "630720000";
+    // Keep the greeting effectively permanent: a greeting is long-lived configuration, not a transient recording,
+    // and the default 2-day TTL would silently delete it. Telnyx requires ttl_secs to be strictly less than
+    // 630720000 (20 years), so use one second under that ceiling.
+    private const string MaxTtlSeconds = "630719999";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TelnyxOptions _options;

@@ -69,7 +69,6 @@ public sealed class MyVoicemailGreetingController : Controller
 
         return View(new MyVoicemailGreetingViewModel
         {
-            GreetingText = agent.VoicemailGreetingText,
             HasAudioGreeting = !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaName) ||
                 !string.IsNullOrWhiteSpace(agent.VoicemailGreetingMediaUrl),
         });
@@ -135,26 +134,6 @@ public sealed class MyVoicemailGreetingController : Controller
         await _notifier.SuccessAsync(H["Your voicemail greeting was saved."]);
 
         return Ok();
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveText(string greetingText)
-    {
-        var agent = await GetCurrentAgentAsync();
-
-        if (agent is null)
-        {
-            return Forbid();
-        }
-
-        agent.VoicemailGreetingText = string.IsNullOrWhiteSpace(greetingText) ? null : greetingText.Trim();
-
-        await _agentProfileManager.UpdateAsync(agent);
-
-        await _notifier.SuccessAsync(H["Your spoken greeting was saved."]);
-
-        return RedirectToAction(nameof(Index));
     }
 
     [HttpPost]
