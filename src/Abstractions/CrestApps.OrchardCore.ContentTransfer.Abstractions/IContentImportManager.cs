@@ -30,4 +30,11 @@ public interface IContentImportManager
     /// </summary>
     /// <param name="context">The export context containing the content item and target data row.</param>
     Task ExportAsync(ContentExportContext context);
+
+    /// <summary>
+    /// Invokes all registered <see cref="IContentExportBatchHandler"/> once for an export page, before its
+    /// content items are mapped to rows, so handlers can pre-load per-page data in a single pass.
+    /// </summary>
+    /// <param name="context">The batch context containing the page's content items and the export entry.</param>
+    Task PrepareExportBatchAsync(ContentExportBatchContext context);
 }
