@@ -50,6 +50,7 @@ public class ContentImportManagerTests
             _partFactory.Object,
             _fieldFactory.Object,
             [],
+            [],
             _contentManager.Object,
             _logger.Object);
     }
@@ -86,6 +87,7 @@ public class ContentImportManagerTests
             _partFactory.Object,
             _fieldFactory.Object,
             [handler.Object],
+            [],
             _contentManager.Object,
             _logger.Object);
 
@@ -116,6 +118,7 @@ public class ContentImportManagerTests
             _partFactory.Object,
             _fieldFactory.Object,
             [handler.Object],
+            [],
             _contentManager.Object,
             _logger.Object);
 
@@ -150,6 +153,7 @@ public class ContentImportManagerTests
             _partFactory.Object,
             _fieldFactory.Object,
             [handler.Object],
+            [],
             _contentManager.Object,
             _logger.Object);
 

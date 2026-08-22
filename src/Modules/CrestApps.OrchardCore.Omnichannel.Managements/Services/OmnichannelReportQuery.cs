@@ -1,3 +1,4 @@
+using System.Data.SqlTypes;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -11,6 +12,41 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 /// </summary>
 internal static class OmnichannelReportQuery
 {
+    /// <summary>
+    /// The lowest UTC date value that can be safely round-tripped through every supported database
+    /// provider. SQL Server's <c>datetime</c> column rejects anything before 1753-01-01, so
+    /// unbounded lower bounds (for example <see cref="DateTime.MinValue"/>) must be clamped to this
+    /// value before they reach the query pipeline to avoid a <see cref="SqlTypeException"/>.
+    /// </summary>
+    public static readonly DateTime MinQueryableUtc = DateTime.SpecifyKind(SqlDateTime.MinValue.Value, DateTimeKind.Utc);
+
+    /// <summary>
+    /// The highest UTC date value that can be safely round-tripped through every supported database
+    /// provider.
+    /// </summary>
+    public static readonly DateTime MaxQueryableUtc = DateTime.SpecifyKind(SqlDateTime.MaxValue.Value, DateTimeKind.Utc);
+
+    /// <summary>
+    /// Clamps a UTC date-range bound into the range every supported database can store, so an unset or
+    /// out-of-range value never triggers a provider-level overflow when it reaches the query.
+    /// </summary>
+    /// <param name="value">The UTC bound to clamp.</param>
+    /// <returns>The bound clamped to <see cref="MinQueryableUtc"/>..<see cref="MaxQueryableUtc"/>.</returns>
+    public static DateTime ClampToQueryableRange(DateTime value)
+    {
+        if (value < MinQueryableUtc)
+        {
+            return MinQueryableUtc;
+        }
+
+        if (value > MaxQueryableUtc)
+        {
+            return MaxQueryableUtc;
+        }
+
+        return value;
+    }
+
     /// <summary>
     /// Lists the activities created within the inclusive UTC period.
     /// </summary>
@@ -27,6 +63,9 @@ internal static class OmnichannelReportQuery
         OmnichannelReportCriteria criteria,
         CancellationToken cancellationToken)
     {
+        fromUtc = ClampToQueryableRange(fromUtc);
+        toUtc = ClampToQueryableRange(toUtc);
+
         var activities = await session.QueryIndex<OmnichannelActivityIndex>(
             index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
             collection: OmnichannelConstants.CollectionName)
@@ -51,6 +90,9 @@ internal static class OmnichannelReportQuery
         OmnichannelReportCriteria criteria,
         CancellationToken cancellationToken)
     {
+        fromUtc = ClampToQueryableRange(fromUtc);
+        toUtc = ClampToQueryableRange(toUtc);
+
         var activities = await session.QueryIndex<OmnichannelActivityIndex>(
             index => index.Status == ActivityStatus.Completed && index.CompletedUtc >= fromUtc && index.CompletedUtc <= toUtc,
             collection: OmnichannelConstants.CollectionName)
