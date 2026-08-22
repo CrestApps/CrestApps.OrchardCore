@@ -1,9 +1,9 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services.Routers;
 using CrestApps.OrchardCore.Telephony.Sms.Models;
-using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 
@@ -12,16 +12,10 @@ public class NumberRouteRouterTests
     [Fact]
     public async Task AgentTarget_AssignsConversationToTheAgentPersonally()
     {
-        var route = new SmsNumberRoute
-        {
-            DialedNumber = "+15553334444",
-            TargetType = SmsNumberRouteTargetType.Agent,
-            TargetId = "agent-1",
-            Enabled = true,
-        };
+        var routing = new SmsEndpointRoutingSettings { TargetType = SmsNumberRouteTargetType.Agent, TargetId = "agent-1" };
+        var context = CreateContext(routing, isNew: true);
 
-        var context = CreateContext(isNew: true);
-        var handled = await CreateRouter(route).TryRouteAsync(context);
+        var handled = await new NumberRouteRouter().TryRouteAsync(context);
 
         Assert.True(handled);
         Assert.Equal(SmsConversationOwnerType.Personal, context.Conversation.OwnerType);
@@ -33,17 +27,15 @@ public class NumberRouteRouterTests
     [Fact]
     public async Task QueueTarget_PlacesConversationInTheQueueSharedPool()
     {
-        var route = new SmsNumberRoute
+        var routing = new SmsEndpointRoutingSettings
         {
-            DialedNumber = "+15553334444",
             TargetType = SmsNumberRouteTargetType.Queue,
             TargetId = "queue-1",
             DistributionMode = SmsNumberRouteDistributionMode.SharedPool,
-            Enabled = true,
         };
+        var context = CreateContext(routing, isNew: true);
 
-        var context = CreateContext(isNew: true);
-        var handled = await CreateRouter(route).TryRouteAsync(context);
+        var handled = await new NumberRouteRouter().TryRouteAsync(context);
 
         Assert.True(handled);
         Assert.Equal(SmsConversationOwnerType.Queue, context.Conversation.OwnerType);
@@ -53,10 +45,11 @@ public class NumberRouteRouterTests
     }
 
     [Fact]
-    public async Task NoRoute_ContinuesTheChain()
+    public async Task NoRoutingTarget_ContinuesTheChain()
     {
-        var context = CreateContext(isNew: true);
-        var handled = await CreateRouter(null).TryRouteAsync(context);
+        var context = CreateContext(routing: null, isNew: true);
+
+        var handled = await new NumberRouteRouter().TryRouteAsync(context);
 
         Assert.False(handled);
     }
@@ -64,29 +57,29 @@ public class NumberRouteRouterTests
     [Fact]
     public async Task ExistingConversation_IsIgnored()
     {
-        var route = new SmsNumberRoute { DialedNumber = "+15553334444", TargetType = SmsNumberRouteTargetType.Agent, TargetId = "agent-1" };
-        var context = CreateContext(isNew: false);
+        var routing = new SmsEndpointRoutingSettings { TargetType = SmsNumberRouteTargetType.Agent, TargetId = "agent-1" };
+        var context = CreateContext(routing, isNew: false);
 
-        var handled = await CreateRouter(route).TryRouteAsync(context);
+        var handled = await new NumberRouteRouter().TryRouteAsync(context);
 
         Assert.False(handled);
     }
 
-    private static NumberRouteRouter CreateRouter(SmsNumberRoute route)
+    private static SmsInboundRoutingContext CreateContext(SmsEndpointRoutingSettings routing, bool isNew)
     {
-        var manager = new Mock<ISmsNumberRouteManager>();
-        manager.Setup(m => m.FindByDialedNumberAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(route);
+        var endpoint = new OmnichannelChannelEndpoint { Channel = "SMS", Value = "+15553334444" };
 
-        return new NumberRouteRouter(manager.Object);
-    }
+        if (routing is not null)
+        {
+            endpoint.Put(routing);
+        }
 
-    private static SmsInboundRoutingContext CreateContext(bool isNew)
-        => new()
+        return new SmsInboundRoutingContext
         {
             Message = new OmnichannelMessage { ServiceAddress = "+15553334444", CustomerAddress = "+15551112222" },
-            Endpoint = new OmnichannelChannelEndpoint { Value = "+15553334444" },
+            Endpoint = endpoint,
             Conversation = new SmsConversation { ServiceAddress = "+15553334444", CustomerAddress = "+15551112222" },
             IsNewConversation = isNew,
         };
+    }
 }

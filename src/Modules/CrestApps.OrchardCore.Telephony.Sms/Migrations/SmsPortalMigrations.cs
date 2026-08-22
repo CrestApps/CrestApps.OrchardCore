@@ -48,30 +48,6 @@ internal sealed class SmsPortalMigrations : DataMigration
             collection: TelephonySmsStorage.CollectionName
         );
 
-        await SchemaBuilder.CreateMapIndexTableAsync<SmsNumberRouteIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("EndpointId", column => column.WithLength(26))
-            .Column<string>("DialedNumber", column => column.WithLength(TelephonySmsStorage.AddressLength))
-            .Column<string>("TargetType", column => column.WithLength(32))
-            .Column<string>("TargetId", column => column.WithLength(26))
-            .Column<bool>("Enabled"),
-            collection: TelephonySmsStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<SmsNumberRouteIndex>(table => table
-            .CreateIndex("IDX_SmsNumberRouteIndex_DialedNumber",
-                "DocumentId",
-                "DialedNumber",
-                "Enabled"),
-            collection: TelephonySmsStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<SmsNumberRouteIndex>(table => table
-            .CreateIndex("IDX_SmsNumberRouteIndex_Endpoint",
-                "DocumentId",
-                "EndpointId"),
-            collection: TelephonySmsStorage.CollectionName
-        );
 
         await CreateTemplateTableAsync();
         await CreateBroadcastTableAsync();

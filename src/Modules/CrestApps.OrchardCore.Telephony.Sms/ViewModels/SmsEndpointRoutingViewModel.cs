@@ -5,32 +5,17 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 namespace CrestApps.OrchardCore.Telephony.Sms.ViewModels;
 
 /// <summary>
-/// The edit view model for an <c>SmsNumberRoute</c>.
+/// The editor for the SMS routing attached to a channel endpoint.
 /// </summary>
-public class SmsNumberRouteViewModel
+public class SmsEndpointRoutingViewModel
 {
     /// <summary>
-    /// Gets or sets the route name.
-    /// </summary>
-    public string Name { get; set; }
-
-    /// <summary>
-    /// Gets or sets the description.
-    /// </summary>
-    public string Description { get; set; }
-
-    /// <summary>
-    /// Gets or sets the identifier of the bound SMS channel endpoint (DID).
-    /// </summary>
-    public string EndpointId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the target type (Agent or Queue).
+    /// Gets or sets what inbound messages route to: an agent or a queue.
     /// </summary>
     public SmsNumberRouteTargetType TargetType { get; set; }
 
     /// <summary>
-    /// Gets or sets the target identifier (agent profile id or queue id).
+    /// Gets or sets the target identifier (agent profile id or queue id). Empty means unassigned inbox.
     /// </summary>
     public string TargetId { get; set; }
 
@@ -43,17 +28,6 @@ public class SmsNumberRouteViewModel
     /// Gets or sets an optional auto-reply message.
     /// </summary>
     public string AutoReplyMessage { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the route is enabled.
-    /// </summary>
-    public bool Enabled { get; set; } = true;
-
-    /// <summary>
-    /// Gets or sets the selectable SMS channel endpoints (DIDs).
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> Endpoints { get; set; }
 
     /// <summary>
     /// Gets or sets the selectable target types.

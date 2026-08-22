@@ -3,6 +3,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Sms.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
@@ -42,12 +43,6 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<ISmsConversationStore, SmsConversationStore>()
             .AddScoped<ISmsConversationManager, SmsConversationManager>();
-
-        // Number-route catalog.
-        services
-            .AddScoped<ISmsNumberRouteStore, SmsNumberRouteStore>()
-            .AddScoped<ISmsNumberRouteManager, SmsNumberRouteManager>()
-            .AddScoped<ICatalogEntryHandler<SmsNumberRoute>, SmsNumberRouteHandler>();
 
         // Canned-response template catalog.
         services
@@ -91,7 +86,6 @@ public sealed class Startup : StartupBase
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TelephonySmsStorage.CollectionName));
 
         services.AddIndexProvider<SmsConversationIndexProvider>();
-        services.AddIndexProvider<SmsNumberRouteIndexProvider>();
         services.AddIndexProvider<SmsTemplateIndexProvider>();
         services.AddIndexProvider<SmsBroadcastIndexProvider>();
         services.AddDataMigration<SmsPortalMigrations>();
@@ -99,8 +93,8 @@ public sealed class Startup : StartupBase
         // Background fan-out for queued broadcasts.
         services.AddSingleton<IBackgroundTask, SmsBroadcastBackgroundTask>();
 
-        // Admin surfaces.
-        services.AddDisplayDriver<SmsNumberRoute, SmsNumberRouteDisplayDriver>();
+        // Admin surfaces. SMS routing is edited on the channel-endpoint screen (no separate routing catalog).
+        services.AddDisplayDriver<OmnichannelChannelEndpoint, SmsEndpointRoutingDisplayDriver>();
         services.AddDisplayDriver<SmsConversation, SmsConversationDisplayDriver>();
         services.AddDisplayDriver<SmsTemplate, SmsTemplateDisplayDriver>();
         services.AddNavigationProvider<SmsPortalAdminMenu>();

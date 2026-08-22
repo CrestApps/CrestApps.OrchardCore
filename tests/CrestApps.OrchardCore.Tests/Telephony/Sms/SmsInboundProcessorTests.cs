@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
@@ -19,8 +20,8 @@ public class SmsInboundProcessorTests
     [Fact]
     public async Task NewInbound_WithAgentRoute_CreatesAssignedConversation()
     {
-        var route = new SmsNumberRoute { DialedNumber = "+15553334444", TargetType = SmsNumberRouteTargetType.Agent, TargetId = "agent-3", Enabled = true };
-        var harness = new Harness(route: route);
+        var routing = new SmsEndpointRoutingSettings { TargetType = SmsNumberRouteTargetType.Agent, TargetId = "agent-3" };
+        var harness = new Harness(routing: routing);
 
         var message = harness.InboundMessage("Hi there");
         var conversation = await harness.Processor.ProcessAsync(message);
@@ -38,7 +39,7 @@ public class SmsInboundProcessorTests
     [Fact]
     public async Task NewInbound_WithNoRoute_LandsInUnassignedInbox()
     {
-        var harness = new Harness(route: null);
+        var harness = new Harness(routing: null);
 
         var conversation = await harness.Processor.ProcessAsync(harness.InboundMessage("hello"));
 
@@ -50,7 +51,7 @@ public class SmsInboundProcessorTests
     [Fact]
     public async Task NewInbound_WhileAutomatedActivityActive_YieldsToTheAiPath()
     {
-        var harness = new Harness(route: null)
+        var harness = new Harness(routing: null)
         {
             AutomatedActivity = new OmnichannelActivity { Status = ActivityStatus.AwaitingCustomerAnswer },
         };
@@ -64,7 +65,7 @@ public class SmsInboundProcessorTests
     [Fact]
     public async Task Inbound_OptOutKeyword_ClosesConversation()
     {
-        var harness = new Harness(route: null);
+        var harness = new Harness(routing: null);
 
         var conversation = await harness.Processor.ProcessAsync(harness.InboundMessage("STOP"));
 
@@ -87,7 +88,7 @@ public class SmsInboundProcessorTests
             UnreadCount = 2,
         };
 
-        var harness = new Harness(route: null, existing: existing);
+        var harness = new Harness(routing: null, existing: existing);
 
         var conversation = await harness.Processor.ProcessAsync(harness.InboundMessage("another"));
 
@@ -107,11 +108,18 @@ public class SmsInboundProcessorTests
 
         public SmsInboundProcessor Processor { get; }
 
-        public Harness(SmsNumberRoute route, SmsConversation existing = null)
+        public Harness(SmsEndpointRoutingSettings routing, SmsConversation existing = null)
         {
+            var endpoint = new OmnichannelChannelEndpoint { ItemId = "endpoint-1", Channel = "SMS", Value = "+15553334444" };
+
+            if (routing is not null)
+            {
+                endpoint.Put(routing);
+            }
+
             var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
             endpointManager.Setup(m => m.GetByServiceAddressAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new OmnichannelChannelEndpoint { ItemId = "endpoint-1", Channel = "SMS", Value = "+15553334444" });
+                .ReturnsAsync(endpoint);
 
             var activityStore = new Mock<IOmnichannelActivityStore>();
             activityStore.Setup(s => s.GetAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ActivityInteractionType>(), It.IsAny<CancellationToken>()))
@@ -130,14 +138,10 @@ public class SmsInboundProcessorTests
             contactResolver.Setup(r => r.ResolveContactContentItemIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(ValueTask.FromResult<string>(null));
 
-            var numberRouteManager = new Mock<ISmsNumberRouteManager>();
-            numberRouteManager.Setup(m => m.FindByDialedNumberAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(route);
-
             var routers = new ISmsInboundRouter[]
             {
                 new ExistingConversationRouter(),
-                new NumberRouteRouter(numberRouteManager.Object),
+                new NumberRouteRouter(),
                 new FallbackRouter(),
             };
 

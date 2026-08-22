@@ -1,0 +1,30 @@
+@model SmsEndpointRoutingViewModel
+
+<div class="mb-3">
+    <label class="form-label">@T["SMS inbound routing"]</label>
+    <span class="hint d-block mb-2">@T["Where inbound messages on this number go. Leave the target empty to send them to the unassigned inbox."]</span>
+
+    <div class="row g-2">
+        <div class="col-md-4">
+            <label asp-for="TargetType" class="form-label">@T["Routes to"]</label>
+            <select asp-for="TargetType" class="form-select" asp-items="Model.TargetTypes"></select>
+        </div>
+        <div class="col-md-8">
+            <label asp-for="TargetId" class="form-label">@T["Target"]</label>
+            <input asp-for="TargetId" class="form-control" />
+            <span class="hint">@T["For an agent target, the agent profile id; for a queue (department) target, the queue id."]</span>
+        </div>
+    </div>
+
+    <div class="row g-2 mt-1">
+        <div class="col-md-4">
+            <label asp-for="DistributionMode" class="form-label">@T["Queue distribution"]</label>
+            <select asp-for="DistributionMode" class="form-select" asp-items="Model.DistributionModes"></select>
+        </div>
+        <div class="col-md-8">
+            <label asp-for="AutoReplyMessage" class="form-label">@T["Auto-reply"]</label>
+            <input asp-for="AutoReplyMessage" class="form-control" />
+            <span class="hint">@T["Optional message sent to the customer on their first inbound message."]</span>
+        </div>
+    </div>
+</div>
