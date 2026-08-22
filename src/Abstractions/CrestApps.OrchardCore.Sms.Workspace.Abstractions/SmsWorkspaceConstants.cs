@@ -22,7 +22,7 @@ public static class SmsWorkspaceConstants
         /// The SMS Communication Portal feature: conversations, number routing, the inbox workspace, and the
         /// real-time messaging hub.
         /// </summary>
-        public const string Portal = "CrestApps.OrchardCore.Sms.Workspace";
+        public const string Workspace = "CrestApps.OrchardCore.Sms.Workspace";
     }
 
     /// <summary>

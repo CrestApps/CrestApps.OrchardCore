@@ -21,6 +21,7 @@ calls to agents server-side** (`ServerSideAcd`), which is what makes true power 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | **Telnyx** | `CrestApps.OrchardCore.Telnyx` | Provides the Telnyx telephony provider, the browser WebRTC soft phone, and signed call-event webhooks. Depends on Telephony. When Contact Center Voice is also enabled, the Telnyx contact center voice adapter (outbound contact center calls, bridging live calls to agents via `ServerSideAcd`, and their real-time call events) activates automatically — it is integration glue, not a separately selectable feature. |
+| **Telnyx SMS** | `CrestApps.OrchardCore.Telnyx.Sms` | Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text through the [SMS Workspace](../omnichannel/sms-workspace) or [SMS Automation](../omnichannel/sms). Category **Communication**. Depends on `OrchardCore.Sms`. See [Telnyx SMS](#telnyx-sms). |
 
 ## Dependencies
 
@@ -191,7 +192,58 @@ browser media adapter because Telnyx delivers this call's audio to the browser. 
 provider advertises dialer dialing, agent connect (bridge), call transfer, and — with the Call Recording
 feature — recording.
 
-:::note
-SMS/MMS is not part of this module. Telnyx supports messaging for US and Canadian numbers, but it is out of
-scope here and would be delivered as a separate messaging module.
-:::
+## Telnyx SMS
+
+The **Telnyx SMS** feature (`CrestApps.OrchardCore.Telnyx.Sms`) adds Telnyx as an Orchard Core **SMS
+provider**, so Telnyx numbers can send and receive text messages through the
+[SMS Workspace](../omnichannel/sms-workspace) (human two-way) and [SMS Automation](../omnichannel/sms)
+(AI-driven). It is categorized under **Communication**, not Telephony, and can be enabled independently of
+the Telnyx voice soft phone — it only depends on `OrchardCore.Sms`.
+
+It follows the same two-provider pattern as Orchard Core's built-in Twilio provider:
+
+- an **appsettings-driven** provider, enabled automatically when configured; and
+- a **UI-driven** provider, configured and validated from the SMS settings screen.
+
+Both resolve their live values through `IOptionsMonitor`, so a settings change takes effect without a
+manual restart.
+
+### Configuration from appsettings
+
+Configure the provider under the `OrchardCore_Sms_Telnyx` section (mirroring Orchard Core's
+`OrchardCore_Sms_Twilio` convention):
+
+```json
+{
+  "OrchardCore_Sms_Telnyx": {
+    "IsEnabled": true,
+    "ApiKey": "KEY0123...",
+    "MessagingProfileId": "40017...",
+    "WebhookPublicKey": "base64-ed25519-public-key"
+  }
+}
+```
+
+The provider is enabled only when it is configured with an API key.
+
+### Configuration from the UI
+
+Alternatively, go to **Settings → SMS** (`/Admin/Settings/sms`), open the **Telnyx** settings, tick
+**Enable**, and enter the API key, messaging profile id, and webhook public key. Secrets are protected at
+rest with the data-protection provider. Values entered in the UI take precedence over appsettings.
+
+Set the tenant **default provider** on the same SMS settings screen if Telnyx should be the default sender.
+
+### Webhook
+
+Point your Telnyx **messaging profile** webhook at:
+
+```
+https://<your-site>/api/telnyx/webhook/sms
+```
+
+The endpoint verifies the Telnyx **Ed25519** signature (using the configured webhook public key), then
+routes inbound `message.received` events onto the shared Omnichannel `SmsReceived` bus and applies
+`message.finalized` delivery receipts to the sent message. Requests are rejected when the provider is
+disabled, unsigned, or unverifiable.
+

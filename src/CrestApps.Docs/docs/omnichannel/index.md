@@ -24,7 +24,8 @@ The management experience layers a lightweight Customer Relationship Management 
 | Azure Communication Services integration | [Azure Communication Services](azure-communication-services) |
 | Event Grid integration | [Event Grid](event-grid) |
 | Management UI | [Management](management) |
-| SMS automation | [SMS](sms) |
+| SMS automation (AI) | [SMS](sms) |
+| SMS Workspace (human two-way) | [SMS Workspace](sms-workspace) |
 
 ## What the base module does
 

@@ -94,6 +94,7 @@ const sidebars = {
                 'omnichannel/event-grid',
                 'omnichannel/management',
                 'omnichannel/sms',
+                'omnichannel/sms-workspace',
             ],
         },
         {

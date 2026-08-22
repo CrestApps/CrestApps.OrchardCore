@@ -31,6 +31,18 @@ It provides the admin tools you need to manage **contacts**, define **subject-le
 
 ## Core concepts
 
+### Channel endpoint
+A **Channel endpoint** is an addressable point on a channel — most commonly an SMS or phone number — that the platform sends from and receives on. Each endpoint carries its channel, its normalized value (numbers are stored as international `+<country code><number>`), and its **provider**, and channel-specific settings can be attached to it (for example the [SMS Workspace](sms-workspace) stores its inbound routing on the SMS endpoint).
+
+Channel endpoints are administered under **Interaction Center → Channel Endpoints**. This administration is provided by a small **dependency-only** feature:
+
+| | |
+| --- | --- |
+| **Feature Name** | Omnichannel Channel Endpoints |
+| **Feature ID** | `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` |
+
+The feature is `EnabledByDependencyOnly` — you do not enable it directly. It depends only on the headless **Omnichannel Activities** feature, so a module that just needs channel endpoints (such as the SMS Workspace) can depend on it and reuse the endpoint administration and services **without** pulling in the full Omnichannel Management CRM screens. Enabling **Omnichannel Management** enables it automatically, so the channel-endpoint screens appear exactly as before.
+
 ### Contact
 A **Contact** is any content item that has `OmnichannelContactPart` attached.
 

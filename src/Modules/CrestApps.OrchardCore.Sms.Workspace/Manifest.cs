@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Sms.Workspace;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
-    Name = "SMS Communication Portal",
+    Name = "SMS Workspace",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
     Version = CrestAppsManifestConstants.Version,
@@ -14,15 +14,14 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = SmsWorkspaceConstants.Feature.Portal,
-    Name = "SMS Communication Portal",
-    Description = "Adds the human two-way SMS inbox and conversation workspace: channel-endpoint routing to agents/queues, the per-number provider dispatcher, two-way send/receive over the shared Omnichannel message store, and real-time messaging notifications. Reuses the channel-neutral Contact Center features (Agents, Work Distribution, Real-Time) without requiring Contact Center Voice, and the Omnichannel channel endpoints without the full Omnichannel management screens.",
+    Id = SmsWorkspaceConstants.Feature.Workspace,
+    Name = "SMS Workspace",
+    Description = "Adds the human two-way SMS inbox and conversation workspace: channel-endpoint routing to agents/queues, the per-number provider dispatcher, two-way send/receive over the shared Omnichannel message store, and its own SignalR hub for real-time messaging. Reuses Contact Center agents and work distribution for operator identity and queue membership (without Voice or the Contact Center real-time hub) and the Omnichannel channel endpoints (without the full Omnichannel management screens).",
     Category = "Communication",
     Dependencies =
     [
         OmnichannelConstants.Features.ChannelEndpoints,
         ContactCenterConstants.Feature.Queues,
-        ContactCenterConstants.Feature.RealTime,
         "OrchardCore.Sms",
         "OrchardCore.SignalR",
     ]
