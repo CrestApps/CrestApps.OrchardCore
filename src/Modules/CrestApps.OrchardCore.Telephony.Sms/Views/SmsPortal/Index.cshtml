@@ -1,6 +1,6 @@
 @model SmsInboxViewModel
 
-<zone Name="Title"><h1>@RenderTitleSegments(ViewData["Title"] as string ?? T["SMS Inbox"].Value)</h1></zone>
+<zone Name="Title"><h1>@RenderTitleSegments(T["SMS Conversations"])</h1></zone>
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">

@@ -91,7 +91,13 @@ public sealed class SmsPortalController : Controller
             return Forbid();
         }
 
-        var conversations = await GetVisibleConversationsAsync();
+        // Supervisors (ViewAllConversations) see every conversation; everyone else sees the conversations
+        // assigned to them or owned by a queue they belong to.
+        var canViewAll = await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.ViewAllConversations);
+
+        var conversations = canViewAll
+            ? await _conversationStore.GetAllAsync()
+            : await GetVisibleConversationsAsync();
 
         var viewModel = new SmsInboxViewModel();
 
@@ -102,6 +108,11 @@ public sealed class SmsPortalController : Controller
                 Conversation = conversation,
                 Shape = await _displayManager.BuildDisplayAsync(conversation, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
             });
+        }
+
+        if (canViewAll)
+        {
+            ViewData["Subtitle"] = S["Every conversation across the tenant."].Value;
         }
 
         return View(viewModel);
@@ -236,35 +247,54 @@ public sealed class SmsPortalController : Controller
             return Json(Array.Empty<SmsCustomerSearchResult>());
         }
 
-        // Match contacts by name (display text, which carries first + last name) and by phone number.
-        var byName = (await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.DisplayText.Contains(q))
-                .Take(20)
-                .ListAsync())
-            .Where(item => item.As<OmnichannelContactPart>() is not null)
-            .Select(item => item.ContentItemId);
+        var term = q.Trim();
+        var digits = new string(term.Where(char.IsDigit).ToArray());
 
-        var byPhone = (await _session.QueryIndex<OmnichannelContactIndex>(index => index.Latest &&
-                (index.PrimaryCellPhoneNumber.Contains(q) || index.NormalizedPrimaryCellPhoneNumber.Contains(q) ||
-                 index.PrimaryHomePhoneNumber.Contains(q) || index.NormalizedPrimaryHomePhoneNumber.Contains(q)))
-                .Take(20)
-                .ListAsync())
-            .Select(index => index.ContentItemId);
+        // Restrict to contacts by joining the contact index (a content item is a contact iff it has an
+        // OmnichannelContactIndex record), and match by display name and/or phone number.
+        var hits = new List<ContentItem>();
 
-        var ids = byName.Concat(byPhone)
-            .Where(id => !string.IsNullOrEmpty(id))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        // Name matches: the contact's display text (the tenant's title, e.g. first + last name).
+        hits.AddRange(await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.DisplayText.Contains(term))
+            .With<OmnichannelContactIndex>()
+            .Take(20)
+            .ListAsync());
+
+        // Phone matches: normalized (E.164) and national digits both contain the typed digits.
+        if (digits.Length >= 3)
+        {
+            hits.AddRange(await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest)
+                .With<OmnichannelContactIndex>(index =>
+                    index.NormalizedPrimaryCellPhoneNumber.Contains(digits) || index.PrimaryCellPhoneNumber.Contains(digits) ||
+                    index.NormalizedPrimaryHomePhoneNumber.Contains(digits) || index.PrimaryHomePhoneNumber.Contains(digits))
+                .Take(20)
+                .ListAsync());
+        }
+
+        var items = hits
+            .GroupBy(item => item.ContentItemId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
             .Take(20)
             .ToArray();
 
-        var phones = (await _session.QueryIndex<OmnichannelContactIndex>(index => index.Latest && index.ContentItemId.IsIn(ids)).ListAsync())
-            .GroupBy(index => index.ContentItemId)
-            .ToDictionary(group => group.Key, group => group.First().NormalizedPrimaryCellPhoneNumber ?? group.First().PrimaryCellPhoneNumber, StringComparer.OrdinalIgnoreCase);
+        var ids = items.Select(item => item.ContentItemId).ToArray();
 
-        var results = (await _contentManager.GetAsync(ids))
+        var phones = (await _session.QueryIndex<OmnichannelContactIndex>(index => index.ContentItemId.IsIn(ids)).ListAsync())
+            .GroupBy(index => index.ContentItemId, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var record = group.FirstOrDefault(r => !string.IsNullOrEmpty(r.NormalizedPrimaryCellPhoneNumber) || !string.IsNullOrEmpty(r.PrimaryCellPhoneNumber) || !string.IsNullOrEmpty(r.NormalizedPrimaryHomePhoneNumber) || !string.IsNullOrEmpty(r.PrimaryHomePhoneNumber)) ?? group.First();
+                    return record.NormalizedPrimaryCellPhoneNumber ?? record.PrimaryCellPhoneNumber ?? record.NormalizedPrimaryHomePhoneNumber ?? record.PrimaryHomePhoneNumber;
+                },
+                StringComparer.OrdinalIgnoreCase);
+
+        var results = items
             .Select(item => new SmsCustomerSearchResult
             {
                 Id = item.ContentItemId,
-                Name = item.DisplayText,
+                Name = string.IsNullOrEmpty(item.DisplayText) ? phones.GetValueOrDefault(item.ContentItemId) : item.DisplayText,
                 Phone = phones.GetValueOrDefault(item.ContentItemId),
             })
             .Where(result => !string.IsNullOrEmpty(result.Phone))
@@ -311,31 +341,6 @@ public sealed class SmsPortalController : Controller
             Templates = (await _templateManager.GetEnabledAsync()).ToArray(),
             ContactDisplayText = contactDisplayText,
         });
-    }
-
-    [Admin("sms/portal/all", "SmsPortalAll")]
-    public async Task<IActionResult> All()
-    {
-        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.ViewAllConversations))
-        {
-            return Forbid();
-        }
-
-        var viewModel = new SmsInboxViewModel();
-
-        foreach (var conversation in (await _conversationStore.GetAllAsync()).OrderByDescending(c => c.LastMessageUtc))
-        {
-            viewModel.Rows.Add(new SmsInboxRow
-            {
-                Conversation = conversation,
-                Shape = await _displayManager.BuildDisplayAsync(conversation, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
-            });
-        }
-
-        ViewData["Title"] = S["All SMS conversations"].Value;
-        ViewData["Subtitle"] = S["Every conversation across the tenant (supervisor view)."].Value;
-
-        return View(nameof(Index), viewModel);
     }
 
     [HttpPost]
