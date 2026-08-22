@@ -82,9 +82,12 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
                 // response so the actual reason is visible.
                 if (response.StatusCode == HttpStatusCode.NotFound)
                 {
-                    _logger.LogDebug(
-                        "Voicemail record_start for call {CallControlId} was not accepted (404); the caller likely hung up before leaving a message.",
-                        callControlId.SanitizeLogValue());
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug(
+                            "Voicemail record_start for call {CallControlId} was not accepted (404); the caller likely hung up before leaving a message.",
+                            callControlId.SanitizeLogValue());
+                    }
                 }
                 else
                 {
