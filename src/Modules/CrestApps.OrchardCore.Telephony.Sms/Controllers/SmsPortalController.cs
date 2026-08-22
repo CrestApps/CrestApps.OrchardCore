@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -16,10 +17,13 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.Telephony.Sms.Controllers;
 
@@ -29,11 +33,15 @@ namespace CrestApps.OrchardCore.Telephony.Sms.Controllers;
 [Admin]
 public sealed class SmsPortalController : Controller
 {
+    private static readonly char[] _recipientSeparators = ['\n', '\r', ',', ';'];
+
     private readonly ISmsConversationStore _conversationStore;
     private readonly ISmsConversationService _conversationService;
+    private readonly ISmsBroadcastManager _broadcastManager;
     private readonly ISmsTemplateManager _templateManager;
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<SmsConversation> _displayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
@@ -46,9 +54,11 @@ public sealed class SmsPortalController : Controller
     public SmsPortalController(
         ISmsConversationStore conversationStore,
         ISmsConversationService conversationService,
+        ISmsBroadcastManager broadcastManager,
         ISmsTemplateManager templateManager,
         IOmnichannelChannelEndpointManager endpointManager,
         IAgentProfileManager agentProfileManager,
+        IContentManager contentManager,
         IAuthorizationService authorizationService,
         IDisplayManager<SmsConversation> displayManager,
         IUpdateModelAccessor updateModelAccessor,
@@ -59,9 +69,11 @@ public sealed class SmsPortalController : Controller
     {
         _conversationStore = conversationStore;
         _conversationService = conversationService;
+        _broadcastManager = broadcastManager;
         _templateManager = templateManager;
         _endpointManager = endpointManager;
         _agentProfileManager = agentProfileManager;
+        _contentManager = contentManager;
         _authorizationService = authorizationService;
         _displayManager = displayManager;
         _updateModelAccessor = updateModelAccessor;
@@ -117,20 +129,26 @@ public sealed class SmsPortalController : Controller
         }
 
         var endpoint = string.IsNullOrEmpty(model.EndpointId) ? null : await _endpointManager.FindByIdAsync(model.EndpointId);
+        var recipients = ParseRecipients(model.Recipients);
 
         if (endpoint is null)
         {
             ModelState.AddModelError(nameof(model.EndpointId), S["A sending number is required."]);
         }
 
-        if (string.IsNullOrWhiteSpace(model.To))
+        if (recipients.Count == 0)
         {
-            ModelState.AddModelError(nameof(model.To), S["A recipient is required."]);
+            ModelState.AddModelError(nameof(model.Recipients), S["At least one recipient is required."]);
         }
 
         if (string.IsNullOrWhiteSpace(model.Body))
         {
             ModelState.AddModelError(nameof(model.Body), S["A message is required."]);
+        }
+
+        if (recipients.Count > 1 && !await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.SendGroupSms))
+        {
+            ModelState.AddModelError(nameof(model.Recipients), S["You are not allowed to send to more than one recipient."]);
         }
 
         if (!ModelState.IsValid)
@@ -142,17 +160,73 @@ public sealed class SmsPortalController : Controller
 
         var agent = await GetCurrentAgentAsync();
 
-        var result = await _conversationService.SendDirectAsync(endpoint.Value, model.To.Trim(), model.Body.Trim(), agent?.ItemId);
-
-        if (!result.Succeeded)
+        // A single recipient starts a 1:1 conversation; multiple recipients fan out as a broadcast (each gets
+        // their own private 1:1 thread).
+        if (recipients.Count == 1)
         {
-            await _notifier.WarningAsync(H["The message could not be sent: {0}", result.Error]);
-            model.Endpoints = await BuildEndpointOptionsAsync();
+            var result = await _conversationService.SendDirectAsync(endpoint.Value, recipients[0], model.Body.Trim(), agent?.ItemId);
 
-            return View(model);
+            if (!result.Succeeded)
+            {
+                await _notifier.WarningAsync(H["The message could not be sent: {0}", result.Error]);
+                model.Endpoints = await BuildEndpointOptionsAsync();
+
+                return View(model);
+            }
+
+            return RedirectToAction(nameof(Conversation), new { id = result.Message.ConversationId });
         }
 
-        return RedirectToAction(nameof(Conversation), new { id = result.Message.ConversationId });
+        var broadcast = await _broadcastManager.NewAsync();
+        broadcast.ItemId = UniqueId.GenerateId();
+        broadcast.Name = S["Group message to {0} recipients", recipients.Count].Value;
+        broadcast.FromNumber = endpoint.Value;
+        broadcast.Body = model.Body.Trim();
+        broadcast.Recipients = recipients;
+        broadcast.OwnerAgentId = agent?.ItemId;
+        broadcast.Status = SmsBroadcastStatus.Queued;
+
+        await _broadcastManager.CreateAsync(broadcast);
+        await _notifier.SuccessAsync(H["Queued a group message to {0} recipients as individual 1:1 threads.", recipients.Count]);
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    [Admin("sms/portal/search-customers", "SmsPortalSearchCustomers")]
+    public async Task<IActionResult> SearchCustomers(string q)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.UseSmsPortal))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
+        {
+            return Json(Array.Empty<SmsCustomerSearchResult>());
+        }
+
+        var items = await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.DisplayText.Contains(q))
+            .Take(20)
+            .ListAsync();
+
+        var contacts = items.Where(item => item.As<OmnichannelContactPart>() is not null).ToArray();
+        var ids = contacts.Select(item => item.ContentItemId).ToArray();
+
+        var phones = (await _session.QueryIndex<OmnichannelContactIndex>(index => index.Latest && index.ContentItemId.IsIn(ids)).ListAsync())
+            .GroupBy(index => index.ContentItemId)
+            .ToDictionary(group => group.Key, group => group.First().NormalizedPrimaryCellPhoneNumber ?? group.First().PrimaryCellPhoneNumber);
+
+        var results = contacts
+            .Select(item => new SmsCustomerSearchResult
+            {
+                Id = item.ContentItemId,
+                Name = item.DisplayText,
+                Phone = phones.GetValueOrDefault(item.ContentItemId),
+            })
+            .Where(result => !string.IsNullOrEmpty(result.Phone))
+            .ToArray();
+
+        return Json(results);
     }
 
     [Admin("sms/portal/conversation/{id}", "SmsPortalConversation")]
@@ -178,11 +252,20 @@ public sealed class SmsPortalController : Controller
             await _conversationStore.UpdateAsync(conversation);
         }
 
+        string contactDisplayText = null;
+
+        if (!string.IsNullOrEmpty(conversation.ContactContentItemId))
+        {
+            var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+            contactDisplayText = contact?.DisplayText;
+        }
+
         return View(new SmsThreadViewModel
         {
             Conversation = conversation,
             Messages = await GetMessagesAsync(id),
             Templates = (await _templateManager.GetEnabledAsync()).ToArray(),
+            ContactDisplayText = contactDisplayText,
         });
     }
 
@@ -305,6 +388,19 @@ public sealed class SmsPortalController : Controller
         }
 
         return RedirectToAction(nameof(Conversation), new { id });
+    }
+
+    private static List<string> ParseRecipients(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        return text
+            .Split(_recipientSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private async Task<IEnumerable<SelectListItem>> BuildEndpointOptionsAsync()

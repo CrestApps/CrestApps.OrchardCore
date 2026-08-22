@@ -14,17 +14,6 @@ public static class TelephonySmsConstants
     public const string Channel = "SMS";
 
     /// <summary>
-    /// Settings constants for the SMS portal.
-    /// </summary>
-    public static class Settings
-    {
-        /// <summary>
-        /// The site-settings group id the SMS portal settings render on.
-        /// </summary>
-        public const string GroupId = "SmsPortal";
-    }
-
-    /// <summary>
     /// Feature identifiers for the SMS portal module set.
     /// </summary>
     public static class Feature

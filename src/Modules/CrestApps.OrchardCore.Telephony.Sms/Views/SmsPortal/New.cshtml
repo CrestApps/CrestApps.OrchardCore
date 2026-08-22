@@ -14,9 +14,17 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="To" class="form-label">@T["To"]</label>
-        <input asp-for="To" class="form-control" placeholder="@T["Recipient number (E.164)"]" />
-        <span asp-validation-for="To" class="text-danger"></span>
+        <label class="form-label">@T["Find a customer"]</label>
+        <input type="text" id="customer-search" class="form-control" placeholder="@T["Search customers by name…"]" autocomplete="off" />
+        <div id="customer-results" class="list-group mt-1" style="max-height: 12rem; overflow-y: auto;"></div>
+        <span class="hint">@T["Pick customers to add their number below; the conversation links to the customer automatically."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Recipients" class="form-label">@T["Recipients"]</label>
+        <textarea asp-for="Recipients" id="recipients" class="form-control" rows="3" placeholder="@T["One number per line (E.164), or comma-separated"]"></textarea>
+        <span class="hint">@T["One recipient starts a 1:1 conversation; multiple recipients start a group (each gets their own private 1:1 thread)."]</span>
+        <span asp-validation-for="Recipients" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
@@ -32,3 +40,44 @@
         </div>
     </div>
 </form>
+
+<script at="Foot">
+    (function () {
+        var search = document.getElementById('customer-search');
+        var results = document.getElementById('customer-results');
+        var recipients = document.getElementById('recipients');
+        if (!search || !results || !recipients) { return; }
+
+        var url = '@Url.Action("SearchCustomers")';
+        var timer = null;
+
+        function addNumber(phone) {
+            var current = recipients.value.split(/[\n,;]+/).map(function (s) { return s.trim(); }).filter(Boolean);
+            if (current.indexOf(phone) === -1) {
+                current.push(phone);
+                recipients.value = current.join('\n');
+            }
+        }
+
+        search.addEventListener('input', function () {
+            var q = this.value.trim();
+            clearTimeout(timer);
+            if (q.length < 2) { results.innerHTML = ''; return; }
+            timer = setTimeout(function () {
+                fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.json(); })
+                    .then(function (items) {
+                        results.innerHTML = '';
+                        items.forEach(function (item) {
+                            var a = document.createElement('a');
+                            a.href = 'javascript:void(0)';
+                            a.className = 'list-group-item list-group-item-action';
+                            a.textContent = item.name + ' — ' + item.phone;
+                            a.addEventListener('click', function () { addNumber(item.phone); results.innerHTML = ''; search.value = ''; });
+                            results.appendChild(a);
+                        });
+                    });
+            }, 250);
+        });
+    })();
+</script>

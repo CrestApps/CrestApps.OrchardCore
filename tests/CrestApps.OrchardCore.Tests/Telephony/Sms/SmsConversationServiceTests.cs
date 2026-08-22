@@ -156,10 +156,15 @@ public class SmsConversationServiceTests
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
 
+        var contactResolver = new Mock<ISmsContactResolver>();
+        contactResolver.Setup(r => r.ResolveContactContentItemIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.FromResult<string>(null));
+
         var service = new SmsConversationService(
             store.Object,
             dispatcher.Object,
             contentManager.Object,
+            contactResolver.Object,
             notifier.Object,
             session.Object,
             clock.Object,

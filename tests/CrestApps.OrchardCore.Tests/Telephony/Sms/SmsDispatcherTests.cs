@@ -17,7 +17,6 @@ public class SmsDispatcherTests
     {
         var dispatcher = CreateDispatcher(
             endpointProvider: "Telnyx",
-            portalDefault: "Twilio",
             smsDefault: "AzureCommunicationServices");
 
         var resolved = await dispatcher.ResolveProviderNameAsync("+15553334444");
@@ -26,24 +25,10 @@ public class SmsDispatcherTests
     }
 
     [Fact]
-    public async Task ResolveProviderName_FallsBackToPortalDefault_WhenNumberHasNoProvider()
+    public async Task ResolveProviderName_FallsBackToTenantSmsDefault_WhenNumberHasNoProvider()
     {
         var dispatcher = CreateDispatcher(
             endpointProvider: null,
-            portalDefault: "Twilio",
-            smsDefault: "AzureCommunicationServices");
-
-        var resolved = await dispatcher.ResolveProviderNameAsync("+15553334444");
-
-        Assert.Equal("Twilio", resolved);
-    }
-
-    [Fact]
-    public async Task ResolveProviderName_FallsBackToTenantSmsDefault_WhenNoPin()
-    {
-        var dispatcher = CreateDispatcher(
-            endpointProvider: null,
-            portalDefault: null,
             smsDefault: "AzureCommunicationServices");
 
         var resolved = await dispatcher.ResolveProviderNameAsync("+15553334444");
@@ -60,7 +45,6 @@ public class SmsDispatcherTests
 
         var dispatcher = CreateDispatcher(
             endpointProvider: "Telnyx",
-            portalDefault: null,
             smsDefault: null,
             resolver: name => name == "Telnyx" ? provider.Object : null);
 
@@ -73,7 +57,7 @@ public class SmsDispatcherTests
     [Fact]
     public async Task SendAsync_Fails_WhenNoProviderResolves()
     {
-        var dispatcher = CreateDispatcher(endpointProvider: null, portalDefault: null, smsDefault: null);
+        var dispatcher = CreateDispatcher(endpointProvider: null, smsDefault: null);
 
         var result = await dispatcher.SendAsync(new SmsMessage { From = "+15553334444", To = "+15551112222", Body = "hi" });
 
@@ -82,7 +66,6 @@ public class SmsDispatcherTests
 
     private static SmsDispatcher CreateDispatcher(
         string endpointProvider,
-        string portalDefault,
         string smsDefault,
         Func<string, ISmsProvider> resolver = null)
     {
@@ -95,7 +78,6 @@ public class SmsDispatcherTests
             .ReturnsAsync((string name) => resolver?.Invoke(name));
 
         var site = new Mock<ISite>();
-        site.Setup(s => s.GetOrCreate<SmsPortalSettings>()).Returns(new SmsPortalSettings { DefaultProviderName = portalDefault });
         site.Setup(s => s.GetOrCreate<SmsSettings>()).Returns(new SmsSettings { DefaultProviderName = smsDefault });
 
         var siteService = new Mock<ISiteService>();

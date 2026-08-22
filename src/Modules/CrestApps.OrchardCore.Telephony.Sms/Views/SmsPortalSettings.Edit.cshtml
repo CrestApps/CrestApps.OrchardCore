@@ -1,7 +1,0 @@
-@model CrestApps.OrchardCore.Telephony.Sms.ViewModels.SmsPortalSettingsViewModel
-
-<div class="mb-3">
-    <label asp-for="DefaultProviderName" class="form-label">@T["Default SMS provider"]</label>
-    <input asp-for="DefaultProviderName" class="form-control" />
-    <span class="hint">@T["The technical name of the provider used when a number does not pin one (for example \"Twilio\" or \"Telnyx\"). Leave empty to use the built-in tenant-default SMS provider."]</span>
-</div>

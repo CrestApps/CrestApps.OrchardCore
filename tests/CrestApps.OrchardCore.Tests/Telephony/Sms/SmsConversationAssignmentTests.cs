@@ -92,6 +92,7 @@ public class SmsConversationAssignmentTests
             store.Object,
             new Mock<ISmsDispatcher>().Object,
             new Mock<IContentManager>().Object,
+            new Mock<ISmsContactResolver>().Object,
             notifier.Object,
             new Mock<ISession>().Object,
             clock.Object,

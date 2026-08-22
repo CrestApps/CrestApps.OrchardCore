@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -85,13 +84,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
             }
         }
 
-        var portalSettings = await _siteService.GetSettingsAsync<SmsPortalSettings>();
-
-        if (!string.IsNullOrEmpty(portalSettings.DefaultProviderName))
-        {
-            return portalSettings.DefaultProviderName;
-        }
-
+        // Fall back to OrchardCore's tenant-default SMS provider (Configuration -> Settings -> SMS).
         var smsSettings = await _siteService.GetSettingsAsync<SmsSettings>();
 
         return smsSettings.DefaultProviderName;

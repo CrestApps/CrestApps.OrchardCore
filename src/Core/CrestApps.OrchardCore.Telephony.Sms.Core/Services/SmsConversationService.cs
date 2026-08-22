@@ -28,6 +28,7 @@ public sealed class SmsConversationService : ISmsConversationService
     private readonly ISmsConversationStore _conversationStore;
     private readonly ISmsDispatcher _dispatcher;
     private readonly IContentManager _contentManager;
+    private readonly ISmsContactResolver _contactResolver;
     private readonly ISmsRealTimeNotifier _notifier;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -41,6 +42,7 @@ public sealed class SmsConversationService : ISmsConversationService
         ISmsConversationStore conversationStore,
         ISmsDispatcher dispatcher,
         IContentManager contentManager,
+        ISmsContactResolver contactResolver,
         ISmsRealTimeNotifier notifier,
         ISession session,
         IClock clock,
@@ -50,6 +52,7 @@ public sealed class SmsConversationService : ISmsConversationService
         _conversationStore = conversationStore;
         _dispatcher = dispatcher;
         _contentManager = contentManager;
+        _contactResolver = contactResolver;
         _notifier = notifier;
         _session = session;
         _clock = clock;
@@ -182,6 +185,7 @@ public sealed class SmsConversationService : ISmsConversationService
                     ? SmsConversationAssignmentStatus.Unassigned
                     : SmsConversationAssignmentStatus.Assigned,
                 CreatedUtc = _clock.UtcNow,
+                ContactContentItemId = await _contactResolver.ResolveContactContentItemIdAsync(customerAddress, cancellationToken),
             };
         }
 

@@ -2,8 +2,17 @@
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["SMS broadcasts"])</h1></zone>
 
-<div class="mb-3">
-    <a class="btn btn-primary" asp-route-action="Create">@T["New broadcast"]</a>
+<div class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-1">
+            <div class="col">
+                <span class="text-muted">@T["Send one message to many recipients as individual 1:1 threads."]</span>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-secondary create" role="button" asp-route-action="Create">@T["New broadcast"]</a>
+            </div>
+        </div>
+    </div>
 </div>
 
 @if (Model.Broadcasts.Count == 0)

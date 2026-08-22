@@ -79,8 +79,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISmsInboundProcessor>(sp => sp.GetRequiredService<SmsInboundProcessor>());
         services.AddScoped<IOmnichannelEventHandler>(sp => sp.GetRequiredService<SmsInboundProcessor>());
 
-        // Pluggable contact resolution (a phone-match resolver can override the no-op default).
-        services.TryAddScoped<ISmsContactResolver, NullSmsContactResolver>();
+        // Resolve the CRM contact for a customer number so conversations link to the customer.
+        services.AddScoped<ISmsContactResolver, SmsContactResolver>();
 
         // Real-time messaging notifications over the SMS portal SignalR hub.
         services.AddScoped<ISmsRealTimeNotifier, SmsRealTimeNotifier>();
@@ -103,9 +103,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<SmsNumberRoute, SmsNumberRouteDisplayDriver>();
         services.AddDisplayDriver<SmsConversation, SmsConversationDisplayDriver>();
         services.AddDisplayDriver<SmsTemplate, SmsTemplateDisplayDriver>();
-        services.AddSiteDisplayDriver<SmsPortalSettingsDisplayDriver>();
         services.AddNavigationProvider<SmsPortalAdminMenu>();
-        services.AddNavigationProvider<SmsPortalSettingsAdminMenu>();
 
         // Permissions.
         services.AddPermissionProvider<TelephonySmsPermissionProvider>();

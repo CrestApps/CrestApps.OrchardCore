@@ -17,9 +17,10 @@ public class SmsComposeViewModel
     public string EndpointId { get; set; }
 
     /// <summary>
-    /// Gets or sets the recipient number (E.164).
+    /// Gets or sets the recipient numbers (E.164), one per line or comma-separated. A single recipient starts a
+    /// 1:1 conversation; multiple recipients start a broadcast (individual 1:1 threads).
     /// </summary>
-    public string To { get; set; }
+    public string Recipients { get; set; }
 
     /// <summary>
     /// Gets or sets the message body.
@@ -31,6 +32,27 @@ public class SmsComposeViewModel
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> Endpoints { get; set; }
+}
+
+/// <summary>
+/// A customer search result for the compose picker.
+/// </summary>
+public class SmsCustomerSearchResult
+{
+    /// <summary>
+    /// Gets or sets the contact content item id.
+    /// </summary>
+    public string Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact display name.
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact's primary phone number (E.164).
+    /// </summary>
+    public string Phone { get; set; }
 }
 
 /// <summary>
@@ -85,4 +107,9 @@ public class SmsThreadViewModel
     /// Gets or sets the enabled canned-response templates offered in the composer.
     /// </summary>
     public IReadOnlyList<SmsTemplate> Templates { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the display name of the linked customer, when the conversation resolves to a contact.
+    /// </summary>
+    public string ContactDisplayText { get; set; }
 }
