@@ -1,0 +1,78 @@
+@using CrestApps.OrchardCore.Subscriptions.Core
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+
+@model ShapeViewModel<SubscriptionFlowPaymentMethod>
+
+<div id="pay-later-errors" role="alert" class="alert alert-danger d-none mb-3"></div>
+
+<div class="d-flex flex-column gap-2">
+    <div class="fw-semibold">@T["Pay later"]</div>
+    <div class="text-body-secondary">@T["Finish the signup now and record the balance for offline payment or later settlement."]</div>
+</div>
+
+<script asp-name="subscription-payment-methods"></script>
+<script at="Foot" depends-on="subscription-payment-methods">
+    document.addEventListener('DOMContentLoaded', () => {
+        const payButtonElement = document.getElementById('Subscription_Next_Button');
+        const errorElement = document.getElementById('pay-later-errors');
+        const showError = (message) => {
+            errorElement.textContent = message;
+            errorElement.classList.remove('d-none');
+        };
+        const clearError = () => {
+            errorElement.textContent = '';
+            errorElement.classList.add('d-none');
+        };
+
+        payButtonElement.addEventListener('click', (e) => {
+
+            if (payButtonElement.getAttribute('data-method-name') != '@SubscriptionConstants.PayLaterProcessorKey') {
+                return;
+            }
+            e.preventDefault();
+
+            clearError();
+            enablePayButtonButton(payButtonElement, false);
+            fetch('@Url.RouteUrl(SubscriptionConstants.RouteName.CreatePayLaterEndpoint)', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sessionId: '@(Model.Value.Flow.Session.SessionId)'
+                }),
+            }).then(async (response) => {
+                // Always try to read the JSON body, even on error responses, so the real reason
+                // returned by the server can be shown instead of a generic message.
+                let data = null;
+
+                try {
+                    data = await response.json();
+                } catch {
+                    data = null;
+                }
+
+                if (!response.ok || !data || data.status !== 'completed') {
+                    enablePayButtonButton(payButtonElement, true);
+
+                    const message = (data && (data.ErrorMessage || data.errorMessage || data.error))
+                        || '@T["Unexpected error. Please try again."]';
+
+                    showError(message);
+
+                    return;
+                }
+
+                const form = document.getElementById('subscription-form');
+                form.requestSubmit();
+            })
+                .catch(() => {
+                    // Always re-enable the button on failure; otherwise it stays stuck on "Processing...".
+                    enablePayButtonButton(payButtonElement, true);
+
+                    showError('@T["Unexpected error. Please try again."]');
+                });
+        });
+
+    });
+</script>

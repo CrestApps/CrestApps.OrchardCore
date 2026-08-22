@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Wizard.Workflows.ViewModels
+
+@model WizardEventViewModel
+
+<div class="mb-3">
+    <label asp-for="WizardType" class="form-label">@T["Wizard type"]</label>
+    <input asp-for="WizardType" class="form-control" />
+    <span class="hint">@T["Optionally limit this event to a specific wizard type. Leave empty to match any wizard."]</span>
+</div>

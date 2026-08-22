@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName.Replace(" ", "_").Replace(".Abstractions",""))</RootNamespace>
+    <Title>CrestApps OrchardCore Transactions Abstractions</Title>
+    <Description>
+      $(OCCMSDescription)
+
+      Provider-agnostic abstractions for the CrestApps OrchardCore Transactions module. Contains the
+      transaction ledger model, status, store, manager, and reminder service contracts used to track,
+      report, and settle financial obligations created by any payment provider (Pay Later, subscriptions,
+      one-time purchases, and others).
+    </Description>
+    <PackageTags>$(PackageTags) CrestApps OrchardCoreCMS Transactions Commerce Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Customers.Abstractions\CrestApps.OrchardCore.Customers.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,240 @@
+stripePaymentProcessing = function () {
+
+    const initialize = (options) => {
+
+        const defaultOptions = {
+            processorKey: 'Stripe',
+            cardElement: '#card-element',
+            genericErrorMessage: 'An unexpected error occurred while processing your payment. Please try again.'
+        };
+
+        const config = { ...defaultOptions, ...options };
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const errorElement = document.getElementById('card-errors');
+            const showError = (message) => {
+                if (!errorElement) {
+                    return;
+                }
+                errorElement.textContent = message;
+                errorElement.classList.remove('d-none');
+            };
+            const clearError = () => {
+                if (!errorElement) {
+                    return;
+                }
+                errorElement.textContent = '';
+                errorElement.classList.add('d-none');
+            };
+
+            // Central failure handler. Every error path must funnel through here so the pay button is
+            // always re-enabled; otherwise the button stays stuck on "Processing..." and the customer
+            // can never retry.
+            const fail = (message) => {
+                showError(message || config.genericErrorMessage);
+                config.enablePayButtonButton(true);
+            };
+            const getFilteredStyleObject = (element) => {
+                if (!element) {
+                    return {};
+                }
+                const computedStyle = window.getComputedStyle(element);
+                const styleObject = {};
+                const propertiesToInclude = [
+                    'margin',
+                    'padding',
+                    'color',
+                    'font-family',
+                    'font-size',
+                    'line-height',
+                    'border-width',
+                    'border-style',
+                    'border-color'
+                ];
+
+                propertiesToInclude.forEach(property => {
+                    styleObject[property] = computedStyle.getPropertyValue(property);
+                });
+
+                return styleObject;
+            };
+            const applyStylesToStripeCard = (styles) => {
+                return {
+                    base: {
+                        color: styles.color || 'black',
+                        fontSize: styles['font-size'] || '16px',
+                        fontFamily: styles['font-family'] || 'Arial, sans-serif',
+                        lineHeight: styles['line-height'] || '1.4'
+                    },
+                };
+            };
+            const stripe = Stripe(config.publishableKey);
+            const elements = stripe.elements();
+
+            const filteredStyleObject = getFilteredStyleObject(config.nameOnBankCardElement);
+            const cardStyles = applyStylesToStripeCard(filteredStyleObject);
+
+            const cardElement = elements.create('card', {
+                style: cardStyles
+            });
+            cardElement.mount(config.cardElement);
+            cardElement.on('change', function (event) {
+                clearError();
+                config.enablePayButtonButton(true);
+
+                if (event.error) {
+                    showError(event.error.message);
+                }
+            });
+
+            config.payButtonElement.addEventListener('click', function (event) {
+
+                if (config.payButtonElement.getAttribute('data-method-name') !== config.processorKey) {
+                    return;
+                }
+
+                event.preventDefault();
+
+                if (config.nameOnBankCardElement && !config.nameOnBankCardElement.value) {
+                    showError(config.invalidNameErrorMessage);
+                    return;
+                }
+
+                clearError();
+                config.enablePayButtonButton(false);
+
+                processPayment().catch((error) => {
+                    fail(error && error.message ? error.message : config.genericErrorMessage);
+                });
+            });
+
+            const processPayment = async () => {
+                const paymentMethodResult = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: cardElement,
+                    billing_details: {
+                        name: config.nameOnBankCardElement ? (config.nameOnBankCardElement.value || '') : '',
+                    },
+                });
+
+                if (paymentMethodResult.error) {
+                    fail(paymentMethodResult.error.message);
+                    return;
+                }
+
+                const setupResponse = await fetch(config.stepIntentEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        paymentMethodId: paymentMethodResult.paymentMethod.id,
+                        sessionId: config.sessionId
+                    }),
+                });
+
+                if (!setupResponse.ok) {
+                    fail(config.genericErrorMessage);
+                    return;
+                }
+
+                const data = await setupResponse.json();
+
+                if (data.error) {
+                    fail(data.error);
+                    return;
+                }
+
+                const setupResult = await stripe.confirmCardSetup(data.clientSecret);
+
+                if (setupResult.error) {
+                    fail(setupResult.error.message);
+                    return;
+                }
+
+                const paymentMethodId = setupResult.setupIntent.payment_method;
+
+                if (data.processInitialPayment) {
+                    const paymentResponse = await fetch(config.paymentIntentEndpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            customerId: data.customerId,
+                            paymentMethodId: paymentMethodId,
+                            sessionId: config.sessionId,
+                        }),
+                    });
+
+                    if (!paymentResponse.ok) {
+                        fail(config.genericErrorMessage);
+                        return;
+                    }
+
+                    const paymentData = await paymentResponse.json();
+
+                    if (paymentData.error) {
+                        fail(paymentData.error);
+                        return;
+                    }
+
+                    const paymentResult = await stripe.confirmCardPayment(paymentData.clientSecret);
+
+                    if (paymentResult.error) {
+                        fail(paymentResult.error.message);
+                        return;
+                    }
+                }
+
+                await createSubscriptions(data.customerId, paymentMethodId);
+            };
+
+            const createSubscriptions = async (customerId, paymentMethodId) => {
+                const response = await fetch(config.subscriptionEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        customerId: customerId,
+                        paymentMethodId: paymentMethodId,
+                        sessionId: config.sessionId,
+                    }),
+                });
+
+                if (!response.ok) {
+                    fail(config.genericErrorMessage);
+                    return;
+                }
+
+                const subscriptionDataArray = await response.json();
+
+                if (subscriptionDataArray.error) {
+                    fail(subscriptionDataArray.error);
+                    return;
+                }
+
+                for (const subscriptionData of subscriptionDataArray) {
+                    if (subscriptionData.status === 'requires_action') {
+                        const result = await stripe.confirmCardPayment(subscriptionData.clientSecret);
+                        if (result.error) {
+                            fail(result.error.message);
+                            return;
+                        }
+                    }
+                }
+
+                // Dispatch the form submit event after all subscriptions are processed. The button
+                // intentionally remains in its processing state here because the page is about to
+                // navigate to the confirmation step.
+                config.formElement.submit();
+            };
+        });
+    };
+
+    return {
+        initialize: initialize
+    };
+}();

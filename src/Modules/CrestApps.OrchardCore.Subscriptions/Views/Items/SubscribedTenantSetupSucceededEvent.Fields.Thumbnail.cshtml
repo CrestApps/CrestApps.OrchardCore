@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SubscribedTenantSetupSucceededEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    @T["Subscribed Tenant Setup Succeeded"]
+</h4>
+<p class="text-muted">@T["Triggered after a tenant provisioned through a subscription has been set up successfully."]</p>

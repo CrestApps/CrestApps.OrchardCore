@@ -1,0 +1,44 @@
+@model TaxCategoryViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" />
+        }
+        else
+        {
+            <input value="@Model.Name" class="form-control" readonly />
+            <input asp-for="Name" type="hidden" />
+            <span class="hint">@T["The name is fixed after creation."]</span>
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Code" class="ocat-label">@T["Code"]</label>
+    <div class="ocat-end">
+        <input asp-for="Code" class="form-control" />
+        <span class="hint">@T["The unique code of the category, for example Electronics or Television."]</span>
+        <span asp-validation-for="Code" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ParentCode" class="ocat-label">@T["Parent code"]</label>
+    <div class="ocat-end">
+        <input asp-for="ParentCode" class="form-control" />
+        <span class="hint">@T["The code of the parent category, forming a hierarchy. Leave empty for a top-level category."]</span>
+        <span asp-validation-for="ParentCode" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>

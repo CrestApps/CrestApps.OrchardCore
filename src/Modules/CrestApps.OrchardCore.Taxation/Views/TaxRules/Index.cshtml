@@ -1,0 +1,91 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using OrchardCore.DisplayManagement
+@model ListSourceModelViewModel<TaxCalculationMethodEntry, CatalogEntryViewModel<TaxRule>>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Tax Rules"])</h1></zone>
+
+@* The post form provides the antiforgery token used by the delete action. *@
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-secondary create" role="button" data-bs-toggle="modal" data-bs-target="#modalAddTaxRule">@T["Add Tax Rule"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="list-group">
+        @if (Model.Models.Count > 0)
+        {
+            foreach (var entry in Model.Models)
+            {
+                <li class="list-group-item item" data-filter-value="@entry.Model.Name?.ToLowerInvariant()">
+                    <div class="flex-grow-1">
+                        @await DisplayAsync(entry.Shape)
+                    </div>
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item list-group-item-info text-center">
+                @T["<strong>Nothing here!</strong> There are no tax rules at the moment."]
+            </li>
+        }
+    </ul>
+</form>
+
+@await DisplayAsync(Model.Pager)
+
+<!-- Modal -->
+<div class="modal fade" id="modalAddTaxRule" tabindex="-1" role="dialog" aria-labelledby="available-calculation-methods-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="available-calculation-methods-title">@T["Select a calculation method"]</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (!(Model.Sources?.Any() ?? false))
+                {
+                    <p class="p-3 mb-2 bg-warning text-white">@T["No calculation methods are available at the moment."]</p>
+                }
+                else
+                {
+                    <div class="row row-cols-1 row-cols-md-2 g-2">
+                        @foreach (var method in Model.Sources)
+                        {
+                            <div class="col">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h4>@method.DisplayName</h4>
+                                        <p class="hint">@method.Description</p>
+                                    </div>
+
+                                    <div class="card-footer text-muted text-sm-end">
+                                        <a class="btn btn-primary btn-sm"
+                                           asp-action="Create"
+                                           asp-route-source="@method.Name">@T["Add"]</a>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+            </div>
+        </div>
+    </div>
+</div>

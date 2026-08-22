@@ -17,15 +17,20 @@ CrestApps provides a set of standard modules that enhance core Orchard Core CMS 
 | [Content Fields](content-fields) | `CrestApps.OrchardCore.ContentFields` | Custom Orchard Core content field editors |
 | [Content Transfer](content-transfer) | `CrestApps.OrchardCore.ContentTransfer` | Bulk Excel import and export for content items |
 | [DNC Registry](dnc-registry) | `CrestApps.OrchardCore.DncRegistry` | National do-not-call registry integrations and import compliance settings |
+| [Checkout](checkout) | `CrestApps.OrchardCore.Checkout` | Provider-agnostic checkout and payment framework with a durable, distributed-safe payment ledger |
+| [Payments](payments) | `CrestApps.OrchardCore.Stripe` | Provider-agnostic payment framework with a hardened Stripe provider |
 | [Phone Number Verifications](phone-number-verifications) | `CrestApps.OrchardCore.PhoneNumbers.Verifications` | Provider-agnostic phone number verification with content-part storage, reporting, and background revalidation |
 | [Phone Number Verifications - AbstractAPI](phone-number-verifications-abstractapi) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.AbstractApi` | AbstractAPI provider for phone number verification |
 | [Phone Number Verifications - Veriphone](phone-number-verifications-veriphone) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Veriphone` | Veriphone provider for phone number verification |
 | [Phone Number Verifications - Twilio](phone-number-verifications-twilio) | `CrestApps.OrchardCore.PhoneNumbers.Verifications.Twilio` | Twilio Lookup provider for phone number verification |
+| [Products](products) | `CrestApps.OrchardCore.Products` | Attach product pricing and type metadata to any content type |
 | [Recipes](recipes) | `CrestApps.OrchardCore.Recipes` | JSON-Schema support for Orchard Core recipes |
 | [Reports](reports) | `CrestApps.OrchardCore.Reports` | Reusable reporting framework with a shared admin Reports area, extensible filters, and exports |
 | [Resources](resources) | `CrestApps.OrchardCore.Resources` | Shared scripts and stylesheets |
 | [Roles](roles) | `CrestApps.OrchardCore.Roles` | Enhanced role management with RolePickerPart |
 | [SignalR compatibility](signalr) | `CrestApps.OrchardCore.SignalR` | Deprecated compatibility feature for the Orchard Core SignalR module |
+| [Subscriptions](subscriptions) | `CrestApps.OrchardCore.Subscriptions` | Sell recurring subscriptions and onboard tenants with a pluggable, hardened checkout |
+| [Taxation](taxation) | `CrestApps.OrchardCore.Taxation` | Provider-agnostic, extensible taxation framework with the TaxationPart |
 | [Time Zones](time-zones) | `CrestApps.OrchardCore.TimeZones` | Friendly named time zone maps and grouped time zone selection |
 | [Users](users) | `CrestApps.OrchardCore.Users` | Enhanced user management with display names and avatars |
 

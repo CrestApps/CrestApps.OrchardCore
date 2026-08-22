@@ -1,0 +1,77 @@
+@using CrestApps.OrchardCore.Payments.Models
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@using Microsoft.Extensions.Options
+@using CrestApps.OrchardCore.Payments
+
+@model SubscriptionsMetadata
+
+@inject IOptions<PaymentMethodOptions> MethodOptions
+
+@foreach (var subscription in Model.Subscriptions)
+{
+    <div class="mb-3">
+        <h4>@T["Subscription Info"]</h4>
+        <dl class="row mb-0">
+            <dt class="col-3 col-md-2">@T["Started At"]</dt>
+            <dd class="col-9 col-md-10">@subscription.StartedAt.ToString("g")</dd>
+
+            <dt class="col-3 col-md-2">@T["Expires At"]</dt>
+            <dd class="col-9 col-md-10">@(subscription.ExpiresAt.HasValue ? subscription.ExpiresAt.Value.ToString("g") : T["Never"])</dd>
+
+            <dt class="col-3 col-md-2">@T["Customer Id"]</dt>
+            <dd class="col-9 col-md-10">@subscription.GatewayCustomerId</dd>
+        </dl>
+    </div>
+
+    <div class="mb-3">
+        <h4>@T["Gateway"]</h4>
+        <dl class="row mb-0">
+            <dt class="col-3 col-md-2">@T["Name"]</dt>
+
+            @if (MethodOptions.Value.PaymentMethods.TryGetValue(subscription.Gateway, out var method))
+            {
+                <dd class="col-9 col-md-10">@method.Title</dd>
+            }
+            else
+            {
+                <dd class="col-9 col-md-10">@subscription.Gateway</dd>
+            }
+
+            <dt class="col-3 col-md-2">@T["Environment"]</dt>
+            <dd class="col-9 col-md-10">@(subscription.GatewayMode == GatewayMode.Live ? T["Live"] : T["Testing"])</dd>
+
+            <dt class="col-3 col-md-2">@T["Subscription Id"]</dt>
+            <dd class="col-9 col-md-10">@subscription.SubscriptionId</dd>
+
+            <dt class="col-3 col-md-2">@T["Customer Id"]</dt>
+            <dd class="col-9 col-md-10">@subscription.GatewayCustomerId</dd>
+        </dl>
+    </div>
+
+    @if (subscription.PaymentMethod?.Card != null)
+    {
+        <div class="mb-3">
+
+            <h4>@T["Payment Method"]</h4>
+            <dl class="row mb-0">
+
+                <dt class="col-3 col-md-2">@T["Card Brand"]</dt>
+                <dd class="col-9 col-md-10">@(subscription.PaymentMethod.Card.Brand)</dd>
+
+                <dt class="col-3 col-md-2">@T["Card Issuer"]</dt>
+                <dd class="col-9 col-md-10">@(subscription.PaymentMethod.Card.Issuer)</dd>
+
+                <dt class="col-3 col-md-2">@T["Card Country"]</dt>
+                <dd class="col-9 col-md-10">@(subscription.PaymentMethod.Card.Country)</dd>
+
+                <dt class="col-3 col-md-2">@T["Last Four"]</dt>
+                <dd class="col-9 col-md-10">@(subscription.PaymentMethod.Card.LastFour)</dd>
+
+                <dt class="col-3 col-md-2">@T["Expiration"]</dt>
+                <dd class="col-9 col-md-10">@(subscription.PaymentMethod.Card.ExpirationMonth)/@(subscription.PaymentMethod.Card.ExpirationYear)</dd>
+
+            </dl>
+        </div>
+    }
+}

@@ -6,8 +6,7 @@ using OrchardCore.Modules.Manifest;
     Name = "Users Core Components",
     Author = CrestAppsManifestConstants.Author,
     Website = CrestAppsManifestConstants.Website,
-    Version = CrestAppsManifestConstants.Version,
-    Category = "Users"
+    Version = CrestAppsManifestConstants.Version
 )]
 
 [assembly: Feature(

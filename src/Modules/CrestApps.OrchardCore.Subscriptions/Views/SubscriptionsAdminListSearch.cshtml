@@ -1,0 +1,15 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+
+@model ListSubscriptionOptions
+
+<input asp-for="OriginalSearchText" type="hidden" />
+<label asp-for="SearchText" class="visually-hidden">@T["Search"]</label>
+<div class="input-group">
+    <div class="has-search flex-grow-1">
+        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+        <input id="search-box" asp-for="SearchText" class="form-control rounded-end-0" placeholder="@T["Search"]" inputmode="search" type="search" autocomplete="off" autofocus />
+    </div>
+    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+        <i class="fa-solid fa-search me-1" aria-hidden="true"></i>@T["Go"]
+    </button>
+</div>

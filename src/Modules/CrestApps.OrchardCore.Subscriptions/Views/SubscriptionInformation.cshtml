@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+
+@model ShapeViewModel<SubscriptionFlow>
+
+@{
+    var step = Model.Value.GetCurrentStep();
+}
+
+<h5 class="card-title">@step.Title</h5>
+
+@if (!string.IsNullOrEmpty(step.Description))
+{
+    <h6 class="card-subtitle mb-2 text-body-secondary">@step.Description</h6>
+}

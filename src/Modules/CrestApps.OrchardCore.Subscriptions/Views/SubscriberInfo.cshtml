@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriberInfoViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-3 col-md-2">@T["Name"]</dt>
+            <dd class="col-9 col-md-10">@Model.DisplayName</dd>
+
+            <dt class="col-3 col-md-2">@T["Username"]</dt>
+            <dd class="col-9 col-md-10">@Model.UserName</dd>
+
+            <dt class="col-3 col-md-2">@T["Email"]</dt>
+            <dd class="col-9 col-md-10">@Model.Email</dd>
+        </dl>
+    </div>
+</div>

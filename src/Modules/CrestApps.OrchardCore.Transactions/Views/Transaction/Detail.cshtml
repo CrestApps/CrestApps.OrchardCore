@@ -1,0 +1,76 @@
+@using CrestApps.OrchardCore.Transactions.Models
+@model TransactionDetailViewModel
+
+@{
+    var transaction = Model.Transaction;
+    var canPay = transaction.OutstandingAmount > 0m && transaction.Status != TransactionStatus.Canceled;
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(string.IsNullOrEmpty(transaction.Title) ? T["Transaction"].Value : transaction.Title)</h1></zone>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>@T["Details"]</span>
+        <partial name="_TransactionStatusBadge" model="transaction.Status" />
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4">@T["Total"]</dt>
+            <dd class="col-sm-8">@transaction.Currency @transaction.TotalAmount.ToString("0.00")</dd>
+
+            <dt class="col-sm-4">@T["Paid"]</dt>
+            <dd class="col-sm-8">@transaction.Currency @transaction.AmountPaid.ToString("0.00")</dd>
+
+            <dt class="col-sm-4">@T["Outstanding"]</dt>
+            <dd class="col-sm-8"><strong>@transaction.Currency @transaction.OutstandingAmount.ToString("0.00")</strong></dd>
+
+            <dt class="col-sm-4">@T["Created"]</dt>
+            <dd class="col-sm-8">@transaction.CreatedUtc.ToString("g")</dd>
+
+            @if (transaction.DueUtc.HasValue)
+            {
+                <dt class="col-sm-4">@T["Due"]</dt>
+                <dd class="col-sm-8">@transaction.DueUtc.Value.ToString("d")</dd>
+            }
+        </dl>
+    </div>
+    @if (canPay)
+    {
+        <div class="card-footer">
+            <form asp-action="Pay" method="post">
+                <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                <button type="submit" class="btn btn-success">@T["Pay now"]</button>
+            </form>
+        </div>
+    }
+</div>
+
+<div class="card">
+    <div class="card-header">@T["History"]</div>
+    <ul class="list-group list-group-flush">
+        @{
+            var visibleEvents = transaction.Events
+                .Where(x => x.Type != TransactionEventType.Note)
+                .OrderByDescending(x => x.CreatedUtc)
+                .ToList();
+        }
+        @if (visibleEvents.Count > 0)
+        {
+            @foreach (var evt in visibleEvents)
+            {
+                <li class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <span>@evt.Message</span>
+                        <span class="text-muted small">@evt.CreatedUtc.ToString("g")</span>
+                    </div>
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item text-muted">@T["No history yet."]</li>
+        }
+    </ul>
+</div>
+
+<a class="btn btn-link" asp-action="Index">@T["Back to my transactions"]</a>

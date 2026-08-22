@@ -1,0 +1,33 @@
+using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using YesSql.Indexes;
+
+namespace CrestApps.OrchardCore.Subscriptions.Indexes;
+
+/// <summary>
+/// Maps subscription session documents to index rows used for session lookup and filtering.
+/// </summary>
+public sealed class SubscriptionSessionIndexProvider : IndexProvider<SubscriptionSession>
+{
+    /// <summary>
+    /// Describes how subscription sessions are projected into <see cref="SubscriptionSessionIndex"/> rows.
+    /// </summary>
+    /// <param name="context">The YesSql describe context for subscription sessions.</param>
+    public override void Describe(DescribeContext<SubscriptionSession> context)
+    {
+        context.For<SubscriptionSessionIndex>()
+            .Map(session =>
+            {
+                return new SubscriptionSessionIndex()
+                {
+                    SessionId = session.SessionId,
+                    CompletedUtc = session.CompletedUtc,
+                    ModifiedUtc = session.ModifiedUtc,
+                    CreatedUtc = session.CreatedUtc,
+                    Status = session.Status,
+                    OwnerId = session.OwnerId,
+                    ContentItemId = session.ContentItemId,
+                    ContentItemVersionId = session.ContentItemVersionId,
+                };
+            });
+    }
+}

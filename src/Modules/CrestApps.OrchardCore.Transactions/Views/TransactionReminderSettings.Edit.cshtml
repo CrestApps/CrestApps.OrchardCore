@@ -1,0 +1,39 @@
+@model TransactionReminderSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enable scheduled reminders"]</label>
+            <span class="hint">@T["When enabled, a background sweep sends reminders for outstanding transactions on the cadence configured below."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="FirstReminderDelayDays">
+    <label asp-for="FirstReminderDelayDays" class="ocat-label">@T["First reminder delay (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="FirstReminderDelayDays" type="number" min="0" class="form-control" />
+        <span asp-validation-for="FirstReminderDelayDays"></span>
+        <span class="hint">@T["The number of days to wait after a transaction becomes due before the first reminder is sent. Use 0 to send as soon as it is due."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ReminderIntervalDays">
+    <label asp-for="ReminderIntervalDays" class="ocat-label">@T["Reminder interval (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReminderIntervalDays" type="number" min="1" class="form-control" />
+        <span asp-validation-for="ReminderIntervalDays"></span>
+        <span class="hint">@T["The number of days to wait between reminders for the same transaction."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxReminders">
+    <label asp-for="MaxReminders" class="ocat-label">@T["Maximum reminders"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxReminders" type="number" min="0" class="form-control" />
+        <span asp-validation-for="MaxReminders"></span>
+        <span class="hint">@T["The maximum number of reminders to send for a single transaction. Use 0 for no limit."]</span>
+    </div>
+</div>

@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Receipts.Models
+@model ReceiptDocument
+
+<style>
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .receipt-print-area,
+        .receipt-print-area * {
+            visibility: visible;
+        }
+
+        .receipt-print-area {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+
+<div class="mb-3 no-print">
+    <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print receipt"]</button>
+    <a class="btn btn-secondary" asp-controller="Dashboard" asp-action="Index">@T["Back"]</a>
+</div>
+
+<div class="receipt-print-area">
+    <partial name="~/Areas/CrestApps.OrchardCore.Receipts/Views/ReceiptDocument.cshtml" model="Model" />
+</div>

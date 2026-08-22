@@ -1,0 +1,72 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model ListSubscriptionsViewModel
+
+<!-- Hidden submit button do not remove -->
+<input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+<input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+@if (Model.Header?.Search != null || Model.Header?.ActionBarButtons != null)
+{
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3 gy-2 align-items-center">
+                @if (Model.Header?.Search != null)
+                {
+                    <div class="col">
+                        @await DisplayAsync(Model.Header.Search)
+                    </div>
+                }
+
+                @if (Model.Header?.ActionBarButtons != null)
+                {
+                    <div class="col-auto">
+                        @await DisplayAsync(Model.Header.ActionBarButtons)
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<div class="list-group with-checkbox">
+    @if (Model.Header?.Summary != null || Model.Header?.Actions != null)
+    {
+        <div class="list-group-item text-bg-theme ignore-elements">
+            <div class="row gx-3 align-items-center">
+                @if (Model.Header?.Summary != null)
+                {
+                    <div class="col">
+                        @await DisplayAsync(Model.Header.Summary)
+                    </div>
+                }
+                @if (Model.Header?.Actions != null)
+                {
+                    <div class="col col-md-auto text-end">
+                        @await DisplayAsync(Model.Header.Actions)
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (Model.Subscriptions != null && Model.Subscriptions.Any())
+    {
+        foreach (var subscription in Model.Subscriptions)
+        {
+            @await DisplayAsync(subscription)
+        }
+    }
+    else
+    {
+        <div class="list-group-item list-group-item-info text-center ignore-elements">
+            @T["<strong>Nothing here!</strong> There are no subscriptions to display."]
+        </div>
+    }
+</div>
+
+@await DisplayAsync(Model.Pager)
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" at="Foot"></script>
+<script asp-name="list-management-ui" at="Foot"></script>

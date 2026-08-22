@@ -1,0 +1,76 @@
+@using CrestApps.OrchardCore.Subscriptions
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+
+@model ShapeViewModel<SubscriptionFlow>
+
+@{
+    var steps = Model.Value.GetSortedSteps();
+    var currentStep = Model.Value.GetCurrentStep();
+    var isPending = Model.Value.Session.Status == SubscriptionSessionStatus.Pending;
+}
+
+<nav aria-label="@T["Sign up progress"]" class="subscription-stepper my-4">
+    <ol class="list-unstyled d-flex justify-content-between align-items-start mb-0">
+        @for (var i = 0; i < steps.Length; i++)
+        {
+            var step = steps[i];
+            var isCurrent = step == currentStep;
+            var isCompleted = !isCurrent && Model.Value.Session.SavedSteps.ContainsKey(step.Key);
+            var isEditable = isPending && (isCompleted || isCurrent);
+
+            var stateClass = isCompleted ? "step-done" : isCurrent ? "step-current" : "step-upcoming";
+            var circleClass = isCompleted ? "text-bg-success" : isCurrent ? "text-bg-warning" : "bg-body-secondary text-body-secondary border";
+            var labelClass = isCompleted ? "text-success" : isCurrent ? "text-warning-emphasis fw-semibold" : "text-body-secondary";
+
+            <li class="step-item @stateClass position-relative d-flex flex-column align-items-center flex-fill text-center">
+                @if (isEditable)
+                {
+                    <a class="step-link text-decoration-none @labelClass" asp-route="SubscriptionSignupStep" asp-route-sessionId="@Model.Value.Session.SessionId" asp-route-step="@step.Key" aria-current="@(isCurrent ? "step" : null)">
+                        <span class="step-circle @circleClass rounded-circle d-inline-flex align-items-center justify-content-center fw-semibold">
+                            @if (isCompleted)
+                            {
+                                <i class="fa-solid fa-check" aria-hidden="true"></i>
+                            }
+                            else
+                            {
+                                @(i + 1)
+                            }
+                        </span>
+                        <span class="d-block small mt-2">@step.Title</span>
+                    </a>
+                }
+                else
+                {
+                    <span class="step-circle @circleClass rounded-circle d-inline-flex align-items-center justify-content-center fw-semibold">
+                        @(i + 1)
+                    </span>
+                    <span class="d-block small mt-2 @labelClass">@step.Title</span>
+                }
+            </li>
+        }
+    </ol>
+</nav>
+
+<style at="Head">
+    .subscription-stepper .step-circle {
+        width: 2.5rem;
+        height: 2.5rem;
+        position: relative;
+        z-index: 1;
+    }
+
+    .subscription-stepper .step-item:not(:first-child)::before {
+        content: "";
+        position: absolute;
+        top: 1.25rem;
+        right: 50%;
+        width: 100%;
+        height: 2px;
+        background-color: var(--bs-border-color);
+    }
+
+    .subscription-stepper .step-item.step-done::before,
+    .subscription-stepper .step-item.step-current::before {
+        background-color: var(--bs-success);
+    }
+</style>

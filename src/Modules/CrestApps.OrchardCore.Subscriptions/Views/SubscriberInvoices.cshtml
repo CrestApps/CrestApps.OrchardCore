@@ -1,0 +1,59 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriberInvoicesViewModel
+
+<div class="card text-bg-theme mb-3">
+    <div class="card-header">
+        @T["Payments"]
+    </div>
+    <div class="card-body">
+        @if (Model.Invoices == null || Model.Invoices.Count == 0)
+        {
+            <p class="mb-0">@T["No subscriptions at the moment."]</p>
+        }
+        else
+        {
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Amount"]</th>
+                        <th scope="col">@T["Date"]</th>
+                        <th scope="col">@T["Service Plan"]</th>
+                        <th scope="col">@T["Status"]</th>
+                        <th scope="col" class="text-end">@T["Receipt"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var invoice in Model.Invoices)
+                    {
+                        <tr>
+                            <td scope="col">@invoice.Amount.ToString("C")</td>
+                            <td scope="col">@invoice.Date.ToString("g")</td>
+                            <td scope="col">@invoice.ServicePlanTitle</td>
+                            <td scope="col">@invoice.Status</td>
+                            <td scope="col" class="text-end">
+                                @if (!string.IsNullOrEmpty(invoice.SessionId) && !string.IsNullOrEmpty(invoice.TransactionId))
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       asp-controller="Dashboard"
+                                       asp-action="Receipt"
+                                       asp-route-sessionId="@invoice.SessionId"
+                                       asp-route-transactionId="@invoice.TransactionId"
+                                       target="_blank">
+                                        @T["Print"]
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+    @if (Model.Pager != null)
+    {
+        <div class="card-footer">
+            @await DisplayAsync(Model.Pager)
+        </div>
+    }
+</div>

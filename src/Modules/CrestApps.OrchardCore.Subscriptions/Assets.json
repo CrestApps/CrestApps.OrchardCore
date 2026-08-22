@@ -1,0 +1,14 @@
+[
+  {
+    "inputs": [
+      "Assets/js/payment-option-selection.js"
+    ],
+    "output": "wwwroot/Scripts/payment-option-selection.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/stripe-subscription-checkout.js"
+    ],
+    "output": "wwwroot/Scripts/stripe-subscription-checkout.js"
+  }
+]

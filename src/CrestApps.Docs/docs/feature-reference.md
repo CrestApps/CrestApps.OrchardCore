@@ -55,13 +55,22 @@ This page tracks every manifest-backed **module ID** or **feature ID** declared 
 | Manifest ID | Name | Kind | Docs |
 | --- | --- | --- | --- |
 | `CrestApps.OrchardCore.ContentTransfer` | Content Transfer | Module | [Content Transfer](./modules/content-transfer) |
+| `CrestApps.OrchardCore.Checkout` | Checkout | Feature | [Checkout](./modules/checkout) |
 | `CrestApps.OrchardCore.DncRegistry` | DNC Registry | Feature | [DNC Registry](./modules/dnc-registry) |
 | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | USA FTC Do Not Call Registry | Feature | [DNC Registry](./modules/dnc-registry) |
 | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | Canada LNNTE-DNCL Registry | Feature | [DNC Registry](./modules/dnc-registry) |
 | `CrestApps.OrchardCore.DncRegistry.Local` | Local Do Not Call Registry | Feature | [DNC Registry](./modules/dnc-registry) |
+| `CrestApps.OrchardCore.PayLater` | Pay Later | Feature | [Pay Later](./modules/pay-later) |
+| `CrestApps.OrchardCore.Products` | Products | Feature | [Products](./modules/products) |
+| `CrestApps.OrchardCore.Reports` | Reports | Feature | [Reports](./modules/reports) |
 | `CrestApps.OrchardCore.SignalR` | SignalR Compatibility | Module | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.SignalR.Redis` | SignalR Redis Backplane Compatibility | Module | [SignalR](./modules/signalr) |
 | `CrestApps.OrchardCore.SignalR.Azure` | SignalR Azure Backplane Compatibility | Module | [SignalR](./modules/signalr) |
+| `CrestApps.OrchardCore.Stripe` | Stripe | Feature | [Payments](./modules/payments) |
+| `CrestApps.OrchardCore.Subscriptions` | Subscriptions | Feature | [Subscriptions](./modules/subscriptions) |
+| `CrestApps.OrchardCore.Subscriptions.ReCaptcha` | Subscriptions - reCaptcha | Feature | [Subscriptions](./modules/subscriptions) |
+| `CrestApps.OrchardCore.Subscriptions.TenantOnboarding` | Subscriptions - Tenant Onboarding | Feature | [Subscriptions](./modules/subscriptions) |
+| `CrestApps.OrchardCore.Taxation` | Taxation | Feature | [Taxation](./modules/taxation) |
 | `CrestApps.OrchardCore.Users` | Users Core Components | Feature | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.DisplayName` | User Display Name | Feature | [Users](./modules/users) |
 | `CrestApps.OrchardCore.Users.Avatars` | User Avatar | Feature | [Users](./modules/users) |

@@ -1,0 +1,10 @@
+@model PayLaterSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="NetTermDays">
+    <label asp-for="NetTermDays" class="ocat-label">@T["Net term (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="NetTermDays" type="number" min="0" class="form-control" />
+        <span asp-validation-for="NetTermDays"></span>
+        <span class="hint">@T["The number of days a Pay Later balance is allowed before it is due. The due date drives the reminder cadence. Use 0 to record the balance without a due date."]</span>
+    </div>
+</div>

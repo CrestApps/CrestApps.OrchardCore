@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Commerce</RootNamespace>
+    <Title>CrestApps OrchardCore Commerce Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Provider-agnostic, cross-domain commerce contracts. Contains the financial-document policy seam that
+      decides which documents (receipt, invoice, credit note, refund document) a money event issues, and the
+      document-number generator contract for tenant-scoped, node-safe numbering with a non-sequential public
+      token. These contracts let a future Orders domain add persisted invoices and formal numbering without a
+      breaking change, while the shipped default stays receipts-only.
+    </Description>
+    <PackageTags>$(PackageTags) Commerce Abstractions</PackageTags>
+  </PropertyGroup>
+
+</Project>

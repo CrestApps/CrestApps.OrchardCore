@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.Taxation.Models
+@using Microsoft.Extensions.Options
+@inject IOptions<TaxCalculationMethodOptions> MethodOptions
+@model ShapeViewModel<TaxRule>
+@{
+    var methodLabel = !string.IsNullOrEmpty(Model.Value.Source) && MethodOptions.Value.Methods.TryGetValue(Model.Value.Source, out var method)
+        ? method.DisplayName.Value
+        : Model.Value.Source;
+}
+
+<h5 class="mb-0">
+    @Model.Value.Name
+    @if (!Model.Value.Enabled)
+    {
+        <span class="badge bg-warning text-dark">@T["Disabled"]</span>
+    }
+</h5>
+<small class="text-muted">
+    <span class="badge bg-secondary">@Model.Value.TaxType</span>
+    <span class="ms-1">@T["Method:"] @methodLabel</span>
+    @if (Model.Value.Rate.HasValue)
+    {
+        <span class="ms-1">@T["Rate:"] @Model.Value.Rate.Value.ToString("P2")</span>
+    }
+    @if (Model.Value.FixedAmount.HasValue)
+    {
+        <span class="ms-1">@T["Amount:"] @Model.Value.FixedAmount.Value.ToString("N2")</span>
+    }
+    <span class="ms-1">@T["Priority:"] @Model.Value.Priority</span>
+</small>

@@ -1,0 +1,56 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.Extensions
+
+@model ShapeViewModel<Invoice>
+
+<div class="table-responsive mb-3">
+    <table class="table table-striped align-middle mb-0">
+        <thead>
+            <tr class="table-light">
+                <th scope="col">@T["Item"]</th>
+                <th scope="col" class="text-center">@T["Quantity"]</th>
+                <th scope="col" class="text-end">@T["Unit Price"]</th>
+                <th scope="col" class="text-end">@T["Total"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var lineItem in Model.Value.LineItems)
+            {
+                <tr>
+                    <td>@lineItem.Description</td>
+                    <td class="text-center">@lineItem.Quantity</td>
+                    <td class="text-end">@lineItem.UnitPrice.ToString("C")</td>
+                    <td class="text-end">
+                        @if (lineItem.Subscription != null)
+                        {
+                            @T.GetAmount(lineItem.Subscription.DurationType, lineItem.Subscription.BillingDuration, lineItem.UnitPrice * lineItem.Quantity)
+                        }
+                        else
+                        {
+                            @(lineItem.GetLineTotal().ToString("C"))
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr class="table-secondary">
+                <th scope="row" colspan="3" class="text-end">@T["Due Now"]</th>
+                <td class="text-end">@Model.Value.DueNow.ToString("C")</td>
+            </tr>
+
+            @foreach (var subtotal in Model.Value.Subtotals)
+            {
+                <tr>
+                    <th scope="row" colspan="3" class="text-end fw-normal text-body-secondary">@T["Subtotal"]</th>
+                    <td class="text-end text-body-secondary">@T.GetAmount(subtotal.Key.Type, subtotal.Key.Duration, subtotal.Value)</td>
+                </tr>
+            }
+
+            <tr class="table-active">
+                <th scope="row" colspan="3" class="text-end">@T["Total"]</th>
+                <td class="text-end fw-bold">@Model.Value.GrandTotal.ToString("C")</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>

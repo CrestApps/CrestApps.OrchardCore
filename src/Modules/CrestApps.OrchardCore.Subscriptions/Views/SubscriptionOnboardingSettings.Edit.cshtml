@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+
+@model SubscriptionOnboardingSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="AllowCustomDomains">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <label class="form-check-label" asp-for="AllowCustomDomains">@T["Use custom domains"]</label>
+            <input type="checkbox" class="form-check-input" asp-for="AllowCustomDomains">
+            <span class="hint dashed">@T["Allow the subscribers to provide their own custom domain names."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="LocalDomainType">
+    <label class="ocat-label" asp-for="LocalDomainType">@T["Local domains"]</label>
+    <div class="ocat-end">
+        <select asp-for="LocalDomainType" asp-items="Model.LocalDomainTypes" class="form-select"></select>
+        <span class="hint">@T["Generate domains for new tenants using a template."]</span>
+    </div>
+</div>
+
+<div id="Generated_Template_Wrapper" class="ocat-wrapper@(Model.LocalDomainType == LocalDomainType.None || Model.LocalDomainType == LocalDomainType.Prefix ? " d-none": string.Empty)" asp-validation-class-for="LocalDomainTemplate">
+    <label asp-for="LocalDomainTemplate" class="ocat-label">@T["Generated domain template"]</label>
+    <div class="ocat-end">
+        <input asp-for="LocalDomainTemplate" class="form-control" />
+        <span asp-validation-for="LocalDomainTemplate"></span>
+        <span class="hint">@T["The template must include a valid URL format and may contain the placeholders '{0}' and '{1}'. To generate multiple domains, separate them with a comma.", SubscriptionOnboardingSettings.TenantKeyVariable, SubscriptionOnboardingSettings.CurrentHostVariable]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const wrapperElement = document.getElementById('Generated_Template_Wrapper');
+        const typeElement = document.getElementById('@Html.IdFor(m => m.LocalDomainType)');
+
+        typeElement.addEventListener('change', (e) => {
+            if (e.target.value == '@nameof(LocalDomainType.None)' || e.target.value == '@nameof(LocalDomainType.Prefix)') {
+                wrapperElement.classList.add('d-none');
+            } else {
+                wrapperElement.classList.remove('d-none');
+            }
+        });
+    });
+</script>

@@ -1,0 +1,81 @@
+@using CrestApps.OrchardCore.Transactions.Models
+@model MyTransactionsViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["My Transactions"])</h1></zone>
+
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by description"]" type="search" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" class="form-select"></select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+                        <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@T["Filter"]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Transactions.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Description"]</th>
+                    <th scope="col" class="text-end">@T["Total"]</th>
+                    <th scope="col" class="text-end">@T["Outstanding"]</th>
+                    <th scope="col">@T["Status"]</th>
+                    <th scope="col">@T["Due"]</th>
+                    <th scope="col" class="text-end">@T["Actions"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var transaction in Model.Transactions)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Detail" asp-route-itemId="@transaction.ItemId">@(string.IsNullOrEmpty(transaction.Title) ? T["Purchase"].Value : transaction.Title)</a>
+                        </td>
+                        <td class="text-end">@transaction.Currency @transaction.TotalAmount.ToString("0.00")</td>
+                        <td class="text-end">@transaction.Currency @transaction.OutstandingAmount.ToString("0.00")</td>
+                        <td>
+                            <partial name="_TransactionStatusBadge" model="transaction.Status" />
+                        </td>
+                        <td>@(transaction.DueUtc.HasValue ? transaction.DueUtc.Value.ToString("d") : "-")</td>
+                        <td class="text-end">
+                            @if (transaction.OutstandingAmount > 0m && transaction.Status != TransactionStatus.Canceled)
+                            {
+                                <form asp-action="Pay" method="post" class="d-inline">
+                                    <input type="hidden" name="itemId" value="@transaction.ItemId" />
+                                    <button type="submit" class="btn btn-sm btn-success">@T["Pay now"]</button>
+                                </form>
+                            }
+                            <a class="btn btn-sm btn-secondary" asp-action="Detail" asp-route-itemId="@transaction.ItemId">@T["View"]</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["You have no transactions."]
+    </div>
+}
+
+@await DisplayAsync(Model.Pager)
