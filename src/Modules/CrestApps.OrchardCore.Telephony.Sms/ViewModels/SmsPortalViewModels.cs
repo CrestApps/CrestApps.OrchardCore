@@ -1,8 +1,37 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Telephony.Sms.ViewModels;
+
+/// <summary>
+/// The view model for starting a new conversation from the portal.
+/// </summary>
+public class SmsComposeViewModel
+{
+    /// <summary>
+    /// Gets or sets the identifier of the sending SMS channel endpoint (DID).
+    /// </summary>
+    public string EndpointId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the recipient number (E.164).
+    /// </summary>
+    public string To { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message body.
+    /// </summary>
+    public string Body { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selectable SMS channel endpoints (DIDs).
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Endpoints { get; set; }
+}
 
 /// <summary>
 /// The inbox list view model: the conversations the current agent can see, each rendered through the display

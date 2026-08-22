@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Telephony.Sms.Core;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
+using CrestApps.OrchardCore.Telephony.Sms.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Entities;
@@ -10,7 +11,8 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Telephony.Sms.Drivers;
 
 /// <summary>
-/// Renders and persists the tenant-default SMS provider on the SMS portal site-settings screen.
+/// Renders and persists the tenant-default SMS provider on the SMS Portal site-settings group
+/// (Configuration → Settings → SMS Portal).
 /// </summary>
 public sealed class SmsPortalSettingsDisplayDriver : SiteDisplayDriver<SmsPortalSettings>
 {
@@ -31,7 +33,7 @@ public sealed class SmsPortalSettingsDisplayDriver : SiteDisplayDriver<SmsPortal
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, SmsPortalSettings settings, BuildEditorContext context)
     {
-        return Initialize<SmsPortalSettings>("SmsPortalSettings_Edit", model =>
+        return Initialize<SmsPortalSettingsViewModel>("SmsPortalSettings_Edit", model =>
             {
                 model.DefaultProviderName = settings.DefaultProviderName;
             })
@@ -45,14 +47,12 @@ public sealed class SmsPortalSettingsDisplayDriver : SiteDisplayDriver<SmsPortal
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, SmsPortalSettings settings, UpdateEditorContext context)
     {
-        if (!await _authorizationService.AuthorizeAsync(
-                _httpContextAccessor.HttpContext?.User,
-                TelephonySmsPermissions.ManageSmsNumberRoutes))
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonySmsPermissions.ManageSmsNumberRoutes))
         {
             return null;
         }
 
-        var model = new SmsPortalSettings();
+        var model = new SmsPortalSettingsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Sms.Core;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
 using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
@@ -12,6 +13,7 @@ using CrestApps.OrchardCore.Telephony.Sms.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
@@ -30,6 +32,7 @@ public sealed class SmsPortalController : Controller
     private readonly ISmsConversationStore _conversationStore;
     private readonly ISmsConversationService _conversationService;
     private readonly ISmsTemplateManager _templateManager;
+    private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<SmsConversation> _displayManager;
@@ -44,6 +47,7 @@ public sealed class SmsPortalController : Controller
         ISmsConversationStore conversationStore,
         ISmsConversationService conversationService,
         ISmsTemplateManager templateManager,
+        IOmnichannelChannelEndpointManager endpointManager,
         IAgentProfileManager agentProfileManager,
         IAuthorizationService authorizationService,
         IDisplayManager<SmsConversation> displayManager,
@@ -56,6 +60,7 @@ public sealed class SmsPortalController : Controller
         _conversationStore = conversationStore;
         _conversationService = conversationService;
         _templateManager = templateManager;
+        _endpointManager = endpointManager;
         _agentProfileManager = agentProfileManager;
         _authorizationService = authorizationService;
         _displayManager = displayManager;
@@ -88,6 +93,66 @@ public sealed class SmsPortalController : Controller
         }
 
         return View(viewModel);
+    }
+
+    [Admin("sms/portal/new", "SmsPortalNew")]
+    public async Task<IActionResult> New()
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.UseSmsPortal))
+        {
+            return Forbid();
+        }
+
+        return View(new SmsComposeViewModel { Endpoints = await BuildEndpointOptionsAsync() });
+    }
+
+    [HttpPost]
+    [ActionName(nameof(New))]
+    [Admin("sms/portal/new", "SmsPortalNew")]
+    public async Task<IActionResult> NewPost(SmsComposeViewModel model)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.UseSmsPortal))
+        {
+            return Forbid();
+        }
+
+        var endpoint = string.IsNullOrEmpty(model.EndpointId) ? null : await _endpointManager.FindByIdAsync(model.EndpointId);
+
+        if (endpoint is null)
+        {
+            ModelState.AddModelError(nameof(model.EndpointId), S["A sending number is required."]);
+        }
+
+        if (string.IsNullOrWhiteSpace(model.To))
+        {
+            ModelState.AddModelError(nameof(model.To), S["A recipient is required."]);
+        }
+
+        if (string.IsNullOrWhiteSpace(model.Body))
+        {
+            ModelState.AddModelError(nameof(model.Body), S["A message is required."]);
+        }
+
+        if (!ModelState.IsValid)
+        {
+            model.Endpoints = await BuildEndpointOptionsAsync();
+
+            return View(model);
+        }
+
+        var agent = await GetCurrentAgentAsync();
+
+        var result = await _conversationService.SendDirectAsync(endpoint.Value, model.To.Trim(), model.Body.Trim(), agent?.ItemId);
+
+        if (!result.Succeeded)
+        {
+            await _notifier.WarningAsync(H["The message could not be sent: {0}", result.Error]);
+            model.Endpoints = await BuildEndpointOptionsAsync();
+
+            return View(model);
+        }
+
+        return RedirectToAction(nameof(Conversation), new { id = result.Message.ConversationId });
     }
 
     [Admin("sms/portal/conversation/{id}", "SmsPortalConversation")]
@@ -139,6 +204,9 @@ public sealed class SmsPortalController : Controller
                 Shape = await _displayManager.BuildDisplayAsync(conversation, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
             });
         }
+
+        ViewData["Title"] = S["All SMS conversations"].Value;
+        ViewData["Subtitle"] = S["Every conversation across the tenant (supervisor view)."].Value;
 
         return View(nameof(Index), viewModel);
     }
@@ -237,6 +305,20 @@ public sealed class SmsPortalController : Controller
         }
 
         return RedirectToAction(nameof(Conversation), new { id });
+    }
+
+    private async Task<IEnumerable<SelectListItem>> BuildEndpointOptionsAsync()
+    {
+        var endpoints = await _endpointManager.GetAllAsync();
+
+        return endpoints
+            .Where(endpoint => string.Equals(endpoint.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase))
+            .Select(endpoint => new SelectListItem
+            {
+                Text = string.IsNullOrEmpty(endpoint.DisplayText) ? endpoint.Value : $"{endpoint.DisplayText} ({endpoint.Value})",
+                Value = endpoint.ItemId,
+            })
+            .ToList();
     }
 
     private async Task<IReadOnlyList<OmnichannelMessage>> GetMessagesAsync(string conversationId)

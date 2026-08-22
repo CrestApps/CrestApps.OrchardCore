@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -67,7 +68,7 @@ public sealed class SmsTemplatesController : Controller
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext { Name = options.Search });
+        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext { Sorted = true, Name = options.Search });
 
         var routeData = new RouteData();
 
@@ -92,6 +93,11 @@ public sealed class SmsTemplatesController : Controller
             });
         }
 
+        viewModel.Options.BulkActions =
+        [
+            new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
+        ];
+
         return View(viewModel);
     }
 
@@ -107,6 +113,44 @@ public sealed class SmsTemplatesController : Controller
         }
 
         return RedirectToAction(nameof(Index), new RouteValueDictionary { { _optionsSearch, model.Options?.Search } });
+    }
+
+    [HttpPost]
+    [ActionName(nameof(Index))]
+    [FormValueRequired("submit.BulkAction")]
+    [Admin("sms/templates", "SmsTemplatesIndex")]
+    public async Task<IActionResult> IndexBulkPost(CatalogEntryOptions options, IEnumerable<string> itemIds)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.ManageSmsNumberRoutes))
+        {
+            return Forbid();
+        }
+
+        if (itemIds?.Any() == true && options.BulkAction == CatalogEntryAction.Remove)
+        {
+            var counter = 0;
+
+            foreach (var id in itemIds)
+            {
+                var template = await _manager.FindByIdAsync(id);
+
+                if (template is not null && await _manager.DeleteAsync(template))
+                {
+                    counter++;
+                }
+            }
+
+            if (counter == 0)
+            {
+                await _notifier.WarningAsync(H["No templates were removed."]);
+            }
+            else
+            {
+                await _notifier.SuccessAsync(H.Plural(counter, "1 template has been removed successfully.", "{0} templates have been removed successfully."));
+            }
+        }
+
+        return RedirectToAction(nameof(Index));
     }
 
     [Admin("sms/templates/create", "SmsTemplatesCreate")]

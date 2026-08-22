@@ -105,6 +105,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<SmsTemplate, SmsTemplateDisplayDriver>();
         services.AddSiteDisplayDriver<SmsPortalSettingsDisplayDriver>();
         services.AddNavigationProvider<SmsPortalAdminMenu>();
+        services.AddNavigationProvider<SmsPortalSettingsAdminMenu>();
 
         // Permissions.
         services.AddPermissionProvider<TelephonySmsPermissionProvider>();
