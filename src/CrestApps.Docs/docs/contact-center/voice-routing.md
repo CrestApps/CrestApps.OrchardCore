@@ -213,6 +213,23 @@ If a persisted interaction references a provider name that is no longer register
 
 When the browser receives a terminal event for a different call id than the call currently displayed, it immediately asks the server for the provider-authoritative active call. This preserves a genuinely newer call while clearing a stale browser call that no longer exists.
 
+## Voicemail
+
+A call is sent to voicemail when an entry point is closed and configured for voicemail, when a direct-to-agent line's ring window elapses without an answer, when a queued offer times out, or when an agent sends a ringing call to voicemail from the soft phone. In every case the interaction is flagged and projected to the recipient agent as a **missed** call before the recording leg is answered, so the agent never sees a live "in call" state for a call they did not take.
+
+### Greeting, then beep, then record {#voicemail-greeting}
+
+The provider answers the caller's leg, plays the greeting, and only **after the greeting finishes** starts recording with a leading **beep**. This keeps the spoken greeting out of the caller's recorded message and gives the caller the "after the tone" cue. With Telnyx this is sequenced through the provider webhook: the greeting is played with a correlation `client_state`, and its `call.speak.ended` / `call.playback.ended` event triggers `record_start` with `play_beep`. That greeting-ended signal is handled as a fast path in the webhook endpoint, ahead of the durable inbox write, so the beep-and-record starts within about a second of the greeting ending rather than queuing behind other event processing.
+
+The greeting played is resolved in this order:
+
+1. The recipient agent's **recorded/uploaded greeting** (hosted in the provider's media storage; see [Agent Workspace → Record your voicemail greeting](agent-desktop.md#7-record-your-voicemail-greeting)).
+2. The recipient agent's **spoken (text-to-speech) greeting**, if set through deployment.
+3. The **inbound entry point's Default voicemail greeting** (text), configured per dialed number so a line can define its callers' greeting without each agent setting one.
+4. The built-in **system greeting**.
+
+The finished recording is ingested into the encrypted media store and surfaced in the recipient agent's **Voicemail** tab in real time. See [Agent Workspace](agent-desktop.md#5-review-recent-activity) for playback and deletion.
+
 ## Outbound routing flow
 
 ### 1. A dialer profile starts a cycle
