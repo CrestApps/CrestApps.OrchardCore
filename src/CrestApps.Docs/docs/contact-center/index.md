@@ -35,6 +35,10 @@ Each Contact Center capability owns both its runtime services and the administra
 Enable the outcome you need and let Orchard resolve its dependencies. For paced outbound calling, enable `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` plus a supported voice-provider adapter; the base Dialer (including mandatory compliance screening), queues, routing, voice services, and Dialer Profiles UI are enabled transitively.
 :::
 
+:::note
+Contact Center depends on the headless **Omnichannel Activities** feature (`CrestApps.OrchardCore.Omnichannel.Activities`), not the full **Omnichannel Management** CRM. That gives it the contact/subject model, the activity and channel-endpoint services, and the message store it needs — without forcing the campaign, subject-flow, disposition, and load-inventory admin. If you want the CRM experience (campaign catalog, subject flows, CRM reports), enable **Omnichannel Management** (`CrestApps.OrchardCore.Omnichannel.Managements`) explicitly.
+:::
+
 The commercial release is not yet approved. See [Production support](production-support.md) for the finite candidate GA profiles, initial capacity tier, and explicitly unsupported combinations. The [Public API surface](public-api-surface.md) page describes which assemblies have a recorded public surface, why the set is derived from the project graph rather than listed, and how to accept a deliberate surface change. The [Single-Node Completion Roadmap](single-node-completion.md) describes the phased plan to make a single node fully functional first - real browser audio, inbound routing, supervisor monitoring, and recording - with multi-node hardening following as a secondary phase.
 
 The CRM **Activity** remains the universal unit of work. Activities can be created before an owner exists, then later reserved and assigned by a dialer, queue, or agent workflow. An **Interaction** is communication history for a single attempt on that activity - for example a busy call attempt, a no-answer attempt, or a connected call - and it never owns workflow or disposition.

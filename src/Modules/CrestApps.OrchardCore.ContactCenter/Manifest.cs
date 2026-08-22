@@ -21,7 +21,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Contact Center",
     Dependencies =
     [
-        OmnichannelConstants.Features.Managements,
+        OmnichannelConstants.Features.Activities,
     ]
 )]
 
