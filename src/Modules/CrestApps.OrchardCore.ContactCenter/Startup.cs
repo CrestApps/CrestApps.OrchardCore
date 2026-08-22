@@ -168,6 +168,14 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterAssistService, ContactCenterAssistService>()
             .AddScoped<ICatalogEntryHandler<Interaction>, InteractionHandler>();
 
+        // The reusable voice media library (hold music, greetings, prompts) referenced by queues, campaigns, and
+        // entry points. Registered in the base feature so the library is available wherever those are configured.
+        services
+            .AddScoped<IVoiceMediaItemStore, VoiceMediaItemStore>()
+            .AddScoped<IVoiceMediaItemManager, VoiceMediaItemManager>()
+            .AddIndexProvider<VoiceMediaItemIndexProvider>()
+            .AddDataMigration<VoiceMediaItemIndexMigrations>();
+
         services
             .AddIndexProvider<ContactCenterEventMetricIndexProvider>()
             .AddDataMigration<ContactCenterEventMetricIndexMigrations>()

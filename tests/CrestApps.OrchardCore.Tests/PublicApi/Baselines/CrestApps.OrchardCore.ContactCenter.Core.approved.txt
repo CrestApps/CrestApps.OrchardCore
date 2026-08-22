@@ -370,6 +370,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public bool RecordingResumed { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureState State { get; set; }
     }
+    public sealed class VoiceMediaItemIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public VoiceMediaItemIndex() { }
+        public long DocumentId { get; set; }
+        public string Name { get; set; }
+    }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models
 {
@@ -1726,6 +1732,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.TransferResult Failure(string reason) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.TransferResult Success(string reason = null) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.TransferResult Unknown(string reason) { }
+    }
+    public sealed class VoiceMediaItem : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public VoiceMediaItem() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public string Format { get; set; }
+        public string MediaReference { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public string ProviderName { get; set; }
     }
     public static class WorkAssignmentLifecycle
     {
@@ -3181,6 +3198,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.InboundVoiceRoutingResult> RouteInboundAsync(CrestApps.OrchardCore.ContactCenter.Models.InboundVoiceEvent inboundEvent, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> RouteOutboundAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterDialRequest request, string providerName = null, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IVoiceMediaItemManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IVoiceMediaItemStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IVoiceQueueOfferService
     {
         System.Threading.Tasks.Task<string> OfferNextAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
@@ -3562,6 +3589,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public UnconfiguredSecureCaptureTokenSink() { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureTokenResult> TokenizeAsync(CrestApps.OrchardCore.ContactCenter.Models.SecureCaptureField field, string rawValue, string idempotencyKey, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class VoiceMediaItemManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaItemManager
+    {
+        public VoiceMediaItemManager(CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaItemStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class VoiceMediaItemStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem, CrestApps.OrchardCore.ContactCenter.Core.Indexes.VoiceMediaItemIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>, CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaItemStore
+    {
+        public VoiceMediaItemStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
