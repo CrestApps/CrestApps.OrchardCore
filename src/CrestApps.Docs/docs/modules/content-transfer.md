@@ -68,8 +68,11 @@ Export supports:
 - owner filtering
 - immediate download for smaller exports
 - queued background processing for larger exports
+- extra options contributed by other modules for the selected content type (see [Contributing export options](#contributing-export-options))
 
 When notifications are enabled, users receive an in-app notification when a queued export is ready.
+
+Modules can add their own options to the export form for specific content types. For example, when the Omnichannel management feature is enabled and you export a contact content type, the form shows a **CRM last activity** section that appends each contact's most recent completed activity to the export. See [Omnichannel management](../omnichannel/management#export-contacts-with-their-last-activity) for that feature, and [Contributing export options](#contributing-export-options) to add your own.
 
 The export pipeline now initializes missing parts on the parent content item before part handlers run, so Open XML (`.xlsx`) exports do not fail with a JSON node cycle when a type includes a part that is not yet materialized on a specific content item.
 
@@ -237,6 +240,12 @@ At a high level:
    - `IContentFieldImportHandler` for content fields
 4. Optional `IContentImportRowFilter` implementations can skip rows before the handlers run.
 5. Optional `IContentTransferNotificationHandler` implementations can notify users when background exports complete.
+
+For export specifically:
+
+- Optional `IDisplayDriver<ExportRequest>` implementations add option UI to the export form and persist the chosen options onto the export entry (see [Contributing export options](#contributing-export-options)).
+- Optional `IContentExportBatchHandler` implementations pre-load per-page data in a single query, before the page's rows are mapped, so row handlers do not query one record at a time.
+- An `IContentImportHandler` can set `ContentExportContext.Exclude` while mapping a row to omit that content item from the output (a contributed row filter for export).
 
 ## Content item level handlers
 
@@ -501,6 +510,113 @@ Register the row filter:
 services.AddScoped<IContentImportRowFilter, ArchivedSkuImportRowFilter>();
 ```
 
+## Contributing export options
+
+The bulk export form is display-managed, so any module can add its own options to it without changing the base module. This is how the Omnichannel management feature adds its **CRM last activity** options to contact exports.
+
+The building blocks are:
+
+- `ExportRequest` — the display-driven model for the export form. Register an `IDisplayDriver<ExportRequest>` to contribute an editor shape.
+- `ExportRequest.Entry` — the export entry the driver writes options onto (as parts). `ExportRequest.ContentType` / `ContentTypeDefinition` identify the content type being exported. Set `ExportRequest.RequiresQueue` to force the queued/background path when your options must be read back from the persisted entry.
+- `IContentImportHandler` — reads the stored options from `context.Entry` and contributes export-only columns and values.
+- `IContentExportBatchHandler` (optional) — pre-loads per-page data in one query so the row handler never queries one record at a time.
+- `ContentExportContext.Exclude` (optional) — set while mapping a row to drop that content item from the output.
+
+### Add the option UI
+
+The export form is a single form for all content types, and the content type is chosen client-side. So a driver renders its section for every export and gates visibility itself (usually with a small script that shows the section only for the relevant content types), then validates server-side in `UpdateAsync` using `ExportRequest.ContentType`.
+
+```csharp
+using CrestApps.OrchardCore.ContentTransfer;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Entities;
+using OrchardCore.Mvc.ModelBinding;
+
+public sealed class ProductExportOptionsDisplayDriver : DisplayDriver<ExportRequest>
+{
+    public override IDisplayResult Edit(ExportRequest model, BuildEditorContext context)
+        => Initialize<ProductExportOptionsViewModel>("ProductExportOptions_Edit", viewModel =>
+        {
+            // Populate any select lists the option needs. The content type is not known yet.
+        }).Location("Content:20");
+
+    public override async Task<IDisplayResult> UpdateAsync(ExportRequest model, UpdateEditorContext context)
+    {
+        var viewModel = new ProductExportOptionsViewModel();
+        await context.Updater.TryUpdateModelAsync(viewModel, Prefix);
+
+        if (viewModel.IncludeCatalogSnapshot && IsProductType(model.ContentType))
+        {
+            model.Entry.Put(new ProductExportOptionsPart
+            {
+                IncludeCatalogSnapshot = true,
+            });
+
+            // Force the queued path so the export handler can read the option from the saved entry.
+            model.RequiresQueue = true;
+        }
+
+        return Edit(model, context);
+    }
+}
+```
+
+The display manager wraps driver output in an `ExportRequest_Edit` shape, so the base module provides the `ExportRequest.Edit.cshtml` container template automatically. Your driver only needs its own shape template (`ProductExportOptions.Edit.cshtml` in this example). Register the driver from your feature startup:
+
+```csharp
+services.AddScoped<IDisplayDriver<ExportRequest>, ProductExportOptionsDisplayDriver>();
+```
+
+### Read the option back and add columns
+
+The export entry is available to `IContentImportHandler` as `context.Entry` on both `GetColumns` (via `ImportContentContext`) and `ExportAsync` (via `ContentExportContext`). Return export-only columns when your option is enabled, and fill them per row:
+
+```csharp
+public IReadOnlyCollection<ImportColumn> GetColumns(ImportContentContext context)
+{
+    if (context.Entry is null || !context.Entry.TryGet<ProductExportOptionsPart>(out var options) || !options.IncludeCatalogSnapshot)
+    {
+        return [];
+    }
+
+    return [new ImportColumn { Name = "Catalog snapshot", Type = ImportColumnType.ExportOnly }];
+}
+```
+
+### Pre-load per-page data (avoid one query per row)
+
+The export loop already pages content items in batches. Implement `IContentExportBatchHandler` to load everything a page needs in one query, before its rows are mapped, and cache it for the row handler. Register the concrete handler once and forward both interfaces to it so the same scoped instance writes and reads the cache:
+
+```csharp
+services.AddScoped<ProductExportHandler>();
+services.AddScoped<IContentImportHandler>(sp => sp.GetRequiredService<ProductExportHandler>());
+services.AddScoped<IContentExportBatchHandler>(sp => sp.GetRequiredService<ProductExportHandler>());
+```
+
+```csharp
+public async Task PrepareExportBatchAsync(ContentExportBatchContext context)
+{
+    // context.ContentItems is the current page; load related data for all of them in one query and cache it.
+}
+```
+
+### Filter which content items are exported
+
+To keep only rows that match your option, set `ContentExportContext.Exclude` while mapping the row. The export writer counts the item as processed but does not write it:
+
+```csharp
+public Task ExportAsync(ContentExportContext context)
+{
+    if (ShouldOmit(context))
+    {
+        context.Exclude = true;
+    }
+
+    return Task.CompletedTask;
+}
+```
+
 ## File format providers
 
 Implement `IContentTransferFileFormatProvider` when you want to add another transfer file type beyond the built-in CSV support and optional OpenXml workbook support.
@@ -573,6 +689,12 @@ services.AddContentFieldImportHandler<RatingField, RatingFieldImportHandler>();
 services.AddScoped<IContentImportRowFilter, ArchivedSkuImportRowFilter>();
 services.AddSingleton<IContentTransferFileFormatProvider, JsonLinesContentTransferFileFormatProvider>();
 services.AddScoped<IContentTransferNotificationHandler, MyContentTransferNotificationHandler>();
+
+// Export-form options (see Contributing export options):
+services.AddScoped<IDisplayDriver<ExportRequest>, ProductExportOptionsDisplayDriver>();
+services.AddScoped<ProductExportHandler>();
+services.AddScoped<IContentImportHandler>(sp => sp.GetRequiredService<ProductExportHandler>());
+services.AddScoped<IContentExportBatchHandler>(sp => sp.GetRequiredService<ProductExportHandler>());
 ```
 
 ## Practical guidance

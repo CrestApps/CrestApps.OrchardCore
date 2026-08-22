@@ -1,11 +1,8 @@
-@using OrchardCore
-@using CrestApps.OrchardCore.ContentTransfer
-
 @model BulkExportViewModel
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["Bulk Export"])</h1></zone>
 
-<div id="export-request-panel" class="collapse mb-3 @(Model.Exporter.ContentTypes.Count == 0 ? "show" : string.Empty)">
+<div id="export-request-panel" class="collapse mb-3 @((Model.Exporter.ContentTypes.Count == 0 || !ViewData.ModelState.IsValid) ? "show" : string.Empty)">
     <div class="card text-bg-theme">
         <div class="card-header fw-bold">@T["Export contents"]</div>
         <div class="card-body">
@@ -113,6 +110,11 @@
                             </div>
                         </div>
                     </div>
+
+                    @if (Model.Exporter.Content != null)
+                    {
+                        @await DisplayAsync(Model.Exporter.Content)
+                    }
 
                     <div class="ocat-limited-wrapper">
                         <div class="ocat-limited">

@@ -88,6 +88,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 {
                     ContentItem = await serviceProvider.GetRequiredService<IContentManager>().NewAsync(entry.ContentType),
                     ContentTypeDefinition = contentTypeDefinition,
+                    Entry = entry,
                 };
 
                 var columns = await contentImportManager.GetColumnsAsync(context);
@@ -163,6 +164,14 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                             break;
                         }
 
+                        // Let handlers pre-load per-page data in a single pass before mapping rows.
+                        await contentImportManager.PrepareExportBatchAsync(new ContentExportBatchContext
+                        {
+                            ContentItems = items,
+                            ContentTypeDefinition = contentTypeDefinition,
+                            Entry = entry,
+                        });
+
                         // Create a temporary DataTable for this batch only.
                         using var dataTable = new DataTable();
 
@@ -177,10 +186,20 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                             {
                                 ContentItem = contentItem,
                                 ContentTypeDefinition = contentTypeDefinition,
+                                Entry = entry,
                                 Row = dataTable.NewRow(),
                             };
 
                             await contentImportManager.ExportAsync(mapContext);
+
+                            progressPart.TotalProcessed++;
+
+                            // A handler may exclude a content item from the output (for example, a contributed
+                            // "only rows that match" filter). Count it as processed but do not write it.
+                            if (mapContext.Exclude)
+                            {
+                                continue;
+                            }
 
                             var rowValues = new List<string>(columnNames.Count);
                             foreach (var colName in columnNames)
@@ -189,7 +208,9 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                             }
 
                             writer.WriteRow(rowValues);
-                            progressPart.TotalProcessed++;
+
+                            // Track how many records were actually written so the UI can show the exported total.
+                            progressPart.ImportedCount++;
                         }
 
                         // Save progress after each page.
