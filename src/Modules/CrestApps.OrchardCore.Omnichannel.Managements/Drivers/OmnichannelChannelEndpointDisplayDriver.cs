@@ -46,7 +46,6 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
             [
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
             ];
         }).Location("Content:1");
     }

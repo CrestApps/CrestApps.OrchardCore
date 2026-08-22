@@ -242,7 +242,6 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             [
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
             ];
 
             var channelEndpointItems = new List<SelectListItem>
