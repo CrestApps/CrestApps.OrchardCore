@@ -125,6 +125,36 @@ internal static class TelnyxWebhookEndpoint
 
             callEvent.OccurredUtc = occurredUtc;
 
+            // Fast-path the voicemail greeting-ended signal: issue record_start immediately, before the durable
+            // webhook inbox write (which can stall for seconds under SQLite write contention). The beep-and-record
+            // is time-critical -- the caller is on the line waiting for the tone -- so it must not queue behind the
+            // inbox. It needs no database work, and a duplicate on redelivery is harmless because Telnyx rejects a
+            // second record_start on an already-recording call. The event carries no call-state transition, so it
+            // does not need to continue into the durable inbox afterward.
+            var greetingEndedEventType = callEvent.EventType?.Trim();
+
+            if ((string.Equals(greetingEndedEventType, TelnyxConstants.Recording.SpeakEndedEventType, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(greetingEndedEventType, TelnyxConstants.Recording.PlaybackEndedEventType, StringComparison.OrdinalIgnoreCase)) &&
+                !string.IsNullOrEmpty(callEvent.CallControlId) &&
+                TelnyxRecordingClientState.TryParseGreeting(callEvent.ClientState, out var greetingState))
+            {
+                var recordingStarter = httpContext.RequestServices.GetService<ITelnyxVoicemailRecordingStarter>();
+
+                if (recordingStarter is not null)
+                {
+                    await recordingStarter.StartAsync(
+                        callEvent.CallControlId,
+                        greetingState.InteractionId,
+                        greetingState.RecipientUserId,
+                        CancellationToken.None);
+                }
+
+                return TypedResults.Ok(new
+                {
+                    accepted = true,
+                });
+            }
+
             ProviderWebhookIngressLease rateLease = null;
 
             try
