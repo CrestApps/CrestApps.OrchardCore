@@ -16,8 +16,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// <summary>
 /// Lets a signed-in agent manage their own voicemail greeting: record one with the microphone, upload an audio
 /// file, set a spoken (text-to-speech) greeting, or clear it back to the queue/system default. An audio greeting
-/// is uploaded to the telephony provider's media storage (via <see cref="IVoicemailGreetingMediaProvisioner"/>) so
-/// it can be played back to callers without the platform hosting a public URL.
+/// is uploaded to the telephony provider's media storage (via <see cref="IVoiceMediaProvisioner"/>) so it can be
+/// played back to callers without the platform hosting a public URL.
 /// </summary>
 [Admin]
 [RequireFeatures(
@@ -28,6 +28,9 @@ public sealed class MyVoicemailGreetingController : Controller
     // Reject oversized uploads early: Telnyx Media Storage caps media at 20 MB, and a greeting is a few seconds of
     // speech, so anything approaching this is not a greeting.
     private const long MaxGreetingBytes = 20L * 1024 * 1024;
+
+    // Labels the stored greeting media by purpose so provider media storage stays identifiable.
+    private const string GreetingMediaNamePrefix = "cc-vm-greeting";
 
     private static readonly string[] _allowedContentTypes =
     [
@@ -100,7 +103,7 @@ public sealed class MyVoicemailGreetingController : Controller
             return BadRequest(S["Unsupported audio format."].Value);
         }
 
-        var provisioner = HttpContext.RequestServices.GetService<IVoicemailGreetingMediaProvisioner>();
+        var provisioner = HttpContext.RequestServices.GetService<IVoiceMediaProvisioner>();
 
         if (provisioner is null)
         {
@@ -111,7 +114,7 @@ public sealed class MyVoicemailGreetingController : Controller
 
         await using (var stream = audio.OpenReadStream())
         {
-            mediaName = await provisioner.UploadAsync(stream, audio.ContentType, HttpContext.RequestAborted);
+            mediaName = await provisioner.UploadAsync(stream, audio.ContentType, GreetingMediaNamePrefix, HttpContext.RequestAborted);
         }
 
         if (string.IsNullOrWhiteSpace(mediaName))
@@ -156,7 +159,7 @@ public sealed class MyVoicemailGreetingController : Controller
 
         if (!string.IsNullOrWhiteSpace(previousMediaName))
         {
-            var provisioner = HttpContext.RequestServices.GetService<IVoicemailGreetingMediaProvisioner>();
+            var provisioner = HttpContext.RequestServices.GetService<IVoiceMediaProvisioner>();
 
             if (provisioner is not null)
             {

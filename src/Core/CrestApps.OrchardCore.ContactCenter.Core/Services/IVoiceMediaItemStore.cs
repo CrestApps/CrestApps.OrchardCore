@@ -21,5 +21,5 @@ public interface IVoiceMediaItemStore : ICatalog<VoiceMediaItem>
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>All media clips.</returns>
-    Task<IReadOnlyCollection<VoiceMediaItem>> GetAllAsync(CancellationToken cancellationToken = default);
+    new Task<IReadOnlyCollection<VoiceMediaItem>> GetAllAsync(CancellationToken cancellationToken = default);
 }

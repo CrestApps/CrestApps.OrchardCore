@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -34,6 +35,7 @@ public sealed class AgentWorkspaceController : Controller
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly ISiteService _siteService;
+    private readonly ITelephonyExtensionManager _extensionManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentWorkspaceController"/> class.
@@ -48,13 +50,15 @@ public sealed class AgentWorkspaceController : Controller
         IAgentStateReasonCodeManager reasonCodeManager,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
-        ISiteService siteService)
+        ISiteService siteService,
+        ITelephonyExtensionManager extensionManager)
     {
         _authorizationService = authorizationService;
         _reasonCodeManager = reasonCodeManager;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
         _siteService = siteService;
+        _extensionManager = extensionManager;
     }
 
     /// <summary>
@@ -72,6 +76,11 @@ public sealed class AgentWorkspaceController : Controller
         var reasonCodes = await _reasonCodeManager.GetEnabledAsync();
         var displayName = await GetCurrentUserDisplayNameAsync(HttpContext.RequestAborted);
 
+        var userId = _userManager.GetUserId(User);
+        var myExtension = string.IsNullOrEmpty(userId)
+            ? null
+            : await _extensionManager.FindByUserIdAsync(userId, HttpContext.RequestAborted);
+
         var recordingSettings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<ContactCenterRecordingSettings>();
         var canSecurePause = recordingSettings.AllowAgentSecurePause &&
             await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SecurePauseRecording);
@@ -85,6 +94,7 @@ public sealed class AgentWorkspaceController : Controller
         var viewModel = new AgentWorkspaceIndexViewModel
         {
             DisplayName = displayName,
+            MyExtension = myExtension?.Number,
             CanMonitor = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.MonitorContactCenter),
             HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(HttpContext),
             StateUrl = Url.RouteUrl(AgentWorkspaceEndpoints.StateRouteName),

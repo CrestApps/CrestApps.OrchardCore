@@ -199,10 +199,11 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> SendToVoicemailAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IVoicemailGreetingMediaProvisioner
+    public interface IVoiceMediaProvisioner
     {
+        string ProviderTechnicalName { get; }
         System.Threading.Tasks.Task DeleteAsync(string mediaReference, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<string> UploadAsync(System.IO.Stream audio, string contentType, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<string> UploadAsync(System.IO.Stream audio, string contentType, string namePrefix, System.Threading.CancellationToken cancellationToken = default);
     }
     public static class TelephonyAudioModeResolver
     {

@@ -32,7 +32,7 @@ public sealed class VoiceMediaItemStore : DocumentCatalog<VoiceMediaItem, VoiceM
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<VoiceMediaItem>> GetAllAsync(CancellationToken cancellationToken = default)
+    public new async Task<IReadOnlyCollection<VoiceMediaItem>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var items = await Session.Query<VoiceMediaItem, VoiceMediaItemIndex>(
             collection: ContactCenterStorage.CollectionName)

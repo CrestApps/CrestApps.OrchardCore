@@ -15,6 +15,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -34,6 +35,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -50,6 +52,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(null),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -82,6 +85,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -112,6 +116,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -130,6 +135,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -146,6 +152,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(null),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -172,6 +179,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -193,6 +201,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -215,6 +224,7 @@ public sealed class DefaultTelephonyServiceTests
         var service = new DefaultTelephonyService(
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act

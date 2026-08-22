@@ -13,6 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
         public static readonly OrchardCore.Security.Permissions.Permission ManageQueueGroups;
         public static readonly OrchardCore.Security.Permissions.Permission ManageQueues;
         public static readonly OrchardCore.Security.Permissions.Permission ManageSkills;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageVoiceMedia;
         public static readonly OrchardCore.Security.Permissions.Permission MonitorContactCenter;
         public static readonly OrchardCore.Security.Permissions.Permission SecurePauseRecording;
         public static readonly OrchardCore.Security.Permissions.Permission SignIntoQueues;

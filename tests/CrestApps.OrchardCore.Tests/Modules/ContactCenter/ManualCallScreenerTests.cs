@@ -190,6 +190,7 @@ public sealed class ManualCallScreenerTests
         var telephonyService = new DefaultTelephonyService(
             resolver.Object,
             screeningService,
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act

@@ -48,6 +48,11 @@ public static class ContactCenterPermissions
     public static readonly Permission ManageDialer = new("ManageContactCenterDialer", "Manage the Contact Center dialer", [ManageContactCenter]);
 
     /// <summary>
+    /// Grants management of the reusable voice media library (hold music, greetings, and IVR prompts).
+    /// </summary>
+    public static readonly Permission ManageVoiceMedia = new("ManageContactCenterVoiceMedia", "Manage the Contact Center voice media library", [ManageContactCenter]);
+
+    /// <summary>
     /// Grants an agent the ability to sign in to queues and campaigns and change their own presence.
     /// </summary>
     public static readonly Permission SignIntoQueues = new("ContactCenterSignIntoQueues", "Sign in to Contact Center queues and campaigns");

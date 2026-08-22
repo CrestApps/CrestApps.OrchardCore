@@ -8,25 +8,25 @@ using Microsoft.Extensions.Options;
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
-/// Telnyx implementation of <see cref="IVoicemailGreetingMediaProvisioner"/> backed by Telnyx Media Storage. It
-/// uploads the greeting audio directly (multipart) so Telnyx hosts and plays the file by <c>media_name</c>, which
-/// means the platform never has to expose a publicly reachable greeting URL of its own.
+/// Telnyx implementation of <see cref="IVoiceMediaProvisioner"/> backed by Telnyx Media Storage. It uploads the audio
+/// directly (multipart) so Telnyx hosts and plays the file by <c>media_name</c>, which means the platform never has
+/// to expose a publicly reachable URL of its own for greetings, hold music, or IVR prompts.
 /// </summary>
-public sealed class TelnyxVoicemailGreetingMediaProvisioner : IVoicemailGreetingMediaProvisioner
+public sealed class TelnyxVoiceMediaProvisioner : IVoiceMediaProvisioner
 {
-    // Keep the greeting effectively permanent: a greeting is long-lived configuration, not a transient recording,
-    // and the default 2-day TTL would silently delete it. Telnyx requires ttl_secs to be strictly less than
-    // 630720000 (20 years), so use one second under that ceiling.
+    // Keep uploaded media effectively permanent: a greeting or hold-music clip is long-lived configuration, not a
+    // transient recording, and the default 2-day TTL would silently delete it. Telnyx requires ttl_secs to be
+    // strictly less than 630720000 (20 years), so use one second under that ceiling.
     private const string MaxTtlSeconds = "630719999";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly TelnyxOptions _options;
-    private readonly ILogger<TelnyxVoicemailGreetingMediaProvisioner> _logger;
+    private readonly ILogger<TelnyxVoiceMediaProvisioner> _logger;
 
-    public TelnyxVoicemailGreetingMediaProvisioner(
+    public TelnyxVoiceMediaProvisioner(
         IHttpClientFactory httpClientFactory,
         IOptionsMonitor<TelnyxOptions> options,
-        ILogger<TelnyxVoicemailGreetingMediaProvisioner> logger)
+        ILogger<TelnyxVoiceMediaProvisioner> logger)
     {
         _httpClientFactory = httpClientFactory;
         _options = options.CurrentValue;
@@ -34,7 +34,11 @@ public sealed class TelnyxVoicemailGreetingMediaProvisioner : IVoicemailGreeting
     }
 
     /// <inheritdoc/>
-    public async Task<string> UploadAsync(Stream audio, string contentType, CancellationToken cancellationToken = default)
+    public string ProviderTechnicalName
+        => TelnyxConstants.ProviderTechnicalName;
+
+    /// <inheritdoc/>
+    public async Task<string> UploadAsync(Stream audio, string contentType, string namePrefix, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(audio);
 
@@ -43,9 +47,10 @@ public sealed class TelnyxVoicemailGreetingMediaProvisioner : IVoicemailGreeting
             return null;
         }
 
-        // A fresh unique name per upload means a re-recorded greeting never collides with the previous one; the
-        // caller deletes the old reference after this succeeds.
-        var mediaName = $"cc-vm-greeting-{Guid.NewGuid():N}";
+        // A fresh unique name per upload means a re-uploaded clip never collides with the previous one; the caller
+        // deletes the old reference after this succeeds. The prefix keeps stored media identifiable by purpose.
+        var prefix = string.IsNullOrWhiteSpace(namePrefix) ? "cc-voice-media" : namePrefix.Trim();
+        var mediaName = $"{prefix}-{Guid.NewGuid():N}";
 
         try
         {
@@ -56,7 +61,7 @@ public sealed class TelnyxVoicemailGreetingMediaProvisioner : IVoicemailGreeting
             mediaContent.Headers.ContentType = MediaTypeHeaderValue.Parse(
                 string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType);
 
-            form.Add(mediaContent, "media", "greeting");
+            form.Add(mediaContent, "media", "media");
             form.Add(new StringContent(mediaName), "media_name");
             form.Add(new StringContent(MaxTtlSeconds), "ttl_secs");
 
@@ -67,7 +72,7 @@ public sealed class TelnyxVoicemailGreetingMediaProvisioner : IVoicemailGreeting
                 var payload = await SafeReadAsync(response, cancellationToken);
 
                 _logger.LogError(
-                    "Telnyx rejected the voicemail greeting upload with status code {StatusCode}. Response: {Response}",
+                    "Telnyx rejected the voice media upload with status code {StatusCode}. Response: {Response}",
                     response.StatusCode,
                     payload.SanitizeLogValue());
 
@@ -82,7 +87,7 @@ public sealed class TelnyxVoicemailGreetingMediaProvisioner : IVoicemailGreeting
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while uploading the voicemail greeting to Telnyx Media Storage.");
+            _logger.LogError(ex, "An error occurred while uploading voice media to Telnyx Media Storage.");
 
             return null;
         }
@@ -101,18 +106,18 @@ public sealed class TelnyxVoicemailGreetingMediaProvisioner : IVoicemailGreeting
             using var client = CreateClient();
             using var response = await client.DeleteAsync($"media/{Uri.EscapeDataString(mediaReference)}", cancellationToken);
 
-            // Deletion is idempotent: a greeting that is already absent is a confirmed delete.
+            // Deletion is idempotent: media that is already absent is a confirmed delete.
             if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.NotFound)
             {
                 _logger.LogWarning(
-                    "Telnyx returned {StatusCode} deleting the voicemail greeting media {MediaName}.",
+                    "Telnyx returned {StatusCode} deleting the voice media {MediaName}.",
                     response.StatusCode,
                     mediaReference.SanitizeLogValue());
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogWarning(ex, "An error occurred while deleting the voicemail greeting media {MediaName} from Telnyx.", mediaReference.SanitizeLogValue());
+            _logger.LogWarning(ex, "An error occurred while deleting the voice media {MediaName} from Telnyx.", mediaReference.SanitizeLogValue());
         }
     }
 

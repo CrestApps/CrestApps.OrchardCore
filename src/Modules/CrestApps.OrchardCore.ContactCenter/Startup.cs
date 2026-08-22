@@ -173,8 +173,12 @@ public sealed class Startup : StartupBase
         services
             .AddScoped<IVoiceMediaItemStore, VoiceMediaItemStore>()
             .AddScoped<IVoiceMediaItemManager, VoiceMediaItemManager>()
+            .AddScoped<ICatalogEntryHandler<VoiceMediaItem>, VoiceMediaItemHandler>()
+            .AddDisplayDriver<VoiceMediaItem, VoiceMediaItemDisplayDriver>()
             .AddIndexProvider<VoiceMediaItemIndexProvider>()
             .AddDataMigration<VoiceMediaItemIndexMigrations>();
+
+        services.AddNavigationProvider<ContactCenterVoiceMediaAdminMenu>();
 
         services
             .AddIndexProvider<ContactCenterEventMetricIndexProvider>()

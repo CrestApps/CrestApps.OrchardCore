@@ -19,6 +19,7 @@ internal sealed class ContactCenterPermissionProvider : IPermissionProvider
         ContactCenterPermissions.ManageQueueGroups,
         ContactCenterPermissions.ManageSkills,
         ContactCenterPermissions.ManageDialer,
+        ContactCenterPermissions.ManageVoiceMedia,
         ContactCenterPermissions.SignIntoQueues,
         ContactCenterPermissions.SecurePauseRecording,
         ContactCenterPermissions.InitiateSecureCapture,

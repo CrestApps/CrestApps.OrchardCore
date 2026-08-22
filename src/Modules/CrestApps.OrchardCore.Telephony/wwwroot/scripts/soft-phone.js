@@ -1114,6 +1114,20 @@
       // as it arrives, and a failure clears it right away.
       beginPendingDial(number);
       render();
+
+      // Internal extension calls are always resolved and bridged server-side: the browser cannot originate
+      // directly to a colleague because it does not know the target's ephemeral provider endpoint. The hub
+      // resolves the extension to the target user and the provider rings this browser, then bridges the two.
+      if (isExtension) {
+        return invoke('DialExtension', {
+          extension: number
+        }).catch(function (error) {
+          clearPendingDial();
+          render();
+          showError(error && error.message ? error.message : String(error));
+          return null;
+        });
+      }
       return ensureBrowserAudio().then(function (session) {
         if (session && session.canOriginate && typeof session.originate === 'function') {
           originateBrowserCall(session, number);

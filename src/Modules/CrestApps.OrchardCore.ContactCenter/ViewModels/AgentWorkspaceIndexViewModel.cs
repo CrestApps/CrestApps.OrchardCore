@@ -13,6 +13,11 @@ public sealed class AgentWorkspaceIndexViewModel
     public string DisplayName { get; set; }
 
     /// <summary>
+    /// Gets or sets the current agent's assigned internal extension number, when one is configured.
+    /// </summary>
+    public string MyExtension { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the current user may open the supervisor dashboard.
     /// </summary>
     public bool CanMonitor { get; set; }

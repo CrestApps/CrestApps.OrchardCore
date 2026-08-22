@@ -40,7 +40,7 @@ public sealed class VoiceMediaItemManager : CatalogManager<VoiceMediaItem>, IVoi
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<VoiceMediaItem>> GetAllAsync(CancellationToken cancellationToken = default)
+    public new async Task<IReadOnlyCollection<VoiceMediaItem>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var items = await _store.GetAllAsync(cancellationToken);
 

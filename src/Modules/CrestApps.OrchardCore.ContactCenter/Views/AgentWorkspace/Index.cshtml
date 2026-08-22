@@ -80,6 +80,12 @@
         <div class="cc-topbar__identity">
             <span class="cc-avatar">@initial</span>
             <span>@Model.DisplayName</span>
+            @if (!string.IsNullOrEmpty(Model.MyExtension))
+            {
+                <span class="badge bg-secondary ms-2" title="@T["Your extension"]">
+                    <i class="fa-solid fa-hashtag" aria-hidden="true"></i> @Model.MyExtension
+                </span>
+            }
         </div>
 
         <div class="cc-presence" data-cc-presence>

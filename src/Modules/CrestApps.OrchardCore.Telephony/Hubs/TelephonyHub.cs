@@ -189,6 +189,46 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         => ExecuteAsync("Voicemail", () => DescribeCallReference(call), (service, token) => service.SendToVoicemailAsync(call, token), () => GetCallIds(call));
 
     /// <summary>
+    /// Places a call to an internal extension.
+    /// </summary>
+    /// <param name="request">The extension dial request.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    public Task<TelephonyResult> DialExtension(ExtensionDialRequest request)
+    {
+        if (request is not null && !string.IsNullOrEmpty(Context.UserIdentifier))
+        {
+            // Stamp the caller's identity so a provider that delivers audio to a per-user browser endpoint can
+            // resolve this agent's live soft-phone registration and bridge the internal call to their browser.
+            request.CallerUserId = Context.UserIdentifier;
+            request.Metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
+        }
+
+        return ExecuteAsync("DialExtension", () => DescribeExtensionDialRequest(request), (service, token) => service.DialExtensionAsync(request, token));
+    }
+
+    /// <summary>
+    /// Adds an internal extension into an active call as a conference participant.
+    /// </summary>
+    /// <param name="request">The extension conference request.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    public Task<TelephonyResult> AddExtensionToConference(ExtensionConferenceRequest request)
+    {
+        if (request is not null && !string.IsNullOrEmpty(Context.UserIdentifier))
+        {
+            request.CallerUserId = Context.UserIdentifier;
+            request.Metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
+        }
+
+        return ExecuteAsync(
+            "AddExtensionToConference",
+            () => DescribeExtensionConferenceRequest(request),
+            (service, token) => service.AddExtensionToConferenceAsync(request, token),
+            () => GetCallIds(request?.ActiveCall));
+    }
+
+    /// <summary>
     /// Issues the bootstrap configuration the soft phone client needs to connect to the provider.
     /// </summary>
     /// <returns>The client credentials, or <see langword="null"/> when no provider is configured.</returns>
@@ -849,6 +889,20 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         return request is null
             ? "(null)"
             : $"To={_addressRedactor.Redact(request.To)}, From={_addressRedactor.Redact(request.From)}";
+    }
+
+    private static string DescribeExtensionDialRequest(ExtensionDialRequest request)
+    {
+        return request is null
+            ? "(null)"
+            : $"Extension={request.Extension.SanitizeLogValue()}, TargetUserId={request.TargetUserId.SanitizeLogValue()}";
+    }
+
+    private static string DescribeExtensionConferenceRequest(ExtensionConferenceRequest request)
+    {
+        return request is null
+            ? "(null)"
+            : $"Extension={request.Extension.SanitizeLogValue()}, TargetUserId={request.TargetUserId.SanitizeLogValue()}, ActiveCallId={request.ActiveCall?.CallId.SanitizeLogValue()}";
     }
 
     private string DescribeCallReference(CallReference call)

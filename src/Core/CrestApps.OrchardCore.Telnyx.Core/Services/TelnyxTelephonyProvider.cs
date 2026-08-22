@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// SIP-over-WebSocket registrar, so hold and mute are handled by the browser media adapter and are reported
 /// optimistically here.
 /// </summary>
-public sealed class TelnyxTelephonyProvider :
+public sealed partial class TelnyxTelephonyProvider :
     ITelephonyProvider,
     ITelephonyCallControlProvider,
     ITelephonyInboundCallProvider,
@@ -30,6 +30,7 @@ public sealed class TelnyxTelephonyProvider :
     ITelephonyConferenceProvider,
     ITelephonyDtmfProvider,
     ITelephonyVoicemailProvider,
+    ITelephonyExtensionDialProvider,
     ITelephonyAudioProvider,
     ITelephonySoftPhoneCredentialsProvider,
     ITelephonyCallStateProvider
@@ -82,7 +83,9 @@ public sealed class TelnyxTelephonyProvider :
             TelephonyCapabilities.Merge |
             TelephonyCapabilities.SendDigits |
             TelephonyCapabilities.Voicemail |
-            TelephonyCapabilities.ReceiveCalls;
+            TelephonyCapabilities.ReceiveCalls |
+            TelephonyCapabilities.ExtensionDial |
+            TelephonyCapabilities.ExtensionConference;
 
     /// <inheritdoc/>
     public TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.Browser;
@@ -247,10 +250,18 @@ public sealed class TelnyxTelephonyProvider :
         return $"sip:{credential.SipUsername}@{sipDomain}";
     }
 
-    private async Task<TelephonyResult> DialBrowserBridgeAsync(DialRequest request, string callerId, string agentEndpoint, CancellationToken cancellationToken)
+    private async Task<TelephonyResult> DialBrowserBridgeAsync(
+        DialRequest request,
+        string callerId,
+        string agentEndpoint,
+        CancellationToken cancellationToken,
+        string voicemailRecipientUserId = null,
+        int? ringTimeoutSeconds = null)
     {
         // Ring the agent's browser endpoint. The destination and caller id travel in client_state so the
         // webhook orchestration can dial the destination once the browser answers and then bridge the legs.
+        // For an internal extension call, the recipient's voicemail user id and a ring timeout also ride along
+        // so an unanswered target can be sent to voicemail.
         var body = new Dictionary<string, object>
         {
             ["connection_id"] = _options.ConnectionId,
@@ -260,6 +271,8 @@ public sealed class TelnyxTelephonyProvider :
                 Intent = TelnyxOutboundBridgeState.AgentLegIntent,
                 Destination = request.To,
                 CallerId = callerId,
+                VoicemailRecipientUserId = voicemailRecipientUserId,
+                RingTimeoutSeconds = ringTimeoutSeconds,
             }.ToClientState(),
         };
 
