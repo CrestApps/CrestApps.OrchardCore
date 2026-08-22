@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

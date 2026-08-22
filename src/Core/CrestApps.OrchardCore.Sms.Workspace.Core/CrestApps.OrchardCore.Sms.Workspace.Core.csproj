@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Title>CrestApps OrchardCore SMS Portal Core</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Core domain models, stores, indexes, routing pipeline, and services for the CrestApps OrchardCore SMS
+      Communication Portal: the conversation document, the number-routing table, the per-number provider
+      dispatcher, and the inbound/outbound message services.
+    </Description>
+    <PackageTags>$(PackageTags) Telephony SMS Portal</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Sms.Workspace" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.Compliance.Redaction" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <PackageReference Include="OrchardCore.Sms.Abstractions" />
+    <PackageReference Include="OrchardCore.Sms.Core" />
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="CrestApps.Core.Data.YesSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
+  </ItemGroup>
+
+</Project>

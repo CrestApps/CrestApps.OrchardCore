@@ -23,7 +23,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
-    <Project Path="src/Abstractions/CrestApps.OrchardCore.Telephony.Sms.Abstractions/CrestApps.OrchardCore.Telephony.Sms.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions.csproj" />
   </Folder>
@@ -41,7 +41,7 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Roles.Core/CrestApps.OrchardCore.Roles.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Telephony.Core/CrestApps.OrchardCore.Telephony.Core.csproj" />
-    <Project Path="src/Core/CrestApps.OrchardCore.Telephony.Sms.Core/CrestApps.OrchardCore.Telephony.Sms.Core.csproj" />
+    <Project Path="src/Core/CrestApps.OrchardCore.Sms.Workspace.Core/CrestApps.OrchardCore.Sms.Workspace.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Telnyx.Core/CrestApps.OrchardCore.Telnyx.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Users.Core/CrestApps.OrchardCore.Users.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
@@ -107,7 +107,7 @@
     <Project Path="src/Modules/CrestApps.OrchardCore.PhoneNumbers/CrestApps.OrchardCore.PhoneNumbers.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telephony.Azure/CrestApps.OrchardCore.Telephony.Azure.csproj" />
-    <Project Path="src/Modules/CrestApps.OrchardCore.Telephony.Sms/CrestApps.OrchardCore.Telephony.Sms.csproj" />
+    <Project Path="src/Modules/CrestApps.OrchardCore.Sms.Workspace/CrestApps.OrchardCore.Sms.Workspace.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.Telnyx/CrestApps.OrchardCore.Telnyx.csproj" />
     <Project Path="src/Modules/CrestApps.OrchardCore.WebSockets/CrestApps.OrchardCore.WebSockets.csproj" />
   </Folder>

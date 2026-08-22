@@ -1,9 +1,9 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
-using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
-using CrestApps.OrchardCore.Telephony.Sms.Models;
-using CrestApps.OrchardCore.Telephony.Sms.Notifications;
-using CrestApps.OrchardCore.Telephony.Sms.Services;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
+using CrestApps.OrchardCore.Sms.Workspace.Models;
+using CrestApps.OrchardCore.Sms.Workspace.Notifications;
+using CrestApps.OrchardCore.Sms.Workspace.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;

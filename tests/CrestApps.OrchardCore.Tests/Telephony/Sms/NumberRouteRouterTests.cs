@@ -1,9 +1,9 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
-using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
-using CrestApps.OrchardCore.Telephony.Sms.Core.Services.Routers;
-using CrestApps.OrchardCore.Telephony.Sms.Models;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routers;
+using CrestApps.OrchardCore.Sms.Workspace.Models;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 

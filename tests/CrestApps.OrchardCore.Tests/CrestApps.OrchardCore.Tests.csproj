@@ -69,9 +69,9 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Dialpad/CrestApps.OrchardCore.Dialpad.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Telnyx/CrestApps.OrchardCore.Telnyx.csproj" />
-    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Telephony.Sms.Abstractions/CrestApps.OrchardCore.Telephony.Sms.Abstractions.csproj" />
-    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Telephony.Sms.Core/CrestApps.OrchardCore.Telephony.Sms.Core.csproj" />
-    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Telephony.Sms/CrestApps.OrchardCore.Telephony.Sms.csproj" />
+    <ProjectReference Include="../../src/Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Core/CrestApps.OrchardCore.Sms.Workspace.Core/CrestApps.OrchardCore.Sms.Workspace.Core.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Sms.Workspace/CrestApps.OrchardCore.Sms.Workspace.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.Users/CrestApps.OrchardCore.Users.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.PhoneNumbers.Verifications/CrestApps.OrchardCore.PhoneNumbers.Verifications.csproj" />
     <ProjectReference Include="../../src/Startup/CrestApps.OrchardCore.Asterisk.Web/CrestApps.OrchardCore.Asterisk.Web.csproj" />

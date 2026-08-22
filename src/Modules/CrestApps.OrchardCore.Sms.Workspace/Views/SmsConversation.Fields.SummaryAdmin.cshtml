@@ -1,0 +1,26 @@
+@model SmsConversation
+
+<div class="d-flex justify-content-between align-items-start">
+    <div>
+        <strong>@Model.CustomerAddress</strong>
+        @if (!Model.IsRead || Model.UnreadCount > 0)
+        {
+            <span class="badge bg-primary ms-1">@(Model.UnreadCount > 0 ? Model.UnreadCount.ToString() : T["New"].Value)</span>
+        }
+        <div class="text-muted small text-truncate" style="max-width: 32rem;">@Model.LastMessagePreview</div>
+        <div class="text-muted small">
+            @T["on"] @Model.ServiceAddress
+            &middot; @Model.Status.ToString()
+            @if (Model.AssignmentStatus == CrestApps.OrchardCore.Sms.Workspace.Models.SmsConversationAssignmentStatus.Unassigned)
+            {
+                <span class="badge bg-warning text-dark ms-1">@T["Unassigned"]</span>
+            }
+        </div>
+    </div>
+    <div class="text-muted small">
+        @if (Model.LastMessageUtc.HasValue)
+        {
+            <text>@Model.LastMessageUtc.Value.ToString("g")</text>
+        }
+    </div>
+</div>

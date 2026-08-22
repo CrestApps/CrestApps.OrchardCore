@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Telephony.Sms.Core.Models;
-using CrestApps.OrchardCore.Telephony.Sms.Core.Services;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 

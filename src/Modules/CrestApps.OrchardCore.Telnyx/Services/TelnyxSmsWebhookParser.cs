@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.Telephony.Sms.Models;
+using CrestApps.OrchardCore.Sms.Workspace.Models;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
