@@ -239,6 +239,15 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             greetingMediaName = recipientAgent?.VoicemailGreetingMediaName;
         }
 
+        // Fall back to the entry point's default spoken greeting (stamped on the interaction when the call arrived)
+        // when the recipient agent has no spoken greeting of their own. A recorded agent greeting still wins.
+        if (string.IsNullOrWhiteSpace(greetingText) &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.EntryPointGreetingTextMetadataKey, out var entryGreeting) &&
+            entryGreeting?.ToString() is { Length: > 0 } entryGreetingText)
+        {
+            greetingText = entryGreetingText;
+        }
+
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         await _publisher.PublishAsync(CreateSentToVoicemailEvent(command, interaction), cancellationToken);
 

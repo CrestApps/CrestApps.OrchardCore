@@ -109,6 +109,13 @@ public static partial class ContactCenterConstants
         /// plays its own hosted copy before recording, so no publicly reachable URL of ours is required.
         /// </summary>
         public const string GreetingMediaNameMetadataKey = "voicemailGreetingMediaName";
+
+        /// <summary>
+        /// The interaction-metadata key that carries the entry point's default (fallback) spoken greeting, stamped
+        /// when the inbound call is created. It is used when the recipient agent has not set their own greeting, so
+        /// a dialed number can define the message its callers hear without each agent configuring one.
+        /// </summary>
+        public const string EntryPointGreetingTextMetadataKey = "voicemailEntryPointGreetingText";
     }
 
     /// <summary>

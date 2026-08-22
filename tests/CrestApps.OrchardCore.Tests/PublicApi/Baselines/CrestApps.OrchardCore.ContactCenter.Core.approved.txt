@@ -919,6 +919,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string TargetQueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType TargetType { get; set; }
         public bool VoicemailEnabled { get; set; }
+        public string VoicemailGreetingText { get; set; }
         public string WelcomeMessage { get; set; }
     }
     public enum ContactCenterErasureStrategy
@@ -1218,6 +1219,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool ShouldQueue { get; set; }
         public string TargetAgentId { get; set; }
         public string TargetQueueId { get; set; }
+        public string VoicemailGreetingText { get; set; }
     }
     public sealed class ExpiredReservationPage
     {

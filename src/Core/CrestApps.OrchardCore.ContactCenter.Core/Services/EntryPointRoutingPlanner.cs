@@ -24,6 +24,9 @@ public static class EntryPointRoutingPlanner
             IsOpen = isOpen,
             Priority = entryPoint.Priority,
             ClosedAction = entryPoint.ClosedAction,
+            // The entry point's default greeting applies to every voicemail from this door (agent or queue route),
+            // as the fallback when the recipient agent has no greeting of their own.
+            VoicemailGreetingText = entryPoint.VoicemailGreetingText,
         };
 
         var isAgentTarget = entryPoint.TargetType == EntryPointTargetType.Agent &&

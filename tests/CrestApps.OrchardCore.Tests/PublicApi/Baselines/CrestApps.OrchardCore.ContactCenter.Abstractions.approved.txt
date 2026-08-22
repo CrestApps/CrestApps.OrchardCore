@@ -180,6 +180,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         }
         public static class Voicemail
         {
+            public const string EntryPointGreetingTextMetadataKey = "voicemailEntryPointGreetingText";
             public const string GreetingMediaNameMetadataKey = "voicemailGreetingMediaName";
             public const string GreetingMediaUrlMetadataKey = "voicemailGreetingMediaUrl";
             public const string GreetingTextMetadataKey = "voicemailGreetingText";

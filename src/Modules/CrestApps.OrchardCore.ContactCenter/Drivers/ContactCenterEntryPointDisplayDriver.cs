@@ -63,6 +63,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             OverflowQueueId = entryPoint.OverflowQueueId,
             WelcomeMessage = entryPoint.WelcomeMessage,
             ClosedMessage = entryPoint.ClosedMessage,
+            VoicemailGreetingText = entryPoint.VoicemailGreetingText,
             Enabled = entryPoint.Enabled,
         };
 
@@ -89,6 +90,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.OverflowQueueOptions = viewModel.OverflowQueueOptions;
             model.WelcomeMessage = viewModel.WelcomeMessage;
             model.ClosedMessage = viewModel.ClosedMessage;
+            model.VoicemailGreetingText = viewModel.VoicemailGreetingText;
             model.Enabled = viewModel.Enabled;
         }).Location("Content:1");
     }
@@ -151,6 +153,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         entryPoint.OverflowQueueId = string.IsNullOrWhiteSpace(model.OverflowQueueId) ? null : model.OverflowQueueId.Trim();
         entryPoint.WelcomeMessage = model.WelcomeMessage?.Trim();
         entryPoint.ClosedMessage = model.ClosedMessage?.Trim();
+        entryPoint.VoicemailGreetingText = string.IsNullOrWhiteSpace(model.VoicemailGreetingText) ? null : model.VoicemailGreetingText.Trim();
         entryPoint.Enabled = model.Enabled;
 
         return await EditAsync(entryPoint, context);
