@@ -51,6 +51,27 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     {
         ArgumentNullException.ThrowIfNull(callEvent);
 
+        // The voicemail greeting has finished playing. Handle this FIRST -- before any database work -- because it
+        // is time-critical: the caller is on the line waiting to hear the beep, so record_start must be issued
+        // within a second of the greeting ending, before they hang up. The greeting's client_state (set on the
+        // speak/playback_start command) is echoed here; only a greeting-tagged ended event triggers this, and it
+        // needs no database read, so it must never queue behind the slower state-ingestion path below.
+        var eventType = callEvent.EventType?.Trim();
+
+        if ((string.Equals(eventType, TelnyxConstants.Recording.SpeakEndedEventType, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(eventType, TelnyxConstants.Recording.PlaybackEndedEventType, StringComparison.OrdinalIgnoreCase)) &&
+            !string.IsNullOrEmpty(callEvent.CallControlId) &&
+            TelnyxRecordingClientState.TryParseGreeting(callEvent.ClientState, out var greetingState))
+        {
+            var started = await _voicemailRecordingStarter.StartAsync(
+                callEvent.CallControlId,
+                greetingState.InteractionId,
+                greetingState.RecipientUserId,
+                cancellationToken);
+
+            return started ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
+        }
+
         // Advance an outbound soft-phone bridge before anything else. The destination leg is an internal leg
         // the platform created only to reach the dialed party, so it is bridged here and never surfaced to the
         // soft phone; the agent leg is the call the soft phone tracks, so it continues to normalization below.
@@ -74,26 +95,6 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
             }
 
             return recordingHandled ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
-        }
-
-        // The voicemail greeting has finished playing. Its client_state (set on the speak/playback_start command)
-        // is echoed here, which is the signal to start the beep-and-record so the greeting is never captured inside
-        // the caller's message. Only a greeting-tagged ended event triggers this; any other speak/playback simply
-        // falls through and is ignored below.
-        var eventType = callEvent.EventType?.Trim();
-
-        if ((string.Equals(eventType, TelnyxConstants.Recording.SpeakEndedEventType, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(eventType, TelnyxConstants.Recording.PlaybackEndedEventType, StringComparison.OrdinalIgnoreCase)) &&
-            !string.IsNullOrEmpty(callEvent.CallControlId) &&
-            TelnyxRecordingClientState.TryParseGreeting(callEvent.ClientState, out var greetingState))
-        {
-            var started = await _voicemailRecordingStarter.StartAsync(
-                callEvent.CallControlId,
-                greetingState.InteractionId,
-                greetingState.RecipientUserId,
-                cancellationToken);
-
-            return started ? TelnyxWebhookResult.Updated : TelnyxWebhookResult.Ignored;
         }
 
         if (string.IsNullOrEmpty(callEvent.CallControlId) || !TryMapState(callEvent, out var state))
