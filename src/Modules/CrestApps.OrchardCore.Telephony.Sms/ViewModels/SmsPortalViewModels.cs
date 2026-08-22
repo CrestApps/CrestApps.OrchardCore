@@ -23,6 +23,11 @@ public class SmsComposeViewModel
     public string Recipients { get; set; }
 
     /// <summary>
+    /// Gets or sets the phone numbers selected through the customer picker.
+    /// </summary>
+    public IList<string> ContactPhones { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the message body.
     /// </summary>
     public string Body { get; set; }

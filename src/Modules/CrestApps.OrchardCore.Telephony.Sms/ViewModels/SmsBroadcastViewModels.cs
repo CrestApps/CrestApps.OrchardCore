@@ -30,6 +30,11 @@ public class SmsBroadcastCreateViewModel
     public string RecipientsText { get; set; }
 
     /// <summary>
+    /// Gets or sets the phone numbers selected through the customer picker.
+    /// </summary>
+    public IList<string> ContactPhones { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the selectable SMS channel endpoints (DIDs).
     /// </summary>
     [BindNever]

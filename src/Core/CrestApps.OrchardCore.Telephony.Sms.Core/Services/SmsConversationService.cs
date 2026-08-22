@@ -166,7 +166,9 @@ public sealed class SmsConversationService : ISmsConversationService
         var serviceAddress = fromNumber.GetCleanedPhoneNumber();
         var customerAddress = toNumber.GetCleanedPhoneNumber();
 
-        var conversation = await _conversationStore.FindByAddressesAsync(serviceAddress, customerAddress, cancellationToken);
+        // Enforce a single conversation per customer number: reuse any existing thread for this customer (on any
+        // of our numbers) rather than creating a duplicate; only create when none exists.
+        var conversation = await _conversationStore.FindByCustomerAsync(customerAddress, cancellationToken);
         var isNew = conversation is null;
 
         if (isNew)
@@ -228,6 +230,12 @@ public sealed class SmsConversationService : ISmsConversationService
         conversation.LastMessagePreview = BuildPreview(body);
         conversation.IsRead = true;
         conversation.ModifiedUtc = _clock.UtcNow;
+
+        // Reopen a closed/snoozed thread when the agent messages the customer again.
+        if (!isNew && conversation.Status is SmsConversationStatus.Closed or SmsConversationStatus.Snoozed)
+        {
+            conversation.Status = SmsConversationStatus.Open;
+        }
 
         if (isNew)
         {

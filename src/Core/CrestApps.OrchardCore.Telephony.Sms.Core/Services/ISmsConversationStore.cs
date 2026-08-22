@@ -19,6 +19,15 @@ public interface ISmsConversationStore : ICatalog<SmsConversation>
     Task<SmsConversation> FindByAddressesAsync(string serviceAddress, string customerAddress, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Finds the most recent conversation with the specified customer, regardless of which of our numbers it
+    /// runs on. Used to enforce a single conversation per customer number when an agent starts a conversation.
+    /// </summary>
+    /// <param name="customerAddress">The customer's number (E.164).</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The most recent matching conversation, or <see langword="null"/> when none exists.</returns>
+    Task<SmsConversation> FindByCustomerAsync(string customerAddress, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists the conversations assigned to (or owned personally by) the specified agent, most-recent first.
     /// </summary>
     /// <param name="agentId">The agent profile id.</param>

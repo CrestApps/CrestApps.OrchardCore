@@ -1,5 +1,8 @@
 @model SmsComposeViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 <zone Name="Title"><h1>@RenderTitleSegments(T["New conversation"])</h1></zone>
 
 <form method="post" class="no-multisubmit">
@@ -7,22 +10,19 @@
 
     <div class="mb-3">
         <label asp-for="EndpointId" class="form-label">@T["Send from (number)"]</label>
-        <select asp-for="EndpointId" class="form-select" asp-items="Model.Endpoints">
-            <option value="">@T["Select an SMS number"]</option>
-        </select>
+        <select asp-for="EndpointId" asp-items="Model.Endpoints" class="selectpicker show-tick" data-live-search="true" data-width="100%" title="@T["Select an SMS number"]"></select>
         <span asp-validation-for="EndpointId" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label class="form-label">@T["Find a customer"]</label>
-        <input type="text" id="customer-search" class="form-control" placeholder="@T["Search customers by name…"]" autocomplete="off" />
-        <div id="customer-results" class="list-group mt-1" style="max-height: 12rem; overflow-y: auto;"></div>
-        <span class="hint">@T["Pick customers to add their number below; the conversation links to the customer automatically."]</span>
+        <label asp-for="ContactPhones" class="form-label">@T["To (customers)"]</label>
+        <select asp-for="ContactPhones" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Search customers by name or phone…"]"></select>
+        <span class="hint">@T["Type a name or phone number to search your contacts, then select one or more."]</span>
     </div>
 
     <div class="mb-3">
-        <label asp-for="Recipients" class="form-label">@T["Recipients"]</label>
-        <textarea asp-for="Recipients" id="recipients" class="form-control" rows="3" placeholder="@T["One number per line (E.164), or comma-separated"]"></textarea>
+        <label asp-for="Recipients" class="form-label">@T["Additional numbers"]</label>
+        <textarea asp-for="Recipients" class="form-control" rows="2" placeholder="@T["One number per line (E.164), or comma-separated"]"></textarea>
         <span class="hint">@T["One recipient starts a 1:1 conversation; multiple recipients start a group (each gets their own private 1:1 thread)."]</span>
         <span asp-validation-for="Recipients" class="text-danger"></span>
     </div>
@@ -41,43 +41,37 @@
     </div>
 </form>
 
-<script at="Foot">
+<script at="Foot" depends-on="bootstrap-select">
     (function () {
-        var search = document.getElementById('customer-search');
-        var results = document.getElementById('customer-results');
-        var recipients = document.getElementById('recipients');
-        if (!search || !results || !recipients) { return; }
-
+        var $ = window.jQuery;
+        if (!$) { return; }
         var url = '@Url.Action("SearchCustomers")';
-        var timer = null;
 
-        function addNumber(phone) {
-            var current = recipients.value.split(/[\n,;]+/).map(function (s) { return s.trim(); }).filter(Boolean);
-            if (current.indexOf(phone) === -1) {
-                current.push(phone);
-                recipients.value = current.join('\n');
-            }
-        }
+        $(function () {
+            var $picker = $('#recipient-select');
+            $picker.selectpicker();
 
-        search.addEventListener('input', function () {
-            var q = this.value.trim();
-            clearTimeout(timer);
-            if (q.length < 2) { results.innerHTML = ''; return; }
-            timer = setTimeout(function () {
-                fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
-                    .then(function (r) { return r.json(); })
-                    .then(function (items) {
-                        results.innerHTML = '';
-                        items.forEach(function (item) {
-                            var a = document.createElement('a');
-                            a.href = 'javascript:void(0)';
-                            a.className = 'list-group-item list-group-item-action';
-                            a.textContent = item.name + ' — ' + item.phone;
-                            a.addEventListener('click', function () { addNumber(item.phone); results.innerHTML = ''; search.value = ''; });
-                            results.appendChild(a);
+            // Server-side live search: as the agent types in the picker's search box, query contacts and add
+            // matching options (keeping any already-selected options so selections persist across searches).
+            var $wrapper = $picker.closest('.bootstrap-select');
+            var timer = null;
+
+            $wrapper.on('input', '.bs-searchbox input', function () {
+                var q = $(this).val().trim();
+                clearTimeout(timer);
+                if (q.length < 2) { return; }
+                timer = setTimeout(function () {
+                    $.getJSON(url, { q: q }).done(function (items) {
+                        (items || []).forEach(function (item) {
+                            if (!item.phone) { return; }
+                            if ($picker.find('option[value="' + item.phone.replace(/"/g, '\\"') + '"]').length === 0) {
+                                $picker.append($('<option>').attr('value', item.phone).attr('data-subtext', item.phone).text(item.name || item.phone));
+                            }
                         });
+                        $picker.selectpicker('refresh');
                     });
-            }, 250);
+                }, 250);
+            });
         });
     })();
 </script>

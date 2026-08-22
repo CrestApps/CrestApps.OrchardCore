@@ -1,5 +1,8 @@
 @model SmsBroadcastCreateViewModel
 
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
 <zone Name="Title"><h1>@RenderTitleSegments(T["New SMS broadcast"])</h1></zone>
 
 <form method="post" class="no-multisubmit">
@@ -13,23 +16,27 @@
 
     <div class="mb-3">
         <label asp-for="EndpointId" class="form-label">@T["Send from (number)"]</label>
-        <select asp-for="EndpointId" class="form-select" asp-items="Model.Endpoints">
-            <option value="">@T["Select an SMS number"]</option>
-        </select>
+        <select asp-for="EndpointId" asp-items="Model.Endpoints" class="selectpicker show-tick" data-live-search="true" data-width="100%" title="@T["Select an SMS number"]"></select>
         <span asp-validation-for="EndpointId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ContactPhones" class="form-label">@T["Recipients (customers)"]</label>
+        <select asp-for="ContactPhones" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Search customers by name or phone…"]"></select>
+        <span class="hint">@T["Type a name or phone number to search your contacts, then select recipients."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="RecipientsText" class="form-label">@T["Additional numbers"]</label>
+        <textarea asp-for="RecipientsText" class="form-control" rows="4" placeholder="@T["One number per line (E.164), or comma-separated"]"></textarea>
+        <span class="hint">@T["Each recipient gets their own 1:1 thread; they cannot see each other."]</span>
+        <span asp-validation-for="RecipientsText" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
         <label asp-for="Body" class="form-label">@T["Message"]</label>
         <textarea asp-for="Body" class="form-control" rows="3"></textarea>
         <span asp-validation-for="Body" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3">
-        <label asp-for="RecipientsText" class="form-label">@T["Recipients"]</label>
-        <textarea asp-for="RecipientsText" class="form-control" rows="5" placeholder="@T["One number per line (E.164), or comma-separated"]"></textarea>
-        <span class="hint">@T["Each recipient gets their own 1:1 thread; they cannot see each other."]</span>
-        <span asp-validation-for="RecipientsText" class="text-danger"></span>
     </div>
 
     <div class="ocat-wrapper">
@@ -39,3 +46,36 @@
         </div>
     </div>
 </form>
+
+<script at="Foot" depends-on="bootstrap-select">
+    (function () {
+        var $ = window.jQuery;
+        if (!$) { return; }
+        var url = '@Url.Action("SearchCustomers", "SmsPortal")';
+
+        $(function () {
+            var $picker = $('#recipient-select');
+            $picker.selectpicker();
+
+            var $wrapper = $picker.closest('.bootstrap-select');
+            var timer = null;
+
+            $wrapper.on('input', '.bs-searchbox input', function () {
+                var q = $(this).val().trim();
+                clearTimeout(timer);
+                if (q.length < 2) { return; }
+                timer = setTimeout(function () {
+                    $.getJSON(url, { q: q }).done(function (items) {
+                        (items || []).forEach(function (item) {
+                            if (!item.phone) { return; }
+                            if ($picker.find('option[value="' + item.phone.replace(/"/g, '\\"') + '"]').length === 0) {
+                                $picker.append($('<option>').attr('value', item.phone).attr('data-subtext', item.phone).text(item.name || item.phone));
+                            }
+                        });
+                        $picker.selectpicker('refresh');
+                    });
+                }, 250);
+            });
+        });
+    })();
+</script>

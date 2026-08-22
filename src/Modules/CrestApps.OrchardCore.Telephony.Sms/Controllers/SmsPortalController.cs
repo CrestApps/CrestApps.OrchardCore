@@ -107,15 +107,41 @@ public sealed class SmsPortalController : Controller
         return View(viewModel);
     }
 
-    [Admin("sms/portal/new", "SmsPortalNew")]
-    public async Task<IActionResult> New()
+    // Entry point for the "SMS" icon shown next to a phone number: open the single existing conversation for
+    // that number (on any of our numbers), or fall through to the composer prefilled with the recipient.
+    [Admin("sms/portal/start", "SmsPortalStart")]
+    public async Task<IActionResult> Start(string number)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.UseSmsPortal))
         {
             return Forbid();
         }
 
-        return View(new SmsComposeViewModel { Endpoints = await BuildEndpointOptionsAsync() });
+        if (string.IsNullOrWhiteSpace(number))
+        {
+            return RedirectToAction(nameof(New));
+        }
+
+        var existing = await _conversationStore.FindByCustomerAsync(number.GetCleanedPhoneNumber());
+
+        return existing is not null
+            ? RedirectToAction(nameof(Conversation), new { id = existing.ItemId })
+            : RedirectToAction(nameof(New), new { to = number });
+    }
+
+    [Admin("sms/portal/new", "SmsPortalNew")]
+    public async Task<IActionResult> New(string to)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, TelephonySmsPermissions.UseSmsPortal))
+        {
+            return Forbid();
+        }
+
+        return View(new SmsComposeViewModel
+        {
+            Recipients = to,
+            Endpoints = await BuildEndpointOptionsAsync(),
+        });
     }
 
     [HttpPost]
@@ -129,7 +155,12 @@ public sealed class SmsPortalController : Controller
         }
 
         var endpoint = string.IsNullOrEmpty(model.EndpointId) ? null : await _endpointManager.FindByIdAsync(model.EndpointId);
-        var recipients = ParseRecipients(model.Recipients);
+        var recipients = ParseRecipients(model.Recipients)
+            .Concat(model.ContactPhones ?? [])
+            .Where(number => !string.IsNullOrWhiteSpace(number))
+            .Select(number => number.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         if (endpoint is null)
         {
@@ -205,18 +236,31 @@ public sealed class SmsPortalController : Controller
             return Json(Array.Empty<SmsCustomerSearchResult>());
         }
 
-        var items = await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.DisplayText.Contains(q))
-            .Take(20)
-            .ListAsync();
+        // Match contacts by name (display text, which carries first + last name) and by phone number.
+        var byName = (await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.DisplayText.Contains(q))
+                .Take(20)
+                .ListAsync())
+            .Where(item => item.As<OmnichannelContactPart>() is not null)
+            .Select(item => item.ContentItemId);
 
-        var contacts = items.Where(item => item.As<OmnichannelContactPart>() is not null).ToArray();
-        var ids = contacts.Select(item => item.ContentItemId).ToArray();
+        var byPhone = (await _session.QueryIndex<OmnichannelContactIndex>(index => index.Latest &&
+                (index.PrimaryCellPhoneNumber.Contains(q) || index.NormalizedPrimaryCellPhoneNumber.Contains(q) ||
+                 index.PrimaryHomePhoneNumber.Contains(q) || index.NormalizedPrimaryHomePhoneNumber.Contains(q)))
+                .Take(20)
+                .ListAsync())
+            .Select(index => index.ContentItemId);
+
+        var ids = byName.Concat(byPhone)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(20)
+            .ToArray();
 
         var phones = (await _session.QueryIndex<OmnichannelContactIndex>(index => index.Latest && index.ContentItemId.IsIn(ids)).ListAsync())
             .GroupBy(index => index.ContentItemId)
-            .ToDictionary(group => group.Key, group => group.First().NormalizedPrimaryCellPhoneNumber ?? group.First().PrimaryCellPhoneNumber);
+            .ToDictionary(group => group.Key, group => group.First().NormalizedPrimaryCellPhoneNumber ?? group.First().PrimaryCellPhoneNumber, StringComparer.OrdinalIgnoreCase);
 
-        var results = contacts
+        var results = (await _contentManager.GetAsync(ids))
             .Select(item => new SmsCustomerSearchResult
             {
                 Id = item.ContentItemId,

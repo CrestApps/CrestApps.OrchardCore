@@ -34,6 +34,18 @@ public sealed class SmsConversationStore : DocumentCatalog<SmsConversation, SmsC
     }
 
     /// <inheritdoc/>
+    public async Task<SmsConversation> FindByCustomerAsync(string customerAddress, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(customerAddress);
+
+        return await Session.Query<SmsConversation, SmsConversationIndex>(
+                index => index.CustomerAddress == customerAddress,
+                collection: TelephonySmsStorage.CollectionName)
+            .OrderByDescending(index => index.LastMessageUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<SmsConversation>> GetForAgentAsync(string agentId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(agentId);

@@ -90,7 +90,12 @@ public sealed class SmsBroadcastsController : Controller
         }
 
         var endpoint = string.IsNullOrEmpty(model.EndpointId) ? null : await _endpointManager.FindByIdAsync(model.EndpointId);
-        var recipients = ParseRecipients(model.RecipientsText);
+        var recipients = ParseRecipients(model.RecipientsText)
+            .Concat(model.ContactPhones ?? [])
+            .Where(number => !string.IsNullOrWhiteSpace(number))
+            .Select(number => number.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
         if (string.IsNullOrWhiteSpace(model.Name))
         {
