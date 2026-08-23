@@ -11,12 +11,9 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="Channel" class="ocat-label">@T["Channel"]</label>
+    <label class="ocat-label">@T["Channel"]</label>
     <div class="ocat-end">
-        <select asp-for="Channel" class="form-select" asp-items="Model.Channels">
-            <option value="">@T["Select a channel"]</option>
-        </select>
-        <span asp-validation-for="Channel" class="text-danger"></span>
+        <input type="text" class="form-control-plaintext" value="@Model.Channel" readonly />
     </div>
 </div>
 
@@ -25,15 +22,6 @@
     <div class="ocat-end">
         <input asp-for="Value" class="form-control" />
         <span asp-validation-for="Value" class="text-danger"></span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="ProviderName" class="ocat-label">@T["Provider"]</label>
-    <div class="ocat-end">
-        <input asp-for="ProviderName" class="form-control" />
-        <span class="hint">@T["The technical name of the provider that owns this number (for example \"Twilio\" or \"Telnyx\"). Leave empty to use the tenant-default provider."]</span>
-        <span asp-validation-for="ProviderName" class="text-danger"></span>
     </div>
 </div>
 

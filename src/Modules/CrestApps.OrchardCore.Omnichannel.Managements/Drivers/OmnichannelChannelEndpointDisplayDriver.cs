@@ -35,18 +35,14 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
 
     public override IDisplayResult Edit(OmnichannelChannelEndpoint endpoint, BuildEditorContext context)
     {
+        // The channel is the source, fixed at creation, so it is not editable here. Channel-specific fields
+        // (provider, routing, ...) are contributed by the display drivers that target that channel.
         return Initialize<OmnichannelChannelEndpointViewModel>("OmnichannelChannelEndpointFields_Edit", model =>
         {
             model.DisplayText = endpoint.DisplayText;
             model.Description = endpoint.Description;
             model.Channel = endpoint.Channel;
             model.Value = endpoint.Value;
-            model.ProviderName = endpoint.ProviderName;
-            model.Channels =
-            [
-                new(S["Phone"], OmnichannelConstants.Channels.Phone),
-                new(S["SMS"], OmnichannelConstants.Channels.Sms),
-            ];
         }).Location("Content:1");
     }
 
@@ -58,9 +54,7 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
 
         endpoint.DisplayText = model.DisplayText?.Trim();
         endpoint.Description = model.Description?.Trim();
-        endpoint.Channel = model.Channel;
         endpoint.Value = model.Value?.Trim();
-        endpoint.ProviderName = model.ProviderName?.Trim();
 
         return Edit(endpoint, context);
     }

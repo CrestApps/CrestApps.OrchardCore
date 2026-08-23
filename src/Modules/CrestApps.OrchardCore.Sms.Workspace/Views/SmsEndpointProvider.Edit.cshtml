@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Sms.Workspace.ViewModels
+
+@model SmsEndpointProviderViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ProviderName" class="ocat-label">@T["Provider"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProviderName" class="form-select" asp-items="Model.Providers">
+            <option value="">@T["Use the tenant-default provider"]</option>
+        </select>
+        <span class="hint">@T["The SMS provider that owns this number. Leave empty to use the site's default SMS provider."]</span>
+        <span asp-validation-for="ProviderName" class="text-danger"></span>
+    </div>
+</div>

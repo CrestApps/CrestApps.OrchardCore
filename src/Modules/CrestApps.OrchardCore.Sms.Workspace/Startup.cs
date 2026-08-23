@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -37,6 +38,13 @@ namespace CrestApps.OrchardCore.Sms.Workspace;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    private readonly IStringLocalizer S;
+
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         // Conversation catalog.
@@ -94,6 +102,15 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, SmsBroadcastBackgroundTask>();
 
         // Admin surfaces. SMS routing is edited on the channel-endpoint screen (no separate routing catalog).
+        // Register the SMS channel as a channel-endpoint source, and the SMS-specific endpoint editors
+        // (provider dropdown + inbound routing). Both drivers target endpoints whose channel is SMS.
+        services.AddChannelEndpointSource(OmnichannelConstants.Channels.Sms, source =>
+        {
+            source.DisplayName = S["SMS"];
+            source.Description = S["A number that sends and receives text messages, handled by the SMS Workspace."];
+        });
+
+        services.AddDisplayDriver<OmnichannelChannelEndpoint, SmsEndpointProviderDisplayDriver>();
         services.AddDisplayDriver<OmnichannelChannelEndpoint, SmsEndpointRoutingDisplayDriver>();
         services.AddDisplayDriver<SmsConversation, SmsConversationDisplayDriver>();
         services.AddDisplayDriver<SmsTemplate, SmsTemplateDisplayDriver>();
