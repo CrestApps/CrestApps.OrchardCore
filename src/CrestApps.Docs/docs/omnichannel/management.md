@@ -43,6 +43,22 @@ Channel endpoints are administered under **Interaction Center → Channel Endpoi
 
 The feature is `EnabledByDependencyOnly` — you do not enable it directly. It depends only on the headless **Omnichannel Activities** feature, so a module that just needs channel endpoints (such as the SMS Workspace) can depend on it and reuse the endpoint administration and services **without** pulling in the full Omnichannel Management CRM screens. Enabling **Omnichannel Management** enables it automatically, so the channel-endpoint screens appear exactly as before.
 
+#### Channels are sources (extensible)
+
+Each **channel** is a registered **source**. The "Add endpoint" button opens a picker that lists the channels wired up on the tenant, and choosing one builds the right editor from display drivers that target that channel — so an SMS endpoint shows the SMS provider and routing, while a Phone endpoint shows only what voice needs. The channel is fixed when the endpoint is created and shown read-only afterwards.
+
+A feature contributes a channel by registering a source from its own startup:
+
+```csharp
+services.AddChannelEndpointSource("SMS", source =>
+{
+    source.DisplayName = S["SMS"];
+    source.Description = S["A number that sends and receives text messages."];
+});
+```
+
+Because the source is registered by the owning feature, a channel only appears in the picker when its feature is enabled. The **Phone** source ships with the Channel Endpoints feature (inbound voice); the **SMS** source is registered by the [SMS Workspace](sms-workspace), which also adds the **provider dropdown** (the enabled SMS providers) and the inbound-routing editor to SMS endpoints. To capture channel-specific fields, add a `DisplayDriver<OmnichannelChannelEndpoint>` that returns `null` unless the endpoint's `Channel` matches your source.
+
 ### Contact
 A **Contact** is any content item that has `OmnichannelContactPart` attached.
 
