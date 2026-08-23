@@ -31,6 +31,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ContactCenterEntryPointIndex"] = "Configuration. One row per configured entry point.",
         ["ContactCenterSkillIndex"] = "Configuration. One row per configured skill.",
         ["DialerProfileIndex"] = "Configuration. One row per configured dialer profile.",
+        ["VoiceMediaItemIndex"] = "Tenant-local reference data. One row per voice media library entry an operator uploaded, bounded by tenant setup rather than traffic.",
         ["ContactCenterProjectionCheckpointIndex"] = "Bookkeeping. One row per projection handler; deleting one would replay that projection from the beginning.",
     };
 

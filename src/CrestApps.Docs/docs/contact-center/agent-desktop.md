@@ -70,7 +70,7 @@ Use this checklist before publishing a new inbound line:
 2. Configure the Subject Flow for that endpoint so inbound activities get the right subject, campaign, disposition list, required-disposition policy, and follow-up subject actions.
 3. Create the target queue, set its SLA, reservation timeout, routing strategy, required skills, and overflow queue.
 4. Attach a business-hours calendar when the queue should pause or overflow outside staffed hours.
-5. Create an **Inbound entry point** for the DID. Set the target queue, priority, optional welcome/closed messages, and the closed action: hold, voicemail, overflow, or reject.
+5. Create an **Inbound entry point** for the DID. Set the target queue (or a specific agent), priority, optional welcome/closed messages, the **default voicemail greeting** (spoken to callers who reach voicemail on this line when the agent has no greeting of their own), and the closed action: hold, voicemail, overflow, or reject.
 6. Sign at least one skilled agent in to the queue, then place a test call. The expected path is **provider webhook → entry point → queue → reservation → Agent Workspace offer → soft-phone media**.
 7. Watch **Live dashboard** while testing. The queue waiting count should increase before assignment, then the selected agent should move from available to reserved/busy/wrap-up as the call progresses.
 
@@ -217,7 +217,25 @@ Completion links opened from Contact Center include a local return location. Aft
 
 ### 5. Review recent activity
 
-The **Recent activity** panel lists your most recent interactions with their direction, outcome, and time, so you can quickly refer back to your last few contacts.
+The soft phone keeps your history on two tabs, both of which update in real time as calls end (no page refresh needed):
+
+- **Recent** lists your most recent calls with their direction, outcome, and time, and a **Call** button to dial the number back.
+- **Voicemail** lists the voicemails left for you. A badge on the tab shows the unread count. Each entry shows the caller's number and time with a **play/pause** control; the compact player keeps the caller's number and time visible while it plays. Opening the tab marks the voicemails read and clears the badge.
+
+### 6. Manage your voicemails
+
+- **Play** a voicemail with the ▶ control on its row. Only the agent a voicemail was left for can play it; playback is governed and audited like any other recording.
+- **Delete** voicemails with the checkboxes: tick one or more rows (or **Select all**) and click **Delete**. Deleting removes the entry from your inbox and erases the stored recording.
+
+### 7. Record your voicemail greeting
+
+Open **Interaction Center → My voicemail greeting**. This is the message callers hear before leaving you a voicemail.
+
+- **Record with your microphone** (the default): press **Record**, speak, then press **Stop** (the same button toggles), review the preview, and **Save**.
+- Or switch to **Upload a file** and choose an audio file (mp3 or wav).
+- **Remove greeting** falls back to the line's default greeting.
+
+A saved greeting is uploaded to the telephony provider's own media storage (for Telnyx, Media Storage) and played back from there, so no publicly reachable URL of your own is required. When you have no recorded greeting, the caller hears the entry point's **Default voicemail greeting** (configured per dialed number), and if that is also empty, a built-in system greeting. See [Voice routing](voice-routing.md#voicemail-greeting).
 
 ## How it works
 

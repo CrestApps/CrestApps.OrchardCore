@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
@@ -177,6 +178,21 @@ public sealed class ContactCenterFeatureDependencyAuditTests
         Type[] candidateServiceTypes)
     {
         var violations = new List<string>();
+
+        // Some HTTP-scoped services (for example anything that resolves IResourceManager) read the ambient
+        // HttpContext at construction and are only ever resolved during a request in production. The audit
+        // resolves them in a bare shell scope, so a request context is supplied here to keep the oracle focused
+        // on genuine manifest gaps rather than reporting the absence of an HttpContext as an unconstructable
+        // service.
+        var httpContextAccessor = serviceProvider.GetService<IHttpContextAccessor>();
+
+        if (httpContextAccessor is not null && httpContextAccessor.HttpContext is null)
+        {
+            httpContextAccessor.HttpContext = new DefaultHttpContext
+            {
+                RequestServices = serviceProvider,
+            };
+        }
 
         foreach (var serviceType in candidateServiceTypes)
         {

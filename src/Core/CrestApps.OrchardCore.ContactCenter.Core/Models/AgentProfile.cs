@@ -58,6 +58,13 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public string VoicemailGreetingMediaUrl { get; set; }
 
     /// <summary>
+    /// Gets or sets the provider-hosted media reference for an audio greeting the agent recorded or uploaded (for
+    /// Telnyx, the <c>media_name</c> in Telnyx Media Storage). It is preferred over <see cref="VoicemailGreetingMediaUrl"/>
+    /// because the provider hosts and fetches the file itself, so no publicly reachable URL of our own is required.
+    /// </summary>
+    public string VoicemailGreetingMediaName { get; set; }
+
+    /// <summary>
     /// Gets or sets the current presence state of the agent.
     /// </summary>
     public AgentPresenceStatus PresenceStatus { get; set; }

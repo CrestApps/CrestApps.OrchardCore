@@ -3,6 +3,7 @@ using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -59,6 +60,18 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
         if (string.IsNullOrWhiteSpace(context.Model.Name))
         {
             context.Result.Fail(new ValidationResult(S["Name is required."], [nameof(ContactCenterEntryPoint.Name)]));
+        }
+
+        // An entry point routes to a specific agent or a queue, never both. The routed-to target is required for the
+        // kind of routing selected, and this rule lives here so a recipe import and an editor enforce the same set.
+        if (context.Model.TargetType == EntryPointTargetType.Agent && string.IsNullOrWhiteSpace(context.Model.TargetAgentId))
+        {
+            context.Result.Fail(new ValidationResult(S["Select the agent this entry point routes calls to."], [nameof(ContactCenterEntryPoint.TargetAgentId)]));
+        }
+
+        if (context.Model.TargetType == EntryPointTargetType.Queue && string.IsNullOrWhiteSpace(context.Model.TargetQueueId))
+        {
+            context.Result.Fail(new ValidationResult(S["Select the queue this entry point routes calls to."], [nameof(ContactCenterEntryPoint.TargetQueueId)]));
         }
 
         return Task.CompletedTask;

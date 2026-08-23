@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// SIP-over-WebSocket registrar, so hold and mute are handled by the browser media adapter and are reported
 /// optimistically here.
 /// </summary>
-public sealed class TelnyxTelephonyProvider :
+public sealed partial class TelnyxTelephonyProvider :
     ITelephonyProvider,
     ITelephonyCallControlProvider,
     ITelephonyInboundCallProvider,
@@ -30,6 +30,7 @@ public sealed class TelnyxTelephonyProvider :
     ITelephonyConferenceProvider,
     ITelephonyDtmfProvider,
     ITelephonyVoicemailProvider,
+    ITelephonyExtensionDialProvider,
     ITelephonyAudioProvider,
     ITelephonySoftPhoneCredentialsProvider,
     ITelephonyCallStateProvider
@@ -82,7 +83,9 @@ public sealed class TelnyxTelephonyProvider :
             TelephonyCapabilities.Merge |
             TelephonyCapabilities.SendDigits |
             TelephonyCapabilities.Voicemail |
-            TelephonyCapabilities.ReceiveCalls;
+            TelephonyCapabilities.ReceiveCalls |
+            TelephonyCapabilities.ExtensionDial |
+            TelephonyCapabilities.ExtensionConference;
 
     /// <inheritdoc/>
     public TelephonyAudioCapabilities AudioCapabilities => TelephonyAudioCapabilities.Browser;
@@ -247,10 +250,18 @@ public sealed class TelnyxTelephonyProvider :
         return $"sip:{credential.SipUsername}@{sipDomain}";
     }
 
-    private async Task<TelephonyResult> DialBrowserBridgeAsync(DialRequest request, string callerId, string agentEndpoint, CancellationToken cancellationToken)
+    private async Task<TelephonyResult> DialBrowserBridgeAsync(
+        DialRequest request,
+        string callerId,
+        string agentEndpoint,
+        CancellationToken cancellationToken,
+        string voicemailRecipientUserId = null,
+        int? ringTimeoutSeconds = null)
     {
         // Ring the agent's browser endpoint. The destination and caller id travel in client_state so the
         // webhook orchestration can dial the destination once the browser answers and then bridge the legs.
+        // For an internal extension call, the recipient's voicemail user id and a ring timeout also ride along
+        // so an unanswered target can be sent to voicemail.
         var body = new Dictionary<string, object>
         {
             ["connection_id"] = _options.ConnectionId,
@@ -260,6 +271,8 @@ public sealed class TelnyxTelephonyProvider :
                 Intent = TelnyxOutboundBridgeState.AgentLegIntent,
                 Destination = request.To,
                 CallerId = callerId,
+                VoicemailRecipientUserId = voicemailRecipientUserId,
+                RingTimeoutSeconds = ringTimeoutSeconds,
             }.ToClientState(),
         };
 
@@ -377,44 +390,67 @@ public sealed class TelnyxTelephonyProvider :
             return answered;
         }
 
-        // Record the caller's message, correlated to the interaction (via client_state) so the
-        // call.recording.saved webhook ingests it as this call's voicemail. Best-effort: a recording or greeting
-        // hiccup must not fail the overall action, which has already answered the call.
-        var recordBody = new Dictionary<string, object>
-        {
-            ["format"] = TelnyxConstants.Recording.Format,
-            ["channels"] = "single",
-        };
-
-        // Correlate the recording to its interaction. The routing engine carries the interaction id under the
+        // Correlate the voicemail to its interaction. The routing engine carries the interaction id under the
         // provider-command metadata key; an agent-initiated "send to voicemail" from the soft phone carries it
-        // under the incoming-call metadata key, so accept either. Tagging the recording as a voicemail lets the
-        // saved-recording handler surface it in the recipient agent's voicemail inbox for both paths.
+        // under the incoming-call metadata key, so accept either.
         var voicemailInteractionId =
             TryGetMetadataString(call.Metadata, ContactCenterConstants.CommandMetadata.InteractionId)
             ?? TryGetMetadataString(call.Metadata, "interactionId");
+        var recipientUserId = TryGetMetadataString(call.Metadata, "voicemailRecipientUserId");
 
-        if (!string.IsNullOrWhiteSpace(voicemailInteractionId))
+        // Play the recipient agent's greeting BEFORE recording, and only start recording once the greeting has
+        // finished. The greeting carries a voicemail-greeting client_state; Telnyx echoes it on the greeting's
+        // call.speak.ended / call.playback.ended webhook, which the webhook pipeline turns into a record_start with
+        // a leading beep (TelnyxVoicemailRecordingStarter). This keeps the spoken greeting out of the caller's
+        // recorded message and gives the caller the "after the beep" tone the greeting promises. A recorded/uploaded
+        // audio greeting (a publicly reachable URL) is played with playback_start; otherwise the per-agent (or
+        // default) text greeting is spoken with text-to-speech.
+        //
+        // Best-effort: a greeting hiccup must not fail the overall action, which has already answered the call.
+        var greetingClientState = string.IsNullOrWhiteSpace(voicemailInteractionId)
+            ? null
+            : TelnyxRecordingClientState.ForVoicemailGreeting(voicemailInteractionId, recipientUserId).ToClientState();
+
+        // Without an interaction id there is nothing to correlate the eventual recording to and no client_state to
+        // ride the greeting-ended webhook, so fall back to recording immediately (uncorrelated, best-effort) rather
+        // than losing the message entirely.
+        if (greetingClientState is null)
         {
-            var recipientUserId = TryGetMetadataString(call.Metadata, "voicemailRecipientUserId");
-            recordBody["client_state"] = TelnyxRecordingClientState
-                .ForVoicemail(voicemailInteractionId, recipientUserId)
-                .ToClientState();
+            await ExecuteActionAsync(
+                callId,
+                "record_start",
+                new Dictionary<string, object>
+                {
+                    ["format"] = TelnyxConstants.Recording.Format,
+                    ["channels"] = "single",
+                    ["play_beep"] = true,
+                },
+                () => null,
+                cancellationToken);
         }
 
-        await ExecuteActionAsync(callId, "record_start", recordBody, () => null, cancellationToken);
-
-        // Play the recipient agent's greeting before recording. A recorded/uploaded audio greeting (a publicly
-        // reachable URL) overrides the text greeting and is played with playback_start; otherwise the per-agent
-        // (or default) text greeting is spoken with text-to-speech.
+        // Prefer a Telnyx-hosted greeting (media_name in Telnyx Media Storage) the agent recorded or uploaded, then a
+        // hosted audio URL, then spoken text. The media_name path needs no publicly reachable URL of ours.
+        var greetingMediaName = TryGetMetadataString(call.Metadata, ContactCenterConstants.Voicemail.GreetingMediaNameMetadataKey);
         var greetingMediaUrl = TryGetMetadataString(call.Metadata, ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey);
 
-        if (!string.IsNullOrWhiteSpace(greetingMediaUrl))
+        if (!string.IsNullOrWhiteSpace(greetingMediaName) || !string.IsNullOrWhiteSpace(greetingMediaUrl))
         {
-            var playbackBody = new Dictionary<string, object>
+            var playbackBody = new Dictionary<string, object>();
+
+            if (!string.IsNullOrWhiteSpace(greetingMediaName))
             {
-                ["audio_url"] = greetingMediaUrl,
-            };
+                playbackBody["media_name"] = greetingMediaName;
+            }
+            else
+            {
+                playbackBody["audio_url"] = greetingMediaUrl;
+            }
+
+            if (greetingClientState is not null)
+            {
+                playbackBody["client_state"] = greetingClientState;
+            }
 
             await ExecuteActionAsync(callId, "playback_start", playbackBody, () => null, cancellationToken);
         }
@@ -432,6 +468,11 @@ public sealed class TelnyxTelephonyProvider :
                 ["voice"] = "female",
                 ["language"] = "en-US",
             };
+
+            if (greetingClientState is not null)
+            {
+                speakBody["client_state"] = greetingClientState;
+            }
 
             await ExecuteActionAsync(callId, "speak", speakBody, () => null, cancellationToken);
         }

@@ -5,28 +5,43 @@ using YesSql;
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
-/// YesSql-backed implementation of <see cref="ITelnyxRecordingIngestJobStore"/>. Every mutating operation
-/// commits in its OWN isolated session created from the tenant <see cref="IStore"/>, so a job becomes durable
-/// immediately, independent of the ambient request scope. Because all sessions are opened from the tenant
-/// store, operations are inherently isolated to the current tenant and never observe or mutate another tenant's
-/// jobs.
+/// YesSql-backed implementation of <see cref="ITelnyxRecordingIngestJobStore"/>.
+/// <para>
+/// Enqueue joins the AMBIENT request session -- the same unit of work the provider's recording-saved handler
+/// already uses to stamp the interaction -- so the job is written and committed as part of that one transaction.
+/// This is deliberate: the enqueue runs inside a provider webhook whose ambient session, once it flushes any
+/// write, holds SQLite's single WAL writer lock until the request commits. A separate (isolated) session opened
+/// during that window can never acquire the write lock, and because both connections live in the SAME process
+/// SQLite returns "database is locked" IMMEDIATELY -- it will not run the busy-timeout handler when doing so
+/// would deadlock -- so a self-contending isolated enqueue fails on every retry. Writing on the ambient session
+/// makes the job part of the one transaction instead of contending with it.
+/// </para>
+/// <para>
+/// The background sweep operations (<see cref="GetDueAsync"/>, <see cref="UpdateAsync"/>) instead use their own
+/// short-lived isolated sessions from the tenant <see cref="IStore"/>, so a per-job write commits and releases
+/// the writer lock immediately rather than being held open across the slow recording download between them.
+/// All sessions are tenant-scoped, so operations never observe or mutate another tenant's jobs.
+/// </para>
 /// </summary>
 public sealed class TelnyxRecordingIngestJobStore : ITelnyxRecordingIngestJobStore
 {
+    private const int UpdateMaxAttempts = 5;
+
     private readonly IStore _store;
+    private readonly ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxRecordingIngestJobStore"/> class.
     /// </summary>
-    /// <param name="store">The tenant YesSql store used to open isolated, immediately committed sessions.</param>
-    public TelnyxRecordingIngestJobStore(IStore store)
+    /// <param name="store">The tenant YesSql store used to open short isolated sessions for the background sweep.</param>
+    /// <param name="session">The ambient request session that <see cref="EnqueueAsync"/> writes the job into.</param>
+    public TelnyxRecordingIngestJobStore(IStore store, ISession session)
     {
         _store = store;
+        _session = session;
     }
 
     /// <inheritdoc/>
-    private const int EnqueueMaxAttempts = 5;
-
     public async Task EnqueueAsync(
         string interactionId,
         string recordingId,
@@ -38,55 +53,31 @@ public sealed class TelnyxRecordingIngestJobStore : ITelnyxRecordingIngestJobSto
 
         // Enqueue is idempotent per recording: Telnyx can redeliver the saved webhook, and the unique recording id
         // means a second enqueue must not create a duplicate job or reset the progress of an in-flight ingestion.
-        // This dedup read runs in its OWN session that is fully disposed before the write session opens. That
-        // separation is what keeps the enqueue reliable under load: under SQLite WAL a busy_timeout lets a writer
-        // WAIT for the single write lock, but only if the connection is not already holding a read snapshot it must
-        // promote to a write -- two connections that each hold a read snapshot and then both try to promote
-        // deadlock, and SQLite breaks that deadlock by returning "database is locked" IMMEDIATELY, ignoring the
-        // busy_timeout. By reading here and writing on a fresh, read-free connection below, the write connection has
-        // no snapshot to promote, so it queues on the write lock (honoring busy_timeout) instead of failing at once.
-        await using (var readSession = _store.CreateSession())
-        {
-            var existing = await readSession
-                .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
-                    index.RecordingId == recordingId)
-                .FirstOrDefaultAsync(cancellationToken);
+        // The query runs on the ambient session, so it also sees a job this same request has just enqueued.
+        var existing = await _session
+            .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
+                index.RecordingId == recordingId)
+            .FirstOrDefaultAsync(cancellationToken);
 
-            if (existing is not null)
-            {
-                return;
-            }
+        if (existing is not null)
+        {
+            return;
         }
 
-        // Losing this enqueue means the recording is never ingested and the voicemail can never be played, so a
-        // transient database lock (SQLite serialises writers) must not drop it. Each attempt uses a fresh write-only
-        // session and the operation is idempotent per recording, so retrying is safe.
-        for (var attempt = 1; ; attempt++)
+        // Save into the ambient session only. It is committed with the rest of the request's unit of work when the
+        // shell scope disposes -- before the after-commit ingest runs -- so the job is durable by the time it is
+        // read back. It is intentionally NOT committed here: forcing a commit would defeat the whole point by
+        // opening a second writer against the request's own in-flight transaction.
+        await _session.SaveAsync(new TelnyxRecordingIngestJob
         {
-            try
-            {
-                await using var session = _store.CreateSession();
-
-                await session.SaveAsync(new TelnyxRecordingIngestJob
-                {
-                    InteractionId = interactionId,
-                    RecordingId = recordingId,
-                    Format = format,
-                    Status = TelnyxRecordingIngestJobStatus.Pending,
-                    AttemptCount = 0,
-                    NextAttemptUtc = nowUtc,
-                    CreatedUtc = nowUtc,
-                }, cancellationToken: cancellationToken);
-
-                await session.SaveChangesAsync(cancellationToken);
-
-                return;
-            }
-            catch (Exception ex) when (attempt < EnqueueMaxAttempts && IsTransientDatabaseLock(ex))
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(150 * attempt), cancellationToken);
-            }
-        }
+            InteractionId = interactionId,
+            RecordingId = recordingId,
+            Format = format,
+            Status = TelnyxRecordingIngestJobStatus.Pending,
+            AttemptCount = 0,
+            NextAttemptUtc = nowUtc,
+            CreatedUtc = nowUtc,
+        }, cancellationToken: cancellationToken);
     }
 
     private static bool IsTransientDatabaseLock(Exception exception)
@@ -132,34 +123,49 @@ public sealed class TelnyxRecordingIngestJobStore : ITelnyxRecordingIngestJobSto
     {
         ArgumentNullException.ThrowIfNull(job);
 
-        await using var session = _store.CreateSession();
-
-        // Re-materialize the job inside this session by its stable recording-id key so the update targets a
-        // tracked instance and commits durably, even when the caller holds a detached copy from an earlier
-        // isolated session.
-        var tracked = await session
-            .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
-                index.RecordingId == job.RecordingId)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (tracked is null)
+        // The sweep's isolated write can still momentarily lose the writer lock to another scope's in-flight
+        // transaction; when that other writer is in this same process SQLite returns "database is locked" at once
+        // rather than waiting on busy_timeout. A fresh session per attempt makes retrying safe and idempotent.
+        for (var attempt = 1; ; attempt++)
         {
-            await session.SaveAsync(job, cancellationToken: cancellationToken);
-        }
-        else
-        {
-            tracked.InteractionId = job.InteractionId;
-            tracked.Format = job.Format;
-            tracked.Status = job.Status;
-            tracked.AttemptCount = job.AttemptCount;
-            tracked.NextAttemptUtc = job.NextAttemptUtc;
-            tracked.MediaReference = job.MediaReference;
-            tracked.MediaStored = job.MediaStored;
-            tracked.LastError = job.LastError;
-            tracked.ModifiedUtc = job.ModifiedUtc;
-            await session.SaveAsync(tracked, cancellationToken: cancellationToken);
-        }
+            try
+            {
+                await using var session = _store.CreateSession();
 
-        await session.SaveChangesAsync(cancellationToken);
+                // Re-materialize the job inside this session by its stable recording-id key so the update targets a
+                // tracked instance and commits durably, even when the caller holds a detached copy from an earlier
+                // isolated session.
+                var tracked = await session
+                    .Query<TelnyxRecordingIngestJob, TelnyxRecordingIngestJobIndex>(index =>
+                        index.RecordingId == job.RecordingId)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (tracked is null)
+                {
+                    await session.SaveAsync(job, cancellationToken: cancellationToken);
+                }
+                else
+                {
+                    tracked.InteractionId = job.InteractionId;
+                    tracked.Format = job.Format;
+                    tracked.Status = job.Status;
+                    tracked.AttemptCount = job.AttemptCount;
+                    tracked.NextAttemptUtc = job.NextAttemptUtc;
+                    tracked.MediaReference = job.MediaReference;
+                    tracked.MediaStored = job.MediaStored;
+                    tracked.LastError = job.LastError;
+                    tracked.ModifiedUtc = job.ModifiedUtc;
+                    await session.SaveAsync(tracked, cancellationToken: cancellationToken);
+                }
+
+                await session.SaveChangesAsync(cancellationToken);
+
+                return;
+            }
+            catch (Exception ex) when (attempt < UpdateMaxAttempts && IsTransientDatabaseLock(ex))
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(150 * attempt), cancellationToken);
+            }
+        }
     }
 }

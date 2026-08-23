@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Migrations;
+using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
@@ -101,6 +102,16 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ITelephonyInteractionStore, DefaultTelephonyInteractionStore>();
         services.AddScoped<ITelephonyInteractionSynchronizationService, TelephonyInteractionSynchronizationService>();
+
+        // Internal extension registry: the provider-neutral system of record that maps a dialed extension
+        // number to an on-platform user. Providers translate the resolved user into their own live endpoint.
+        services.AddScoped<ITelephonyExtensionStore, TelephonyExtensionStore>();
+        services.AddScoped<ITelephonyExtensionManager, TelephonyExtensionManager>();
+        services.AddScoped<ITelephonyExtensionResolver, TelephonyExtensionResolver>();
+        services.AddIndexProvider<TelephonyExtensionIndexProvider>();
+        services.AddDataMigration<TelephonyExtensionIndexMigrations>();
+        services.AddDisplayDriver<TelephonyExtension, TelephonyExtensionDisplayDriver>();
+        services.AddNavigationProvider<TelephonyExtensionsAdminMenu>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>());
         services.AddIndexProvider<TelephonyInteractionIndexProvider>();
         services.AddIndexProvider<TelephonyUserConnectionIndexProvider>();

@@ -18,7 +18,29 @@ public sealed class ContactCenterHealthProbeActivationTests
     private static readonly string[] _baseOnlyFeatures =
     [
         "CrestApps.OrchardCore.ContactCenter",
+
+        // The Contact Center health checks, their options, and the readiness and dependency probe endpoints are
+        // opt-in: they only register when OrchardCore.HealthChecks is also enabled, so a tenant that exercises the
+        // probes must enable it. The process-liveness middleware is host-level and stays independent of it.
+        "OrchardCore.HealthChecks",
     ];
+
+    /// <summary>
+    /// Returns a copy of the profile with the opt-in OrchardCore.HealthChecks feature enabled, which is what
+    /// registers the HealthCheckService and the Contact Center probes a support-matrix profile does not enable
+    /// on its own.
+    /// </summary>
+    /// <param name="profile">The profile to augment.</param>
+    /// <returns>A profile that also enables OrchardCore.HealthChecks.</returns>
+    private static ContactCenterTenantProfile WithHealthChecks(ContactCenterTenantProfile profile)
+        => new()
+        {
+            Id = profile.Id,
+            ProviderProfile = profile.ProviderProfile,
+            Features = profile.Features.Contains("OrchardCore.HealthChecks")
+                ? profile.Features
+                : [.. profile.Features, "OrchardCore.HealthChecks"],
+        };
 
     [Fact]
     public async Task DependencyProbe_ProducesAVerdict_OnATenantWithoutVoice()
@@ -59,7 +81,7 @@ public sealed class ContactCenterHealthProbeActivationTests
     {
         // Arrange
         var matrix = await ContactCenterSupportMatrix.LoadAsync();
-        var profile = matrix.TenantProfiles.Single(profile => profile.Id == "ga-core-asterisk");
+        var profile = WithHealthChecks(matrix.TenantProfiles.Single(profile => profile.Id == "ga-core-asterisk"));
 
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
 
@@ -93,7 +115,7 @@ public sealed class ContactCenterHealthProbeActivationTests
         // aggregate on a real Voice shell. The default host reports the development environment, so an
         // unacknowledged deployment is tolerated and the verdict is healthy here rather than fail-closed.
         var matrix = await ContactCenterSupportMatrix.LoadAsync();
-        var profile = matrix.TenantProfiles.Single(profile => profile.Id == "ga-core-asterisk");
+        var profile = WithHealthChecks(matrix.TenantProfiles.Single(profile => profile.Id == "ga-core-asterisk"));
 
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
 

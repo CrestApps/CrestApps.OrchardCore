@@ -84,7 +84,7 @@
 
 @if (statsPart?.TotalProcessed > 0)
 {
-    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@T["Records imported successfully"]">
+    <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@(isImportEntry ? T["Records imported successfully"] : T["Records exported"])">
         <i class="fa-solid fa-check text-success" aria-hidden="true"></i> @successCount
     </span>
 

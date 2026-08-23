@@ -1,11 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
-using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
@@ -13,19 +11,14 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
 {
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
 
-    internal readonly IStringLocalizer S;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointDisplayDriver"/> class.
     /// </summary>
     /// <param name="optionsProvider">The admin form options provider.</param>
-    /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterEntryPointDisplayDriver(
-        ContactCenterAdminFormOptionsProvider optionsProvider,
-        IStringLocalizer<ContactCenterEntryPointDisplayDriver> stringLocalizer)
+        ContactCenterAdminFormOptionsProvider optionsProvider)
     {
         _optionsProvider = optionsProvider;
-        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -63,6 +56,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             OverflowQueueId = entryPoint.OverflowQueueId,
             WelcomeMessage = entryPoint.WelcomeMessage,
             ClosedMessage = entryPoint.ClosedMessage,
+            VoicemailGreetingText = entryPoint.VoicemailGreetingText,
             Enabled = entryPoint.Enabled,
         };
 
@@ -89,6 +83,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.OverflowQueueOptions = viewModel.OverflowQueueOptions;
             model.WelcomeMessage = viewModel.WelcomeMessage;
             model.ClosedMessage = viewModel.ClosedMessage;
+            model.VoicemailGreetingText = viewModel.VoicemailGreetingText;
             model.Enabled = viewModel.Enabled;
         }).Location("Content:1");
     }
@@ -118,22 +113,8 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             ? model.TargetQueueId.Trim()
             : null;
 
-        if (isAgentTarget && string.IsNullOrEmpty(entryPoint.TargetAgentId))
-        {
-            context.Updater.ModelState.AddModelError(
-                Prefix,
-                nameof(EntryPointViewModel.TargetAgentId),
-                S["Select the agent this entry point routes calls to."]);
-        }
-
-        if (!isAgentTarget && string.IsNullOrEmpty(entryPoint.TargetQueueId))
-        {
-            context.Updater.ModelState.AddModelError(
-                Prefix,
-                nameof(EntryPointViewModel.TargetQueueId),
-                S["Select the queue this entry point routes calls to."]);
-        }
-
+        // The rule that a routed-to target is required for the selected routing kind is enforced by
+        // ContactCenterEntryPointHandler, so a recipe import and this editor reject the same entries.
         entryPoint.Priority = model.Priority;
 
         // Whether an unanswered specific-agent call goes to voicemail, and the ring window that governs it. The
@@ -151,6 +132,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         entryPoint.OverflowQueueId = string.IsNullOrWhiteSpace(model.OverflowQueueId) ? null : model.OverflowQueueId.Trim();
         entryPoint.WelcomeMessage = model.WelcomeMessage?.Trim();
         entryPoint.ClosedMessage = model.ClosedMessage?.Trim();
+        entryPoint.VoicemailGreetingText = string.IsNullOrWhiteSpace(model.VoicemailGreetingText) ? null : model.VoicemailGreetingText.Trim();
         entryPoint.Enabled = model.Enabled;
 
         return await EditAsync(entryPoint, context);

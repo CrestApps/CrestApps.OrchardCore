@@ -283,7 +283,8 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             fromAddress,
             serviceAddress,
             isDirect ? plan.TargetAgentId : null,
-            isDirect ? plan.RingTimeoutSeconds : (int?)null);
+            isDirect ? plan.RingTimeoutSeconds : (int?)null,
+            plan?.VoicemailGreetingText);
         result.InteractionId = interaction.ItemId;
 
         if (plan is not null && !plan.ShouldQueue)
@@ -601,7 +602,8 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         string fromAddress,
         string serviceAddress,
         string directTargetAgentId,
-        int? directRingTimeoutSeconds)
+        int? directRingTimeoutSeconds,
+        string voicemailGreetingText)
     {
         var interaction = await _interactionManager.NewAsync();
         interaction.Channel = InteractionChannel.Voice;
@@ -629,6 +631,12 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         if (directRingTimeoutSeconds.HasValue)
         {
             interaction.TechnicalMetadata[ContactCenterConstants.DirectRouting.RingTimeoutMetadataKey] = directRingTimeoutSeconds.Value;
+        }
+
+        // The entry point's default voicemail greeting, used as the fallback when the recipient agent has none.
+        if (!string.IsNullOrWhiteSpace(voicemailGreetingText))
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.EntryPointGreetingTextMetadataKey] = voicemailGreetingText;
         }
 
         foreach (var entry in inboundEvent.Metadata)

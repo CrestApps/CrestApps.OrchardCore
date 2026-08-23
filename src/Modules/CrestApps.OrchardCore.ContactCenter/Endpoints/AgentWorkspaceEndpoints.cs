@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -18,6 +19,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -34,11 +36,15 @@ internal static class AgentWorkspaceEndpoints
     public const string PauseRecordingRouteName = "ContactCenterAgentWorkspacePauseRecording";
     public const string ResumeRecordingRouteName = "ContactCenterAgentWorkspaceResumeRecording";
     public const string VoicemailMediaRouteName = "ContactCenterVoicemailMedia";
+    public const string VoicemailDeleteRouteName = "ContactCenterVoicemailDelete";
 
     public static IEndpointRouteBuilder AddAgentWorkspaceEndpoints(this IEndpointRouteBuilder builder)
     {
         builder.MapGet("Admin/contact-center/voicemail/{interactionId}/media", HandleVoicemailMediaAsync)
             .WithName(VoicemailMediaRouteName);
+
+        builder.MapPost("Admin/contact-center/voicemail/{interactionId}/delete", HandleDeleteVoicemailAsync)
+            .WithName(VoicemailDeleteRouteName);
 
         builder.MapGet("Admin/contact-center/workspace/state", HandleStateAsync)
             .WithName(StateRouteName);
@@ -363,12 +369,27 @@ internal static class AgentWorkspaceEndpoints
             return TypedResults.Forbid();
         }
 
+        // A voicemail that will not play returns 404 through several distinct branches; logging the specific reason
+        // turns an otherwise silent "nothing happens" into a diagnosable cause (a missing recording, a governance
+        // feature that is not enabled, media that has not finished ingesting, and so on).
+        var logger = httpContext.RequestServices.GetService<ILoggerFactory>()?.CreateLogger("ContactCenterVoicemailMedia");
+
+        void LogNotAvailable(string reason)
+        {
+            if (logger?.IsEnabled(LogLevel.Debug) == true)
+            {
+                logger.LogDebug("Voicemail media for interaction {InteractionId} is unavailable: {Reason}.", interactionId.SanitizeLogValue(), reason);
+            }
+        }
+
         var interaction = await interactionManager.FindByIdAsync(interactionId, httpContext.RequestAborted);
 
         // Only a voicemail interaction is playable through this endpoint; a normal call recording is governed and
         // surfaced elsewhere, so this endpoint deliberately refuses to expose it.
         if (interaction is null || !IsVoicemailInteraction(interaction))
         {
+            LogNotAvailable(interaction is null ? "the interaction was not found" : "the interaction is not flagged as a voicemail");
+
             return TypedResults.NotFound();
         }
 
@@ -381,6 +402,10 @@ internal static class AgentWorkspaceEndpoints
 
         if (recipientAgent is null || !string.Equals(recipientAgent.UserId, userId, StringComparison.Ordinal))
         {
+            LogNotAvailable(recipientAgent is null
+                ? "the voicemail has no resolvable recipient agent"
+                : "the requesting user is not the voicemail recipient");
+
             return TypedResults.Forbid();
         }
 
@@ -391,6 +416,8 @@ internal static class AgentWorkspaceEndpoints
             !interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.RecordingMetadata.StorageReference, out var storageReferenceValue) ||
             storageReferenceValue?.ToString() is not { Length: > 0 } storageReference)
         {
+            LogNotAvailable("the interaction carries no recording storage reference yet");
+
             return TypedResults.NotFound();
         }
 
@@ -402,6 +429,8 @@ internal static class AgentWorkspaceEndpoints
 
         if (recordingAccessGovernanceService is null)
         {
+            LogNotAvailable("the recording governance service is not registered (the Recording Governance feature is not enabled)");
+
             return TypedResults.NotFound();
         }
 
@@ -413,6 +442,8 @@ internal static class AgentWorkspaceEndpoints
 
         if (!granted)
         {
+            LogNotAvailable("recording access was not granted by governance");
+
             return TypedResults.NotFound();
         }
 
@@ -420,6 +451,8 @@ internal static class AgentWorkspaceEndpoints
 
         if (mediaStore is null)
         {
+            LogNotAvailable("no recording media store is registered");
+
             return TypedResults.NotFound();
         }
 
@@ -427,10 +460,95 @@ internal static class AgentWorkspaceEndpoints
 
         if (stream is null)
         {
+            LogNotAvailable("the media store has no bytes for the recording storage reference");
+
             return TypedResults.NotFound();
         }
 
         return Results.Stream(stream, "audio/mpeg");
+    }
+
+    internal static async Task<IResult> HandleDeleteVoicemailAsync(
+        string interactionId,
+        IInteractionManager interactionManager,
+        IAgentProfileManager agentProfileManager,
+        ITelephonyInteractionStore telephonyInteractionStore,
+        IAntiforgery antiforgery,
+        HttpContext httpContext)
+    {
+        if (httpContext.User.Identity?.IsAuthenticated != true)
+        {
+            return TypedResults.Challenge();
+        }
+
+        var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(interactionId))
+        {
+            return TypedResults.Forbid();
+        }
+
+        // Deleting a voicemail changes state, so it is a POST guarded by antiforgery, unlike the media GET.
+        if (!await ContactCenterEndpointAntiforgery.ValidateRequestAsync(antiforgery, httpContext))
+        {
+            return TypedResults.BadRequest();
+        }
+
+        var interaction = await interactionManager.FindByIdAsync(interactionId, httpContext.RequestAborted);
+
+        if (interaction is null || !IsVoicemailInteraction(interaction))
+        {
+            return TypedResults.NotFound();
+        }
+
+        // A voicemail may be deleted only by the agent it was left for -- the same ownership rule as playback.
+        var recipientAgentId = ResolveVoicemailRecipientAgentId(interaction);
+        var recipientAgent = string.IsNullOrEmpty(recipientAgentId)
+            ? null
+            : await agentProfileManager.FindByIdAsync(recipientAgentId, httpContext.RequestAborted);
+
+        if (recipientAgent is null || !string.Equals(recipientAgent.UserId, userId, StringComparison.Ordinal))
+        {
+            return TypedResults.Forbid();
+        }
+
+        // Delete the encrypted media first, while the storage reference is still on the interaction. The media store
+        // is owned by the Telephony recording feature; a governance erase alone would not remove the bytes here
+        // because the media-deletion event handler lives in the (separately enabled) full call-recording feature.
+        if (interaction.TechnicalMetadata is not null &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.RecordingMetadata.StorageReference, out var storageReferenceValue) &&
+            storageReferenceValue?.ToString() is { Length: > 0 } storageReference)
+        {
+            var mediaStore = httpContext.RequestServices.GetService<IRecordingMediaStore>();
+
+            if (mediaStore is not null)
+            {
+                await mediaStore.DeleteAsync(storageReference, httpContext.RequestAborted);
+            }
+        }
+
+        // Then run the recording-governance erase (audit trail + clearing the interaction's retrieval handle and
+        // erasure tombstone) when the governance service is available, so a later playback cannot resurrect it.
+        var governance = httpContext.RequestServices.GetService<IRecordingAccessGovernanceService>();
+
+        if (governance is not null)
+        {
+            await governance.EraseAsync(interactionId, userId, "voicemail-deleted", httpContext.RequestAborted);
+        }
+
+        // Finally remove the soft-phone projection so the voicemail leaves the recipient's inbox. It is keyed by the
+        // provider call id, which the projection mirrors from the interaction.
+        if (!string.IsNullOrEmpty(interaction.ProviderInteractionId))
+        {
+            var projection = await telephonyInteractionStore.FindByCallIdAsync(userId, interaction.ProviderInteractionId, httpContext.RequestAborted);
+
+            if (projection is not null)
+            {
+                await telephonyInteractionStore.DeleteAsync(projection, httpContext.RequestAborted);
+            }
+        }
+
+        return TypedResults.Ok();
     }
 
     private static bool IsVoicemailInteraction(Interaction interaction)

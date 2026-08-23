@@ -140,6 +140,24 @@ public static class TelnyxConstants
         public const string ClientStateIntent = "cc-rec";
 
         /// <summary>
+        /// The <c>client_state</c> intent set on the voicemail greeting (the <c>speak</c> or <c>playback_start</c>
+        /// that plays "leave your message"). It is echoed on the greeting's <c>call.speak.ended</c> /
+        /// <c>call.playback.ended</c> webhook, which is the signal to start the beep-and-record only after the
+        /// greeting has finished playing, so the greeting is never captured inside the caller's message.
+        /// </summary>
+        public const string VoicemailGreetingClientStateIntent = "cc-vmg";
+
+        /// <summary>
+        /// The Telnyx webhook event type raised once a spoken (text-to-speech) prompt has finished playing.
+        /// </summary>
+        public const string SpeakEndedEventType = "call.speak.ended";
+
+        /// <summary>
+        /// The Telnyx webhook event type raised once an audio playback has finished playing.
+        /// </summary>
+        public const string PlaybackEndedEventType = "call.playback.ended";
+
+        /// <summary>
         /// The recording format requested from Telnyx and used as the stored media format.
         /// </summary>
         public const string Format = "mp3";

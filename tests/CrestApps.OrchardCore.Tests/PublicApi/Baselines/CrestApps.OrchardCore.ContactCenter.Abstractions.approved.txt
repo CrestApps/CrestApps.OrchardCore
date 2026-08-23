@@ -3,6 +3,7 @@ namespace CrestApps.OrchardCore.ContactCenter
     public static class ContactCenterConstants
     {
         public const string SystemActor = "system";
+        public static bool IsDirectRoutingQueue(string queueId) { }
         public static class AggregateTypes
         {
             public const string ManualCall = "ManualCall";
@@ -15,6 +16,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         {
             public const string CommandId = "providerCommandId";
             public const string FenceToken = "providerCommandFence";
+            public const string InteractionId = "providerCommandInteractionId";
         }
         public static class Components
         {
@@ -31,6 +33,15 @@ namespace CrestApps.OrchardCore.ContactCenter
         public static class ConferenceMetadata
         {
             public const string AgentUserId = "conferenceAgentUserId";
+        }
+        public static class DirectRouting
+        {
+            public const int DefaultRingTimeoutSeconds = 30;
+            public const int MaximumRingTimeoutSeconds = 300;
+            public const int MinimumRingTimeoutSeconds = 5;
+            public const string QueueId = "__cc-direct-routing__";
+            public const string RingTimeoutMetadataKey = "directRingTimeoutSeconds";
+            public const string TargetAgentMetadataKey = "directTargetAgentId";
         }
         public static class Events
         {
@@ -49,6 +60,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string CallHeld = "CallHeld";
             public const string CallMuted = "CallMuted";
             public const string CallResumed = "CallResumed";
+            public const string CallSentToVoicemail = "CallSentToVoicemail";
             public const string CallSessionCreated = "CallSessionCreated";
             public const string CallSessionUpdated = "CallSessionUpdated";
             public const string CallUnmuted = "CallUnmuted";
@@ -104,6 +116,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
             public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
             public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
+            public const string RecordingCore = "CrestApps.OrchardCore.ContactCenter.Recording.Core";
             public const string SecureCapture = "CrestApps.OrchardCore.ContactCenter.SecureCapture";
             public const string Supervision = "CrestApps.OrchardCore.ContactCenter.Supervision";
             public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
@@ -164,6 +177,15 @@ namespace CrestApps.OrchardCore.ContactCenter
         public static class TransferMetadata
         {
             public const string AgentUserId = "transferAgentUserId";
+        }
+        public static class Voicemail
+        {
+            public const string EntryPointGreetingTextMetadataKey = "voicemailEntryPointGreetingText";
+            public const string GreetingMediaNameMetadataKey = "voicemailGreetingMediaName";
+            public const string GreetingMediaUrlMetadataKey = "voicemailGreetingMediaUrl";
+            public const string GreetingTextMetadataKey = "voicemailGreetingText";
+            public const string ProjectionMetadataKey = "agentVoicemailProjection";
+            public const string RecipientAgentMetadataKey = "agentVoicemailRecipientAgentId";
         }
     }
     public sealed class ContactCenterFeatureLifecycleOptions
@@ -376,6 +398,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string DisplayName { get; set; }
         public System.Collections.Generic.IList<string> QueueIds { get; set; }
         public string Reason { get; set; }
+        public string RequestedStatus { get; set; }
         public string Status { get; set; }
         public string UserId { get; set; }
     }
@@ -596,6 +619,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Voicemail = 1,
         Overflow = 2,
         Reject = 3,
+    }
+    public enum EntryPointTargetType
+    {
+        Queue = 0,
+        Agent = 1,
     }
     public sealed class InboundVoiceEvent
     {

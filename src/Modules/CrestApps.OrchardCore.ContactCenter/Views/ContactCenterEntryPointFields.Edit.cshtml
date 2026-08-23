@@ -147,6 +147,15 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="VoicemailGreetingText">
+    <label asp-for="VoicemailGreetingText" class="ocat-label">@T["Default voicemail greeting"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="VoicemailGreetingText" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="VoicemailGreetingText" class="text-danger"></span>
+        <span class="hint">@T["Spoken to callers who reach voicemail on this line, unless the agent has recorded their own greeting. Leave blank to use the system default."]</span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="Enabled">
     <div class="ocat-end-offset">
         <div class="form-check">

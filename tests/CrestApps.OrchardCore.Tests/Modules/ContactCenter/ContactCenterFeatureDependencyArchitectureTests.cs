@@ -76,19 +76,21 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             [
                 "CrestApps.OrchardCore.ContactCenter.Queues",
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
+                "CrestApps.OrchardCore.ContactCenter.Recording.Core",
                 "CrestApps.OrchardCore.Telephony",
             ],
             voiceDependencies);
         Assert.False(
             features.ContainsKey("CrestApps.OrchardCore.ContactCenter.Voice.SoftPhone"),
             "The soft-phone projection is integration glue and must not be declared as a selectable feature.");
+        // The soft-phone projection is integration glue owned by the Voice feature and gated on Real-Time and the
+        // Telephony soft phone, so it activates whenever all three capabilities are enabled without a separate toggle.
         Assert.Equal(
-            ContactCenterConstantsFeatureArea(repositoryRoot),
+            "CrestApps.OrchardCore.ContactCenter.Voice",
             softPhoneEventHandlerOwner.FeatureId);
         Assert.Equal(
             [
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
-                "CrestApps.OrchardCore.ContactCenter.Voice",
                 "CrestApps.OrchardCore.Telephony.SoftPhone",
             ],
             softPhoneRequiredFeatures);
@@ -167,18 +169,17 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             startup.Body.Contains(
                 "AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix)",
                 StringComparison.Ordinal));
-        var area = ContactCenterConstantsFeatureArea(repositoryRoot);
+        var voice = "CrestApps.OrchardCore.ContactCenter.Voice";
 
-        // Assert: the soft-phone projection is integration glue owned by the base feature and gated on the
-        // Voice, Real-Time, and Telephony soft-phone features rather than owned by Work Distribution.
+        // Assert: the soft-phone projection is integration glue owned by the Voice feature and gated on the
+        // Real-Time and Telephony soft-phone features rather than owned by Work Distribution.
         Assert.NotEqual("CrestApps.OrchardCore.ContactCenter.Queues", widgetOwner.FeatureId);
-        Assert.Equal(area, widgetOwner.FeatureId);
-        Assert.Equal(area, resourceOwner.FeatureId);
-        Assert.Equal(area, endpointOwner.FeatureId);
+        Assert.Equal(voice, widgetOwner.FeatureId);
+        Assert.Equal(voice, resourceOwner.FeatureId);
+        Assert.Equal(voice, endpointOwner.FeatureId);
         Assert.Equal(
             [
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
-                "CrestApps.OrchardCore.ContactCenter.Voice",
                 "CrestApps.OrchardCore.Telephony.SoftPhone",
             ],
             widgetOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
@@ -499,7 +500,10 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
         // Assert
         Assert.Equal(
-            ["CrestApps.OrchardCore.ContactCenter.Voice"],
+            [
+                "CrestApps.OrchardCore.ContactCenter.Recording.Core",
+                "CrestApps.OrchardCore.ContactCenter.Voice",
+            ],
             dependencies);
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Recording", recordingOwner.FeatureId);
     }
@@ -579,16 +583,16 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             "The Dialpad Contact Center voice adapter is integration glue and must not be a selectable feature.");
         Assert.Equal(["CrestApps.OrchardCore.Telephony"], asteriskBaseDependencies);
         Assert.Equal("CrestApps.OrchardCore.Asterisk", asteriskVoiceOwner.FeatureId);
+        // The adapter is owned by the Asterisk module's default feature, so it only requires the Contact Center
+        // capability it composes; requiring the Asterisk feature it already belongs to would be redundant.
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.Asterisk",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
             ],
             asteriskVoiceOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
         Assert.Equal("CrestApps.OrchardCore.Asterisk", asteriskMediaOwner.FeatureId);
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.Asterisk",
                 "CrestApps.OrchardCore.ContactCenter.Voice.Media",
             ],
             asteriskMediaOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
@@ -599,7 +603,6 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         Assert.Equal("CrestApps.OrchardCore.Asterisk", asteriskContactCenterReconcilerOwner.FeatureId);
         Assert.Equal(
             [
-                "CrestApps.OrchardCore.Asterisk",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
             ],
             asteriskContactCenterReconcilerOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));

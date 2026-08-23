@@ -24,6 +24,7 @@ public sealed class OutboundCallScreeningTests
         var service = new DefaultTelephonyService(
             resolver.Object,
             screeningService,
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -50,6 +51,7 @@ public sealed class OutboundCallScreeningTests
         var service = new DefaultTelephonyService(
             resolver.Object,
             screeningService,
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -123,6 +125,7 @@ public sealed class OutboundCallScreeningTests
         var service = new DefaultTelephonyService(
             resolver.Object,
             screeningService,
+            new StubTelephonyExtensionResolver(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act

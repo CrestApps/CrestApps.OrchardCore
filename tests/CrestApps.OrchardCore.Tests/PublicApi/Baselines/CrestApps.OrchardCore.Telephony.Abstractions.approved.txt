@@ -110,6 +110,11 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> SendDigitsAsync(CrestApps.OrchardCore.Telephony.Models.SendDigitsRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITelephonyExtensionDialProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AddExtensionToConferenceAsync(CrestApps.OrchardCore.Telephony.Models.ExtensionConferenceRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialExtensionAsync(CrestApps.OrchardCore.Telephony.Models.ExtensionDialRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITelephonyHoldProvider
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> HoldAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
@@ -131,6 +136,9 @@ namespace CrestApps.OrchardCore.Telephony
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetActiveAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetRecentAsync(string userId, int count, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> GetUnreadVoicemailCountAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> MarkAllVoicemailsReadAsync(string userId, System.DateTime readUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> MarkVoicemailReadAsync(string userId, string callId, System.DateTime readUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task UpdateAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> UpdateByIdAsync(string interactionId, System.Func<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction, bool> mutate, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> UpdateByProviderCallIdAsync(string providerName, string callId, System.Func<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction, bool> mutate, System.Threading.CancellationToken cancellationToken = default);
@@ -158,8 +166,10 @@ namespace CrestApps.OrchardCore.Telephony
     }
     public interface ITelephonyService
     {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AddExtensionToConferenceAsync(CrestApps.OrchardCore.Telephony.Models.ExtensionConferenceRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AnswerAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialAsync(CrestApps.OrchardCore.Telephony.Models.DialRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialExtensionAsync(CrestApps.OrchardCore.Telephony.Models.ExtensionDialRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities> GetCapabilitiesAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyClientCredentials> GetClientCredentialsAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyDirectoryResult> GetDirectoryAsync(System.Threading.CancellationToken cancellationToken = default);
@@ -182,6 +192,10 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> TransferAsync(CrestApps.OrchardCore.Telephony.Models.TransferRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITelephonyUserConnectionMetadataProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> EnrichTokensAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens tokens, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITelephonyUserTokenStore
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyUserTokens> GetAsync(string providerName, System.Threading.CancellationToken cancellationToken = default);
@@ -191,6 +205,12 @@ namespace CrestApps.OrchardCore.Telephony
     public interface ITelephonyVoicemailProvider
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> SendToVoicemailAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IVoiceMediaProvisioner
+    {
+        string ProviderTechnicalName { get; }
+        System.Threading.Tasks.Task DeleteAsync(string mediaReference, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<string> UploadAsync(System.IO.Stream audio, string contentType, string namePrefix, System.Threading.CancellationToken cancellationToken = default);
     }
     public static class TelephonyAudioModeResolver
     {
@@ -233,6 +253,7 @@ namespace CrestApps.OrchardCore.Telephony
         {
             public const string FenceToken = "commandFenceToken";
             public const string IdempotencyKey = "idempotencyKey";
+            public const string SoftPhoneUserId = "softPhoneUserId";
         }
         public static class RouteNames
         {
@@ -243,6 +264,7 @@ namespace CrestApps.OrchardCore.Telephony
     }
     public static class TelephonyPermissions
     {
+        public static readonly OrchardCore.Security.Permissions.Permission ManageExtensions;
         public static readonly OrchardCore.Security.Permissions.Permission ManageTelephonySettings;
         public static readonly OrchardCore.Security.Permissions.Permission UseSoftPhone;
     }
@@ -317,6 +339,26 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public bool IsExtension { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string To { get; set; }
+    }
+    public sealed class ExtensionConferenceRequest
+    {
+        public ExtensionConferenceRequest() { }
+        public CrestApps.OrchardCore.Telephony.Models.CallReference ActiveCall { get; set; }
+        public string CallerUserId { get; set; }
+        public string Extension { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string TargetDisplayName { get; set; }
+        public string TargetUserId { get; set; }
+    }
+    public sealed class ExtensionDialRequest
+    {
+        public ExtensionDialRequest() { }
+        public string CallerUserId { get; set; }
+        public string Extension { get; set; }
+        public string From { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string TargetDisplayName { get; set; }
+        public string TargetUserId { get; set; }
     }
     public enum HangupCause
     {
@@ -473,9 +515,11 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public sealed class SoftPhoneRegistrationConfig
     {
         public SoftPhoneRegistrationConfig() { }
+        public bool ClientOriginatesCalls { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.SoftPhoneCredentialConfig Credential { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.SoftPhoneIceConfig Ice { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.SoftPhoneMediaConfig Media { get; set; }
+        public string OutboundCallerId { get; set; }
         public string Provider { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.SoftPhoneSessionConfig Session { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.SoftPhoneSignalingConfig Signaling { get; set; }
@@ -586,6 +630,8 @@ namespace CrestApps.OrchardCore.Telephony.Models
         Voicemail = 512,
         Directory = 1024,
         AttendedTransfer = 2048,
+        ExtensionDial = 4096,
+        ExtensionConference = 8192,
     }
     public sealed class TelephonyClientCredentials
     {
@@ -641,12 +687,14 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public string From { get; set; }
         public long Id { get; set; }
         public string InteractionId { get; set; }
+        public bool IsVoicemail { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.CallOutcome Outcome { get; set; }
         public string ProviderName { get; set; }
         public System.DateTime StartedUtc { get; set; }
         public string To { get; set; }
         public string UserId { get; set; }
         public string UserName { get; set; }
+        public System.DateTime? VoicemailReadUtc { get; set; }
     }
     public sealed class TelephonyResult
     {
@@ -666,6 +714,10 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public System.DateTimeOffset? ExpiresUtc { get; set; }
         public string ProviderName { get; set; }
         public string RefreshToken { get; set; }
+        public string RemotePhoneNumber { get; set; }
+        public string RemoteUserEmail { get; set; }
+        public string RemoteUserId { get; set; }
+        public string RemoteUserName { get; set; }
         public string Scope { get; set; }
         public string TokenType { get; set; }
     }

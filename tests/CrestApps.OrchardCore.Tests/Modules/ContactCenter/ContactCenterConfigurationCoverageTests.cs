@@ -38,6 +38,7 @@ public sealed class ContactCenterConfigurationCoverageTests
         ["ProviderWebhookInboxMessage"] = "Runtime state. Provider callbacks awaiting processing.",
         ["QueueItem"] = "Runtime state. Work currently waiting in a queue.",
         ["SecureCaptureSession"] = "Runtime state. One bounded capture of sensitive data a customer entered on a secure page; it is produced by traffic, holds no raw value, and must never travel between environments.",
+        ["VoiceMediaItem"] = "Tenant-local. A voice media library entry (hold music, greeting, IVR prompt) whose MediaReference points to an audio clip uploaded to this environment's telephony provider account; the clip does not exist in the destination environment, so the reference is meaningless there and the entry stays put like the AgentProfile it resembles.",
     };
 
     /// <summary>

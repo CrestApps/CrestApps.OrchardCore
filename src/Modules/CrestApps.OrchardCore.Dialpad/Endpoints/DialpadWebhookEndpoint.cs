@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Core.Http;
@@ -203,7 +204,7 @@ internal static class DialpadWebhookEndpoint
                     logger.LogInformation(
                         "Parsed Dialpad webhook event. TraceIdentifier: {TraceIdentifier}, CallId: {CallId}, State: {State}, EventTimestamp: {EventTimestamp}, Event: {Event}",
                         httpContext.TraceIdentifier,
-                        callEvent.CallId,
+                        callEvent.CallId.SanitizeLogValue(),
                         callEvent.State,
                         callEvent.EventTimestamp,
                         JsonSerializer.Serialize(callEvent, DialpadJsonSerializerOptions.Default));

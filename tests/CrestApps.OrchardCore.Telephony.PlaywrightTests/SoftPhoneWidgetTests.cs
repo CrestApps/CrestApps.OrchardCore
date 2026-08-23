@@ -159,9 +159,12 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Act
         await page.ClickAsync("[data-telephony-dial]");
 
-        // Assert - the command response alone does not change the call state.
-        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+        // Assert - the widget shows the dial as connecting while the round-trip is in flight, but no in-call
+        // controls (hangup) appear until the provider publishes the authoritative call state. The dial button
+        // stays visible throughout the pending round-trip.
+        Assert.Equal("Connecting...", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
         Assert.True(await page.Locator("[data-telephony-dial]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
 
         // Act - publish the provider-authoritative state.
         await PublishLatestCallStateAsync(page);
@@ -208,7 +211,10 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.WaitForFunctionAsync(
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetDialRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
-        Assert.Equal(string.Empty, await page.Locator("[data-telephony-number]").InputValueAsync());
+
+        // While the dial is in flight the widget mirrors the number being connected in the (now read-only) input,
+        // so the display does not jump when the first authoritative call state arrives.
+        Assert.Equal("+1 (555) 123-4567", await page.Locator("[data-telephony-number]").InputValueAsync());
     }
 
     [Fact]

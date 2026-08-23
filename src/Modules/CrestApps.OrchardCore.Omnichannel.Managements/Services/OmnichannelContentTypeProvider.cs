@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Events;
@@ -15,9 +16,20 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHandler
 {
     private readonly object _lock = new();
+    private readonly IServiceScopeFactory _scopeFactory;
 
     private volatile HashSet<string> _subjectContentTypes;
     private volatile HashSet<string> _contactContentTypes;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="OmnichannelContentTypeProvider"/> class.
+    /// </summary>
+    /// <param name="scopeFactory">The scope factory used to warm the sets on demand from the async accessors,
+    /// since this provider is a singleton and cannot capture the scoped content definition manager directly.</param>
+    public OmnichannelContentTypeProvider(IServiceScopeFactory scopeFactory)
+    {
+        _scopeFactory = scopeFactory;
+    }
 
     /// <summary>
     /// Determines whether the specified content type has the <c>OmnichannelSubjectPart</c> attached.
@@ -48,6 +60,48 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     /// <returns>A read-only snapshot of the contact content type names.</returns>
     public IReadOnlyCollection<string> GetContactContentTypes()
         => _contactContentTypes ?? (IReadOnlyCollection<string>)Array.Empty<string>();
+
+    /// <summary>
+    /// Gets the subject content type names, warming the cached sets on demand when they have not been
+    /// initialized yet. This lets callers that do not have an <see cref="IContentDefinitionManager"/> at hand
+    /// read the snapshot without an explicit warm step.
+    /// </summary>
+    /// <returns>A read-only snapshot of the subject content type names.</returns>
+    public async ValueTask<IReadOnlyCollection<string>> GetSubjectContentTypesAsync()
+    {
+        await EnsureInitializedAsync();
+
+        return GetSubjectContentTypes();
+    }
+
+    /// <summary>
+    /// Gets the contact content type names, warming the cached sets on demand when they have not been
+    /// initialized yet.
+    /// </summary>
+    /// <returns>A read-only snapshot of the contact content type names.</returns>
+    public async ValueTask<IReadOnlyCollection<string>> GetContactContentTypesAsync()
+    {
+        await EnsureInitializedAsync();
+
+        return GetContactContentTypes();
+    }
+
+    /// <summary>
+    /// Warms the cached sets on demand using a fresh scope, for the async accessors used by callers that do not
+    /// pass an <see cref="IContentDefinitionManager"/> themselves.
+    /// </summary>
+    private async Task EnsureInitializedAsync()
+    {
+        if (_subjectContentTypes is not null && _contactContentTypes is not null)
+        {
+            return;
+        }
+
+        using var scope = _scopeFactory.CreateScope();
+        var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
+
+        await EnsureInitializedAsync(contentDefinitionManager);
+    }
 
     /// <summary>
     /// Warms the cached sets from the current content definitions the first time they are requested. Subsequent

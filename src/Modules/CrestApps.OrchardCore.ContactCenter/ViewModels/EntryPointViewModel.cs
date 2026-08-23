@@ -109,6 +109,11 @@ public class EntryPointViewModel
     public string ClosedMessage { get; set; }
 
     /// <summary>
+    /// Gets or sets the default (fallback) spoken voicemail greeting for calls through this entry point.
+    /// </summary>
+    public string VoicemailGreetingText { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the entry point is enabled.
     /// </summary>
     public bool Enabled { get; set; } = true;

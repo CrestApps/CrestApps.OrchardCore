@@ -589,6 +589,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     public sealed class OmnichannelContactPartSettings
     {
         public OmnichannelContactPartSettings() { }
+        public bool AutoDetectTimeZone { get; set; }
         public bool RequireTimeZone { get; set; }
         public bool UseDoNotCall { get; set; }
         public bool UseDoNotChat { get; set; }

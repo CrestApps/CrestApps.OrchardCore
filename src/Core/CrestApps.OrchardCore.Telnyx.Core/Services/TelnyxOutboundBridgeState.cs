@@ -26,6 +26,14 @@ public sealed class TelnyxOutboundBridgeState
     public const string ContactCenterAgentLegIntent = "cc-agent";
 
     /// <summary>
+    /// The intent marking a leg dialed to an internal extension's browser endpoint to add it into an active
+    /// call as a conference participant. When this leg is answered, the active call carried in
+    /// <see cref="PeerCallControlId"/> is turned into (or reused as) the conference named
+    /// <see cref="ConferenceName"/>, and this answered leg joins it.
+    /// </summary>
+    public const string ConferenceExtensionLegIntent = "ext-conf";
+
+    /// <summary>
     /// Gets or sets the leg intent, one of <see cref="AgentLegIntent"/> or <see cref="DestinationLegIntent"/>.
     /// </summary>
     [JsonPropertyName("i")]
@@ -49,6 +57,28 @@ public sealed class TelnyxOutboundBridgeState
     /// </summary>
     [JsonPropertyName("p")]
     public string PeerCallControlId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the conference name used when adding an internal extension into an active call
+    /// (conference-extension-leg state only).
+    /// </summary>
+    [JsonPropertyName("c")]
+    public string ConferenceName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user id whose voicemail an unanswered internal extension call is routed to. When set on
+    /// an agent/destination leg, a no-answer hangup of the destination leg sends the caller to this user's
+    /// voicemail instead of simply ending the call.
+    /// </summary>
+    [JsonPropertyName("v")]
+    public string VoicemailRecipientUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the ring window, in seconds, for the destination leg of an internal extension call. After
+    /// this window the provider stops ringing the target so the caller can be routed to voicemail.
+    /// </summary>
+    [JsonPropertyName("t")]
+    public int? RingTimeoutSeconds { get; set; }
 
     private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
     {
@@ -83,7 +113,8 @@ public sealed class TelnyxOutboundBridgeState
             if (parsed is null ||
                 (parsed.Intent != AgentLegIntent &&
                  parsed.Intent != DestinationLegIntent &&
-                 parsed.Intent != ContactCenterAgentLegIntent))
+                 parsed.Intent != ContactCenterAgentLegIntent &&
+                 parsed.Intent != ConferenceExtensionLegIntent))
             {
                 return false;
             }

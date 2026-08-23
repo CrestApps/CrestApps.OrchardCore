@@ -66,6 +66,14 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     public int RingTimeoutSeconds { get; set; } = ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds;
 
     /// <summary>
+    /// Gets or sets the default spoken (text-to-speech) voicemail greeting for calls that arrive through this
+    /// entry point. It is the fallback used when the agent the caller reaches has not recorded their own greeting;
+    /// when this is also empty, the built-in system greeting is used. This is configured for the agents (per
+    /// dialed number / entry point), not by them.
+    /// </summary>
+    public string VoicemailGreetingText { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the business-hours calendar that gates when the entry point is open.
     /// When empty, the entry point is always open.
     /// </summary>

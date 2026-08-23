@@ -107,21 +107,21 @@ internal sealed class OmnichannelContactTimeZoneHandler : ContentHandlerBase
 
     private string GetFirstKnownTimeZoneId(PhoneField field)
     {
-        var e164Number = field?.PhoneNumber?.Trim();
+        var rawNumber = field?.PhoneNumber?.Trim();
 
-        if (string.IsNullOrEmpty(e164Number))
+        if (string.IsNullOrEmpty(rawNumber))
         {
             return null;
         }
 
-        // The time-zone lookup expects an E.164 number; normalize when the stored value is not already E.164.
-        if (!PhoneNumber.IsE164(e164Number) &&
-            _phoneNumberService.TryFormatToE164(e164Number, field.CountryCode, out var formattedNumber))
+        // The time-zone lookup expects a canonical E.164 number. Canonicalize through the single parsing entry point
+        // so a number that cannot be canonicalized is dropped rather than looked up as a half-normalized string.
+        if (!_phoneNumberService.TryParse(rawNumber, field.CountryCode, out var phoneNumber))
         {
-            e164Number = formattedNumber;
+            return null;
         }
 
-        foreach (var timeZoneId in _phoneNumberService.GetTimeZones(e164Number))
+        foreach (var timeZoneId in _phoneNumberService.GetTimeZones(phoneNumber.Value))
         {
             var normalizedTimeZoneId = NormalizeTimeZoneId(timeZoneId);
 

@@ -54,6 +54,12 @@ public sealed class EntryPointRoutingPlan
     public int RingTimeoutSeconds { get; set; } = ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds;
 
     /// <summary>
+    /// Gets or sets the entry point's default (fallback) spoken voicemail greeting, used when the recipient agent
+    /// has not set their own.
+    /// </summary>
+    public string VoicemailGreetingText { get; set; }
+
+    /// <summary>
     /// Gets or sets the action to apply while the entry point is closed.
     /// </summary>
     public EntryPointClosedAction ClosedAction { get; set; }

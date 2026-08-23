@@ -180,6 +180,11 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             {
                 call.Metadata[ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey] = greeting.MediaUrl;
             }
+
+            if (!string.IsNullOrWhiteSpace(greeting.MediaName))
+            {
+                call.Metadata[ContactCenterConstants.Voicemail.GreetingMediaNameMetadataKey] = greeting.MediaName;
+            }
         }
 
         var result = await ExecuteTelephonyAsync(_telephonyService, call, cancellationToken);
@@ -187,7 +192,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         return ToVoiceProviderResult(command, request, result);
     }
 
-    private async Task<(string Text, string MediaUrl)> MarkVoicemailProjectionAsync(
+    private async Task<(string Text, string MediaUrl, string MediaName)> MarkVoicemailProjectionAsync(
         ProviderCommand command,
         ProviderCallActionCommandRequest request,
         CancellationToken cancellationToken)
@@ -219,23 +224,34 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
         string greetingText = null;
         string greetingMediaUrl = null;
+        string greetingMediaName = null;
 
         if (!string.IsNullOrWhiteSpace(recipientAgentId))
         {
             interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey] = recipientAgentId;
 
             // Resolve the recipient agent's per-agent greeting so the provider can play it before recording. A
-            // recorded/uploaded audio greeting overrides the text greeting; a missing agent or empty greeting falls
-            // back to the provider's default greeting.
+            // provider-hosted recording (media_name) is preferred, then a hosted audio URL, then the spoken text; a
+            // missing agent or empty greeting falls back to the provider's default greeting.
             var recipientAgent = await _agentProfileManager.FindByIdAsync(recipientAgentId, cancellationToken);
             greetingText = recipientAgent?.VoicemailGreetingText;
             greetingMediaUrl = recipientAgent?.VoicemailGreetingMediaUrl;
+            greetingMediaName = recipientAgent?.VoicemailGreetingMediaName;
+        }
+
+        // Fall back to the entry point's default spoken greeting (stamped on the interaction when the call arrived)
+        // when the recipient agent has no spoken greeting of their own. A recorded agent greeting still wins.
+        if (string.IsNullOrWhiteSpace(greetingText) &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.EntryPointGreetingTextMetadataKey, out var entryGreeting) &&
+            entryGreeting?.ToString() is { Length: > 0 } entryGreetingText)
+        {
+            greetingText = entryGreetingText;
         }
 
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         await _publisher.PublishAsync(CreateSentToVoicemailEvent(command, interaction), cancellationToken);
 
-        return (greetingText, greetingMediaUrl);
+        return (greetingText, greetingMediaUrl, greetingMediaName);
     }
 
     private InteractionEvent CreateSentToVoicemailEvent(ProviderCommand command, Interaction interaction)

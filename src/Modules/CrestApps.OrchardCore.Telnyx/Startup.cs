@@ -64,6 +64,8 @@ public sealed class Startup : StartupBase
 
         services
             .AddScoped<ITelnyxWebhookService, TelnyxWebhookService>()
+            .AddScoped<ITelnyxVoicemailRecordingStarter, TelnyxVoicemailRecordingStarter>()
+            .AddScoped<IVoiceMediaProvisioner, TelnyxVoiceMediaProvisioner>()
             .AddScoped<ITelnyxOutboundBridgeOrchestrator, TelnyxOutboundBridgeOrchestrator>()
             .AddScoped<ITelnyxAgentCredentialStore, TelnyxAgentCredentialStore>()
             .AddScoped<ITelnyxTelephonyCredentialIssuer, TelnyxTelephonyCredentialIssuer>()
