@@ -2,50 +2,61 @@
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["SMS broadcasts"])</h1></zone>
 
-<div class="card text-bg-theme mb-3 position-sticky action-bar">
-    <div class="card-body">
-        <div class="row gx-1">
-            <div class="col">
-                <span class="text-muted">@T["Send one message to many recipients as individual 1:1 threads."]</span>
-            </div>
-            <div class="col-auto">
-                <a class="btn btn-secondary create" role="button" asp-route-action="Create">@T["New broadcast"]</a>
+<div data-list-management data-client-side-search="true">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" class="form-control" placeholder="@T["Search broadcasts"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-route-action="Create">@T["New broadcast"]</a>
+                </div>
             </div>
         </div>
     </div>
+
+    @if (Model.Broadcasts.Count == 0)
+    {
+        <div class="alert alert-info">@T["No broadcasts yet."]</div>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>@T["Name"]</th>
+                    <th>@T["From"]</th>
+                    <th>@T["Status"]</th>
+                    <th>@T["Recipients"]</th>
+                    <th>@T["Sent"]</th>
+                    <th>@T["Failed"]</th>
+                    <th>@T["Created"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var broadcast in Model.Broadcasts)
+                {
+                    <tr data-filter-value="@($"{broadcast.Name} {broadcast.FromNumber} {broadcast.Status}")">
+                        <td>@broadcast.Name</td>
+                        <td>@broadcast.FromNumber</td>
+                        <td>@broadcast.Status.ToString()</td>
+                        <td>@broadcast.Recipients.Count</td>
+                        <td>@broadcast.SentCount</td>
+                        <td>@broadcast.FailedCount</td>
+                        <td>@broadcast.CreatedUtc.ToString("g")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+            @T["Your search returned no results."]
+        </div>
+    }
 </div>
 
-@if (Model.Broadcasts.Count == 0)
-{
-    <div class="alert alert-info">@T["No broadcasts yet. A broadcast sends one message to many recipients as individual 1:1 threads."]</div>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>@T["Name"]</th>
-                <th>@T["From"]</th>
-                <th>@T["Status"]</th>
-                <th>@T["Recipients"]</th>
-                <th>@T["Sent"]</th>
-                <th>@T["Failed"]</th>
-                <th>@T["Created"]</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var broadcast in Model.Broadcasts)
-            {
-                <tr>
-                    <td>@broadcast.Name</td>
-                    <td>@broadcast.FromNumber</td>
-                    <td>@broadcast.Status.ToString()</td>
-                    <td>@broadcast.Recipients.Count</td>
-                    <td>@broadcast.SentCount</td>
-                    <td>@broadcast.FailedCount</td>
-                    <td>@broadcast.CreatedUtc.ToString("g")</td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+<script asp-name="list-management-ui" at="Foot"></script>

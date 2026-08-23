@@ -2,32 +2,44 @@
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["SMS Conversations"])</h1></zone>
 
-<div class="card text-bg-theme mb-3 position-sticky action-bar">
-    <div class="card-body">
-        <div class="row gx-1">
-            <div class="col">
-                <span class="text-muted">@(ViewData["Subtitle"] as string ?? T["Conversations on the numbers you serve."].Value)</span>
-            </div>
-            <div class="col-auto">
-                <a class="btn btn-secondary create" role="button" asp-route-action="New">@T["New conversation"]</a>
+<div data-list-management data-client-side-search="true">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" class="form-control" placeholder="@T["Search conversations"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-route-action="New">@T["New conversation"]</a>
+                </div>
             </div>
         </div>
     </div>
+
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="alert alert-info">@T["Nothing here yet. Start a new conversation, or inbound messages on the numbers you serve will appear here."]</div>
+    }
+    else
+    {
+        <div class="list-group" id="sms-inbox-list">
+            @foreach (var row in Model.Rows)
+            {
+                <a class="list-group-item list-group-item-action" asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId"
+                   data-conversation-id="@row.Conversation.ItemId"
+                   data-filter-value="@($"{row.Conversation.CustomerAddress} {row.Conversation.ServiceAddress} {row.Conversation.LastMessagePreview}")">
+                    @await DisplayAsync(row.Shape)
+                </a>
+            }
+        </div>
+
+        <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+            @T["Your search returned no results."]
+        </div>
+    }
 </div>
 
-@if (Model.Rows.Count == 0)
-{
-    <div class="alert alert-info">@T["Nothing here yet. Start a new conversation, or inbound messages on the numbers you serve will appear here."]</div>
-}
-else
-{
-    <div class="list-group" id="sms-inbox-list">
-        @foreach (var row in Model.Rows)
-        {
-            <a class="list-group-item list-group-item-action" asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId"
-               data-conversation-id="@row.Conversation.ItemId">
-                @await DisplayAsync(row.Shape)
-            </a>
-        }
-    </div>
-}
+<script asp-name="list-management-ui" at="Foot"></script>
