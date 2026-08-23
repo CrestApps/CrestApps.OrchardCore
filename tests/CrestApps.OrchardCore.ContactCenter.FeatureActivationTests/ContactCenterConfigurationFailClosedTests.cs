@@ -20,12 +20,14 @@ public sealed class ContactCenterConfigurationFailClosedTests
         "CrestApps.OrchardCore.ContactCenter",
     ];
 
-    private static ContactCenterTenantProfile CreateProfile()
+    private static ContactCenterTenantProfile CreateProfile(params string[] additionalFeatures)
         => new()
         {
             Id = "fail-closed",
             ProviderProfile = "asterisk-ga-core",
-            Features = _baseFeatures,
+            Features = additionalFeatures.Length == 0
+                ? _baseFeatures
+                : [.. _baseFeatures, .. additionalFeatures],
         };
 
     [Fact]
@@ -61,7 +63,9 @@ public sealed class ContactCenterConfigurationFailClosedTests
                 ["CrestApps:ContactCenter:HealthChecks:ConsecutiveFailuresBeforeUnready"] = "0",
             });
 
-        var tenant = await host.CreateTenantAsync(CreateProfile());
+        // The health-check options are bound and validated only when OrchardCore.HealthChecks is enabled, so the
+        // fail-closed rule for a below-one threshold can only fire on a tenant that opted into health checks.
+        var tenant = await host.CreateTenantAsync(CreateProfile("OrchardCore.HealthChecks"));
 
         var exception = await Assert.ThrowsAnyAsync<Exception>(
             () => host.ActivateTenantAsync(tenant));

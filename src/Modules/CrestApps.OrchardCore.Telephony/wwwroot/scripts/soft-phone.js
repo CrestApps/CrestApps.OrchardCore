@@ -1738,8 +1738,12 @@
       }
       show(dom.dial, canDial && has(CAPABILITIES.Dial));
       // Allow hanging up (cancelling) while the call is still connecting or ringing, not only once media
-      // is live, so an outbound call that has not been answered yet can still be ended.
-      show(dom.hangup, active && has(CAPABILITIES.Hangup));
+      // is live, so an outbound call that has not been answered yet can still be ended. A ringing inbound
+      // offer is the exception: it is answered or declined through the incoming panel, so the hangup control
+      // stays hidden until that call actually connects rather than sitting beside the answer and decline
+      // actions.
+      var incomingOfferRinging = isRingingInbound() && !incomingHandled;
+      show(dom.hangup, active && !incomingOfferRinging && has(CAPABILITIES.Hangup));
       show(dom.hangupAll, calls.length > 1 && has(CAPABILITIES.Hangup));
       show(dom.hold, active && stateName === 'Connected' && has(CAPABILITIES.Hold));
       show(dom.resume, active && stateName === 'OnHold' && has(CAPABILITIES.Resume));
