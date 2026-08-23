@@ -51,7 +51,7 @@ public sealed class SmsEndpointRoutingDisplayDriver : DisplayDriver<OmnichannelC
                 new(S["Shared pool (claim to own)"], nameof(SmsNumberRouteDistributionMode.SharedPool)),
                 new(S["Routed (assign via routing strategy)"], nameof(SmsNumberRouteDistributionMode.Routed)),
             ];
-        }).Location("Content:5#SMS routing;20");
+        }).Location("Content:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)

@@ -10,9 +10,11 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Deployment;
@@ -30,8 +32,24 @@ namespace CrestApps.OrchardCore.ContactCenter;
 [Feature(ContactCenterConstants.Feature.InboundVoice)]
 public sealed class InboundVoiceStartup : StartupBase
 {
+    private readonly IStringLocalizer S;
+
+    public InboundVoiceStartup(IStringLocalizer<InboundVoiceStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
+        // A phone number channel endpoint only has an inbound handler when inbound voice is enabled (it maps a
+        // dialed number to a subject flow), so the Phone channel is offered in the channel-endpoint create picker
+        // only with this feature. When the channel-endpoint administration is also enabled, Phone appears there.
+        services.AddChannelEndpointSource(OmnichannelConstants.Channels.Phone, source =>
+        {
+            source.DisplayName = S["Phone"];
+            source.Description = S["A phone number for inbound voice. Routes a dialed number to a subject flow."];
+        });
+
         services
             .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
             .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
