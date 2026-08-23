@@ -114,6 +114,13 @@ public sealed class ContentTransferStartup : StartupBase
         services.AddScoped<IOmnichannelContactDuplicateLookupService, OmnichannelContactDuplicateLookupService>();
         services.AddScoped<IContentImportRowFilter, OmnichannelContactImportRowFilter>();
         services.AddScoped<IDisplayDriver<ImportContent>, OmnichannelContactImportOptionsDisplayDriver>();
+        services.AddScoped<IDisplayDriver<ExportRequest>, OmnichannelActivityExportDisplayDriver>();
+
+        // Register the concrete handler once so the same scoped instance serves both interfaces: the batch
+        // hook pre-loads the page's activities and the import handler reads them back while mapping rows.
+        services.AddScoped<ContactActivityExportHandler>();
+        services.AddScoped<IContentImportHandler>(sp => sp.GetRequiredService<ContactActivityExportHandler>());
+        services.AddScoped<IContentExportBatchHandler>(sp => sp.GetRequiredService<ContactActivityExportHandler>());
     }
 }
 

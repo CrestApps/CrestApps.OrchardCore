@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
@@ -52,12 +54,17 @@ internal sealed class EnterpriseActivityReportProvider : IReport
 
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        var fromUtc = _definition.Kind is EnterpriseActivityReportKind.Backlog or EnterpriseActivityReportKind.Aging
-            ? DateTime.MinValue
-            : context.FromUtc;
+        // Clamp the bounds to a database-safe range. Backlog and Aging intentionally span all history,
+        // but an unbounded lower bound such as DateTime.MinValue overflows SQL Server's datetime column,
+        // so it must be floored to the lowest value every provider can store.
+        var toUtc = OmnichannelReportQuery.ClampToQueryableRange(context.ToUtc);
+        var fromUtc = OmnichannelReportQuery.ClampToQueryableRange(
+            _definition.Kind is EnterpriseActivityReportKind.Backlog or EnterpriseActivityReportKind.Aging
+                ? OmnichannelReportQuery.MinQueryableUtc
+                : context.FromUtc);
 
         var activities = (await _session.QueryIndex<OmnichannelActivityIndex>(
-            index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= context.ToUtc,
+            index => index.CreatedUtc >= fromUtc && index.CreatedUtc <= toUtc,
             collection: OmnichannelConstants.CollectionName)
             .ListAsync(cancellationToken))
             .ToArray();
@@ -83,11 +90,14 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         var userNames = IsUserReport()
             ? await ResolveUserNamesAsync(filteredActivities, cancellationToken)
             : null;
+        var contactNames = IsContactReport()
+            ? await ResolveContactNamesAsync(filteredActivities, cancellationToken)
+            : null;
 
         return _definition.Kind switch
         {
-            EnterpriseActivityReportKind.Backlog => BuildBacklog(filteredActivities, context.ToUtc),
-            EnterpriseActivityReportKind.Aging => BuildAging(filteredActivities, context.ToUtc),
+            EnterpriseActivityReportKind.Backlog => BuildBacklog(filteredActivities, toUtc),
+            EnterpriseActivityReportKind.Aging => BuildAging(filteredActivities, toUtc),
             EnterpriseActivityReportKind.SourcePerformance => BuildProgress(filteredActivities, S["Source"].Value, activity => Display(activity.Source)),
             EnterpriseActivityReportKind.ChannelPerformance => BuildProgress(filteredActivities, S["Channel"].Value, activity => Display(activity.Channel)),
             EnterpriseActivityReportKind.KindPerformance => BuildProgress(filteredActivities, S["Activity kind"].Value, activity => activity.Kind.ToString()),
@@ -149,12 +159,16 @@ internal sealed class EnterpriseActivityReportProvider : IReport
                 activity => Math.Max(0, activity.Attempts).ToString(CultureInfo.InvariantCulture)),
             EnterpriseActivityReportKind.OverdueByUser => BuildOverdueByDimension(
                 filteredActivities,
-                context.ToUtc,
+                toUtc,
                 S["Assigned user"].Value,
                 activity => activity.AssignedToId,
                 activity => ResolveUser(activity.AssignedToId, userNames)),
             EnterpriseActivityReportKind.ChannelEndpointUsage => BuildProgress(filteredActivities, S["Channel endpoint"].Value, activity => Display(activity.ChannelEndpointId)),
-            EnterpriseActivityReportKind.CustomerWorkload => BuildProgress(filteredActivities, S["Customer"].Value, activity => Display(activity.ContactContentItemId)),
+            EnterpriseActivityReportKind.CustomerWorkload => BuildProgress(
+                filteredActivities,
+                S["Customer"].Value,
+                activity => activity.ContactContentItemId ?? string.Empty,
+                activity => ResolveContact(activity.ContactContentItemId, contactNames)),
             EnterpriseActivityReportKind.ScheduleCompletion => BuildScheduleCompletion(filteredActivities),
             _ => new ReportDocument(),
         };
@@ -611,6 +625,61 @@ internal sealed class EnterpriseActivityReportProvider : IReport
         return userNames.TryGetValue(userId, out var userName)
             ? ReportValue.UserDisplayName(userName, S["(Unknown user)"].Value)
             : S["(Unknown user)"].Value;
+    }
+
+    private async Task<IReadOnlyDictionary<string, string>> ResolveContactNamesAsync(
+        IEnumerable<OmnichannelActivityIndex> activities,
+        CancellationToken cancellationToken)
+    {
+        var contactIds = activities
+            .Select(activity => activity.ContactContentItemId)
+            .Where(contactId => !string.IsNullOrEmpty(contactId))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (contactIds.Length == 0)
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        var contacts = await _session.Query<ContentItem, ContentItemIndex>(
+                index => index.ContentItemId.IsIn(contactIds) && index.Latest)
+            .ListAsync(cancellationToken);
+
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var contact in contacts)
+        {
+            names[contact.ContentItemId] = BuildContactDisplayName(contact);
+        }
+
+        return names;
+    }
+
+    private static string BuildContactDisplayName(ContentItem contact)
+    {
+        return !string.IsNullOrWhiteSpace(contact.DisplayText)
+            ? contact.DisplayText.Trim()
+            : contact.ContentItemId;
+    }
+
+    private string ResolveContact(
+        string contactId,
+        IReadOnlyDictionary<string, string> contactNames)
+    {
+        if (string.IsNullOrEmpty(contactId))
+        {
+            return S["(Not set)"].Value;
+        }
+
+        return contactNames is not null && contactNames.TryGetValue(contactId, out var name)
+            ? name
+            : contactId;
+    }
+
+    private bool IsContactReport()
+    {
+        return _definition.Kind is EnterpriseActivityReportKind.CustomerWorkload;
     }
 
     private bool IsUserReport()
