@@ -14,10 +14,17 @@
     "tration screens.", Id="CrestApps.OrchardCore.Omnichannel.Activities", Name="Omnichannel Activities")]
 [assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
         "CrestApps.OrchardCore.Omnichannel.Activities",
+        "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints",
         "CrestApps.OrchardCore.Resources",
         "OrchardCore.Resources",
         "OrchardCore.ContentTypes"}, Description="Adds the omnichannel contact, campaign, activity, disposition, subject-flow, and " +
     "channel-endpoint administration screens.", Id="CrestApps.OrchardCore.Omnichannel.Managements", Name="Omnichannel Management")]
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Omnichannel.Activities",
+        "CrestApps.OrchardCore.Resources",
+        "OrchardCore.Resources"}, Description="Adds only the channel-endpoint (number/address) administration screen and service" +
+    "s, so a feature that needs to reuse channel endpoints can depend on this without" +
+    " pulling in the full Omnichannel management screens.", EnabledByDependencyOnly=true, Id="CrestApps.OrchardCore.Omnichannel.ChannelEndpoints", Name="Omnichannel Channel Endpoints")]
 [assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Contact Center", Name="Omnichannel Management", Version="3.0.0", Website="https://crestapps.com")]
 [assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Omnichannel.Managements", "Module")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.ContactCenter.DistributedTests")]
@@ -29,6 +36,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     public sealed class AISubjectFlowStartup : OrchardCore.Modules.StartupBase
     {
         public AISubjectFlowStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
+    public sealed class ChannelEndpointsStartup : OrchardCore.Modules.StartupBase
+    {
+        public ChannelEndpointsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.ChannelEndpointsStartup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Managements")]
@@ -267,15 +280,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
     public sealed class ChannelEndpointsController : Microsoft.AspNetCore.Mvc.Controller
     {
-        public ChannelEndpointsController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ChannelEndpointsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ChannelEndpointsController> stringLocalizer) { }
-        [OrchardCore.Admin.Admin("omnichannel/channel-endpoints/create", "OmnichannelChannelEndpointsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create() { }
+        public ChannelEndpointsController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.ChannelEndpointSourceOptions> sourceOptions, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ChannelEndpointsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.ChannelEndpointsController> stringLocalizer) { }
+        [OrchardCore.Admin.Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create(string source) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
         [Microsoft.AspNetCore.Mvc.HttpPost]
-        [OrchardCore.Admin.Admin("omnichannel/channel-endpoints/create", "OmnichannelChannelEndpointsCreate")]
-        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost() { }
+        [OrchardCore.Admin.Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost(string source) { }
         [OrchardCore.Admin.Admin("omnichannel/channel-endpoints/edit/{id}", "OmnichannelChannelEndpointsEdit")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
@@ -1078,8 +1092,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     {
         public OmnichannelChannelEndpointViewModel() { }
         public string Channel { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Channels { get; set; }
         public string Description { get; set; }
         public string DisplayText { get; set; }
         public string Value { get; set; }

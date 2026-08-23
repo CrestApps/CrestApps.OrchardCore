@@ -48,6 +48,10 @@ public sealed class CallTopologyAuthorityTests
         Path.Combine("Modules", "CrestApps.OrchardCore.Dialpad"),
         Path.Combine("Core", "CrestApps.OrchardCore.Telnyx.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telnyx"),
+        // The SMS Workspace reaches Contact Center Core for agent-profile identity, so it can see CallSession and
+        // must be covered by the topology-authority gate even though it never touches live call topology.
+        Path.Combine("Core", "CrestApps.OrchardCore.Sms.Workspace.Core"),
+        Path.Combine("Modules", "CrestApps.OrchardCore.Sms.Workspace"),
         Path.Combine("Targets", "CrestApps.OrchardCore.Cms.Core.Targets"),
         Path.Combine("Startup", "CrestApps.Aspire.AppHost"),
         Path.Combine("Startup", "CrestApps.OrchardCore.Cms.Web"),

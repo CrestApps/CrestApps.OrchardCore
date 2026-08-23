@@ -31,7 +31,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
     ];
 
     [Fact]
-    public void BaseFeature_ComposesOmnichannelManagementForItsAdministrationSurface()
+    public void BaseFeature_ComposesHeadlessOmnichannelActivities_NotTheManagementCrm()
     {
         // Arrange
         var repositoryRoot = FindRepositoryRoot();
@@ -43,8 +43,14 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             .Order(StringComparer.Ordinal);
 
         // Assert
+        // Contact Center only consumes the headless Omnichannel services (the activity/channel-endpoint managers
+        // and the contact content part, all registered by the Activities feature), never a Management-only (CRM
+        // admin) type. Depending on the full Omnichannel Management feature would force the CRM administration
+        // (campaigns, subjects, dispositions, load inventory) into every Contact Center install - and into the
+        // SMS Workspace, which reuses Contact Center. So the base feature composes the headless Activities feature;
+        // a tenant that wants the CRM experience enables Omnichannel Management explicitly.
         Assert.Equal(
-            ["CrestApps.OrchardCore.Omnichannel.Managements"],
+            ["CrestApps.OrchardCore.Omnichannel.Activities"],
             baseDependencies);
     }
 
