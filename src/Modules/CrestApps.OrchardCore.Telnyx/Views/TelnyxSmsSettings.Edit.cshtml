@@ -2,33 +2,74 @@
 
 <fieldset class="mb-3">
     <div class="form-check">
-        <input asp-for="IsEnabled" class="form-check-input" />
+        <input asp-for="IsEnabled" class="form-check-input" data-telnyx-sms-enable />
         <label asp-for="IsEnabled" class="form-check-label">@T["Enable the Telnyx SMS provider"]</label>
         <span class="hint">@T["When enabled and configured, Telnyx becomes selectable as the tenant SMS provider."]</span>
     </div>
 </fieldset>
 
-<div class="mb-3">
-    <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
-    <input asp-for="ApiKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasApiKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx API v2 key"].Value)" />
-    <span class="hint">@T["The Telnyx account API key used as the bearer token on the Messaging API."]</span>
-    <span asp-validation-for="ApiKey" class="text-danger"></span>
+<div data-telnyx-sms-config class="@(Model.IsEnabled ? "" : "d-none")">
+    <div class="alert alert-info" role="alert">
+        <h6 class="alert-heading">@T["Where to find these values in Telnyx"]</h6>
+        <ol class="mb-0 ps-3">
+            <li>
+                @T["<strong>API key</strong> — in the Telnyx portal, go to <em>Account → Keys &amp; Credentials → API Keys</em> and create a V2 API key."]
+                <a href="https://portal.telnyx.com/#/app/api-keys" target="_blank" rel="noopener noreferrer">@T["Open API Keys"]</a>
+            </li>
+            <li>
+                @T["<strong>Messaging profile id</strong> — go to <em>Messaging → Messaging Profiles</em>, open (or create) a profile, and copy its ID. Optional; leave empty to send using only the From number."]
+                <a href="https://portal.telnyx.com/#/app/messaging" target="_blank" rel="noopener noreferrer">@T["Open Messaging Profiles"]</a>
+            </li>
+            <li>
+                @T["<strong>Webhook public key</strong> — on the same messaging profile, set the webhook URL to the address below, then copy the account's public (Ed25519) key from <em>Account → Keys &amp; Credentials → Public Key</em>."]
+                <a href="https://portal.telnyx.com/#/app/account/public-keys" target="_blank" rel="noopener noreferrer">@T["Open Public Key"]</a>
+            </li>
+        </ol>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">@T["Webhook URL"]</label>
+        <input class="form-control" value="@($"{Context.Request.Scheme}://{Context.Request.Host}/api/telnyx/webhook/sms")" readonly onclick="this.select();" />
+        <span class="hint">@T["Set this as the inbound and delivery webhook URL on your Telnyx messaging profile."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+        <input asp-for="ApiKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasApiKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx API v2 key"].Value)" />
+        <span class="hint">@T["The Telnyx account API key used as the bearer token on the Messaging API."]</span>
+        <span asp-validation-for="ApiKey" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="MessagingProfileId" class="form-label">@T["Messaging profile id"]</label>
+        <input asp-for="MessagingProfileId" class="form-control" />
+        <span class="hint">@T["Optional. Sends through a specific Telnyx messaging profile; leave empty to send using only the From number."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="WebhookPublicKey" class="form-label">@T["Webhook public key"]</label>
+        <input asp-for="WebhookPublicKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasWebhookPublicKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx Ed25519 public key (base64)"].Value)" />
+        <span class="hint">@T["Used to verify inbound and delivery-receipt webhooks."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ApiBaseUrl" class="form-label">@T["API base URL"]</label>
+        <input asp-for="ApiBaseUrl" class="form-control" placeholder="https://api.telnyx.com/v2/" />
+        <span class="hint">@T["Optional override for the Telnyx REST API base address."]</span>
+    </div>
 </div>
 
-<div class="mb-3">
-    <label asp-for="MessagingProfileId" class="form-label">@T["Messaging profile id"]</label>
-    <input asp-for="MessagingProfileId" class="form-control" />
-    <span class="hint">@T["Optional. Sends through a specific Telnyx messaging profile; leave empty to send using only the From number."]</span>
-</div>
+<script at="Foot">
+    (function () {
+        var toggle = document.querySelector('[data-telnyx-sms-enable]');
+        var config = document.querySelector('[data-telnyx-sms-config]');
+        if (!toggle || !config) { return; }
 
-<div class="mb-3">
-    <label asp-for="WebhookPublicKey" class="form-label">@T["Webhook public key"]</label>
-    <input asp-for="WebhookPublicKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasWebhookPublicKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx Ed25519 public key (base64)"].Value)" />
-    <span class="hint">@T["Used to verify inbound and delivery-receipt webhooks. Register the webhook at /api/telnyx/webhook/sms in the Telnyx portal."]</span>
-</div>
+        var apply = function () {
+            config.classList.toggle('d-none', !toggle.checked);
+        };
 
-<div class="mb-3">
-    <label asp-for="ApiBaseUrl" class="form-label">@T["API base URL"]</label>
-    <input asp-for="ApiBaseUrl" class="form-control" placeholder="https://api.telnyx.com/v2/" />
-    <span class="hint">@T["Optional override for the Telnyx REST API base address."]</span>
-</div>
+        toggle.addEventListener('change', apply);
+        apply();
+    })();
+</script>

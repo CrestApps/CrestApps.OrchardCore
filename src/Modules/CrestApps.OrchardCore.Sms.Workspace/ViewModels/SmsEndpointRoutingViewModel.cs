@@ -15,9 +15,15 @@ public class SmsEndpointRoutingViewModel
     public SmsNumberRouteTargetType TargetType { get; set; }
 
     /// <summary>
-    /// Gets or sets the target identifier (agent profile id or queue id). Empty means unassigned inbox.
+    /// Gets or sets the selected agent's user id (when routing to an agent). The editor resolves it to the
+    /// operator's agent profile on save.
     /// </summary>
-    public string TargetId { get; set; }
+    public string AgentUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected queue id (when routing to a queue).
+    /// </summary>
+    public string QueueId { get; set; }
 
     /// <summary>
     /// Gets or sets how inbound messages for a queue target are distributed.

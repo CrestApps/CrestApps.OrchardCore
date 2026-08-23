@@ -41,7 +41,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
     public sealed class ChannelEndpointsStartup : OrchardCore.Modules.StartupBase
     {
-        public ChannelEndpointsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.ChannelEndpointsStartup> stringLocalizer) { }
+        public ChannelEndpointsStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Managements")]
