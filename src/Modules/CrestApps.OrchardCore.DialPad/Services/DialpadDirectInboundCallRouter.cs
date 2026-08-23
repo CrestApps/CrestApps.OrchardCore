@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -84,8 +85,8 @@ public sealed class DialpadDirectInboundCallRouter : IDialpadInboundCallRouter
         {
             _logger.LogInformation(
                 "Routed Dialpad inbound call {CallId} to soft-phone user {UserId} using the connected Dialpad account mapping.",
-                callEvent.CallId,
-                userId);
+                callEvent.CallId.SanitizeLogValue(),
+                userId.SanitizeLogValue());
         }
 
         return true;
@@ -183,7 +184,7 @@ public sealed class DialpadDirectInboundCallRouter : IDialpadInboundCallRouter
             {
                 _logger.LogWarning(
                     "Dialpad inbound call {CallId} matched multiple connected users for {CandidateSource}. The event was not routed.",
-                    callEvent.CallId,
+                    callEvent.CallId.SanitizeLogValue(),
                     candidateSource);
             }
         }
