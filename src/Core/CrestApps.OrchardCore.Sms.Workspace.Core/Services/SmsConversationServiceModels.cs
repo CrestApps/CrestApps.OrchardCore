@@ -68,9 +68,9 @@ public sealed class SmsDeliveryReceipt
     public string ServiceAddress { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer number the message was sent to.
+    /// Gets or sets the contact number the message was sent to.
     /// </summary>
-    public string CustomerAddress { get; set; }
+    public string ContactAddress { get; set; }
 
     /// <summary>
     /// Gets or sets the provider's message identifier, when known.

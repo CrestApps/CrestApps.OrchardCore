@@ -22,24 +22,24 @@ public sealed class SmsConversationStore : DocumentCatalog<SmsConversation, SmsC
     }
 
     /// <inheritdoc/>
-    public async Task<SmsConversation> FindByAddressesAsync(string serviceAddress, string customerAddress, CancellationToken cancellationToken = default)
+    public async Task<SmsConversation> FindByAddressesAsync(string serviceAddress, string contactAddress, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(serviceAddress);
-        ArgumentException.ThrowIfNullOrEmpty(customerAddress);
+        ArgumentException.ThrowIfNullOrEmpty(contactAddress);
 
         return await Session.Query<SmsConversation, SmsConversationIndex>(
-            index => index.ServiceAddress == serviceAddress && index.CustomerAddress == customerAddress,
+            index => index.ServiceAddress == serviceAddress && index.ContactAddress == contactAddress,
             collection: SmsWorkspaceStorage.CollectionName)
             .FirstOrDefaultAsync(cancellationToken);
     }
 
     /// <inheritdoc/>
-    public async Task<SmsConversation> FindByCustomerAsync(string customerAddress, CancellationToken cancellationToken = default)
+    public async Task<SmsConversation> FindByContactAsync(string contactAddress, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(customerAddress);
+        ArgumentException.ThrowIfNullOrEmpty(contactAddress);
 
         return await Session.Query<SmsConversation, SmsConversationIndex>(
-                index => index.CustomerAddress == customerAddress,
+                index => index.ContactAddress == contactAddress,
                 collection: SmsWorkspaceStorage.CollectionName)
             .OrderByDescending(index => index.LastMessageUtc)
             .FirstOrDefaultAsync(cancellationToken);

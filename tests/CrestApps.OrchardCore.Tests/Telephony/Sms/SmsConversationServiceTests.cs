@@ -25,7 +25,7 @@ public class SmsConversationServiceTests
         {
             ItemId = "conv-1",
             ServiceAddress = "+15553334444",
-            CustomerAddress = "+15551112222",
+            ContactAddress = "+15551112222",
             OwnerType = SmsConversationOwnerType.Personal,
             AssignmentStatus = SmsConversationAssignmentStatus.Unassigned,
         };
@@ -62,7 +62,7 @@ public class SmsConversationServiceTests
         {
             ItemId = "conv-1",
             ServiceAddress = "+15553334444",
-            CustomerAddress = "+15551112222",
+            ContactAddress = "+15551112222",
             OwnerType = SmsConversationOwnerType.Personal,
             AssignmentStatus = SmsConversationAssignmentStatus.Unassigned,
         };
@@ -83,7 +83,7 @@ public class SmsConversationServiceTests
         {
             ItemId = "conv-1",
             ServiceAddress = "+15553334444",
-            CustomerAddress = "+15551112222",
+            ContactAddress = "+15551112222",
             OwnerType = SmsConversationOwnerType.Personal,
             AssignmentStatus = SmsConversationAssignmentStatus.Assigned,
             AssignedAgentId = "agent-7",
@@ -109,7 +109,7 @@ public class SmsConversationServiceTests
         {
             ItemId = "conv-1",
             ServiceAddress = "+15553334444",
-            CustomerAddress = "+15551112222",
+            ContactAddress = "+15551112222",
             OwnerType = SmsConversationOwnerType.Personal,
             AssignmentStatus = SmsConversationAssignmentStatus.Assigned,
             AssignedAgentId = "agent-owner",

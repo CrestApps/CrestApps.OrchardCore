@@ -9,23 +9,23 @@ namespace CrestApps.OrchardCore.Sms.Workspace.Core.Services;
 public interface ISmsConversationStore : ICatalog<SmsConversation>
 {
     /// <summary>
-    /// Finds the conversation for a given number pair, keyed on the DID we own and the customer's number. This
+    /// Finds the conversation for a given number pair, keyed on the DID we own and the contact's number. This
     /// is the find-or-create key of the inbound pipeline.
     /// </summary>
     /// <param name="serviceAddress">The DID (service address) the thread runs on.</param>
-    /// <param name="customerAddress">The customer's number (E.164).</param>
+    /// <param name="contactAddress">The contact's number (E.164).</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The matching conversation, or <see langword="null"/> when none exists.</returns>
-    Task<SmsConversation> FindByAddressesAsync(string serviceAddress, string customerAddress, CancellationToken cancellationToken = default);
+    Task<SmsConversation> FindByAddressesAsync(string serviceAddress, string contactAddress, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Finds the most recent conversation with the specified customer, regardless of which of our numbers it
-    /// runs on. Used to enforce a single conversation per customer number when an agent starts a conversation.
+    /// Finds the most recent conversation with the specified contact, regardless of which of our numbers it
+    /// runs on. Used to enforce a single conversation per contact number when an agent starts a conversation.
     /// </summary>
-    /// <param name="customerAddress">The customer's number (E.164).</param>
+    /// <param name="contactAddress">The contact's number (E.164).</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The most recent matching conversation, or <see langword="null"/> when none exists.</returns>
-    Task<SmsConversation> FindByCustomerAsync(string customerAddress, CancellationToken cancellationToken = default);
+    Task<SmsConversation> FindByContactAsync(string contactAddress, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the conversations assigned to (or owned personally by) the specified agent, most-recent first.

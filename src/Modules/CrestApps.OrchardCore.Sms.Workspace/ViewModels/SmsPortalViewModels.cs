@@ -23,7 +23,7 @@ public class SmsComposeViewModel
     public string Recipients { get; set; }
 
     /// <summary>
-    /// Gets or sets the phone numbers selected through the customer picker.
+    /// Gets or sets the phone numbers selected through the contact picker.
     /// </summary>
     public IList<string> ContactPhones { get; set; } = [];
 
@@ -40,9 +40,9 @@ public class SmsComposeViewModel
 }
 
 /// <summary>
-/// A customer search result for the compose picker.
+/// A contact search result for the compose picker.
 /// </summary>
-public class SmsCustomerSearchResult
+public class SmsContactSearchResult
 {
     /// <summary>
     /// Gets or sets the contact content item id.
@@ -114,7 +114,34 @@ public class SmsThreadViewModel
     public IReadOnlyList<SmsTemplate> Templates { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the display name of the linked customer, when the conversation resolves to a contact.
+    /// Gets or sets the display name of the linked contact, when the conversation resolves to a contact.
     /// </summary>
     public string ContactDisplayText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact records that match the conversation's number. A conversation is 1:1, so this is
+    /// normally a single contact; it holds more than one only when several CRM records share the same number.
+    /// </summary>
+    public IReadOnlyList<SmsThreadContact> Contacts { get; set; } = [];
+}
+
+/// <summary>
+/// A contact record shown in the conversation sidebar, linking to the contact's account.
+/// </summary>
+public class SmsThreadContact
+{
+    /// <summary>
+    /// Gets or sets the contact content item id, used to link to the contact's account.
+    /// </summary>
+    public string ContentItemId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact display name.
+    /// </summary>
+    public string DisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this is the contact the conversation is linked to.
+    /// </summary>
+    public bool IsPrimary { get; set; }
 }

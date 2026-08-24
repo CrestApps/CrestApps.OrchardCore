@@ -24,6 +24,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
@@ -174,6 +175,9 @@ public sealed class SoftPhoneWidgetStartup : StartupBase
         {
             options.Filters.Add<SoftPhoneWidgetFilter>();
         });
+
+        // Loads the phone-field dialer "call" button on demand, only where a phone field renders (see the provider).
+        services.AddShapeTableProvider<PhoneFieldDialerShapeTableProvider>();
     }
 }
 

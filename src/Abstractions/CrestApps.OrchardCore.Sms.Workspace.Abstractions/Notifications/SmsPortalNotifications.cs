@@ -19,9 +19,9 @@ public sealed class SmsInboundNotification
     public string ServiceAddress { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer address (E.164) the message came from.
+    /// Gets or sets the contact address (E.164) the message came from.
     /// </summary>
-    public string CustomerAddress { get; set; }
+    public string ContactAddress { get; set; }
 
     /// <summary>
     /// Gets or sets a short preview of the message body.

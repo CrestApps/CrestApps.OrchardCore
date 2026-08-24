@@ -80,7 +80,7 @@ public class SmsInboundProcessorTests
         {
             ItemId = "conv-existing",
             ServiceAddress = "+15553334444",
-            CustomerAddress = "+15551112222",
+            ContactAddress = "+15551112222",
             OwnerType = SmsConversationOwnerType.Personal,
             OwnerId = "agent-owner",
             AssignedAgentId = "agent-owner",

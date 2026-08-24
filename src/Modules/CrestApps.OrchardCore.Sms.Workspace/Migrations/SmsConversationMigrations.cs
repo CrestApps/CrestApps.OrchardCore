@@ -6,12 +6,12 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Sms.Workspace.Migrations;
 
 /// <summary>
-/// Creates the schema for the SMS portal index tables (conversations and number routes).
+/// Creates the schema for the SMS Workspace index tables (conversations, canned-response templates, and broadcasts).
 /// </summary>
-internal sealed class SmsPortalMigrations : DataMigration
+internal sealed class SmsConversationMigrations : DataMigration
 {
     /// <summary>
-    /// Creates the SMS portal index tables.
+    /// Creates the SMS Workspace index tables.
     /// </summary>
     /// <returns>The migration version number.</returns>
     public async Task<int> CreateAsync()
@@ -19,7 +19,7 @@ internal sealed class SmsPortalMigrations : DataMigration
         await SchemaBuilder.CreateMapIndexTableAsync<SmsConversationIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("ServiceAddress", column => column.WithLength(SmsWorkspaceStorage.AddressLength))
-            .Column<string>("CustomerAddress", column => column.WithLength(SmsWorkspaceStorage.AddressLength))
+            .Column<string>("ContactAddress", column => column.WithLength(SmsWorkspaceStorage.AddressLength))
             .Column<string>("OwnerType", column => column.WithLength(32))
             .Column<string>("OwnerId", column => column.WithLength(26))
             .Column<string>("AssignedAgentId", column => column.WithLength(26))
@@ -34,7 +34,7 @@ internal sealed class SmsPortalMigrations : DataMigration
             .CreateIndex("IDX_SmsConversationIndex_Addresses",
                 "DocumentId",
                 "ServiceAddress",
-                "CustomerAddress"),
+                "ContactAddress"),
             collection: SmsWorkspaceStorage.CollectionName
         );
 
@@ -48,31 +48,26 @@ internal sealed class SmsPortalMigrations : DataMigration
             collection: SmsWorkspaceStorage.CollectionName
         );
 
-
         await CreateTemplateTableAsync();
         await CreateBroadcastTableAsync();
 
-        return 3;
+        return 1;
     }
 
-    /// <summary>
-    /// Adds the canned-response template index table.
-    /// </summary>
-    public async Task<int> UpdateFrom1Async()
+    private async Task CreateTemplateTableAsync()
     {
-        await CreateTemplateTableAsync();
+        await SchemaBuilder.CreateMapIndexTableAsync<SmsTemplateIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("Name", column => column.WithLength(255)),
+            collection: SmsWorkspaceStorage.CollectionName
+        );
 
-        return 2;
-    }
-
-    /// <summary>
-    /// Adds the broadcast index table.
-    /// </summary>
-    public async Task<int> UpdateFrom2Async()
-    {
-        await CreateBroadcastTableAsync();
-
-        return 3;
+        await SchemaBuilder.AlterIndexTableAsync<SmsTemplateIndex>(table => table
+            .CreateIndex("IDX_SmsTemplateIndex_Name",
+                "DocumentId",
+                "Name"),
+            collection: SmsWorkspaceStorage.CollectionName
+        );
     }
 
     private async Task CreateBroadcastTableAsync()
@@ -88,22 +83,6 @@ internal sealed class SmsPortalMigrations : DataMigration
             .CreateIndex("IDX_SmsBroadcastIndex_Status",
                 "DocumentId",
                 "Status"),
-            collection: SmsWorkspaceStorage.CollectionName
-        );
-    }
-
-    private async Task CreateTemplateTableAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<SmsTemplateIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.WithLength(255)),
-            collection: SmsWorkspaceStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<SmsTemplateIndex>(table => table
-            .CreateIndex("IDX_SmsTemplateIndex_Name",
-                "DocumentId",
-                "Name"),
             collection: SmsWorkspaceStorage.CollectionName
         );
     }

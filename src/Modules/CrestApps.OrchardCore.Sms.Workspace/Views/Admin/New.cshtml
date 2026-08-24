@@ -15,8 +15,8 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="ContactPhones" class="form-label">@T["To (customers)"]</label>
-        <select asp-for="ContactPhones" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Search customers by name or phone…"]"></select>
+        <label asp-for="ContactPhones" class="form-label">@T["To (contacts)"]</label>
+        <select asp-for="ContactPhones" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Search contacts by name or phone…"]"></select>
         <span class="hint">@T["Type a name or phone number to search your contacts, then select one or more."]</span>
     </div>
 
@@ -45,7 +45,7 @@
     (function () {
         var $ = window.jQuery;
         if (!$) { return; }
-        var url = '@Url.Action("SearchCustomers")';
+        var url = '@Url.Action("SearchContacts")';
 
         $(function () {
             var $picker = $('#recipient-select');

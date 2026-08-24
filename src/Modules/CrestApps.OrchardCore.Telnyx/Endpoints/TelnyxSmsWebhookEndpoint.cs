@@ -99,7 +99,7 @@ internal static class TelnyxSmsWebhookEndpoint
             await conversationService.ApplyDeliveryReceiptAsync(new SmsDeliveryReceipt
             {
                 ServiceAddress = messagingEvent.From,
-                CustomerAddress = messagingEvent.To,
+                ContactAddress = messagingEvent.To,
                 ProviderMessageId = messagingEvent.ProviderMessageId,
                 Status = messagingEvent.DeliveryStatus,
                 ErrorCode = messagingEvent.ErrorCode,

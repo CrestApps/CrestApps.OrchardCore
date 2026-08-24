@@ -30,7 +30,7 @@
             {
                 <a class="list-group-item list-group-item-action" asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId"
                    data-conversation-id="@row.Conversation.ItemId"
-                   data-filter-value="@($"{row.Conversation.CustomerAddress} {row.Conversation.ServiceAddress} {row.Conversation.LastMessagePreview}")">
+                   data-filter-value="@($"{row.Conversation.ContactAddress} {row.Conversation.ServiceAddress} {row.Conversation.LastMessagePreview}")">
                     @await DisplayAsync(row.Shape)
                 </a>
             }

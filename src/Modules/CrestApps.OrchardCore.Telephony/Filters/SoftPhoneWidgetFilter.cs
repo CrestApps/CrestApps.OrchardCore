@@ -101,6 +101,11 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
         var widget = await _presenter.CreateWidgetAsync();
         _presenter.RegisterResources(widget);
 
+        // Signal that the soft phone is present on this request, so PhoneFieldDialerShapeTableProvider may add the
+        // dialer "call" button when a phone field renders. The button is meaningless without the widget, so its
+        // registration is gated on the same decision made here.
+        context.HttpContext.Items[PhoneFieldDialerShapeTableProvider.SoftPhonePresentRequestKey] = true;
+
         if (isAdmin)
         {
             var shape = await _displayManager.BuildDisplayAsync(widget, _updateModelAccessor.ModelUpdater, "Detail");

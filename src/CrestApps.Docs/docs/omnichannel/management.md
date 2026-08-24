@@ -468,6 +468,10 @@ Content Admin supports these named search terms:
 
 National-number searches can match contacts from more than one country. Use a leading `+` when the country calling code must be part of the search.
 
+When the content list is scoped exclusively to contact content types — which is the case for the **Interaction Center → Contacts** menu item, or any Content Admin URL whose `contentTypeId` lists only types that attach `OmnichannelContactPart` — the standard search box does double duty: a plain entry matches the **Display Text** *or* a contact phone number (a contains match on the primary Cell and Home numbers). This lets an agent type either a name or a number in the same box and find the contact. On any other content list the search box behaves exactly as the framework default and matches Display Text only, so the phone behavior never leaks onto unrelated types. The explicit `phone:` terms above still work everywhere.
+
+On those same contact-scoped lists, a **Phone** card also appears in the Content Admin **Filters** popover, next to Display Text, Type, Stereotype, Status, and Sort, documenting the `phone:` term and its `phone-exact:`, `phone-starts:`, and `phone-ends:` variants.
+
 ## Bulk Activity Management
 
 The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one. Historical activities without a subject content type remain manageable and are represented by the generic **Activity** type instead of failing the page or completion action.

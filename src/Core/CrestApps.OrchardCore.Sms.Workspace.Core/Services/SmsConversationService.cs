@@ -82,7 +82,7 @@ public sealed class SmsConversationService : ISmsConversationService
             return SmsSendResult.Failed("You are not allowed to send from this number.");
         }
 
-        // Enforce the customer's SMS opt-out on every send.
+        // Enforce the contact's SMS opt-out on every send.
         if (await IsOptedOutAsync(conversation))
         {
             return SmsSendResult.Failed("The contact has opted out of SMS (Do not SMS).");
@@ -92,7 +92,7 @@ public sealed class SmsConversationService : ISmsConversationService
         {
             Id = UniqueId.GenerateId(),
             Channel = OmnichannelConstants.Channels.Sms,
-            CustomerAddress = conversation.CustomerAddress,
+            CustomerAddress = conversation.ContactAddress,
             ServiceAddress = conversation.ServiceAddress,
             Content = request.Body,
             CreatedUtc = _clock.UtcNow,
@@ -106,7 +106,7 @@ public sealed class SmsConversationService : ISmsConversationService
         var dispatch = await _dispatcher.SendAsync(new SmsMessage
         {
             From = conversation.ServiceAddress,
-            To = conversation.CustomerAddress,
+            To = conversation.ContactAddress,
             Body = request.Body,
         }, cancellationToken);
 
@@ -164,11 +164,11 @@ public sealed class SmsConversationService : ISmsConversationService
         }
 
         var serviceAddress = fromNumber.GetCleanedPhoneNumber();
-        var customerAddress = toNumber.GetCleanedPhoneNumber();
+        var contactAddress = toNumber.GetCleanedPhoneNumber();
 
-        // Enforce a single conversation per customer number: reuse any existing thread for this customer (on any
+        // Enforce a single conversation per contact number: reuse any existing thread for this contact (on any
         // of our numbers) rather than creating a duplicate; only create when none exists.
-        var conversation = await _conversationStore.FindByCustomerAsync(customerAddress, cancellationToken);
+        var conversation = await _conversationStore.FindByContactAsync(contactAddress, cancellationToken);
         var isNew = conversation is null;
 
         if (isNew)
@@ -178,7 +178,7 @@ public sealed class SmsConversationService : ISmsConversationService
                 ItemId = UniqueId.GenerateId(),
                 Channel = OmnichannelConstants.Channels.Sms,
                 ServiceAddress = serviceAddress,
-                CustomerAddress = customerAddress,
+                ContactAddress = contactAddress,
                 Status = SmsConversationStatus.Open,
                 OwnerType = SmsConversationOwnerType.Personal,
                 OwnerId = actingAgentId,
@@ -187,7 +187,7 @@ public sealed class SmsConversationService : ISmsConversationService
                     ? SmsConversationAssignmentStatus.Unassigned
                     : SmsConversationAssignmentStatus.Assigned,
                 CreatedUtc = _clock.UtcNow,
-                ContactContentItemId = await _contactResolver.ResolveContactContentItemIdAsync(customerAddress, cancellationToken),
+                ContactContentItemId = await _contactResolver.ResolveContactContentItemIdAsync(contactAddress, cancellationToken),
             };
         }
 
@@ -200,7 +200,7 @@ public sealed class SmsConversationService : ISmsConversationService
         {
             Id = UniqueId.GenerateId(),
             Channel = OmnichannelConstants.Channels.Sms,
-            CustomerAddress = conversation.CustomerAddress,
+            CustomerAddress = conversation.ContactAddress,
             ServiceAddress = conversation.ServiceAddress,
             Content = body,
             CreatedUtc = _clock.UtcNow,
@@ -213,7 +213,7 @@ public sealed class SmsConversationService : ISmsConversationService
         var dispatch = await _dispatcher.SendAsync(new SmsMessage
         {
             From = conversation.ServiceAddress,
-            To = conversation.CustomerAddress,
+            To = conversation.ContactAddress,
             Body = body,
         }, cancellationToken);
 
@@ -231,7 +231,7 @@ public sealed class SmsConversationService : ISmsConversationService
         conversation.IsRead = true;
         conversation.ModifiedUtc = _clock.UtcNow;
 
-        // Reopen a closed/snoozed thread when the agent messages the customer again.
+        // Reopen a closed/snoozed thread when the agent messages the contact again.
         if (!isNew && conversation.Status is SmsConversationStatus.Closed or SmsConversationStatus.Snoozed)
         {
             conversation.Status = SmsConversationStatus.Open;
@@ -261,7 +261,7 @@ public sealed class SmsConversationService : ISmsConversationService
 
         var conversation = await _conversationStore.FindByAddressesAsync(
             receipt.ServiceAddress.GetCleanedPhoneNumber(),
-            receipt.CustomerAddress.GetCleanedPhoneNumber(),
+            receipt.ContactAddress.GetCleanedPhoneNumber(),
             cancellationToken);
 
         if (conversation is null)

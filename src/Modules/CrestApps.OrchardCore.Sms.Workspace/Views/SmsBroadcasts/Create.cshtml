@@ -21,8 +21,8 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="ContactPhones" class="form-label">@T["Recipients (customers)"]</label>
-        <select asp-for="ContactPhones" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Search customers by name or phone…"]"></select>
+        <label asp-for="ContactPhones" class="form-label">@T["Recipients (contacts)"]</label>
+        <select asp-for="ContactPhones" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Search contacts by name or phone…"]"></select>
         <span class="hint">@T["Type a name or phone number to search your contacts, then select recipients."]</span>
     </div>
 
@@ -51,7 +51,7 @@
     (function () {
         var $ = window.jQuery;
         if (!$) { return; }
-        var url = '@Url.Action("SearchCustomers", "SmsPortal")';
+        var url = '@Url.Action("SearchContacts", "Workspace")';
 
         $(function () {
             var $picker = $('#recipient-select');

@@ -86,6 +86,8 @@ public sealed class SoftPhoneWidgetPresenter : ISoftPhoneWidgetPresenter
         }
 
         _resourceManager.RegisterResource("script", "telephony-soft-phone").AtFoot();
-        _resourceManager.RegisterResource("script", "telephony-phone-field").AtFoot();
+
+        // The phone-field dialer script (the "call" button) is registered on demand by
+        // PhoneFieldDialerShapeTableProvider, only when a phone field actually renders on the page.
     }
 }

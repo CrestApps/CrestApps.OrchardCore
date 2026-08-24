@@ -30,7 +30,7 @@ public class SmsBroadcastCreateViewModel
     public string RecipientsText { get; set; }
 
     /// <summary>
-    /// Gets or sets the phone numbers selected through the customer picker.
+    /// Gets or sets the phone numbers selected through the contact picker.
     /// </summary>
     public IList<string> ContactPhones { get; set; } = [];
 

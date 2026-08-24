@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Telnyx.Models;
 using CrestApps.OrchardCore.Telnyx.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
@@ -23,16 +24,19 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
 
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
 
     public TelnyxSmsSettingsDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
         IShellReleaseManager shellReleaseManager,
+        IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<TelnyxSmsSettingsDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _shellReleaseManager = shellReleaseManager;
+        _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
 
@@ -49,9 +53,33 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
                 model.MessagingProfileId = settings.MessagingProfileId;
                 model.HasWebhookPublicKey = !string.IsNullOrEmpty(settings.WebhookPublicKey);
                 model.ApiBaseUrl = settings.ApiBaseUrl;
+                model.WebhookUrl = BuildWebhookUrl(site);
             })
             .Location("Content:5#Telnyx;20")
             .OnGroup(SettingsGroupId);
+    }
+
+    // Builds the public webhook URL to show the operator. The tenant's canonical site Base URL wins because it is
+    // operator-controlled and correct behind any proxy; otherwise the current request is used as a convenience -
+    // its host reflects X-Forwarded-* only when OrchardCore's Reverse Proxy feature is enabled to validate the
+    // forwarded headers, so an untrusted client cannot inject the address Telnyx is told to call.
+    private string BuildWebhookUrl(ISite site)
+    {
+        var baseUrl = site.BaseUrl?.Trim();
+
+        if (string.IsNullOrEmpty(baseUrl))
+        {
+            var request = _httpContextAccessor.HttpContext?.Request;
+
+            if (request is not null && request.Host.HasValue)
+            {
+                baseUrl = $"{request.Scheme}://{request.Host}{request.PathBase}";
+            }
+        }
+
+        return string.IsNullOrEmpty(baseUrl)
+            ? null
+            : $"{baseUrl.TrimEnd('/')}/{TelnyxConstants.SmsWebhookPath}";
     }
 
     /// <inheritdoc/>

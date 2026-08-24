@@ -6,7 +6,7 @@ using YesSql;
 namespace CrestApps.OrchardCore.Sms.Workspace.Services;
 
 /// <summary>
-/// Resolves the Omnichannel contact for a customer phone number by matching the normalized (E.164) primary
+/// Resolves the Omnichannel contact for a contact phone number by matching the normalized (E.164) primary
 /// cell or home number on the <see cref="OmnichannelContactIndex"/>, so a conversation links to the CRM
 /// contact and the portal shows who the agent is talking to.
 /// </summary>

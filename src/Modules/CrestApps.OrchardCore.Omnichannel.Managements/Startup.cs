@@ -18,6 +18,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.Contents.Services;
+using OrchardCore.Contents.ViewModels;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
@@ -86,6 +87,7 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<AdminMenu>();
 
         services.AddTransient<IContentsAdminListFilterProvider, OmnichannelContactPhoneContentsAdminListFilterProvider>();
+        services.AddDisplayDriver<ContentOptionsViewModel, OmnichannelContactPhoneContentsAdminListDisplayDriver>();
 
         services.AddShapeTableProvider<OmnichannelSubjectButtonsShapeTableProvider>();
         services.AddShapeTableProvider<OmnichannelSubjectPartIndexSettingsShapeTableProvider>();

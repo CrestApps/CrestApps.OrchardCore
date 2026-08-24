@@ -27,7 +27,7 @@ public sealed class SmsConversationIndexProvider : IndexProvider<SmsConversation
             {
                 ItemId = conversation.ItemId,
                 ServiceAddress = conversation.ServiceAddress,
-                CustomerAddress = conversation.CustomerAddress,
+                ContactAddress = conversation.ContactAddress,
                 OwnerType = conversation.OwnerType.ToString(),
                 OwnerId = conversation.OwnerId,
                 AssignedAgentId = conversation.AssignedAgentId,

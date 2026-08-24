@@ -39,4 +39,11 @@ public class TelnyxSmsSettingsViewModel
     /// Gets or sets the optional REST API base address override.
     /// </summary>
     public string ApiBaseUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the public webhook URL to configure on the Telnyx messaging profile. Built from the tenant's
+    /// canonical site Base URL when set, otherwise from the current request - whose host reflects
+    /// <c>X-Forwarded-*</c> only when OrchardCore's Reverse Proxy feature is enabled to validate them.
+    /// </summary>
+    public string WebhookUrl { get; set; }
 }

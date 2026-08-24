@@ -17,11 +17,11 @@
                 <a href="https://portal.telnyx.com/#/app/api-keys" target="_blank" rel="noopener noreferrer">@T["Open API Keys"]</a>
             </li>
             <li>
-                @T["<strong>Messaging profile id</strong> — go to <em>Messaging → Messaging Profiles</em>, open (or create) a profile, and copy its ID. Optional; leave empty to send using only the From number."]
-                <a href="https://portal.telnyx.com/#/app/messaging" target="_blank" rel="noopener noreferrer">@T["Open Messaging Profiles"]</a>
+                @T["<strong>Messaging profile</strong> — go to <em>Messaging Suite → Programmable Messaging</em> and click <em>Create profile</em>. Select your destinations, then set both the <em>Webhook URL</em> and <em>Webhook Failover URL</em> to the address shown below. Copy the profile's ID into the <em>Messaging profile id</em> field."]
+                <a href="https://portal.telnyx.com/#/app/messaging" target="_blank" rel="noopener noreferrer">@T["Open Programmable Messaging"]</a>
             </li>
             <li>
-                @T["<strong>Webhook public key</strong> — on the same messaging profile, set the webhook URL to the address below, then copy the account's public (Ed25519) key from <em>Account → Keys &amp; Credentials → Public Key</em>."]
+                @T["<strong>Webhook public key</strong> — copy the account's public (Ed25519) key from <em>Account → Keys &amp; Credentials → Public Key</em>. It verifies inbound and delivery webhooks."]
                 <a href="https://portal.telnyx.com/#/app/account/public-keys" target="_blank" rel="noopener noreferrer">@T["Open Public Key"]</a>
             </li>
         </ol>
@@ -29,8 +29,8 @@
 
     <div class="mb-3">
         <label class="form-label">@T["Webhook URL"]</label>
-        <input class="form-control" value="@($"{Context.Request.Scheme}://{Context.Request.Host}/api/telnyx/webhook/sms")" readonly onclick="this.select();" />
-        <span class="hint">@T["Set this as the inbound and delivery webhook URL on your Telnyx messaging profile."]</span>
+        <input class="form-control" value="@Model.WebhookUrl" readonly onclick="this.select();" />
+        <span class="hint">@T["Set this as both the <em>Webhook URL</em> and <em>Webhook Failover URL</em> on your Telnyx messaging profile. Behind a reverse proxy, set the site Base URL (Configuration → Settings → General) or enable the Reverse Proxy feature so this address is correct."]</span>
     </div>
 
     <div class="mb-3">

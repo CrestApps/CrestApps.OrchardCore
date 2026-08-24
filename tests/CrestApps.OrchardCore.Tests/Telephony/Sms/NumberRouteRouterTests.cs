@@ -78,7 +78,7 @@ public class NumberRouteRouterTests
         {
             Message = new OmnichannelMessage { ServiceAddress = "+15553334444", CustomerAddress = "+15551112222" },
             Endpoint = endpoint,
-            Conversation = new SmsConversation { ServiceAddress = "+15553334444", CustomerAddress = "+15551112222" },
+            Conversation = new SmsConversation { ServiceAddress = "+15553334444", ContactAddress = "+15551112222" },
             IsNewConversation = isNew,
         };
     }

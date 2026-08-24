@@ -20,21 +20,23 @@ public sealed class SmsPortalAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         builder
-            .Add(S["SMS Workspace"], "15", portal => portal
+            .Add(S["SMS Workspace"], S["SMS Workspace"].PrefixPosition(), portal => portal
                 .AddClass("sms-workspace")
                 .Id("smsWorkspace")
                 .Add(S["Conversations"], "1", conversations => conversations
-                    .Action("Index", "SmsPortal", "CrestApps.OrchardCore.Sms.Workspace")
+                    .Action("Index", "Admin", "CrestApps.OrchardCore.Sms.Workspace")
                     .Permission(SmsWorkspacePermissions.UseSmsPortal)
                     .LocalNav())
-                .Add(S["Broadcasts"], "6", broadcasts => broadcasts
+                .Add(S["Broadcasts"], S["Broadcasts"].PrefixPosition(), broadcasts => broadcasts
                     .Action("Index", "SmsBroadcasts", "CrestApps.OrchardCore.Sms.Workspace")
                     .Permission(SmsWorkspacePermissions.SendGroupSms)
                     .LocalNav())
-                .Add(S["Templates"], "7", templates => templates
+                .Add(S["Templates"], S["Templates"].PrefixPosition(), templates => templates
                     .Action("Index", "SmsTemplates", "CrestApps.OrchardCore.Sms.Workspace")
                     .Permission(SmsWorkspacePermissions.ManageSmsNumberRoutes)
-                    .LocalNav()));
+                    .LocalNav()
+                )
+            );
 
         return ValueTask.CompletedTask;
     }

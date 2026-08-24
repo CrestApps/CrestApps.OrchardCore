@@ -3,7 +3,7 @@ using CrestApps.Core.Data.YesSql.Indexes;
 namespace CrestApps.OrchardCore.Sms.Workspace.Core.Indexes;
 
 /// <summary>
-/// The YesSql index used to query <c>SmsConversation</c> documents: find-or-create by DID + customer, list an
+/// The YesSql index used to query <c>SmsConversation</c> documents: find-or-create by DID + contact, list an
 /// agent's or queue's inbox, and filter by read/assignment/status.
 /// </summary>
 public sealed class SmsConversationIndex : CatalogItemIndex
@@ -19,9 +19,9 @@ public sealed class SmsConversationIndex : CatalogItemIndex
     public string ServiceAddress { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer address (E.164).
+    /// Gets or sets the contact address (E.164).
     /// </summary>
-    public string CustomerAddress { get; set; }
+    public string ContactAddress { get; set; }
 
     /// <summary>
     /// Gets or sets the owner type (Personal or Queue), stored as its string name.

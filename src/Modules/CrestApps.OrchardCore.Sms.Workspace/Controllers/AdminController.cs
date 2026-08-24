@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Sms.Workspace.Core;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
@@ -22,6 +23,7 @@ using OrchardCore.ContentManagement.Records;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Services;
@@ -31,8 +33,7 @@ namespace CrestApps.OrchardCore.Sms.Workspace.Controllers;
 /// <summary>
 /// The human SMS portal: the agent's inbox and conversation workspace.
 /// </summary>
-[Admin]
-public sealed class SmsPortalController : Controller
+public sealed class AdminController : Controller
 {
     private static readonly char[] _recipientSeparators = ['\n', '\r', ',', ';'];
 
@@ -49,11 +50,12 @@ public sealed class SmsPortalController : Controller
     private readonly INotifier _notifier;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly OmnichannelContentTypeProvider _contentTypeProvider;
 
     private readonly IHtmlLocalizer H;
     private readonly IStringLocalizer S;
 
-    public SmsPortalController(
+    public AdminController(
         ISmsConversationStore conversationStore,
         ISmsConversationService conversationService,
         ISmsBroadcastManager broadcastManager,
@@ -67,8 +69,9 @@ public sealed class SmsPortalController : Controller
         INotifier notifier,
         ISession session,
         IClock clock,
-        IHtmlLocalizer<SmsPortalController> htmlLocalizer,
-        IStringLocalizer<SmsPortalController> stringLocalizer)
+        OmnichannelContentTypeProvider contentTypeProvider,
+        IHtmlLocalizer<AdminController> htmlLocalizer,
+        IStringLocalizer<AdminController> stringLocalizer)
     {
         _conversationStore = conversationStore;
         _conversationService = conversationService;
@@ -83,6 +86,7 @@ public sealed class SmsPortalController : Controller
         _notifier = notifier;
         _session = session;
         _clock = clock;
+        _contentTypeProvider = contentTypeProvider;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -137,7 +141,7 @@ public sealed class SmsPortalController : Controller
             return RedirectToAction(nameof(New));
         }
 
-        var existing = await _conversationStore.FindByCustomerAsync(number.GetCleanedPhoneNumber());
+        var existing = await _conversationStore.FindByContactAsync(number.GetCleanedPhoneNumber());
 
         return existing is not null
             ? RedirectToAction(nameof(Conversation), new { id = existing.ItemId })
@@ -238,8 +242,8 @@ public sealed class SmsPortalController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    [Admin("sms/portal/search-customers", "SmsPortalSearchCustomers")]
-    public async Task<IActionResult> SearchCustomers(string q)
+    [Admin("sms/portal/search-contacts", "SmsPortalSearchContacts")]
+    public async Task<IActionResult> SearchContacts(string q)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SmsWorkspacePermissions.UseSmsPortal))
         {
@@ -248,38 +252,48 @@ public sealed class SmsPortalController : Controller
 
         if (string.IsNullOrWhiteSpace(q) || q.Length < 2)
         {
-            return Json(Array.Empty<SmsCustomerSearchResult>());
+            return Json(Array.Empty<SmsContactSearchResult>());
         }
 
         var term = q.Trim();
         var digits = new string(term.Where(char.IsDigit).ToArray());
 
-        // Restrict to contacts by joining the contact index (a content item is a contact iff it has an
-        // OmnichannelContactIndex record), and match by display name and/or phone number.
-        var hits = new List<ContentItem>();
+        // A contact is a content item whose type carries the Omnichannel Contact part. Scope the search to those
+        // content types (rather than relying on a contact-index join, which only exists once a contact has been
+        // indexed), and match by display name and/or phone number.
+        var contactTypes = (await _contentTypeProvider.GetContactContentTypesAsync()).ToArray();
 
-        // Name matches: the contact's display text (the tenant's title, e.g. first + last name).
-        hits.AddRange(await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.DisplayText.Contains(term))
-            .With<OmnichannelContactIndex>()
-            .Take(20)
-            .ListAsync());
-
-        // Phone matches: normalized (E.164) and national digits both contain the typed digits.
-        if (digits.Length >= 3)
+        if (contactTypes.Length == 0)
         {
-            hits.AddRange(await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest)
-                .With<OmnichannelContactIndex>(index =>
-                    index.NormalizedPrimaryCellPhoneNumber.Contains(digits) || index.PrimaryCellPhoneNumber.Contains(digits) ||
-                    index.NormalizedPrimaryHomePhoneNumber.Contains(digits) || index.PrimaryHomePhoneNumber.Contains(digits))
-                .Take(20)
-                .ListAsync());
+            return Json(Array.Empty<SmsContactSearchResult>());
         }
 
-        var items = hits
-            .GroupBy(item => item.ContentItemId, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .Take(20)
-            .ToArray();
+        var hits = new Dictionary<string, ContentItem>(StringComparer.OrdinalIgnoreCase);
+
+        // Name matches: the contact's display text (the tenant's title, e.g. first + last name).
+        foreach (var item in await _session.Query<ContentItem, ContentItemIndex>(index =>
+                    index.Latest && index.ContentType.IsIn(contactTypes) && index.DisplayText.Contains(term))
+                .Take(20)
+                .ListAsync())
+        {
+            hits[item.ContentItemId] = item;
+        }
+
+        // Phone matches: the indexed cell/home numbers (E.164 and national) contain the typed digits.
+        if (digits.Length >= 3)
+        {
+            foreach (var item in await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentType.IsIn(contactTypes))
+                    .With<OmnichannelContactIndex>(index =>
+                        index.NormalizedPrimaryCellPhoneNumber.Contains(digits) || index.PrimaryCellPhoneNumber.Contains(digits) ||
+                        index.NormalizedPrimaryHomePhoneNumber.Contains(digits) || index.PrimaryHomePhoneNumber.Contains(digits))
+                    .Take(20)
+                    .ListAsync())
+            {
+                hits[item.ContentItemId] = item;
+            }
+        }
+
+        var items = hits.Values.Take(20).ToArray();
 
         var ids = items.Select(item => item.ContentItemId).ToArray();
 
@@ -295,16 +309,62 @@ public sealed class SmsPortalController : Controller
                 StringComparer.OrdinalIgnoreCase);
 
         var results = items
-            .Select(item => new SmsCustomerSearchResult
+            .Select(item =>
             {
-                Id = item.ContentItemId,
-                Name = string.IsNullOrEmpty(item.DisplayText) ? phones.GetValueOrDefault(item.ContentItemId) : item.DisplayText,
-                Phone = phones.GetValueOrDefault(item.ContentItemId),
+                // Prefer the indexed (canonical E.164) cell/home number; fall back to any phone method on the
+                // contact, so a match is not dropped just because its number is typed something other than
+                // "Cell"/"Home" (which is all the index captures).
+                var phone = phones.GetValueOrDefault(item.ContentItemId) ?? ResolveContactPhone(item);
+
+                return new SmsContactSearchResult
+                {
+                    Id = item.ContentItemId,
+                    Name = string.IsNullOrEmpty(item.DisplayText) ? phone : item.DisplayText,
+                    Phone = phone,
+                };
             })
             .Where(result => !string.IsNullOrEmpty(result.Phone))
             .ToArray();
 
         return Json(results);
+    }
+
+    // Reads a usable phone number straight from the contact's ContactMethods bag (preferring a cell number),
+    // regardless of how its "Type" is labelled, so search results are not limited to the cell/home numbers the
+    // OmnichannelContactIndex captures.
+    private static string ResolveContactPhone(ContentItem contact)
+    {
+        if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bag) || bag.ContentItems is null)
+        {
+            return null;
+        }
+
+        string firstPhone = null;
+
+        foreach (var method in bag.ContentItems)
+        {
+            if (!string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal) ||
+                !method.TryGet<PhoneNumberInfoPart>(out var phonePart))
+            {
+                continue;
+            }
+
+            var number = phonePart.Number?.PhoneNumber?.Trim();
+
+            if (string.IsNullOrEmpty(number))
+            {
+                continue;
+            }
+
+            firstPhone ??= number;
+
+            if (string.Equals(phonePart.Type?.Text, "Cell", StringComparison.OrdinalIgnoreCase))
+            {
+                return number;
+            }
+        }
+
+        return firstPhone;
     }
 
     [Admin("sms/portal/conversation/{id}", "SmsPortalConversation")]
@@ -330,21 +390,69 @@ public sealed class SmsPortalController : Controller
             await _conversationStore.UpdateAsync(conversation);
         }
 
-        string contactDisplayText = null;
-
-        if (!string.IsNullOrEmpty(conversation.ContactContentItemId))
-        {
-            var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
-            contactDisplayText = contact?.DisplayText;
-        }
+        var contacts = await ResolveThreadContactsAsync(conversation);
+        var titleContact = contacts.FirstOrDefault(contact => contact.IsPrimary) ?? (contacts.Count > 0 ? contacts[0] : null);
 
         return View(new SmsThreadViewModel
         {
             Conversation = conversation,
             Messages = await GetMessagesAsync(id),
             Templates = (await _templateManager.GetAllAsync()).ToArray(),
-            ContactDisplayText = contactDisplayText,
+            ContactDisplayText = titleContact?.DisplayName,
+            Contacts = contacts,
         });
+    }
+
+    // Lists every contact record that matches the conversation's number, with the linked contact first. A
+    // conversation is 1:1, so this is normally a single contact; a shared number surfaces every matching account
+    // so the agent can reach the right one (the conversation's own link is picked arbitrarily among matches).
+    private async Task<IReadOnlyList<SmsThreadContact>> ResolveThreadContactsAsync(SmsConversation conversation)
+    {
+        var contentItemIds = new List<string>();
+
+        if (!string.IsNullOrEmpty(conversation.ContactContentItemId))
+        {
+            contentItemIds.Add(conversation.ContactContentItemId);
+        }
+
+        if (!string.IsNullOrWhiteSpace(conversation.ContactAddress))
+        {
+            var normalized = conversation.ContactAddress.GetCleanedPhoneNumber();
+
+            var matches = await _session.QueryIndex<OmnichannelContactIndex>(index =>
+                    index.Published &&
+                    (index.NormalizedPrimaryCellPhoneNumber == normalized || index.NormalizedPrimaryHomePhoneNumber == normalized))
+                .ListAsync();
+
+            foreach (var match in matches)
+            {
+                if (!contentItemIds.Contains(match.ContentItemId))
+                {
+                    contentItemIds.Add(match.ContentItemId);
+                }
+            }
+        }
+
+        var contacts = new List<SmsThreadContact>();
+
+        foreach (var contentItemId in contentItemIds)
+        {
+            var contact = await _contentManager.GetAsync(contentItemId, VersionOptions.Latest);
+
+            if (contact is null)
+            {
+                continue;
+            }
+
+            contacts.Add(new SmsThreadContact
+            {
+                ContentItemId = contentItemId,
+                DisplayName = contact.DisplayText,
+                IsPrimary = string.Equals(contentItemId, conversation.ContactContentItemId, StringComparison.Ordinal),
+            });
+        }
+
+        return contacts;
     }
 
     [HttpPost]

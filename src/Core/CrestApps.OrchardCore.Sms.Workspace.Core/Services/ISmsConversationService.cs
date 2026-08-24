@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Sms.Workspace.Core.Services;
 public interface ISmsConversationService
 {
     /// <summary>
-    /// Sends an outbound message on a conversation: authorizes the acting agent, enforces the customer's SMS
+    /// Sends an outbound message on a conversation: authorizes the acting agent, enforces the contact's SMS
     /// opt-out, dispatches through the provider that owns the number, and persists the outbound message.
     /// </summary>
     /// <param name="request">The send request.</param>

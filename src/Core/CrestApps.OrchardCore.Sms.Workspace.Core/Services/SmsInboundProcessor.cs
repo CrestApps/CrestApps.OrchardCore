@@ -85,7 +85,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         ArgumentNullException.ThrowIfNull(message);
 
         var serviceAddress = message.ServiceAddress.GetCleanedPhoneNumber();
-        var customerAddress = message.CustomerAddress.GetCleanedPhoneNumber();
+        var contactAddress = message.CustomerAddress.GetCleanedPhoneNumber();
 
         var endpoint = await _endpointManager.GetByServiceAddressAsync(OmnichannelConstants.Channels.Sms, serviceAddress, cancellationToken);
 
@@ -96,7 +96,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
             return null;
         }
 
-        var conversation = await _conversationStore.FindByAddressesAsync(serviceAddress, customerAddress, cancellationToken);
+        var conversation = await _conversationStore.FindByAddressesAsync(serviceAddress, contactAddress, cancellationToken);
 
         var isNew = conversation is null;
 
@@ -123,11 +123,11 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
                 ItemId = UniqueId.GenerateId(),
                 Channel = OmnichannelConstants.Channels.Sms,
                 ServiceAddress = serviceAddress,
-                CustomerAddress = customerAddress,
+                ContactAddress = contactAddress,
                 Status = SmsConversationStatus.Open,
                 AssignmentStatus = SmsConversationAssignmentStatus.Unassigned,
                 CreatedUtc = _clock.UtcNow,
-                ContactContentItemId = await _contactResolver.ResolveContactContentItemIdAsync(customerAddress, cancellationToken),
+                ContactContentItemId = await _contactResolver.ResolveContactContentItemIdAsync(contactAddress, cancellationToken),
             };
         }
 
@@ -178,7 +178,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         {
             ConversationId = conversation.ItemId,
             ServiceAddress = conversation.ServiceAddress,
-            CustomerAddress = conversation.CustomerAddress,
+            ContactAddress = conversation.ContactAddress,
             Preview = conversation.LastMessagePreview,
             UnreadCount = conversation.UnreadCount,
             ReceivedUtc = conversation.LastMessageUtc ?? _clock.UtcNow,

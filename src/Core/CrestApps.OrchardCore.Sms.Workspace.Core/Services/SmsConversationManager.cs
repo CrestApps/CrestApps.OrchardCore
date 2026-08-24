@@ -27,9 +27,9 @@ public sealed class SmsConversationManager : CatalogManager<SmsConversation>, IS
     }
 
     /// <inheritdoc/>
-    public async Task<SmsConversation> FindByAddressesAsync(string serviceAddress, string customerAddress, CancellationToken cancellationToken = default)
+    public async Task<SmsConversation> FindByAddressesAsync(string serviceAddress, string contactAddress, CancellationToken cancellationToken = default)
     {
-        var conversation = await _store.FindByAddressesAsync(serviceAddress, customerAddress, cancellationToken);
+        var conversation = await _store.FindByAddressesAsync(serviceAddress, contactAddress, cancellationToken);
 
         if (conversation is not null)
         {

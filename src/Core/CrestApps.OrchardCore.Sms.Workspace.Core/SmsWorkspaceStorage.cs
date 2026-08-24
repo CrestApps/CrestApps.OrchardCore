@@ -12,7 +12,7 @@ internal static class SmsWorkspaceStorage
     public const string CollectionName = "SmsWorkspace";
 
     /// <summary>
-    /// The maximum stored length, in characters, of a phone number (DID or customer address) across the SMS
+    /// The maximum stored length, in characters, of a phone number (DID or contact address) across the SMS
     /// portal index tables.
     /// </summary>
     public const int AddressLength = 255;

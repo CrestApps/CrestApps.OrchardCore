@@ -19,13 +19,13 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 public class SmsSendDirectTests
 {
     [Fact]
-    public async Task SendDirectAsync_ReusesExistingConversationForTheCustomer_InsteadOfCreating()
+    public async Task SendDirectAsync_ReusesExistingConversationForTheContact_InsteadOfCreating()
     {
         var existing = new SmsConversation
         {
             ItemId = "conv-existing",
             ServiceAddress = "+15553330000",
-            CustomerAddress = "+15551112222",
+            ContactAddress = "+15551112222",
             Status = SmsConversationStatus.Closed,
         };
 
@@ -44,20 +44,20 @@ public class SmsSendDirectTests
     }
 
     [Fact]
-    public async Task SendDirectAsync_CreatesConversation_WhenNoneExistsForTheCustomer()
+    public async Task SendDirectAsync_CreatesConversation_WhenNoneExistsForTheContact()
     {
         var (service, store, _) = CreateService(existing: null);
 
         var result = await service.SendDirectAsync("+15559998888", "+15551112222", "hello", "agent-1", TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
-        store.Verify(s => s.CreateAsync(It.Is<SmsConversation>(c => c.CustomerAddress == "+15551112222" && c.ServiceAddress == "+15559998888"), It.IsAny<CancellationToken>()), Times.Once);
+        store.Verify(s => s.CreateAsync(It.Is<SmsConversation>(c => c.ContactAddress == "+15551112222" && c.ServiceAddress == "+15559998888"), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static (SmsConversationService Service, Mock<ISmsConversationStore> Store, Mock<ISmsDispatcher> Dispatcher) CreateService(SmsConversation existing)
     {
         var store = new Mock<ISmsConversationStore>();
-        store.Setup(s => s.FindByCustomerAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        store.Setup(s => s.FindByContactAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         store.Setup(s => s.CreateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
         store.Setup(s => s.UpdateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
 

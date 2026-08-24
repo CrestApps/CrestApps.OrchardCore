@@ -1,9 +1,8 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Sms.Workspace.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Sms.Workspace.BackgroundTasks;
 using CrestApps.OrchardCore.Sms.Workspace.Core;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
@@ -19,11 +18,11 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -38,7 +37,7 @@ namespace CrestApps.OrchardCore.Sms.Workspace;
 /// </summary>
 public sealed class Startup : StartupBase
 {
-    private readonly IStringLocalizer S;
+    internal readonly IStringLocalizer S;
 
     public Startup(IStringLocalizer<Startup> stringLocalizer)
     {
@@ -82,7 +81,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISmsInboundProcessor>(sp => sp.GetRequiredService<SmsInboundProcessor>());
         services.AddScoped<IOmnichannelEventHandler>(sp => sp.GetRequiredService<SmsInboundProcessor>());
 
-        // Resolve the CRM contact for a customer number so conversations link to the customer.
+        // Resolve the CRM contact for a contact number so conversations link to the contact.
         services.AddScoped<ISmsContactResolver, SmsContactResolver>();
 
         // Real-time messaging notifications over the SMS portal SignalR hub.
@@ -96,7 +95,7 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<SmsConversationIndexProvider>();
         services.AddIndexProvider<SmsTemplateIndexProvider>();
         services.AddIndexProvider<SmsBroadcastIndexProvider>();
-        services.AddDataMigration<SmsPortalMigrations>();
+        services.AddDataMigration<SmsConversationMigrations>();
 
         // Background fan-out for queued broadcasts.
         services.AddSingleton<IBackgroundTask, SmsBroadcastBackgroundTask>();
@@ -116,10 +115,15 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<SmsTemplate, SmsTemplateDisplayDriver>();
         services.AddNavigationProvider<SmsPortalAdminMenu>();
 
+        // Adds a "Send SMS" button next to phone-number fields on admin pages (mirrors the soft-phone dial button
+        // and its PhoneFieldDialerShapeTableProvider). Injected from the phone field's own rendering via the shape
+        // table, so only pages that actually show a phone field pay for it.
+        services.AddShapeTableProvider<SmsPhoneFieldButtonShapeTableProvider>();
+
         // Permissions.
         services.AddPermissionProvider<SmsWorkspacePermissionProvider>();
 
-        // Redact customer/service addresses in logs, matching the other telephony modules.
+        // Redact contact/service addresses in logs, matching the other telephony modules.
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
     }
 

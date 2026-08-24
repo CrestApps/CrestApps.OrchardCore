@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Sms.Workspace.Core.Models;
 
 /// <summary>
 /// The central new entity of the SMS portal: a two-way SMS thread between one of our numbers
-/// (<see cref="ServiceAddress"/>) and a customer (<see cref="CustomerAddress"/>). Stored as its own document
+/// (<see cref="ServiceAddress"/>) and a contact (<see cref="ContactAddress"/>). Stored as its own document
 /// via <c>ICatalog&lt;SmsConversation&gt;</c>. The document holds only the thread rollup; the message bodies
 /// live as individual <c>OmnichannelMessage</c> records linked by an indexed <c>ConversationId</c>.
 /// </summary>
@@ -23,9 +23,9 @@ public sealed class SmsConversation : CatalogItem, IModifiedUtcAwareModel
     public string ServiceAddress { get; set; }
 
     /// <summary>
-    /// Gets or sets the customer's number (E.164).
+    /// Gets or sets the contact's number (E.164).
     /// </summary>
-    public string CustomerAddress { get; set; }
+    public string ContactAddress { get; set; }
 
     /// <summary>
     /// Gets or sets who owns the thread: a personal agent inbox or a queue (department).

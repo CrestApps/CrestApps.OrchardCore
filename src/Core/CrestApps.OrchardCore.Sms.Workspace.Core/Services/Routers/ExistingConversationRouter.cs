@@ -20,7 +20,7 @@ public sealed class ExistingConversationRouter : ISmsInboundRouter
             return Task.FromResult(false);
         }
 
-        // Re-opening a closed thread the customer texted again: bring it back into the inbox but keep its owner.
+        // Re-opening a closed thread the contact texted again: bring it back into the inbox but keep its owner.
         if (context.Conversation.Status is SmsConversationStatus.Closed or SmsConversationStatus.Snoozed)
         {
             context.Conversation.Status = SmsConversationStatus.Open;

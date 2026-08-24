@@ -27,7 +27,7 @@ public sealed class SmsEndpointRoutingSettings
     public SmsNumberRouteDistributionMode DistributionMode { get; set; } = SmsNumberRouteDistributionMode.SharedPool;
 
     /// <summary>
-    /// Gets or sets an optional auto-reply sent to the customer on their first inbound message.
+    /// Gets or sets an optional auto-reply sent to the contact on their first inbound message.
     /// </summary>
     public string AutoReplyMessage { get; set; }
 }
