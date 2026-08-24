@@ -1,5 +1,7 @@
 # CrestApps.OrchardCore Development Instructions
 
+> This is the shared instruction file for all AI coding agents working in this repository (it follows the cross-tool `AGENTS.md` convention). Keep tool-agnostic guidance here so every assistant reads the same conventions.
+
 **ALWAYS reference these instructions first and fallback to search or bash commands only when you encounter unexpected information that does not match the info here.**
 
 ## Project Overview
@@ -365,6 +367,7 @@ When a change affects public behavior, configuration, setup, or project guidance
 - **Database**: Uses SQLite by default, no external DB required for development
 - **Modules not appearing**: Enable modules in Orchard Core admin dashboard
 - **Permission errors**: Check content access control module configuration
+- **Application logs**: When troubleshooting runtime issues, always read the log at `src/Startup/CrestApps.OrchardCore.Cms.Web/App_Data/logs/orchard-log-{YYYY-MM-DD}.log` (for example `orchard-log-2026-03-11.log`). It contains errors, warnings, and debug output from all modules; trace the root cause there before changing code.
 
 ### Network Dependencies
 This project requires network access to:
