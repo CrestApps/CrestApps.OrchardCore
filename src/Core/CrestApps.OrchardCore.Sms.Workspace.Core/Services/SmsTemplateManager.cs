@@ -9,8 +9,6 @@ namespace CrestApps.OrchardCore.Sms.Workspace.Core.Services;
 /// </summary>
 public sealed class SmsTemplateManager : CatalogManager<SmsTemplate>, ISmsTemplateManager
 {
-    private readonly ISmsTemplateStore _store;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsTemplateManager"/> class.
     /// </summary>
@@ -23,19 +21,5 @@ public sealed class SmsTemplateManager : CatalogManager<SmsTemplate>, ISmsTempla
         ILogger<CatalogManager<SmsTemplate>> logger)
         : base(store, handlers, logger)
     {
-        _store = store;
-    }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<SmsTemplate>> GetEnabledAsync(CancellationToken cancellationToken = default)
-    {
-        var templates = await _store.GetEnabledAsync(cancellationToken);
-
-        foreach (var template in templates)
-        {
-            await LoadAsync(template, cancellationToken);
-        }
-
-        return templates;
     }
 }

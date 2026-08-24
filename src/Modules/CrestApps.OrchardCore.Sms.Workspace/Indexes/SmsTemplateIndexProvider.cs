@@ -27,7 +27,6 @@ public sealed class SmsTemplateIndexProvider : IndexProvider<SmsTemplate>
             {
                 ItemId = template.ItemId,
                 Name = template.Name,
-                Enabled = template.Enabled,
             });
     }
 }

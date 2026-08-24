@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Sms.Workspace.Core.Models;
 
 /// <summary>
 /// A reusable canned response (template) an agent can drop into the composer. Kept deliberately simple: a
-/// named body of text, optionally disabled.
+/// named body of text.
 /// </summary>
 public sealed class SmsTemplate : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
 {
@@ -18,11 +18,6 @@ public sealed class SmsTemplate : CatalogItem, INameAwareModel, IModifiedUtcAwar
     /// Gets or sets the template body inserted into the composer.
     /// </summary>
     public string Body { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the template is available to agents.
-    /// </summary>
-    public bool Enabled { get; set; } = true;
 
     /// <summary>
     /// Gets or sets the UTC time the template was created.

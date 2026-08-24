@@ -342,7 +342,7 @@ public sealed class SmsPortalController : Controller
         {
             Conversation = conversation,
             Messages = await GetMessagesAsync(id),
-            Templates = (await _templateManager.GetEnabledAsync()).ToArray(),
+            Templates = (await _templateManager.GetAllAsync()).ToArray(),
             ContactDisplayText = contactDisplayText,
         });
     }

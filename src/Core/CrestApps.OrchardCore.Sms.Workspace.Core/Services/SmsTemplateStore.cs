@@ -19,16 +19,4 @@ public sealed class SmsTemplateStore : DocumentCatalog<SmsTemplate, SmsTemplateI
     {
         CollectionName = SmsWorkspaceStorage.CollectionName;
     }
-
-    /// <inheritdoc/>
-    public async Task<IReadOnlyCollection<SmsTemplate>> GetEnabledAsync(CancellationToken cancellationToken = default)
-    {
-        var templates = await Session.Query<SmsTemplate, SmsTemplateIndex>(
-                index => index.Enabled,
-                collection: SmsWorkspaceStorage.CollectionName)
-            .OrderBy(index => index.Name)
-            .ListAsync(cancellationToken);
-
-        return templates.ToArray();
-    }
 }

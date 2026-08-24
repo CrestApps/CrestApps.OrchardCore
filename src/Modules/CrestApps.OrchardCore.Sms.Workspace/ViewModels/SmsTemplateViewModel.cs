@@ -14,9 +14,4 @@ public class SmsTemplateViewModel
     /// Gets or sets the template body.
     /// </summary>
     public string Body { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the template is enabled.
-    /// </summary>
-    public bool Enabled { get; set; } = true;
 }

@@ -23,7 +23,6 @@ public sealed class SmsTemplateDisplayDriver : DisplayDriver<SmsTemplate>
         {
             model.Name = template.Name;
             model.Body = template.Body;
-            model.Enabled = template.Enabled;
         }).Location("Content:1");
     }
 
@@ -35,7 +34,6 @@ public sealed class SmsTemplateDisplayDriver : DisplayDriver<SmsTemplate>
 
         template.Name = model.Name?.Trim();
         template.Body = model.Body?.Trim();
-        template.Enabled = model.Enabled;
 
         return Edit(template, context);
     }
