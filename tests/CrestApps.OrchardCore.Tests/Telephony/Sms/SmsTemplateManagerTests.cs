@@ -21,7 +21,7 @@ public class SmsTemplateManagerTests
 
         var manager = new SmsTemplateManager(store.Object, [], NullLogger<CrestApps.Core.Services.CatalogManager<SmsTemplate>>.Instance);
 
-        var result = await manager.GetEnabledAsync();
+        var result = await manager.GetEnabledAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, t => t.Name == "Greeting");

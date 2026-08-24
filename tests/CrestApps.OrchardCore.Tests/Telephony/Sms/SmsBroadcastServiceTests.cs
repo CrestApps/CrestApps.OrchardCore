@@ -33,7 +33,7 @@ public class SmsBroadcastServiceTests
 
         var service = CreateService(conversationService.Object);
 
-        await service.ProcessAsync(broadcast);
+        await service.ProcessAsync(broadcast, TestContext.Current.CancellationToken);
 
         Assert.Equal(3, broadcast.SentCount);
         Assert.Equal(0, broadcast.FailedCount);
@@ -69,7 +69,7 @@ public class SmsBroadcastServiceTests
 
         var service = CreateService(conversationService.Object);
 
-        await service.ProcessAsync(broadcast);
+        await service.ProcessAsync(broadcast, TestContext.Current.CancellationToken);
 
         // Only the third recipient is sent on resume.
         Assert.Equal(["+15551110003"], sentTo);
@@ -99,7 +99,7 @@ public class SmsBroadcastServiceTests
 
         var service = CreateService(conversationService.Object);
 
-        await service.ProcessAsync(broadcast);
+        await service.ProcessAsync(broadcast, TestContext.Current.CancellationToken);
 
         Assert.Equal(1, broadcast.SentCount);
         Assert.Equal(1, broadcast.FailedCount);

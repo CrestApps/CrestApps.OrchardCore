@@ -53,7 +53,7 @@ internal static class SqliteConnectionTuningBuilderExtensions
                 // original factory returns null. There is nothing to tune, so return it unchanged.
                 if (innerFactory(serviceProvider) is not IStore store)
                 {
-                    return null;
+                    return null!;
                 }
 
                 var configuration = store.Configuration;

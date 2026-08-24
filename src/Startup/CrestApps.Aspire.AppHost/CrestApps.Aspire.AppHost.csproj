@@ -7,6 +7,9 @@
     <IsAspireHost>true</IsAspireHost>
     <IsPackable>false</IsPackable>
     <UserSecretsId>0e4ae8bf-0fbf-43e7-b88a-91a70740841c</UserSecretsId>
+    <!-- This local AppHost intentionally runs without the Aspire CLI bundle, so silence the analyzer that
+         recommends enabling it (ASPIRE010). See https://aka.ms/aspire/diagnostics/aspire010. -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

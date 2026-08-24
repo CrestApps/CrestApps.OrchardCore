@@ -154,7 +154,7 @@ public static class TelnyxSmsWebhookParser
         return (null, null);
     }
 
-    private static IReadOnlyList<string> ReadMediaUrls(JsonElement payload)
+    private static List<string> ReadMediaUrls(JsonElement payload)
     {
         if (!payload.TryGetProperty("media", out var media) || media.ValueKind != JsonValueKind.Array)
         {

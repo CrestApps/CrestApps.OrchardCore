@@ -38,7 +38,7 @@ public class SmsConversationServiceTests
             ConversationId = "conv-1",
             Body = "Reply from agent",
             ActingAgentId = "agent-7",
-        });
+        }, TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.NotNull(saved);
@@ -70,7 +70,7 @@ public class SmsConversationServiceTests
         OmnichannelMessage saved = null;
         var (service, _) = CreateService(conversation, dispatchSucceeds: false, onSave: m => saved = m);
 
-        var result = await service.SendAsync(new SmsSendRequest { ConversationId = "conv-1", Body = "x", ActingAgentId = "agent-7" });
+        var result = await service.SendAsync(new SmsSendRequest { ConversationId = "conv-1", Body = "x", ActingAgentId = "agent-7" }, TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal(SmsDeliveryStatus.Failed.ToString(), saved.DeliveryStatus);
@@ -96,7 +96,7 @@ public class SmsConversationServiceTests
 
         var (service, dispatcher) = CreateService(conversation, dispatchSucceeds: true, onSave: _ => { }, contact: optedOutContact);
 
-        var result = await service.SendAsync(new SmsSendRequest { ConversationId = "conv-1", Body = "hi", ActingAgentId = "agent-7" });
+        var result = await service.SendAsync(new SmsSendRequest { ConversationId = "conv-1", Body = "hi", ActingAgentId = "agent-7" }, TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         dispatcher.Verify(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -118,7 +118,7 @@ public class SmsConversationServiceTests
 
         var (service, dispatcher) = CreateService(conversation, dispatchSucceeds: true, onSave: _ => { });
 
-        var result = await service.SendAsync(new SmsSendRequest { ConversationId = "conv-1", Body = "hi", ActingAgentId = "agent-intruder" });
+        var result = await service.SendAsync(new SmsSendRequest { ConversationId = "conv-1", Body = "hi", ActingAgentId = "agent-intruder" }, TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         dispatcher.Verify(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -158,7 +158,7 @@ public class SmsConversationServiceTests
 
         var contactResolver = new Mock<ISmsContactResolver>();
         contactResolver.Setup(r => r.ResolveContactContentItemIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult<string>(null));
+            .Returns(() => ValueTask.FromResult<string>(null));
 
         var service = new SmsConversationService(
             store.Object,

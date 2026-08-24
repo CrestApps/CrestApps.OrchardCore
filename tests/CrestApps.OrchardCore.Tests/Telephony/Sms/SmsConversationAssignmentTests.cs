@@ -27,7 +27,7 @@ public class SmsConversationAssignmentTests
 
         var (service, notifier) = CreateService(conversation);
 
-        var result = await service.ClaimAsync("conv-1", "agent-9");
+        var result = await service.ClaimAsync("conv-1", "agent-9", TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Equal("agent-9", conversation.AssignedAgentId);
@@ -50,7 +50,7 @@ public class SmsConversationAssignmentTests
 
         var (service, notifier) = CreateService(conversation);
 
-        var result = await service.ClaimAsync("conv-1", "agent-intruder");
+        var result = await service.ClaimAsync("conv-1", "agent-intruder", TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal("agent-owner", conversation.AssignedAgentId);
@@ -69,7 +69,7 @@ public class SmsConversationAssignmentTests
 
         var (service, _) = CreateService(conversation);
 
-        var result = await service.AssignAsync("conv-1", "agent-5");
+        var result = await service.AssignAsync("conv-1", "agent-5", TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Equal("agent-5", conversation.AssignedAgentId);

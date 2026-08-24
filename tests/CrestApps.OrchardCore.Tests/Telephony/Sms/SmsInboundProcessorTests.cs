@@ -23,8 +23,8 @@ public class SmsInboundProcessorTests
         var routing = new SmsEndpointRoutingSettings { TargetType = SmsNumberRouteTargetType.Agent, TargetId = "agent-3" };
         var harness = new Harness(routing: routing);
 
-        var message = harness.InboundMessage("Hi there");
-        var conversation = await harness.Processor.ProcessAsync(message);
+        var message = Harness.InboundMessage("Hi there");
+        var conversation = await harness.Processor.ProcessAsync(message, TestContext.Current.CancellationToken);
 
         Assert.NotNull(conversation);
         Assert.Equal(SmsConversationOwnerType.Personal, conversation.OwnerType);
@@ -41,7 +41,7 @@ public class SmsInboundProcessorTests
     {
         var harness = new Harness(routing: null);
 
-        var conversation = await harness.Processor.ProcessAsync(harness.InboundMessage("hello"));
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("hello"), TestContext.Current.CancellationToken);
 
         Assert.NotNull(conversation);
         Assert.Equal(SmsConversationAssignmentStatus.Unassigned, conversation.AssignmentStatus);
@@ -56,7 +56,7 @@ public class SmsInboundProcessorTests
             AutomatedActivity = new OmnichannelActivity { Status = ActivityStatus.AwaitingCustomerAnswer },
         };
 
-        var conversation = await harness.Processor.ProcessAsync(harness.InboundMessage("hello"));
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("hello"), TestContext.Current.CancellationToken);
 
         Assert.Null(conversation);
         Assert.Null(harness.CreatedConversation);
@@ -67,7 +67,7 @@ public class SmsInboundProcessorTests
     {
         var harness = new Harness(routing: null);
 
-        var conversation = await harness.Processor.ProcessAsync(harness.InboundMessage("STOP"));
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("STOP"), TestContext.Current.CancellationToken);
 
         Assert.NotNull(conversation);
         Assert.Equal(SmsConversationStatus.Closed, conversation.Status);
@@ -90,7 +90,7 @@ public class SmsInboundProcessorTests
 
         var harness = new Harness(routing: null, existing: existing);
 
-        var conversation = await harness.Processor.ProcessAsync(harness.InboundMessage("another"));
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("another"), TestContext.Current.CancellationToken);
 
         Assert.Same(existing, conversation);
         Assert.Equal("agent-owner", conversation.AssignedAgentId);
@@ -136,7 +136,7 @@ public class SmsInboundProcessorTests
 
             var contactResolver = new Mock<ISmsContactResolver>();
             contactResolver.Setup(r => r.ResolveContactContentItemIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(ValueTask.FromResult<string>(null));
+                .Returns(() => ValueTask.FromResult<string>(null));
 
             var routers = new ISmsInboundRouter[]
             {
@@ -168,7 +168,7 @@ public class SmsInboundProcessorTests
                 NullLogger<SmsInboundProcessor>.Instance);
         }
 
-        public OmnichannelMessage InboundMessage(string text)
+        public static OmnichannelMessage InboundMessage(string text)
             => new()
             {
                 Channel = "SMS",

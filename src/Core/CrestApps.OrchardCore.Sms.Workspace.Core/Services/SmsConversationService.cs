@@ -83,7 +83,7 @@ public sealed class SmsConversationService : ISmsConversationService
         }
 
         // Enforce the customer's SMS opt-out on every send.
-        if (await IsOptedOutAsync(conversation, cancellationToken))
+        if (await IsOptedOutAsync(conversation))
         {
             return SmsSendResult.Failed("The contact has opted out of SMS (Do not SMS).");
         }
@@ -191,7 +191,7 @@ public sealed class SmsConversationService : ISmsConversationService
             };
         }
 
-        if (await IsOptedOutAsync(conversation, cancellationToken))
+        if (await IsOptedOutAsync(conversation))
         {
             return SmsSendResult.Failed("The contact has opted out of SMS (Do not SMS).");
         }
@@ -412,7 +412,7 @@ public sealed class SmsConversationService : ISmsConversationService
             (actingAgentId == conversation.OwnerId || actingAgentId == conversation.AssignedAgentId);
     }
 
-    private async Task<bool> IsOptedOutAsync(SmsConversation conversation, CancellationToken cancellationToken)
+    private async Task<bool> IsOptedOutAsync(SmsConversation conversation)
     {
         if (string.IsNullOrEmpty(conversation.ContactContentItemId))
         {
@@ -421,7 +421,7 @@ public sealed class SmsConversationService : ISmsConversationService
 
         var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
 
-        return contact is not null && contact.As<OmnichannelContactPart>()?.DoNotSms == true;
+        return contact is not null && contact.TryGet<OmnichannelContactPart>(out var part) && part.DoNotSms;
     }
 
     private static string BuildPreview(string content)

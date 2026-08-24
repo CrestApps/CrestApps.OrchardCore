@@ -35,7 +35,7 @@ public sealed class OmnichannelChannelEndpointManagerTests
 
         var manager = CreateManager(store.Object, phoneNumberService.Object);
 
-        await manager.GetByServiceAddressAsync(channel, "(702) 499-3350");
+        await manager.GetByServiceAddressAsync(channel, "(702) 499-3350", TestContext.Current.CancellationToken);
 
         Assert.Equal("+17024993350", capturedAddress);
     }
@@ -61,7 +61,7 @@ public sealed class OmnichannelChannelEndpointManagerTests
 
         var manager = CreateManager(store.Object, phoneNumberService.Object);
 
-        await manager.GetByServiceAddressAsync(OmnichannelConstants.Channels.Sms, "not-a-number");
+        await manager.GetByServiceAddressAsync(OmnichannelConstants.Channels.Sms, "not-a-number", TestContext.Current.CancellationToken);
 
         Assert.Equal("not-a-number", capturedAddress);
     }
@@ -80,7 +80,7 @@ public sealed class OmnichannelChannelEndpointManagerTests
 
         var manager = CreateManager(store.Object, phoneNumberService.Object);
 
-        await manager.GetByServiceAddressAsync("Email", "support@example.com");
+        await manager.GetByServiceAddressAsync("Email", "support@example.com", TestContext.Current.CancellationToken);
 
         Assert.Equal("support@example.com", capturedAddress);
         phoneNumberService.Verify(

@@ -19,7 +19,7 @@ public class SmsDispatcherTests
             endpointProvider: "Telnyx",
             smsDefault: "AzureCommunicationServices");
 
-        var resolved = await dispatcher.ResolveProviderNameAsync("+15553334444");
+        var resolved = await dispatcher.ResolveProviderNameAsync("+15553334444", TestContext.Current.CancellationToken);
 
         Assert.Equal("Telnyx", resolved);
     }
@@ -31,7 +31,7 @@ public class SmsDispatcherTests
             endpointProvider: null,
             smsDefault: "AzureCommunicationServices");
 
-        var resolved = await dispatcher.ResolveProviderNameAsync("+15553334444");
+        var resolved = await dispatcher.ResolveProviderNameAsync("+15553334444", TestContext.Current.CancellationToken);
 
         Assert.Equal("AzureCommunicationServices", resolved);
     }
@@ -48,7 +48,7 @@ public class SmsDispatcherTests
             smsDefault: null,
             resolver: name => name == "Telnyx" ? provider.Object : null);
 
-        var result = await dispatcher.SendAsync(new SmsMessage { From = "+15553334444", To = "+15551112222", Body = "hi" });
+        var result = await dispatcher.SendAsync(new SmsMessage { From = "+15553334444", To = "+15551112222", Body = "hi" }, TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         provider.Verify(p => p.SendAsync(It.Is<SmsMessage>(m => m.From == "+15553334444"), It.IsAny<CancellationToken>()), Times.Once);
@@ -59,7 +59,7 @@ public class SmsDispatcherTests
     {
         var dispatcher = CreateDispatcher(endpointProvider: null, smsDefault: null);
 
-        var result = await dispatcher.SendAsync(new SmsMessage { From = "+15553334444", To = "+15551112222", Body = "hi" });
+        var result = await dispatcher.SendAsync(new SmsMessage { From = "+15553334444", To = "+15551112222", Body = "hi" }, TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
     }

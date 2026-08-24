@@ -15,7 +15,7 @@ public class NumberRouteRouterTests
         var routing = new SmsEndpointRoutingSettings { TargetType = SmsNumberRouteTargetType.Agent, TargetId = "agent-1" };
         var context = CreateContext(routing, isNew: true);
 
-        var handled = await new NumberRouteRouter().TryRouteAsync(context);
+        var handled = await new NumberRouteRouter().TryRouteAsync(context, TestContext.Current.CancellationToken);
 
         Assert.True(handled);
         Assert.Equal(SmsConversationOwnerType.Personal, context.Conversation.OwnerType);
@@ -35,7 +35,7 @@ public class NumberRouteRouterTests
         };
         var context = CreateContext(routing, isNew: true);
 
-        var handled = await new NumberRouteRouter().TryRouteAsync(context);
+        var handled = await new NumberRouteRouter().TryRouteAsync(context, TestContext.Current.CancellationToken);
 
         Assert.True(handled);
         Assert.Equal(SmsConversationOwnerType.Queue, context.Conversation.OwnerType);
@@ -49,7 +49,7 @@ public class NumberRouteRouterTests
     {
         var context = CreateContext(routing: null, isNew: true);
 
-        var handled = await new NumberRouteRouter().TryRouteAsync(context);
+        var handled = await new NumberRouteRouter().TryRouteAsync(context, TestContext.Current.CancellationToken);
 
         Assert.False(handled);
     }
@@ -60,7 +60,7 @@ public class NumberRouteRouterTests
         var routing = new SmsEndpointRoutingSettings { TargetType = SmsNumberRouteTargetType.Agent, TargetId = "agent-1" };
         var context = CreateContext(routing, isNew: false);
 
-        var handled = await new NumberRouteRouter().TryRouteAsync(context);
+        var handled = await new NumberRouteRouter().TryRouteAsync(context, TestContext.Current.CancellationToken);
 
         Assert.False(handled);
     }

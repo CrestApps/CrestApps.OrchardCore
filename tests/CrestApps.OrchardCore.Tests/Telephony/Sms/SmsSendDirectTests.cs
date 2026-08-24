@@ -32,7 +32,7 @@ public class SmsSendDirectTests
         var (service, store, dispatcher) = CreateService(existing);
 
         // The agent composes from a different DID than the existing thread runs on.
-        var result = await service.SendDirectAsync("+15559998888", "+15551112222", "hi again", "agent-1");
+        var result = await service.SendDirectAsync("+15559998888", "+15551112222", "hi again", "agent-1", TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         store.Verify(s => s.CreateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -48,7 +48,7 @@ public class SmsSendDirectTests
     {
         var (service, store, _) = CreateService(existing: null);
 
-        var result = await service.SendDirectAsync("+15559998888", "+15551112222", "hello", "agent-1");
+        var result = await service.SendDirectAsync("+15559998888", "+15551112222", "hello", "agent-1", TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         store.Verify(s => s.CreateAsync(It.Is<SmsConversation>(c => c.CustomerAddress == "+15551112222" && c.ServiceAddress == "+15559998888"), It.IsAny<CancellationToken>()), Times.Once);
@@ -66,7 +66,7 @@ public class SmsSendDirectTests
 
         var contactResolver = new Mock<ISmsContactResolver>();
         contactResolver.Setup(r => r.ResolveContactContentItemIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns(ValueTask.FromResult<string>(null));
+            .Returns(() => ValueTask.FromResult<string>(null));
 
         var session = new Mock<ISession>();
         session.Setup(s => s.SaveAsync(It.IsAny<OmnichannelMessage>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
