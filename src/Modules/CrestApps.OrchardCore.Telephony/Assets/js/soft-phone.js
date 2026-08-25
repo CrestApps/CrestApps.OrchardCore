@@ -1443,6 +1443,114 @@
         return international ? formatInternationalNumber(digits) : digits;
     }
 
+    // A self-contained inbound-call ringtone synthesized with the Web Audio API, so no audio asset needs to be
+    // bundled or fetched (which would also run into the strict CSP). It plays a classic telephone double-ring
+    // cadence (two short 440/480 Hz bursts, then a pause) on a loop until stopped. start() is idempotent, so it
+    // can be called on every render while a call is ringing. Playback needs the page to have had a user gesture
+    // (browser autoplay policy); an agent using the admin has almost always interacted, and if not the ring is
+    // simply silent rather than erroring.
+    function createRingtonePlayer() {
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        var ctx = null;
+        var oscA = null;
+        var oscB = null;
+        var gain = null;
+        var timer = null;
+        var running = false;
+
+        function ringOnce() {
+            if (!ctx || !gain) {
+                return;
+            }
+
+            var now = ctx.currentTime;
+            var peak = 0.14;
+            var floor = 0.0001;
+
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setValueAtTime(floor, now);
+            // First burst.
+            gain.gain.exponentialRampToValueAtTime(peak, now + 0.04);
+            gain.gain.setValueAtTime(peak, now + 0.4);
+            gain.gain.exponentialRampToValueAtTime(floor, now + 0.45);
+            // Second burst (double-ring), then a ~2s silence handled by the interval.
+            gain.gain.exponentialRampToValueAtTime(peak, now + 0.65);
+            gain.gain.setValueAtTime(peak, now + 1.0);
+            gain.gain.exponentialRampToValueAtTime(floor, now + 1.05);
+        }
+
+        return {
+            start: function () {
+                if (running || !AudioCtx) {
+                    return;
+                }
+
+                running = true;
+
+                try {
+                    ctx = new AudioCtx();
+                    oscA = ctx.createOscillator();
+                    oscB = ctx.createOscillator();
+                    gain = ctx.createGain();
+                    oscA.type = 'sine';
+                    oscB.type = 'sine';
+                    oscA.frequency.value = 440;
+                    oscB.frequency.value = 480;
+                    gain.gain.value = 0.0001;
+                    oscA.connect(gain);
+                    oscB.connect(gain);
+                    gain.connect(ctx.destination);
+                    oscA.start();
+                    oscB.start();
+
+                    if (ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+                        ctx.resume().catch(function () { });
+                    }
+
+                    ringOnce();
+                    timer = window.setInterval(ringOnce, 3000);
+                } catch (error) {
+                    running = false;
+                }
+            },
+            stop: function () {
+                if (!running) {
+                    return;
+                }
+
+                running = false;
+
+                if (timer) {
+                    window.clearInterval(timer);
+                    timer = null;
+                }
+
+                try {
+                    if (gain && ctx) {
+                        gain.gain.cancelScheduledValues(ctx.currentTime);
+                        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+                    }
+
+                    if (oscA) {
+                        oscA.stop();
+                    }
+
+                    if (oscB) {
+                        oscB.stop();
+                    }
+                } catch (error) { /* best effort */ }
+
+                try {
+                    if (ctx && typeof ctx.close === 'function') {
+                        ctx.close();
+                    }
+                } catch (error) { /* best effort */ }
+
+                ctx = oscA = oscB = gain = null;
+            }
+        };
+    }
+
     function createSoftPhone(rootElement, options) {
         options = options || {};
 
@@ -1547,6 +1655,8 @@
         var incomingContext = null;
         var incomingHandled = false;
         var incomingAcceptPending = false;
+        // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
+        var ringtone = createRingtonePlayer();
         var incomingExpiryTimer = null;
         var requiresAuthentication = false;
         var isConnected = false;
@@ -4470,6 +4580,16 @@
             show(dom.incoming, visible);
             rootElement.classList.toggle('telephony-soft-phone--incoming', visible);
 
+            // Ring while an inbound offer is pending answer (covers both Contact Center offers and direct
+            // extension rings, since both surface as a ringing inbound call). start()/stop() are idempotent, so
+            // calling them on every render is safe; the ring stops the moment the call is answered, declined,
+            // ignored, times out, or the caller hangs up.
+            if (visible) {
+                ringtone.start();
+            } else {
+                ringtone.stop();
+            }
+
             if (!visible) {
                 clearIncomingExpiryTimer();
 
@@ -5938,9 +6058,10 @@
             });
             window.addEventListener('pagehide', function () {
                 // The page is actually being unloaded (navigation confirmed or tab closing): stop the manual
-                // reconnect loop from scheduling a doomed restart during teardown, and release the provider
-                // media session.
+                // reconnect loop from scheduling a doomed restart during teardown, silence the ringtone, and
+                // release the provider media session.
                 pageUnloading = true;
+                ringtone.stop();
                 releaseBrowserAudio();
             });
             window.addEventListener('resize', function () {
