@@ -133,9 +133,14 @@ Enable the **Telephony Soft Phone** feature
 adds the phone to the admin dashboard automatically, and provides a **Soft Phone** widget you can place
 on the front end. Configure it on the **Soft Phone** tab of the telephony settings:
 
+- **Enable the soft phone** is the master switch (a kill switch). When turned off, the widget is not
+  shown anywhere and its scripts are not loaded, so the soft phone can be shut off site-wide instantly
+  without a redeploy — useful during an incident or maintenance. It is enabled by default.
 - **Show the soft phone on the admin dashboard** displays the widget on admin pages. This is enabled
   by default. To show the phone on the front end, add the **Soft Phone** widget from **Design → Widgets**
   (see [Adding the soft phone to the website](#adding-the-soft-phone-to-the-website)).
+- **Enable the diagnostics tab** shows a **Diagnostics** tab on the soft phone for troubleshooting (see
+  [Diagnostics](#diagnostics)). It is off by default.
 - **Default country** selects the country the phone number input uses by default so a national number is normalized to E.164 before it is dialed or screened. Leave it on **Automatic** to derive the country from the current request culture; when the culture does not identify a region, the widget falls back to the browser's locale and finally to the United States, so a country is always selected and national numbers can still be normalized.
 - **Accent color** controls the widget's button and control colors.
 - **Recent calls to display** controls how many calls the **Recent** tab loads. The default is `30`, and administrators can select a value from `1` through `200`.
@@ -185,6 +190,29 @@ window.telephonySoftPhone.mediaAdapters.myProvider = function (context) {
 ```
 
 The factory receives `credentials`, `localStream`, `remoteAudioElement`, `setRemoteStream`, and `showError`. Registering a JavaScript factory alone is not sufficient: the server provider must implement `ITelephonyAudioProvider`, advertise `Browser`, return the same adapter name, and issue the provider-specific short-lived bootstrap settings needed by that executable adapter.
+
+### Audio device settings
+
+When the soft phone uses browser audio, a **gear** icon appears in the widget header. It opens a **Settings** panel where the agent can choose which **microphone** and **speaker** the soft phone uses, instead of relying on the operating-system default. The choice is saved per agent in the browser's `localStorage` and applied to microphone capture (`getUserMedia`) and speaker output (`setSinkId`, where the browser supports it); the device lists refresh automatically when devices are plugged in or removed.
+
+This matters because a browser's *default* input device is not always the agent's real microphone — a common cause of "the other side can't hear me" is a virtual audio device (for example VB-Audio Virtual Cable) being the system default. The picker lists only real, unambiguous devices so the agent can select their actual microphone; the [Diagnostics](#diagnostics) tab's microphone meter shows which device is live and whether it is producing audio.
+
+### Diagnostics
+
+The soft phone includes an optional **Diagnostics** tab for troubleshooting call quality and audio problems — including in production, and without a redeploy. It is **off by default** and can be enabled two ways:
+
+- **Enable the diagnostics tab** in the **Soft Phone** settings turns it on persistently for everyone (an administrator flips it on to investigate, then off again).
+- Adding **`?diag=1`** to the page URL turns it on for that single browser session only — handy for an ad-hoc check on one agent's machine without changing any settings.
+
+The Diagnostics tab shows:
+
+- A live **microphone level meter** that labels the device actually being captured (for example `Using: Microphone Array (Realtek)`), so a wrong or silent input device is obvious at a glance — a flat bar while speaking means the selected microphone is not producing audio.
+- The **live call quality** for the active call: estimated MOS, packet loss, jitter, round-trip time, bytes received, negotiated **codec**, and the selected ICE candidate types.
+- **Provider warnings** raised by the browser media SDK (for example a low-microphone-audio advisory).
+- An **audio test**: place a call to a configurable echo/loopback destination and confirm round-trip audio without a second person (the destination is configured per provider — for Telnyx, the **Audio test destination** advanced setting).
+- A **Dump SDP/stats** action that prints the current call's SDP and a full `getStats` snapshot for deep inspection.
+
+Enabling diagnostics does **not** add any browser console logging; the data is shown in the tab and forwarded (throttled and de-duplicated) to server telemetry, where poor call quality and client-side errors are logged for alerting. The soft phone continuously samples media quality during every call regardless of the tab, so a poor connection is reported to the server even when no one has the Diagnostics tab open.
 
 ### Keypad, recent calls, and extension tabs
 
