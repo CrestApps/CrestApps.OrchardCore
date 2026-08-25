@@ -22,6 +22,7 @@
             : 0;
     var browserMediaAdapterName = Model.BrowserMediaAdapterName as string;
     var defaultCountryCode = Model.DefaultCountryCode as string ?? string.Empty;
+    var enableDiagnostics = Model.EnableDiagnostics is bool configuredEnableDiagnostics && configuredEnableDiagnostics;
 
     if (Model.Capabilities is TelephonyCapabilities caps)
     {
@@ -73,6 +74,7 @@
         ["antiForgeryToken"] = antiForgeryToken,
         ["storageKey"] = "telephony-soft-phone",
         ["defaultCountryCode"] = defaultCountryCode,
+        ["enableDiagnostics"] = enableDiagnostics,
         ["strings"] = new Dictionary<string, string>
         {
             ["idle"] = T["Ready"].Value,
@@ -153,6 +155,8 @@
             ["defaultSpeaker"] = T["Default speaker"].Value,
             ["callCredentialExpiring"] = T["This call is nearing its session limit. If it drops, redial to reconnect."].Value,
             ["diagNoData"] = T["No active call to measure."].Value,
+            ["micMeterUnavailable"] = T["Microphone metering is not available in this browser."].Value,
+            ["micMeterDenied"] = T["Allow microphone access to see the input level."].Value,
             ["diagUnavailable"] = T["Diagnostics are not available for this provider."].Value,
             ["diagCollecting"] = T["Collecting..."].Value,
             ["echoTestNoDestination"] = T["Configure an audio test destination in the provider settings first."].Value,
@@ -282,21 +286,6 @@
                     <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> @T["Retry microphone"]
                 </button>
 
-                <div class="telephony-soft-phone__diagnostics" data-telephony-diagnostics hidden>
-                    <div class="telephony-soft-phone__diag-title">@T["Diagnostics"]</div>
-                    <div class="telephony-soft-phone__diag-readout" data-telephony-diag-readout></div>
-                    <div class="telephony-soft-phone__diag-actions">
-                        <input type="text"
-                               class="form-control form-control-sm"
-                               data-telephony-diag-echo-input
-                               placeholder="@T["Audio test destination (optional)"]"
-                               aria-label="@T["Audio test destination"]" />
-                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-diag-run>@T["Run audio test"]</button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-diag-dump>@T["Dump SDP/stats"]</button>
-                    </div>
-                    <div class="telephony-soft-phone__diag-status" data-telephony-diag-status></div>
-                    <pre class="telephony-soft-phone__diag-output" data-telephony-diag-output></pre>
-                </div>
 
                 <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
                     <div class="telephony-soft-phone__active-calls-heading">@T["Active calls"]</div>
@@ -378,6 +367,42 @@
                 <div class="telephony-soft-phone__voicemail-list" data-telephony-voicemail-list></div>
             </div>
 
+            <div class="telephony-soft-phone__view telephony-soft-phone__diagnostics-view" data-telephony-view="diagnostics" hidden>
+                <div class="telephony-soft-phone__diag-section">
+                    <div class="telephony-soft-phone__diag-label">@T["Microphone level"]</div>
+                    <div class="telephony-soft-phone__mic-meter" data-telephony-mic-meter>
+                        <div class="telephony-soft-phone__mic-meter-fill" data-telephony-mic-meter-fill></div>
+                    </div>
+                    <div class="telephony-soft-phone__diag-hint" data-telephony-mic-meter-hint>@T["Speak — the bar should move. A flat bar means the selected microphone is silent."]</div>
+                </div>
+
+                <div class="telephony-soft-phone__diag-section">
+                    <div class="telephony-soft-phone__diag-label">@T["Live call quality"]</div>
+                    <div class="telephony-soft-phone__diag-readout" data-telephony-diag-readout>@T["No active call to measure."]</div>
+                </div>
+
+                <div class="telephony-soft-phone__diag-section" data-telephony-diag-warnings-section hidden>
+                    <div class="telephony-soft-phone__diag-label">@T["Provider warnings"]</div>
+                    <div class="telephony-soft-phone__diag-warnings" data-telephony-diag-warnings></div>
+                </div>
+
+                <div class="telephony-soft-phone__diag-section">
+                    <div class="telephony-soft-phone__diag-label">@T["Audio test"]</div>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           data-telephony-diag-echo-input
+                           placeholder="@T["Audio test destination (optional)"]"
+                           aria-label="@T["Audio test destination"]" />
+                    <div class="telephony-soft-phone__diag-actions">
+                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-diag-run>@T["Run audio test"]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-diag-dump>@T["Dump SDP/stats"]</button>
+                    </div>
+                    <div class="telephony-soft-phone__diag-status" data-telephony-diag-status></div>
+                </div>
+
+                <pre class="telephony-soft-phone__diag-output" data-telephony-diag-output></pre>
+            </div>
+
             @if (Model.Views != null)
             {
                 @await DisplayAsync(Model.Views)
@@ -397,6 +422,10 @@
                 <i class="fa-solid fa-voicemail"></i>
                 <span>@T["Voicemail"]</span>
                 <span class="telephony-soft-phone__tab-badge" data-telephony-voicemail-badge hidden aria-label="@T["Unread voicemails"]"></span>
+            </button>
+            <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="diagnostics" data-telephony-diagnostics-tab aria-selected="false" hidden>
+                <i class="fa-solid fa-wave-square"></i>
+                <span>@T["Diagnostics"]</span>
             </button>
             @if (Model.Tabs != null)
             {

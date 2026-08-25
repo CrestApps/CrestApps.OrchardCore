@@ -56,6 +56,7 @@ public sealed class SoftPhoneWidgetPresenter : ISoftPhoneWidgetPresenter
                 ? settings.RecentCallsCount
                 : SoftPhoneWidgetSettings.DefaultRecentCallsCount,
             DefaultCountryCode = SoftPhoneCountries.ResolveDefaultCountryCode(settings?.DefaultCountryCode),
+            EnableDiagnostics = settings?.EnableDiagnostics ?? false,
         };
     }
 

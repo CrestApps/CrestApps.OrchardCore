@@ -20,6 +20,16 @@
     </div>
 </div>
 
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableDiagnostics" checked="@Model.EnableDiagnostics" />
+            <label class="form-check-label" asp-for="EnableDiagnostics">@T["Enable the diagnostics tab"]</label>
+            <span class="hint">@T["Shows a Diagnostics tab on the soft phone with live media stats, a microphone level meter, provider warnings, an SDP dump, and an audio test. Turn it on to troubleshoot (including in production), then turn it off. It can also be enabled for one session by adding ?diag=1 to the URL."]</span>
+        </div>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="RecentCallsCount">
     <label asp-for="RecentCallsCount" class="ocat-label">@T["Recent calls to display"]</label>
     <div class="ocat-end">

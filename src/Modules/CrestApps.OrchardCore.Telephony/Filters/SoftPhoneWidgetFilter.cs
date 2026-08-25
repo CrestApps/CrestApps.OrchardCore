@@ -118,6 +118,7 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
             shape.Properties["BrowserMediaAdapterName"] = widget.BrowserMediaAdapterName;
             shape.Properties["RecentCallsCount"] = widget.RecentCallsCount;
             shape.Properties["DefaultCountryCode"] = widget.DefaultCountryCode;
+            shape.Properties["EnableDiagnostics"] = widget.EnableDiagnostics;
 
             var layout = await _layoutAccessor.GetLayoutAsync();
 

@@ -40,4 +40,9 @@ public sealed class SoftPhoneWidget
     /// selects initially so a national number can be normalized to E.164.
     /// </summary>
     public string DefaultCountryCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the soft phone's Diagnostics tab is enabled.
+    /// </summary>
+    public bool EnableDiagnostics { get; set; }
 }

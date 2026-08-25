@@ -1119,6 +1119,14 @@
             reportSignalingDegraded(false);
         });
 
+        // Provider SDK warnings (media/quality advisories such as "Low local microphone audio detected"). Surface
+        // them to the core for the Diagnostics tab and server telemetry.
+        client.on('telnyx.warning', function (warning) {
+            if (!disposed && typeof context.onProviderWarning === 'function') {
+                context.onProviderWarning(warning);
+            }
+        });
+
         // On every (re)connect, clear any stale transient error banner -- most importantly a LOGIN_FAILED that
         // has since recovered (for example after a brief credential churn), which would otherwise linger on the
         // widget even though the client is connected again.
@@ -1465,13 +1473,18 @@
             inputDevice: rootElement.querySelector('[data-telephony-input-device]'),
             outputDevice: rootElement.querySelector('[data-telephony-output-device]'),
             outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
-            diagnostics: rootElement.querySelector('[data-telephony-diagnostics]'),
+            diagnosticsTab: rootElement.querySelector('[data-telephony-diagnostics-tab]'),
             diagStatus: rootElement.querySelector('[data-telephony-diag-status]'),
             diagReadout: rootElement.querySelector('[data-telephony-diag-readout]'),
             diagOutput: rootElement.querySelector('[data-telephony-diag-output]'),
             diagEchoInput: rootElement.querySelector('[data-telephony-diag-echo-input]'),
             diagRun: rootElement.querySelector('[data-telephony-diag-run]'),
             diagDump: rootElement.querySelector('[data-telephony-diag-dump]'),
+            diagWarnings: rootElement.querySelector('[data-telephony-diag-warnings]'),
+            diagWarningsSection: rootElement.querySelector('[data-telephony-diag-warnings-section]'),
+            micMeter: rootElement.querySelector('[data-telephony-mic-meter]'),
+            micMeterFill: rootElement.querySelector('[data-telephony-mic-meter-fill]'),
+            micMeterHint: rootElement.querySelector('[data-telephony-mic-meter-hint]'),
             activeCalls: rootElement.querySelector('[data-telephony-active-calls]'),
             activeCallsList: rootElement.querySelector('[data-telephony-active-calls-list]'),
             keys: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-key]')),
@@ -1582,10 +1595,12 @@
         var hubReconnecting = false;
         var mediaReconnecting = false;
 
-        // Gated diagnostics mode (companion tooling): a live getStats/SDP panel plus the echo/loopback audio
-        // test, shown only when ?diag=1 is present so it can be pulled up on any real session without exposing
-        // it to every agent. lastQualitySample mirrors item 2's most recent measurement for the live readout.
-        var diagnosticsEnabled = /(?:^|[?&])diag=1(?:&|$)/.test(window.location.search || '');
+        // Gated diagnostics tab: a live getStats/SDP view with a microphone level meter, provider warnings, and
+        // the echo/loopback audio test. Enabled by the EnableDiagnostics site setting (admins can turn it on at
+        // runtime to troubleshoot production, then off) or ad hoc for one session with ?diag=1. lastQualitySample
+        // mirrors item 2's most recent measurement for the live readout.
+        var diagnosticsEnabled = !!config.enableDiagnostics ||
+            /(?:^|[?&])diag=1(?:&|$)/.test(window.location.search || '');
         var lastQualitySample = null;
         var echoTestActive = false;
 
@@ -2237,7 +2252,10 @@
                         onConnectionQuality: setConnectionQualityPoor,
                         // Degraded-state UX (item 6): the adapter reports when its signaling socket drops and is
                         // reconnecting so the status line can show "Reconnecting..." for a media outage too.
-                        onSignalingDegraded: setMediaReconnecting
+                        onSignalingDegraded: setMediaReconnecting,
+                        // Diagnostics: provider SDK warnings (e.g. "Low local microphone audio detected") are
+                        // collected for the Diagnostics tab and forwarded to server telemetry.
+                        onProviderWarning: addProviderWarning
                     }));
                 });
             }).then(function (session) {
@@ -2606,6 +2624,146 @@
             if (dom.diagStatus) {
                 dom.diagStatus.textContent = text || '';
             }
+        }
+
+        // ---- Microphone level meter (Diagnostics tab) ----
+        // A live meter of the microphone the soft phone is (or would be) capturing. It reads the actual input
+        // level, so a flat bar while speaking immediately reveals a silent/wrong input device -- the exact class
+        // of problem that is otherwise painful to diagnose (a virtual-cable default, a muted device, etc.).
+        var micMeterCtx = null;
+        var micMeterAnalyser = null;
+        var micMeterRaf = null;
+        var micMeterOwnStream = null;
+        var micMeterData = null;
+
+        function startMicMeter() {
+            if (!dom.micMeter || !dom.micMeterFill || micMeterCtx) {
+                return;
+            }
+
+            var AudioCtx = window.AudioContext || window.webkitAudioContext;
+
+            if (!AudioCtx || !navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                if (dom.micMeterHint) {
+                    dom.micMeterHint.textContent = strings.micMeterUnavailable || 'Microphone metering is not available in this browser.';
+                }
+
+                return;
+            }
+
+            function attach(stream) {
+                try {
+                    micMeterCtx = new AudioCtx();
+                    var source = micMeterCtx.createMediaStreamSource(stream);
+                    micMeterAnalyser = micMeterCtx.createAnalyser();
+                    micMeterAnalyser.fftSize = 512;
+                    source.connect(micMeterAnalyser);
+                    micMeterData = new Float32Array(micMeterAnalyser.fftSize);
+                    micMeterTick();
+                } catch (error) { /* best effort */ }
+            }
+
+            // Prefer the soft phone's own captured mic so the meter reflects exactly what a call uses; when idle
+            // and not yet registered, open a dedicated capture with the same constraints (selected device).
+            if (localAudioStream) {
+                attach(localAudioStream);
+            } else {
+                navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+                    if (activeTab === 'diagnostics' && !micMeterCtx) {
+                        micMeterOwnStream = stream;
+                        attach(stream);
+                    } else {
+                        stream.getTracks().forEach(function (track) { track.stop(); });
+                    }
+                }).catch(function () {
+                    if (dom.micMeterHint) {
+                        dom.micMeterHint.textContent = strings.micMeterDenied || 'Allow microphone access to see the input level.';
+                    }
+                });
+            }
+        }
+
+        function micMeterTick() {
+            if (!micMeterAnalyser || !dom.micMeterFill) {
+                return;
+            }
+
+            micMeterAnalyser.getFloatTimeDomainData(micMeterData);
+
+            var sum = 0;
+
+            for (var i = 0; i < micMeterData.length; i++) {
+                sum += micMeterData[i] * micMeterData[i];
+            }
+
+            var rms = Math.sqrt(sum / micMeterData.length);
+            // Speech RMS is roughly 0..0.3; scale to a 0..100% bar with headroom.
+            var pct = Math.min(100, Math.round(rms * 400));
+            dom.micMeterFill.style.width = pct + '%';
+            dom.micMeterFill.classList.toggle('is-active', pct > 3);
+            micMeterRaf = window.requestAnimationFrame(micMeterTick);
+        }
+
+        function stopMicMeter() {
+            if (micMeterRaf) {
+                window.cancelAnimationFrame(micMeterRaf);
+                micMeterRaf = null;
+            }
+
+            if (micMeterCtx) {
+                try {
+                    micMeterCtx.close();
+                } catch (error) { /* best effort */ }
+
+                micMeterCtx = null;
+            }
+
+            micMeterAnalyser = null;
+            micMeterData = null;
+
+            if (micMeterOwnStream) {
+                micMeterOwnStream.getTracks().forEach(function (track) { track.stop(); });
+                micMeterOwnStream = null;
+            }
+
+            if (dom.micMeterFill) {
+                dom.micMeterFill.style.width = '0%';
+                dom.micMeterFill.classList.remove('is-active');
+            }
+        }
+
+        // ---- Provider warnings (Diagnostics tab) ----
+        // Warnings the provider SDK raises (for example Telnyx "Low local microphone audio detected") are
+        // collected here so they can be seen in the Diagnostics tab and are also forwarded (deduped) to server
+        // telemetry, turning a console-only signal into an alertable one.
+        var providerWarnings = [];
+
+        function addProviderWarning(warning) {
+            if (!warning) {
+                return;
+            }
+
+            var code = warning.code || warning.name || '';
+            var message = warning.message || warning.error || (typeof warning === 'string' ? warning : '');
+            var text = (code ? ('[' + code + '] ') : '') + (message || 'Provider warning');
+
+            providerWarnings.unshift(new Date().toLocaleTimeString() + '  ' + text);
+
+            if (providerWarnings.length > 20) {
+                providerWarnings.length = 20;
+            }
+
+            reportDiagnostic('warning', 'provider-warning', text, null);
+            renderProviderWarnings();
+        }
+
+        function renderProviderWarnings() {
+            if (!dom.diagWarnings || !dom.diagWarningsSection) {
+                return;
+            }
+
+            dom.diagWarningsSection.hidden = providerWarnings.length === 0;
+            dom.diagWarnings.textContent = providerWarnings.join('\n');
         }
 
         // Renders the most recent media-quality sample (item 2) into the diagnostics panel so live ICE/codec/RTP
@@ -2997,7 +3155,7 @@
         }
 
         function isTelephonyTab(tab) {
-            return tab === 'keypad' || tab === 'history' || tab === 'voicemail';
+            return tab === 'keypad' || tab === 'history' || tab === 'voicemail' || tab === 'diagnostics';
         }
 
         function hasExtensionTabs() {
@@ -3388,6 +3546,15 @@
                 // Voicemails stay unread until the caller opens one (clicks its body); opening the list no longer
                 // marks them all read.
                 loadVoicemails();
+            } else if (tab === 'diagnostics') {
+                // Start the live microphone level meter and refresh the readout while the tab is open.
+                startMicMeter();
+                updateDiagnosticsReadout();
+            }
+
+            // The mic meter only needs to run while the Diagnostics tab is visible.
+            if (tab !== 'diagnostics') {
+                stopMicMeter();
             }
         }
 
@@ -3489,9 +3656,9 @@
                 show(dom.micRetry, !!micPermissionState);
             }
 
-            // The gated diagnostics panel (companion tooling) is shown only when ?diag=1 is present.
-            if (dom.diagnostics) {
-                show(dom.diagnostics, diagnosticsEnabled);
+            // The gated Diagnostics tab is shown only when diagnostics are enabled (site setting or ?diag=1).
+            if (dom.diagnosticsTab) {
+                show(dom.diagnosticsTab, diagnosticsEnabled);
             }
 
             // The header gear opens the settings overlay, offered only when the soft phone uses browser audio
@@ -5740,9 +5907,21 @@
             attachDrag(dom.toggle, { ignoreButtons: false, suppressClick: true });
 
             window.addEventListener('message', onOAuthMessage);
-            window.addEventListener('beforeunload', function () {
-                // Mark the page as unloading so the manual reconnect loop does not schedule a doomed restart
-                // during teardown, then release browser audio as the tab goes away.
+            window.addEventListener('beforeunload', function (event) {
+                // Seatbelt for navigating away mid-call: a full page load tears down the WebRTC media, so the
+                // call cannot survive a reload. Warn the agent before they leave while a call is live (the
+                // browser shows its own generic confirmation). This does NOT release audio -- if the agent
+                // cancels the navigation the call keeps running; cleanup happens in pagehide only when the page
+                // actually goes away. This is a safety net, not a fix for navigating while on a call.
+                if (hasLiveCall()) {
+                    event.preventDefault();
+                    event.returnValue = '';
+                }
+            });
+            window.addEventListener('pagehide', function () {
+                // The page is actually being unloaded (navigation confirmed or tab closing): stop the manual
+                // reconnect loop from scheduling a doomed restart during teardown, and release the provider
+                // media session.
                 pageUnloading = true;
                 releaseBrowserAudio();
             });

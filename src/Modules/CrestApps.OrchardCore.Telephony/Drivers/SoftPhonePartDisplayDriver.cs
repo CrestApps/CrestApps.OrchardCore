@@ -85,6 +85,7 @@ public sealed class SoftPhonePartDisplayDriver : ContentPartDisplayDriver<SoftPh
             shape.Properties["BrowserMediaAdapterName"] = widget.BrowserMediaAdapterName;
             shape.Properties["RecentCallsCount"] = widget.RecentCallsCount;
             shape.Properties["DefaultCountryCode"] = widget.DefaultCountryCode;
+            shape.Properties["EnableDiagnostics"] = widget.EnableDiagnostics;
 
             return shape;
         }).Location("Detail", "Content:5");

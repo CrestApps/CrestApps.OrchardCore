@@ -18,6 +18,11 @@ public class SoftPhoneWidgetSettingsViewModel
     public bool DisplayOnAdmin { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the soft phone's Diagnostics tab is shown.
+    /// </summary>
+    public bool EnableDiagnostics { get; set; }
+
+    /// <summary>
     /// Gets or sets the accent color, as a CSS color value, used by the soft phone widget.
     /// </summary>
     public string AccentColor { get; set; }

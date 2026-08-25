@@ -29,6 +29,14 @@ public sealed class SoftPhoneWidgetSettings
     public bool DisplayOnAdmin { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the soft phone's Diagnostics tab is shown. It surfaces live
+    /// media stats, a microphone-input level meter, provider warnings, an SDP dump, and the audio test. Off by
+    /// default; turn it on at runtime (no redeploy) to troubleshoot in production, then turn it back off. It can
+    /// also be enabled ad hoc for a single session by adding <c>?diag=1</c> to the URL.
+    /// </summary>
+    public bool EnableDiagnostics { get; set; }
+
+    /// <summary>
     /// Gets or sets the accent color, as a CSS color value, used by the soft phone widget.
     /// </summary>
     public string AccentColor { get; set; } = DefaultAccentColor;
