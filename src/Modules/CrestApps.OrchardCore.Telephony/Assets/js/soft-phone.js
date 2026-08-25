@@ -2041,8 +2041,16 @@
             }
 
             return navigator.mediaDevices.enumerateDevices().then(function (devices) {
-                var inputs = devices.filter(function (device) { return device.kind === 'audioinput'; });
-                var outputs = devices.filter(function (device) { return device.kind === 'audiooutput'; });
+                // Exclude the "default" and "communications" pseudo-devices: they just alias whatever the system
+                // default is (which can be a silent virtual cable), so listing them alongside the real devices
+                // only adds confusing duplicates. The "Default microphone" option already covers the system
+                // default, and the real, unambiguous devices are what an agent needs to pick to fix a bad default.
+                function isRealDevice(device) {
+                    return device.deviceId !== 'default' && device.deviceId !== 'communications';
+                }
+
+                var inputs = devices.filter(function (device) { return device.kind === 'audioinput' && isRealDevice(device); });
+                var outputs = devices.filter(function (device) { return device.kind === 'audiooutput' && isRealDevice(device); });
                 var sinkSupported = outputDeviceSelectionSupported();
 
                 fillDeviceSelect(dom.inputDevice, inputs, selectedInputDeviceId, strings.defaultMicrophone || 'Default microphone');
@@ -2659,6 +2667,16 @@
                     micMeterAnalyser.fftSize = 512;
                     source.connect(micMeterAnalyser);
                     micMeterData = new Float32Array(micMeterAnalyser.fftSize);
+
+                    // Show which device is actually being captured. A wrong/virtual default (for example
+                    // "CABLE Output (VB-Audio Virtual Cable)") shows up here immediately, next to a flat meter.
+                    var track = stream.getAudioTracks()[0];
+
+                    if (dom.micMeterHint && track) {
+                        dom.micMeterHint.textContent = (strings.micMeterUsing || 'Using:') + ' ' +
+                            (track.label || strings.defaultMicrophone || 'Default microphone');
+                    }
+
                     micMeterTick();
                 } catch (error) { /* best effort */ }
             }
