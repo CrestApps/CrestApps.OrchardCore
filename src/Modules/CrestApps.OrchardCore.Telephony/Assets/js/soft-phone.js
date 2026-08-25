@@ -491,6 +491,143 @@
         });
     }
 
+    // Estimates a Mean Opinion Score (1.0-4.5) from round-trip time, jitter, and packet loss using the ITU-T
+    // G.107 E-model approximation widely used for WebRTC quality monitoring. Latency and jitter are in
+    // milliseconds, loss in percent. A higher score is better; ~4.0+ is good, below ~3.5 is poor.
+    function estimateMos(rttMs, jitterMs, lossPercent) {
+        var effectiveLatency = (rttMs || 0) + (jitterMs || 0) * 2 + 10;
+        var r = effectiveLatency < 160
+            ? 93.2 - effectiveLatency / 40
+            : 93.2 - (effectiveLatency - 120) / 10;
+
+        r = r - 2.5 * (lossPercent || 0);
+
+        if (r < 0) {
+            return 1;
+        }
+
+        if (r > 100) {
+            return 4.5;
+        }
+
+        return 1 + 0.035 * r + r * (r - 60) * (100 - r) * 0.000007;
+    }
+
+    // Thresholds that classify a getStats sample as a poor connection. Kept in sync with the server-side
+    // TelephonyCallQualityEvaluator so the in-call UX (item 6) and the server logs agree on what "poor" means.
+    var QUALITY_POOR_MOS = 3.5;
+    var QUALITY_POOR_LOSS_PERCENT = 5;
+
+    // Maps configured codec names (for example "opus", "G722", "PCMU") to the { mimeType } shape the Telnyx SDK's
+    // preferred_codecs call option expects, which it applies with RTCRtpTransceiver.setCodecPreferences. This
+    // only reorders the browser's SDP OFFER; the Telnyx gateway's answer still picks the final codec, so a codec
+    // Telnyx does not support on the media path is not negotiated regardless. In practice Telnyx transcodes the
+    // WebRTC<->SIP/PSTN/conference legs to G711/G722, so Opus is not negotiated even though the browser offers it;
+    // this hook is here so an admin can influence ordering (and so Opus is used automatically if Telnyx ever
+    // enables it on the path). Item 2's quality telemetry reports the codec actually negotiated.
+    function buildPreferredCodecs(codecs) {
+        if (!Array.isArray(codecs) || codecs.length === 0) {
+            return null;
+        }
+
+        var mapped = [];
+
+        codecs.forEach(function (codec) {
+            var name = String(codec || '').trim();
+
+            if (!name) {
+                return;
+            }
+
+            mapped.push({ mimeType: /^(audio|video)\//i.test(name) ? name : 'audio/' + name });
+        });
+
+        return mapped.length ? mapped : null;
+    }
+
+    // Extracts the audio inbound-rtp, selected candidate pair, negotiated codec, and candidate types from an
+    // RTCStatsReport. Written defensively because the exact shape and which candidate pair is flagged "selected"
+    // varies across browsers (Chrome nominates a succeeded pair; Firefox marks one `selected`; the transport may
+    // name the pair through selectedCandidatePairId).
+    function parseWebRtcStats(report) {
+        var inbound = null;
+        var remoteInbound = null;
+        var selectedPair = null;
+        var nominatedPair = null;
+        var transportPairId = null;
+        var codecs = {};
+        var localCandidates = {};
+        var remoteCandidates = {};
+        var pairs = {};
+
+        report.forEach(function (stat) {
+            switch (stat.type) {
+                case 'inbound-rtp':
+                    if (stat.kind === 'audio' || stat.mediaType === 'audio') {
+                        inbound = stat;
+                    }
+
+                    break;
+                case 'remote-inbound-rtp':
+                    if (stat.kind === 'audio' || stat.mediaType === 'audio') {
+                        remoteInbound = stat;
+                    }
+
+                    break;
+                case 'candidate-pair':
+                    pairs[stat.id] = stat;
+
+                    if (stat.selected) {
+                        selectedPair = stat;
+                    }
+
+                    if (stat.nominated && stat.state === 'succeeded' &&
+                        (!nominatedPair || (stat.bytesReceived || 0) > (nominatedPair.bytesReceived || 0))) {
+                        nominatedPair = stat;
+                    }
+
+                    break;
+                case 'codec':
+                    codecs[stat.id] = stat;
+
+                    break;
+                case 'local-candidate':
+                    localCandidates[stat.id] = stat;
+
+                    break;
+                case 'remote-candidate':
+                    remoteCandidates[stat.id] = stat;
+
+                    break;
+                case 'transport':
+                    if (stat.selectedCandidatePairId) {
+                        transportPairId = stat.selectedCandidatePairId;
+                    }
+
+                    break;
+                default:
+                    break;
+            }
+        });
+
+        var pair = selectedPair ||
+            (transportPairId && pairs[transportPairId]) ||
+            nominatedPair ||
+            null;
+        var codec = inbound && inbound.codecId && codecs[inbound.codecId] ? codecs[inbound.codecId] : null;
+        var localCandidate = pair && pair.localCandidateId ? localCandidates[pair.localCandidateId] : null;
+        var remoteCandidate = pair && pair.remoteCandidateId ? remoteCandidates[pair.remoteCandidateId] : null;
+
+        return {
+            inbound: inbound,
+            remoteInbound: remoteInbound,
+            pair: pair,
+            codec: codec ? codec.mimeType || '' : '',
+            localCandidateType: localCandidate ? localCandidate.candidateType || '' : '',
+            remoteCandidateType: remoteCandidate ? remoteCandidate.candidateType || '' : ''
+        };
+    }
+
     function createTelnyxBrowserMediaAdapter(rootElement, widgetConfig) {
         return function (context) {
             var telnyx = window.TelnyxWebRTC;
@@ -510,6 +647,8 @@
         var credential = registrationConfig.credential || {};
         var ice = registrationConfig.ice || {};
         var media = registrationConfig.media || {};
+        // Codec preference applied to both outbound newCall and inbound answer (see buildPreferredCodecs).
+        var preferredCodecs = buildPreferredCodecs(media.codecs);
         var remoteElement = context.remoteAudioElement;
 
         // Telnyx logs in with the telephony-credential SIP username/password, delivered in the same
@@ -530,6 +669,182 @@
         // to the soft-phone core as an Answer/Decline prompt; until the agent chooses it is not the currentCall.
         var inboundRingingCall = null;
         var disposed = false;
+
+        // Media-quality sampler state for the active call. A getStats sample is taken every few seconds while a
+        // call is active; the samples feed a rolling summary, a poor-connection signal for the degraded-state
+        // UX, and periodic + end-of-call reports to the server. Cleared when the call ends or the session is
+        // disposed. This is the early-warning system that would have caught the recent TURN/one-way-audio bug.
+        var QUALITY_SAMPLE_INTERVAL_MS = 8000;
+        // Only transmit every Nth periodic sample to the server (plus every poor-state change and the final
+        // summary), so an 8s sampling cadence does not become 8s of hub traffic per call.
+        var QUALITY_TRANSMIT_EVERY = 3;
+        var qualityTimer = null;
+        var qualityState = null;
+
+        function startQualitySampler(call) {
+            // Already sampling this call, or nothing to sample.
+            if (!call || (qualityState && qualityState.call === call)) {
+                return;
+            }
+
+            stopQualitySampler(false);
+
+            qualityState = {
+                call: call,
+                callId: (call && (call.id || call.callId)) || '',
+                started: Date.now(),
+                samples: 0,
+                transmitCounter: 0,
+                mosSum: 0,
+                minMos: Infinity,
+                maxLoss: 0,
+                lastPacketsReceived: 0,
+                lastPacketsLost: 0,
+                lastPoor: false,
+                finalSent: false,
+                last: null
+            };
+
+            qualityTimer = window.setInterval(sampleQuality, QUALITY_SAMPLE_INTERVAL_MS);
+        }
+
+        function sampleQuality() {
+            if (!qualityState) {
+                return;
+            }
+
+            var call = qualityState.call;
+            var peer = call && call.peer && call.peer.instance;
+
+            if (!peer || typeof peer.getStats !== 'function') {
+                return;
+            }
+
+            Promise.resolve(peer.getStats()).then(function (report) {
+                if (!qualityState || qualityState.call !== call || !report || typeof report.forEach !== 'function') {
+                    return;
+                }
+
+                var parsed = parseWebRtcStats(report);
+                var inbound = parsed.inbound;
+
+                if (!inbound) {
+                    return;
+                }
+
+                var packetsReceived = inbound.packetsReceived || 0;
+                var packetsLost = inbound.packetsLost || 0;
+                var deltaReceived = Math.max(0, packetsReceived - qualityState.lastPacketsReceived);
+                var deltaLost = Math.max(0, packetsLost - qualityState.lastPacketsLost);
+                var lossPercent = (deltaReceived + deltaLost) > 0
+                    ? (deltaLost / (deltaReceived + deltaLost)) * 100
+                    : 0;
+                var jitterMs = (inbound.jitter || 0) * 1000;
+                var rttMs = parsed.pair && typeof parsed.pair.currentRoundTripTime === 'number'
+                    ? parsed.pair.currentRoundTripTime * 1000
+                    : (parsed.remoteInbound && typeof parsed.remoteInbound.roundTripTime === 'number'
+                        ? parsed.remoteInbound.roundTripTime * 1000
+                        : 0);
+                var bytesReceived = inbound.bytesReceived || 0;
+                var mos = estimateMos(rttMs, jitterMs, lossPercent);
+                var poor = lossPercent > QUALITY_POOR_LOSS_PERCENT ||
+                    mos < QUALITY_POOR_MOS ||
+                    (bytesReceived === 0 && packetsReceived > 0);
+
+                qualityState.lastPacketsReceived = packetsReceived;
+                qualityState.lastPacketsLost = packetsLost;
+                qualityState.samples++;
+                qualityState.mosSum += mos;
+                qualityState.minMos = Math.min(qualityState.minMos, mos);
+                qualityState.maxLoss = Math.max(qualityState.maxLoss, lossPercent);
+
+                var sample = {
+                    callId: qualityState.callId,
+                    direction: (call && call.direction) || '',
+                    codec: parsed.codec,
+                    localCandidateType: parsed.localCandidateType,
+                    remoteCandidateType: parsed.remoteCandidateType,
+                    packetsReceived: packetsReceived,
+                    packetsLost: packetsLost,
+                    lossPercent: lossPercent,
+                    jitterMs: jitterMs,
+                    rttMs: rttMs,
+                    bytesReceived: bytesReceived,
+                    mos: mos,
+                    poor: poor
+                };
+                qualityState.last = sample;
+
+                var poorChanged = poor !== qualityState.lastPoor;
+
+                if (poorChanged) {
+                    qualityState.lastPoor = poor;
+
+                    if (typeof context.onConnectionQuality === 'function') {
+                        context.onConnectionQuality(poor);
+                    }
+                }
+
+                qualityState.transmitCounter++;
+
+                if ((poorChanged || (qualityState.transmitCounter % QUALITY_TRANSMIT_EVERY) === 0) &&
+                    typeof context.reportCallQuality === 'function') {
+                    context.reportCallQuality(buildQualityPayload(sample, false));
+                }
+            }).catch(function () { /* best effort: a failed sample must never disrupt the call */ });
+        }
+
+        function buildQualityPayload(sample, isFinal) {
+            var payload = {
+                callId: sample.callId,
+                direction: sample.direction,
+                codec: sample.codec,
+                localCandidateType: sample.localCandidateType,
+                remoteCandidateType: sample.remoteCandidateType,
+                packetsReceived: sample.packetsReceived,
+                packetsLost: sample.packetsLost,
+                lossPercent: sample.lossPercent,
+                jitterMs: sample.jitterMs,
+                rttMs: sample.rttMs,
+                bytesReceived: sample.bytesReceived,
+                mos: sample.mos,
+                poor: sample.poor,
+                final: !!isFinal,
+                sampleCount: qualityState ? qualityState.samples : 0,
+                minMos: qualityState && isFinite(qualityState.minMos) ? qualityState.minMos : sample.mos,
+                avgMos: qualityState && qualityState.samples ? qualityState.mosSum / qualityState.samples : sample.mos,
+                maxLossPercent: qualityState ? qualityState.maxLoss : sample.lossPercent,
+                durationMs: qualityState ? (Date.now() - qualityState.started) : 0
+            };
+
+            return payload;
+        }
+
+        function stopQualitySampler(sendFinal) {
+            if (qualityTimer) {
+                window.clearInterval(qualityTimer);
+                qualityTimer = null;
+            }
+
+            if (!qualityState) {
+                return;
+            }
+
+            // Report the end-of-call summary once, only when at least one sample was taken (a sub-sample-interval
+            // call produced no measurements worth summarizing).
+            if (sendFinal && !qualityState.finalSent && qualityState.samples > 0 && qualityState.last &&
+                typeof context.reportCallQuality === 'function') {
+                qualityState.finalSent = true;
+                context.reportCallQuality(buildQualityPayload(qualityState.last, true));
+            }
+
+            // Clear any lingering poor-connection signal on the core when the call ends.
+            if (qualityState.lastPoor && typeof context.onConnectionQuality === 'function') {
+                context.onConnectionQuality(false);
+            }
+
+            qualityState = null;
+        }
 
         var clientOptions = {
             login: login,
@@ -585,12 +900,18 @@
         // left the leg connected (DTLS up) but silent -- no media flowed in either direction.
         function answerInboundCall(call) {
             try {
-                call.answer({
+                var answerOptions = {
                     localStream: context.localStream,
                     remoteElement: remoteElement,
                     audio: true,
                     video: false
-                });
+                };
+
+                if (preferredCodecs) {
+                    answerOptions.preferred_codecs = preferredCodecs;
+                }
+
+                call.answer(answerOptions);
             } catch (error) {
                 context.showError(error && error.message ? error.message : String(error));
             }
@@ -705,9 +1026,11 @@
             }
 
             if (call === currentCall) {
-                // Once media is flowing, make sure the remote audio is actually playing (see ensureRemotePlayback).
+                // Once media is flowing, make sure the remote audio is actually playing (see ensureRemotePlayback)
+                // and begin sampling media quality for this call.
                 if (call.state === 'active') {
                     ensureRemotePlayback();
+                    startQualitySampler(call);
                 }
 
                 if (outboundNotify) {
@@ -719,6 +1042,8 @@
                 }
 
                 if (isTelnyxTerminalState(call.state)) {
+                    // Send the end-of-call quality summary before clearing the call.
+                    stopQualitySampler(true);
                     clearCall(call);
                 }
             }
@@ -736,6 +1061,30 @@
             }
 
             context.showError((error && (error.error || error.message)) || 'Telnyx WebRTC error.');
+        });
+
+        // Signaling-health signals for the degraded-state UX (item 6). The SDK owns the socket reconnect
+        // (autoReconnect, which we leave enabled); we only observe it. A close/error while the session is live
+        // means the SDK is reconnecting, so surface "Reconnecting..."; a re-open clears it. Intentional
+        // teardown (dispose/renewal sets `disposed`) must not masquerade as a reconnect.
+        function reportSignalingDegraded(active) {
+            if (disposed || typeof context.onSignalingDegraded !== 'function') {
+                return;
+            }
+
+            context.onSignalingDegraded(active);
+        }
+
+        client.on('telnyx.socket.close', function () {
+            reportSignalingDegraded(true);
+        });
+
+        client.on('telnyx.socket.error', function () {
+            reportSignalingDegraded(true);
+        });
+
+        client.on('telnyx.socket.open', function () {
+            reportSignalingDegraded(false);
         });
 
         // Resolve the session only once the client has logged in (telnyx.ready); newCall/answer require a
@@ -771,6 +1120,41 @@
             }
         });
 
+        // Returns live diagnostics for the current call: the negotiated SDP and a getStats dump. Used by the
+        // gated diagnostics panel to pull ICE/SDP/RTP from a real session on demand (companion tooling), and by
+        // the echo/loopback audio test to assert inbound bytesReceived > 0. Best-effort and read-only.
+        function getCallDiagnostics() {
+            var call = currentCall;
+            var peer = call && call.peer && call.peer.instance;
+
+            if (!peer) {
+                return Promise.resolve({ available: false, localSdp: '', remoteSdp: '', stats: [] });
+            }
+
+            var result = { available: true, localSdp: '', remoteSdp: '', stats: [] };
+
+            try {
+                result.localSdp = (peer.localDescription && peer.localDescription.sdp) || '';
+                result.remoteSdp = (peer.remoteDescription && peer.remoteDescription.sdp) || '';
+            } catch (error) { /* best effort */ }
+
+            if (typeof peer.getStats !== 'function') {
+                return Promise.resolve(result);
+            }
+
+            return Promise.resolve(peer.getStats()).then(function (report) {
+                if (report && typeof report.forEach === 'function') {
+                    report.forEach(function (stat) {
+                        result.stats.push(stat);
+                    });
+                }
+
+                return result;
+            }).catch(function () {
+                return result;
+            });
+        }
+
         function buildSession() {
             return {
                 providerConfig: registrationConfig,
@@ -778,6 +1162,10 @@
                 // The browser places its own outbound calls through the Telnyx SDK.
                 canOriginate: true,
                 outboundCallerId: registrationConfig.outboundCallerId || '',
+                // Optional echo/loopback destination for the diagnostics audio test (companion tooling).
+                echoTestDestination: registrationConfig.echoTestDestination || '',
+                // On-demand live diagnostics (SDP + getStats) for the diagnostics panel and the echo test.
+                getDiagnostics: getCallDiagnostics,
                 // Places an outbound call through the Telnyx SDK and returns a controller. onState receives
                 // soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
                 originate: function (destination, callerId, onState) {
@@ -792,7 +1180,7 @@
                     var call;
 
                     try {
-                        call = client.newCall({
+                        var callOptions = {
                             destinationNumber: destination,
                             callerNumber: callerId || registrationConfig.outboundCallerId || '',
                             // Reuse the microphone stream the soft phone already acquired so the SDK does not
@@ -801,7 +1189,13 @@
                             remoteElement: remoteElement,
                             audio: true,
                             video: false
-                        });
+                        };
+
+                        if (preferredCodecs) {
+                            callOptions.preferred_codecs = preferredCodecs;
+                        }
+
+                        call = client.newCall(callOptions);
                     } catch (error) {
                         context.showError(error && error.message ? error.message : String(error));
                         notify('Disconnected');
@@ -845,6 +1239,8 @@
 
                     if (!serverCall || stateName === 'Disconnected' || stateName === 'Failed') {
                         if (currentCall) {
+                            stopQualitySampler(true);
+
                             try {
                                 currentCall.hangup();
                             } catch (error) { /* best effort */ }
@@ -890,6 +1286,8 @@
                     }
 
                     disposed = true;
+                    // Flush the end-of-call quality summary if a call was still live at disposal.
+                    stopQualitySampler(true);
 
                     if (currentCall) {
                         try {
@@ -1018,6 +1416,18 @@
             dialModeToggle: rootElement.querySelector('[data-telephony-dial-mode-toggle]'),
             dialModeLabel: rootElement.querySelector('[data-telephony-dial-mode-label]'),
             error: rootElement.querySelector('[data-telephony-error]'),
+            micRetry: rootElement.querySelector('[data-telephony-mic-retry]'),
+            devices: rootElement.querySelector('[data-telephony-devices]'),
+            inputDevice: rootElement.querySelector('[data-telephony-input-device]'),
+            outputDevice: rootElement.querySelector('[data-telephony-output-device]'),
+            outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
+            diagnostics: rootElement.querySelector('[data-telephony-diagnostics]'),
+            diagStatus: rootElement.querySelector('[data-telephony-diag-status]'),
+            diagReadout: rootElement.querySelector('[data-telephony-diag-readout]'),
+            diagOutput: rootElement.querySelector('[data-telephony-diag-output]'),
+            diagEchoInput: rootElement.querySelector('[data-telephony-diag-echo-input]'),
+            diagRun: rootElement.querySelector('[data-telephony-diag-run]'),
+            diagDump: rootElement.querySelector('[data-telephony-diag-dump]'),
             activeCalls: rootElement.querySelector('[data-telephony-active-calls]'),
             activeCallsList: rootElement.querySelector('[data-telephony-active-calls-list]'),
             keys: Array.prototype.slice.call(rootElement.querySelectorAll('[data-telephony-key]')),
@@ -1091,13 +1501,46 @@
         var activeCommand = null;
         var activeCallsRefreshTimer = null;
         var suppressToggleClick = false;
+        // Indefinite SignalR reconnect state. SignalR's automatic reconnect gives up after its default
+        // schedule, after which an agent silently stops receiving inbound-call offers until a manual page
+        // reload. The custom policy and the manual restart loop below back off but never give up.
+        var manualReconnectTimer = null;
+        var manualReconnectAttempt = 0;
+        var pageUnloading = false;
         var browserAudioPromise = null;
         var browserAudioSession = null;
         var browserAudioHeartbeatTimer = null;
         var localAudioStream = null;
+        // Selected audio input/output device ids (item 5 device picker). Null means the browser default. The
+        // input id is applied to getUserMedia; the output id is applied to the remote audio element via
+        // setSinkId. Both persist per soft-phone instance in localStorage.
+        var selectedInputDeviceId = null;
+        var selectedOutputDeviceId = null;
+        // Mic-permission recovery UX (item 9). 'denied' or 'notfound' when getUserMedia is rejected for a
+        // permission/device reason; drives an actionable message plus a Retry affordance (distinct from a generic
+        // transient error). Cleared on a successful capture or when the agent retries.
+        var micPermissionState = null;
         // Controllers for calls the browser originated itself (client-originated providers such as Telnyx),
         // keyed by the synthetic call id. Server-tracked calls are not in this map.
         var browserCallControllers = {};
+
+        // Set by the media adapter's quality sampler (item 2) when the live call's measured quality breaches the
+        // poor-connection thresholds, and consumed by the degraded-state UX (item 6). Kept in the core so it
+        // survives across adapter calls and can be read by render().
+        var connectionQualityPoor = false;
+
+        // Degraded-state UX (item 6). Two independent "trying to recover" signals drive a "Reconnecting..."
+        // status: the SignalR hub connection (hubReconnecting) and the provider media socket (mediaReconnecting).
+        // Each is toggled only on an actual state change, which debounces the status line so it does not flap.
+        var hubReconnecting = false;
+        var mediaReconnecting = false;
+
+        // Gated diagnostics mode (companion tooling): a live getStats/SDP panel plus the echo/loopback audio
+        // test, shown only when ?diag=1 is present so it can be pulled up on any real session without exposing
+        // it to every agent. lastQualitySample mirrors item 2's most recent measurement for the live readout.
+        var diagnosticsEnabled = /(?:^|[?&])diag=1(?:&|$)/.test(window.location.search || '');
+        var lastQualitySample = null;
+        var echoTestActive = false;
 
         // A direct browser-inbound (extension) call that is ringing and awaiting the agent's Answer/Decline
         // choice: { callId, controller }. The controller is the media adapter's handle for answering, declining,
@@ -1352,6 +1795,9 @@
             if (message) {
                 dom.error.textContent = message;
                 dom.error.hidden = false;
+                // Surface client-side errors to server telemetry (item 7), throttled/deduped. Kept at warning
+                // level so routine input validations do not escalate to error alerts.
+                reportDiagnostic('warning', 'client-error', message, null);
             } else {
                 dom.error.textContent = '';
                 dom.error.hidden = true;
@@ -1381,6 +1827,194 @@
                 track.stop();
             });
             localAudioStream = null;
+        }
+
+        // Builds the microphone capture constraints. The three processing flags (echo cancellation, noise
+        // suppression, automatic gain control) are on by default so captured audio is clean without extra
+        // configuration. When the agent has picked a specific input device (item 5) it is requested exactly;
+        // otherwise the browser's default input is used.
+        function buildAudioConstraints() {
+            var audio = {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true
+            };
+
+            if (selectedInputDeviceId) {
+                audio.deviceId = { exact: selectedInputDeviceId };
+            }
+
+            return { audio: audio, video: false };
+        }
+
+        // Maps a getUserMedia rejection to an actionable error and records the recovery state (item 9). A denied
+        // permission and a missing device are distinguished from a generic failure so the agent gets a specific,
+        // localized message plus a Retry affordance instead of an opaque error. Never retries on its own.
+        function categorizeMicError(error) {
+            var name = (error && error.name) || '';
+
+            if (name === 'NotAllowedError' || name === 'PermissionDeniedError' || name === 'SecurityError') {
+                reportDiagnostic('error', 'mic-permission-denied', name, null);
+                setMicPermissionIssue('denied');
+
+                return new Error(strings.micPermissionDenied ||
+                    'Microphone access is blocked. Allow microphone access in your browser, then retry.');
+            }
+
+            if (name === 'NotFoundError' || name === 'DevicesNotFoundError' || name === 'OverconstrainedError') {
+                // A selected input device that has gone away throws OverconstrainedError; drop the stale selection
+                // so a retry falls back to the browser default input.
+                if (name === 'OverconstrainedError') {
+                    selectedInputDeviceId = null;
+                    persistDeviceSelection();
+                }
+
+                reportDiagnostic('error', 'mic-not-found', name, null);
+                setMicPermissionIssue('notfound');
+
+                return new Error(strings.micNotFound ||
+                    'No microphone was found. Connect a microphone, then retry.');
+            }
+
+            reportDiagnostic('error', 'mic-error', name || (error && error.message) || 'getUserMedia failed', null);
+
+            return error instanceof Error ? error : new Error(String(error));
+        }
+
+        function setMicPermissionIssue(kind) {
+            micPermissionState = kind;
+
+            var message = kind === 'denied'
+                ? (strings.micPermissionDenied || 'Microphone access is blocked. Allow microphone access in your browser, then retry.')
+                : (strings.micNotFound || 'No microphone was found. Connect a microphone, then retry.');
+
+            // Show the guidance directly (not through showError, which would double-report the diagnostic) so it
+            // appears regardless of which path hit the error: a dial surfaces it through the promise chain, but
+            // the idle background registration swallows failures to a debug log.
+            if (dom.error) {
+                dom.error.textContent = message;
+                dom.error.hidden = false;
+            }
+
+            render();
+        }
+
+        function clearMicPermissionIssue() {
+            if (!micPermissionState) {
+                return;
+            }
+
+            micPermissionState = null;
+
+            if (dom.error && !dom.error.hidden) {
+                dom.error.textContent = '';
+                dom.error.hidden = true;
+            }
+
+            render();
+        }
+
+        // Retries microphone capture once after a permission/device failure (item 9). Not a loop: a repeated
+        // failure simply re-shows the guidance.
+        function retryMicrophone() {
+            clearMicPermissionIssue();
+            registerBrowserAudioForInbound();
+        }
+
+        // ---- Audio device selection (item 5) ----
+
+        function loadDeviceSelection() {
+            var layout = loadLayout();
+            selectedInputDeviceId = layout.inputDeviceId || null;
+            selectedOutputDeviceId = layout.outputDeviceId || null;
+        }
+
+        function persistDeviceSelection() {
+            saveLayout({
+                inputDeviceId: selectedInputDeviceId || '',
+                outputDeviceId: selectedOutputDeviceId || ''
+            });
+        }
+
+        function fillDeviceSelect(select, devices, selectedId, defaultLabel) {
+            if (!select) {
+                return;
+            }
+
+            var html = '<option value="">' + escapeHtml(defaultLabel) + '</option>';
+
+            devices.forEach(function (device, index) {
+                var label = device.label || (defaultLabel + ' ' + (index + 1));
+                html += '<option value="' + escapeHtml(device.deviceId) + '"' +
+                    (device.deviceId === selectedId ? ' selected' : '') + '>' +
+                    escapeHtml(label) + '</option>';
+            });
+
+            select.innerHTML = html;
+            select.value = selectedId || '';
+        }
+
+        function outputDeviceSelectionSupported() {
+            return !!(dom.remoteAudio && typeof dom.remoteAudio.setSinkId === 'function');
+        }
+
+        // Applies the selected output device to the shared remote audio element via setSinkId (feature-detected).
+        // An empty id routes back to the system default. The sink sticks on the element across calls, so applying
+        // it on selection and after (re)registration is enough.
+        function applyOutputDevice() {
+            if (!outputDeviceSelectionSupported()) {
+                return;
+            }
+
+            Promise.resolve(dom.remoteAudio.setSinkId(selectedOutputDeviceId || '')).catch(function () { });
+        }
+
+        // Enumerates audio devices and fills the pickers. Device labels are only exposed once microphone
+        // permission has been granted, so the picker is shown only when labels are known and there is a real
+        // choice to make.
+        function populateDevicePickers() {
+            if (!isBrowserAudioEnabled() || !navigator.mediaDevices ||
+                typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+                return Promise.resolve();
+            }
+
+            return navigator.mediaDevices.enumerateDevices().then(function (devices) {
+                var inputs = devices.filter(function (device) { return device.kind === 'audioinput'; });
+                var outputs = devices.filter(function (device) { return device.kind === 'audiooutput'; });
+                var sinkSupported = outputDeviceSelectionSupported();
+
+                fillDeviceSelect(dom.inputDevice, inputs, selectedInputDeviceId, strings.defaultMicrophone || 'Default microphone');
+
+                if (sinkSupported) {
+                    fillDeviceSelect(dom.outputDevice, outputs, selectedOutputDeviceId, strings.defaultSpeaker || 'Default speaker');
+                }
+
+                if (dom.outputDeviceRow) {
+                    dom.outputDeviceRow.hidden = !sinkSupported;
+                }
+
+                var labelsKnown = inputs.some(function (device) { return !!device.label; });
+                var hasChoice = inputs.length > 1 || (sinkSupported && outputs.length > 1);
+                show(dom.devices, labelsKnown && hasChoice);
+            }).catch(function () { /* best effort */ });
+        }
+
+        function onInputDeviceChange() {
+            selectedInputDeviceId = (dom.inputDevice && dom.inputDevice.value) || null;
+            persistDeviceSelection();
+
+            // Apply now when idle by re-registering with the new input. A live call keeps its current microphone
+            // (re-acquiring would drop the call); the new device takes effect on the next call.
+            if (!hasLiveCall()) {
+                releaseBrowserAudio();
+                registerBrowserAudioForInbound();
+            }
+        }
+
+        function onOutputDeviceChange() {
+            selectedOutputDeviceId = (dom.outputDevice && dom.outputDevice.value) || null;
+            persistDeviceSelection();
+            applyOutputDevice();
         }
 
         function releaseBrowserAudio() {
@@ -1419,6 +2053,13 @@
         // A credential whose advertised expiry predates this is treated as carrying no real expiry (an unset
         // or default timestamp) rather than being renewed on every heartbeat.
         var BROWSER_AUDIO_MIN_PLAUSIBLE_EXPIRY_MS = Date.UTC(2000, 0, 1);
+        // How close to expiry an ongoing call must be before the agent is warned it may not survive (item 8).
+        // The renewal is deferred during a live call because re-registering would drop media, so a call longer
+        // than the credential lifetime can lose its registration at expiry; the warning lets the agent redial
+        // proactively. It is well inside the renewal threshold so it only fires when renewal has actually been
+        // deferred by an in-progress call.
+        var BROWSER_AUDIO_EXPIRY_WARNING_MS = 3 * 60 * 1000;
+        var credentialExpiryWarned = false;
 
         function browserAudioExpiryMs(session) {
             var providerConfig = session && session.providerConfig;
@@ -1502,8 +2143,16 @@
                     throw new Error(strings.browserAudioUnavailable || 'The configured browser audio adapter is unavailable.');
                 }
 
-                return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+                return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).catch(function (mediaError) {
+                    // Turn a permission/device rejection into an actionable, categorized error (item 9).
+                    throw categorizeMicError(mediaError);
+                }).then(function (stream) {
                     localAudioStream = stream;
+                    // Capture succeeded: clear any prior mic-permission guidance and refresh the device pickers
+                    // (labels are only available now that permission has been granted).
+                    clearMicPermissionIssue();
+                    populateDevicePickers();
+                    applyOutputDevice();
 
                     return Promise.resolve(adapter({
                         credentials: credentials,
@@ -1516,11 +2165,21 @@
                         // extension call from a colleague).
                         shouldAutoAnswerInbound: consumeInboundAutoAnswer,
                         onInboundRing: handleBrowserInboundRing,
-                        onInboundRingCanceled: clearBrowserInboundRing
+                        onInboundRingCanceled: clearBrowserInboundRing,
+                        // Media-quality telemetry (item 2): the adapter samples the live peer connection and
+                        // reports periodic/final summaries and a poor-connection signal back through these.
+                        reportCallQuality: reportCallQuality,
+                        onConnectionQuality: setConnectionQualityPoor,
+                        // Degraded-state UX (item 6): the adapter reports when its signaling socket drops and is
+                        // reconnecting so the status line can show "Reconnecting..." for a media outage too.
+                        onSignalingDegraded: setMediaReconnecting
                     }));
                 });
             }).then(function (session) {
                 browserAudioSession = session || {};
+                // A fresh credential is live: reset the one-time expiry warning so a subsequent long call warns
+                // again against the new expiry (item 8).
+                credentialExpiryWarned = false;
 
                 // A renewal replaced a still-live credential; revoke that predecessor now that the fresh
                 // session is registered (unless, defensively, the server handed back the same credential id).
@@ -1546,10 +2205,19 @@
                 return;
             }
 
-            // Nothing to do until the credential is near expiry, and never renew mid-call (re-establishing
-            // would drop the active media session). A deferred renewal is retried on the next heartbeat once
-            // the line clears.
-            if (!isBrowserAudioExpiring(browserAudioSession) || hasLiveCall()) {
+            // Nothing to do until the credential is near expiry.
+            if (!isBrowserAudioExpiring(browserAudioSession)) {
+                credentialExpiryWarned = false;
+
+                return;
+            }
+
+            // Never renew mid-call (re-establishing would drop the active media session); the renewal is retried
+            // on the next heartbeat once the line clears. If the credential is very close to expiring, warn the
+            // agent once that a very long call may drop so they can redial proactively (item 8).
+            if (hasLiveCall()) {
+                maybeWarnCredentialExpiry();
+
                 return;
             }
 
@@ -1561,6 +2229,28 @@
                     console.debug('[soft-phone] Browser audio credential renewal failed.', error);
                 }
             });
+        }
+
+        // Warns the agent, once per credential, when an in-progress call is within the warning window of the
+        // credential expiry. The soft phone cannot renew mid-call without dropping media, so the honest
+        // mitigation is to tell the agent a very long call may drop and let them redial. The flag resets when a
+        // fresh credential is established (ensureBrowserAudio) or the credential is no longer expiring.
+        function maybeWarnCredentialExpiry() {
+            if (credentialExpiryWarned) {
+                return;
+            }
+
+            var expiry = browserAudioExpiryMs(browserAudioSession);
+
+            if (expiry === null || (expiry - Date.now()) > BROWSER_AUDIO_EXPIRY_WARNING_MS) {
+                return;
+            }
+
+            credentialExpiryWarned = true;
+            reportDiagnostic('warning', 'credential-expiry-approaching',
+                'Active call approaching browser credential expiry', null);
+            showError(strings.callCredentialExpiring ||
+                'This call is nearing its session limit. If it drops, redial to reconnect.');
         }
 
         function startBrowserAudioHeartbeat() {
@@ -1727,6 +2417,9 @@
                     reportBrowserCallEnded(callId, existing.everConnected);
                     removeActiveCall(callId);
                     delete browserCallControllers[callId];
+                    // The call ended; if the credential is at/near expiry (a call longer than its lifetime
+                    // deferred renewal), renew now rather than waiting for the next heartbeat tick (item 8).
+                    renewBrowserAudioIfNeeded();
                 } else {
                     upsertActiveCall(existing, false);
                 }
@@ -1763,6 +2456,266 @@
             if (connection && callId) {
                 connection.invoke('RecordBrowserCallEnded', callId, !!connected).catch(function () { });
             }
+        }
+
+        // Forwards a browser-measured media-quality report (item 2) to the server for observability and
+        // alerting. Best-effort: telemetry must never disrupt the call.
+        function reportCallQuality(payload) {
+            if (payload) {
+                lastQualitySample = payload;
+
+                if (diagnosticsEnabled) {
+                    updateDiagnosticsReadout();
+                }
+            }
+
+            if (connection && payload) {
+                connection.invoke('ReportCallQuality', payload).catch(function () { });
+            }
+        }
+
+        // Records the media adapter's poor-connection signal for the degraded-state UX (item 6). A change
+        // re-renders so the status line updates promptly, and it debounces internally by ignoring no-op updates.
+        function setConnectionQualityPoor(poor) {
+            var next = !!poor;
+
+            if (next === connectionQualityPoor) {
+                return;
+            }
+
+            connectionQualityPoor = next;
+            render();
+        }
+
+        // Throttled/deduped client diagnostics (item 7). Client-side failures are reported to the server so they
+        // become alertable rather than only visible in the agent's console. A given level+code+message is sent at
+        // most once per dedupe window, and total volume is capped per minute, so a flapping error cannot flood
+        // the hub.
+        var DIAGNOSTIC_DEDUPE_MS = 60 * 1000;
+        var DIAGNOSTIC_MAX_PER_MINUTE = 20;
+        var diagnosticRecent = {};
+        var diagnosticWindowStart = 0;
+        var diagnosticWindowCount = 0;
+
+        function reportDiagnostic(level, code, message, context) {
+            if (!connection) {
+                return;
+            }
+
+            var now = Date.now();
+            var key = (level || '') + '|' + (code || '') + '|' + (message || '');
+
+            if (diagnosticRecent[key] && (now - diagnosticRecent[key]) < DIAGNOSTIC_DEDUPE_MS) {
+                return;
+            }
+
+            // Rolling per-minute cap across all diagnostics.
+            if ((now - diagnosticWindowStart) >= 60000) {
+                diagnosticWindowStart = now;
+                diagnosticWindowCount = 0;
+            }
+
+            if (diagnosticWindowCount >= DIAGNOSTIC_MAX_PER_MINUTE) {
+                return;
+            }
+
+            diagnosticWindowCount++;
+            diagnosticRecent[key] = now;
+
+            // Bound the dedupe map over a long session by dropping entries older than the dedupe window.
+            if (Object.keys(diagnosticRecent).length > 200) {
+                Object.keys(diagnosticRecent).forEach(function (existing) {
+                    if ((now - diagnosticRecent[existing]) >= DIAGNOSTIC_DEDUPE_MS) {
+                        delete diagnosticRecent[existing];
+                    }
+                });
+            }
+
+            connection.invoke('ReportClientDiagnostic', level || 'warning', code || 'client-error',
+                message || '', context || '').catch(function () { });
+        }
+
+        // ---- Gated diagnostics + echo/loopback audio test (companion tooling) ----
+
+        function setDiagStatus(text) {
+            if (dom.diagStatus) {
+                dom.diagStatus.textContent = text || '';
+            }
+        }
+
+        // Renders the most recent media-quality sample (item 2) into the diagnostics panel so live ICE/codec/RTP
+        // can be watched from any real session.
+        function updateDiagnosticsReadout() {
+            if (!dom.diagReadout) {
+                return;
+            }
+
+            var sample = lastQualitySample;
+
+            if (!sample) {
+                dom.diagReadout.textContent = strings.diagNoData || 'No active call to measure.';
+
+                return;
+            }
+
+            dom.diagReadout.textContent = [
+                'MOS ' + (sample.mos ? sample.mos.toFixed(2) : '-'),
+                'loss ' + (sample.lossPercent != null ? sample.lossPercent.toFixed(1) : '-') + '%',
+                'jitter ' + (sample.jitterMs != null ? Math.round(sample.jitterMs) : '-') + 'ms',
+                'rtt ' + (sample.rttMs != null ? Math.round(sample.rttMs) : '-') + 'ms',
+                'bytesRecv ' + (sample.bytesReceived != null ? sample.bytesReceived : '-'),
+                'codec ' + (sample.codec || '-'),
+                'ice ' + (sample.localCandidateType || '-') + '/' + (sample.remoteCandidateType || '-')
+            ].join('  •  ');
+        }
+
+        // Dumps the live SDP + getStats for the current call into the diagnostics output on demand.
+        function dumpDiagnostics() {
+            if (!dom.diagOutput) {
+                return;
+            }
+
+            if (!browserAudioSession || typeof browserAudioSession.getDiagnostics !== 'function') {
+                dom.diagOutput.textContent = strings.diagUnavailable || 'Diagnostics are not available for this provider.';
+
+                return;
+            }
+
+            dom.diagOutput.textContent = strings.diagCollecting || 'Collecting...';
+
+            browserAudioSession.getDiagnostics().then(function (diag) {
+                if (!diag || !diag.available) {
+                    dom.diagOutput.textContent = strings.diagNoData || 'No active call to measure.';
+
+                    return;
+                }
+
+                var lines = ['=== getStats ==='];
+
+                (diag.stats || []).forEach(function (stat) {
+                    try {
+                        lines.push(JSON.stringify(stat));
+                    } catch (error) { /* skip unserializable entries */ }
+                });
+
+                lines.push('', '=== local SDP ===', diag.localSdp || '(none)', '', '=== remote SDP ===', diag.remoteSdp || '(none)');
+                dom.diagOutput.textContent = lines.join('\n');
+            }).catch(function () {
+                dom.diagOutput.textContent = strings.diagUnavailable || 'Diagnostics are not available.';
+            });
+        }
+
+        // Runs the echo/loopback audio test: places a call to the configured echo destination and asserts that
+        // inbound audio flows back (bytesReceived > 0), so an agent can verify audio without a second person.
+        function runEchoTest() {
+            if (echoTestActive) {
+                return;
+            }
+
+            var dest = (browserAudioSession && browserAudioSession.echoTestDestination) || '';
+
+            if (dom.diagEchoInput && dom.diagEchoInput.value && dom.diagEchoInput.value.trim()) {
+                dest = dom.diagEchoInput.value.trim();
+            }
+
+            if (!dest) {
+                setDiagStatus(strings.echoTestNoDestination || 'Configure an audio test destination in the provider settings first.');
+
+                return;
+            }
+
+            if (hasBlockingActiveCall()) {
+                setDiagStatus(strings.echoTestBusy || 'End the current call before running the audio test.');
+
+                return;
+            }
+
+            echoTestActive = true;
+            setDiagStatus(strings.echoTestRunning || 'Running audio test...');
+
+            ensureBrowserAudio().then(function (session) {
+                if (!session || !session.canOriginate || typeof session.originate !== 'function') {
+                    echoTestActive = false;
+                    setDiagStatus(strings.echoTestUnavailable || 'The audio test is not available for this provider.');
+
+                    return;
+                }
+
+                startEchoTestCall(session, dest);
+            }).catch(function (error) {
+                echoTestActive = false;
+                setDiagStatus((strings.echoTestFailed || 'Audio test failed.') + ' ' +
+                    (error && error.message ? error.message : String(error)));
+            });
+        }
+
+        function startEchoTestCall(session, dest) {
+            var settled = false;
+            var checkTimer = null;
+
+            function finish(pass, detail) {
+                if (settled) {
+                    return;
+                }
+
+                settled = true;
+
+                if (checkTimer) {
+                    window.clearTimeout(checkTimer);
+                }
+
+                echoTestActive = false;
+
+                try {
+                    if (controller) {
+                        controller.terminate();
+                    }
+                } catch (error) { /* best effort */ }
+
+                var label = pass
+                    ? (strings.echoTestPass || 'Audio test passed')
+                    : (strings.echoTestFail || 'Audio test failed');
+                setDiagStatus(label + (detail ? ' — ' + detail : ''));
+            }
+
+            var controller = session.originate(dest, session.outboundCallerId, function (stateName) {
+                if (stateName === 'Connected' && !checkTimer) {
+                    setDiagStatus(strings.echoTestMeasuring || 'Connected. Measuring round-trip audio...');
+                    // Give media a few seconds to flow, then assert inbound audio is arriving.
+                    checkTimer = window.setTimeout(function () {
+                        checkEchoResult(session, finish);
+                    }, 6000);
+                } else if (stateName === 'Disconnected') {
+                    finish(false, strings.echoTestEndedEarly || 'the call ended before audio was confirmed');
+                }
+            });
+
+            if (!controller) {
+                finish(false, strings.echoTestNoPlace || 'could not place the test call');
+            }
+        }
+
+        function checkEchoResult(session, finish) {
+            if (typeof session.getDiagnostics !== 'function') {
+                // Connected but we cannot read stats: treat as an inconclusive pass (the call did connect).
+                finish(true, strings.echoTestConnectedNoStats || 'connected (stats unavailable)');
+
+                return;
+            }
+
+            session.getDiagnostics().then(function (diag) {
+                var bytes = 0;
+
+                (diag.stats || []).forEach(function (stat) {
+                    if (stat.type === 'inbound-rtp' && (stat.kind === 'audio' || stat.mediaType === 'audio')) {
+                        bytes = stat.bytesReceived || 0;
+                    }
+                });
+
+                finish(bytes > 0, 'bytesReceived=' + bytes);
+            }).catch(function () {
+                finish(false, strings.echoTestNoStats || 'could not read audio stats');
+            });
         }
 
         // Arm the one-shot expectation that the next inbound provider leg is this browser's own bridged leg (an
@@ -1875,6 +2828,8 @@
                     if (stateName === 'Disconnected') {
                         removeActiveCall(ring.callId);
                         delete browserCallControllers[ring.callId];
+                        // Renew the credential now if this (possibly very long) answered call outlasted it (item 8).
+                        renewBrowserAudioIfNeeded();
                     } else {
                         upsertActiveCall(live, false);
                     }
@@ -2463,6 +3418,17 @@
             renderIncoming();
             ensureActiveTab();
 
+            // The mic-permission Retry affordance (item 9) is shown whenever a permission/device issue is
+            // outstanding, independent of the connection state below.
+            if (dom.micRetry) {
+                show(dom.micRetry, !!micPermissionState);
+            }
+
+            // The gated diagnostics panel (companion tooling) is shown only when ?diag=1 is present.
+            if (dom.diagnostics) {
+                show(dom.diagnostics, diagnosticsEnabled);
+            }
+
             var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
             var active = isActive(stateName);
             var connected = stateName === 'Connected';
@@ -2595,9 +3561,20 @@
                 clearPendingDial();
             }
 
-            setStatus(currentCall
+            var baseStatus = currentCall
                 ? statusTextForCall(currentCall)
-                : (pendingDial ? (strings.connecting || 'Connecting') : (strings.idle || 'Ready')));
+                : (pendingDial ? (strings.connecting || 'Connecting') : (strings.idle || 'Ready'));
+
+            // Degraded-state overlays (item 6). A hub or media reconnect takes precedence so the agent sees the
+            // soft phone is trying to recover; a measured poor connection is surfaced while media is live. Both
+            // signals are toggled only on a real state change, so the status does not flap.
+            if (hubReconnecting || mediaReconnecting) {
+                baseStatus = strings.reconnecting || 'Reconnecting...';
+            } else if (connectionQualityPoor && liveMedia) {
+                baseStatus = strings.poorConnection || 'Poor connection';
+            }
+
+            setStatus(baseStatus);
 
             if (dom.number && currentCall && (active || stateName === 'OnHold')) {
                 // The dial has materialized into a real call, so the pending-dial state is done. Clear it now
@@ -4341,39 +5318,123 @@
 
             connection.on('CredentialsIssued', function () { });
 
+            if (typeof connection.onreconnecting === 'function') {
+                connection.onreconnecting(function () {
+                    // SignalR is transparently retrying a dropped connection. Surface the degraded state (item 6
+                    // layers a debounced degraded-state manager over this same status line) instead of leaving a
+                    // stale "Ready" while calls cannot be placed or received.
+                    setHubReconnecting(true);
+                });
+            }
+
             connection.onclose(function () {
-                setStatus(strings.disconnectedHub || 'Disconnected');
                 clearActiveCallsRefresh();
                 stopBrowserAudioHeartbeat();
-                releaseBrowserAudio();
+                // Do NOT release browser audio here: the provider media session (and any live call) is a
+                // separate connection to the provider and must survive a transient hub outage -- tearing it down
+                // would drop an in-progress call and de-register the agent for inbound. The manual restart loop
+                // below brings the hub back and re-runs setup; browser audio is only released on sign-out/unload.
+                setHubReconnecting(true);
+                scheduleManualReconnect();
             });
 
             if (typeof connection.onreconnected === 'function') {
                 connection.onreconnected(function () {
-                    showError(null);
-                    // Re-establish (or renew) the browser registration so the agent stays reachable for inbound
-                    // calls after a reconnect, and restart the heartbeat that keeps the credential alive.
-                    startBrowserAudioHeartbeat();
-                    registerBrowserAudioForInbound();
-                    return Promise.all([refreshCapabilities(), refreshConnectionStatus()])
-                        .then(function () {
-                            return restoreActiveCall();
-                        })
-                        .then(function () {
-                            if (activeTab === 'history') {
-                                loadHistory();
-                            } else if (activeTab === 'voicemail') {
-                                loadVoicemails();
-                            }
+                    manualReconnectAttempt = 0;
 
-                            refreshVoicemailBadge();
-                            render();
-                        })
-                        .catch(function (error) {
-                            showError(error && error.message ? error.message : String(error));
-                        });
+                    return afterConnected();
                 });
             }
+        }
+
+        // Reconnect backoff (ms) by attempt index: immediate, then 2s, 5s, 10s, 20s, capped at 30s. Shared by
+        // the SignalR automatic-reconnect policy and the manual restart loop so both back off identically and
+        // neither ever gives up.
+        var RECONNECT_DELAYS_MS = [0, 2000, 5000, 10000, 20000, 30000];
+
+        function reconnectDelayMs(attempt) {
+            var index = attempt > 0 ? attempt : 0;
+
+            return RECONNECT_DELAYS_MS[Math.min(index, RECONNECT_DELAYS_MS.length - 1)];
+        }
+
+        // Degraded-state setters (item 6). render() derives the "Reconnecting..." status from these; toggling
+        // only on a real change keeps the status line from flapping.
+        function setHubReconnecting(active) {
+            if (hubReconnecting === !!active) {
+                return;
+            }
+
+            hubReconnecting = !!active;
+            render();
+        }
+
+        function setMediaReconnecting(active) {
+            if (mediaReconnecting === !!active) {
+                return;
+            }
+
+            mediaReconnecting = !!active;
+            render();
+        }
+
+        // Re-runs the full post-connect setup after the hub connection is (re-)established, whether by the
+        // initial connect, SignalR's automatic reconnect, or the manual restart loop. Each step is idempotent:
+        // startBrowserAudioHeartbeat no-ops if already running, and registerBrowserAudioForInbound dedupes
+        // through ensureBrowserAudio, so running it more than once cannot double-register or double-start.
+        function afterConnected() {
+            showError(null);
+            // The hub is back: clear the reconnecting overlay (render() below restores the real status).
+            setHubReconnecting(false);
+            startBrowserAudioHeartbeat();
+            // Register with the provider now that the soft phone is connected, so the agent is reachable for
+            // inbound calls while idle -- not only while placing a call.
+            registerBrowserAudioForInbound();
+
+            return Promise.all([refreshCapabilities(), refreshConnectionStatus()])
+                .then(function () {
+                    return restoreActiveCall();
+                })
+                .then(function () {
+                    if (activeTab === 'history') {
+                        loadHistory();
+                    } else if (activeTab === 'voicemail') {
+                        loadVoicemails();
+                    }
+
+                    refreshVoicemailBadge();
+                    render();
+                })
+                .catch(function (error) {
+                    showError(error && error.message ? error.message : String(error));
+                });
+        }
+
+        // Manual restart loop for when the hub connection closes for good. SignalR's automatic reconnect only
+        // covers a connection that started successfully and then dropped, and it does not retry an initial start
+        // that never succeeded. This loop guarantees the soft phone keeps trying to reconnect indefinitely (same
+        // backoff as the automatic policy) so an agent is never stranded unable to receive calls until a reload.
+        function scheduleManualReconnect() {
+            if (manualReconnectTimer || pageUnloading || !connection) {
+                return;
+            }
+
+            var delay = reconnectDelayMs(manualReconnectAttempt);
+            manualReconnectAttempt++;
+            setHubReconnecting(true);
+
+            manualReconnectTimer = window.setTimeout(function () {
+                manualReconnectTimer = null;
+
+                connection.start().then(function () {
+                    manualReconnectAttempt = 0;
+
+                    return afterConnected();
+                }).catch(function () {
+                    // Still down: keep trying. The status stays on "Reconnecting...".
+                    scheduleManualReconnect();
+                });
+            }, delay);
         }
 
         function connect() {
@@ -4385,31 +5446,28 @@
 
             connection = new signalRFactory.HubConnectionBuilder()
                 .withUrl(config.hubUrl)
-                .withAutomaticReconnect()
+                .withAutomaticReconnect({
+                    // Never return null: retry with a backoff that caps at ~30s but never gives up, so a hub
+                    // connection lost for longer than SignalR's default schedule still recovers on its own
+                    // without a page reload. previousRetryCount is 0 on the first retry.
+                    nextRetryDelayInMilliseconds: function (retryContext) {
+                        return reconnectDelayMs(retryContext.previousRetryCount);
+                    }
+                })
                 .build();
 
             registerClientCallbacks();
 
             return connection.start().then(function () {
-                showError(null);
-                startBrowserAudioHeartbeat();
-                return Promise.all([refreshCapabilities(), refreshConnectionStatus()]);
-            }).then(function () {
-                // Register with the provider now that the soft phone is connected, so the agent is reachable for
-                // inbound calls while idle -- not only while placing a call.
-                registerBrowserAudioForInbound();
-                return restoreActiveCall();
-            }).then(function () {
-                if (activeTab === 'history') {
-                    loadHistory();
-                } else if (activeTab === 'voicemail') {
-                    loadVoicemails();
-                }
+                manualReconnectAttempt = 0;
 
-                refreshVoicemailBadge();
-                render();
+                return afterConnected();
             }).catch(function (error) {
                 showError(error && error.message ? error.message : String(error));
+                // The initial start failed (for example the server was briefly unreachable at page load).
+                // SignalR's automatic reconnect does not cover a start that never succeeded, so kick off the
+                // manual restart loop to keep trying instead of leaving the soft phone permanently offline.
+                scheduleManualReconnect();
             });
         }
 
@@ -4454,6 +5512,33 @@
 
             if (dom.dial) {
                 dom.dial.addEventListener('click', dial);
+            }
+
+            if (dom.micRetry) {
+                dom.micRetry.addEventListener('click', retryMicrophone);
+            }
+
+            if (dom.inputDevice) {
+                dom.inputDevice.addEventListener('change', onInputDeviceChange);
+            }
+
+            if (dom.outputDevice) {
+                dom.outputDevice.addEventListener('change', onOutputDeviceChange);
+            }
+
+            if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
+                // Re-enumerate when devices are plugged in or removed so the picker stays current (item 5).
+                navigator.mediaDevices.addEventListener('devicechange', function () {
+                    populateDevicePickers();
+                });
+            }
+
+            if (dom.diagRun) {
+                dom.diagRun.addEventListener('click', runEchoTest);
+            }
+
+            if (dom.diagDump) {
+                dom.diagDump.addEventListener('click', dumpDiagnostics);
             }
 
             if (dom.dialModeToggle) {
@@ -4560,7 +5645,12 @@
             attachDrag(dom.toggle, { ignoreButtons: false, suppressClick: true });
 
             window.addEventListener('message', onOAuthMessage);
-            window.addEventListener('beforeunload', releaseBrowserAudio);
+            window.addEventListener('beforeunload', function () {
+                // Mark the page as unloading so the manual reconnect loop does not schedule a doomed restart
+                // during teardown, then release browser audio as the tab goes away.
+                pageUnloading = true;
+                releaseBrowserAudio();
+            });
             window.addEventListener('resize', function () {
                 restorePosition();
                 syncViewHeight();
@@ -4569,6 +5659,9 @@
 
         bindEvents();
         restoreLayout();
+        // Load the persisted device selection before the first registration so getUserMedia uses the saved
+        // input device (item 5).
+        loadDeviceSelection();
         render();
         rootElement.style.visibility = '';
 

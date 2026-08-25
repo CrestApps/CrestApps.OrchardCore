@@ -85,6 +85,8 @@
             ["disconnected"] = T["Call ended"].Value,
             ["failed"] = T["Call failed"].Value,
             ["disconnectedHub"] = T["Disconnected"].Value,
+            ["reconnecting"] = T["Reconnecting..."].Value,
+            ["poorConnection"] = T["Poor connection"].Value,
             ["notReady"] = T["Not Ready"].Value,
             ["notConfigured"] = T["No provider is configured. To use the soft phone enable at least one provider and update the site settings by setting the default phone provider."].Value,
             ["notConnected"] = T["Not connected"].Value,
@@ -145,6 +147,26 @@
             ["offerUnavailable"] = T["This call is no longer available."].Value,
             ["microphoneUnavailable"] = T["The microphone is unavailable. Allow microphone access and try again."].Value,
             ["browserAudioUnavailable"] = T["The configured browser audio adapter is unavailable."].Value,
+            ["micPermissionDenied"] = T["Microphone access is blocked. Allow microphone access in your browser, then retry."].Value,
+            ["micNotFound"] = T["No microphone was found. Connect a microphone, then retry."].Value,
+            ["defaultMicrophone"] = T["Default microphone"].Value,
+            ["defaultSpeaker"] = T["Default speaker"].Value,
+            ["callCredentialExpiring"] = T["This call is nearing its session limit. If it drops, redial to reconnect."].Value,
+            ["diagNoData"] = T["No active call to measure."].Value,
+            ["diagUnavailable"] = T["Diagnostics are not available for this provider."].Value,
+            ["diagCollecting"] = T["Collecting..."].Value,
+            ["echoTestNoDestination"] = T["Configure an audio test destination in the provider settings first."].Value,
+            ["echoTestBusy"] = T["End the current call before running the audio test."].Value,
+            ["echoTestRunning"] = T["Running audio test..."].Value,
+            ["echoTestMeasuring"] = T["Connected. Measuring round-trip audio..."].Value,
+            ["echoTestUnavailable"] = T["The audio test is not available for this provider."].Value,
+            ["echoTestFailed"] = T["Audio test failed."].Value,
+            ["echoTestPass"] = T["Audio test passed"].Value,
+            ["echoTestFail"] = T["Audio test failed"].Value,
+            ["echoTestEndedEarly"] = T["the call ended before audio was confirmed"].Value,
+            ["echoTestNoPlace"] = T["could not place the test call"].Value,
+            ["echoTestConnectedNoStats"] = T["connected (stats unavailable)"].Value,
+            ["echoTestNoStats"] = T["could not read audio stats"].Value,
         },
     };
 }
@@ -214,6 +236,44 @@
                 </div>
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
+
+                <button type="button"
+                        class="telephony-soft-phone__mic-retry btn btn-sm btn-outline-primary"
+                        data-telephony-mic-retry
+                        hidden>
+                    <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> @T["Retry microphone"]
+                </button>
+
+                <div class="telephony-soft-phone__devices" data-telephony-devices hidden>
+                    <label class="telephony-soft-phone__device">
+                        <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+                        <select class="telephony-soft-phone__device-select"
+                                data-telephony-input-device
+                                aria-label="@T["Microphone"]"></select>
+                    </label>
+                    <label class="telephony-soft-phone__device" data-telephony-output-device-row>
+                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+                        <select class="telephony-soft-phone__device-select"
+                                data-telephony-output-device
+                                aria-label="@T["Speaker"]"></select>
+                    </label>
+                </div>
+
+                <div class="telephony-soft-phone__diagnostics" data-telephony-diagnostics hidden>
+                    <div class="telephony-soft-phone__diag-title">@T["Diagnostics"]</div>
+                    <div class="telephony-soft-phone__diag-readout" data-telephony-diag-readout></div>
+                    <div class="telephony-soft-phone__diag-actions">
+                        <input type="text"
+                               class="form-control form-control-sm"
+                               data-telephony-diag-echo-input
+                               placeholder="@T["Audio test destination (optional)"]"
+                               aria-label="@T["Audio test destination"]" />
+                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-diag-run>@T["Run audio test"]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-diag-dump>@T["Dump SDP/stats"]</button>
+                    </div>
+                    <div class="telephony-soft-phone__diag-status" data-telephony-diag-status></div>
+                    <pre class="telephony-soft-phone__diag-output" data-telephony-diag-output></pre>
+                </div>
 
                 <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
                     <div class="telephony-soft-phone__active-calls-heading">@T["Active calls"]</div>
