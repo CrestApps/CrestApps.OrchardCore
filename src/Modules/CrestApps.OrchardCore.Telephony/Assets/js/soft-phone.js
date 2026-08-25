@@ -530,8 +530,25 @@
             return null;
         }
 
-        var mapped = [];
+        // setCodecPreferences requires full RTCRtpCodec descriptors (mimeType AND clockRate, plus channels for
+        // stereo codecs); a bare { mimeType } throws "Required member is undefined" and aborts the call. So build
+        // the preference from the browser's real audio codec capabilities, which carry those members. If the
+        // browser cannot report capabilities, return null and let the SDK/browser default ordering stand.
+        if (typeof RTCRtpSender === 'undefined' || typeof RTCRtpSender.getCapabilities !== 'function') {
+            return null;
+        }
 
+        var capabilities = RTCRtpSender.getCapabilities('audio');
+        var available = (capabilities && capabilities.codecs) || [];
+
+        if (!available.length) {
+            return null;
+        }
+
+        var ordered = [];
+
+        // Add the configured codecs first, in preference order, matched case-insensitively against the real
+        // capabilities (each match is a valid RTCRtpCodec).
         codecs.forEach(function (codec) {
             var name = String(codec || '').trim();
 
@@ -539,10 +556,25 @@
                 return;
             }
 
-            mapped.push({ mimeType: /^(audio|video)\//i.test(name) ? name : 'audio/' + name });
+            var mimeType = (/^(audio|video)\//i.test(name) ? name : 'audio/' + name).toLowerCase();
+
+            available.forEach(function (capability) {
+                if (capability.mimeType && capability.mimeType.toLowerCase() === mimeType &&
+                    ordered.indexOf(capability) === -1) {
+                    ordered.push(capability);
+                }
+            });
         });
 
-        return mapped.length ? mapped : null;
+        // Append every remaining capability so this only REORDERS the offer and never removes a codec the peer
+        // needs (for example telephone-event for DTMF or comfort noise).
+        available.forEach(function (capability) {
+            if (ordered.indexOf(capability) === -1) {
+                ordered.push(capability);
+            }
+        });
+
+        return ordered.length ? ordered : null;
     }
 
     // Extracts the audio inbound-rtp, selected candidate pair, negotiated codec, and candidate types from an
