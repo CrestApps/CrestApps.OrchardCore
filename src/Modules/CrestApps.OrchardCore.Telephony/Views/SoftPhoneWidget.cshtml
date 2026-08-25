@@ -57,9 +57,17 @@
     var voicemailMediaUrlTemplate = Url.RouteUrl("ContactCenterVoicemailMedia", new { interactionId = "__INTERACTION_ID__" });
     var voicemailDeleteUrlTemplate = Url.RouteUrl("ContactCenterVoicemailDelete", new { interactionId = "__INTERACTION_ID__" });
 
+    // Resolve the browser-media registration-config endpoint by route name so the client uses an absolute URL
+    // instead of deriving one from the current page path. Path derivation assumes the page lives under the admin
+    // prefix, which is true for the admin widget but not for the standalone /softphone page (where it would 404).
+    // The endpoint is owned by Contact Center; when that module is not enabled the route does not resolve and the
+    // value is empty, so the client falls back to its path derivation exactly as before.
+    var registrationConfigUrl = Url.RouteUrl("ContactCenterAgentSoftPhoneRegistrationConfig");
+
     var config = new Dictionary<string, object>
     {
         ["hubUrl"] = hubUrl,
+        ["registrationConfigUrl"] = registrationConfigUrl ?? string.Empty,
         ["voicemailPlaybackEnabled"] = !string.IsNullOrEmpty(voicemailMediaUrlTemplate),
         ["voicemailMediaUrlTemplate"] = voicemailMediaUrlTemplate ?? string.Empty,
         ["voicemailDeleteEnabled"] = !string.IsNullOrEmpty(voicemailDeleteUrlTemplate),
