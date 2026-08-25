@@ -200,6 +200,9 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             // Stamp the caller's identity so a provider that delivers audio to a per-user browser endpoint can
             // resolve this agent's live soft-phone registration and bridge the internal call to their browser.
             request.CallerUserId = Context.UserIdentifier;
+            // Carry the caller's display name so the target's ringing prompt can show who is calling instead of
+            // only the internal caller-id number.
+            request.CallerDisplayName = Context.GetHttpContext()?.User?.Identity?.Name;
             request.Metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             request.Metadata[TelephonyConstants.RequestMetadata.SoftPhoneUserId] = Context.UserIdentifier;
         }
@@ -451,6 +454,44 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         });
 
         return count;
+    }
+
+    /// <summary>
+    /// Revokes a single browser credential the current user's soft phone just superseded during a renewal,
+    /// so a renewed session does not leave its predecessor credential live until natural expiry (which would
+    /// otherwise accumulate and, once the per-user cap is reached, evict a credential a live tab still uses).
+    /// The revoke is scoped to the caller's own credentials, so a user can only revoke a credential they own.
+    /// </summary>
+    /// <param name="credentialId">The provider credential identifier to revoke.</param>
+    public async Task RevokeSupersededCredential(string credentialId)
+    {
+        if (string.IsNullOrEmpty(credentialId))
+        {
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("RevokeSupersededCredential");
+                return;
+            }
+
+            var userId = Context.UserIdentifier;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            // Offer the id to every registered revoker; each only revokes a credential it actually owns for
+            // this user, so a provider that does not own it simply returns without doing anything.
+            foreach (var revoker in scope.ServiceProvider.GetServices<ISoftPhoneCredentialRevoker>())
+            {
+                await revoker.RevokeCredentialAsync(userId, credentialId, "superseded", Context.ConnectionAborted);
+            }
+        });
     }
 
     /// <summary>
@@ -958,13 +999,104 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
             : Context.UserIdentifier.SanitizeLogValue();
     }
 
+    /// <summary>
+    /// Records a browser-originated outbound call in the caller's history. A client-originated provider (such as
+    /// Telnyx) places the call directly from the browser, so it never passes through a server "Dial" action; the
+    /// client reports it here so it still appears at the top of the Recent tab like any other outbound call.
+    /// </summary>
+    /// <param name="callId">The client call identifier.</param>
+    /// <param name="to">The dialed destination (a number, or an extension's display name).</param>
+    /// <param name="from">The presented caller id.</param>
+    public async Task RecordBrowserCall(string callId, string to, string from)
+    {
+        if (string.IsNullOrEmpty(callId))
+        {
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("RecordBrowserCall");
+                return;
+            }
+
+            var call = new TelephonyCall
+            {
+                CallId = callId,
+                To = to,
+                From = from,
+                Direction = CallDirection.Outbound,
+                State = CallState.Connecting,
+            };
+
+            await RecordInteractionAsync(scope.ServiceProvider, "Dial", call, Context.ConnectionAborted);
+        });
+    }
+
+    /// <summary>
+    /// Marks a browser-originated call ended in the caller's history. A client-originated provider (such as
+    /// Telnyx) drives the call entirely in the browser, so the server never sees it end; without this the
+    /// interaction stays "in progress" forever, which both keeps it out of completed history and leaves it to be
+    /// reconciled away as an orphan (losing the entry). Reporting the end here settles it to a final outcome.
+    /// </summary>
+    /// <param name="callId">The client call identifier reported to <see cref="RecordBrowserCall"/>.</param>
+    /// <param name="connected">Whether the call reached a connected state before it ended.</param>
+    public async Task RecordBrowserCallEnded(string callId, bool connected)
+    {
+        if (string.IsNullOrEmpty(callId))
+        {
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("RecordBrowserCallEnded");
+                return;
+            }
+
+            var store = scope.ServiceProvider.GetService<ITelephonyInteractionStore>();
+            var userId = Context.UserIdentifier;
+
+            if (store is null || string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            var interaction = await store.FindByCallIdAsync(userId, callId, Context.ConnectionAborted);
+
+            // Only settle an interaction still in progress; a real-time or reconciliation update may have already
+            // given it a final outcome, which must not be overwritten.
+            if (interaction is null || interaction.Outcome != CallOutcome.InProgress)
+            {
+                return;
+            }
+
+            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+            var endedUtc = clock.UtcNow;
+
+            interaction.Outcome = connected ? CallOutcome.Completed : CallOutcome.Canceled;
+            interaction.EndedUtc = endedUtc;
+            interaction.DurationSeconds = Math.Max(0, (endedUtc - interaction.StartedUtc).TotalSeconds);
+
+            await store.UpdateAsync(interaction, Context.ConnectionAborted);
+        });
+    }
+
     private async Task RecordInteractionAsync(
         IServiceProvider services,
         string actionName,
         TelephonyCall call,
         CancellationToken cancellationToken)
     {
-        if (!string.Equals(actionName, "Dial", StringComparison.Ordinal) ||
+        // Record outbound-producing actions in call history. Both a server-placed "Dial" and an internal
+        // "DialExtension" (and a browser-originated call the client reports through RecordBrowserCall, which
+        // also routes here as "Dial") return a Call that should appear in the Recent tab.
+        if ((!string.Equals(actionName, "Dial", StringComparison.Ordinal) &&
+             !string.Equals(actionName, "DialExtension", StringComparison.Ordinal)) ||
             call is null ||
             string.IsNullOrEmpty(call.CallId))
         {
@@ -992,6 +1124,8 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 return;
             }
 
+            var extensionNumber = GetCallMetadataString(call, TelephonyConstants.CallMetadata.ExtensionNumber);
+
             var interaction = new TelephonyInteraction
             {
                 InteractionId = IdGenerator.GenerateId(),
@@ -1002,6 +1136,8 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 From = call.From,
                 To = call.To,
                 Direction = call.Direction,
+                IsExtension = !string.IsNullOrEmpty(extensionNumber),
+                ExtensionNumber = extensionNumber,
                 Outcome = CallOutcome.InProgress,
                 StartedUtc = call.StartedUtc?.UtcDateTime ?? now,
             };
@@ -1022,6 +1158,20 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         }
 
         await store.UpdateAsync(existing, cancellationToken);
+    }
+
+    private static string GetCallMetadataString(TelephonyCall call, string key)
+    {
+        if (call?.Metadata is not null &&
+            call.Metadata.TryGetValue(key, out var value) &&
+            value is not null)
+        {
+            var text = value.ToString();
+
+            return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+
+        return null;
     }
 
     private async Task<bool> AuthorizeAsync(IServiceProvider services)

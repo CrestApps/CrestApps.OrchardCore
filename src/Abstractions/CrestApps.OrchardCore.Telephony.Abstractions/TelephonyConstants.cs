@@ -53,6 +53,19 @@ public static class TelephonyConstants
     }
 
     /// <summary>
+    /// Contains metadata keys carried on a <see cref="Models.TelephonyCall"/> to convey provider-neutral context
+    /// back to the caller (for example, to record call history).
+    /// </summary>
+    public static class CallMetadata
+    {
+        /// <summary>
+        /// The dialed extension number for an internal extension call, carried so the interaction can be recorded
+        /// as an extension call and redialed by extension from the Recent tab.
+        /// </summary>
+        public const string ExtensionNumber = "extensionNumber";
+    }
+
+    /// <summary>
     /// Contains the well-known authentication scheme identifiers a telephony provider can use.
     /// </summary>
     public static class AuthenticationSchemes

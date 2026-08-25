@@ -175,10 +175,21 @@ public sealed class DefaultTelephonyService : ITelephonyService
         request.TargetUserId = resolution.UserId;
         request.TargetDisplayName = resolution.DisplayName;
 
-        return await InvokeAsync<ITelephonyExtensionDialProvider>(
+        var result = await InvokeAsync<ITelephonyExtensionDialProvider>(
             TelephonyCapabilities.ExtensionDial,
             (provider, token) => provider.DialExtensionAsync(request, token),
             cancellationToken);
+
+        // Carry the dialed extension number on the resulting call so it is recorded as an extension interaction
+        // (the call's To holds the target's display name, not a dialable number) and can be redialed by extension
+        // from the Recent tab.
+        if (result?.Call is not null && !string.IsNullOrWhiteSpace(request.Extension))
+        {
+            result.Call.Metadata ??= new Dictionary<string, object>();
+            result.Call.Metadata[TelephonyConstants.CallMetadata.ExtensionNumber] = request.Extension;
+        }
+
+        return result;
     }
 
     /// <inheritdoc/>

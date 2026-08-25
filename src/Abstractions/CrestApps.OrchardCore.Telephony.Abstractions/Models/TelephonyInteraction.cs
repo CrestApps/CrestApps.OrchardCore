@@ -54,6 +54,20 @@ public sealed class TelephonyInteraction : Entity
     public CallDirection Direction { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this interaction was an internal extension call (dialed by
+    /// extension rather than by phone number). The soft phone uses it to redial the entry in extension mode from
+    /// the Recent tab, since <see cref="To"/> holds the target's display name, not a dialable number.
+    /// </summary>
+    public bool IsExtension { get; set; }
+
+    /// <summary>
+    /// Gets or sets the dialed extension number for an internal extension call (<see cref="IsExtension"/> is
+    /// <see langword="true"/>), so the Recent tab's call-back button can redial the extension. It is
+    /// <see langword="null"/> for calls placed by phone number.
+    /// </summary>
+    public string ExtensionNumber { get; set; }
+
+    /// <summary>
     /// Gets or sets the outcome of the call.
     /// </summary>
     public CallOutcome Outcome { get; set; }

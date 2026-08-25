@@ -31,6 +31,12 @@ public sealed class ExtensionDialRequest
     public string CallerUserId { get; set; }
 
     /// <summary>
+    /// Gets or sets the display name of the user placing the call, presented to the target on the ringing offer
+    /// so the callee can see who is calling.
+    /// </summary>
+    public string CallerDisplayName { get; set; }
+
+    /// <summary>
     /// Gets or sets an optional caller identifier to present to the target. When not provided the provider uses
     /// the caller's internal identity or its configured default.
     /// </summary>

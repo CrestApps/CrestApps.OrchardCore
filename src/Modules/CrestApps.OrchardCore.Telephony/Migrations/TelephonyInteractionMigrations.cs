@@ -19,6 +19,7 @@ public sealed class TelephonyInteractionMigrations : DataMigration
             .Column<string>("UserId", column => column.WithLength(26))
             .Column<string>("UserName", column => column.WithLength(255))
             .Column<CallDirection>("Direction")
+            .Column<bool>("IsExtension")
             .Column<CallOutcome>("Outcome")
             .Column<DateTime>("StartedUtc")
             .Column<bool>("IsVoicemail")
@@ -56,7 +57,7 @@ public sealed class TelephonyInteractionMigrations : DataMigration
                 "DocumentId")
         );
 
-        return 2;
+        return 3;
     }
 
     // Adds the voicemail columns to an existing telephony interaction index so a call sent to voicemail can be
@@ -80,5 +81,16 @@ public sealed class TelephonyInteractionMigrations : DataMigration
         );
 
         return 2;
+    }
+
+    // Adds the extension-call marker column to an existing telephony interaction index so the Recent tab can
+    // redial an internal extension entry in extension mode.
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TelephonyInteractionIndex>(table => table
+            .AddColumn<bool>("IsExtension", column => column.WithDefault(false))
+        );
+
+        return 3;
     }
 }

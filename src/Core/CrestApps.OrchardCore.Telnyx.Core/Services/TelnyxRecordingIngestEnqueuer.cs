@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -133,7 +134,12 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
 
             return true;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        // A ConcurrencyException means another process committed a conflicting change to the same interaction
+        // (for example the routing engine or the direct-hold timeout stamping the call it just sent to voicemail).
+        // Let it propagate: the durable provider webhook inbox lets the delivery's claim expire and re-dispatches
+        // it in a fresh scope, which re-reads the interaction and stamps the recording. Swallowing it here would
+        // settle the delivery as handled and silently drop the voicemail so it never surfaces on the soft phone.
+        catch (Exception ex) when (ex is not OperationCanceledException and not ConcurrencyException)
         {
             _logger.LogError(
                 ex,

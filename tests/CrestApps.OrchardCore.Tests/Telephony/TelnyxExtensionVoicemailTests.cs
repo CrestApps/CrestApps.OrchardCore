@@ -69,6 +69,55 @@ public sealed class TelnyxExtensionVoicemailTests
             r.RequestUri.AbsolutePath.EndsWith("record_start", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public async Task AgentAnswered_InternalSipDestination_OmitsOutboundVoiceProfile()
+    {
+        // When the agent leg answers, the orchestrator dials the destination. An extension call targets another
+        // registered browser credential (a sip: URI); carrying the outbound voice profile would make Telnyx route
+        // it as an outbound/PSTN call and never deliver it to the credential, so it must be omitted.
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"data\":{\"call_control_id\":\"dest-1\"}}");
+        var orchestrator = CreateOrchestrator(handler, outboundVoiceProfileId: "vp-1");
+
+        await orchestrator.AdvanceAsync(
+            AgentAnswered(destination: "sip:agent2@sip.telnyx.com"),
+            TestContext.Current.CancellationToken);
+
+        Assert.DoesNotContain("outbound_voice_profile_id", handler.LastRequestBody, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task AgentAnswered_PstnDestination_IncludesOutboundVoiceProfile()
+    {
+        // A PSTN destination (a real outbound bridge) is still terminated through the outbound voice profile.
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"data\":{\"call_control_id\":\"dest-1\"}}");
+        var orchestrator = CreateOrchestrator(handler, outboundVoiceProfileId: "vp-1");
+
+        await orchestrator.AdvanceAsync(
+            AgentAnswered(destination: "+15551234567"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains("outbound_voice_profile_id", handler.LastRequestBody, StringComparison.Ordinal);
+    }
+
+    private static TelnyxCallEvent AgentAnswered(string destination)
+    {
+        var clientState = DecodeClientState(new TelnyxOutboundBridgeState
+        {
+            Intent = TelnyxOutboundBridgeState.AgentLegIntent,
+            Destination = destination,
+            CallerId = "+17787204596",
+            VoicemailRecipientUserId = "user-1",
+            RingTimeoutSeconds = 25,
+        }.ToClientState());
+
+        return new TelnyxCallEvent
+        {
+            EventType = "call.answered",
+            CallControlId = "agent-1",
+            ClientState = clientState,
+        };
+    }
+
     private static TelnyxCallEvent DestinationHangup(string hangupCause, string recipientUserId, string agentLegId)
     {
         // The webhook parser base64-decodes client_state before the orchestrator sees it, so the event carries
@@ -89,7 +138,7 @@ public sealed class TelnyxExtensionVoicemailTests
         };
     }
 
-    private static TelnyxOutboundBridgeOrchestrator CreateOrchestrator(StubHttpMessageHandler handler)
+    private static TelnyxOutboundBridgeOrchestrator CreateOrchestrator(StubHttpMessageHandler handler, string outboundVoiceProfileId = null)
         => new(
             new StubHttpClientFactory(handler),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
@@ -99,6 +148,7 @@ public sealed class TelnyxExtensionVoicemailTests
                 ApiKey = "KEY",
                 ConnectionId = "connection-1",
                 ApiBaseUrl = "https://api.telnyx.test/v2/",
+                OutboundVoiceProfileId = outboundVoiceProfileId,
             }));
 
     private static string DecodeClientState(string clientState)

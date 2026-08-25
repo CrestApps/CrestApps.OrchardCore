@@ -18,8 +18,12 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
 {
     // The maximum number of concurrent live browser credentials a single authenticated user may hold. When a
     // new credential would exceed this cap, the oldest live credentials are revoked first so the newest
-    // session wins, bounding how many Telnyx SIP endpoints one agent can materialize.
-    private const int MaxLiveCredentialsPerUser = 3;
+    // session wins, bounding how many Telnyx SIP endpoints one agent can materialize. This is a safety net,
+    // not the primary cleanup: a renewing soft phone revokes the exact credential it supersedes (see
+    // RevokeCredentialAsync), so in normal use the live count stays near one. The cap is kept generous enough
+    // that ordinary reloads and renewals do not evict a credential a live browser tab is still registered with
+    // (which would surface as a LOGIN_FAILED on that tab).
+    private const int MaxLiveCredentialsPerUser = 8;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ITelnyxAgentCredentialStore _credentialStore;
@@ -155,6 +159,32 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
         }
 
         return revoked;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> RevokeCredentialAsync(string userId, string credentialId, string reason, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(credentialId))
+        {
+            return false;
+        }
+
+        // Scope the lookup to the caller's own credentials so a user can only ever revoke a credential they own.
+        var credentials = await _credentialStore.ListByUserAsync(userId, cancellationToken);
+
+        var credential = credentials.FirstOrDefault(candidate =>
+            !candidate.RevokedUtc.HasValue &&
+            string.Equals(candidate.CredentialId, credentialId, StringComparison.Ordinal));
+
+        if (credential is null)
+        {
+            return false;
+        }
+
+        await DeleteAtTelnyxAsync(credential.CredentialId, cancellationToken);
+        await _credentialStore.MarkRevokedAsync(credential, _clock.UtcNow, cancellationToken);
+
+        return true;
     }
 
     private async Task EnforceUserCredentialCapAsync(string userId, DateTime now, CancellationToken cancellationToken)

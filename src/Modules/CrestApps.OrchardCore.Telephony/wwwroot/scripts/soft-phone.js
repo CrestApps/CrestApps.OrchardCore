@@ -423,6 +423,22 @@
   function isTelnyxTerminalState(state) {
     return state === 'hangup' || state === 'destroy' || state === 'purge';
   }
+
+  // Whether an ICE server list contains at least one TURN (relay) server. A STUN-only list does not, and must
+  // not replace the Telnyx SDK's default ICE servers (which include TURN) or clients behind a restrictive NAT
+  // lose the relay they need to receive inbound media.
+  function iceServersIncludeTurn(iceServers) {
+    if (!Array.isArray(iceServers)) {
+      return false;
+    }
+    return iceServers.some(function (server) {
+      var urls = server && server.urls;
+      var list = Array.isArray(urls) ? urls : urls ? [urls] : [];
+      return list.some(function (url) {
+        return /^turns?:/i.test(String(url || ''));
+      });
+    });
+  }
   function createTelnyxBrowserMediaAdapter(rootElement, widgetConfig) {
     return function (context) {
       var telnyx = window.TelnyxWebRTC;
@@ -453,12 +469,21 @@
     var currentCall = null;
     // The active outbound call's state callback, set by originate() and cleared when that call ends.
     var outboundNotify = null;
+    // An inbound leg that is ringing but has not been answered yet (a direct extension call). It is surfaced
+    // to the soft-phone core as an Answer/Decline prompt; until the agent chooses it is not the currentCall.
+    var inboundRingingCall = null;
     var disposed = false;
     var clientOptions = {
       login: login,
       password: password
     };
-    if (Array.isArray(ice.iceServers) && ice.iceServers.length > 0) {
+
+    // Only override the Telnyx SDK's built-in ICE servers when the provided set includes a TURN relay.
+    // Passing a STUN-only list here REPLACES the SDK's defaults -- which include Telnyx's TURN servers -- and
+    // a client behind a restrictive/symmetric NAT then has no relay to receive inbound media: it can send
+    // audio but receives nothing (one-way audio), while a client on a permissive NAT still works via STUN.
+    // With a STUN-only config we leave the SDK defaults in place so TURN relaying stays available.
+    if (Array.isArray(ice.iceServers) && ice.iceServers.length > 0 && iceServersIncludeTurn(ice.iceServers)) {
       clientOptions.iceServers = ice.iceServers;
     }
     var client = new telnyx.TelnyxRTC(clientOptions);
@@ -474,23 +499,139 @@
     //    accepted the offer over SignalR, so answering the incoming call here mirrors the SIP.js
     //    passive-answer model;
     //  * outbound: relay the SDK call state to the originate() callback that owns the active call.
+    // The Telnyx SDK attaches the remote media to the audio element, but the browser's autoplay policy can
+    // block playback -- most notably on an auto-answered inbound call, which happens with no user gesture --
+    // leaving the call connected (DTLS up) but silent. Force playback and make sure the element is audible
+    // once the call is active. Best-effort: a rejected play() only means this particular attempt was blocked.
+    function ensureRemotePlayback() {
+      if (!remoteElement) {
+        return;
+      }
+      try {
+        remoteElement.muted = false;
+        if (typeof remoteElement.volume === 'number') {
+          remoteElement.volume = 1;
+        }
+        Promise.resolve(remoteElement.play()).catch(function () {});
+      } catch (error) {/* best effort */}
+    }
+
+    // Answer an inbound call with the same media options the outbound newCall path uses. Passing the already
+    // acquired microphone stream (localStream) plus audio:true is what makes the SDK negotiate a two-way
+    // (sendrecv) audio answer and attach the remote audio to remoteElement; answering with only remoteElement
+    // left the leg connected (DTLS up) but silent -- no media flowed in either direction.
+    function answerInboundCall(call) {
+      try {
+        call.answer({
+          localStream: context.localStream,
+          remoteElement: remoteElement,
+          audio: true,
+          video: false
+        });
+      } catch (error) {
+        context.showError(error && error.message ? error.message : String(error));
+      }
+    }
+
+    // Best-effort extraction of the calling party from an inbound Telnyx call, used to label the ring
+    // prompt. The SDK surfaces it under a few names depending on version; a display name is preferred over
+    // a raw number, and both fall back to empty so the core can show a generic "Incoming call".
+    function extractCaller(call) {
+      var options = call && call.options || {};
+      var name = call.remoteCallerName || options.remoteCallerName || options.callerName || '';
+      var number = call.remoteCallerNumber || options.remoteCallerNumber || options.callerNumber || call.callerNumber || '';
+      return {
+        name: name || '',
+        number: number || ''
+      };
+    }
     client.on('telnyx.notification', function (notification) {
       if (!notification || notification.type !== 'callUpdate' || !notification.call) {
         return;
       }
       var call = notification.call;
-      if (call.direction === 'inbound' && call.state === 'ringing' && call !== currentCall && !disposed) {
-        currentCall = call;
-        try {
-          call.answer({
-            remoteElement: remoteElement
-          });
-        } catch (error) {
-          context.showError(error && error.message ? error.message : String(error));
+      if (call.direction === 'inbound' && call.state === 'ringing' && call !== currentCall && call !== inboundRingingCall && !disposed) {
+        // The caller's own bridged leg (an extension call this browser just placed) and a Contact Center
+        // leg it just accepted are inbound calls the agent is expecting, so they are answered
+        // automatically. An unsolicited inbound leg -- a colleague dialing this agent's extension -- must
+        // ring with an Answer/Decline prompt instead of connecting silently.
+        var autoAnswer = typeof context.shouldAutoAnswerInbound !== 'function' || context.shouldAutoAnswerInbound();
+        if (autoAnswer) {
+          currentCall = call;
+          answerInboundCall(call);
+          return;
+        }
+        inboundRingingCall = call;
+        var caller = extractCaller(call);
+        var controller = {
+          callerName: caller.name,
+          callerNumber: caller.number,
+          // Answer the ringing leg and, from here on, drive its state through onState just like an
+          // originated call (so the core sees Connected/Disconnected and can clean up).
+          answer: function (onState) {
+            currentCall = call;
+            inboundRingingCall = null;
+            outboundNotify = typeof onState === 'function' ? onState : null;
+            answerInboundCall(call);
+          },
+          // Decline before answer: hang up the ringing leg. Telnyx reports the destination-leg hangup to
+          // the server, whose no-answer handling can still route the caller to voicemail.
+          decline: function () {
+            inboundRingingCall = null;
+            try {
+              call.hangup();
+            } catch (error) {/* best effort */}
+          },
+          terminate: function () {
+            try {
+              return Promise.resolve(call.hangup()).catch(function () {});
+            } catch (error) {
+              return Promise.resolve();
+            }
+          },
+          setHold: function (hold) {
+            try {
+              return Promise.resolve(hold ? call.hold() : call.unhold()).catch(function () {});
+            } catch (error) {
+              return Promise.resolve();
+            }
+          },
+          setMute: function (mute) {
+            try {
+              if (mute) {
+                call.muteAudio();
+              } else {
+                call.unmuteAudio();
+              }
+            } catch (error) {/* best effort */}
+            return Promise.resolve();
+          }
+        };
+        if (typeof context.onInboundRing === 'function') {
+          context.onInboundRing(controller);
+        } else {
+          // No ring handler is wired: never leave a call silently unanswered -- answer it.
+          controller.answer();
+        }
+        return;
+      }
+
+      // The agent has not answered yet and the caller hung up (or the ring timed out): tell the core to
+      // dismiss the Answer/Decline prompt.
+      if (call === inboundRingingCall) {
+        if (isTelnyxTerminalState(call.state)) {
+          inboundRingingCall = null;
+          if (typeof context.onInboundRingCanceled === 'function') {
+            context.onInboundRingCanceled();
+          }
         }
         return;
       }
       if (call === currentCall) {
+        // Once media is flowing, make sure the remote audio is actually playing (see ensureRemotePlayback).
+        if (call.state === 'active') {
+          ensureRemotePlayback();
+        }
         if (outboundNotify) {
           var mapped = mapTelnyxOutboundState(call.state);
           if (mapped) {
@@ -818,10 +959,23 @@
     var suppressToggleClick = false;
     var browserAudioPromise = null;
     var browserAudioSession = null;
+    var browserAudioHeartbeatTimer = null;
     var localAudioStream = null;
     // Controllers for calls the browser originated itself (client-originated providers such as Telnyx),
     // keyed by the synthetic call id. Server-tracked calls are not in this map.
     var browserCallControllers = {};
+
+    // A direct browser-inbound (extension) call that is ringing and awaiting the agent's Answer/Decline
+    // choice: { callId, controller }. The controller is the media adapter's handle for answering, declining,
+    // and (once answered) controlling the SDK call.
+    var browserInboundRing = null;
+
+    // One-shot expectation that the next inbound provider leg belongs to a call this browser initiated (an
+    // extension call it just placed), so the media adapter answers it automatically instead of ringing. It is
+    // armed when placing an extension call and consumed by the adapter for the next inbound leg; a genuine
+    // incoming call arriving without this armed still rings.
+    var INBOUND_AUTO_ANSWER_WINDOW_MS = 20000;
+    var expectInboundAutoAnswerUntil = 0;
 
     // True from the moment a call is placed until the first real call state arrives (or the attempt
     // fails). While it is set - and no call is active yet - the status line reads "Connecting" instead
@@ -910,6 +1064,12 @@
       if (extensionMode) {
         return raw;
       }
+
+      // A number the user already entered in international form is dialed as-is.
+      if (raw.charAt(0) === '+') {
+        return raw;
+      }
+      var visibleDigits = raw.replace(/\D/g, '');
       if (telInput && typeof telInput.getNumber === 'function') {
         // Only trust the intl-tel-input E.164 output for real, valid phone numbers. Short
         // strings such as internal extensions are not valid numbers, so they are dialed
@@ -917,9 +1077,22 @@
         var isValid = typeof telInput.isValidNumber !== 'function' || telInput.isValidNumber();
         if (isValid) {
           var e164 = telInput.getNumber();
-          if (e164 && e164.charAt(0) === '+') {
+
+          // Guard against intl-tel-input desyncing (e.g. a keypad edit that did not update its
+          // internal state): only accept its E.164 when its digits actually contain what the user
+          // sees, so the dialed number can never differ from the visible number.
+          if (e164 && e164.charAt(0) === '+' && (visibleDigits === '' || e164.replace(/\D/g, '').indexOf(visibleDigits) !== -1)) {
             return e164;
           }
+        }
+      }
+
+      // Fall back to the visible number, prefixed with the selected country's dial code so it stays
+      // routable. This path guarantees the dialed number matches what is on screen.
+      if (visibleDigits && telInput && typeof telInput.getSelectedCountryData === 'function') {
+        var dialCode = (telInput.getSelectedCountryData() || {}).dialCode;
+        if (dialCode) {
+          return visibleDigits.indexOf(dialCode) === 0 ? '+' + visibleDigits : '+' + dialCode + visibleDigits;
         }
       }
       return raw;
@@ -938,6 +1111,11 @@
       dom.number.value = value ? formatPhoneNumber(value) : '';
     }
     function clearNumberInput() {
+      // Also drop any lingering dial/call-display state, otherwise the next render() re-fills the input
+      // with the previous number (pendingDialNumber / the last call's peer) and clobbers what the user
+      // is now typing -- e.g. entering "2" but dialing the previous "6183".
+      clearPendingDial();
+      numberIsCallDisplay = false;
       if (dom.number) {
         dom.number.value = '';
       }
@@ -1031,12 +1209,67 @@
         Promise.resolve(dom.remoteAudio.play()).catch(function () {});
       }
     }
+
+    // The registration config advertises when the provider's browser credential expires. This is a
+    // generic part of the SoftPhoneRegistrationConfig contract that each provider fills with its own
+    // lifetime, so the renewal below is provider-agnostic: it honors whatever expiry the active provider
+    // advertises and does nothing for a provider that advertises no real expiry.
+    var BROWSER_AUDIO_HEARTBEAT_MS = 60 * 1000;
+    var BROWSER_AUDIO_RENEW_THRESHOLD_MS = 10 * 60 * 1000;
+    // A credential whose advertised expiry predates this is treated as carrying no real expiry (an unset
+    // or default timestamp) rather than being renewed on every heartbeat.
+    var BROWSER_AUDIO_MIN_PLAUSIBLE_EXPIRY_MS = Date.UTC(2000, 0, 1);
+    function browserAudioExpiryMs(session) {
+      var providerConfig = session && session.providerConfig;
+      var credential = providerConfig && providerConfig.credential;
+      var parsed = credential && credential.expiresAtUtc ? Date.parse(credential.expiresAtUtc) : NaN;
+      return isFinite(parsed) ? parsed : null;
+    }
+    function isBrowserAudioExpiring(session) {
+      var expiry = browserAudioExpiryMs(session);
+
+      // No expiry, or an implausible/unset one: the provider does not expire this credential, so it is
+      // never renewed.
+      if (expiry === null || expiry < BROWSER_AUDIO_MIN_PLAUSIBLE_EXPIRY_MS) {
+        return false;
+      }
+      return expiry - Date.now() <= BROWSER_AUDIO_RENEW_THRESHOLD_MS;
+    }
+
+    // The provider credential id the session registered with, carried on the registration config so a
+    // renewal can revoke the exact credential it supersedes.
+    function browserAudioCredentialId(session) {
+      var providerConfig = session && session.providerConfig;
+      var sessionConfig = providerConfig && providerConfig.session;
+      return sessionConfig && sessionConfig.interactionId ? sessionConfig.interactionId : null;
+    }
+
+    // Ask the server to tear down a credential this soft phone just superseded during a renewal, so renewed
+    // sessions do not leave their predecessor credentials live until natural expiry. Best-effort: a failure
+    // only means the old credential lingers until it expires or the per-user cap trims it.
+    function revokeSupersededCredential(credentialId) {
+      if (!connection || !credentialId) {
+        return;
+      }
+      connection.invoke('RevokeSupersededCredential', credentialId).catch(function () {});
+    }
     function ensureBrowserAudio() {
       if (!isBrowserAudioEnabled()) {
         return Promise.resolve(null);
       }
+      var supersededCredentialId = null;
       if (browserAudioSession) {
-        return Promise.resolve(browserAudioSession);
+        // Self-heal on every entry point (placing or answering a call, or becoming available): when
+        // the credential is at or near expiry, re-establish with a fresh one first. Only do so while
+        // idle -- re-establishing tears down the provider media client and would drop a live call, so
+        // during an active call the current session is kept and the heartbeat renews once it ends.
+        if (isBrowserAudioExpiring(browserAudioSession) && !hasLiveCall()) {
+          // Remember the credential being replaced so it can be revoked once the fresh one is live.
+          supersededCredentialId = browserAudioCredentialId(browserAudioSession);
+          releaseBrowserAudio();
+        } else {
+          return Promise.resolve(browserAudioSession);
+        }
       }
       if (browserAudioPromise) {
         return browserAudioPromise;
@@ -1061,11 +1294,23 @@
             localStream: stream,
             remoteAudioElement: dom.remoteAudio,
             setRemoteStream: setRemoteAudioStream,
-            showError: showError
+            showError: showError,
+            // Lets a client-originated provider (Telnyx) decide, per inbound leg, whether to answer
+            // automatically (the agent's own bridged leg) or ring an Answer/Decline prompt (a direct
+            // extension call from a colleague).
+            shouldAutoAnswerInbound: consumeInboundAutoAnswer,
+            onInboundRing: handleBrowserInboundRing,
+            onInboundRingCanceled: clearBrowserInboundRing
           }));
         });
       }).then(function (session) {
         browserAudioSession = session || {};
+
+        // A renewal replaced a still-live credential; revoke that predecessor now that the fresh
+        // session is registered (unless, defensively, the server handed back the same credential id).
+        if (supersededCredentialId && supersededCredentialId !== browserAudioCredentialId(browserAudioSession)) {
+          revokeSupersededCredential(supersededCredentialId);
+        }
         return browserAudioSession;
       }).catch(function (error) {
         releaseBrowserAudio();
@@ -1074,6 +1319,55 @@
         browserAudioPromise = null;
       });
       return browserAudioPromise;
+    }
+    function renewBrowserAudioIfNeeded() {
+      if (!isBrowserAudioEnabled() || !browserAudioSession) {
+        return;
+      }
+
+      // Nothing to do until the credential is near expiry, and never renew mid-call (re-establishing
+      // would drop the active media session). A deferred renewal is retried on the next heartbeat once
+      // the line clears.
+      if (!isBrowserAudioExpiring(browserAudioSession) || hasLiveCall()) {
+        return;
+      }
+
+      // ensureBrowserAudio re-establishes with a freshly issued credential (its self-heal releases the
+      // expiring session first). Failures are kept quiet here because this runs in the background; a
+      // genuine problem surfaces the next time the agent places or answers a call.
+      ensureBrowserAudio().catch(function (error) {
+        if (window.console && console.debug) {
+          console.debug('[soft-phone] Browser audio credential renewal failed.', error);
+        }
+      });
+    }
+    function startBrowserAudioHeartbeat() {
+      if (browserAudioHeartbeatTimer || !isBrowserAudioEnabled()) {
+        return;
+      }
+      browserAudioHeartbeatTimer = window.setInterval(renewBrowserAudioIfNeeded, BROWSER_AUDIO_HEARTBEAT_MS);
+    }
+    function stopBrowserAudioHeartbeat() {
+      if (browserAudioHeartbeatTimer) {
+        window.clearInterval(browserAudioHeartbeatTimer);
+        browserAudioHeartbeatTimer = null;
+      }
+    }
+
+    // Register the browser with the provider as soon as the soft phone connects -- not lazily on the first
+    // dial -- and keep it registered, so an idle agent can still RECEIVE inbound extension/queue calls.
+    // Without this the browser only registers for the duration of a call it places (and disconnects right
+    // after), so a colleague dialing an idle agent's extension reaches an unregistered endpoint and the
+    // call is cleared before it can ring.
+    function registerBrowserAudioForInbound() {
+      if (!isBrowserAudioEnabled()) {
+        return;
+      }
+      ensureBrowserAudio().catch(function (error) {
+        if (window.console && console.debug) {
+          console.debug('[soft-phone] Could not pre-register browser audio for inbound calls.', error);
+        }
+      });
     }
     function notifyBrowserAudio(call) {
       // Browser-originated calls drive their own SIP session directly; the passive-answer bridging here
@@ -1115,18 +1409,39 @@
       beginPendingDial(number);
       render();
 
-      // Internal extension calls are always resolved and bridged server-side: the browser cannot originate
-      // directly to a colleague because it does not know the target's ephemeral provider endpoint. The hub
-      // resolves the extension to the target user and the provider rings this browser, then bridges the two.
-      if (isExtension) {
-        return invoke('DialExtension', {
-          extension: number
-        }).catch(function (error) {
+      // A hub command that fails resolves with { succeeded: false } rather than rejecting, so the
+      // optimistic "Connecting" state must be cleared here too -- otherwise the status line stays
+      // stranded on "Connecting" after an error (for example an unavailable extension) until the safety
+      // timer eventually fires.
+      function settleDial(result) {
+        if (!result || result.succeeded === false) {
           clearPendingDial();
           render();
-          showError(error && error.message ? error.message : String(error));
-          return null;
-        });
+        }
+        return result;
+      }
+      function failDial(error) {
+        clearPendingDial();
+        render();
+        showError(error && error.message ? error.message : String(error));
+        return null;
+      }
+
+      // Internal extension calls are resolved and bridged server-side, but the caller's own browser must
+      // be registered first: the provider rings this browser and then bridges it to the target. Ensure
+      // (and renew, if the credential has lapsed) the browser audio session before asking the hub to place
+      // the call, so a stale caller credential self-heals instead of failing with "you must be signed in".
+      // In a non-browser audio mode ensureBrowserAudio resolves to null and the hub places the call as
+      // before.
+      if (isExtension) {
+        // The provider rings this browser's own leg first and then bridges it to the target; that inbound
+        // leg is expected, so arm the media adapter to answer it automatically rather than ring for it.
+        armInboundAutoAnswer();
+        return ensureBrowserAudio().then(function () {
+          return invoke('DialExtension', {
+            extension: number
+          });
+        }).then(settleDial).catch(failDial);
       }
       return ensureBrowserAudio().then(function (session) {
         if (session && session.canOriginate && typeof session.originate === 'function') {
@@ -1136,13 +1451,8 @@
         return invoke('Dial', {
           to: number,
           isExtension: isExtension
-        });
-      }).catch(function (error) {
-        clearPendingDial();
-        render();
-        showError(error && error.message ? error.message : String(error));
-        return null;
-      });
+        }).then(settleDial);
+      }).catch(failDial);
     }
     function originateBrowserCall(session, number) {
       var callId = 'browser-' + Date.now();
@@ -1165,12 +1475,16 @@
         if (!existing) {
           return;
         }
+        if (stateName === 'Connected') {
+          existing.everConnected = true;
+        }
 
         // Preserve a local hold state (the SIP session has no distinct hold signal to the UI).
         if (!(stateName === 'Connected' && existing.isOnHold)) {
           existing.state = stateName;
         }
         if (stateName === 'Disconnected') {
+          reportBrowserCallEnded(callId, existing.everConnected);
           removeActiveCall(callId);
           delete browserCallControllers[callId];
         } else {
@@ -1180,6 +1494,13 @@
       });
       if (controller) {
         browserCallControllers[callId] = controller;
+
+        // A browser-originated call is placed directly through the provider SDK and never passes through
+        // a server "Dial" action, so report it to the hub to record call history -- otherwise it would be
+        // missing from the Recent tab. Best-effort: history is not essential to the call itself.
+        if (connection) {
+          connection.invoke('RecordBrowserCall', callId, call.to, call.from).catch(function () {});
+        }
       } else {
         clearPendingDial();
         removeActiveCall(callId);
@@ -1188,6 +1509,148 @@
     }
     function currentBrowserController() {
       return currentCall && currentCall.browserOriginated ? browserCallControllers[currentCall.callId] || null : null;
+    }
+
+    // Tell the server a browser-originated call ended, so its history interaction is settled to a final
+    // outcome instead of lingering "in progress" (which would keep it out of completed history and let the
+    // reconciler delete it as an orphan). Best-effort: history is not essential to the call itself.
+    function reportBrowserCallEnded(callId, connected) {
+      if (connection && callId) {
+        connection.invoke('RecordBrowserCallEnded', callId, !!connected).catch(function () {});
+      }
+    }
+
+    // Arm the one-shot expectation that the next inbound provider leg is this browser's own bridged leg (an
+    // extension call it is placing), so the media adapter answers it automatically rather than ringing.
+    function armInboundAutoAnswer() {
+      expectInboundAutoAnswerUntil = Date.now() + INBOUND_AUTO_ANSWER_WINDOW_MS;
+    }
+
+    // Called by the media adapter for each inbound provider leg to decide whether to auto-answer. A Contact
+    // Center offer the agent just accepted (incomingHandled/incomingAcceptPending) and a freshly placed
+    // extension call (the armed window) are expected legs; both are consumed here so a later, genuine
+    // incoming call still rings.
+    function consumeInboundAutoAnswer() {
+      if (incomingHandled || incomingAcceptPending) {
+        return true;
+      }
+      if (Date.now() < expectInboundAutoAnswerUntil) {
+        expectInboundAutoAnswerUntil = 0;
+        return true;
+      }
+      return false;
+    }
+
+    // Surface a ringing direct extension call as an Answer/Decline prompt, reusing the incoming-call modal
+    // that Contact Center offers use. There is no server-side offer here (no reservation/accept URL); the
+    // agent's choice acts directly on the provider SDK through the adapter controller.
+    function handleBrowserInboundRing(controller) {
+      if (!controller) {
+        return;
+      }
+
+      // The agent is already on a (non-ringing) call: decline the new leg rather than interrupting, matching
+      // how a server offer is suppressed while a blocking call is active.
+      if (hasBlockingActiveCall()) {
+        try {
+          controller.decline();
+        } catch (e) {/* best effort */}
+        return;
+      }
+
+      // Replace any earlier unanswered ring with this one.
+      if (browserInboundRing && browserInboundRing.callId !== null) {
+        removeActiveCall(browserInboundRing.callId);
+      }
+      var callId = 'browser-in-' + Date.now();
+      browserInboundRing = {
+        callId: callId,
+        controller: controller
+      };
+      var call = {
+        callId: callId,
+        state: 'Ringing',
+        direction: 'Inbound',
+        from: controller.callerName || controller.callerNumber || '',
+        to: '',
+        startedUtc: new Date().toISOString(),
+        isMuted: false,
+        isOnHold: false,
+        browserOriginated: true,
+        browserInbound: true,
+        metadata: {}
+      };
+      upsertActiveCall(call, true);
+
+      // A direct extension call carries no Contact Center offer context.
+      incomingContext = null;
+      incomingHandled = false;
+      incomingAcceptPending = false;
+      setActiveTab('keypad');
+      render();
+    }
+
+    // Answer the ringing browser-inbound call: hand control to the adapter and wire the SDK call's state back
+    // into the active-call UI (Connected/Disconnected), then keep the controller for the in-call buttons.
+    function answerBrowserInboundRing() {
+      if (!browserInboundRing) {
+        return;
+      }
+      var ring = browserInboundRing;
+      browserInboundRing = null;
+      incomingHandled = true;
+      var existing = activeCalls[ring.callId];
+      if (existing) {
+        existing.state = 'Connecting';
+        upsertActiveCall(existing, true);
+      }
+      browserCallControllers[ring.callId] = ring.controller;
+      togglePanel(true);
+      try {
+        ring.controller.answer(function (stateName) {
+          var live = activeCalls[ring.callId];
+          if (!live) {
+            return;
+          }
+          if (!(stateName === 'Connected' && live.isOnHold)) {
+            live.state = stateName;
+          }
+          if (stateName === 'Disconnected') {
+            removeActiveCall(ring.callId);
+            delete browserCallControllers[ring.callId];
+          } else {
+            upsertActiveCall(live, false);
+          }
+          render();
+        });
+      } catch (error) {
+        showError(error && error.message ? error.message : String(error));
+        removeActiveCall(ring.callId);
+        delete browserCallControllers[ring.callId];
+      }
+      render();
+    }
+
+    // Dismiss the ringing browser-inbound call, optionally declining it on the SDK. Used both when the agent
+    // ignores/sends it to voicemail and when the caller cancels before it is answered.
+    function clearBrowserInboundRing(options) {
+      if (!browserInboundRing) {
+        return;
+      }
+      options = options || {};
+      var ring = browserInboundRing;
+      browserInboundRing = null;
+      if (options.decline) {
+        try {
+          ring.controller.decline();
+        } catch (e) {/* best effort */}
+      }
+      removeActiveCall(ring.callId);
+      incomingHandled = false;
+      render();
+    }
+    function isBrowserInboundRinging() {
+      return !!(browserInboundRing && currentCall && currentCall.callId === browserInboundRing.callId);
     }
     function showView(name) {
       dom.views.forEach(function (view) {
@@ -1551,8 +2014,9 @@
       if (tab === 'history') {
         loadHistory();
       } else if (tab === 'voicemail') {
+        // Voicemails stay unread until the caller opens one (clicks its body); opening the list no longer
+        // marks them all read.
         loadVoicemails();
-        markAllVoicemailsRead();
       }
     }
     function renderActiveCalls() {
@@ -1719,6 +2183,10 @@
       }
       setStatus(currentCall ? statusTextForCall(currentCall) : pendingDial ? strings.connecting || 'Connecting' : strings.idle || 'Ready');
       if (dom.number && currentCall && (active || stateName === 'OnHold')) {
+        // The dial has materialized into a real call, so the pending-dial state is done. Clear it now
+        // rather than letting its 30s timer keep it alive -- otherwise, once this call ends, render()
+        // would fall back into the pendingDial branch and re-show the old number over a fresh entry.
+        clearPendingDial();
         var peerNumber = getPeerNumber(currentCall);
         if (peerNumber) {
           setNumberDisplay(peerNumber);
@@ -1826,9 +2294,11 @@
       }
       render();
       notifyBrowserAudio(currentCall);
-      if (!currentCall) {
-        releaseBrowserAudio();
-      }
+
+      // Do NOT tear down the browser registration when the last call ends: the soft phone stays registered
+      // with the provider so it can receive the next inbound extension/queue call while idle. The
+      // registration is released only on an explicit disconnect/sign-out or when the hub connection closes.
+
       scheduleActiveCallsRefresh();
       return currentCall;
     }
@@ -1896,23 +2366,37 @@
     }
     function dial() {
       var number = getDialNumber();
-      if (!number) {
-        showError(strings.invalidNumber || 'Enter a phone number to call.');
-        return;
+      if (extensionMode) {
+        // An internal extension call requires an extension to be entered.
+        if (!number) {
+          showError(strings.extensionRequired || 'Enter an extension to call.');
+          return;
+        }
+      } else {
+        // A phone call requires a complete, valid number. intl-tel-input validates completeness, so an
+        // incomplete entry (for example "702499") is rejected here instead of being dialed as raw digits.
+        var canValidate = telInput && typeof telInput.isValidNumber === 'function';
+        if (canValidate && !telInput.isValidNumber() || !number) {
+          showError(strings.invalidNumber || 'Enter a valid phone number to call.');
+          return;
+        }
       }
       clearNumberInput();
       numberIsCallDisplay = false;
       placeCall(number, extensionMode);
     }
-    function dialNumber(number) {
+    function dialNumber(number, isExtension) {
       if (!number) {
         return;
       }
       setActiveTab('keypad');
       togglePanel(true);
-      clearNumberInput();
+
+      // Align the dial mode with the entry being called back (setDialMode also clears the input), so an
+      // extension entry redials in extension mode and a phone entry in phone mode.
+      setDialMode(!!isExtension);
       numberIsCallDisplay = false;
-      placeCall(normalizeDialNumber(number), false);
+      placeCall(isExtension ? number : normalizeDialNumber(number), !!isExtension);
     }
     function hangup() {
       var controller = currentBrowserController();
@@ -1921,9 +2405,23 @@
         return;
       }
       var call = currentCallReference();
-      if (call) {
-        invoke('Hangup', call);
+      if (!call) {
+        return;
       }
+      var callId = call.callId;
+
+      // If the provider cannot end the call -- for example a stale call restored from the server that the
+      // provider no longer knows about -- clear it locally so the soft phone recovers instead of staying
+      // stuck "in a call", which blocks the keypad (it sends DTMF) and the dialer.
+      invoke('Hangup', call).then(function (result) {
+        if (result && result.succeeded === false) {
+          removeActiveCall(callId);
+          render();
+        }
+      }).catch(function () {
+        removeActiveCall(callId);
+        render();
+      });
     }
     function hangupAll() {
       var calls = getActiveCalls();
@@ -2112,7 +2610,21 @@
           digits: value
         });
       } else if ((!isActive(stateName) || stateName === 'OnHold') && dom.number) {
+        // If the field is currently showing a call/pending number (not something the user typed),
+        // start a fresh entry so the keypad digit is not appended to -- or immediately overwritten by
+        // a background render with -- the previous number. clearNumberInput also drops that state.
+        if (numberIsCallDisplay) {
+          clearNumberInput();
+        }
         dom.number.value = dom.number.value + value;
+
+        // The number field is enhanced by intl-tel-input, which tracks the number/country from 'input'
+        // events. Setting .value directly (a keypad press) bypasses that, leaving its internal state
+        // stale so getNumber() returns a wrong E.164 -- the dialed number then differs from what is
+        // visible. Fire an input event so intl-tel-input re-reads the current value.
+        dom.number.dispatchEvent(new Event('input', {
+          bubbles: true
+        }));
       }
     }
     function togglePanel(open) {
@@ -2328,6 +2840,13 @@
       if (incomingAcceptPending) {
         return;
       }
+
+      // A direct browser-inbound (extension) call has no server-side offer; it is answered on the provider
+      // SDK through the adapter controller, not via a server "Answer" command.
+      if (isBrowserInboundRinging()) {
+        answerBrowserInboundRing();
+        return;
+      }
       if (isBrowserAudioEnabled() && !browserAudioSession) {
         ensureBrowserAudio().then(function () {
           answerIncoming(openUrl);
@@ -2386,6 +2905,14 @@
       });
     }
     function voicemailIncoming() {
+      // A direct extension call: decline the local leg. The server's no-answer handling routes the caller to
+      // the extension owner's voicemail from the destination-leg hangup, so there is nothing more to do here.
+      if (isBrowserInboundRinging()) {
+        clearBrowserInboundRing({
+          decline: true
+        });
+        return;
+      }
       var call = currentCallReference();
       postLifecycle('declineUrl');
       if (call) {
@@ -2393,6 +2920,13 @@
       }
     }
     function ignoreIncoming() {
+      // A direct extension call has no server offer to decline; hang up the ringing leg on the SDK.
+      if (isBrowserInboundRinging()) {
+        clearBrowserInboundRing({
+          decline: true
+        });
+        return;
+      }
       var call = currentCallReference();
       var hasOffer = incomingContext && incomingContext.properties && incomingContext.properties.declineUrl;
       if (hasOffer) {
@@ -2642,15 +3176,28 @@
       return config.voicemailMediaUrlTemplate.replace('__INTERACTION_ID__', encodeURIComponent(interactionId));
     }
     var playingVoicemailButton = null;
+    var playingVoicemailId = null;
     function stopVoicemailPlayback() {
       if (dom.voicemailAudio) {
         try {
           dom.voicemailAudio.pause();
         } catch (e) {/* ignore */}
+
+        // Detach the clip so a deleted or gone voicemail cannot stay loaded in the player.
+        dom.voicemailAudio.removeAttribute('src');
+        try {
+          dom.voicemailAudio.load();
+        } catch (e) {/* ignore */}
       }
       if (playingVoicemailButton) {
         playingVoicemailButton.classList.remove('is-playing');
         playingVoicemailButton = null;
+      }
+      playingVoicemailId = null;
+
+      // The player bar only makes sense while a voicemail is loaded; remove it once playback is torn down.
+      if (dom.voicemailPlayer) {
+        dom.voicemailPlayer.hidden = true;
       }
     }
     function playVoicemail(interactionId, callId, button) {
@@ -2683,6 +3230,7 @@
       }
       dom.voicemailAudio.src = url;
       playingVoicemailButton = button;
+      playingVoicemailId = interactionId;
       if (button) {
         button.classList.add('is-playing');
       }
@@ -2754,6 +3302,14 @@
       if (!dom.voicemailList) {
         return;
       }
+
+      // If the voicemail currently loaded in the player is no longer in the list (deleted or otherwise
+      // gone), tear the player down so it cannot strand an orphaned clip over an empty or changed list.
+      if (playingVoicemailId && !items.some(function (interaction) {
+        return interaction.interactionId === playingVoicemailId;
+      })) {
+        stopVoicemailPlayback();
+      }
       var canDelete = voicemailDeleteEnabled();
       if (dom.voicemailToolbar) {
         dom.voicemailToolbar.hidden = !(canDelete && items.length);
@@ -2770,7 +3326,7 @@
         var unread = !interaction.voicemailReadUtc;
         var cls = 'telephony-soft-phone__voicemail-item' + (unread ? ' telephony-soft-phone__voicemail-item--unread' : '');
         var selectMarkup = canDelete ? '<input type="checkbox" class="telephony-soft-phone__voicemail-select" data-telephony-voicemail-select ' + 'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'aria-label="' + escapeHtml(strings.selectVoicemail || 'Select voicemail') + '">' : '';
-        return '<div class="' + cls + '">' + selectMarkup + '<button type="button" class="telephony-soft-phone__voicemail-play" data-telephony-voicemail-play ' + 'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'data-telephony-voicemail-call="' + escapeHtml(interaction.callId || '') + '" ' + 'title="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '" ' + 'aria-label="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '"><i class="fa-solid fa-play"></i></button>' + '<div class="telephony-soft-phone__voicemail-body">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || strings.voicemailLabel || 'Voicemail') + '</span>' + '<span class="telephony-soft-phone__history-meta">' + escapeHtml(time) + '</span>' + '</div>' + '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(number) + '" ' + 'title="' + escapeHtml(strings.callBack || 'Call back') + '" aria-label="' + escapeHtml(strings.callBack || 'Call back') + '"><i class="fa-solid fa-phone"></i></button>' + '</div>';
+        return '<div class="' + cls + '">' + selectMarkup + '<button type="button" class="telephony-soft-phone__voicemail-play" data-telephony-voicemail-play ' + 'data-telephony-voicemail-id="' + escapeHtml(interaction.interactionId || '') + '" ' + 'data-telephony-voicemail-call="' + escapeHtml(interaction.callId || '') + '" ' + 'title="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '" ' + 'aria-label="' + escapeHtml(strings.playVoicemail || 'Play voicemail') + '"><i class="fa-solid fa-play"></i></button>' + '<div class="telephony-soft-phone__voicemail-body" data-telephony-voicemail-body ' + 'data-telephony-voicemail-call="' + escapeHtml(interaction.callId || '') + '" ' + 'role="button" tabindex="0">' + '<span class="telephony-soft-phone__history-number">' + escapeHtml(formattedNumber || number || strings.voicemailLabel || 'Voicemail') + '</span>' + '<span class="telephony-soft-phone__history-meta">' + escapeHtml(time) + '</span>' + '</div>' + '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(number) + '" ' + 'title="' + escapeHtml(strings.callBack || 'Call back') + '" aria-label="' + escapeHtml(strings.callBack || 'Call back') + '"><i class="fa-solid fa-phone"></i></button>' + '</div>';
       }).join('');
       Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-play]'), function (item) {
         item.addEventListener('click', function () {
@@ -2779,6 +3335,21 @@
       });
       Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-select]'), function (checkbox) {
         checkbox.addEventListener('change', updateVoicemailDeleteButton);
+      });
+
+      // Clicking (or keyboard-activating) the voicemail body -- the caller/time area, distinct from the
+      // play and call-back icons -- marks that voicemail as read.
+      Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-voicemail-body]'), function (body) {
+        function activate() {
+          markVoicemailRead(body.getAttribute('data-telephony-voicemail-call'), body.closest('.telephony-soft-phone__voicemail-item'));
+        }
+        body.addEventListener('click', activate);
+        body.addEventListener('keydown', function (event) {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            activate();
+          }
+        });
       });
       Array.prototype.forEach.call(dom.voicemailList.querySelectorAll('[data-telephony-history-number]'), function (item) {
         item.addEventListener('click', function () {
@@ -2831,6 +3402,18 @@
         return;
       }
       connection.invoke('MarkAllVoicemailsRead').then(function (remaining) {
+        updateVoicemailBadge(remaining);
+      }).catch(function () {});
+    }
+    function markVoicemailRead(callId, itemElement) {
+      // Reflect the read state immediately so the row stops showing as unread even before the round trip.
+      if (itemElement) {
+        itemElement.classList.remove('telephony-soft-phone__voicemail-item--unread');
+      }
+      if (!connection || !callId) {
+        return;
+      }
+      connection.invoke('MarkVoicemailRead', callId).then(function (remaining) {
         updateVoicemailBadge(remaining);
       }).catch(function () {});
     }
@@ -2888,23 +3471,30 @@
         var inbound = isInbound(interaction);
         var missed = isMissed(interaction);
         var inProgress = isInProgress(interaction);
+        var isExtension = !!interaction.isExtension;
         var directionGlyph = inbound ? '\u2199' : '\u2197';
         var number = inbound ? interaction.from || '' : interaction.to || '';
-        var formattedNumber = formatPhoneNumber(number);
+        // An extension entry stores the target's display name in `to`; the dialable value is the stored
+        // extension number, so the call-back button redials that (in extension mode) rather than the name.
+        var dialTarget = isExtension ? interaction.extensionNumber || '' : number;
         var label = missed ? strings.missed || 'Missed' : inbound ? strings.incoming || 'Incoming' : strings.outgoing || 'Outgoing';
         var time = formatTime(interaction.startedUtc);
-        var meta = escapeHtml(label) + (time ? ' \u2022 ' + escapeHtml(time) : '');
-        var displayNumber = escapeHtml(formattedNumber || number || label);
+        var extensionTag = isExtension ? escapeHtml(strings.extensionLabel || 'Extension') + ' \u2022 ' : '';
+        var meta = extensionTag + escapeHtml(label) + (time ? ' \u2022 ' + escapeHtml(time) : '');
+        // Extension targets are display names, not numbers, so they are shown verbatim; phone numbers are
+        // run through the display formatter.
+        var displayNumber = escapeHtml(isExtension ? number || dialTarget || label : formatPhoneNumber(number) || number || label);
         var cls = 'telephony-soft-phone__history-item' + (missed ? ' telephony-soft-phone__history-item--missed' : '') + (inProgress ? ' telephony-soft-phone__history-item--active' : '');
 
         // The row itself no longer dials; a dedicated Call button on the right places the call.
-        return '<div class="' + cls + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<div class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + displayNumber + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</div>' + (number ? '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(number) + '" ' + 'title="' + escapeHtml(strings.call || 'Call') + '" aria-label="' + escapeHtml(strings.call || 'Call') + '"><i class="fa-solid fa-phone"></i></button>' : '') + '</div>';
+        return '<div class="' + cls + '">' + '<span class="telephony-soft-phone__history-dir" aria-hidden="true">' + directionGlyph + '</span>' + '<div class="telephony-soft-phone__history-body">' + '<span class="telephony-soft-phone__history-number">' + displayNumber + '</span>' + '<span class="telephony-soft-phone__history-meta">' + meta + '</span>' + '</div>' + (dialTarget ? '<button type="button" class="telephony-soft-phone__call-btn" data-telephony-history-number="' + escapeHtml(dialTarget) + '"' + (isExtension ? ' data-telephony-history-extension="true"' : '') + ' ' + 'title="' + escapeHtml(strings.call || 'Call') + '" aria-label="' + escapeHtml(strings.call || 'Call') + '"><i class="fa-solid fa-phone"></i></button>' : '') + '</div>';
       }).join('');
       Array.prototype.forEach.call(dom.historyList.querySelectorAll('[data-telephony-history-number]'), function (item) {
         item.addEventListener('click', function () {
           var number = item.getAttribute('data-telephony-history-number');
+          var isExtension = item.getAttribute('data-telephony-history-extension') === 'true';
           if (number) {
-            dialNumber(number);
+            dialNumber(number, isExtension);
           }
         });
       });
@@ -2982,11 +3572,16 @@
       connection.onclose(function () {
         setStatus(strings.disconnectedHub || 'Disconnected');
         clearActiveCallsRefresh();
+        stopBrowserAudioHeartbeat();
         releaseBrowserAudio();
       });
       if (typeof connection.onreconnected === 'function') {
         connection.onreconnected(function () {
           showError(null);
+          // Re-establish (or renew) the browser registration so the agent stays reachable for inbound
+          // calls after a reconnect, and restart the heartbeat that keeps the credential alive.
+          startBrowserAudioHeartbeat();
+          registerBrowserAudioForInbound();
           return Promise.all([refreshCapabilities(), refreshConnectionStatus()]).then(function () {
             return restoreActiveCall();
           }).then(function () {
@@ -3012,15 +3607,18 @@
       registerClientCallbacks();
       return connection.start().then(function () {
         showError(null);
+        startBrowserAudioHeartbeat();
         return Promise.all([refreshCapabilities(), refreshConnectionStatus()]);
       }).then(function () {
+        // Register with the provider now that the soft phone is connected, so the agent is reachable for
+        // inbound calls while idle -- not only while placing a call.
+        registerBrowserAudioForInbound();
         return restoreActiveCall();
       }).then(function () {
         if (activeTab === 'history') {
           loadHistory();
         } else if (activeTab === 'voicemail') {
           loadVoicemails();
-          markAllVoicemailsRead();
         }
         refreshVoicemailBadge();
         render();
@@ -3029,6 +3627,13 @@
       });
     }
     function bindEvents() {
+      document.addEventListener('visibilitychange', function () {
+        // Background tabs throttle timers, so the heartbeat can be delayed while hidden. Re-check the
+        // credential the moment the agent brings the soft phone back to the foreground.
+        if (!document.hidden) {
+          renewBrowserAudioIfNeeded();
+        }
+      });
       if (dom.toggle) {
         dom.toggle.addEventListener('click', function () {
           if (suppressToggleClick) {

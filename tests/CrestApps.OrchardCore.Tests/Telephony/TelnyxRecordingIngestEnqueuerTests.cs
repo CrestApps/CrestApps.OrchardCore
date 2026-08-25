@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -94,6 +95,48 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
         Assert.True(handled);
         Assert.False(interaction.TechnicalMetadata.ContainsKey(ContactCenterConstants.Voicemail.ProjectionMetadataKey));
         publisher.Verify(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleAsync_WhenInteractionUpdateConflicts_PropagatesConcurrencyException()
+    {
+        // A concurrent writer (for example the routing engine stamping the same call it sent to voicemail) can
+        // win the interaction update. The enqueuer must let the ConcurrencyException propagate so the durable
+        // provider webhook inbox re-dispatches the delivery in a fresh scope instead of silently dropping the
+        // voicemail.
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderInteractionId = "call-1",
+            TechnicalMetadata = new Dictionary<string, object>(),
+        };
+
+        var callEvent = new TelnyxCallEvent
+        {
+            RecordingId = "rec-1",
+            ClientState = DecodeClientState(TelnyxRecordingClientState.ForVoicemail("interaction-1", "user-1").ToClientState()),
+        };
+
+        var (jobStore, interactionManager, agentManager, publisher, clock) = CreateMocks(interaction);
+
+        interactionManager
+            .Setup(manager => manager.UpdateAsync(
+                interaction,
+                It.IsAny<System.Text.Json.Nodes.JsonNode>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ConcurrencyException(new Document()));
+
+        var handler = new TelnyxRecordingIngestEnqueuer(
+            jobStore.Object,
+            interactionManager.Object,
+            [agentManager.Object],
+            publisher.Object,
+            Mock.Of<IContactCenterScopeExecutor>(),
+            clock.Object,
+            NullLogger<TelnyxRecordingIngestEnqueuer>.Instance);
+
+        await Assert.ThrowsAsync<ConcurrencyException>(
+            () => handler.HandleAsync(callEvent, TestContext.Current.CancellationToken));
     }
 
     private static (

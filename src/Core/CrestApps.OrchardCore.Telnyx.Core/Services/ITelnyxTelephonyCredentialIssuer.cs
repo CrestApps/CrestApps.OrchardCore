@@ -24,4 +24,16 @@ public interface ITelnyxTelephonyCredentialIssuer
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of credentials revoked.</returns>
     Task<int> RevokeForUserAsync(string userId, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Revokes a single browser credential owned by the specified user, deleting it at Telnyx. Used by a
+    /// renewing soft phone to tear down the exact credential it just superseded, so renewals do not accumulate
+    /// live credentials. A credential that is not found, not owned by the user, or already revoked is ignored.
+    /// </summary>
+    /// <param name="userId">The authenticated user the credential must belong to.</param>
+    /// <param name="credentialId">The provider credential identifier to revoke.</param>
+    /// <param name="reason">The reason recorded for the revocation.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when a live credential was revoked; otherwise <see langword="false"/>.</returns>
+    Task<bool> RevokeCredentialAsync(string userId, string credentialId, string reason, CancellationToken cancellationToken = default);
 }

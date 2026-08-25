@@ -141,12 +141,16 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
         interaction.ProviderName = providerEvent.ProviderName;
         interaction.StartedUtc = interaction.StartedUtc == default ? now : interaction.StartedUtc;
 
-        if (!string.IsNullOrWhiteSpace(providerEvent.FromAddress))
+        // Do not overwrite the interaction's addresses with a raw SIP URI (e.g. sip:gencred...@sip.telnyx.com).
+        // Those are internal routing endpoints, not user-facing numbers -- an internal extension call already
+        // recorded the friendly extension/target as To, and formatting a SIP URI as a phone number renders it
+        // as a garbage number in the in-call display and the Recent list.
+        if (!string.IsNullOrWhiteSpace(providerEvent.FromAddress) && !IsSipUri(providerEvent.FromAddress))
         {
             interaction.From = providerEvent.FromAddress;
         }
 
-        if (!string.IsNullOrWhiteSpace(providerEvent.ToAddress))
+        if (!string.IsNullOrWhiteSpace(providerEvent.ToAddress) && !IsSipUri(providerEvent.ToAddress))
         {
             interaction.To = providerEvent.ToAddress;
         }
@@ -166,6 +170,9 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
         interaction.DurationSeconds = 0;
         interaction.Outcome = CallOutcome.InProgress;
     }
+
+    private static bool IsSipUri(string address)
+        => address is not null && address.StartsWith("sip:", StringComparison.OrdinalIgnoreCase);
 
     private static TelephonyCall BuildTelephonyCall(TelephonyInteraction interaction, ProviderVoiceEvent providerEvent)
     {

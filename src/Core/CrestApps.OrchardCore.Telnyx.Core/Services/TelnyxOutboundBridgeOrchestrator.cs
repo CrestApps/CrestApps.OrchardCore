@@ -76,10 +76,28 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
             return TelnyxOutboundBridgeLeg.None;
         }
 
-        // The destination answered; bridge it to the agent leg that has been waiting.
+        // The destination answered; connect it to the agent leg that has been waiting.
         if (isAnswered && _options.IsConfigured && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
         {
-            await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken);
+            // An internal extension call connects two WebRTC (telnyx-rtc) browser legs. Telnyx's raw two-leg
+            // bridge does not reliably pass media between two WebRTC legs -- the SDP negotiates cleanly and DTLS
+            // comes up, but audio flows only one way (one leg receives nothing). Joining the two legs through a
+            // conference (Telnyx's media mixer) fixes it, because each WebRTC leg negotiates normal two-way media
+            // with the mixer just like it does on a working PSTN call. A regular PSTN destination keeps the direct
+            // bridge. An internal extension call is the one that carries a voicemail recipient.
+            var isInternalExtensionCall = !string.IsNullOrWhiteSpace(state.VoicemailRecipientUserId);
+
+            if (isInternalExtensionCall)
+            {
+                await ConnectExtensionViaConferenceAsync(
+                    agentLegCallControlId: state.PeerCallControlId,
+                    destinationLegCallControlId: callEvent.CallControlId,
+                    cancellationToken);
+            }
+            else
+            {
+                await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken);
+            }
 
             return TelnyxOutboundBridgeLeg.DestinationLeg;
         }
@@ -87,15 +105,37 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         // The destination hung up without answering. For an internal extension call that names a voicemail
         // recipient, route the still-connected caller (agent) leg to that user's voicemail instead of just
         // ending the call. A caller-canceled or normal-clearing hangup is not a no-answer, so it is left alone.
-        if (IsNoAnswerHangup(callEvent) &&
-            _options.IsConfigured &&
-            !string.IsNullOrWhiteSpace(state.VoicemailRecipientUserId) &&
-            !string.IsNullOrWhiteSpace(state.PeerCallControlId))
+        var isHangup = string.Equals(callEvent.EventType?.Trim(), "call.hangup", StringComparison.OrdinalIgnoreCase);
+
+        if (isHangup && _options.IsConfigured && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
         {
-            await RouteToVoicemailAsync(
-                agentLegCallControlId: state.PeerCallControlId,
-                recipientUserId: state.VoicemailRecipientUserId,
-                cancellationToken);
+            var isInternalExtensionCall = !string.IsNullOrWhiteSpace(state.VoicemailRecipientUserId);
+
+            if (IsNoAnswerHangup(callEvent) && isInternalExtensionCall)
+            {
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Extension bridge: destination leg {CallControlId} did not answer (cause {HangupCause}); routing caller leg {AgentLeg} to voicemail for user {RecipientUserId}.",
+                        callEvent.CallControlId.SanitizeLogValue(),
+                        callEvent.HangupCause.SanitizeLogValue(),
+                        state.PeerCallControlId.SanitizeLogValue(),
+                        state.VoicemailRecipientUserId.SanitizeLogValue());
+                }
+
+                await RouteToVoicemailAsync(
+                    agentLegCallControlId: state.PeerCallControlId,
+                    recipientUserId: state.VoicemailRecipientUserId,
+                    cancellationToken);
+            }
+            else if (isInternalExtensionCall)
+            {
+                // The callee's leg of an internal extension call ended after it was connected (the callee hung
+                // up). The two legs are joined through a conference, so ending one participant does not end the
+                // other; hang up the caller's (agent) leg too so the call clears for both. Idempotent: if the
+                // caller hung up first (which ended the conference and this leg), the agent leg is already gone.
+                await HangupLegAsync(state.PeerCallControlId, cancellationToken);
+            }
         }
 
         return TelnyxOutboundBridgeLeg.DestinationLeg;
@@ -298,7 +338,22 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
             body["from"] = agentState.CallerId;
         }
 
-        if (!string.IsNullOrWhiteSpace(_options.OutboundVoiceProfileId))
+        // Present the caller's name to the destination so a callee ringing on an internal extension call sees who
+        // is calling instead of just the caller-id number.
+        if (!string.IsNullOrWhiteSpace(agentState.CallerDisplayName))
+        {
+            body["from_display_name"] = agentState.CallerDisplayName;
+        }
+
+        // A PSTN destination is terminated through the outbound voice profile, but an internal SIP destination
+        // -- an extension call to another registered browser credential (sip:{cred}@...) -- must NOT carry one:
+        // with an outbound voice profile Telnyx routes the leg as an outbound/PSTN call and never delivers it to
+        // the registered credential, so it clears immediately without ringing. The agent leg reaches the caller's
+        // own credential the same way (no voice profile), which is why it connects and this one did not.
+        var destinationIsInternalSip = agentState.Destination is not null &&
+            agentState.Destination.StartsWith("sip:", StringComparison.OrdinalIgnoreCase);
+
+        if (!destinationIsInternalSip && !string.IsNullOrWhiteSpace(_options.OutboundVoiceProfileId))
         {
             body["outbound_voice_profile_id"] = _options.OutboundVoiceProfileId;
         }
@@ -331,6 +386,97 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while dialing the destination leg of a Telnyx outbound bridge.");
+        }
+    }
+
+    // Connect the caller's (agent) leg and the answered destination leg of an internal extension call by placing
+    // both into a conference, instead of a raw two-leg bridge. Two WebRTC legs bridged directly negotiate media
+    // but only pass audio one way on Telnyx; a conference mixes them and each WebRTC leg gets normal two-way
+    // media with the mixer. The conference is named after the agent leg so both legs resolve the same one.
+    private async Task ConnectExtensionViaConferenceAsync(
+        string agentLegCallControlId,
+        string destinationLegCallControlId,
+        CancellationToken cancellationToken)
+    {
+        var conferenceName = $"ext-{agentLegCallControlId}";
+
+        try
+        {
+            using var client = CreateClient();
+
+            // Form the conference from the destination (callee) leg, then join the caller's (agent) leg with
+            // end_conference_on_exit so that when the caller hangs up, Telnyx ends the conference and drops the
+            // callee too. (A conference, unlike a raw bridge, otherwise leaves the remaining participant connected
+            // when the other hangs up.) The reverse direction -- the callee hanging up first -- is handled by the
+            // destination-leg hangup path, which hangs up the caller's leg.
+            var conferenceId = await EnsureConferenceAsync(client, conferenceName, destinationLegCallControlId, cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(conferenceId))
+            {
+                _logger.LogError(
+                    "Could not resolve the Telnyx conference '{ConferenceName}' to connect an internal extension call.",
+                    conferenceName.SanitizeLogValue());
+
+                return;
+            }
+
+            using var joinContent = JsonContent.Create(
+                new Dictionary<string, object>
+                {
+                    ["call_control_id"] = agentLegCallControlId,
+                    ["end_conference_on_exit"] = true,
+                    ["command_id"] = $"ext-join-{agentLegCallControlId}",
+                },
+                options: TelnyxJsonSerializerOptions.Default);
+            using var joinResponse = await client.PostAsync(
+                $"conferences/{Uri.EscapeDataString(conferenceId)}/actions/join",
+                joinContent,
+                cancellationToken);
+
+            if (!joinResponse.IsSuccessStatusCode)
+            {
+                _logger.LogError(
+                    "Telnyx rejected joining the caller leg to conference '{ConferenceName}' with status code {StatusCode}. Response: {Response}",
+                    conferenceName.SanitizeLogValue(),
+                    joinResponse.StatusCode,
+                    (await SafeReadContentAsync(joinResponse, cancellationToken)).SanitizeLogValue());
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "An error occurred while connecting an internal extension call through a Telnyx conference.");
+        }
+    }
+
+    private async Task HangupLegAsync(string callControlId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(callControlId))
+        {
+            return;
+        }
+
+        try
+        {
+            using var client = CreateClient();
+            using var response = await client.PostAsync(
+                $"calls/{Uri.EscapeDataString(callControlId)}/actions/hangup",
+                content: null,
+                cancellationToken);
+
+            // A leg that has already ended returns an error; that is expected (for example the caller hung up
+            // first, which ended the conference and this leg), so it is not logged as a failure.
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "An error occurred while hanging up the peer leg {CallControlId} of an internal extension call.", callControlId.SanitizeLogValue());
         }
     }
 

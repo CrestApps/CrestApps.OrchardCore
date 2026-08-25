@@ -57,6 +57,19 @@ public sealed partial class TelnyxTelephonyProvider
 
         var callerId = string.IsNullOrWhiteSpace(request.From) ? _options.DefaultOutboundCallerId : request.From;
 
+        // Record the exact SIP endpoints resolved for both legs. Comparing the target endpoint here to the
+        // credential the target browser actually registered with tells whether an unreachable destination leg is
+        // a stale-credential resolution mismatch or a target that simply is not registered.
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Extension dial resolved endpoints: caller {CallerEndpoint} -> target {TargetEndpoint} (extension {Extension}, target user {TargetUserId}).",
+                callerEndpoint.SanitizeLogValue(),
+                targetEndpoint.SanitizeLogValue(),
+                request.Extension.SanitizeLogValue(),
+                request.TargetUserId.SanitizeLogValue());
+        }
+
         // Ring the caller's browser first (agent leg), carrying the target endpoint as the destination to dial
         // once they answer. This is exactly the outbound browser-bridge flow, with a SIP target instead of a
         // PSTN number, so the existing bridge orchestrator advances it with no special-casing.
@@ -73,7 +86,8 @@ public sealed partial class TelnyxTelephonyProvider
             callerEndpoint,
             cancellationToken,
             voicemailRecipientUserId: request.TargetUserId,
-            ringTimeoutSeconds: ExtensionRingTimeoutSeconds);
+            ringTimeoutSeconds: ExtensionRingTimeoutSeconds,
+            callerDisplayName: request.CallerDisplayName);
 
         // Show the friendly extension/display name in history rather than the raw SIP uri that was dialed.
         if (result.Succeeded && result.Call is not null)

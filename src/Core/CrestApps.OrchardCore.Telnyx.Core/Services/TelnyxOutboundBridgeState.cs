@@ -52,6 +52,14 @@ public sealed class TelnyxOutboundBridgeState
     public string CallerId { get; set; }
 
     /// <summary>
+    /// Gets or sets the caller display name to present to the destination, so a callee ringing on an internal
+    /// extension call sees who is calling rather than only the caller-id number (agent-leg state only, carried to
+    /// the destination leg's <c>from_display_name</c>).
+    /// </summary>
+    [JsonPropertyName("n")]
+    public string CallerDisplayName { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent leg's call control id to bridge to once the destination answers
     /// (destination-leg state only).
     /// </summary>

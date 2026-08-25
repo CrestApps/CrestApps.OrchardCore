@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.Telephony.ViewModels;
 /// <summary>
 /// The editor fields for an internal extension, rendered by <c>ExtensionFields_Edit</c>.
 /// </summary>
-public sealed class TelephonyExtensionFieldsViewModel
+public class TelephonyExtensionFieldsViewModel
 {
     /// <summary>
     /// Gets or sets a value indicating whether the extension is being created.

@@ -256,7 +256,8 @@ public sealed partial class TelnyxTelephonyProvider :
         string agentEndpoint,
         CancellationToken cancellationToken,
         string voicemailRecipientUserId = null,
-        int? ringTimeoutSeconds = null)
+        int? ringTimeoutSeconds = null,
+        string callerDisplayName = null)
     {
         // Ring the agent's browser endpoint. The destination and caller id travel in client_state so the
         // webhook orchestration can dial the destination once the browser answers and then bridge the legs.
@@ -271,6 +272,7 @@ public sealed partial class TelnyxTelephonyProvider :
                 Intent = TelnyxOutboundBridgeState.AgentLegIntent,
                 Destination = request.To,
                 CallerId = callerId,
+                CallerDisplayName = callerDisplayName,
                 VoicemailRecipientUserId = voicemailRecipientUserId,
                 RingTimeoutSeconds = ringTimeoutSeconds,
             }.ToClientState(),
