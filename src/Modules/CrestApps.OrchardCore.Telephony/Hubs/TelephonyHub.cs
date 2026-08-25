@@ -1086,6 +1086,155 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         });
     }
 
+    /// <summary>
+    /// Receives a client-side diagnostic (an error, warning, or notable event surfaced in the browser) so
+    /// failures that would otherwise only appear in the agent's console become alertable server-side. The client
+    /// throttles and de-duplicates these before sending; the server maps the reported level to a log level and
+    /// sanitizes the free-text fields against log injection.
+    /// </summary>
+    /// <param name="level">The severity the client reported (<c>error</c>, <c>warning</c>, or <c>info</c>).</param>
+    /// <param name="code">A short, stable code identifying the kind of diagnostic (for example
+    /// <c>mic-permission-denied</c>).</param>
+    /// <param name="message">The human-readable message.</param>
+    /// <param name="context">Optional extra context (for example the failing operation).</param>
+    public async Task ReportClientDiagnostic(string level, string code, string message, string context)
+    {
+        if (string.IsNullOrEmpty(code) && string.IsNullOrEmpty(message))
+        {
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("ReportClientDiagnostic");
+                return;
+            }
+
+            var logLevel = ResolveDiagnosticLogLevel(level);
+
+            if (!_logger.IsEnabled(logLevel))
+            {
+                return;
+            }
+
+            _logger.Log(
+                logLevel,
+                "Telephony client diagnostic from user {UserId} on connection {ConnectionId}. Code={Code}, Message={Message}, Context={Context}.",
+                RedactedUserId(),
+                Context.ConnectionId.SanitizeLogValue(),
+                code.SanitizeLogValue(),
+                message.SanitizeLogValue(),
+                context.SanitizeLogValue());
+        });
+    }
+
+    private static LogLevel ResolveDiagnosticLogLevel(string level)
+    {
+        if (string.Equals(level, "error", StringComparison.OrdinalIgnoreCase))
+        {
+            return LogLevel.Error;
+        }
+
+        if (string.Equals(level, "info", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(level, "information", StringComparison.OrdinalIgnoreCase))
+        {
+            return LogLevel.Information;
+        }
+
+        // Default: treat anything else (including the common "warning") as a warning so a client problem is
+        // visible without being escalated to an error alert.
+        return LogLevel.Warning;
+    }
+
+    /// <summary>
+    /// Receives a browser-measured media-quality sample (or an end-of-call summary) for the current user's
+    /// call and logs it structured for observability and alerting. The server rates the report independently of
+    /// the browser's own poor flag so alerting does not depend on a client-supplied value, and chooses the log
+    /// severity from that rating so a poor connection surfaces as a warning without every periodic sample
+    /// flooding the log.
+    /// </summary>
+    /// <param name="report">The measured media-quality report.</param>
+    public async Task ReportCallQuality(CallQualityReport report)
+    {
+        if (report is null)
+        {
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("ReportCallQuality");
+                return;
+            }
+
+            var rating = TelephonyCallQualityEvaluator.Evaluate(report);
+
+            if (rating == CallQualityRating.Poor)
+            {
+                if (_logger.IsEnabled(LogLevel.Warning))
+                {
+                    _logger.LogWarning(
+                        "Telephony call quality {Rating} for user {UserId}. CallId={CallId}, Mos={Mos:F2}, Loss={Loss:F1}%, Jitter={Jitter:F0}ms, Rtt={Rtt:F0}ms, BytesReceived={Bytes}, Codec={Codec}, Ice={LocalIce}/{RemoteIce}, Final={Final}.",
+                        rating,
+                        RedactedUserId(),
+                        report.CallId.SanitizeLogValue(),
+                        report.Mos,
+                        report.LossPercent,
+                        report.JitterMs,
+                        report.RoundTripTimeMs,
+                        report.BytesReceived,
+                        report.Codec.SanitizeLogValue(),
+                        report.LocalCandidateType.SanitizeLogValue(),
+                        report.RemoteCandidateType.SanitizeLogValue(),
+                        report.Final);
+                }
+
+                return;
+            }
+
+            if (report.Final)
+            {
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Telephony call quality summary ({Rating}) for user {UserId}. CallId={CallId}, AvgMos={AvgMos:F2}, MinMos={MinMos:F2}, MaxLoss={MaxLoss:F1}%, Samples={Samples}, DurationMs={Duration}, Codec={Codec}, Ice={LocalIce}/{RemoteIce}.",
+                        rating,
+                        RedactedUserId(),
+                        report.CallId.SanitizeLogValue(),
+                        report.AvgMos,
+                        report.MinMos,
+                        report.MaxLossPercent,
+                        report.SampleCount,
+                        report.DurationMs,
+                        report.Codec.SanitizeLogValue(),
+                        report.LocalCandidateType.SanitizeLogValue(),
+                        report.RemoteCandidateType.SanitizeLogValue());
+                }
+
+                return;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Telephony call quality sample ({Rating}) for user {UserId}. CallId={CallId}, Mos={Mos:F2}, Loss={Loss:F1}%, Jitter={Jitter:F0}ms, Rtt={Rtt:F0}ms, BytesReceived={Bytes}, Codec={Codec}.",
+                    rating,
+                    RedactedUserId(),
+                    report.CallId.SanitizeLogValue(),
+                    report.Mos,
+                    report.LossPercent,
+                    report.JitterMs,
+                    report.RoundTripTimeMs,
+                    report.BytesReceived,
+                    report.Codec.SanitizeLogValue());
+            }
+        });
+    }
+
     private async Task RecordInteractionAsync(
         IServiceProvider services,
         string actionName,
