@@ -16,6 +16,14 @@ public sealed class SoftPhoneWidgetSettings
     public const int DefaultRecentCallsCount = 30;
 
     /// <summary>
+    /// Gets or sets a value indicating whether the soft phone widget is enabled at all. This is a kill switch:
+    /// when turned off, the widget is not injected on the admin dashboard, its styles and scripts are not
+    /// registered, and a front-end placement does not render -- so the soft phone can be shut off site-wide
+    /// instantly without a redeploy (for example during an incident). Defaults to enabled.
+    /// </summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the floating soft phone widget is shown on the admin dashboard.
     /// </summary>
     public bool DisplayOnAdmin { get; set; } = true;

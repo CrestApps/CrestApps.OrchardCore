@@ -7,6 +7,7 @@ using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Telephony.Drivers;
 
@@ -23,6 +24,7 @@ public sealed class SoftPhonePartDisplayDriver : ContentPartDisplayDriver<SoftPh
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ISiteService _siteService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SoftPhonePartDisplayDriver"/> class.
@@ -32,18 +34,21 @@ public sealed class SoftPhonePartDisplayDriver : ContentPartDisplayDriver<SoftPh
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
+    /// <param name="siteService">The site service used to read the soft phone widget settings.</param>
     public SoftPhonePartDisplayDriver(
         ISoftPhoneWidgetPresenter presenter,
         IDisplayManager<SoftPhoneWidget> softPhoneDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IAuthorizationService authorizationService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        ISiteService siteService)
     {
         _presenter = presenter;
         _softPhoneDisplayManager = softPhoneDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
+        _siteService = siteService;
     }
 
     public override async Task<IDisplayResult> DisplayAsync(SoftPhonePart part, BuildPartDisplayContext context)
@@ -52,6 +57,14 @@ public sealed class SoftPhonePartDisplayDriver : ContentPartDisplayDriver<SoftPh
 
         if (user?.Identity?.IsAuthenticated != true ||
             !await _authorizationService.AuthorizeAsync(user, TelephonyPermissions.UseSoftPhone))
+        {
+            return null;
+        }
+
+        // Kill switch: a disabled soft phone does not render even where the widget is explicitly placed.
+        var settings = await _siteService.GetSettingsAsync<SoftPhoneWidgetSettings>();
+
+        if (settings is not null && !settings.Enabled)
         {
             return null;
         }

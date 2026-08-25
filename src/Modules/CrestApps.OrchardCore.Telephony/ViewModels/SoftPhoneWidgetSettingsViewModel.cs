@@ -8,6 +8,11 @@ namespace CrestApps.OrchardCore.Telephony.ViewModels;
 public class SoftPhoneWidgetSettingsViewModel
 {
     /// <summary>
+    /// Gets or sets a value indicating whether the soft phone widget is enabled site-wide (the kill switch).
+    /// </summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the floating soft phone widget is shown on the admin dashboard.
     /// </summary>
     public bool DisplayOnAdmin { get; set; }

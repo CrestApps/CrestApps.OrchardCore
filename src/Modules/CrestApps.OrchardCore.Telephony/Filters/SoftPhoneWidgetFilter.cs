@@ -73,7 +73,9 @@ public sealed class SoftPhoneWidgetFilter : IAsyncResultFilter
 
         var settings = await _siteService.GetSettingsAsync<SoftPhoneWidgetSettings>();
 
-        if (settings is null)
+        // Kill switch: when the widget is disabled site-wide, inject nothing and register no resources, so the
+        // soft phone is fully off everywhere without a redeploy.
+        if (settings is null || !settings.Enabled)
         {
             await next();
 

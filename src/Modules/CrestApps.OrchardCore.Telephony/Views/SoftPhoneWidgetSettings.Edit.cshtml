@@ -3,6 +3,16 @@
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
         <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" checked="@Model.Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Enable the soft phone"]</label>
+            <span class="hint">@T["Master switch for the soft phone. When turned off, the widget is not shown anywhere and its scripts are not loaded, so it can be shut off site-wide instantly without a redeploy."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="DisplayOnAdmin" checked="@Model.DisplayOnAdmin" />
             <label class="form-check-label" asp-for="DisplayOnAdmin">@T["Show the soft phone on the admin dashboard"]</label>
             <span class="hint">@T["Displays the floating soft phone on admin pages for users who can use the soft phone. To show it on the front end, add the Soft Phone widget to your site from Design &gt; Widgets."]</span>

@@ -45,6 +45,7 @@ public sealed class SoftPhoneWidgetSettingsDisplayDriver : SiteDisplayDriver<Sof
     {
         return Initialize<SoftPhoneWidgetSettingsViewModel>("SoftPhoneWidgetSettings_Edit", model =>
         {
+            model.Enabled = settings.Enabled;
             model.DisplayOnAdmin = settings.DisplayOnAdmin;
             model.AccentColor = string.IsNullOrWhiteSpace(settings.AccentColor)
                 ? SoftPhoneWidgetSettings.DefaultAccentColor
@@ -72,6 +73,7 @@ public sealed class SoftPhoneWidgetSettingsDisplayDriver : SiteDisplayDriver<Sof
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        settings.Enabled = model.Enabled;
         settings.DisplayOnAdmin = model.DisplayOnAdmin;
         settings.AccentColor = string.IsNullOrWhiteSpace(model.AccentColor)
             ? SoftPhoneWidgetSettings.DefaultAccentColor
