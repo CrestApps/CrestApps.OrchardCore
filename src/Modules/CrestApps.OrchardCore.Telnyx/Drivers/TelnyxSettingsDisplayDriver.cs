@@ -69,13 +69,14 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             model.SipConnectionId = settings.SipConnectionId;
             model.OutboundVoiceProfileId = settings.OutboundVoiceProfileId;
             model.DefaultOutboundCallerId = settings.DefaultOutboundCallerId;
-            model.CredentialLifetimeMinutes = settings.CredentialLifetimeMinutes > 0 ? settings.CredentialLifetimeMinutes : 60;
+            model.CredentialLifetimeMinutes = settings.CredentialLifetimeMinutes > 0 ? settings.CredentialLifetimeMinutes : 180;
             model.SipWebSocketUrl = settings.SipWebSocketUrl;
             model.SipDomain = settings.SipDomain;
             model.WebRtcCodecs = settings.WebRtcCodecs;
             model.IceUrls = settings.IceUrls;
             model.TurnUsername = settings.TurnUsername;
             model.IceTransportPolicy = settings.IceTransportPolicy;
+            model.EchoTestDestination = settings.EchoTestDestination;
             model.ApiBaseUrl = settings.ApiBaseUrl;
             model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
             model.HasWebhookPublicKey = !string.IsNullOrEmpty(settings.WebhookPublicKey);
@@ -129,6 +130,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             hasChanges |= settings.IceUrls != Trim(model.IceUrls);
             hasChanges |= settings.TurnUsername != Trim(model.TurnUsername);
             hasChanges |= settings.IceTransportPolicy != Trim(model.IceTransportPolicy);
+            hasChanges |= settings.EchoTestDestination != Trim(model.EchoTestDestination);
             hasChanges |= settings.ApiBaseUrl != Trim(model.ApiBaseUrl);
             hasChanges |= settings.CredentialLifetimeMinutes != NormalizeLifetime(model.CredentialLifetimeMinutes);
 
@@ -139,6 +141,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             settings.IceUrls = Trim(model.IceUrls);
             settings.TurnUsername = Trim(model.TurnUsername);
             settings.IceTransportPolicy = Trim(model.IceTransportPolicy);
+            settings.EchoTestDestination = Trim(model.EchoTestDestination);
             settings.ApiBaseUrl = Trim(model.ApiBaseUrl);
             settings.CredentialLifetimeMinutes = NormalizeLifetime(model.CredentialLifetimeMinutes);
 
@@ -195,5 +198,5 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static int NormalizeLifetime(int minutes)
-        => minutes > 0 ? minutes : 60;
+        => minutes > 0 ? minutes : 180;
 }

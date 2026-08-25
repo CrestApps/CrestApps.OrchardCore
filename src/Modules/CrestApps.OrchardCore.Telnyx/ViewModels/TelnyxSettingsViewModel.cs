@@ -61,7 +61,7 @@ public class TelnyxSettingsViewModel
     /// <summary>
     /// Gets or sets the browser SIP credential lifetime in minutes.
     /// </summary>
-    public int CredentialLifetimeMinutes { get; set; } = 60;
+    public int CredentialLifetimeMinutes { get; set; } = 180;
 
     /// <summary>
     /// Gets or sets the SIP-over-WebSocket signaling URL.
@@ -102,6 +102,11 @@ public class TelnyxSettingsViewModel
     /// Gets or sets the ICE transport policy.
     /// </summary>
     public string IceTransportPolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional echo/loopback destination used by the soft phone's audio test and canary.
+    /// </summary>
+    public string EchoTestDestination { get; set; }
 
     /// <summary>
     /// Gets or sets the optional REST API base address override.

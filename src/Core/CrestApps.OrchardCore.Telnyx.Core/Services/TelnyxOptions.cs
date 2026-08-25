@@ -33,9 +33,13 @@ public sealed class TelnyxOptions
     public string OutboundVoiceProfileId { get; set; }
 
     /// <summary>
-    /// Gets or sets the browser SIP credential lifetime in minutes.
+    /// Gets or sets the browser SIP credential lifetime in minutes. Defaults to 180 (three hours) so a long
+    /// call is unlikely to outlast its credential -- renewal is deferred during a live call to avoid dropping
+    /// media, so a call longer than this can lose its registration at expiry until the call ends. The per-user
+    /// live-credential cap tolerates the longer lifetime because a renewing soft phone revokes the exact
+    /// credential it supersedes, keeping the live count near one.
     /// </summary>
-    public int CredentialLifetimeMinutes { get; set; } = 60;
+    public int CredentialLifetimeMinutes { get; set; } = 180;
 
     /// <summary>
     /// Gets or sets the default outbound caller identifier.
@@ -81,6 +85,13 @@ public sealed class TelnyxOptions
     /// Gets or sets the ICE transport policy advertised to the browser.
     /// </summary>
     public string IceTransportPolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional echo/loopback destination (a Telnyx number or SIP URI that echoes audio back)
+    /// the diagnostics "Run audio test" action and the canary dial to verify round-trip audio. When empty, the
+    /// audio test is unavailable.
+    /// </summary>
+    public string EchoTestDestination { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the provider has the minimum configuration required to place and

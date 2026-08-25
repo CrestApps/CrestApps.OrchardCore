@@ -38,10 +38,12 @@ public sealed class TelnyxSettings
     public string OutboundVoiceProfileId { get; set; }
 
     /// <summary>
-    /// Gets or sets the browser SIP credential lifetime in minutes. Browser credentials are short-lived so
-    /// a lost session cannot register indefinitely.
+    /// Gets or sets the browser SIP credential lifetime in minutes. Browser credentials are short-lived so a
+    /// lost session cannot register indefinitely. Defaults to 180 (three hours): long enough that an ordinary
+    /// call does not outlast its credential (renewal is deferred during a live call to avoid dropping media),
+    /// short enough that an abandoned registration expires within the working day.
     /// </summary>
-    public int CredentialLifetimeMinutes { get; set; } = 60;
+    public int CredentialLifetimeMinutes { get; set; } = 180;
 
     /// <summary>
     /// Gets or sets the default caller identifier (E.164) presented on outbound calls when no per-agent or
@@ -100,4 +102,11 @@ public sealed class TelnyxSettings
     /// <c>relay</c>).
     /// </summary>
     public string IceTransportPolicy { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional echo/loopback destination (a Telnyx number or SIP URI that echoes audio back)
+    /// used by the diagnostics "Run audio test" action and the health canary to verify round-trip audio
+    /// without a second person. When empty, the audio test is unavailable.
+    /// </summary>
+    public string EchoTestDestination { get; set; }
 }

@@ -49,6 +49,17 @@ public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneReg
 
         var codecs = ParseDelimited(_options.WebRtcCodecs);
 
+        if (codecs.Count == 0)
+        {
+            // Default codec preference: Opus first (best quality and loss resilience) then the codecs Telnyx
+            // actually negotiates on its SIP/PSTN/conference media paths. The browser applies this only to the
+            // ordering of its SDP offer (via setCodecPreferences); Telnyx's answer picks the final codec, so
+            // Opus is used only if Telnyx supports it on the path. Today Telnyx transcodes those legs to
+            // G711/G722, so Opus is not negotiated -- this default keeps a clean, explicit preference so Opus is
+            // used automatically if Telnyx ever enables it, without fabricating a capability that does not exist.
+            codecs = ["opus", "G722", "PCMU", "PCMA"];
+        }
+
         return new SoftPhoneRegistrationConfig
         {
             Provider = TelnyxConstants.ProviderTechnicalName,
@@ -84,6 +95,7 @@ public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneReg
             // the newCall callerNumber.
             ClientOriginatesCalls = true,
             OutboundCallerId = _options.DefaultOutboundCallerId,
+            EchoTestDestination = _options.EchoTestDestination,
         };
     }
 

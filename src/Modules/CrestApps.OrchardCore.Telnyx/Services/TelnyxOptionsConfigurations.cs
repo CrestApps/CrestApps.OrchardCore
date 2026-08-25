@@ -43,7 +43,7 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
             ? settings.ConnectionId?.Trim()
             : settings.SipConnectionId.Trim();
         options.OutboundVoiceProfileId = settings.OutboundVoiceProfileId?.Trim();
-        options.CredentialLifetimeMinutes = settings.CredentialLifetimeMinutes > 0 ? settings.CredentialLifetimeMinutes : 60;
+        options.CredentialLifetimeMinutes = settings.CredentialLifetimeMinutes > 0 ? settings.CredentialLifetimeMinutes : 180;
         options.DefaultOutboundCallerId = settings.DefaultOutboundCallerId?.Trim();
         options.ApiKey = string.IsNullOrEmpty(settings.ApiKey) ? null : Unprotect(apiKeyProtector, settings.ApiKey);
         options.TurnCredential = string.IsNullOrEmpty(settings.TurnCredential) ? null : Unprotect(apiKeyProtector, settings.TurnCredential);
@@ -57,6 +57,7 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
         options.SipDomain = string.IsNullOrWhiteSpace(settings.SipDomain)
             ? TelnyxConstants.DefaultSipDomain
             : settings.SipDomain.Trim();
+        options.EchoTestDestination = settings.EchoTestDestination?.Trim();
 
         options.ApiBaseUrl = ResolveApiBaseUrl(settings.ApiBaseUrl);
     }

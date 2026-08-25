@@ -104,6 +104,12 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="EchoTestDestination">@T["Audio test destination"]</label>
+                <input type="text" class="form-control" asp-for="EchoTestDestination" placeholder="+15551234567" />
+                <span class="hint">@T["Optional. A Telnyx number or SIP URI that echoes audio back. Enables the soft phone's diagnostics 'Run audio test' action (and the health canary) to verify round-trip audio without a second person."]</span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="SipWebSocketUrl">@T["SIP WebSocket URL"]</label>
                 <input type="text" class="form-control" asp-for="SipWebSocketUrl" placeholder="wss://sip.telnyx.com" />
             </div>

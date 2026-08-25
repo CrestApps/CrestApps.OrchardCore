@@ -49,4 +49,10 @@ public sealed class SoftPhoneRegistrationConfig
     /// P-Asserted-Identity). Ignored when <see cref="ClientOriginatesCalls"/> is <see langword="false"/>.
     /// </summary>
     public string OutboundCallerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional echo/loopback destination the diagnostics "Run audio test" action dials to
+    /// verify round-trip audio without a second person. When empty, the audio test is unavailable.
+    /// </summary>
+    public string EchoTestDestination { get; set; }
 }
