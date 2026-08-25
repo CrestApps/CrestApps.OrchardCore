@@ -190,6 +190,14 @@
             }
             <button type="button"
                     class="telephony-soft-phone__icon-btn"
+                    data-telephony-settings-toggle
+                    title="@T["Settings"]"
+                    aria-label="@T["Settings"]"
+                    hidden>
+                <i class="fa-solid fa-gear"></i>
+            </button>
+            <button type="button"
+                    class="telephony-soft-phone__icon-btn"
                     data-telephony-disconnect
                     title="@T["Disconnect provider"]"
                     aria-label="@T["Disconnect provider"]"
@@ -207,6 +215,39 @@
             <button type="button" class="telephony-soft-phone__connect-btn btn btn-primary" data-telephony-connect>
                 <i class="fa-solid fa-link"></i> @T["Connect to provider"]
             </button>
+        </div>
+
+        <div class="telephony-soft-phone__settings" data-telephony-settings-panel hidden>
+            <div class="telephony-soft-phone__settings-header">
+                <button type="button"
+                        class="telephony-soft-phone__settings-back"
+                        data-telephony-settings-back
+                        title="@T["Back"]"
+                        aria-label="@T["Back"]">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <span class="telephony-soft-phone__settings-title">@T["Settings"]</span>
+            </div>
+
+            <div class="telephony-soft-phone__settings-section">
+                <div class="telephony-soft-phone__settings-group-title">@T["Audio devices"]</div>
+                <label class="telephony-soft-phone__setting">
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-microphone" aria-hidden="true"></i> @T["Microphone"]
+                    </span>
+                    <select class="form-select form-select-sm"
+                            data-telephony-input-device
+                            aria-label="@T["Microphone"]"></select>
+                </label>
+                <label class="telephony-soft-phone__setting" data-telephony-output-device-row>
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i> @T["Speaker"]
+                    </span>
+                    <select class="form-select form-select-sm"
+                            data-telephony-output-device
+                            aria-label="@T["Speaker"]"></select>
+                </label>
+            </div>
         </div>
 
         <div class="telephony-soft-phone__body" data-telephony-body>
@@ -243,21 +284,6 @@
                         hidden>
                     <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> @T["Retry microphone"]
                 </button>
-
-                <div class="telephony-soft-phone__devices" data-telephony-devices hidden>
-                    <label class="telephony-soft-phone__device">
-                        <i class="fa-solid fa-microphone" aria-hidden="true"></i>
-                        <select class="telephony-soft-phone__device-select"
-                                data-telephony-input-device
-                                aria-label="@T["Microphone"]"></select>
-                    </label>
-                    <label class="telephony-soft-phone__device" data-telephony-output-device-row>
-                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
-                        <select class="telephony-soft-phone__device-select"
-                                data-telephony-output-device
-                                aria-label="@T["Speaker"]"></select>
-                    </label>
-                </div>
 
                 <div class="telephony-soft-phone__diagnostics" data-telephony-diagnostics hidden>
                     <div class="telephony-soft-phone__diag-title">@T["Diagnostics"]</div>

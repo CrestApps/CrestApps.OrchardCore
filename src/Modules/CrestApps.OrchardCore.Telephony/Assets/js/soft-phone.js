@@ -1087,6 +1087,16 @@
             reportSignalingDegraded(false);
         });
 
+        // On every (re)connect, clear any stale transient error banner -- most importantly a LOGIN_FAILED that
+        // has since recovered (for example after a brief credential churn), which would otherwise linger on the
+        // widget even though the client is connected again.
+        client.on('telnyx.ready', function () {
+            if (!disposed) {
+                context.showError(null);
+                reportSignalingDegraded(false);
+            }
+        });
+
         // Resolve the session only once the client has logged in (telnyx.ready); newCall/answer require a
         // live session.
         return new Promise(function (resolve, reject) {
@@ -1417,7 +1427,9 @@
             dialModeLabel: rootElement.querySelector('[data-telephony-dial-mode-label]'),
             error: rootElement.querySelector('[data-telephony-error]'),
             micRetry: rootElement.querySelector('[data-telephony-mic-retry]'),
-            devices: rootElement.querySelector('[data-telephony-devices]'),
+            settingsToggle: rootElement.querySelector('[data-telephony-settings-toggle]'),
+            settingsPanel: rootElement.querySelector('[data-telephony-settings-panel]'),
+            settingsBack: rootElement.querySelector('[data-telephony-settings-back]'),
             inputDevice: rootElement.querySelector('[data-telephony-input-device]'),
             outputDevice: rootElement.querySelector('[data-telephony-output-device]'),
             outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
@@ -1520,6 +1532,9 @@
         // permission/device reason; drives an actionable message plus a Retry affordance (distinct from a generic
         // transient error). Cleared on a successful capture or when the agent retries.
         var micPermissionState = null;
+        // Whether the settings overlay (opened from the header gear) is showing. It holds the audio device
+        // pickers off the keypad; it is an overlay, not a footer tab.
+        var settingsOpen = false;
         // Controllers for calls the browser originated itself (client-originated providers such as Telnyx),
         // keyed by the synthetic call id. Server-tracked calls are not in this map.
         var browserCallControllers = {};
@@ -1992,11 +2007,29 @@
                 if (dom.outputDeviceRow) {
                     dom.outputDeviceRow.hidden = !sinkSupported;
                 }
-
-                var labelsKnown = inputs.some(function (device) { return !!device.label; });
-                var hasChoice = inputs.length > 1 || (sinkSupported && outputs.length > 1);
-                show(dom.devices, labelsKnown && hasChoice);
             }).catch(function () { /* best effort */ });
+        }
+
+        // Settings overlay (opened from the header gear). It hosts the audio device pickers off the keypad. It is
+        // an overlay over the widget body, not a footer tab, so it never adds a tab to the strip.
+        function openSettings() {
+            settingsOpen = true;
+            // Refresh the device lists on open so newly attached devices appear.
+            populateDevicePickers();
+            render();
+        }
+
+        function closeSettings() {
+            settingsOpen = false;
+            render();
+        }
+
+        function toggleSettings() {
+            if (settingsOpen) {
+                closeSettings();
+            } else {
+                openSettings();
+            }
         }
 
         function onInputDeviceChange() {
@@ -3427,6 +3460,28 @@
             // The gated diagnostics panel (companion tooling) is shown only when ?diag=1 is present.
             if (dom.diagnostics) {
                 show(dom.diagnostics, diagnosticsEnabled);
+            }
+
+            // The header gear opens the settings overlay, offered only when the soft phone uses browser audio
+            // (the only setting today is audio device selection).
+            if (dom.settingsToggle) {
+                show(dom.settingsToggle, isBrowserAudioEnabled());
+            }
+
+            // The settings overlay replaces the body/footer while open (like the connect panel). The header
+            // stays visible so the gear, back, and close controls remain reachable.
+            if (settingsOpen && isBrowserAudioEnabled()) {
+                show(dom.settingsPanel, true);
+                show(dom.connectPanel, false);
+                show(dom.unavailable, false);
+                setBodyVisible(false);
+                show(dom.footer, false);
+
+                return;
+            }
+
+            if (dom.settingsPanel) {
+                show(dom.settingsPanel, false);
             }
 
             var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
@@ -5516,6 +5571,14 @@
 
             if (dom.micRetry) {
                 dom.micRetry.addEventListener('click', retryMicrophone);
+            }
+
+            if (dom.settingsToggle) {
+                dom.settingsToggle.addEventListener('click', toggleSettings);
+            }
+
+            if (dom.settingsBack) {
+                dom.settingsBack.addEventListener('click', closeSettings);
             }
 
             if (dom.inputDevice) {
