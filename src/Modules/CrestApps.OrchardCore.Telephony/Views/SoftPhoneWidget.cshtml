@@ -183,7 +183,7 @@
     <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
         <audio data-telephony-remote-audio autoplay></audio>
         <div class="telephony-soft-phone__header" data-telephony-drag-handle>
-            <span class="telephony-soft-phone__title">@T["Phone"]</span>
+            <span class="telephony-soft-phone__header-status" data-telephony-status>@T["Not Ready"]</span>
             @if (Model.HeaderActions != null)
             {
                 @await DisplayAsync(Model.HeaderActions)
@@ -258,9 +258,6 @@
 
             <div class="telephony-soft-phone__view" data-telephony-view="keypad">
                 <div class="telephony-soft-phone__display">
-                    <div class="telephony-soft-phone__display-meta">
-                        <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
-                    </div>
                     <input type="tel"
                            class="telephony-soft-phone__number"
                            data-telephony-number

@@ -58,6 +58,16 @@
   font-weight: 600;
   margin-right: auto;
 }
+.telephony-soft-phone__header-status {
+  margin-right: auto;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 10rem;
+}
 .telephony-soft-phone__header-actions {
   margin-left: auto;
   display: flex;

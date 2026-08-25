@@ -68,6 +68,19 @@
         margin-right: auto;
     }
 
+    // The live call status sits on the left of the header (replacing the redundant "Phone" title) so it is
+    // visible on every tab, including the degraded-state messages ("Reconnecting...", "Poor connection").
+    &__header-status {
+        margin-right: auto;
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 10rem;
+    }
+
     &__header-actions {
         margin-left: auto;
         display: flex;
