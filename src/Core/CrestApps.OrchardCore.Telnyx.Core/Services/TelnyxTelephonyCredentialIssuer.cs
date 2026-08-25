@@ -29,6 +29,7 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
     private readonly ITelnyxAgentCredentialStore _credentialStore;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly ISoftPhoneHealthMetrics _healthMetrics;
     private readonly TelnyxOptions _options;
 
     /// <summary>
@@ -39,12 +40,14 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
         ITelnyxAgentCredentialStore credentialStore,
         IClock clock,
         ILogger<TelnyxTelephonyCredentialIssuer> logger,
+        ISoftPhoneHealthMetrics healthMetrics,
         IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
         _httpClientFactory = httpClientFactory;
         _credentialStore = credentialStore;
         _clock = clock;
         _logger = logger;
+        _healthMetrics = healthMetrics;
         _options = telnyxOptions.CurrentValue;
     }
 
@@ -83,6 +86,8 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
                     response.StatusCode,
                     (await SafeReadContentAsync(response, cancellationToken)).SanitizeLogValue());
 
+                _healthMetrics.RecordCredentialFailure();
+
                 return null;
             }
 
@@ -92,6 +97,8 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
             if (!document.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
             {
                 _logger.LogError("Telnyx returned a telephony credential response without a data object.");
+
+                _healthMetrics.RecordCredentialFailure();
 
                 return null;
             }
@@ -106,6 +113,8 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
             {
                 _logger.LogError("Telnyx returned an incomplete telephony credential (missing id, sip_username, or sip_password).");
 
+                _healthMetrics.RecordCredentialFailure();
+
                 return null;
             }
 
@@ -119,6 +128,8 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
                 IssuedUtc = now,
                 ExpiresUtc = expiresAt,
             }, cancellationToken);
+
+            _healthMetrics.RecordCredentialIssued();
 
             return new TelnyxTelephonyCredential
             {
@@ -135,6 +146,8 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while issuing a Telnyx browser credential.");
+
+            _healthMetrics.RecordCredentialFailure();
 
             return null;
         }

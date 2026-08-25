@@ -83,6 +83,12 @@ public sealed class Startup : StartupBase
 
         services.AddIndexProvider<TelnyxAgentCredentialIndexProvider>();
         services.AddDataMigration<TelnyxAgentCredentialMigrations>();
+
+        // Soft-phone health metrics (companion tooling): a shell-lifetime recorder of credential-issuance and
+        // webhook-processing outcomes, plus a passive canary that logs the snapshot and warns on a low
+        // registration success rate.
+        services.AddSingleton<ISoftPhoneHealthMetrics, SoftPhoneHealthMetrics>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SoftPhoneHealthCanaryBackgroundTask>());
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

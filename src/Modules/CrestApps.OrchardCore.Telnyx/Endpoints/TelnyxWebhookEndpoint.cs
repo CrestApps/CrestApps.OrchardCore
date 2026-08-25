@@ -42,6 +42,10 @@ internal static class TelnyxWebhookEndpoint
     {
         var ingressLimiter = httpContext.RequestServices.GetService<IProviderWebhookIngressLimiter>();
         var inbox = httpContext.RequestServices.GetService<IProviderWebhookInbox>();
+        // Health metrics (companion tooling): count webhooks that pass validation and are processed vs. those
+        // that validate but cannot be parsed. Backpressure (429/503) and security rejections (auth/signature)
+        // are deliberately not counted as delivery failures.
+        var healthMetrics = httpContext.RequestServices.GetService<ISoftPhoneHealthMetrics>();
         var settings = await siteService.GetSettingsAsync<TelnyxSettings>();
 
         if (!settings.IsEnabled)
@@ -111,6 +115,8 @@ internal static class TelnyxWebhookEndpoint
                     "Rejected the Telnyx webhook because the validated payload could not be parsed. TraceIdentifier: {TraceIdentifier}",
                     httpContext.TraceIdentifier);
 
+                healthMetrics?.RecordWebhookProcessed(false);
+
                 return TypedResults.BadRequest();
             }
 
@@ -149,6 +155,8 @@ internal static class TelnyxWebhookEndpoint
                         CancellationToken.None);
                 }
 
+                healthMetrics?.RecordWebhookProcessed(true);
+
                 return TypedResults.Ok(new
                 {
                     accepted = true,
@@ -174,6 +182,8 @@ internal static class TelnyxWebhookEndpoint
                 if (inbox is null)
                 {
                     var result = await webhookService.ProcessAsync(callEvent, CancellationToken.None);
+
+                    healthMetrics?.RecordWebhookProcessed(true);
 
                     return TypedResults.Ok(new
                     {
@@ -204,6 +214,8 @@ internal static class TelnyxWebhookEndpoint
                     // A concurrent worker won ownership during immediate dispatch. The delivery is already
                     // durably accepted, so the background inbox completes it in a fresh scope.
                 }
+
+                healthMetrics?.RecordWebhookProcessed(true);
 
                 return TypedResults.Ok(new
                 {
