@@ -108,8 +108,23 @@ public static class TelephonyConstants
         public const string Area = "CrestApps.OrchardCore.Telephony";
 
         /// <summary>
-        /// The identifier of the soft phone feature.
+        /// The identifier of the shared soft phone client feature. It is enabled by dependency only and
+        /// carries the reusable soft phone component, presenter, and resources shared by the widget and the
+        /// browser-extension endpoint.
+        /// </summary>
+        public const string SoftPhoneCore = "CrestApps.OrchardCore.Telephony.SoftPhone.Core";
+
+        /// <summary>
+        /// The identifier of the soft phone widget feature. It adds the floating soft phone to the admin
+        /// dashboard and provides the placeable front-end Soft Phone widget.
         /// </summary>
         public const string SoftPhone = "CrestApps.OrchardCore.Telephony.SoftPhone";
+
+        /// <summary>
+        /// The identifier of the soft phone browser-extension feature. It exposes the standalone
+        /// <c>/softphone</c> page and its configuration endpoint that the CrestApps Soft Phone browser
+        /// extension hosts.
+        /// </summary>
+        public const string SoftPhoneExtension = "CrestApps.OrchardCore.Telephony.SoftPhone.Extension";
     }
 }

@@ -27,7 +27,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
     ContactCenterConstants.Feature.Agents,
     ContactCenterConstants.Feature.RealTime,
     ContactCenterConstants.Feature.Voice,
-    TelephonyConstants.Feature.SoftPhone)]
+    TelephonyConstants.Feature.SoftPhoneCore)]
 public sealed class AgentWorkspaceController : Controller
 {
     private readonly IAuthorizationService _authorizationService;

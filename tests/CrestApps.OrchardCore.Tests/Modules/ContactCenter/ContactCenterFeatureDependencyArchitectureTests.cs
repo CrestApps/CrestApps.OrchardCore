@@ -97,7 +97,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         Assert.Equal(
             [
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
-                "CrestApps.OrchardCore.Telephony.SoftPhone",
+                "CrestApps.OrchardCore.Telephony.SoftPhone.Core",
             ],
             softPhoneRequiredFeatures);
     }
@@ -186,7 +186,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         Assert.Equal(
             [
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
-                "CrestApps.OrchardCore.Telephony.SoftPhone",
+                "CrestApps.OrchardCore.Telephony.SoftPhone.Core",
             ],
             widgetOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
     }
@@ -335,7 +335,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 "CrestApps.OrchardCore.ContactCenter.Agents",
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
-                "CrestApps.OrchardCore.Telephony.SoftPhone",
+                "CrestApps.OrchardCore.Telephony.SoftPhone.Core",
             ],
             endpointOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
         Assert.Equal(
@@ -343,7 +343,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 "CrestApps.OrchardCore.ContactCenter.Agents",
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
                 "CrestApps.OrchardCore.ContactCenter.Voice",
-                "CrestApps.OrchardCore.Telephony.SoftPhone",
+                "CrestApps.OrchardCore.Telephony.SoftPhone.Core",
             ],
             navigationOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
         Assert.Contains(

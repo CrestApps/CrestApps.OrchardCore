@@ -39,7 +39,10 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
 
         app.MapHub<TestTelephonyHub>("/telephony");
         app.MapGet("/", (HttpContext context) => Results.Content(
-            BuildHtml(context.Request.Query.ContainsKey("browserAudio")),
+            BuildHtml(
+                context.Request.Query.ContainsKey("browserAudio"),
+                context.Request.Query.ContainsKey("embedded"),
+                context.Request.Query["answerCallId"]),
             "text/html; charset=utf-8"));
         app.MapGet("/soft-phone.js", () => ServeAsset("soft-phone.js"));
         app.MapGet("/telephony-client.js", () => ServeAsset("telephony-client.js"));
@@ -78,7 +81,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio)
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null)
     {
         var config = new Dictionary<string, object>
         {
@@ -113,6 +116,16 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
 
         var configJson = JsonSerializer.Serialize(config);
 
+        // When the standalone /softphone page hosts the phone (the browser extension case), the real Index view
+        // wraps the widget in an element flagged data-softphone-embedded and, on an answer handoff, carries the
+        // requested call id in data-softphone-answer-call-id. Reproduce that wrapper so the client's embedded and
+        // auto-answer behavior can be exercised against the real script.
+        var encodedAnswerCallId = System.Net.WebUtility.HtmlEncode(answerCallId ?? string.Empty);
+        var embeddedOpen = embedded
+            ? $"<div class=\"softphone-standalone\" data-softphone-embedded=\"true\" data-softphone-answer-call-id=\"{encodedAnswerCallId}\">"
+            : string.Empty;
+        var embeddedClose = embedded ? "</div>" : string.Empty;
+
         return $$"""
         <!DOCTYPE html>
         <html lang="en">
@@ -121,6 +134,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             <title>Soft Phone Test</title>
         </head>
         <body>
+            {{embeddedOpen}}
             <div id="telephony-soft-phone" data-config='{{configJson}}'>
                 <button type="button" data-telephony-toggle><i class="fa-solid fa-phone" data-telephony-toggle-icon></i></button>
                 <div data-telephony-panel hidden>
@@ -182,6 +196,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     </div>
                 </div>
             </div>
+            {{embeddedClose}}
             <script src="/signalr.js"></script>
             <script src="/telephony-client.js"></script>
             <script src="/soft-phone.js"></script>

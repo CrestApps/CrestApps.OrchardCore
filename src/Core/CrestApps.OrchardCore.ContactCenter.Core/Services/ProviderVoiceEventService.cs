@@ -288,9 +288,17 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                 : providerEvent.SequenceNumber.Value;
         }
 
-        var startsWrapUp = IsTerminalState(providerEvent.State) &&
+        // A handled call ending is what releases the agent from the interaction. Whether that release parks the
+        // agent in wrap-up or returns them straight to a ready state depends on how the call was routed.
+        var handledCallEnded = IsTerminalState(providerEvent.State) &&
             !string.IsNullOrEmpty(session.AgentId) &&
             (session.AnsweredUtc.HasValue || interaction.AnsweredUtc.HasValue);
+
+        // Wrap-up (after-call work) is only for ACD-routed queue and campaign work, where the platform manages
+        // the agent's status so they can document and disposition the interaction before the next assignment. A
+        // direct-to-agent (personal line) call is treated like a manual call: there is nothing to disposition, so
+        // the agent goes back to their ready state rather than into wrap-up.
+        var startsWrapUp = handledCallEnded && ContactCenterConstants.QueueStartsAfterCallWork(interaction.QueueId);
 
         if (startsWrapUp)
         {
@@ -303,6 +311,13 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         if (startsWrapUp)
         {
             await _presenceManager.StartWrapUpAsync(session.AgentId, cancellationToken);
+        }
+        else if (handledCallEnded)
+        {
+            // A direct or manual call leaves no after-call work, so completing the agent's work here returns them
+            // to their ready state immediately. CompleteWorkAsync is a no-op unless the agent is actually parked in
+            // an on-call state, so a call that never moved the agent into Busy is unaffected.
+            await _presenceManager.CompleteWorkAsync(session.AgentId, cancellationToken);
         }
 
         foreach (var eventType in ResolveEventTypes(

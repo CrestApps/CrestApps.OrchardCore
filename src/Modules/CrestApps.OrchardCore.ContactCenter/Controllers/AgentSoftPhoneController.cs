@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 [RequireFeatures(
     ContactCenterConstants.Feature.Voice,
     ContactCenterConstants.Feature.RealTime,
-    TelephonyConstants.Feature.SoftPhone)]
+    TelephonyConstants.Feature.SoftPhoneCore)]
 public sealed class AgentSoftPhoneController : Controller
 {
     private readonly IAgentPresenceManager _presenceManager;

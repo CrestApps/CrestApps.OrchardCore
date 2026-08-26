@@ -39,6 +39,7 @@ namespace CrestApps.OrchardCore.Telephony
     public interface ISoftPhoneCredentialRevoker
     {
         string ProviderName { get; }
+        System.Threading.Tasks.Task<bool> RevokeCredentialAsync(string userId, string credentialId, string reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> RevokeForUserAsync(string userId, string reason, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISoftPhoneRegistrationConfigContributor
@@ -244,10 +245,16 @@ namespace CrestApps.OrchardCore.Telephony
         {
             public const string OAuth2 = "oauth2";
         }
+        public static class CallMetadata
+        {
+            public const string ExtensionNumber = "extensionNumber";
+        }
         public static class Feature
         {
             public const string Area = "CrestApps.OrchardCore.Telephony";
             public const string SoftPhone = "CrestApps.OrchardCore.Telephony.SoftPhone";
+            public const string SoftPhoneCore = "CrestApps.OrchardCore.Telephony.SoftPhone.Core";
+            public const string SoftPhoneExtension = "CrestApps.OrchardCore.Telephony.SoftPhone.Extension";
         }
         public static class RequestMetadata
         {
@@ -316,6 +323,35 @@ namespace CrestApps.OrchardCore.Telephony.Models
         Failed = 4,
         Canceled = 5,
     }
+    public enum CallQualityRating
+    {
+        Good = 0,
+        Degraded = 1,
+        Poor = 2,
+    }
+    public sealed class CallQualityReport
+    {
+        public CallQualityReport() { }
+        public double AvgMos { get; set; }
+        public long BytesReceived { get; set; }
+        public string CallId { get; set; }
+        public string Codec { get; set; }
+        public string Direction { get; set; }
+        public long DurationMs { get; set; }
+        public bool Final { get; set; }
+        public double JitterMs { get; set; }
+        public string LocalCandidateType { get; set; }
+        public double LossPercent { get; set; }
+        public double MaxLossPercent { get; set; }
+        public double MinMos { get; set; }
+        public double Mos { get; set; }
+        public long PacketsLost { get; set; }
+        public long PacketsReceived { get; set; }
+        public bool Poor { get; set; }
+        public string RemoteCandidateType { get; set; }
+        public double RoundTripTimeMs { get; set; }
+        public int SampleCount { get; set; }
+    }
     public sealed class CallReference
     {
         public CallReference() { }
@@ -353,6 +389,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public sealed class ExtensionDialRequest
     {
         public ExtensionDialRequest() { }
+        public string CallerDisplayName { get; set; }
         public string CallerUserId { get; set; }
         public string Extension { get; set; }
         public string From { get; set; }
@@ -517,6 +554,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public SoftPhoneRegistrationConfig() { }
         public bool ClientOriginatesCalls { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.SoftPhoneCredentialConfig Credential { get; set; }
+        public string EchoTestDestination { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.SoftPhoneIceConfig Ice { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.SoftPhoneMediaConfig Media { get; set; }
         public string OutboundCallerId { get; set; }
@@ -556,6 +594,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public string BrowserMediaAdapterName { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities Capabilities { get; set; }
         public string DefaultCountryCode { get; set; }
+        public bool EnableDiagnostics { get; set; }
         public int RecentCallsCount { get; set; }
     }
     [System.Flags]
@@ -613,6 +652,14 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public string Error { get; set; }
         public bool Found { get; set; }
         public bool Succeeded { get; set; }
+    }
+    public static class TelephonyCallQualityEvaluator
+    {
+        public const double DegradedLossPercentThreshold = 2D;
+        public const double DegradedMosThreshold = 4D;
+        public const double PoorLossPercentThreshold = 5D;
+        public const double PoorMosThreshold = 3.5D;
+        public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating Evaluate(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
     }
     [System.Flags]
     public enum TelephonyCapabilities
@@ -684,9 +731,11 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public CrestApps.OrchardCore.Telephony.Models.CallDirection Direction { get; set; }
         public double DurationSeconds { get; set; }
         public System.DateTime? EndedUtc { get; set; }
+        public string ExtensionNumber { get; set; }
         public string From { get; set; }
         public long Id { get; set; }
         public string InteractionId { get; set; }
+        public bool IsExtension { get; set; }
         public bool IsVoicemail { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.CallOutcome Outcome { get; set; }
         public string ProviderName { get; set; }

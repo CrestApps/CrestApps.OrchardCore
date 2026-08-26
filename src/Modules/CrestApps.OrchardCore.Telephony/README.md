@@ -9,7 +9,9 @@ This module does **not** provide an SMS abstraction. Use the Orchard Core SMS or
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Telephony | `CrestApps.OrchardCore.Telephony` | Provider resolver, call services, SignalR hub, OAuth connect/callback routes, interaction persistence, and the **Settings → Communication → Telephony** provider settings screen. Depends on `OrchardCore.Users` and `CrestApps.OrchardCore.SignalR`. |
-| Telephony Soft Phone | `CrestApps.OrchardCore.Telephony.SoftPhone` | Injects the floating soft phone into the admin dashboard, the front end, or both. Its country-aware keypad uses the `intl-tel-input` resource, so it depends on `CrestApps.OrchardCore.Resources`. |
+| Telephony Soft Phone Core | `CrestApps.OrchardCore.Telephony.SoftPhone.Core` | The shared soft phone client, component, presenter, and resources. Enabled by dependency only — the widget and browser-extension features below both depend on it, so enable one of them rather than this directly. Its country-aware keypad uses the `intl-tel-input` resource, so it depends on `CrestApps.OrchardCore.Resources`. |
+| Telephony Soft Phone | `CrestApps.OrchardCore.Telephony.SoftPhone` | Injects the floating soft phone into the admin dashboard, the front end, or both. Depends on **Soft Phone Core** and `OrchardCore.Widgets`. |
+| Telephony Soft Phone (Browser Extension) | `CrestApps.OrchardCore.Telephony.SoftPhone.Extension` | Exposes the chromeless, full-window `/softphone` page and its `extension-config` endpoint hosted by the CrestApps Soft Phone browser extension, so a live call survives navigating other sites. Depends on **Soft Phone Core**; no floating widget. |
 
 ## Installation
 

@@ -139,7 +139,7 @@ public sealed class VoiceStartup : StartupBase
 /// Telephony soft phone are all enabled, rather than a separately selectable feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Voice)]
-[RequireFeatures(ContactCenterConstants.Feature.RealTime, TelephonyConstants.Feature.SoftPhone)]
+[RequireFeatures(ContactCenterConstants.Feature.RealTime, TelephonyConstants.Feature.SoftPhoneCore)]
 public sealed class VoiceSoftPhoneStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

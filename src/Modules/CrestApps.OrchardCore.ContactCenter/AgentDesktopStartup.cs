@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
     ContactCenterConstants.Feature.Agents,
     ContactCenterConstants.Feature.RealTime,
     ContactCenterConstants.Feature.Voice,
-    TelephonyConstants.Feature.SoftPhone)]
+    TelephonyConstants.Feature.SoftPhoneCore)]
 public sealed class AgentDesktopStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

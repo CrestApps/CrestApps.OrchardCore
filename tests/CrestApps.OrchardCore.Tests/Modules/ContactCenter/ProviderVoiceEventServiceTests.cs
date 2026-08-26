@@ -315,6 +315,82 @@ public sealed class ProviderVoiceEventServiceTests
     }
 
     [Fact]
+    public async Task IngestAsync_WhenDirectRoutedCallEnds_CompletesWorkInsteadOfStartingWrapUp()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "Asterisk",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            QueueId = ContactCenterConstants.DirectRouting.QueueId,
+            Direction = InteractionDirection.Inbound,
+            AnsweredUtc = new DateTime(2026, 7, 10, 14, 59, 0, DateTimeKind.Utc),
+        }.RestorePersistedStatus(InteractionStatus.Connected);
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "Asterisk",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            QueueId = ContactCenterConstants.DirectRouting.QueueId,
+            Direction = InteractionDirection.Inbound,
+            AnsweredUtc = interaction.AnsweredUtc,
+        }.RestorePersistedState(VoiceCallState.Connected);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Asterisk", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("Asterisk", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync("ended-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var presenceManager = new Mock<IAgentPresenceManager>();
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            presenceManager.Object,
+            new ProviderIdentityResolver([new TestProviderIdentityProvider(new ProviderIdentity("Asterisk", "Default Asterisk"))]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "Asterisk",
+            ProviderCallId = "call-1",
+            State = VoiceCallState.Ended,
+            IdempotencyKey = "ended-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(interaction.WrapUpStartedUtc);
+        presenceManager.Verify(
+            manager => manager.StartWrapUpAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        presenceManager.Verify(
+            manager => manager.CompleteWorkAsync("agent-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task IngestAsync_WhenCallIdBelongsToAnotherActiveProvider_DoesNotCanonicalizeInteraction()
     {
         // Arrange

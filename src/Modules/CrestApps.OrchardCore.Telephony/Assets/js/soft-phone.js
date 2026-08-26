@@ -1560,6 +1560,19 @@
         var storageKey = (config.storageKey || 'telephony-soft-phone') + '-layout';
         var mediaAdapters = createBrowserMediaAdapterRegistry(rootElement, config);
 
+        // The standalone /softphone page (hosted by the CrestApps Soft Phone browser extension) wraps the phone
+        // in an element flagged data-softphone-embedded, and -- when the agent answered an inbound call from an
+        // OS notification while the phone window was closed -- data-softphone-answer-call-id. Embedded mode
+        // renders the phone open and full-window (the page CSS pins it); an answer call id, when present, makes
+        // the phone auto-answer that one offer as it arrives (see the one-shot state below).
+        var embeddedHost = typeof rootElement.closest === 'function'
+            ? rootElement.closest('[data-softphone-embedded]')
+            : null;
+        var isEmbedded = !!(embeddedHost && embeddedHost.getAttribute('data-softphone-embedded') === 'true');
+        var requestedAnswerCallId = embeddedHost
+            ? (embeddedHost.getAttribute('data-softphone-answer-call-id') || '').trim()
+            : '';
+
         var signalRFactory = options.signalRFactory || (typeof signalR !== 'undefined' ? signalR : null);
 
         var dom = {
@@ -1725,6 +1738,17 @@
         // incoming call arriving without this armed still rings.
         var INBOUND_AUTO_ANSWER_WINDOW_MS = 20000;
         var expectInboundAutoAnswerUntil = 0;
+
+        // One-shot auto-answer for the extension "answer from the OS notification" handoff. When the standalone
+        // page is opened as /softphone?answerCallId=ID, the phone answers exactly the offer whose call id matches
+        // ID, and only once, the moment it surfaces -- whether restored on (re)connect (Contact Center's
+        // GetCurrentIncomingOffer) or pushed live (the hub's IncomingCall). A non-matching call is never
+        // auto-answered, and if the requested offer never arrives (it expired before the window opened) the phone
+        // simply falls through to the normal idle/ringing UI. The exact call-id match is the real guard against
+        // answering a stale call; the deadline only disarms the one-shot so it cannot linger past its usefulness.
+        var ANSWER_ON_LOAD_WINDOW_MS = 30000;
+        var pendingAnswerCallId = requestedAnswerCallId || '';
+        var pendingAnswerDeadline = pendingAnswerCallId ? (Date.now() + ANSWER_ON_LOAD_WINDOW_MS) : 0;
 
         // True from the moment a call is placed until the first real call state arrives (or the attempt
         // fails). While it is set - and no call is active yet - the status line reads "Connecting" instead
@@ -3540,6 +3564,17 @@
                 activeTab = layout.activeTab;
             }
 
+            // Embedded in the standalone /softphone page: the phone always renders open and full-window (the page
+            // CSS pins it), so ignore the saved floating open/position state -- the phone is not a draggable
+            // bubble here, and applying a stored corner position would fight the page layout.
+            if (isEmbedded) {
+                if (dom.panel) {
+                    dom.panel.hidden = false;
+                }
+
+                return;
+            }
+
             if (layout.open && dom.panel) {
                 dom.panel.hidden = false;
             }
@@ -4934,6 +4969,28 @@
             incomingAcceptPending = false;
             setActiveTab('keypad');
             render();
+            maybeAutoAnswerRequestedOffer(call);
+        }
+
+        // Fires the extension's one-shot "answer from the OS notification" handoff: when the just-surfaced offer
+        // is the exact call the agent already chose to answer (its call id matches the ?answerCallId the page was
+        // opened with), answer it automatically through the same path the incoming modal's Answer button uses.
+        // Consumed once regardless of outcome so a later, unrelated call is never auto-answered.
+        function maybeAutoAnswerRequestedOffer(call) {
+            if (!pendingAnswerCallId || !call || call.callId !== pendingAnswerCallId) {
+                return;
+            }
+
+            // Match found: burn the one-shot now so nothing else can retrigger it.
+            pendingAnswerCallId = '';
+
+            // Too long has passed since the page was opened to still trust this as the same ring the agent
+            // accepted; leave it ringing for the agent to answer manually instead of connecting on its own.
+            if (pendingAnswerDeadline && Date.now() > pendingAnswerDeadline) {
+                return;
+            }
+
+            answerIncoming(null);
         }
 
         function clearIncomingOffer(options) {

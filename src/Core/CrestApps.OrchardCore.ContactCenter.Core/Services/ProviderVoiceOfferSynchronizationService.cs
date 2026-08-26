@@ -125,14 +125,20 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
                 var agent = await _agentManager.FindByIdAsync(answeredAgentId, cancellationToken);
                 var activityWasCompleted = activity?.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged;
 
-                if (activityWasCompleted &&
+                // Wrap-up (after-call work) is only for ACD-routed queue and campaign work. A direct-to-agent
+                // (personal line) call has nothing to disposition, so the agent returns straight to a ready state
+                // instead of being parked in wrap-up -- the same distinction the live provider-event path draws.
+                var startsWrapUp = !activityWasCompleted &&
+                    ContactCenterConstants.QueueStartsAfterCallWork(interaction.QueueId);
+
+                if (!startsWrapUp &&
                     agent is not null &&
                     string.IsNullOrWhiteSpace(agent.ActiveReservationId) &&
                     agent.PresenceStatus is AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp)
                 {
                     await presenceManager.CompleteWorkAsync(answeredAgentId, cancellationToken);
                 }
-                else if (!activityWasCompleted)
+                else if (startsWrapUp)
                 {
                     await presenceManager.StartWrapUpAsync(answeredAgentId, cancellationToken);
                 }

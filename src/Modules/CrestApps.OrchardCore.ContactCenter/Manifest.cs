@@ -151,7 +151,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Recording,
-        TelephonyConstants.Feature.SoftPhone,
+        TelephonyConstants.Feature.SoftPhoneCore,
     ]
 )]
 

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Drivers;
+using CrestApps.OrchardCore.Telephony.Endpoints;
 using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
@@ -156,7 +157,21 @@ public sealed class Startup : StartupBase
 }
 
 /// <summary>
-/// Registers the soft phone feature.
+/// Registers the shared soft phone client. This feature is enabled by dependency only; the soft phone widget
+/// and the browser-extension endpoint both depend on it and reuse the presenter and resources it provides.
+/// </summary>
+[Feature(TelephonyConstants.Feature.SoftPhoneCore)]
+public sealed class SoftPhoneCoreStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ISoftPhoneWidgetPresenter, SoftPhoneWidgetPresenter>();
+    }
+}
+
+/// <summary>
+/// Registers the soft phone widget feature: the admin auto-injected floating phone and the placeable
+/// front-end Soft Phone widget.
 /// </summary>
 [Feature(TelephonyConstants.Feature.SoftPhone)]
 public sealed class SoftPhoneWidgetStartup : StartupBase
@@ -164,8 +179,6 @@ public sealed class SoftPhoneWidgetStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SoftPhoneWidgetSettingsDisplayDriver>();
-
-        services.AddScoped<ISoftPhoneWidgetPresenter, SoftPhoneWidgetPresenter>();
 
         services
             .AddContentPart<SoftPhonePart>()
@@ -178,6 +191,19 @@ public sealed class SoftPhoneWidgetStartup : StartupBase
 
         // Loads the phone-field dialer "call" button on demand, only where a phone field renders (see the provider).
         services.AddShapeTableProvider<PhoneFieldDialerShapeTableProvider>();
+    }
+}
+
+/// <summary>
+/// Registers the soft phone browser-extension feature: the standalone <c>/softphone</c> page and its
+/// configuration endpoint hosted by the CrestApps Soft Phone browser extension.
+/// </summary>
+[Feature(TelephonyConstants.Feature.SoftPhoneExtension)]
+public sealed class SoftPhoneExtensionStartup : StartupBase
+{
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddSoftPhoneExtensionEndpoints();
     }
 }
 

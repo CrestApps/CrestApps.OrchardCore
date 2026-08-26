@@ -20,6 +20,23 @@ public static partial class ContactCenterConstants
         => string.Equals(queueId, DirectRouting.QueueId, StringComparison.Ordinal);
 
     /// <summary>
+    /// Determines whether a call carried under the supplied queue identifier drives automatic after-call work
+    /// (wrap-up) for the handling agent when it ends.
+    /// </summary>
+    /// <remarks>
+    /// Wrap-up is reserved for ACD-routed queue and campaign work, where the platform manages the agent's status
+    /// so they can document and disposition the interaction before the router assigns the next one. A
+    /// direct-to-agent (personal line) call is handled like a manual call: there is nothing to disposition, so the
+    /// agent returns straight to their ready state instead of being parked in wrap-up. Only the synthetic
+    /// direct-routing queue is excluded; a real queue (including a campaign's queue) and an unqueued
+    /// system-handled call remain wrap-up eligible.
+    /// </remarks>
+    /// <param name="queueId">The queue identifier the call was routed under.</param>
+    /// <returns><see langword="true"/> when a handled call under the queue starts after-call work; otherwise <see langword="false"/>.</returns>
+    public static bool QueueStartsAfterCallWork(string queueId)
+        => !IsDirectRoutingQueue(queueId);
+
+    /// <summary>
     /// Contains the well-known values for direct-to-agent (personal line) routing. A specific-agent entry point
     /// rings one agent directly rather than a queue: the call is carried through the existing reservation and
     /// offer pipeline under this synthetic queue identifier, which has no persisted queue row and therefore never
