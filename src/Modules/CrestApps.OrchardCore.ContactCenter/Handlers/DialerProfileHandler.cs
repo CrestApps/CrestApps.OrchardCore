@@ -80,6 +80,16 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
             context.Result.Fail(new ValidationResult(S["Enable the Contact Center Paced Dialing feature before using Power or Progressive dialing."], [nameof(DialerProfile.Mode)]));
         }
 
+        if (string.IsNullOrWhiteSpace(profile.QueueId))
+        {
+            context.Result.Fail(new ValidationResult(S["Select the queue whose signed-in agents handle this campaign's calls."], [nameof(DialerProfile.QueueId)]));
+        }
+
+        if (string.IsNullOrWhiteSpace(profile.CampaignId))
+        {
+            context.Result.Fail(new ValidationResult(S["Select the campaign whose CRM activities are dialed."], [nameof(DialerProfile.CampaignId)]));
+        }
+
         if (profile.CallsPerAgent < 1 || profile.CallsPerAgent > PowerDialerStrategy.MaxCallsPerAgent)
         {
             context.Result.Fail(new ValidationResult(S["The calls per agent must be between 1 and {0}.", PowerDialerStrategy.MaxCallsPerAgent], [nameof(DialerProfile.CallsPerAgent)]));
