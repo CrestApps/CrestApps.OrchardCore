@@ -71,11 +71,11 @@ internal sealed class OmnichannelContactDisplayDriver : ContentDisplayDriver
             return null;
         }
 
-        return Shape("ContactNavigationAdmin", new ContactNavigationAdminShapeViewModel()
+        return Initialize<ContactNavigationAdminShapeViewModel>("ContactNavigationAdmin", model =>
         {
-            ContactContentItem = contentItem,
-            Definition = contentTypeDefinition,
-            ShowEdit = false,
+            model.ContactContentItem = contentItem;
+            model.Definition = contentTypeDefinition;
+            model.ShowEdit = false;
         }).Location("Content:1.5")
         .RenderWhen(() => Task.FromResult(!context.IsNew));
     }
