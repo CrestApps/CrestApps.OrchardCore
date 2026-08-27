@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -53,9 +54,10 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             Id = profile.ItemId,
             Name = profile.Name,
             Description = profile.Description,
-            CampaignId = profile.CampaignId,
-            QueueId = profile.QueueId,
-            Mode = profile.Mode,
+            // Manual is no longer offered as a dialer-profile mode (agent free-dialing is governed by the separate
+            // manual-dialing compliance policy). Any legacy Manual profile is shown and re-saved as the equivalent
+            // agent-initiated Preview mode.
+            Mode = profile.Mode == DialerMode.Manual ? DialerMode.Preview : profile.Mode,
             ProviderName = profile.ProviderName,
             CallsPerAgent = profile.CallsPerAgent,
             MaxAttempts = profile.MaxAttempts,
@@ -82,10 +84,6 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.Id = viewModel.Id;
             model.Name = viewModel.Name;
             model.Description = viewModel.Description;
-            model.CampaignId = viewModel.CampaignId;
-            model.CampaignOptions = viewModel.CampaignOptions;
-            model.QueueId = viewModel.QueueId;
-            model.QueueOptions = viewModel.QueueOptions;
             model.Mode = viewModel.Mode;
             model.AutomatedDialerEnabled = automatedDialerEnabled;
             model.ProviderName = viewModel.ProviderName;
@@ -95,6 +93,7 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
             model.RetryDelayMinutes = viewModel.RetryDelayMinutes;
             model.CallerId = viewModel.CallerId;
             model.DefaultRegionCode = viewModel.DefaultRegionCode;
+            model.DefaultRegionOptions = viewModel.DefaultRegionOptions;
             model.RespectDoNotCall = viewModel.RespectDoNotCall;
             model.EnforceCallingWindow = viewModel.EnforceCallingWindow;
             model.CallingCalendarId = viewModel.CallingCalendarId;
@@ -117,12 +116,9 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
 
         profile.Name = model.Name?.Trim();
         profile.Description = model.Description?.Trim();
-        profile.CampaignId = string.IsNullOrWhiteSpace(model.CampaignId)
-            ? null
-            : model.CampaignId.Trim();
-        profile.QueueId = string.IsNullOrWhiteSpace(model.QueueId)
-            ? null
-            : model.QueueId.Trim();
+
+        // A dialer profile is reusable settings: it no longer owns a campaign or queue. The campaign is chosen
+        // when inventory is loaded (on the activity batch), which is also where the profile is selected.
         profile.Mode = model.Mode;
         profile.ProviderName = string.IsNullOrWhiteSpace(model.ProviderName)
             ? null

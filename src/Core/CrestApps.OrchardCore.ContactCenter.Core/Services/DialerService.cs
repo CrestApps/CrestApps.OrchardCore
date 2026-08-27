@@ -37,11 +37,12 @@ public sealed class DialerService : IDialerService
     }
 
     /// <inheritdoc/>
-    public async Task<int> RunCycleAsync(DialerProfile profile, CancellationToken cancellationToken = default)
+    public async Task<int> RunCycleAsync(DialerProfile profile, string queueId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        if (!profile.Enabled || string.IsNullOrEmpty(profile.QueueId))
+        if (!profile.Enabled)
         {
             return 0;
         }
@@ -77,6 +78,6 @@ public sealed class DialerService : IDialerService
             return 0;
         }
 
-        return await strategy.RunCycleAsync(profile, cancellationToken);
+        return await strategy.RunCycleAsync(profile, queueId, cancellationToken);
     }
 }

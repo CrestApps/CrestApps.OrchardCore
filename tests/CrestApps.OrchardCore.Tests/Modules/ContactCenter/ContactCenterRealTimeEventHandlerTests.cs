@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -160,6 +162,145 @@ public sealed class ContactCenterRealTimeEventHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_AgentReserved_RingingInboundInteraction_DispatchesSoftPhoneIncomingCall()
+    {
+        // Arrange
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation
+            {
+                ItemId = "r1",
+                AgentId = "a1",
+                ActivityItemId = "act1",
+                QueueItemId = "qi1",
+                QueueId = "q1",
+                ExpiresUtc = _now.AddSeconds(30),
+            });
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1" });
+
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore.Setup(m => m.CountWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(0);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction
+            {
+                ItemId = "int1",
+                ActivityItemId = "act1",
+                Direction = InteractionDirection.Inbound,
+                ProviderInteractionId = "call-1",
+                ProviderName = "test-provider",
+                CustomerAddress = "+15550001111",
+                QueueId = "q1",
+            }.RestorePersistedStatus(InteractionStatus.Ringing));
+
+        var incomingCallDispatcher = new Mock<IIncomingCallDispatcher>();
+
+        var notifier = new Mock<IContactCenterRealTimeNotifier>();
+        var handler = CreateHandler(
+            notifier,
+            reservationManager,
+            agentManager,
+            queueItemStore,
+            interactionManager: interactionManager,
+            incomingCallDispatcher: incomingCallDispatcher);
+
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.AgentReserved,
+            AggregateId = "r1",
+            OccurredUtc = _now,
+        };
+
+        // Act
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        incomingCallDispatcher.Verify(
+            d => d.DispatchAsync(
+                "u1",
+                It.Is<TelephonyCall>(call =>
+                    call.CallId == "call-1" &&
+                    call.From == "+15550001111" &&
+                    call.Direction == CallDirection.Inbound &&
+                    call.State == CallState.Ringing),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // The Contact Center offer broadcast is unchanged by the soft-phone projection.
+        notifier.Verify(
+            n => n.NotifyOfferReceivedAsync(
+                It.Is<AgentOfferNotification>(o => o.UserId == "u1" && o.ReservationId == "r1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(InteractionStatus.Connected)]
+    [InlineData(InteractionStatus.Ended)]
+    public async Task HandleAsync_AgentReserved_InteractionNotRinging_DoesNotDispatchSoftPhoneIncomingCall(
+        InteractionStatus status)
+    {
+        // Arrange
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation
+            {
+                ItemId = "r1",
+                AgentId = "a1",
+                ActivityItemId = "act1",
+                QueueId = "q1",
+                ExpiresUtc = _now.AddSeconds(30),
+            });
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1" });
+
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore.Setup(m => m.CountWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(0);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction
+            {
+                ItemId = "int1",
+                ActivityItemId = "act1",
+                Direction = InteractionDirection.Inbound,
+                ProviderInteractionId = "call-1",
+            }.RestorePersistedStatus(status));
+
+        var incomingCallDispatcher = new Mock<IIncomingCallDispatcher>();
+
+        var notifier = new Mock<IContactCenterRealTimeNotifier>();
+        var handler = CreateHandler(
+            notifier,
+            reservationManager,
+            agentManager,
+            queueItemStore,
+            interactionManager: interactionManager,
+            incomingCallDispatcher: incomingCallDispatcher);
+
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.AgentReserved,
+            AggregateId = "r1",
+            OccurredUtc = _now,
+        };
+
+        // Act
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        incomingCallDispatcher.Verify(
+            d => d.DispatchAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task HandleAsync_QueueItemAssigned_BroadcastsOfferRevokedAccepted()
     {
         // Arrange
@@ -236,7 +377,9 @@ public sealed class ContactCenterRealTimeEventHandlerTests
         Mock<IActivityReservationManager> reservationManager = null,
         Mock<IAgentProfileManager> agentManager = null,
         Mock<IQueueItemStore> queueItemStore = null,
-        Mock<IOmnichannelActivityManager> activityManager = null)
+        Mock<IOmnichannelActivityManager> activityManager = null,
+        Mock<IInteractionManager> interactionManager = null,
+        Mock<IIncomingCallDispatcher> incomingCallDispatcher = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -246,14 +389,24 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             .AddSingleton((reservationManager ?? new Mock<IActivityReservationManager>()).Object)
             .AddSingleton((queueItemStore ?? new Mock<IQueueItemStore>()).Object)
             .AddSingleton((activityManager ?? new Mock<IOmnichannelActivityManager>()).Object)
+            .AddSingleton((interactionManager ?? new Mock<IInteractionManager>()).Object)
             .AddSingleton(MockUserManager().Object)
-            .AddSingleton(MockDisplayNameProvider().Object)
+            .AddSingleton(MockDisplayNameProvider().Object);
+
+        // The soft-phone incoming-call dispatcher is optional (the Telephony module may be absent), so it is
+        // only registered when a test supplies one -- mirroring how the scope context resolves it.
+        if (incomingCallDispatcher is not null)
+        {
+            services.AddSingleton(incomingCallDispatcher.Object);
+        }
+
+        var provider = services
             .AddTransient<ContactCenterRealTimeEventScopeContext>()
             .BuildServiceProvider();
 
         return new ContactCenterRealTimeEventHandler(
             notifier.Object,
-            new TestContactCenterScopeExecutor(services),
+            new TestContactCenterScopeExecutor(provider),
             clock.Object);
     }
 

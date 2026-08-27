@@ -22,36 +22,13 @@
 </div>
 
 <div class="alert alert-info" role="alert">
-    @T["A dialer profile pairs a campaign (the records to dial) with a queue (the agents who handle the calls), then a mode that sets the pacing. Queues are the shared routing primitive — the same queues are used for inbound routing."]
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="CampaignId">
-    <label asp-for="CampaignId" class="ocat-label">@T["Campaign"]</label>
-    <div class="ocat-end">
-        <select asp-for="CampaignId" asp-items="Model.CampaignOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a campaign"]" data-width="100%" title="@T["Select a campaign"]">
-            <option value="">@T["Select a campaign"]</option>
-        </select>
-        <span asp-validation-for="CampaignId" class="text-danger"></span>
-        <span class="hint">@T["What to dial: the dialer works through the CRM activities in the selected Interaction Center campaign. Required for the automated Power and Progressive modes."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="QueueId">
-    <label asp-for="QueueId" class="ocat-label ocat-label-required">@T["Queue"]</label>
-    <div class="ocat-end">
-        <select asp-for="QueueId" asp-items="Model.QueueOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a queue"]" data-width="100%" title="@T["Select a queue"]">
-            <option value="">@T["Select a queue"]</option>
-        </select>
-        <span asp-validation-for="QueueId" class="text-danger"></span>
-        <span class="hint">@T["Who handles the calls: answered calls route to agents signed in to this queue. Automated modes (Power, Progressive) reserve those agents as they pace; in Manual and Preview an agent works the queue themselves."]</span>
-    </div>
+    @T["A dialer profile is a reusable set of dialing settings — a mode that sets the pacing, plus provider, caller ID, and compliance rules. You choose the campaign (the records to call) and this profile when you load inventory, so one profile can dial many campaigns. Agents handle the answered calls by signing into the campaign; the routing is set up automatically (queues are only used for inbound routing)."]
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="Mode">
     <label asp-for="Mode" class="ocat-label">@T["Mode"]</label>
     <div class="ocat-end">
-        <select asp-for="Mode" class="selectpicker show-tick" data-width="100%" title="@T["Select a dialing mode"]">
-            <option value="@DialerMode.Manual">@T["Manual"]</option>
+        <select asp-for="Mode" class="selectpicker show-tick" data-width="100%" title="@T["Select a dialing mode"]" data-dialer-mode-select>
             <option value="@DialerMode.Preview">@T["Preview"]</option>
             @if (Model.AutomatedDialerEnabled || Model.Mode == DialerMode.Power)
             {
@@ -63,7 +40,7 @@
             }
         </select>
         <span asp-validation-for="Mode" class="text-danger"></span>
-        <span class="hint">@T["How calls are paced: Manual and Preview are agent-initiated (the agent dials from the queue); Power and Progressive are system-paced (the dialer reserves agents and places calls automatically)."]</span>
+        <span class="hint">@T["How calls are paced: Preview is agent-initiated (the agent reviews each record, then dials); Power and Progressive are system-paced (the dialer reserves agents and places calls automatically)."]</span>
         @if (!Model.AutomatedDialerEnabled)
         {
             <span class="hint">@T["Enable the Contact Center Automated Dialer feature to offer the Power and Progressive automated pacing modes."]</span>
@@ -83,7 +60,7 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="CallsPerAgent">
+<div class="ocat-limited-wrapper" asp-validation-class-for="CallsPerAgent" data-dialer-modes="Power">
     <label asp-for="CallsPerAgent" class="ocat-label">@T["Calls per agent"]</label>
     <div class="ocat-limited">
         <input asp-for="CallsPerAgent" type="number" min="1" max="@Model.MaxCallsPerAgent" class="form-control" />
@@ -92,7 +69,7 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAttempts">
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAttempts" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="MaxAttempts" class="ocat-label">@T["Max attempts"]</label>
     <div class="ocat-limited">
         <input asp-for="MaxAttempts" type="number" min="1" class="form-control" />
@@ -101,7 +78,7 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="RetryDelayMinutes">
+<div class="ocat-limited-wrapper" asp-validation-class-for="RetryDelayMinutes" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="RetryDelayMinutes" class="ocat-label">@T["Retry delay (minutes)"]</label>
     <div class="ocat-limited">
         <input asp-for="RetryDelayMinutes" type="number" min="0" class="form-control" />
@@ -120,11 +97,13 @@
 </div>
 
 <div class="ocat-wrapper" asp-validation-class-for="DefaultRegionCode">
-    <label asp-for="DefaultRegionCode" class="ocat-label">@T["Default region"]</label>
+    <label asp-for="DefaultRegionCode" class="ocat-label">@T["Default calling region"]</label>
     <div class="ocat-end">
-        <input asp-for="DefaultRegionCode" class="form-control" maxlength="2" />
-        <span class="hint dashed">@T["The ISO 3166-1 alpha-2 region code, such as US or CA, used to read a destination that carries no country calling code. A destination that cannot be read as a phone number is suppressed, because it cannot be checked against a do-not-call registry."]</span>
+        <select asp-for="DefaultRegionCode" asp-items="Model.DefaultRegionOptions" class="selectpicker show-tick" data-live-search="true" data-header="@T["Select a country"]" data-width="100%" title="@T["Auto-detect from the number"]">
+            <option value="">@T["Auto-detect from the number"]</option>
+        </select>
         <span asp-validation-for="DefaultRegionCode" class="text-danger"></span>
+        <span class="hint dashed">@T["The country a destination is assumed to be in when the number has no international calling code — common for campaign lists imported in national format. Numbers that still cannot be read are suppressed, because they cannot be checked against a do-not-call registry."]</span>
     </div>
 </div>
 
@@ -159,7 +138,7 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="EnforceAbandonmentCap">
+<div class="ocat-wrapper" asp-validation-class-for="EnforceAbandonmentCap" data-dialer-modes="Power Progressive Predictive">
     <div class="ocat-end-offset">
         <div class="form-check">
             <input asp-for="EnforceAbandonmentCap" class="form-check-input" />
@@ -169,7 +148,7 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAbandonmentRatePercent">
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxAbandonmentRatePercent" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="MaxAbandonmentRatePercent" class="ocat-label">@T["Maximum abandonment rate"]</label>
     <div class="ocat-limited">
         <div class="input-group">
@@ -181,7 +160,7 @@
     </div>
 </div>
 
-<div class="ocat-limited-wrapper" asp-validation-class-for="AbandonmentSampleFloor">
+<div class="ocat-limited-wrapper" asp-validation-class-for="AbandonmentSampleFloor" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="AbandonmentSampleFloor" class="ocat-label">@T["Abandonment sample floor"]</label>
     <div class="ocat-limited">
         <input asp-for="AbandonmentSampleFloor" type="number" min="0" class="form-control" />
@@ -190,7 +169,7 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="SafeHarborEnabled">
+<div class="ocat-wrapper" asp-validation-class-for="SafeHarborEnabled" data-dialer-modes="Power Progressive Predictive">
     <div class="ocat-end-offset">
         <div class="form-check">
             <input asp-for="SafeHarborEnabled" class="form-check-input" />
@@ -200,7 +179,7 @@
     </div>
 </div>
 
-<div class="ocat-wrapper" asp-validation-class-for="SafeHarborMessage">
+<div class="ocat-wrapper" asp-validation-class-for="SafeHarborMessage" data-dialer-modes="Power Progressive Predictive">
     <label asp-for="SafeHarborMessage" class="ocat-label">@T["Safe-harbor announcement"]</label>
     <div class="ocat-end">
         <textarea asp-for="SafeHarborMessage" class="form-control"></textarea>
@@ -218,3 +197,28 @@
         </div>
     </div>
 </div>
+
+<script at="Foot" depends-on="bootstrap-select">
+    (function () {
+        var select = document.querySelector('[data-dialer-mode-select]');
+
+        if (!select) {
+            return;
+        }
+
+        var groups = document.querySelectorAll('[data-dialer-modes]');
+
+        function apply() {
+            var mode = select.value;
+
+            groups.forEach(function (group) {
+                var modes = (group.getAttribute('data-dialer-modes') || '').split(/\s+/);
+
+                group.style.display = modes.indexOf(mode) === -1 ? 'none' : '';
+            });
+        }
+
+        select.addEventListener('change', apply);
+        apply();
+    })();
+</script>

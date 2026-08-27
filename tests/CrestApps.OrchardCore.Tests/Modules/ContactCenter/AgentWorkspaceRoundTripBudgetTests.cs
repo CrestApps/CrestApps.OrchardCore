@@ -190,6 +190,9 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
                     ItemId = $"interaction-{index:D4}",
                     AgentId = "agent-0001",
                     ActivityItemId = $"activity-{index:D4}",
+                    // Answered so each ended interaction qualifies as a wrap-up candidate, forcing the worst-case
+                    // batch activity lookup this budget guards.
+                    AnsweredUtc = DateTime.UtcNow,
                 }.RestorePersistedStatus(InteractionStatus.Ended))
                 .ToArray();
 

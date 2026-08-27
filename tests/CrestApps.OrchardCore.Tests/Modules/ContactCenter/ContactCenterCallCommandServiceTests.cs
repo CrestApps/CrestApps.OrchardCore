@@ -508,6 +508,7 @@ public sealed class ContactCenterCallCommandServiceTests
             AgentId = "a1",
             ActivityItemId = "act1",
             QueueId = "q1",
+            DialerProfileId = "profile-1",
         }.RestorePersistedStatus(ReservationStatus.Pending);
     }
 
@@ -544,7 +545,6 @@ public sealed class ContactCenterCallCommandServiceTests
         return new DialerProfile
         {
             ItemId = "profile-1",
-            CampaignId = "campaign-1",
             Mode = DialerMode.Preview,
         };
     }
@@ -708,7 +708,7 @@ public sealed class ContactCenterCallCommandServiceTests
                 .ReturnsAsync(CreatePreviewDialActivity());
 
             DialerProfileManager
-                .Setup(manager => manager.FindByCampaignAsync("campaign-1", It.IsAny<CancellationToken>()))
+                .Setup(manager => manager.FindByIdAsync("profile-1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(CreatePreviewDialProfile());
 
             DialerAttemptService

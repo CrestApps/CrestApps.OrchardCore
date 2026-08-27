@@ -533,6 +533,13 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         {
             var queueId = interaction.QueueId ?? string.Empty;
 
+            // Queue usage describes inbound routing only. Outbound campaign work rides a virtual campaign queue
+            // (never a real queue), so it is excluded here and reported at the campaign level instead.
+            if (ContactCenterConstants.IsCampaignQueue(queueId))
+            {
+                continue;
+            }
+
             if (!byQueue.TryGetValue(queueId, out var queueAccumulator))
             {
                 queueAccumulator = new QueueUsageAccumulator();

@@ -610,7 +610,12 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
     {
         var memberships = intervals
             .Where(interval => interval.Status != AgentPresenceStatus.Offline)
-            .SelectMany(interval => (queueMembership ? interval.QueueIds : interval.CampaignIds)
+            .SelectMany(interval => (queueMembership
+                    // A campaign's virtual queue is enrolled implicitly by signing into the campaign; it is not a
+                    // real inbound queue, so it is excluded from queue membership and reported under campaign
+                    // membership instead.
+                    ? interval.QueueIds.Where(id => !ContactCenterConstants.IsCampaignQueue(id))
+                    : interval.CampaignIds)
                 .Select(id => new { Id = id, interval.DurationSeconds }))
             .ToArray();
         var columns = new[]

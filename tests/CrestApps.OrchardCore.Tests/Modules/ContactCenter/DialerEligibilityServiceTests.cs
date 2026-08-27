@@ -365,7 +365,6 @@ public sealed class DialerEligibilityServiceTests
         {
             ItemId = "profile1",
             Name = "Test",
-            QueueId = "q1",
             MaxAttempts = maxAttempts,
             RetryDelayMinutes = retryDelayMinutes,
             RespectDoNotCall = true,

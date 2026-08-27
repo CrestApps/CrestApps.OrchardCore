@@ -105,7 +105,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         var previousStatus = profile.PresenceStatus;
 
-        profile.QueueIds = entitledQueueIds;
+        profile.QueueIds = ApplyCampaignRouting(profile, entitledQueueIds, entitledCampaignIds);
         profile.CampaignIds = entitledCampaignIds;
         profile.PresenceStatus = AgentPresenceStatus.Available;
         profile.RequestedPresenceStatus = null;
@@ -166,7 +166,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         var previousStatus = profile.PresenceStatus;
 
-        profile.QueueIds = entitledQueueIds;
+        profile.QueueIds = ApplyCampaignRouting(profile, entitledQueueIds, entitledCampaignIds);
         profile.CampaignIds = entitledCampaignIds;
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
@@ -174,6 +174,40 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, previousStatus, cancellationToken);
 
         return profile;
+    }
+
+    /// <summary>
+    /// Folds each signed-in campaign's virtual queue into the agent's routing queue set. This is what makes
+    /// "sign into a campaign" actually receive that campaign's outbound work: the campaign's queue id is derived
+    /// directly from the campaign (it is never stored), and adding it to both the signed-in queues and the allowed
+    /// queues lets the existing queue-based routing, membership index, and availability gate treat it like any other
+    /// entitled queue. Agents and admins only ever pick campaigns; these queues stay hidden.
+    /// </summary>
+    private static IList<string> ApplyCampaignRouting(
+        AgentProfile profile,
+        IList<string> entitledQueueIds,
+        IList<string> entitledCampaignIds)
+    {
+        if (entitledCampaignIds.Count == 0)
+        {
+            return entitledQueueIds;
+        }
+
+        var campaignQueueIds = entitledCampaignIds
+            .Select(ContactCenterConstants.CampaignQueue.CreateId)
+            .ToList();
+
+        // Entitlement to a campaign implies entitlement to its virtual queue; the membership index and the
+        // availability gate both require the queue to appear in the allowed set.
+        profile.AllowedQueueIds = profile.AllowedQueueIds
+            .Concat(campaignQueueIds)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return entitledQueueIds
+            .Concat(campaignQueueIds)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     /// <inheritdoc/>

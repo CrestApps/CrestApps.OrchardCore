@@ -128,7 +128,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         interaction.Direction = InteractionDirection.Outbound;
         interaction.TransitionTo(InteractionStatus.Created);
         interaction.ActivityItemId = activity.ItemId;
-        interaction.QueueId = profile.QueueId;
+        interaction.QueueId = reservation.QueueId;
         interaction.AgentId = reservation.AgentId;
         interaction.ProviderName = _voiceCallRouter.GetOutboundProviderName(profile.ProviderName);
         interaction.CustomerAddress = activity.PreferredDestination;
@@ -140,8 +140,8 @@ public sealed class DialerAttemptService : IDialerAttemptService
             CommandId = interaction.ItemId,
             AgentId = reservation.AgentId,
             AgentUserId = agent.UserId,
-            QueueId = profile.QueueId,
-            CampaignId = profile.CampaignId,
+            QueueId = reservation.QueueId,
+            CampaignId = activity.CampaignId,
             Destination = activity.PreferredDestination,
             CallerId = profile.CallerId,
             Metadata = new Dictionary<string, string>

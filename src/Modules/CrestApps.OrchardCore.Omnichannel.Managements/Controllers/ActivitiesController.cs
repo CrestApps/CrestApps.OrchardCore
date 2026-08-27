@@ -1452,7 +1452,7 @@ public sealed class ActivitiesController : Controller
 
         foreach (var activity in activities)
         {
-            activity.CampaignId = profile.CampaignId;
+            // The profile no longer owns a campaign; changing the dialer profile keeps the activity's own campaign.
             activity.Source = profile.ActivitySource;
             activity.InteractionType = ActivityInteractionType.Manual;
             activity.AISessionId = null;

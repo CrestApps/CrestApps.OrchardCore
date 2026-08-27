@@ -1,0 +1,186 @@
+/*
+ * Contact Center persistent docked agent bar.
+ *
+ * A slim, always-on strip pinned to the bottom of the admin content column. It is the CRM-side surface the call
+ * router reaches while the soft phone runs elsewhere: a read-only presence chip on the left, the live work context
+ * in the middle (idle / ringing offer / active call / wrap-up link), and connection status on the right. Presence
+ * and disposition are intentionally NOT editable here — the soft phone owns status, and dispositioning happens on
+ * the activity screen — so the bar stays compact.
+ *
+ * It docks inside `.ta-content` (JS adds `--docked`) so its left edge clears the fixed left sidebar and it reserves
+ * its own height in the content flow instead of covering the page's action buttons. When the content column is not
+ * found it falls back to a fixed full-width strip.
+ */
+.cc-agent-bar {
+    // Fixed to the viewport bottom, but not full width: JS sets `left` to the content column's left edge so the
+    // bar hugs the left of the content area (clear of the sidebar) and sizes to its content, not the whole screen.
+    position: fixed;
+    left: 0;
+    right: auto;
+    bottom: 0;
+    z-index: 1030;
+    // Auto width: shrinks to just the status chip when idle, expands as a call/assignment adds content (capped).
+    width: auto;
+    max-width: min(560px, 60vw);
+    background: #1f2733;
+    color: #f4f6f8;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-bottom: 0;
+    border-radius: 0.5rem 0.5rem 0 0;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.25);
+    font-size: 0.8rem;
+
+    &[hidden] {
+        display: none;
+    }
+}
+
+.cc-agent-bar__inner {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 34px;
+    padding: 0.15rem 0.6rem;
+}
+
+.cc-bar__dot {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    margin-right: 0.35rem;
+    background: #8a929c;
+
+    &.is-available { background: #2ecc71; }
+    &.is-oncall,
+    &.is-busy { background: #e67e22; }
+    &.is-wrapup { background: #f1c40f; }
+    &.is-break,
+    &.is-requestbreak { background: #9b59b6; }
+    &.is-offline { background: #8a929c; }
+}
+
+.cc-bar__presence {
+    flex: 0 0 auto;
+}
+
+// Read-only status chip (no picker): the soft phone is the single place to change status.
+.cc-bar__presence-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    white-space: nowrap;
+    cursor: default;
+}
+
+.cc-bar__presence-label {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cc-bar__context {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+}
+
+.cc-bar__idle {
+    color: rgba(244, 246, 248, 0.7);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.cc-bar__muted { color: rgba(244, 246, 248, 0.6); }
+
+.cc-bar__offer {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.15rem 0.6rem;
+    border-radius: 0.5rem;
+
+    &.is-ringing {
+        background: rgba(46, 204, 113, 0.14);
+        animation: cc-bar-pulse 1.4s ease-in-out infinite;
+    }
+
+    &.is-preview { background: rgba(52, 152, 219, 0.16); }
+}
+
+.cc-bar__offer-info { min-width: 0; flex: 1 1 auto; }
+.cc-bar__offer-head { font-weight: 600; }
+.cc-bar__offer-customer {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.cc-bar__offer-actions { display: flex; gap: 0.4rem; flex: 0 0 auto; }
+
+.cc-bar__active {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+}
+
+.cc-bar__active-dir {
+    flex: 0 0 auto;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cc-bar__active-info { min-width: 0; flex: 1 1 auto; }
+.cc-bar__active-customer {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.cc-bar__active-actions { display: flex; gap: 0.4rem; flex: 0 0 auto; }
+
+.cc-bar__tail {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.cc-bar__conn {
+    font-size: 0.72rem;
+    color: rgba(244, 246, 248, 0.6);
+
+    &.is-connected { color: #2ecc71; }
+    &.is-reconnecting { color: #f1c40f; }
+    &.is-disconnected { color: #ff8a80; }
+}
+
+.cc-bar__workspace {
+    color: rgba(244, 246, 248, 0.85);
+    text-decoration: none;
+
+    &:hover { color: #fff; }
+}
+
+@keyframes cc-bar-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(46, 204, 113, 0.0); }
+    50% { box-shadow: inset 0 0 0 2px rgba(46, 204, 113, 0.5); }
+}
+
+@media (max-width: 768px) {
+    .cc-agent-bar { max-width: calc(100vw - 1rem); }
+    .cc-bar__presence-label { max-width: 6rem; }
+}

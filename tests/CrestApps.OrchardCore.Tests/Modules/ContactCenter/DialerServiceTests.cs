@@ -20,7 +20,7 @@ public sealed class DialerServiceTests
         var service = CreateService(voiceCallRouter, resolver);
 
         // Act
-        var started = await service.RunCycleAsync(CreateProfile(mode), TestContext.Current.CancellationToken);
+        var started = await service.RunCycleAsync(CreateProfile(mode), "q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, started);
@@ -37,7 +37,7 @@ public sealed class DialerServiceTests
         var service = CreateService(voiceCallRouter, resolver);
 
         // Act
-        var started = await service.RunCycleAsync(CreateProfile(DialerMode.Power), TestContext.Current.CancellationToken);
+        var started = await service.RunCycleAsync(CreateProfile(DialerMode.Power), "q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, started);
@@ -57,7 +57,7 @@ public sealed class DialerServiceTests
         var service = CreateService(voiceCallRouter, resolver);
 
         // Act
-        var started = await service.RunCycleAsync(CreateProfile(DialerMode.Predictive), TestContext.Current.CancellationToken);
+        var started = await service.RunCycleAsync(CreateProfile(DialerMode.Predictive), "q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, started);
@@ -74,7 +74,7 @@ public sealed class DialerServiceTests
 
         var strategy = new Mock<IDialerStrategy>();
         strategy
-            .Setup(s => s.RunCycleAsync(profile, It.IsAny<CancellationToken>()))
+            .Setup(s => s.RunCycleAsync(profile, "q1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(4);
 
         var resolver = new Mock<IDialerStrategyResolver>();
@@ -83,11 +83,11 @@ public sealed class DialerServiceTests
         var service = CreateService(voiceCallRouter, resolver);
 
         // Act
-        var started = await service.RunCycleAsync(profile, TestContext.Current.CancellationToken);
+        var started = await service.RunCycleAsync(profile, "q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(4, started);
-        strategy.Verify(s => s.RunCycleAsync(profile, It.IsAny<CancellationToken>()), Times.Once);
+        strategy.Verify(s => s.RunCycleAsync(profile, "q1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private static DialerProfile CreateProfile(DialerMode mode)
@@ -96,7 +96,6 @@ public sealed class DialerServiceTests
         {
             ItemId = "profile1",
             Name = "Test",
-            QueueId = "q1",
             ProviderName = "test",
             Mode = mode,
             Enabled = true,

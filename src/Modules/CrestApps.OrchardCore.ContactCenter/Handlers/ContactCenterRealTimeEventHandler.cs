@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.Modules;
@@ -84,6 +86,8 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                     context.AgentManager,
                     context.QueueItemStore,
                     context.ActivityManager,
+                    context.InteractionManager,
+                    context.IncomingCallDispatcher,
                     cancellationToken);
                 break;
 
@@ -179,6 +183,8 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         IAgentProfileManager agentManager,
         IQueueItemStore queueItemStore,
         IOmnichannelActivityManager activityManager,
+        IInteractionManager interactionManager,
+        IIncomingCallDispatcher incomingCallDispatcher,
         CancellationToken cancellationToken)
     {
         var reservation = await ResolveReservationAsync(interactionEvent.AggregateId, reservationManager, cancellationToken);
@@ -198,13 +204,60 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             ReservationId = reservation.ItemId,
             ActivityItemId = reservation.ActivityItemId,
             AutoOpenActivity = DialerActivitySourceHelper.IsDialerSource(activity?.Source),
+            Kind = AgentOfferKindHelper.FromActivitySource(activity?.Source),
             QueueItemId = reservation.QueueItemId,
             QueueId = reservation.QueueId,
             ExpiresUtc = reservation.ExpiresUtc,
             ServerTimeUtc = _clock.UtcNow,
         }, cancellationToken);
 
+        await DispatchSoftPhoneRingAsync(reservation, agent, interactionManager, incomingCallDispatcher, _clock.UtcNow, cancellationToken);
+
         await BroadcastQueueStatsAsync(reservation.QueueId, queueItemStore, cancellationToken);
+    }
+
+    /// <summary>
+    /// Projects a ringing inbound queue offer onto the agent's soft phone as a Telephony
+    /// <c>IncomingCall</c>. The reservation broadcast above only reaches Contact Center clients over the
+    /// Contact Center hub, so without this the soft phone (the browser extension and the Windows app, which
+    /// listen only for <c>IncomingCall</c> on the Telephony hub) never rings for queue calls -- only for
+    /// direct-to-agent DID calls, which the Dialpad inbound router dispatches. The dispatcher runs the same
+    /// incoming-call context providers used by the current-offer recovery poll, so the matched-customer
+    /// cards and the accept/decline offer actions are attached here too, and both paths surface the same
+    /// call id (the modal dedupes on it).
+    /// </summary>
+    private static async Task DispatchSoftPhoneRingAsync(
+        ActivityReservation reservation,
+        AgentProfile agent,
+        IInteractionManager interactionManager,
+        IIncomingCallDispatcher incomingCallDispatcher,
+        DateTime nowUtc,
+        CancellationToken cancellationToken)
+    {
+        if (incomingCallDispatcher is null ||
+            agent is null ||
+            string.IsNullOrEmpty(agent.UserId) ||
+            string.IsNullOrEmpty(reservation.ActivityItemId))
+        {
+            return;
+        }
+
+        var interaction = await interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+
+        // Ring only a genuine inbound voice call that is currently alerting the agent. A non-voice
+        // reservation (or one that has already advanced past ringing) carries no ringing call to surface,
+        // and the guard mirrors the one the current-offer recovery poll applies so the two agree.
+        if (interaction is null ||
+            interaction.Direction != InteractionDirection.Inbound ||
+            interaction.Status != InteractionStatus.Ringing ||
+            string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
+        {
+            return;
+        }
+
+        var call = ContactCenterIncomingCallFactory.BuildRingingInboundCall(interaction, nowUtc);
+
+        await incomingCallDispatcher.DispatchAsync(agent.UserId, call, cancellationToken);
     }
 
     private static async Task<string> GetAgentDisplayNameAsync(
@@ -257,6 +310,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             UserId = agent?.UserId,
             AgentId = reservation.AgentId,
             ReservationId = reservation.ItemId,
+            ActivityItemId = reservation.ActivityItemId,
             QueueId = reservation.QueueId,
             Reason = resolvedReason,
         }, cancellationToken);

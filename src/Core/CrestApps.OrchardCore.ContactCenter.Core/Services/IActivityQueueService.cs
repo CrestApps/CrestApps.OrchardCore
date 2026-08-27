@@ -19,6 +19,18 @@ public interface IActivityQueueService
     Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Adds a CRM activity to a queue as outbound dialer inventory, tagging the queue item with the dialer
+    /// profile that dials it so the pacer can apply that profile's settings without the profile owning a campaign.
+    /// </summary>
+    /// <param name="activityItemId">The CRM activity identifier.</param>
+    /// <param name="queueId">The queue identifier.</param>
+    /// <param name="priority">The optional priority override; the queue default is used when null.</param>
+    /// <param name="dialerProfileId">The dialer profile that dials the item, or null for non-dialer work.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The created queue item.</returns>
+    Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, string dialerProfileId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Removes a queue item from its queue with the supplied final status.
     /// </summary>
     /// <param name="queueItem">The queue item to dequeue.</param>

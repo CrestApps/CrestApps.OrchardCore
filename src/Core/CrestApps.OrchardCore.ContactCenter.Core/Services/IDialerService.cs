@@ -9,10 +9,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public interface IDialerService
 {
     /// <summary>
-    /// Runs one pacing cycle for the dialer profile, placing calls for as many reserved activities as pacing allows.
+    /// Runs one pacing cycle for a campaign queue, placing calls for as many reserved activities as pacing allows.
     /// </summary>
-    /// <param name="profile">The dialer profile to run.</param>
+    /// <param name="profile">The dialer profile whose settings govern the cycle.</param>
+    /// <param name="queueId">The campaign queue whose waiting inventory is dialed.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of outbound attempts started.</returns>
-    Task<int> RunCycleAsync(DialerProfile profile, CancellationToken cancellationToken = default);
+    Task<int> RunCycleAsync(DialerProfile profile, string queueId, CancellationToken cancellationToken = default);
 }

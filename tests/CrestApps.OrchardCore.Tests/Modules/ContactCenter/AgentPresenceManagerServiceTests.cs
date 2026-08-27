@@ -24,7 +24,7 @@ public sealed class AgentPresenceManagerServiceTests
         var publisher = new Mock<IContactCenterEventPublisher>();
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], publisher.Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],publisher.Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.SignInAsync("u1", ["q1", "q2"], [], TestContext.Current.CancellationToken);
@@ -37,6 +37,34 @@ public sealed class AgentPresenceManagerServiceTests
     }
 
     [Fact]
+    public async Task SignInAsync_WhenSignedIntoACampaign_EnrollsInTheCampaignsVirtualQueue()
+    {
+        // Arrange: an agent entitled to a campaign. The campaign's routing queue is derived from the campaign id
+        // (never stored), so signing into the campaign should enroll the agent in that virtual queue with no
+        // dialer-profile lookup at all.
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new AgentProfile { ItemId = "a1", UserId = "u1", AllowedCampaignIds = ["camp-1"] });
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new AgentProfile { ItemId = "a1", UserId = "u1", AllowedCampaignIds = ["camp-1"] });
+
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [], publisher.Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+
+        // Act
+        var profile = await service.SignInAsync("u1", [], ["camp-1"], TestContext.Current.CancellationToken);
+
+        // Assert: signing into the campaign enrolled the agent in its virtual queue for routing, entitled it,
+        // and recorded the campaign membership.
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.CreateId("camp-1");
+        Assert.Contains("camp-1", profile.CampaignIds);
+        Assert.Contains(campaignQueueId, profile.QueueIds);
+        Assert.Contains(campaignQueueId, profile.AllowedQueueIds);
+    }
+
+    [Fact]
     public async Task SignInAsync_WhenNoQueueOrCampaignIsEntitled_ThrowsAndDoesNotSignIn()
     {
         // Arrange
@@ -46,7 +74,7 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<AgentEntitlementDeniedException>(
@@ -73,7 +101,7 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.SignInAsync("u1", ["q1", "q2"], [], TestContext.Current.CancellationToken);
@@ -93,7 +121,7 @@ public sealed class AgentPresenceManagerServiceTests
         var publisher = new Mock<IContactCenterEventPublisher>();
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], publisher.Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],publisher.Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         await service.SignInAsync("u1", ["q1"], [], TestContext.Current.CancellationToken);
@@ -149,7 +177,8 @@ public sealed class AgentPresenceManagerServiceTests
         Assert.Equal(AgentPresenceStatus.Reserved, profile.PresenceStatus);
         Assert.Equal(AgentPresenceStatus.Break, profile.RequestedPresenceStatus);
         Assert.Equal("r1", profile.ActiveReservationId);
-        Assert.Equal(["q2"], profile.QueueIds);
+        // Signing into campaign "c1" enrolls the agent in its derived virtual queue alongside the real queue "q2".
+        Assert.Equal(["q2", ContactCenterConstants.CampaignQueue.CreateId("c1")], profile.QueueIds);
         Assert.Equal(["c1"], profile.CampaignIds);
     }
 
@@ -383,7 +412,7 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.SignOutAsync("u1", TestContext.Current.CancellationToken);
@@ -423,7 +452,7 @@ public sealed class AgentPresenceManagerServiceTests
 
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [sessionManager.Object], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [sessionManager.Object], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         await service.SignOutAsync("u1", TestContext.Current.CancellationToken);
@@ -445,7 +474,7 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentProfile)null);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.DoNotDisturb, "Focus time", TestContext.Current.CancellationToken);
@@ -479,7 +508,7 @@ public sealed class AgentPresenceManagerServiceTests
             .Returns(Task.CompletedTask);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], publisher.Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],publisher.Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         await service.SetPresenceAsync("u1", AgentPresenceStatus.Available, null, TestContext.Current.CancellationToken);
@@ -503,7 +532,7 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.RequestBreak, null, TestContext.Current.CancellationToken);
@@ -529,7 +558,7 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.RequestBreak, null, TestContext.Current.CancellationToken);
@@ -549,7 +578,7 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.StartWrapUpAsync("a1", TestContext.Current.CancellationToken);
@@ -616,7 +645,7 @@ public sealed class AgentPresenceManagerServiceTests
         agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.CompleteWorkAsync("a1", TestContext.Current.CancellationToken);
@@ -690,7 +719,7 @@ public sealed class AgentPresenceManagerServiceTests
         var healer = new Mock<IAgentWorkStateHealingService>();
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         await service.SignInAsync("u1", ["q2"], [], TestContext.Current.CancellationToken);
@@ -717,7 +746,7 @@ public sealed class AgentPresenceManagerServiceTests
         var healer = new Mock<IAgentWorkStateHealingService>();
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         await service.SignOutAsync("u1", TestContext.Current.CancellationToken);
@@ -756,7 +785,7 @@ public sealed class AgentPresenceManagerServiceTests
 
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.Available, "Ready", TestContext.Current.CancellationToken);
@@ -797,7 +826,7 @@ public sealed class AgentPresenceManagerServiceTests
 
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object], new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
+        var service = new AgentPresenceManagerService(agentManager.Object, [], [healer.Object],new Mock<IContactCenterEventPublisher>().Object, CreateDistributedLock().Object, clock.Object, new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
         var profile = await service.SetPresenceAsync("u1", AgentPresenceStatus.Available, null, TestContext.Current.CancellationToken);

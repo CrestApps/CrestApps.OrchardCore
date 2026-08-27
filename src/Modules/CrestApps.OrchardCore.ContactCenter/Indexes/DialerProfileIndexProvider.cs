@@ -26,8 +26,6 @@ public sealed class DialerProfileIndexProvider : IndexProvider<DialerProfile>
             {
                 ItemId = profile.ItemId,
                 Name = profile.Name,
-                CampaignId = profile.CampaignId,
-                QueueId = profile.QueueId,
                 Enabled = profile.Enabled,
             });
     }

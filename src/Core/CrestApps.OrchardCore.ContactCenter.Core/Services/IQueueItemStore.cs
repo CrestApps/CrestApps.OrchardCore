@@ -34,6 +34,15 @@ public interface IQueueItemStore : ICatalog<QueueItem>
     Task<int> CountWaitingAsync(string queueId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the distinct identifiers of every queue that currently has at least one waiting item. The dialer
+    /// pacer uses this to find the campaign queues with outbound inventory to dial without knowing the campaigns
+    /// in advance.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The distinct queue identifiers with waiting work.</returns>
+    Task<IReadOnlyCollection<string>> GetWaitingQueueIdsAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Counts the items currently waiting across every queue using an aggregate query, without materializing the
     /// waiting rows. This is the tenant-wide queued-interaction backlog an operator weighs before draining a node.
     /// </summary>

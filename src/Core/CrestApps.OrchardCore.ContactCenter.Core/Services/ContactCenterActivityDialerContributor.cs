@@ -49,17 +49,22 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
     /// <inheritdoc/>
     public async Task EnqueueAsync(
         string activityId,
+        string campaignId,
         ActivityDialerProfileDescriptor profile,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(activityId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(campaignId);
         ArgumentNullException.ThrowIfNull(profile);
-        ArgumentException.ThrowIfNullOrWhiteSpace(profile.RoutingTargetId);
 
+        // The routing target is the campaign's virtual queue, derived from the campaign the inventory was loaded
+        // for — never from the profile. The profile id is stamped on the queue item so the pacer can apply its
+        // settings while every activity for the campaign shares one queue.
         await _activityQueueService.EnqueueAsync(
             activityId,
-            profile.RoutingTargetId,
+            ContactCenterConstants.CampaignQueue.CreateId(campaignId),
             priority: null,
+            dialerProfileId: profile.ProfileId,
             cancellationToken);
     }
 
@@ -70,8 +75,6 @@ public sealed class ContactCenterActivityDialerContributor : IActivityDialerCont
             ProfileId = profile.ItemId,
             DisplayName = profile.Name ?? profile.ItemId,
             ActivitySource = DialerActivitySourceHelper.GetActivitySource(profile.Mode),
-            CampaignId = profile.CampaignId,
-            RoutingTargetId = profile.QueueId,
         };
     }
 }

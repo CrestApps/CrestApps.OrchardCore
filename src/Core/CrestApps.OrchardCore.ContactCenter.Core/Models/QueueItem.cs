@@ -22,6 +22,13 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     public string ActivityItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the dialer profile that dials this item, when the item was loaded as
+    /// outbound dialer inventory. The profile is chosen at inventory-load time and travels with the item, so
+    /// the pacer applies its settings (mode, caller id, compliance) without the profile owning a campaign.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the routing priority of the item. Higher values are handled first.
     /// </summary>
     public InteractionPriority Priority { get; set; } = InteractionPriority.Normal;

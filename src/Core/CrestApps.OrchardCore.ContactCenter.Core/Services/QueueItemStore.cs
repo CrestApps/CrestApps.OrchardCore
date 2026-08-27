@@ -66,6 +66,20 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<string>> GetWaitingQueueIdsAsync(CancellationToken cancellationToken = default)
+    {
+        var rows = await Session.QueryIndex<QueueItemIndex>(
+            index => index.Status == QueueItemStatus.Waiting,
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return rows
+            .Select(row => row.QueueId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<int> CountAllWaitingAsync(CancellationToken cancellationToken = default)
     {
         return await Session.Query<QueueItem, QueueItemIndex>(

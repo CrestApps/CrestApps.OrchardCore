@@ -81,7 +81,11 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         var allowedCampaignIds = new HashSet<string>(profile?.AllowedCampaignIds ?? [], StringComparer.OrdinalIgnoreCase);
         var selectedCampaignIds = AgentEntitlementUtilities.FilterEntitled(profile?.CampaignIds, profile?.AllowedCampaignIds);
         var queues = await _queueManager.GetEnabledAsync();
+
+        // Only stored (inbound) queues are offered for sign-in. A campaign's virtual queue is never stored, so it
+        // is naturally absent here; agents join it implicitly by signing into the campaign.
         var entitledQueues = queues.Where(queue => allowedQueueIds.Contains(queue.ItemId)).ToList();
+        var entitledQueueIds = new HashSet<string>(entitledQueues.Select(queue => queue.ItemId), StringComparer.OrdinalIgnoreCase);
         var campaignOptions = await _optionsProvider.GetCampaignOptionsAsync(selectedCampaignIds);
         var entitledCampaignOptions = campaignOptions.Where(option => allowedCampaignIds.Contains(option.Value)).ToList();
         var reasonCodes = _reasonCodeManager is null
@@ -97,7 +101,9 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
             HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(httpContext),
             Profile = profile,
             AvailableQueues = entitledQueues,
-            SelectedQueueIds = AgentEntitlementUtilities.FilterEntitled(profile?.QueueIds, profile?.AllowedQueueIds),
+            SelectedQueueIds = AgentEntitlementUtilities.FilterEntitled(profile?.QueueIds, profile?.AllowedQueueIds)
+                .Where(entitledQueueIds.Contains)
+                .ToList(),
             CampaignOptions = entitledCampaignOptions,
             SelectedCampaignIds = selectedCampaignIds,
             ReasonCodes = [.. reasonCodes],

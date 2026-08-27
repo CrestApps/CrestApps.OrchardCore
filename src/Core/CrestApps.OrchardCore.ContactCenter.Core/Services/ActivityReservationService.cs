@@ -176,6 +176,7 @@ public sealed class ActivityReservationService : IActivityReservationService, IA
         reservation.ActivityItemId = queueItem.ActivityItemId;
         reservation.QueueId = queueItem.QueueId;
         reservation.QueueItemId = queueItem.ItemId;
+        reservation.DialerProfileId = queueItem.DialerProfileId;
         reservation.AgentId = agent.ItemId;
         reservation.TransitionTo(ReservationStatus.Pending);
         reservation.CreatedUtc = now;

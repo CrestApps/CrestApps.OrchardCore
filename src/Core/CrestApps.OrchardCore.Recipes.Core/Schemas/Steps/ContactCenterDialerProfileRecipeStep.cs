@@ -28,8 +28,6 @@ public sealed class ContactCenterDialerProfileRecipeStep : IRecipeStep
                             ("ItemId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional unique identifier. When supplied and found, the existing dialer profile is updated instead of a new one being created.")),
                             ("Name", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Unique name of the dialer profile.")),
                             ("Description", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Description of the dialer profile.")),
-                            ("CampaignId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The CRM campaign whose activities are dialed.")),
-                            ("QueueId", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("The queue eligible agents sign in to for the campaign.")),
                             ("Mode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Manual", "Preview", "Power", "Progressive", "Predictive").Description("Dialing mode that controls pacing and agent reservation behavior.")),
                             ("ProviderName", new JsonSchemaBuilder().Type(SchemaValueType.String | SchemaValueType.Null).Description("Technical name of the Contact Center voice provider that places calls, or null for the default.")),
                             ("CallsPerAgent", new JsonSchemaBuilder().Type(SchemaValueType.Integer).Description("Number of calls placed per available agent for power dialing.")),

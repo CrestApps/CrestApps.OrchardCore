@@ -122,6 +122,13 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
         ContactCenterReportingService.ApplyCurrentQueueGroupCriteria(criteria, queues.Values.ToArray());
         var filteredInteractions = ContactCenterReportingService.FilterInteractions(interactions, criteria);
+
+        // Queue reports describe inbound routing only. Outbound campaign work is carried under a virtual campaign
+        // queue (never a real, stored queue), so it is excluded from queue reports and reported at the campaign
+        // level instead.
+        var inboundQueueInteractions = filteredInteractions
+            .Where(interaction => !ContactCenterConstants.IsCampaignQueue(interaction.QueueId))
+            .ToArray();
         _agentUserNames = (await _agentManager.GetAllAsync(cancellationToken))
             .Where(agent => !string.IsNullOrEmpty(agent.UserName))
             .ToDictionary(agent => agent.ItemId, agent => agent.UserName, StringComparer.Ordinal);
@@ -138,23 +145,23 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             EnterpriseInteractionReportKind.InteractionDetail => BuildInteractionDetail(filteredInteractions),
             EnterpriseInteractionReportKind.TransferAnalysis => BuildTransferAnalysis(filteredInteractions),
             EnterpriseInteractionReportKind.RecordingCoverage => BuildRecordingCoverage(filteredInteractions),
-            EnterpriseInteractionReportKind.QueueServiceLevel => BuildQueueServiceLevel(filteredInteractions, queues),
-            EnterpriseInteractionReportKind.QueueAbandonment => BuildQueueAbandonment(filteredInteractions, queues),
+            EnterpriseInteractionReportKind.QueueServiceLevel => BuildQueueServiceLevel(inboundQueueInteractions, queues),
+            EnterpriseInteractionReportKind.QueueAbandonment => BuildQueueAbandonment(inboundQueueInteractions, queues),
             EnterpriseInteractionReportKind.AgentHandleTime => BuildAgentHandleTime(filteredInteractions),
             EnterpriseInteractionReportKind.WrapUpPerformance => BuildWrapUpPerformance(filteredInteractions),
             EnterpriseInteractionReportKind.HourOfDayPerformance => BuildTimeDimensionPerformance(filteredInteractions, S["Hour (UTC)"].Value, interaction => interaction.CreatedUtc.Hour.ToString("00", CultureInfo.InvariantCulture)),
             EnterpriseInteractionReportKind.DayOfWeekPerformance => BuildTimeDimensionPerformance(filteredInteractions, S["Day of week"].Value, interaction => interaction.CreatedUtc.DayOfWeek.ToString()),
-            EnterpriseInteractionReportKind.QueuePerformance => BuildNamedDimensionPerformance(filteredInteractions, queues, queueDimension: true),
-            EnterpriseInteractionReportKind.QueueWaitTime => BuildQueueDurationPerformance(filteredInteractions, queues, queueWait: true),
-            EnterpriseInteractionReportKind.QueueHandleTime => BuildQueueDurationPerformance(filteredInteractions, queues, queueWait: false),
-            EnterpriseInteractionReportKind.QueueTransferPerformance => BuildQueueTransferPerformance(filteredInteractions, queues),
+            EnterpriseInteractionReportKind.QueuePerformance => BuildNamedDimensionPerformance(inboundQueueInteractions, queues, queueDimension: true),
+            EnterpriseInteractionReportKind.QueueWaitTime => BuildQueueDurationPerformance(inboundQueueInteractions, queues, queueWait: true),
+            EnterpriseInteractionReportKind.QueueHandleTime => BuildQueueDurationPerformance(inboundQueueInteractions, queues, queueWait: false),
+            EnterpriseInteractionReportKind.QueueTransferPerformance => BuildQueueTransferPerformance(inboundQueueInteractions, queues),
             EnterpriseInteractionReportKind.AgentVolume => BuildAgentPerformance(filteredInteractions, AgentPerformanceMode.Volume),
             EnterpriseInteractionReportKind.AgentOutcome => BuildAgentPerformance(filteredInteractions, AgentPerformanceMode.Outcome),
             EnterpriseInteractionReportKind.AgentInbound => BuildAgentPerformance(filteredInteractions.Where(interaction => interaction.Direction == InteractionDirection.Inbound).ToArray(), AgentPerformanceMode.Volume),
             EnterpriseInteractionReportKind.AgentOutbound => BuildAgentPerformance(filteredInteractions.Where(interaction => interaction.Direction == InteractionDirection.Outbound).ToArray(), AgentPerformanceMode.Volume),
             EnterpriseInteractionReportKind.AgentTransferPerformance => BuildAgentPerformance(filteredInteractions, AgentPerformanceMode.Transfers),
             EnterpriseInteractionReportKind.AgentRecordingCoverage => BuildAgentPerformance(filteredInteractions, AgentPerformanceMode.Recordings),
-            EnterpriseInteractionReportKind.QueueUsageBilling => BuildUsageReport(filteredInteractions, S["Queue"].Value, interaction => ResolveQueueName(interaction.QueueId, queues)),
+            EnterpriseInteractionReportKind.QueueUsageBilling => BuildUsageReport(inboundQueueInteractions, S["Queue"].Value, interaction => ResolveQueueName(interaction.QueueId, queues)),
             EnterpriseInteractionReportKind.AgentUsageBilling => BuildUsageReport(filteredInteractions, S["Agent"].Value, interaction => ResolveAgentName(interaction.AgentId)),
             EnterpriseInteractionReportKind.ProviderUsageBilling => BuildUsageReport(filteredInteractions, S["Provider"].Value, interaction => DisplayOrUnknown(interaction.ProviderName)),
             EnterpriseInteractionReportKind.ChannelUsageBilling => BuildUsageReport(filteredInteractions, S["Channel"].Value, interaction => interaction.Channel.ToString()),

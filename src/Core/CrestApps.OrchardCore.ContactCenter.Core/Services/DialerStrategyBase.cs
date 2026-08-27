@@ -37,15 +37,16 @@ public abstract class DialerStrategyBase : IDialerStrategy
     protected abstract int GetMaxAttemptsPerCycle(DialerProfile profile);
 
     /// <inheritdoc/>
-    public async Task<int> RunCycleAsync(DialerProfile profile, CancellationToken cancellationToken = default)
+    public async Task<int> RunCycleAsync(DialerProfile profile, string queueId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(profile);
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
 
         var maxAttempts = Math.Max(GetMaxAttemptsPerCycle(profile), 1);
         var attempted = 0;
         var started = 0;
 
-        var reservation = await _assignmentService.AssignNextAsync(profile.QueueId, cancellationToken);
+        var reservation = await _assignmentService.AssignNextAsync(queueId, cancellationToken);
 
         while (reservation is not null && attempted < maxAttempts)
         {
@@ -58,7 +59,7 @@ public abstract class DialerStrategyBase : IDialerStrategy
 
             if (attempted < maxAttempts)
             {
-                reservation = await _assignmentService.AssignNextAsync(profile.QueueId, cancellationToken);
+                reservation = await _assignmentService.AssignNextAsync(queueId, cancellationToken);
             }
         }
 

@@ -1,5 +1,7 @@
+using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -26,6 +28,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
     private readonly IEnumerable<IContactCenterVoiceProvider> _voiceProviders;
     private readonly UserManager<IUser> _userManager;
     private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly IPhoneNumberService _phoneNumberService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterAdminFormOptionsProvider"/> class.
@@ -50,7 +53,8 @@ public sealed class ContactCenterAdminFormOptionsProvider
         IAgentProfileManager agentProfileManager,
         IEnumerable<IContactCenterVoiceProvider> voiceProviders,
         UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider)
+        IDisplayNameProvider displayNameProvider,
+        IEnumerable<IPhoneNumberService> phoneNumberServices)
     {
         _campaignManager = campaignManager;
         _queueManager = queueManager;
@@ -62,6 +66,8 @@ public sealed class ContactCenterAdminFormOptionsProvider
         _voiceProviders = voiceProviders;
         _userManager = userManager;
         _displayNameProvider = displayNameProvider;
+        // Optional: the phone-number feature may not be enabled. Without it the region picker is simply empty.
+        _phoneNumberService = phoneNumberServices.FirstOrDefault();
     }
 
     internal async Task<IList<SelectListItem>> GetAgentOptionsAsync(string selectedAgentId)
@@ -265,10 +271,54 @@ public sealed class ContactCenterAdminFormOptionsProvider
 
     internal async Task PopulateDialerProfileEditorAsync(DialerProfileViewModel model)
     {
-        model.CampaignOptions = await GetCampaignOptionsAsync([model.CampaignId]);
-        model.QueueOptions = await GetQueueOptionsAsync(model.QueueId);
+        // A dialer profile is reusable dialing settings; it no longer selects a campaign or queue (those are
+        // chosen when inventory is loaded), so the editor only needs the provider, calendar, and region pickers.
         model.CallingCalendarOptions = await GetBusinessHoursCalendarOptionsAsync(model.CallingCalendarId);
         model.ProviderOptions = GetVoiceProviderOptions(model.ProviderName);
+        model.DefaultRegionOptions = GetRegionOptions(model.DefaultRegionCode);
+    }
+
+    /// <summary>
+    /// Builds a country picker for the outbound default region, labelled by country name, from the phone
+    /// number library's supported regions. It removes the need for a user to know raw ISO 3166-1 alpha-2 codes.
+    /// </summary>
+    /// <param name="selectedRegionCode">The currently selected ISO 3166-1 alpha-2 region code.</param>
+    /// <returns>The country select-list options, ordered by country name.</returns>
+    internal IList<SelectListItem> GetRegionOptions(string selectedRegionCode)
+    {
+        var selected = selectedRegionCode?.Trim().ToUpperInvariant();
+        var options = new List<SelectListItem>();
+
+        if (_phoneNumberService is null)
+        {
+            return options;
+        }
+
+        foreach (var regionCode in _phoneNumberService.GetSupportedRegions())
+        {
+            // Supported regions can include non-geographic entries (for example "001") that have no ISO country.
+            if (regionCode.Length != 2)
+            {
+                continue;
+            }
+
+            string name;
+
+            try
+            {
+                name = new RegionInfo(regionCode).EnglishName;
+            }
+            catch (ArgumentException)
+            {
+                name = regionCode;
+            }
+
+            options.Add(new SelectListItem($"{name} ({regionCode})", regionCode, string.Equals(regionCode, selected, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return options
+            .OrderBy(option => option.Text, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
     }
 
     internal async Task PopulateEntryPointEditorAsync(EntryPointViewModel model)

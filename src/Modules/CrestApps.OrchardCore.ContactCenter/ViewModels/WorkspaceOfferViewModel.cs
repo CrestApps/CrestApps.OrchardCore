@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter.Models;
+
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
 /// <summary>
@@ -35,6 +37,17 @@ public sealed class WorkspaceOfferViewModel
     /// Gets or sets the customer address (for example the caller's phone number) shown on the offer card.
     /// </summary>
     public string CustomerAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the assigned activity should open automatically in the agent experience.
+    /// </summary>
+    public bool AutoOpenActivity { get; set; }
+
+    /// <summary>
+    /// Gets or sets the classification of the offer, which determines whether the agent experience presents
+    /// accept/decline, dial/skip, or a screen pop with no action.
+    /// </summary>
+    public AgentOfferKind Kind { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the offer expires when it is not accepted.

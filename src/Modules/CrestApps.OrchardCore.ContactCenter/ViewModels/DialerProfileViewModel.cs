@@ -27,26 +27,6 @@ public class DialerProfileViewModel
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the campaign identifier.
-    /// </summary>
-    public string CampaignId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available campaigns.
-    /// </summary>
-    public IList<SelectListItem> CampaignOptions { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets the queue identifier.
-    /// </summary>
-    public string QueueId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available queues.
-    /// </summary>
-    public IList<SelectListItem> QueueOptions { get; set; } = [];
-
-    /// <summary>
     /// Gets or sets the dialing mode.
     /// </summary>
     public DialerMode Mode { get; set; } = DialerMode.Preview;
@@ -99,6 +79,11 @@ public class DialerProfileViewModel
     /// Gets or sets the ISO 3166-1 alpha-2 region a destination without a country calling code is read in.
     /// </summary>
     public string DefaultRegionCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the country options presented for <see cref="DefaultRegionCode"/>.
+    /// </summary>
+    public IList<SelectListItem> DefaultRegionOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether do-not-call and communication preferences are honored.

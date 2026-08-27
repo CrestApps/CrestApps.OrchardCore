@@ -1,7 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
+using CrestApps.OrchardCore.ContactCenter.Filters;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -26,6 +28,15 @@ public sealed class AgentDesktopStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddNavigationProvider<ContactCenterAgentDesktopAdminMenu>();
+
+        // The docked agent bar is the CRM-side bridge to the call router. It rides the admin chrome on every page
+        // so an assignment reaches the agent wherever they are, even when the soft phone runs in its own window or
+        // the browser extension. It reuses the workspace state and offer endpoints registered above.
+        services.AddScoped<IContactCenterAgentBarBuilder, ContactCenterAgentBarBuilder>();
+        services.Configure<MvcOptions>(options =>
+        {
+            options.Filters.Add<ContactCenterAgentBarFilter>();
+        });
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)

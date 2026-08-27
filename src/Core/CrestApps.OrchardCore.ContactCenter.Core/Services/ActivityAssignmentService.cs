@@ -182,7 +182,9 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         }
         else
         {
-            var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+            var queue = ContactCenterConstants.IsCampaignQueue(queueId)
+                ? CampaignRoutingQueue.Create(queueId)
+                : await _queueManager.FindByIdAsync(queueId, cancellationToken);
 
             if (queue is null || !queue.Enabled)
             {
@@ -232,7 +234,9 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
     private async Task<ActivityReservation> AssignNextCoreAsync(string queueId, CancellationToken cancellationToken)
     {
-        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+        var queue = ContactCenterConstants.IsCampaignQueue(queueId)
+            ? CampaignRoutingQueue.Create(queueId)
+            : await _queueManager.FindByIdAsync(queueId, cancellationToken);
 
         if (queue is null || !queue.Enabled)
         {

@@ -45,6 +45,21 @@ internal sealed class ContactCenterRealTimeResourceConfiguration : IConfigureOpt
                 "~/CrestApps.OrchardCore.ContactCenter/styles/contact-center-workspace.min.css",
                 "~/CrestApps.OrchardCore.ContactCenter/styles/contact-center-workspace.css")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("contact-center-agent-bar")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.ContactCenter/scripts/contact-center-agent-bar.min.js",
+                "~/CrestApps.OrchardCore.ContactCenter/scripts/contact-center-agent-bar.js")
+            .SetDependencies("contact-center-realtime")
+            .SetVersion("1.0.0");
+
+        _manifest
+            .DefineStyle("contact-center-agent-bar")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.ContactCenter/styles/contact-center-agent-bar.min.css",
+                "~/CrestApps.OrchardCore.ContactCenter/styles/contact-center-agent-bar.css")
+            .SetVersion("1.0.0");
     }
 
     /// <inheritdoc/>

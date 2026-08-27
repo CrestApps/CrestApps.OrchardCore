@@ -13,8 +13,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// </summary>
 public sealed class PendingIncomingCallOfferService : IPendingIncomingCallOfferService
 {
-    private const string ServiceAddressMetadataKey = "serviceAddress";
-
     private readonly IAgentProfileManager _agentManager;
     private readonly IActivityReservationManager _reservationManager;
     private readonly IInteractionManager _interactionManager;
@@ -75,7 +73,7 @@ public sealed class PendingIncomingCallOfferService : IPendingIncomingCallOfferS
             return null;
         }
 
-        var call = BuildCall(interaction, now);
+        var call = ContactCenterIncomingCallFactory.BuildRingingInboundCall(interaction, now);
         var contributionContext = new IncomingCallContributionContext(call, userId);
 
         foreach (var provider in _contextProviders)
@@ -101,66 +99,4 @@ public sealed class PendingIncomingCallOfferService : IPendingIncomingCallOfferS
         };
     }
 
-    private static TelephonyCall BuildCall(Interaction interaction, DateTime now)
-    {
-        return new TelephonyCall
-        {
-            CallId = interaction.ProviderInteractionId,
-            From = interaction.CustomerAddress,
-            To = ResolveServiceAddress(interaction),
-            State = CallState.Ringing,
-            Direction = CallDirection.Inbound,
-            ProviderName = interaction.ProviderName,
-            StartedUtc = interaction.CreatedUtc == default
-                ? now
-                : new DateTimeOffset(DateTime.SpecifyKind(interaction.CreatedUtc, DateTimeKind.Utc)),
-            Metadata = BuildCallMetadata(interaction),
-        };
-    }
-
-    private static string ResolveServiceAddress(Interaction interaction)
-    {
-        return interaction.TechnicalMetadata.TryGetValue(ServiceAddressMetadataKey, out var value)
-            ? value?.ToString()
-            : null;
-    }
-
-    private static Dictionary<string, object> BuildCallMetadata(Interaction interaction)
-    {
-        var metadata = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-
-        if (!string.IsNullOrWhiteSpace(interaction.CustomerAddress))
-        {
-            metadata["callerAddress"] = interaction.CustomerAddress;
-        }
-
-        var serviceAddress = ResolveServiceAddress(interaction);
-
-        if (!string.IsNullOrWhiteSpace(serviceAddress))
-        {
-            metadata["calledAddress"] = serviceAddress;
-        }
-
-        if (!string.IsNullOrWhiteSpace(interaction.ProviderName))
-        {
-            metadata["providerName"] = interaction.ProviderName;
-        }
-
-        if (!string.IsNullOrWhiteSpace(interaction.ItemId))
-        {
-            metadata["interactionId"] = interaction.ItemId;
-        }
-
-        if (!string.IsNullOrWhiteSpace(interaction.ActivityItemId))
-        {
-            metadata["activityItemId"] = interaction.ActivityItemId;
-        }
-
-        if (!string.IsNullOrWhiteSpace(interaction.QueueId))
-        {
-            metadata["queueId"] = interaction.QueueId;
-        }
-
-        return metadata;
-    }
 }

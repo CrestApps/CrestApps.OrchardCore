@@ -437,6 +437,7 @@ public sealed class DialerAttemptServiceTests
             ItemId = "r1",
             ActivityItemId = "act1",
             QueueItemId = "qi1",
+            QueueId = "q1",
             AgentId = "a1",
         };
     }
@@ -447,7 +448,6 @@ public sealed class DialerAttemptServiceTests
         {
             ItemId = "profile1",
             Name = "Power",
-            QueueId = "q1",
             ProviderName = "test",
             Mode = DialerMode.Power,
             MaxAttempts = 3,

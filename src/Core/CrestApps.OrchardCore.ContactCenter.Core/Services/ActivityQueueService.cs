@@ -60,18 +60,22 @@ public sealed class ActivityQueueService : IActivityQueueService
     }
 
     /// <inheritdoc/>
-    public async Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, CancellationToken cancellationToken = default)
+    public Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, CancellationToken cancellationToken = default)
+        => EnqueueAsync(activityItemId, queueId, priority, dialerProfileId: null, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, string dialerProfileId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(activityItemId);
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
         try
         {
-            return await EnqueueCoreAsync(activityItemId, queueId, priority, cancellationToken);
+            return await EnqueueCoreAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
         }
         catch (Exception exception) when (IsEnqueueConflict(exception))
         {
-            return await RetryEnqueueInFreshScopeAsync(activityItemId, queueId, priority, cancellationToken);
+            return await RetryEnqueueInFreshScopeAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
         }
     }
 
@@ -79,6 +83,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         string activityItemId,
         string queueId,
         InteractionPriority? priority,
+        string dialerProfileId,
         CancellationToken cancellationToken)
     {
         var existing = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
@@ -93,6 +98,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         var item = await _queueItemManager.NewAsync(cancellationToken: cancellationToken);
         item.QueueId = queueId;
         item.ActivityItemId = activityItemId;
+        item.DialerProfileId = dialerProfileId;
         item.Priority = priority ?? queue?.DefaultPriority ?? InteractionPriority.Normal;
         item.TransitionTo(QueueItemStatus.Waiting);
         var existingWorkState = activity is null
@@ -129,6 +135,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         string activityItemId,
         string queueId,
         InteractionPriority? priority,
+        string dialerProfileId,
         CancellationToken cancellationToken)
     {
         Exception lastException = null;
@@ -141,7 +148,7 @@ public sealed class ActivityQueueService : IActivityQueueService
             {
                 await _scopeExecutor.ExecuteAsync<IActivityQueueService>(async queueService =>
                 {
-                    item = await queueService.EnqueueAsync(activityItemId, queueId, priority, cancellationToken);
+                    item = await queueService.EnqueueAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
                 });
 
                 return item;

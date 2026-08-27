@@ -20,6 +20,48 @@ public static partial class ContactCenterConstants
         => string.Equals(queueId, DirectRouting.QueueId, StringComparison.Ordinal);
 
     /// <summary>
+    /// Determines whether the supplied queue identifier is a virtual campaign queue that carries a dialer
+    /// campaign's outbound work. A campaign queue is never stored as an <c>ActivityQueue</c> record; it is
+    /// synthesized on demand by the router from the campaign, so it never appears in queue administration or
+    /// any queue picker. Agents join it implicitly by signing into the campaign.
+    /// </summary>
+    /// <param name="queueId">The queue identifier to test.</param>
+    /// <returns><see langword="true"/> when the identifier is a virtual campaign queue; otherwise <see langword="false"/>.</returns>
+    public static bool IsCampaignQueue(string queueId)
+        => queueId is not null && queueId.StartsWith(CampaignQueue.Prefix, StringComparison.Ordinal);
+
+    /// <summary>
+    /// Contains the well-known values for the virtual per-campaign outbound queue. Outbound campaign work is
+    /// routed under a queue identifier derived from the campaign; the queue itself is never persisted, so it is
+    /// invisible to users and requires no configuration.
+    /// </summary>
+    public static class CampaignQueue
+    {
+        /// <summary>
+        /// The prefix that identifies a virtual campaign queue identifier.
+        /// </summary>
+        public const string Prefix = "__campaign-queue__";
+
+        /// <summary>
+        /// Builds the virtual queue identifier a campaign's outbound work is routed under.
+        /// </summary>
+        /// <param name="campaignId">The campaign content item identifier.</param>
+        /// <returns>The derived campaign queue identifier.</returns>
+        public static string CreateId(string campaignId)
+            => Prefix + campaignId;
+
+        /// <summary>
+        /// Extracts the campaign identifier from a virtual campaign queue identifier.
+        /// </summary>
+        /// <param name="queueId">The campaign queue identifier.</param>
+        /// <returns>The campaign identifier, or <see langword="null"/> when the identifier is not a campaign queue.</returns>
+        public static string GetCampaignId(string queueId)
+            => queueId is not null && queueId.StartsWith(Prefix, StringComparison.Ordinal)
+                ? queueId[Prefix.Length..]
+                : null;
+    }
+
+    /// <summary>
     /// Determines whether a call carried under the supplied queue identifier drives automatic after-call work
     /// (wrap-up) for the handling agent when it ends.
     /// </summary>

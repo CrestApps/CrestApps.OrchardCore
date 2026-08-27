@@ -190,8 +190,6 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             ItemId = "profile-1",
             Name = $"{mode} profile",
             Mode = mode,
-            QueueId = QueueId,
-            CampaignId = CampaignId,
             ProviderName = ProviderName,
             CallsPerAgent = callsPerAgent,
             Enabled = true,
@@ -208,7 +206,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// </summary>
     public async Task<int> RunPacingCycleAsync(DialerProfile profile)
     {
-        var started = await DialerService.RunCycleAsync(profile, TestContext.Current.CancellationToken);
+        var started = await DialerService.RunCycleAsync(profile, QueueId, TestContext.Current.CancellationToken);
         await _session.SaveChangesAsync(TestContext.Current.CancellationToken);
         await DrainAsync();
 

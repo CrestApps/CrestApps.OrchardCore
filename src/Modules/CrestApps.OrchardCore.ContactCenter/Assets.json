@@ -30,10 +30,23 @@
     "output": "wwwroot/scripts/contact-center-external-transfer-settings.js"
   },
   {
+    "inputs": [
+      "Assets/js/contact-center-agent-bar.js"
+    ],
+    "output": "wwwroot/scripts/contact-center-agent-bar.js"
+  },
+  {
     "generateSourceMaps": false,
     "inputs": [
       "Assets/scss/contact-center-workspace.scss"
     ],
     "output": "wwwroot/styles/contact-center-workspace.css"
+  },
+  {
+    "generateSourceMaps": false,
+    "inputs": [
+      "Assets/scss/contact-center-agent-bar.scss"
+    ],
+    "output": "wwwroot/styles/contact-center-agent-bar.css"
   }
 ]

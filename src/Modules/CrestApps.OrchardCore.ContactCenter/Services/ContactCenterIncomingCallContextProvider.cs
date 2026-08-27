@@ -132,20 +132,26 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
             return null;
         }
 
-        if (httpContext is not null)
+        // The offer accept/decline actions must be present even when there is no ambient request. The queue
+        // ring is dispatched from the reservation event on a background scope (no HttpContext), and that push
+        // reaches the soft-phone page too; if its context omitted these actions it would downgrade the modal
+        // and the page could no longer accept the reservation. Build the same-origin paths from the request
+        // when one exists (so a hosted path base is honored) and from the tenant routes otherwise.
+        var acceptUrl = httpContext is not null
+            ? _linkGenerator.GetPathByName(httpContext, "ContactCenterVoiceAcceptOffer", new { reservationId = reservation.ItemId })
+            : _linkGenerator.GetPathByName("ContactCenterVoiceAcceptOffer", new { reservationId = reservation.ItemId });
+        var declineUrl = httpContext is not null
+            ? _linkGenerator.GetPathByName(httpContext, "ContactCenterVoiceDeclineOffer", new { reservationId = reservation.ItemId })
+            : _linkGenerator.GetPathByName("ContactCenterVoiceDeclineOffer", new { reservationId = reservation.ItemId });
+
+        if (!string.IsNullOrEmpty(acceptUrl))
         {
-            var acceptUrl = _linkGenerator.GetPathByName(httpContext, "ContactCenterVoiceAcceptOffer", new { reservationId = reservation.ItemId });
-            var declineUrl = _linkGenerator.GetPathByName(httpContext, "ContactCenterVoiceDeclineOffer", new { reservationId = reservation.ItemId });
+            context.Properties["acceptUrl"] = acceptUrl;
+        }
 
-            if (!string.IsNullOrEmpty(acceptUrl))
-            {
-                context.Properties["acceptUrl"] = acceptUrl;
-            }
-
-            if (!string.IsNullOrEmpty(declineUrl))
-            {
-                context.Properties["declineUrl"] = declineUrl;
-            }
+        if (!string.IsNullOrEmpty(declineUrl))
+        {
+            context.Properties["declineUrl"] = declineUrl;
         }
 
         context.Properties["reservationId"] = reservation.ItemId;

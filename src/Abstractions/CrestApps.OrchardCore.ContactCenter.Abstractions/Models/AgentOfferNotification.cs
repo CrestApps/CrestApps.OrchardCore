@@ -32,6 +32,12 @@ public sealed class AgentOfferNotification
     public bool AutoOpenActivity { get; set; }
 
     /// <summary>
+    /// Gets or sets the classification of the offer, which determines whether the agent experience presents
+    /// accept/decline, dial/skip, or a screen pop with no action.
+    /// </summary>
+    public AgentOfferKind Kind { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the queue item being offered.
     /// </summary>
     public string QueueItemId { get; set; }

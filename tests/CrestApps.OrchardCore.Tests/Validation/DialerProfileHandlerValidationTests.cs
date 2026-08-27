@@ -203,42 +203,6 @@ public class DialerProfileHandlerValidationTests
         AssertFailedFor(context, nameof(DialerProfile.SafeHarborMessage));
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task ValidatingAsync_WhenTheQueueIsMissing_Fails(string queueId)
-    {
-        // Arrange
-        var profile = CreateValidProfile();
-        profile.QueueId = queueId;
-
-        // Act
-        var context = await ValidateAsync(profile);
-
-        // Assert
-        AssertFailedFor(context, nameof(DialerProfile.QueueId));
-    }
-
-    [Theory]
-    [InlineData(DialerMode.Manual)]
-    [InlineData(DialerMode.Preview)]
-    [InlineData(DialerMode.Power)]
-    [InlineData(DialerMode.Progressive)]
-    public async Task ValidatingAsync_WhenTheCampaignIsMissing_Fails(DialerMode mode)
-    {
-        // Arrange
-        var profile = CreateValidProfile();
-        profile.Mode = mode;
-        profile.CampaignId = null;
-
-        // Act
-        var context = await ValidateAsync(profile);
-
-        // Assert
-        AssertFailedFor(context, nameof(DialerProfile.CampaignId));
-    }
-
     private static async Task<ValidatingContext<DialerProfile>> ValidateAsync(DialerProfile profile, bool automatedDialerEnabled = true)
     {
         var context = new ValidatingContext<DialerProfile>(profile);
@@ -285,8 +249,6 @@ public class DialerProfileHandlerValidationTests
             Name = "Outbound",
             Mode = DialerMode.Manual,
             CallsPerAgent = 1,
-            QueueId = "queue-1",
-            CampaignId = "campaign-1",
         };
     }
 }

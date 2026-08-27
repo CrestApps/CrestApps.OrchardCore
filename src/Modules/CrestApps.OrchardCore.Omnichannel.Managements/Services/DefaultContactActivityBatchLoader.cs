@@ -413,8 +413,9 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 if (dialerProfile is not null)
                 {
+                    // The campaign comes from the batch (resolved above); the profile only decides how the
+                    // contacts are dialed, so it no longer overrides which campaign they belong to.
                     activitySource = dialerProfile.ActivitySource;
-                    campaignId = dialerProfile.CampaignId;
                     interactionType = ActivityInteractionType.Manual;
                     channel = OmnichannelConstants.Channels.Phone;
                     automatedSettings.AIProfileId = null;
@@ -475,6 +476,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 {
                     await dialerContributor.EnqueueAsync(
                         activity.ItemId,
+                        campaignId,
                         dialerProfile,
                         cancellationToken);
                 }

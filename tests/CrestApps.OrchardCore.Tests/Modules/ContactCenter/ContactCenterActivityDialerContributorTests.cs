@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -27,7 +28,7 @@ public sealed class ContactCenterActivityDialerContributorTests
         // Act
         var descriptors = (await contributor.GetProfilesAsync(TestContext.Current.CancellationToken)).ToArray();
 
-        // Assert
+        // Assert: a descriptor is reusable settings only — it no longer carries a campaign or routing target.
         Assert.Collection(
             descriptors,
             descriptor =>
@@ -35,16 +36,12 @@ public sealed class ContactCenterActivityDialerContributorTests
                 Assert.Equal("profile-1", descriptor.ProfileId);
                 Assert.Equal("Preview profile", descriptor.DisplayName);
                 Assert.Equal(ActivitySources.PreviewDial, descriptor.ActivitySource);
-                Assert.Equal("campaign-1", descriptor.CampaignId);
-                Assert.Equal("queue-1", descriptor.RoutingTargetId);
             },
             descriptor =>
             {
                 Assert.Equal("profile-2", descriptor.ProfileId);
                 Assert.Equal("profile-2", descriptor.DisplayName);
                 Assert.Equal(ActivitySources.PowerDial, descriptor.ActivitySource);
-                Assert.Equal("campaign-1", descriptor.CampaignId);
-                Assert.Equal("queue-1", descriptor.RoutingTargetId);
             });
     }
 
@@ -70,7 +67,7 @@ public sealed class ContactCenterActivityDialerContributorTests
     }
 
     [Fact]
-    public async Task EnqueueAsync_WhenProfileExists_UsesProfileQueue()
+    public async Task EnqueueAsync_DerivesTheCampaignQueueAndStampsTheProfile()
     {
         // Arrange
         var queueService = new Mock<IActivityQueueService>();
@@ -80,27 +77,31 @@ public sealed class ContactCenterActivityDialerContributorTests
         var profile = new ActivityDialerProfileDescriptor
         {
             ProfileId = "profile-1",
-            RoutingTargetId = "queue-1",
         };
 
         // Act
         await contributor.EnqueueAsync(
             "activity-1",
+            "campaign-1",
             profile,
             TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert: the routing target is the campaign's virtual queue (derived from the campaign, not the profile),
+        // and the profile is stamped on the queue item so the pacer can apply its settings.
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.CreateId("campaign-1");
+
         queueService.Verify(
             service => service.EnqueueAsync(
                 "activity-1",
-                "queue-1",
+                campaignQueueId,
                 null,
+                "profile-1",
                 TestContext.Current.CancellationToken),
             Times.Once);
     }
 
     [Fact]
-    public async Task EnqueueAsync_WhenRoutingTargetIsMissing_ThrowsArgumentNullException()
+    public async Task EnqueueAsync_WhenCampaignIsMissing_Throws()
     {
         // Arrange
         var contributor = new ContactCenterActivityDialerContributor(
@@ -112,9 +113,10 @@ public sealed class ContactCenterActivityDialerContributorTests
         };
 
         // Act and assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+        await Assert.ThrowsAsync<ArgumentException>(() =>
             contributor.EnqueueAsync(
                 "activity-1",
+                string.Empty,
                 profile,
                 TestContext.Current.CancellationToken));
     }
@@ -128,8 +130,6 @@ public sealed class ContactCenterActivityDialerContributorTests
         {
             ItemId = profileId,
             Name = name,
-            CampaignId = "campaign-1",
-            QueueId = "queue-1",
             Mode = mode,
         };
     }

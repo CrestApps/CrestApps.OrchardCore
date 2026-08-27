@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
@@ -18,6 +20,15 @@ internal static class AgentSoftPhoneEndpoints
     public const string CurrentIncomingOfferRouteName = "ContactCenterAgentSoftPhoneCurrentIncomingOffer";
     public const string SoftPhoneRegistrationConfigRouteName = "ContactCenterAgentSoftPhoneRegistrationConfig";
     public const string SoftPhoneSignOutRouteName = "ContactCenterAgentSoftPhoneSignOut";
+
+    // The soft-phone clients (browser extension and Windows app) bind the call's State/Direction as
+    // strings -- the same shape the Telephony hub sends. Serialize enums as their names here so the
+    // current-offer recovery poll can parse the payload; the default HTTP options would emit numbers and
+    // the client's string binding would fail (`$.call.state could not be converted to System.String`).
+    private static readonly JsonSerializerOptions _incomingOfferJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     public static IEndpointRouteBuilder AddAgentSoftPhoneEndpoints(
         this IEndpointRouteBuilder builder,
@@ -103,7 +114,7 @@ internal static class AgentSoftPhoneEndpoints
 
         return offer is null
             ? TypedResults.NotFound()
-            : TypedResults.Ok(offer);
+            : TypedResults.Json(offer, _incomingOfferJsonOptions);
     }
 
     internal static async Task<IResult> HandleRegistrationConfigAsync(

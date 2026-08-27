@@ -599,6 +599,8 @@ internal static class AgentWorkspaceEndpoints
             QueueName = queue?.Name,
             CustomerLabel = await ResolveCustomerLabelAsync(activity, null, contentManager),
             CustomerAddress = activity?.PreferredDestination,
+            AutoOpenActivity = DialerActivitySourceHelper.IsDialerSource(activity?.Source),
+            Kind = AgentOfferKindHelper.FromActivitySource(activity?.Source),
             ExpiresUtc = reservation.ExpiresUtc,
             ServerTimeUtc = now,
         };
@@ -693,8 +695,12 @@ internal static class AgentWorkspaceEndpoints
         IOmnichannelActivityManager activityManager,
         CancellationToken cancellationToken)
     {
+        // Wrap-up (disposition) applies only to a call the agent actually handled: it must have ended normally and
+        // have been answered. A failed or never-answered call — an unanswered inbound ring, a busy/failed dial —
+        // was not handled, so it must never linger in the bar or workspace demanding an activity completion.
         var candidates = recentInteractions
-            .Where(interaction => interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed &&
+            .Where(interaction => interaction.Status == InteractionStatus.Ended &&
+                interaction.AnsweredUtc.HasValue &&
                 !string.IsNullOrEmpty(interaction.ActivityItemId))
             .ToArray();
 

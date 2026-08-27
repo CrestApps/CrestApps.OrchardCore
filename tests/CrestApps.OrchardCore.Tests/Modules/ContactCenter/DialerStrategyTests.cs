@@ -38,10 +38,10 @@ public sealed class DialerStrategyTests
             .ReturnsAsync(true);
 
         var strategy = new PowerDialerStrategy(assignmentService.Object, attemptService.Object);
-        var profile = new DialerProfile { QueueId = "q1", Mode = DialerMode.Power, CallsPerAgent = 10 };
+        var profile = new DialerProfile { Mode = DialerMode.Power, CallsPerAgent = 10 };
 
         // Act
-        var started = await strategy.RunCycleAsync(profile, TestContext.Current.CancellationToken);
+        var started = await strategy.RunCycleAsync(profile, "q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(PowerDialerStrategy.MaxCallsPerAgent, started);
@@ -65,10 +65,10 @@ public sealed class DialerStrategyTests
             .ReturnsAsync(true);
 
         var strategy = new ProgressiveDialerStrategy(assignmentService.Object, attemptService.Object);
-        var profile = new DialerProfile { QueueId = "q1", Mode = DialerMode.Progressive };
+        var profile = new DialerProfile { Mode = DialerMode.Progressive };
 
         // Act
-        var started = await strategy.RunCycleAsync(profile, TestContext.Current.CancellationToken);
+        var started = await strategy.RunCycleAsync(profile, "q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(2, started);
@@ -87,10 +87,10 @@ public sealed class DialerStrategyTests
 
         var attemptService = new Mock<IDialerAttemptService>();
         var strategy = new ProgressiveDialerStrategy(assignmentService.Object, attemptService.Object);
-        var profile = new DialerProfile { QueueId = "q1", Mode = DialerMode.Progressive };
+        var profile = new DialerProfile { Mode = DialerMode.Progressive };
 
         // Act
-        var started = await strategy.RunCycleAsync(profile, TestContext.Current.CancellationToken);
+        var started = await strategy.RunCycleAsync(profile, "q1", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, started);

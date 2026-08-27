@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -51,6 +50,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
         var dialerManager = serviceProvider.GetRequiredService<IDialerProfileManager>();
         var dialerService = serviceProvider.GetRequiredService<IDialerService>();
+        var queueItemStore = serviceProvider.GetRequiredService<IQueueItemStore>();
         var clock = serviceProvider.GetRequiredService<IClock>();
         var logger = serviceProvider.GetRequiredService<ILogger<DialerPacingBackgroundTask>>();
 
@@ -60,11 +60,15 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
         var runDeadlineUtc = clock.UtcNow.AddMilliseconds(MaxRunDurationMilliseconds);
 
-        IReadOnlyCollection<DialerProfile> profiles;
+        // Pacing is work-driven: a dialer profile is now reusable settings chosen when inventory is loaded, and
+        // each loaded activity carries its profile on the queue item. So instead of iterating profiles, find the
+        // campaign queues that actually have waiting outbound inventory and pace each one with the profile the
+        // work was loaded under.
+        IReadOnlyCollection<string> waitingQueueIds;
 
         try
         {
-            profiles = await dialerManager.GetEnabledAsync(runToken);
+            waitingQueueIds = await queueItemStore.GetWaitingQueueIdsAsync(runToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -75,21 +79,25 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug(
-                    "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while listing profiles; deferring to the next scheduled tick.",
+                    "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while listing queues; deferring to the next scheduled tick.",
                     MaxRunDurationMilliseconds);
             }
 
             return;
         }
 
-        foreach (var profile in profiles)
+        var campaignQueueIds = waitingQueueIds
+            .Where(ContactCenterConstants.IsCampaignQueue)
+            .ToArray();
+
+        foreach (var queueId in campaignQueueIds)
         {
             if (clock.UtcNow >= runDeadlineUtc)
             {
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
                     logger.LogDebug(
-                        "The dialer pacing run reached its {BudgetMilliseconds} ms time budget; deferring the remaining profiles to the next scheduled tick.",
+                        "The dialer pacing run reached its {BudgetMilliseconds} ms time budget; deferring the remaining queues to the next scheduled tick.",
                         MaxRunDurationMilliseconds);
                 }
 
@@ -98,7 +106,24 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
             try
             {
-                await dialerService.RunCycleAsync(profile, runToken);
+                // Resolve the profile the queue's waiting inventory was loaded under from its head item. A campaign
+                // is normally dialed by one profile; when several profiles share a campaign queue, the head item's
+                // profile governs this cycle's pacing.
+                var headItem = await queueItemStore.FindNextWaitingAsync(queueId, runToken);
+
+                if (headItem is null || string.IsNullOrEmpty(headItem.DialerProfileId))
+                {
+                    continue;
+                }
+
+                var profile = await dialerManager.FindByIdAsync(headItem.DialerProfileId, runToken);
+
+                if (profile is null)
+                {
+                    continue;
+                }
+
+                await dialerService.RunCycleAsync(profile, queueId, runToken);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -109,16 +134,16 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
                     logger.LogDebug(
-                        "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while running profile '{Profile}'; deferring the remaining profiles to the next scheduled tick.",
+                        "The dialer pacing run reached its {BudgetMilliseconds} ms time budget while pacing queue '{QueueId}'; deferring the remaining queues to the next scheduled tick.",
                         MaxRunDurationMilliseconds,
-                        profile.Name);
+                        queueId);
                 }
 
                 break;
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "An error occurred while running dialer profile '{Profile}'.", profile.Name);
+                logger.LogError(ex, "An error occurred while pacing dialer queue '{QueueId}'.", queueId);
             }
         }
     }

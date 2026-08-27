@@ -38,17 +38,4 @@ public sealed class DialerProfileManager : CatalogManager<DialerProfile>, IDiale
 
         return profiles;
     }
-
-    /// <inheritdoc/>
-    public async Task<DialerProfile> FindByCampaignAsync(string campaignId, CancellationToken cancellationToken = default)
-    {
-        var profile = await _store.FindByCampaignAsync(campaignId, cancellationToken);
-
-        if (profile is not null)
-        {
-            await LoadAsync(profile, cancellationToken);
-        }
-
-        return profile;
-    }
 }

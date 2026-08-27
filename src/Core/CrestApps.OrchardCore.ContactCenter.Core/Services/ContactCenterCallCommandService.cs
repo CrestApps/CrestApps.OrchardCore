@@ -98,9 +98,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             if (activity?.Source == ActivitySources.PreviewDial &&
                 _dialerProfileManager is not null &&
                 _dialerAttemptService is not null &&
-                !string.IsNullOrWhiteSpace(activity.CampaignId))
+                !string.IsNullOrWhiteSpace(reservation.DialerProfileId))
             {
-                var profile = await _dialerProfileManager.FindByCampaignAsync(activity.CampaignId, cancellationToken);
+                var profile = await _dialerProfileManager.FindByIdAsync(reservation.DialerProfileId, cancellationToken);
 
                 if (profile is not null)
                 {

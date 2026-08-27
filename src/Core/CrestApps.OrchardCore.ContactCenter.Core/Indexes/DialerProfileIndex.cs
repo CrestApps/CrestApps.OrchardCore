@@ -18,16 +18,6 @@ public sealed class DialerProfileIndex : CatalogItemIndex
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the campaign the dialer profile targets.
-    /// </summary>
-    public string CampaignId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the queue the dialer profile feeds.
-    /// </summary>
-    public string QueueId { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether the dialer profile is enabled.
     /// </summary>
     public bool Enabled { get; set; }

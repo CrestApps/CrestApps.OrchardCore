@@ -27,6 +27,13 @@ public sealed class ActivityReservation : CatalogItem, IModifiedUtcAwareModel
     public string QueueItemId { get; set; }
 
     /// <summary>
+    /// Gets or sets the dialer profile that dials the reserved item, when it is outbound dialer inventory.
+    /// Copied from the queue item so the pacer and preview-accept path can apply the profile's settings without
+    /// the profile owning a campaign.
+    /// </summary>
+    public string DialerProfileId { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent the activity is reserved for.
     /// </summary>
     public string AgentId { get; set; }

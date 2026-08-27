@@ -30,15 +30,4 @@ public sealed class DialerProfileStore : DocumentCatalog<DialerProfile, DialerPr
 
         return profiles.ToArray();
     }
-
-    /// <inheritdoc/>
-    public async Task<DialerProfile> FindByCampaignAsync(string campaignId, CancellationToken cancellationToken = default)
-    {
-        ArgumentException.ThrowIfNullOrEmpty(campaignId);
-
-        return await Session.Query<DialerProfile, DialerProfileIndex>(
-            index => index.CampaignId == campaignId,
-            collection: ContactCenterStorage.CollectionName)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
 }

@@ -22,6 +22,12 @@ public sealed class AgentOfferRevokedNotification
     public string ReservationId { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the CRM activity the offer was for, so a screen pop can open the record for
+    /// an accepted offer.
+    /// </summary>
+    public string ActivityItemId { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the queue the offer originated from.
     /// </summary>
     public string QueueId { get; set; }

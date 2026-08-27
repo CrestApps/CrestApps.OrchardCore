@@ -1,8 +1,11 @@
+using System.Text.Json.Serialization;
+
 namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
 /// Identifies why an offer presented to an agent was revoked.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum AgentOfferRevokedReason
 {
     /// <summary>

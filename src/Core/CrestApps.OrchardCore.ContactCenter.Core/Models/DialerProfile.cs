@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 /// <summary>
-/// Represents an outbound dialing configuration that ties a campaign and queue to a dialing mode and provider.
+/// Represents a reusable outbound dialing configuration: a dialing mode, provider, and compliance settings
+/// that can be applied to any campaign. A profile is not tied to a campaign or queue; the campaign is chosen
+/// when inventory is loaded (on the activity batch), and each loaded activity carries the profile that dials it.
 /// </summary>
 public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
 {
@@ -18,16 +20,6 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     /// Gets or sets the description of the dialer profile.
     /// </summary>
     public string Description { get; set; }
-
-    /// <summary>
-    /// Gets or sets the CRM campaign whose activities are dialed.
-    /// </summary>
-    public string CampaignId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the queue eligible agents sign in to for the campaign.
-    /// </summary>
-    public string QueueId { get; set; }
 
     /// <summary>
     /// Gets or sets the dialing mode that controls pacing and agent reservation behavior.
