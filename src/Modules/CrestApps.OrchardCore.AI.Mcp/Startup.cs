@@ -143,7 +143,7 @@ public sealed class McpServerStartup : StartupBase
            .AddCoreAIMcpServerStoresYesSql()
            .AddDataMigration<McpConnectionServerMigrations>();
 
-        services.AddOrchardCoreAgentSkillServices();
+        services.AddOrchardCoreAgentSkillServices(_ => { });
 
         // Also register OC implementations under the framework interfaces
         // so the shared WithCrestAppsHandlers() can resolve them.
