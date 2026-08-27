@@ -34,7 +34,17 @@ namespace CrestApps.OrchardCore.AI.Chat.Hubs;
 /// and overrides hooks to integrate with OrchardCore's scoping, authorization, localization,
 /// analytics, and citation systems.
 /// </summary>
-[Authorize]
+/// <remarks>
+/// This hub intentionally does not carry a blanket <c>[Authorize]</c>. Access is enforced
+/// per profile by <see cref="AuthorizeProfileAsync"/> (which checks
+/// <see cref="AIPermissions.QueryAnyAIProfile"/> against the specific profile), so a site can
+/// grant the Anonymous role access to public profiles. A class-level <c>[Authorize]</c> would
+/// reject the SignalR negotiate for anonymous callers before that per-profile check runs, which
+/// breaks anonymous chat and the external chat widget hosted in a third-party iframe (where auth
+/// cookies are not available). <see cref="AllowAnonymousAttribute"/> is applied explicitly so a
+/// future change that secures hubs globally does not silently re-break anonymous access.
+/// </remarks>
+[AllowAnonymous]
 public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 {
     private readonly IStringLocalizer S;
