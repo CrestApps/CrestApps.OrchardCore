@@ -130,6 +130,24 @@ internal sealed class McpPromptStep : NamedRecipeStepHandler
                     .ToList();
             }
         }
+
+        var messagesArray = token[nameof(McpPrompt.Messages)]?.AsArray();
+        if (messagesArray is not null)
+        {
+            entry.Messages = messagesArray
+                .Where(m => m is not null)
+                .Select(m =>
+                {
+                    var obj = m.AsObject();
+                    return new McpPromptMessage
+                    {
+                        Role = obj[nameof(McpPromptMessage.Role)]?.GetValue<string>(),
+                        Content = obj[nameof(McpPromptMessage.Content)]?.GetValue<string>(),
+                    };
+                })
+                .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+                .ToList();
+        }
     }
 
     private sealed class McpPromptDeploymentStepModel
