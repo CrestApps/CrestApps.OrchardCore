@@ -17,7 +17,7 @@ public sealed class DialerModeIntegrationTests
         await using var harness = await DialerModeIntegrationHarness.CreateAsync();
         await harness.SignInAgentAsync("agent-1", "user-1");
         await harness.SeedQueuedActivityAsync("activity-1", "+15551230001");
-        var profile = harness.CreateProfile(DialerMode.Power, callsPerAgent: 3);
+        var profile = DialerModeIntegrationHarness.CreateProfile(DialerMode.Power, callsPerAgent: 3);
 
         // Act + Assert: a pacing cycle reserves the agent and places the call, moving them to Busy.
         var started = await harness.RunPacingCycleAsync(profile);
@@ -46,7 +46,7 @@ public sealed class DialerModeIntegrationTests
         await harness.SeedQueuedActivityAsync("activity-1", "+15551230001");
         await harness.SeedQueuedActivityAsync("activity-2", "+15551230002");
         await harness.SeedQueuedActivityAsync("activity-3", "+15551230003");
-        var profile = harness.CreateProfile(DialerMode.Power, callsPerAgent: 3);
+        var profile = DialerModeIntegrationHarness.CreateProfile(DialerMode.Power, callsPerAgent: 3);
 
         // Act
         var started = await harness.RunPacingCycleAsync(profile);
@@ -68,7 +68,7 @@ public sealed class DialerModeIntegrationTests
         await harness.SignInAgentAsync("agent-2", "user-2");
         await harness.SeedQueuedActivityAsync("activity-1", "+15551230001");
         await harness.SeedQueuedActivityAsync("activity-2", "+15551230002");
-        var profile = harness.CreateProfile(DialerMode.Progressive);
+        var profile = DialerModeIntegrationHarness.CreateProfile(DialerMode.Progressive);
 
         // Act
         var started = await harness.RunPacingCycleAsync(profile);
@@ -96,7 +96,7 @@ public sealed class DialerModeIntegrationTests
         await using var harness = await DialerModeIntegrationHarness.CreateAsync();
         await harness.SignInAgentAsync("agent-1", "user-1");
         await harness.SeedQueuedActivityAsync("activity-1", "+15551230001");
-        var profile = harness.CreateProfile(DialerMode.Predictive);
+        var profile = DialerModeIntegrationHarness.CreateProfile(DialerMode.Predictive);
 
         // Act
         var started = await harness.RunPacingCycleAsync(profile);
@@ -116,7 +116,7 @@ public sealed class DialerModeIntegrationTests
         await using var harness = await DialerModeIntegrationHarness.CreateAsync();
         await harness.SignInAgentAsync("agent-1", "user-1");
         await harness.SeedQueuedActivityAsync("activity-1", "+15551230001");
-        var profile = harness.CreateProfile(mode);
+        var profile = DialerModeIntegrationHarness.CreateProfile(mode);
 
         // Act
         var started = await harness.RunPacingCycleAsync(profile);

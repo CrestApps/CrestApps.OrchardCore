@@ -200,10 +200,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public ActivityDialerProfileDescriptor() { }
         public string ActivitySource { get; set; }
-        public string CampaignId { get; set; }
         public string DisplayName { get; set; }
         public string ProfileId { get; set; }
-        public string RoutingTargetId { get; set; }
     }
     public sealed class ActivityDispositionRequest
     {
@@ -805,7 +803,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public interface IActivityDialerContributor
     {
-        System.Threading.Tasks.Task EnqueueAsync(string activityId, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task EnqueueAsync(string activityId, string campaignId, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor> FindByIdAsync(string profileId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default);
     }

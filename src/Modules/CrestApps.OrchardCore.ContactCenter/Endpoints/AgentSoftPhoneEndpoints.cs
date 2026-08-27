@@ -114,7 +114,7 @@ internal static class AgentSoftPhoneEndpoints
 
         return offer is null
             ? TypedResults.NotFound()
-            : TypedResults.Json(offer, _incomingOfferJsonOptions);
+            : TypedResults.Json(offer, _incomingOfferJsonOptions, statusCode: StatusCodes.Status200OK);
     }
 
     internal static async Task<IResult> HandleRegistrationConfigAsync(

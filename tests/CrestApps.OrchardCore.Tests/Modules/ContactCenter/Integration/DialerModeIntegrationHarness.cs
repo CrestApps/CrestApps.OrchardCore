@@ -183,7 +183,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         await _session.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
-    public DialerProfile CreateProfile(DialerMode mode, int callsPerAgent = 1)
+    public static DialerProfile CreateProfile(DialerMode mode, int callsPerAgent = 1)
     {
         return new DialerProfile
         {

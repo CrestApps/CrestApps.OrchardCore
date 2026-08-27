@@ -3,7 +3,9 @@ namespace CrestApps.OrchardCore.ContactCenter
     public static class ContactCenterConstants
     {
         public const string SystemActor = "system";
+        public static bool IsCampaignQueue(string queueId) { }
         public static bool IsDirectRoutingQueue(string queueId) { }
+        public static bool QueueStartsAfterCallWork(string queueId) { }
         public static class AggregateTypes
         {
             public const string ManualCall = "ManualCall";
@@ -11,6 +13,12 @@ namespace CrestApps.OrchardCore.ContactCenter
         public static class AttendedTransferMetadata
         {
             public const string AgentUserId = "attendedTransferAgentUserId";
+        }
+        public static class CampaignQueue
+        {
+            public const string Prefix = "__campaign-queue__";
+            public static string CreateId(string campaignId) { }
+            public static string GetCampaignId(string queueId) { }
         }
         public static class CommandMetadata
         {
@@ -363,6 +371,13 @@ namespace CrestApps.OrchardCore.ContactCenter
 }
 namespace CrestApps.OrchardCore.ContactCenter.Models
 {
+    [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+    public enum AgentOfferKind
+    {
+        InboundCall = 0,
+        PreviewDial = 1,
+        AutoDial = 2,
+    }
     public sealed class AgentOfferNotification
     {
         public AgentOfferNotification() { }
@@ -370,6 +385,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string AgentId { get; set; }
         public bool AutoOpenActivity { get; set; }
         public System.DateTime ExpiresUtc { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentOfferKind Kind { get; set; }
         public string QueueId { get; set; }
         public string QueueItemId { get; set; }
         public string ReservationId { get; set; }
@@ -379,12 +395,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     public sealed class AgentOfferRevokedNotification
     {
         public AgentOfferRevokedNotification() { }
+        public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
         public string QueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.AgentOfferRevokedReason Reason { get; set; }
         public string ReservationId { get; set; }
         public string UserId { get; set; }
     }
+    [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
     public enum AgentOfferRevokedReason
     {
         Expired = 0,

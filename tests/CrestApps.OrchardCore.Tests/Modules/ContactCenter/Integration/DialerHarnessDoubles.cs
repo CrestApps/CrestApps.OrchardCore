@@ -28,8 +28,6 @@ internal sealed class TestClock : IClock
     public ITimeZone GetSystemTimeZone() => throw new NotSupportedException();
 
     public ITimeZone[] GetTimeZones() => [];
-
-    public DateTime ConvertToUtc(DateTime dateTime, ITimeZone timeZone) => dateTime;
 }
 
 /// <summary>

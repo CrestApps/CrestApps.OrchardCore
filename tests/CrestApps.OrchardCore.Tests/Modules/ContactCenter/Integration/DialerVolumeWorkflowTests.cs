@@ -20,7 +20,7 @@ public sealed class DialerVolumeWorkflowTests
         const int callCount = 100;
         await harness.SignInAgentsAsync(agentCount);
         await harness.SeedQueuedActivitiesAsync(callCount);
-        var profile = harness.CreateProfile(DialerMode.Progressive);
+        var profile = DialerModeIntegrationHarness.CreateProfile(DialerMode.Progressive);
 
         // Act: run pacing cycles until the queue drains, completing every call each round.
         var summary = await RunToCompletionAsync(harness, profile, agentCount);
@@ -51,7 +51,7 @@ public sealed class DialerVolumeWorkflowTests
         const int callCount = 100;
         await harness.SignInAgentsAsync(agentCount);
         await harness.SeedQueuedActivitiesAsync(callCount);
-        var profile = harness.CreateProfile(DialerMode.Power, callsPerAgent: 3);
+        var profile = DialerModeIntegrationHarness.CreateProfile(DialerMode.Power, callsPerAgent: 3);
 
         // Act
         var summary = await RunToCompletionAsync(harness, profile, agentCount);
