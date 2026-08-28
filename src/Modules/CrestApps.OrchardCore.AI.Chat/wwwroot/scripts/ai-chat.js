@@ -1199,8 +1199,29 @@ window.coreAIChatManager = function () {
                     if (_this3.isRecording) {
                       _this3.stopRecording();
                     }
+
+                    // A server-side error (for example a session-start rate-limit rejection) ends the
+                    // in-flight request. Reject any pending new-session promise so the UI stops waiting
+                    // until it times out, and clear the typing indicator that a send may have shown.
+                    _this3.rejectPendingSessionRequest(error);
+                    _this3.hideTypingIndicator();
                     if (widgetBehavior && typeof widgetBehavior.handleReceiveError === 'function') {
                       widgetBehavior.handleReceiveError(_this3, error, config);
+                    } else if (!_this3.isNavigatingAway) {
+                      // Surface the message to the user instead of failing silently.
+                      _this3.addMessage(_this3.getErrorMessage(error));
+                    }
+                  });
+                  _this3.connection.on("ReceiveSessionStartRejected", function (reason) {
+                    // A rate-limit rejection is a definitive "wait and retry", not a recoverable
+                    // session/connection error. Unblock any pending new-session request, clear the
+                    // typing indicator, and show the message for every host (main app and widget)
+                    // without triggering the widget's clear-and-retry recovery, which would wipe the
+                    // visitor's state and fire another throttled StartSession.
+                    _this3.rejectPendingSessionRequest(reason);
+                    _this3.hideTypingIndicator();
+                    if (!_this3.isNavigatingAway) {
+                      _this3.addMessage(_this3.getErrorMessage(reason));
                     }
                   });
                   _this3.connection.on("MessageRated", function (messageId, userRating) {
@@ -1714,6 +1735,14 @@ window.coreAIChatManager = function () {
             htmlContent: ""
           };
           return newMessage;
+        },
+        getErrorMessage: function getErrorMessage(error) {
+          var content = typeof error === 'string' && error.trim() ? error : "Something went wrong. Please try again.";
+          return {
+            role: "assistant",
+            content: content,
+            htmlContent: ""
+          };
         },
         processReferences: function processReferences(references, messageIndex) {
           var _this9 = this;
