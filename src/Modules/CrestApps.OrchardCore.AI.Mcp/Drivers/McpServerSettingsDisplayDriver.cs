@@ -30,6 +30,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
     private readonly AIToolDefinitionOptions _toolDefinitions;
     private readonly IAIToolInstanceAccessor _instanceAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IShellReleaseManager _shellReleaseManager;
 
@@ -43,6 +44,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
     /// <param name="toolDefinitions">The registered AI tool definitions.</param>
     /// <param name="instanceAccessor">The accessor that resolves the tool instances the current user may assign.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="toolAccessEvaluator">The evaluator used to check tool access permissions.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="shellReleaseManager">The shell release manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -50,6 +52,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
         IOptions<AIToolDefinitionOptions> toolDefinitions,
         IAIToolInstanceAccessor instanceAccessor,
         IAuthorizationService authorizationService,
+        IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
         IShellReleaseManager shellReleaseManager,
         IStringLocalizer<McpServerSettingsDisplayDriver> stringLocalizer)
@@ -57,6 +60,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
         _toolDefinitions = toolDefinitions.Value;
         _instanceAccessor = instanceAccessor;
         _authorizationService = authorizationService;
+        _toolAccessEvaluator = toolAccessEvaluator;
         _httpContextAccessor = httpContextAccessor;
         _shellReleaseManager = shellReleaseManager;
         S = stringLocalizer;
@@ -208,7 +212,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
 
         foreach (var tool in _toolDefinitions.GetSelectableTools())
         {
-            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
+            if (await _toolAccessEvaluator.IsAuthorizedAsync(user, tool.Key))
             {
                 accessibleTools[tool.Key] = tool.Value;
             }
