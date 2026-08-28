@@ -39,7 +39,9 @@ internal sealed class PromptSecurityOptionsConfiguration : IConfigureOptions<Pro
         options.CustomBlockedPatterns = settings.CustomBlockedPatterns;
         options.MaxMessagesPerWindow = settings.MaxMessagesPerWindow;
         options.RateLimitWindow = settings.RateLimitWindow;
+        options.AnonymousMessageRateLimitTiers = settings.AnonymousMessageRateLimitTiers;
         options.MaxAnonymousSessionsPerWindow = settings.MaxAnonymousSessionsPerWindow;
         options.AnonymousSessionRateLimitWindow = settings.AnonymousSessionRateLimitWindow;
+        options.AnonymousSessionStartRateLimitTiers = settings.AnonymousSessionStartRateLimitTiers;
     }
 }

@@ -9,6 +9,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.AI.Security;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -113,6 +114,18 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
     protected override string GetNotAuthorizedMessage()
         => S["You are not authorized to interact with the given profile."].Value;
+
+    /// <summary>
+    /// Gets the message shown when a caller is throttled while starting a new chat session.
+    /// </summary>
+    /// <param name="result">The rate-limit result.</param>
+    /// <remarks>
+    /// The message deliberately discloses neither the configured limit, the current count, nor the
+    /// retry delay: those values let an abuser tune their traffic to sit just under the throttle. It
+    /// still tells a legitimate visitor what happened and that waiting resolves it.
+    /// </remarks>
+    protected override string GetSessionStartRateLimitMessage(RateLimitResult result)
+        => S["You've reached the limit for starting new chats. Please wait a few minutes and try again."].Value;
 
     protected override string GetFriendlyErrorMessage(Exception ex)
         => AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value;
