@@ -221,6 +221,11 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
                 ProviderName = TechnicalName,
                 ProviderCallId = callerCallControlId,
                 ProviderLegId = agentCallControlId,
+
+                // Telnyx accepted the invite for delivery; the agent's browser has not answered it yet. The leg
+                // is answered only when its call.answered webhook arrives, which is also what triggers the
+                // bridge, so reporting it as dialing keeps the topology honest until then.
+                ProviderLegState = VoiceCallState.Dialing,
             };
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

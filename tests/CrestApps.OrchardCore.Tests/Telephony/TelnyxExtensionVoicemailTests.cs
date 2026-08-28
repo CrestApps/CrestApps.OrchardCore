@@ -1,6 +1,8 @@
 using System.Net;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Moq;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -149,7 +151,8 @@ public sealed class TelnyxExtensionVoicemailTests
                 ConnectionId = "connection-1",
                 ApiBaseUrl = "https://api.telnyx.test/v2/",
                 OutboundVoiceProfileId = outboundVoiceProfileId,
-            }));
+            }),
+            new Mock<IContactCenterAgentLegFailureService>().Object);
 
     private static string DecodeClientState(string clientState)
         => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(clientState));

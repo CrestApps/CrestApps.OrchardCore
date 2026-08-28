@@ -460,6 +460,17 @@
           var reason = notification && notification.reason;
           var accepted = reason === 2 || reason === 'Accepted';
           var acceptPending = typeof api.isIncomingAcceptPending === 'function' && api.isIncomingAcceptPending();
+
+          // An accepted offer means the platform is about to deliver the routed leg to this browser.
+          // The accept can be made from the docked agent bar in the CRM chrome rather than from the
+          // phone, and in that case nothing here is pending, so the phone would treat the arriving leg
+          // as an unsolicited incoming call and tear it down -- the provider reports that as a busy
+          // refusal and the agent is never connected. Arming covers the accept wherever it was made;
+          // the window is one-shot, so an accept made in the phone (already covered by its own pending
+          // state) is unaffected.
+          if (accepted && typeof api.armInboundAutoAnswer === 'function') {
+            api.armInboundAutoAnswer();
+          }
           api.clearIncomingOffer({
             preserveCurrentCall: accepted && acceptPending,
             preservePendingAccept: accepted && acceptPending

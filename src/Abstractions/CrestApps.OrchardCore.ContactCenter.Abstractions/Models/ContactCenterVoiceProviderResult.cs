@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Telephony.Models;
+
 namespace CrestApps.OrchardCore.ContactCenter.Models;
 
 /// <summary>
@@ -25,6 +27,17 @@ public sealed class ContactCenterVoiceProviderResult
     /// as a supervisor's monitoring leg or the private leg of a consult.
     /// </summary>
     public string ProviderLegId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the state the provider observed on the leg named by <see cref="ProviderLegId"/>, when the
+    /// provider reports one. A provider that only originates the leg -- the invite is accepted for delivery but
+    /// the endpoint has not picked up -- reports <see cref="VoiceCallState.Dialing"/> or
+    /// <see cref="VoiceCallState.Ringing"/> here, so the topology records a leg that is still being reached
+    /// instead of asserting a party who is already talking. <see langword="null"/> when the provider does not
+    /// report a leg state, in which case a leg it returned is taken to be answered, because the operation that
+    /// created it is one that answers.
+    /// </summary>
+    public VoiceCallState? ProviderLegState { get; set; }
 
     /// <summary>
     /// Gets or sets the technical name of the provider that executed the operation.

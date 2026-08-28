@@ -250,6 +250,42 @@ public sealed class AnswerProviderCommandTypeExecutorTests
     }
 
     [Fact]
+    public async Task ProjectSuccessAsync_WhenTheProviderOnlyOriginatedTheAgentLeg_RecordsItAsStillBeingReached()
+    {
+        // Arrange
+        // Connecting an agent on a provider that rings a registered soft phone only originates the leg: the
+        // invite is accepted for delivery and the endpoint has not picked up yet. Recording it as answered and
+        // joining it to the bridge asserts the agent is already talking, so a leg that never rings still reads
+        // as a connected party, and nothing downstream can tell a failed connect from a live call.
+        var harness = new Harness();
+        harness.SetupActiveState();
+        harness.SetupPublisher();
+
+        var executor = harness.CreateExecutor();
+        var command = CreateCommand();
+        var result = new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderName = "provider-a",
+            ProviderCallId = "call-1",
+            ProviderLegId = "agent-channel-1",
+            ProviderLegState = VoiceCallState.Dialing,
+        };
+
+        // Act
+        await executor.ProjectSuccessAsync(command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        var leg = Assert.Single(harness.Session.Legs, leg => leg.ProviderLegId == "agent-channel-1");
+
+        Assert.Equal(CallLegStatus.Dialing, leg.Status);
+        Assert.Null(leg.AnsweredUtc);
+        Assert.DoesNotContain(
+            harness.Session.Bridge?.ActiveParticipants ?? Enumerable.Empty<BridgeParticipant>(),
+            participant => participant.ProviderLegId == "agent-channel-1");
+    }
+
+    [Fact]
     public async Task ProjectFailureAsync_WhenReofferOnFailureIsTrue_PreservesCallAndPublishesOfferRequeued()
     {
         // Arrange

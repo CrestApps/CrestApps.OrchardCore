@@ -36,6 +36,11 @@ namespace CrestApps.OrchardCore.Telephony
         System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> StoreAsync(CrestApps.OrchardCore.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISoftPhoneCredentialRegistrar
+    {
+        string ProviderName { get; }
+        System.Threading.Tasks.Task<bool> ReportRegisteredAsync(string userId, string credentialId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ISoftPhoneCredentialRevoker
     {
         string ProviderName { get; }

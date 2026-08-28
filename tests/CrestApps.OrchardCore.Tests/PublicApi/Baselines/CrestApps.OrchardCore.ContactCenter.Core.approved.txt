@@ -2214,6 +2214,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task ScheduleUpdateAsync(string activityItemId, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task UpdateAsync(string activityItemId, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContactCenterAgentLegFailureService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAgentLegFailureService
+    {
+        public ContactCenterAgentLegFailureService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.Telephony.ITelephonyService telephonyService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterAgentLegFailureService> logger) { }
+        public System.Threading.Tasks.Task<bool> FailAsync(string providerName, string peerProviderCallId, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ContactCenterAssistService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAssistService
     {
         public ContactCenterAssistService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAssistProvider> providers) { }
@@ -2788,6 +2793,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task ScheduleUpdateAsync(string activityItemId, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task UpdateAsync(string activityItemId, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterAgentLegFailureService
+    {
+        System.Threading.Tasks.Task<bool> FailAsync(string providerName, string peerProviderCallId, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterAssistProvider
     {

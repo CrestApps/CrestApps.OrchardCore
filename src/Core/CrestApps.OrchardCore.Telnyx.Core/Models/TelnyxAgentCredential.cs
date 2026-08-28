@@ -45,6 +45,17 @@ public sealed class TelnyxAgentCredential
     public DateTime ExpiresUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the browser client reported that it completed SIP registration on this
+    /// credential, when it has reported one.
+    /// </summary>
+    /// <remarks>
+    /// Several credentials can be live for one user at once, and the client is registered on exactly one of
+    /// them. This is what distinguishes it: a credential that was minted but whose registration never
+    /// completed has no value here, and delivering a call to it is refused by Telnyx with SIP 486.
+    /// </remarks>
+    public DateTime? RegisteredUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the UTC time the credential was revoked, when it has been revoked.
     /// </summary>
     public DateTime? RevokedUtc { get; set; }

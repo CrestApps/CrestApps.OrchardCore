@@ -495,6 +495,43 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     }
 
     /// <summary>
+    /// Records that the caller's soft phone completed SIP registration on a browser credential, so the platform
+    /// delivers calls to the credential the client can actually receive on rather than the one minted most
+    /// recently. Scoped to the caller's own credentials, so a user can only report a credential they own.
+    /// </summary>
+    /// <param name="credentialId">The provider credential identifier the client registered on.</param>
+    public async Task ReportCredentialRegistered(string credentialId)
+    {
+        if (string.IsNullOrEmpty(credentialId))
+        {
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+        {
+            if (!await AuthorizeAsync(scope.ServiceProvider))
+            {
+                LogHubActionUnauthorized("ReportCredentialRegistered");
+                return;
+            }
+
+            var userId = Context.UserIdentifier;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return;
+            }
+
+            // Offer the id to every registered registrar; each only acts on a credential it owns for this user,
+            // so a provider that does not own it simply returns without doing anything.
+            foreach (var registrar in scope.ServiceProvider.GetServices<ISoftPhoneCredentialRegistrar>())
+            {
+                await registrar.ReportRegisteredAsync(userId, credentialId, Context.ConnectionAborted);
+            }
+        });
+    }
+
+    /// <summary>
     /// Gets the current user's active call directly from the configured telephony provider.
     /// </summary>
     /// <returns>The provider-authoritative call lookup result.</returns>

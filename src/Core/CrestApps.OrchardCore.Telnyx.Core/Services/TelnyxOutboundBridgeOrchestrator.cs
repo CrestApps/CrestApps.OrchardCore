@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -16,16 +18,19 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<TelnyxOutboundBridgeOrchestrator> _logger;
+    private readonly IContactCenterAgentLegFailureService _agentLegFailureService;
     private readonly TelnyxOptions _options;
 
     public TelnyxOutboundBridgeOrchestrator(
         IHttpClientFactory httpClientFactory,
         ILogger<TelnyxOutboundBridgeOrchestrator> logger,
-        IOptionsMonitor<TelnyxOptions> telnyxOptions)
+        IOptionsMonitor<TelnyxOptions> telnyxOptions,
+        IContactCenterAgentLegFailureService agentLegFailureService)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
+        _agentLegFailureService = agentLegFailureService;
     }
 
     /// <inheritdoc/>
@@ -59,6 +64,37 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
             if (isAnswered && _options.IsConfigured && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
             {
                 await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken);
+            }
+            else if (IsHangup(callEvent))
+            {
+                // Report what the provider actually said about the leg. The normalized cause collapses several
+                // provider outcomes onto one value, and the SIP response is what separates them: a rejection by
+                // the endpoint, a rejection by the platform's own routing policy, and a busy endpoint all arrive
+                // as a refusal but mean different things and are fixed in different places. Logged for every
+                // terminal agent leg, not only the ones treated as a connect failure, so a cause this code does
+                // not yet recognize is still named rather than silently ignored.
+                _logger.LogWarning(
+                    "A Contact Center agent leg ended without answering. HangupCause={HangupCause}, SipHangupCause={SipHangupCause}, HangupSource={HangupSource}, To={ToAddress}, PeerCallControlId={PeerCallControlId}, TreatedAsConnectFailure={TreatedAsConnectFailure}.",
+                    callEvent.HangupCause.SanitizeLogValue(),
+                    callEvent.SipHangupCause.SanitizeLogValue(),
+                    callEvent.HangupSource.SanitizeLogValue(),
+                    callEvent.To.SanitizeLogValue(),
+                    state.PeerCallControlId.SanitizeLogValue(),
+                    IsAgentLegConnectFailure(callEvent));
+            }
+
+            if (!isAnswered && IsAgentLegConnectFailure(callEvent) && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
+            {
+                // The agent leg died before it was ever answered -- rejected by the endpoint, unanswered, or
+                // cleared without ringing. Its identifier belongs to no interaction, so normalization discards
+                // it and nothing else ever learns the connect failed: the customer is left on a call with an
+                // agent who was never reached, and the agent is left holding work they cannot finish. The peer
+                // identifier in the leg's own client_state is the call that failed, so report it here.
+                await _agentLegFailureService.FailAsync(
+                    TelnyxConstants.ProviderTechnicalName,
+                    state.PeerCallControlId,
+                    MapHangupCause(callEvent.HangupCause),
+                    cancellationToken);
             }
 
             return TelnyxOutboundBridgeLeg.None;
@@ -140,6 +176,49 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
 
         return TelnyxOutboundBridgeLeg.DestinationLeg;
     }
+
+    // Telnyx hangup causes that mean an agent leg the platform originated never reached the agent. It is a
+    // superset of the no-answer causes: an endpoint that is not registered, or that declines, refuses the invite
+    // outright rather than letting it ring out. NORMAL_CLEARING is deliberately absent -- that is the agent leg
+    // of a real conversation ending, which is not a connect failure.
+    private static readonly HashSet<string> _agentLegConnectFailureCauses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "TIMEOUT",
+        "NO_ANSWER",
+        "USER_BUSY",
+        "CALL_REJECTED",
+        "REJECTED",
+        "NORMAL_TEMPORARY_FAILURE",
+        "UNALLOCATED_NUMBER",
+        "INCOMPATIBLE_DESTINATION",
+    };
+
+    private static bool IsHangup(TelnyxCallEvent callEvent)
+        => string.Equals(callEvent.EventType?.Trim(), "call.hangup", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAgentLegConnectFailure(TelnyxCallEvent callEvent)
+    {
+        if (!string.Equals(callEvent.EventType?.Trim(), "call.hangup", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var cause = callEvent.HangupCause?.Trim();
+
+        return !string.IsNullOrEmpty(cause) && _agentLegConnectFailureCauses.Contains(cause);
+    }
+
+    private static HangupCause? MapHangupCause(string hangupCause)
+        => hangupCause?.Trim().ToUpperInvariant() switch
+        {
+            null or "" => null,
+            "NORMAL_CLEARING" => Telephony.Models.HangupCause.NormalClearing,
+            "TIMEOUT" or "NO_ANSWER" => Telephony.Models.HangupCause.NoAnswer,
+            "USER_BUSY" => Telephony.Models.HangupCause.Busy,
+            "CALL_REJECTED" or "REJECTED" => Telephony.Models.HangupCause.Rejected,
+            "ORIGINATOR_CANCEL" or "CANCELED" or "CANCELLED" => Telephony.Models.HangupCause.Canceled,
+            _ => Telephony.Models.HangupCause.Failed,
+        };
 
     // Telnyx hangup causes that mean the target never answered (as opposed to a normal end after a conversation
     // or the caller canceling before answer). Only these route the caller to voicemail.

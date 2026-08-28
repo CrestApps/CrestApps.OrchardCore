@@ -1998,6 +1998,18 @@
       }
       connection.invoke('RevokeSupersededCredential', credentialId).catch(function () {});
     }
+
+    // Tell the server which credential this client is registered on. Several credentials can be live for
+    // one user at once -- a renewal mints a fresh one before its predecessor expires, and a registration
+    // that never completes leaves its credential live but unusable -- and only the registered one can
+    // receive a call. Without this the server delivers to the newest-issued credential, which Telnyx
+    // refuses with SIP 486 when no client is registered on it, so the agent's leg never rings.
+    function reportCredentialRegistered(credentialId) {
+      if (!connection || !credentialId) {
+        return;
+      }
+      connection.invoke('ReportCredentialRegistered', credentialId).catch(function () {});
+    }
     function ensureBrowserAudio() {
       if (!isBrowserAudioEnabled()) {
         return Promise.resolve(null);
@@ -2069,6 +2081,9 @@
         // A fresh credential is live: reset the one-time expiry warning so a subsequent long call warns
         // again against the new expiry (item 8).
         credentialExpiryWarned = false;
+
+        // Registration completed on this credential, so it is the one the platform must deliver to.
+        reportCredentialRegistered(browserAudioCredentialId(browserAudioSession));
 
         // A renewal replaced a still-live credential; revoke that predecessor now that the fresh
         // session is registered (unless, defensively, the server handed back the same credential id).
@@ -2641,16 +2656,19 @@
       });
     }
 
-    // Arm the one-shot expectation that the next inbound provider leg is this browser's own bridged leg (an
-    // extension call it is placing), so the media adapter answers it automatically rather than ringing.
+    // Arm the one-shot expectation that the next inbound provider leg is one this browser is expecting -- its
+    // own bridged leg for an extension call it is placing, or the Contact Center leg for an offer the agent
+    // just accepted -- so the media adapter answers it automatically rather than ringing it as an
+    // unsolicited incoming call and tearing it down.
     function armInboundAutoAnswer() {
       expectInboundAutoAnswerUntil = Date.now() + INBOUND_AUTO_ANSWER_WINDOW_MS;
     }
 
     // Called by the media adapter for each inbound provider leg to decide whether to auto-answer. A Contact
-    // Center offer the agent just accepted (incomingHandled/incomingAcceptPending) and a freshly placed
-    // extension call (the armed window) are expected legs; both are consumed here so a later, genuine
-    // incoming call still rings.
+    // Center offer the agent just accepted (incomingHandled/incomingAcceptPending), an offer accepted from
+    // the docked agent bar rather than from the phone (the armed window), and a freshly placed extension
+    // call (also the armed window) are expected legs; all are consumed here so a later, genuine incoming
+    // call still rings.
     function consumeInboundAutoAnswer() {
       if (incomingHandled || incomingAcceptPending) {
         return true;
@@ -5119,6 +5137,9 @@
       isIncomingAcceptPending: function () {
         return incomingAcceptPending;
       },
+      // Lets the Contact Center layer declare that a routed leg is on its way to this browser, so the
+      // media adapter answers it instead of ringing it as an unsolicited incoming call.
+      armInboundAutoAnswer: armInboundAutoAnswer,
       setIncomingOffer: setIncomingOffer,
       clearIncomingOffer: clearIncomingOffer,
       showError: showError,

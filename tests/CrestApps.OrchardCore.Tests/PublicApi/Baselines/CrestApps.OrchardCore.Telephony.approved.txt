@@ -180,6 +180,7 @@ namespace CrestApps.OrchardCore.Telephony.Hubs
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Reject(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
         public System.Threading.Tasks.Task ReportCallQuality(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
         public System.Threading.Tasks.Task ReportClientDiagnostic(string level, string code, string message, string context) { }
+        public System.Threading.Tasks.Task ReportCredentialRegistered(string credentialId) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Resume(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
         public System.Threading.Tasks.Task RevokeSupersededCredential(string credentialId) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> SendDigits(CrestApps.OrchardCore.Telephony.Models.SendDigitsRequest request) { }

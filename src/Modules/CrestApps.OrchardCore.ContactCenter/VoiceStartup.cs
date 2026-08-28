@@ -75,6 +75,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IInboundVoiceEventSink, InboundVoiceEventSink>()
             .AddScoped<IInboundVoiceInteractionProbe, InboundVoiceInteractionProbe>()
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
+            .AddScoped<IContactCenterAgentLegFailureService, ContactCenterAgentLegFailureService>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
             .AddScoped<IProviderCommandStore, ProviderCommandStore>()
             .AddScoped<IProviderCommandManager, ProviderCommandManager>()

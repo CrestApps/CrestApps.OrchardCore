@@ -1773,6 +1773,84 @@ public sealed class ProviderVoiceEventServiceTests
     }
 
     [Fact]
+    public async Task IngestAsync_WhenTheProviderNamesTheLegOfItsOwnCall_RecordsItAsTheCustomerLeg()
+    {
+        // Arrange
+        // A provider that publishes per-leg events names the leg in its own identifier space, which is not the
+        // space the call itself is identified in: Telnyx reports call_leg_id here and call_control_id as the
+        // call. Deriving the party from the leg identifier compares the two spaces and can never match, so the
+        // customer -- the one party the platform always knows the role of -- was recorded as Unknown on every
+        // call whose provider names its legs, and the topology could not say who was on the call.
+        var now = new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc);
+
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            Direction = InteractionDirection.Outbound,
+        }.RestorePersistedStatus(InteractionStatus.Connected);
+
+        var session = new CallSession
+        {
+            ItemId = "call-session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            Direction = InteractionDirection.Outbound,
+            ToAddress = "+15551234567",
+        }.RestorePersistedState(VoiceCallState.Dialing);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(now);
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        // The event is about the session's own call, but the provider names the leg in its own space.
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            ProviderLegId = "fe2f72b4-a30f-11f1-9305-8ea121fd4ac2",
+            State = VoiceCallState.Ringing,
+            OccurredUtc = now,
+            IdempotencyKey = "ringing-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var leg = Assert.Single(session.Legs);
+
+        Assert.Equal("fe2f72b4-a30f-11f1-9305-8ea121fd4ac2", leg.ProviderLegId);
+        Assert.Equal(CallPartyRole.Customer, leg.Role);
+    }
+
+    [Fact]
     public async Task IngestAsync_WhenCallEnds_ClosesTheSupervisorEngagementNothingElseCanClose()
     {
         // Arrange

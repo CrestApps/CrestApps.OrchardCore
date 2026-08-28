@@ -52,9 +52,46 @@ public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
                 index.ExpiresUtc > nowUtc)
             .ListAsync(cancellationToken);
 
-        return credentials
-            .OrderByDescending(credential => credential.IssuedUtc)
-            .ToList();
+        // Order by what actually makes a credential reachable, not by when it was minted. Several credentials
+        // can be live for one user at once -- a renewal mints a fresh one before its predecessor expires, and a
+        // registration that never completes leaves its credential live but unusable -- and the client is
+        // registered on exactly one of them. Delivering a call to a credential no client registered on is
+        // refused by Telnyx with SIP 486, which is why the newest-issued credential is the wrong choice. A
+        // credential the client reported registering on wins, most recently registered first; credentials that
+        // were never reported fall back to newest-issued so a client that predates the report still works.
+        return TelnyxAgentCredentialSelection.OrderByDeliveryPreference(credentials);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> MarkRegisteredAsync(string userId, string credentialId, DateTime registeredUtc, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(credentialId))
+        {
+            return false;
+        }
+
+        var tenantName = GetTenantName();
+        var normalizedUserId = userId.Trim();
+        var normalizedCredentialId = credentialId.Trim();
+
+        // Scoped to the caller's own credentials so a client cannot mark someone else's credential registered.
+        var credential = await _session
+            .Query<TelnyxAgentCredential, TelnyxAgentCredentialIndex>(index =>
+                index.TenantName == tenantName &&
+                index.UserId == normalizedUserId &&
+                index.CredentialId == normalizedCredentialId)
+            .FirstOrDefaultAsync();
+
+        if (credential is null)
+        {
+            return false;
+        }
+
+        credential.RegisteredUtc = registeredUtc;
+
+        await _session.SaveAsync(credential, cancellationToken: cancellationToken);
+
+        return true;
     }
 
     /// <inheritdoc/>

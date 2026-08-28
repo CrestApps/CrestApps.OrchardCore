@@ -588,6 +588,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public bool OutcomeUnknown { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderLegId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.VoiceCallState? ProviderLegState { get; set; }
         public string ProviderName { get; set; }
         public bool Succeeded { get; set; }
     }

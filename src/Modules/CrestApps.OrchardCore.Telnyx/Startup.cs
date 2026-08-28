@@ -71,7 +71,8 @@ public sealed class Startup : StartupBase
             .AddScoped<ITelnyxTelephonyCredentialIssuer, TelnyxTelephonyCredentialIssuer>()
             .AddScoped<ITelnyxProvisioningApiService, TelnyxProvisioningApiService>()
             .AddScoped<ISoftPhoneRegistrationConfigContributor, TelnyxSoftPhoneRegistrationConfigContributor>()
-            .AddScoped<ISoftPhoneCredentialRevoker, TelnyxSoftPhoneCredentialRevoker>();
+            .AddScoped<ISoftPhoneCredentialRevoker, TelnyxSoftPhoneCredentialRevoker>()
+            .AddScoped<ISoftPhoneCredentialRegistrar, TelnyxSoftPhoneCredentialRegistrar>();
 
         // The base router never routes; the Contact Center Voice feature (DialerStartup) registers
         // ContactCenterTelnyxInboundCallRouter to take over inbound routing. TryAdd registers this no-op

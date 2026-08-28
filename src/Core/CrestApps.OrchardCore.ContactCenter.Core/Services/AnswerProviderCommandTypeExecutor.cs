@@ -238,16 +238,29 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             {
                 var now = _clock.UtcNow;
 
+                // Record the leg in the state the provider actually observed. Connecting an agent on a provider
+                // that rings a registered soft phone only originates the leg -- the invite is accepted for
+                // delivery and the endpoint has not picked up -- so asserting it answered would report the agent
+                // as talking to a call they may never be reached on, and a leg that clears without ever ringing
+                // would still read as a connected party. A provider that does not report a leg state is answering
+                // the call, so its leg is taken to be answered as before.
+                var legStatus = MapCallLegStatus(result.ProviderLegState);
+
                 CallTopologyProjector.UpsertLeg(
                     session,
                     result.ProviderLegId,
                     CallPartyRole.Agent,
-                    CallLegStatus.Answered,
+                    legStatus,
                     now,
                     agentId: request.AgentId);
 
-                CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
-                CallTopologyProjector.Join(session, result.ProviderLegId, CallPartyRole.Agent, now, request.AgentId);
+                // Only a leg that is actually on the call joins the bridge. A leg still being reached is a party
+                // the platform is trying to add, not one the bridge can claim to be carrying.
+                if (legStatus is CallLegStatus.Answered or CallLegStatus.OnHold)
+                {
+                    CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
+                    CallTopologyProjector.Join(session, result.ProviderLegId, CallPartyRole.Agent, now, request.AgentId);
+                }
             }
 
             await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
@@ -501,6 +514,25 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     {
         return TryDeserializeRequest(command.RequestPayload);
     }
+
+    /// <summary>
+    /// Maps the state a provider reported for the leg it created onto the topology's leg status. A provider that
+    /// reports no state is one whose operation answers the call, so its leg is answered.
+    /// </summary>
+    private static CallLegStatus MapCallLegStatus(VoiceCallState? providerLegState)
+        => providerLegState switch
+        {
+            null => CallLegStatus.Answered,
+            VoiceCallState.Planned => CallLegStatus.Unknown,
+            VoiceCallState.Dialing => CallLegStatus.Dialing,
+            VoiceCallState.Ringing => CallLegStatus.Ringing,
+            VoiceCallState.Connected => CallLegStatus.Answered,
+            VoiceCallState.OnHold => CallLegStatus.OnHold,
+            VoiceCallState.Ending => CallLegStatus.Answered,
+            VoiceCallState.Ended => CallLegStatus.Ended,
+            VoiceCallState.Failed or VoiceCallState.NoAnswer or VoiceCallState.Rejected or VoiceCallState.Canceled => CallLegStatus.Failed,
+            _ => CallLegStatus.Unknown,
+        };
 
     private static bool IsTerminal(InteractionStatus status)
     {

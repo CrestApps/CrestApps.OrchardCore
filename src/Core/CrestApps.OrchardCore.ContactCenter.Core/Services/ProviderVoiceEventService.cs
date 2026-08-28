@@ -651,10 +651,14 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return;
         }
 
-        // The leg carried on the session's own call identifier is the party the contact center is serving.
-        // Any other leg on the same session belongs to a party the platform did not originate, so its role is
-        // left undetermined rather than guessed.
-        var role = string.Equals(providerLegId, session.ProviderCallId, StringComparison.Ordinal)
+        // The event that belongs to the session's own call describes the party the contact center is serving.
+        // The comparison is made on the call, not on the leg: a provider that publishes per-leg events names the
+        // leg in a different identifier space than the call (Telnyx reports call_leg_id for the leg and
+        // call_control_id for the call), so comparing the leg against the call identifier compares two spaces
+        // that can never match and left the customer -- the one party whose role is always known -- recorded as
+        // Unknown. An event carried on any other call belongs to a party the platform did not originate, so its
+        // role is left undetermined rather than guessed.
+        var role = string.Equals(providerEvent.ProviderCallId, session.ProviderCallId, StringComparison.Ordinal)
             ? CallPartyRole.Customer
             : CallPartyRole.Unknown;
 
