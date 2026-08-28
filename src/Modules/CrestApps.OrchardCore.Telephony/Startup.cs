@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
+using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Endpoints;
@@ -8,7 +9,6 @@ using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Migrations;
-using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
@@ -166,6 +166,9 @@ public sealed class SoftPhoneCoreStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ISoftPhoneWidgetPresenter, SoftPhoneWidgetPresenter>();
+
+        // Loads the phone-field dialer "call" button on demand, only where a phone field renders (see the provider).
+        services.AddShapeTableProvider<PhoneFieldDialerShapeTableProvider>();
     }
 }
 
@@ -188,9 +191,6 @@ public sealed class SoftPhoneWidgetStartup : StartupBase
         {
             options.Filters.Add<SoftPhoneWidgetFilter>();
         });
-
-        // Loads the phone-field dialer "call" button on demand, only where a phone field renders (see the provider).
-        services.AddShapeTableProvider<PhoneFieldDialerShapeTableProvider>();
     }
 }
 
