@@ -267,6 +267,7 @@ namespace CrestApps.OrchardCore.Telephony
             public const string OAuthCallback = "TelephonyOAuthCallback";
             public const string OAuthConnect = "TelephonyOAuthConnect";
             public const string OAuthDisconnect = "TelephonyOAuthDisconnect";
+            public const string SoftPhonePage = "TelephonySoftPhonePage";
         }
     }
     public static class TelephonyPermissions

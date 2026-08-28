@@ -358,11 +358,18 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             {
                 var contentItemsIds = contacts.Select(x => x.ContentItemId).ToArray();
 
+                // A contact counts as a duplicate only while it still has an OPEN activity. Every terminal state
+                // is excluded so a finished contact can be re-loaded: a completed or purged activity was already
+                // excluded, and a failed or cancelled one is just as terminal — leaving those in would let a
+                // single failed dial (for example a busy or no-answer) permanently bar the lead from ever being
+                // loaded again.
                 inQueueActivities = (await readonlySession.QueryIndex<OmnichannelActivityIndex>(index =>
                     index.ContactContentType == batch.ContactContentType &&
                     index.ContactContentItemId.IsIn(contentItemsIds) &&
                     index.Status != ActivityStatus.Completed &&
-                    index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
+                    index.Status != ActivityStatus.Purged &&
+                    index.Status != ActivityStatus.Failed &&
+                    index.Status != ActivityStatus.Cancelled, collection: OmnichannelConstants.CollectionName)
                 .ListAsync(cancellationToken))
                 .Select(x => x.ContactContentItemId)
                 .ToHashSet();

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -60,7 +61,8 @@ public sealed class ContactCenterAgentBarFilter : IAsyncResultFilter
         // layout to inject into, and an anonymous request is not an agent.
         if (context.Result is not (ViewResult or PageResult) ||
             context.HttpContext.User.Identity?.IsAuthenticated != true ||
-            !IsAdminPage(context))
+            !IsAdminPage(context) ||
+            IsSoftPhonePage(context))
         {
             await next();
 
@@ -91,5 +93,17 @@ public sealed class ContactCenterAgentBarFilter : IAsyncResultFilter
     private bool IsAdminPage(ResultExecutingContext context)
     {
         return context.HttpContext.Request.Path.StartsWithSegments('/' + _adminOptions.AdminUrlPrefix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Never inject the bar into the standalone soft phone page. That page is the soft phone itself -- chromeless
+    // and hosted in its own window or the browser extension -- so injecting the bar there would run a second hub
+    // connection inside the phone and pop the matched record over the phone, navigating the phone window away
+    // from the live call. The bar belongs on every other admin page; this one is the sole carve-out.
+    private static bool IsSoftPhonePage(ResultExecutingContext context)
+    {
+        return string.Equals(
+            context.ActionDescriptor.AttributeRouteInfo?.Name,
+            TelephonyConstants.RouteNames.SoftPhonePage,
+            StringComparison.Ordinal);
     }
 }

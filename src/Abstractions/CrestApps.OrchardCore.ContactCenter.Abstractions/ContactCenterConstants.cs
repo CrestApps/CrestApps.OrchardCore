@@ -217,6 +217,13 @@ public static partial class ContactCenterConstants
         public const string Agents = "Agents";
 
         /// <summary>
+        /// The optional agent entitlement component. When enabled, an agent may sign in only to the queues and
+        /// campaigns explicitly granted on their profile; when disabled, any agent may sign in to any queue or
+        /// campaign with no per-agent setup.
+        /// </summary>
+        public const string AgentEntitlements = "AgentEntitlements";
+
+        /// <summary>
         /// The voice channel adapter component.
         /// </summary>
         public const string Voice = "Voice";

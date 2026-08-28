@@ -1,10 +1,11 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -15,6 +16,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
 {
     private readonly IClock _clock;
     private readonly IShellFeaturesManager _shellFeaturesManager;
+    private readonly IPhoneNumberService _phoneNumberService;
 
     internal readonly IStringLocalizer S;
 
@@ -23,14 +25,17 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     /// </summary>
     /// <param name="clock">The clock used to stamp audit times.</param>
     /// <param name="shellFeaturesManager">The shell features manager used to detect the Automated Dialer feature.</param>
+    /// <param name="phoneNumberService">The phone number service used to validate the outbound caller id.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileHandler(
         IClock clock,
         IShellFeaturesManager shellFeaturesManager,
+        IPhoneNumberService phoneNumberService,
         IStringLocalizer<DialerProfileHandler> stringLocalizer)
     {
         _clock = clock;
         _shellFeaturesManager = shellFeaturesManager;
+        _phoneNumberService = phoneNumberService;
         S = stringLocalizer;
     }
 
@@ -78,6 +83,17 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
             !await _shellFeaturesManager.IsFeatureEnabledAsync(ContactCenterConstants.Feature.DialerPaced))
         {
             context.Result.Fail(new ValidationResult(S["Enable the Contact Center Paced Dialing feature before using Power or Progressive dialing."], [nameof(DialerProfile.Mode)]));
+        }
+
+        // The caller id becomes the outbound "from" the voice provider dials with, and a provider rejects a
+        // value that is not a real phone number: a name like "CrestApps" fails instantly with no call placed and
+        // no obvious cause. Validating here rather than in the editor means a recipe import cannot install a
+        // profile that silently fails every dial. An empty value is allowed -- the provider then falls back to
+        // its own configured default caller id.
+        if (!string.IsNullOrWhiteSpace(profile.CallerId) &&
+            !_phoneNumberService.TryParse(profile.CallerId, profile.DefaultRegionCode, out _))
+        {
+            context.Result.Fail(new ValidationResult(S["Enter the caller ID as a valid phone number in international format, for example +15551234567."], [nameof(DialerProfile.CallerId)]));
         }
 
         if (profile.CallsPerAgent < 1 || profile.CallsPerAgent > PowerDialerStrategy.MaxCallsPerAgent)

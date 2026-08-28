@@ -22,6 +22,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly IAgentStateReasonCodeManager _reasonCodeManager;
     private readonly IResourceManager _resourceManager;
+    private readonly IAgentEntitlementPolicy _entitlementPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSoftPhoneWidgetDisplayDriver"/> class.
@@ -33,6 +34,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
     /// <param name="optionsProvider">The admin form options provider.</param>
     /// <param name="resourceManager">The Orchard resource manager.</param>
     /// <param name="reasonCodeManagers">The optional agent state reason code managers, available when the Agents feature is enabled.</param>
+    /// <param name="entitlementPolicy">The policy that decides which queues and campaigns the sign-in picker offers.</param>
     public ContactCenterSoftPhoneWidgetDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
@@ -40,7 +42,8 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         IActivityQueueManager queueManager,
         ContactCenterAdminFormOptionsProvider optionsProvider,
         IResourceManager resourceManager,
-        IEnumerable<IAgentStateReasonCodeManager> reasonCodeManagers)
+        IEnumerable<IAgentStateReasonCodeManager> reasonCodeManagers,
+        IAgentEntitlementPolicy entitlementPolicy)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
@@ -49,6 +52,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         _optionsProvider = optionsProvider;
         _resourceManager = resourceManager;
         _reasonCodeManager = reasonCodeManagers.FirstOrDefault();
+        _entitlementPolicy = entitlementPolicy;
     }
 
     /// <inheritdoc/>
@@ -77,17 +81,18 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
         }
 
         var profile = await _agentProfileManager.FindByUserIdAsync(userId);
-        var allowedQueueIds = new HashSet<string>(profile?.AllowedQueueIds ?? [], StringComparer.OrdinalIgnoreCase);
-        var allowedCampaignIds = new HashSet<string>(profile?.AllowedCampaignIds ?? [], StringComparer.OrdinalIgnoreCase);
-        var selectedCampaignIds = AgentEntitlementUtilities.FilterEntitled(profile?.CampaignIds, profile?.AllowedCampaignIds);
+
+        // The entitlement policy decides what the picker offers: the permissive default offers every queue and
+        // campaign, while the enforcing policy (Agent Entitlements feature) limits it to the profile's grants.
+        var selectedCampaignIds = _entitlementPolicy.GetSignedInCampaignIds(profile);
         var queues = await _queueManager.GetEnabledAsync();
 
         // Only stored (inbound) queues are offered for sign-in. A campaign's virtual queue is never stored, so it
         // is naturally absent here; agents join it implicitly by signing into the campaign.
-        var entitledQueues = queues.Where(queue => allowedQueueIds.Contains(queue.ItemId)).ToList();
+        var entitledQueues = queues.Where(queue => _entitlementPolicy.AllowsQueue(profile, queue.ItemId)).ToList();
         var entitledQueueIds = new HashSet<string>(entitledQueues.Select(queue => queue.ItemId), StringComparer.OrdinalIgnoreCase);
         var campaignOptions = await _optionsProvider.GetCampaignOptionsAsync(selectedCampaignIds);
-        var entitledCampaignOptions = campaignOptions.Where(option => allowedCampaignIds.Contains(option.Value)).ToList();
+        var entitledCampaignOptions = campaignOptions.Where(option => _entitlementPolicy.AllowsCampaign(profile, option.Value)).ToList();
         var reasonCodes = _reasonCodeManager is null
             ? []
             : await _reasonCodeManager.GetEnabledAsync();
@@ -101,7 +106,7 @@ internal sealed class ContactCenterSoftPhoneWidgetDisplayDriver : DisplayDriver<
             HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(httpContext),
             Profile = profile,
             AvailableQueues = entitledQueues,
-            SelectedQueueIds = AgentEntitlementUtilities.FilterEntitled(profile?.QueueIds, profile?.AllowedQueueIds)
+            SelectedQueueIds = _entitlementPolicy.GetSignedInQueueIds(profile)
                 .Where(entitledQueueIds.Contains)
                 .ToList(),
             CampaignOptions = entitledCampaignOptions,

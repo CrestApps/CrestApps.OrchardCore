@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Contact Center persistent docked agent bar.
  *
  * A slim, always-on strip pinned to the bottom of the admin content column. It is the CRM-side surface the call
@@ -12,16 +12,17 @@
  * found it falls back to a fixed full-width strip.
  */
 .cc-agent-bar {
-    // Fixed to the viewport bottom, but not full width: JS sets `left` to the content column's left edge so the
-    // bar hugs the left of the content area (clear of the sidebar) and sizes to its content, not the whole screen.
+    // Fixed to the viewport bottom and horizontally centered, so it never sits under the left sidebar and never
+    // covers the page's left-aligned action buttons. Sizes to its content, not the whole screen.
     position: fixed;
-    left: 0;
+    left: 50%;
     right: auto;
+    transform: translateX(-50%);
     bottom: 0;
     z-index: 1030;
     // Auto width: shrinks to just the status chip when idle, expands as a call/assignment adds content (capped).
     width: auto;
-    max-width: min(560px, 60vw);
+    max-width: min(560px, 90vw);
     background: #1f2733;
     color: #f4f6f8;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -37,10 +38,20 @@
 
 .cc-agent-bar__inner {
     display: flex;
-    align-items: center;
-    gap: 0.6rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
     min-height: 34px;
     padding: 0.15rem 0.6rem;
+}
+
+// The always-present top row: read-only status chip on the left, connection tail (headphone) on the right.
+.cc-agent-bar__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    min-height: 30px;
 }
 
 .cc-bar__dot {
@@ -85,10 +96,13 @@
 }
 
 .cc-bar__context {
-    flex: 1 1 auto;
     min-width: 0;
-    display: flex;
-    align-items: center;
+
+    // Idle renders nothing into the context; collapse it so the bar is just the top row until work arrives and
+    // no empty gap is left below the status chip.
+    &:empty {
+        display: none;
+    }
 }
 
 .cc-bar__idle {
@@ -102,10 +116,10 @@
 
 .cc-bar__offer {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    flex-direction: column;
+    gap: 0.5rem;
     width: 100%;
-    padding: 0.15rem 0.6rem;
+    padding: 0.55rem 0.7rem;
     border-radius: 0.5rem;
 
     &.is-ringing {
@@ -114,43 +128,63 @@
     }
 
     &.is-preview { background: rgba(52, 152, 219, 0.16); }
+
+    // A connected call is steady (no pulse: nothing is waiting on the agent), and an ended call awaiting its
+    // disposition is tinted amber so the outstanding "Complete activity" prompt reads as an action, not a call.
+    &.is-connected { background: rgba(46, 204, 113, 0.12); }
+
+    &.is-ended { background: rgba(241, 196, 15, 0.16); }
 }
 
-.cc-bar__offer-info { min-width: 0; flex: 1 1 auto; }
-.cc-bar__offer-head { font-weight: 600; }
-.cc-bar__offer-customer {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.cc-bar__offer-actions { display: flex; gap: 0.4rem; flex: 0 0 auto; }
-
-.cc-bar__active {
+.cc-bar__offer-head {
     display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    width: 100%;
-}
-
-.cc-bar__active-dir {
-    flex: 0 0 auto;
-    width: 1.5rem;
-    height: 1.5rem;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.cc-bar__active-info { min-width: 0; flex: 1 1 auto; }
-.cc-bar__active-customer {
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
     font-weight: 600;
+}
+
+.cc-bar__offer-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.cc-bar__offer-row {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-width: 0;
+    font-size: 0.85em;
+    line-height: 1.3;
+}
+
+.cc-bar__offer-label {
+    flex: 0 0 4.5rem;
+    color: rgba(244, 246, 248, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 0.72em;
+    font-weight: 600;
+}
+
+.cc-bar__offer-value {
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 500;
 }
-.cc-bar__active-actions { display: flex; gap: 0.4rem; flex: 0 0 auto; }
+
+.cc-bar__offer-actions {
+    display: flex;
+    gap: 0.4rem;
+
+    .btn { flex: 1 1 0; }
+}
+
+// The active call reuses the offer card's stacked layout, so it needs no box rules of its own. The talk timer
+// sits where the offer countdown does, in the card heading.
 
 .cc-bar__tail {
     flex: 0 0 auto;

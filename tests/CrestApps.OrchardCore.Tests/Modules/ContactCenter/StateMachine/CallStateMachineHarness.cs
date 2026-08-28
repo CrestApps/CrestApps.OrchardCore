@@ -123,9 +123,15 @@ public sealed class CallStateMachineHarness
             .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((null, true));
 
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken _) => new AgentProfile { ItemId = id, UserId = "user-" + id });
+
         _service = new ProviderVoiceEventService(
             interactionManager.Object,
             callSessionManager.Object,
+            agentManager.Object,
             new Mock<IContactCenterVoiceProviderResolver>().Object,
             new Mock<ITelephonyProviderResolver>().Object,
             eventStore.Object,

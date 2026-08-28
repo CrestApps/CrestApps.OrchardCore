@@ -354,7 +354,9 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<IProviderIdentityResolver>(new ProviderIdentityResolver([]));
         services.AddSingleton<IVoiceIngressGate>(sp => new VoiceIngressGate(sp.GetRequiredService<IDistributedLock>()));
 
-        // Real agent-state pipeline.
+        // Real agent-state pipeline. Entitlements are not enforced in the harness, so agents may sign in to any
+        // queue or campaign (the permissive default policy).
+        services.AddSingleton<IAgentEntitlementPolicy, PermissiveAgentEntitlementPolicy>();
         services.AddSingleton<IAgentPresenceManager, AgentPresenceManagerService>();
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
         services.AddSingleton<IProviderVoiceEventService, ProviderVoiceEventService>();

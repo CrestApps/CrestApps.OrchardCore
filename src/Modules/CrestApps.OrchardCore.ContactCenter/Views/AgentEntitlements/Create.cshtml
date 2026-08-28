@@ -5,27 +5,30 @@
 <form method="post" class="no-multisubmit">
     @Html.ValidationSummary()
 
-    <div class="mb-3" asp-validation-class-for="UserName">
-        <label asp-for="UserName" class="form-label">@T["User"]</label>
-        @await Component.InvokeAsync("ItemSelector", new
-        {
-            id = "agent-entitlement-user-selector",
-            inputName = Html.NameFor(model => model.UserName),
-            endpoint = Model.UserSearchEndpoint,
-            initialItemsJson = "[]",
-            multiple = false,
-            enableSearch = true,
-            buttonText = T["Browse users"].Value,
-            searchPlaceholder = T["Search users"].Value,
-            emptyResultsText = T["No users found."].Value,
-            noSelectionText = T["No user selected."].Value,
-            loadingText = T["Loading users..."].Value,
-            loadErrorText = T["Unable to load users."].Value,
-            resultsTextFormat = T["Found {0} user(s)."].Value,
-            selectedItemsLabel = T["Selected user"].Value,
-            availableItemsLabel = T["Available users"].Value
-        })
-        <span asp-validation-for="UserName"></span>
+    <div class="ocat-wrapper" asp-validation-class-for="UserName">
+        <label asp-for="UserName" class="ocat-label ocat-label-required">@T["User"]</label>
+        <div class="ocat-end">
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = "agent-entitlement-user-selector",
+                inputName = Html.NameFor(model => model.UserName),
+                endpoint = Model.UserSearchEndpoint,
+                initialItemsJson = "[]",
+                multiple = false,
+                enableSearch = true,
+                buttonText = T["Browse users"].Value,
+                searchPlaceholder = T["Search users"].Value,
+                emptyResultsText = T["No users found."].Value,
+                noSelectionText = T["No user selected."].Value,
+                loadingText = T["Loading users..."].Value,
+                loadErrorText = T["Unable to load users."].Value,
+                resultsTextFormat = T["Found {0} user(s)."].Value,
+                selectedItemsLabel = T["Selected user"].Value,
+                availableItemsLabel = T["Available users"].Value
+            })
+            <span asp-validation-for="UserName" class="text-danger"></span>
+            <span class="hint">@T["The agent whose queue and campaign access you are granting."]</span>
+        </div>
     </div>
 
     @await Html.PartialAsync("_EntitlementFields", Model)

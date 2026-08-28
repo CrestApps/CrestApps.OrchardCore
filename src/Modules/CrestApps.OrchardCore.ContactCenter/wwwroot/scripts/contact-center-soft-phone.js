@@ -10,6 +10,13 @@
 (function (window, document) {
   'use strict';
 
+  // A campaign's routing queue is virtual backend plumbing (id prefixed like this). Agents only ever see and
+  // manage the campaign, never its queue, so it is hidden from the membership list; signing out of the campaign
+  // drops it. Keep this in sync with ContactCenterConstants.CampaignQueue.Prefix on the server.
+  var CAMPAIGN_QUEUE_PREFIX = '__campaign-queue__';
+  function isCampaignQueue(queueId) {
+    return typeof queueId === 'string' && queueId.indexOf(CAMPAIGN_QUEUE_PREFIX) === 0;
+  }
   function isBlockingActiveCall(call) {
     if (!call) {
       return false;
@@ -145,6 +152,10 @@
     var signOutText = root.getAttribute('data-contact-center-sign-out-item-text') || 'Sign out';
     var memberships = [];
     (snapshot.queueIds || []).forEach(function (queueId) {
+      // Never surface a campaign's virtual routing queue; the agent manages the campaign instead.
+      if (isCampaignQueue(queueId)) {
+        return;
+      }
       memberships.push({
         kind: 'queue',
         id: queueId,
@@ -165,7 +176,7 @@
       var item = document.createElement('div');
       item.className = 'list-group-item px-0 py-2 d-flex align-items-center justify-content-between gap-2';
       var label = document.createElement('span');
-      label.className = 'small';
+      label.className = 'small text-truncate';
       var typeLabel = document.createElement('span');
       typeLabel.className = 'text-body-secondary';
       typeLabel.textContent = membership.type + ':';
@@ -173,7 +184,7 @@
       label.appendChild(document.createTextNode(' ' + membership.name));
       var button = document.createElement('button');
       button.type = 'button';
-      button.className = 'btn btn-sm btn-outline-secondary';
+      button.className = 'btn btn-sm btn-outline-secondary flex-shrink-0 text-nowrap';
       button.setAttribute('data-contact-center-membership-sign-out', '');
       button.setAttribute('data-membership-kind', membership.kind);
       button.setAttribute('data-membership-id', membership.id);
@@ -191,7 +202,7 @@
     updatePresenceUi(snapshot);
     var isSignedIn = !!(snapshot.queueIds && snapshot.queueIds.length) || !!(snapshot.campaignIds && snapshot.campaignIds.length);
     var signedInText = root.getAttribute('data-contact-center-signed-in-text') || 'Signed in';
-    var offlineText = root.getAttribute('data-contact-center-offline-text') || 'Offline';
+    var offlineText = root.getAttribute('data-contact-center-offline-text') || 'Signed out';
     var badge = root.querySelector('[data-contact-center-membership-badge]');
     var signInPanel = root.querySelector('[data-contact-center-sign-in-panel]');
     var signOutPanel = root.querySelector('[data-contact-center-sign-out-panel]');
@@ -314,34 +325,6 @@
       return offer ? null : postQueuedVoiceSync(root, api, client);
     });
   }
-  function resolveSafeSameOriginUrl(candidate) {
-    var resolved;
-    try {
-      resolved = new URL(candidate, window.location.origin);
-    } catch (error) {
-      return null;
-    }
-    if (resolved.protocol !== 'http:' && resolved.protocol !== 'https:') {
-      return null;
-    }
-    if (resolved.origin !== window.location.origin) {
-      return null;
-    }
-    return resolved.href;
-  }
-  function openAssignedDialerActivity(root, notification) {
-    if (!notification || !notification.autoOpenActivity || !notification.activityItemId) {
-      return;
-    }
-    var template = root.getAttribute('data-contact-center-complete-activity-url-template');
-    if (!template) {
-      return;
-    }
-    var targetUrl = resolveSafeSameOriginUrl(template.replace('__activityId__', encodeURIComponent(notification.activityItemId)));
-    if (targetUrl) {
-      window.location.assign(targetUrl);
-    }
-  }
   function bindMembershipForms(root, api, client) {
     if (!root || root.__contactCenterMembershipBound) {
       return;
@@ -409,8 +392,11 @@
       };
       var kind = button.getAttribute('data-membership-kind');
       var membershipId = button.getAttribute('data-membership-id');
+
+      // Send only real queues and the remaining campaigns; the server re-derives each campaign's virtual
+      // queue from the campaign list, so dropping a campaign here also drops its queue automatically.
       var queueIds = (snapshot.queueIds || []).filter(function (queueId) {
-        return kind !== 'queue' || queueId !== membershipId;
+        return !isCampaignQueue(queueId) && (kind !== 'queue' || queueId !== membershipId);
       });
       var campaignIds = (snapshot.campaignIds || []).filter(function (campaignId) {
         return kind !== 'campaign' || campaignId !== membershipId;
@@ -463,7 +449,10 @@
         });
       });
       client.connection.on('OfferReceived', function (notification) {
-        openAssignedDialerActivity(root, notification);
+        // The soft phone never navigates on an offer. It runs chromeless in its own window (the /softphone
+        // page and the browser extension), so screen-popping the assigned record here would redirect the
+        // phone away from the live call. Record pop-on-offer is owned exclusively by the docked agent bar,
+        // which lives in the CRM admin chrome; the phone only refreshes its own in-place offer state.
         recoverSoftPhoneState(root, api, client);
       });
       client.connection.on('OfferRevoked', function (notification) {

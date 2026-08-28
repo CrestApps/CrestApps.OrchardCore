@@ -1,6 +1,8 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -12,6 +14,7 @@ public sealed class DialerProviderCommandDispatchValidator : IProviderCommandDis
     private readonly IDialerProfileManager _profileManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IDialerEligibilityService _eligibilityService;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialerProviderCommandDispatchValidator"/> class.
@@ -19,14 +22,17 @@ public sealed class DialerProviderCommandDispatchValidator : IProviderCommandDis
     /// <param name="profileManager">The manager used to load the governing dialer profile.</param>
     /// <param name="activityManager">The manager used to load the current CRM activity.</param>
     /// <param name="eligibilityService">The compliance gate used to revalidate outbound eligibility.</param>
+    /// <param name="logger">The logger used to surface why a dial dispatch was refused.</param>
     public DialerProviderCommandDispatchValidator(
         IDialerProfileManager profileManager,
         IOmnichannelActivityManager activityManager,
-        IDialerEligibilityService eligibilityService)
+        IDialerEligibilityService eligibilityService,
+        ILogger<DialerProviderCommandDispatchValidator> logger)
     {
         _profileManager = profileManager;
         _activityManager = activityManager;
         _eligibilityService = eligibilityService;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -34,9 +40,17 @@ public sealed class DialerProviderCommandDispatchValidator : IProviderCommandDis
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        // Refusing dispatch here compensates the dial command and fails the interaction, so an agent who clicked
+        // Dial sees nothing happen. Log every refusal reason so a silent no-dial is diagnosable from the log.
         if (string.IsNullOrWhiteSpace(command.DialerProfileId) ||
             string.IsNullOrWhiteSpace(command.ActivityItemId))
         {
+            _logger.LogWarning(
+                "Refused to dispatch dial command '{CommandId}' because it is missing its dialer profile or activity reference (profile '{DialerProfileId}', activity '{ActivityItemId}').",
+                command.CommandId.SanitizeLogValue(),
+                command.DialerProfileId.SanitizeLogValue(),
+                command.ActivityItemId.SanitizeLogValue());
+
             return false;
         }
 
@@ -45,6 +59,14 @@ public sealed class DialerProviderCommandDispatchValidator : IProviderCommandDis
 
         if (profile is null || activity is null)
         {
+            _logger.LogWarning(
+                "Refused to dispatch dial command '{CommandId}' because its dialer profile '{DialerProfileId}' ({ProfileState}) or activity '{ActivityItemId}' ({ActivityState}) no longer exists.",
+                command.CommandId.SanitizeLogValue(),
+                command.DialerProfileId.SanitizeLogValue(),
+                profile is null ? "missing" : "found",
+                command.ActivityItemId.SanitizeLogValue(),
+                activity is null ? "missing" : "found");
+
             return false;
         }
 
@@ -52,7 +74,22 @@ public sealed class DialerProviderCommandDispatchValidator : IProviderCommandDis
         {
             Profile = profile,
             Activity = activity,
+
+            // This runs after the dial attempt was recorded but before it reaches the provider, so the
+            // maximum-attempts gate must not count the in-flight attempt against the limit.
+            AttemptAlreadyCounted = true,
         }, cancellationToken);
+
+        if (!eligibility.IsEligible)
+        {
+            _logger.LogWarning(
+                "Refused to dispatch dial command '{CommandId}' for activity '{ActivityItemId}' under dialer profile '{ProfileName}' because the compliance gate suppressed it: {SuppressionReason} - {SuppressionDescription}.",
+                command.CommandId.SanitizeLogValue(),
+                command.ActivityItemId.SanitizeLogValue(),
+                profile.Name.SanitizeLogValue(),
+                eligibility.Reason,
+                eligibility.Description.SanitizeLogValue());
+        }
 
         return eligibility.IsEligible;
     }

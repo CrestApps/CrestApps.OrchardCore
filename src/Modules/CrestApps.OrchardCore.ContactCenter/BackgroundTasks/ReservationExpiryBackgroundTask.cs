@@ -13,7 +13,9 @@ using YesSql;
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 
 /// <summary>
-/// Expires stale agent reservations and assigns waiting work to available agents across enabled queues.
+/// Expires stale agent reservations and assigns waiting work to available agents across enabled queues, and
+/// across the virtual campaign queues that carry agent-driven (Preview/Manual) outbound inventory — which the
+/// enabled-queue sweep cannot see because campaign queues are never persisted.
 /// It participates in the Routing feature's work-admission drain so it stops admitting work while that
 /// feature is quiescing (and disposes its lease so a disable can drain), it honours the cancellation token
 /// so it stops promptly on shutdown, and it bounds each run to a wall-clock budget (enforced both by an
@@ -62,6 +64,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         var queueService = serviceProvider.GetRequiredService<IActivityQueueService>();
         var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
         var queueItemManager = serviceProvider.GetRequiredService<IQueueItemManager>();
+        var queueItemStore = serviceProvider.GetRequiredService<IQueueItemStore>();
         var interactionManager = serviceProvider.GetRequiredService<IInteractionManager>();
         var activityManager = serviceProvider.GetRequiredService<IOmnichannelActivityManager>();
         var inboundVoiceService = serviceProvider.GetServices<IInboundVoiceService>().FirstOrDefault();
@@ -215,6 +218,97 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                     ex,
                     "An error occurred while assigning work for queue '{QueueId}'.",
                     queue.ItemId.SanitizeLogValue());
+            }
+        }
+
+        // Campaign queues are virtual: outbound routing synthesizes them on demand and never persists them, so
+        // the enabled-queue sweep above never sees them. Agent-driven outbound inventory (Preview and Manual)
+        // still needs to be offered to available agents, and nothing else does it: the dialer pacing task owns
+        // only the automated Power/Progressive modes and no-ops for the rest. Enumerate the campaign queues that
+        // currently hold waiting inventory and run the same assignment for the agent-driven ones here, leaving
+        // paced inventory to DialerPacingBackgroundTask so the two tasks never both drive one campaign queue.
+        IReadOnlyCollection<string> waitingCampaignQueueIds;
+
+        try
+        {
+            var waitingQueueIds = await queueItemStore.GetWaitingQueueIdsAsync(runToken);
+
+            waitingCampaignQueueIds = waitingQueueIds
+                .Where(ContactCenterConstants.IsCampaignQueue)
+                .ToArray();
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (OperationCanceledException) when (runToken.IsCancellationRequested)
+        {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug(
+                    "The reservation-and-assignment run reached its {BudgetMilliseconds} ms time budget while listing campaign queues; deferring the remaining work to the next scheduled tick.",
+                    MaxRunDurationMilliseconds);
+            }
+
+            return;
+        }
+
+        foreach (var queueId in waitingCampaignQueueIds)
+        {
+            if (clock.UtcNow >= runDeadlineUtc)
+            {
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug(
+                        "The reservation-and-assignment run reached its {BudgetMilliseconds} ms time budget; deferring the remaining campaign queues to the next scheduled tick.",
+                        MaxRunDurationMilliseconds);
+                }
+
+                break;
+            }
+
+            try
+            {
+                var headItem = await queueItemStore.FindNextWaitingAsync(queueId, runToken);
+
+                if (headItem is null)
+                {
+                    continue;
+                }
+
+                var activity = await activityManager.FindByIdAsync(headItem.ActivityItemId, runToken);
+
+                // Automated dialer inventory is paced and offered by DialerPacingBackgroundTask; skip it here so
+                // the pacer remains the sole owner of Power/Progressive (and the blocked Predictive) work.
+                if (activity?.Source is ActivitySources.PowerDial or ActivitySources.ProgressiveDial or ActivitySources.PredictiveDial)
+                {
+                    continue;
+                }
+
+                await assignmentService.AssignQueueAsync(queueId, runToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (runToken.IsCancellationRequested)
+            {
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug(
+                        "The reservation-and-assignment run reached its {BudgetMilliseconds} ms time budget while assigning campaign queue '{QueueId}'; deferring the remaining work to the next scheduled tick.",
+                        MaxRunDurationMilliseconds,
+                        queueId.SanitizeLogValue());
+                }
+
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "An error occurred while assigning work for campaign queue '{QueueId}'.",
+                    queueId.SanitizeLogValue());
             }
         }
     }

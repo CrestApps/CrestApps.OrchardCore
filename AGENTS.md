@@ -349,6 +349,8 @@ Whenever code is modified, you MUST update the documentation project located at 
 
 ## Documentation expectations
 
+**Keep the site docs honest.** Documentation must describe what the code actually does today — not what is planned, aspirational, or hoped. Never present a feature, option, setting, or behavior as available or working in the docs unless it is implemented and verified in the current code. When you change behavior, update the docs in the same change; when you find docs that no longer match the code, correct them rather than leaving them stale, and prefer removing an inaccurate claim over letting it stand. The same honesty applies to status you report back to the user: state plainly what was done and verified versus what is still pending, and never describe something as working that you have not confirmed.
+
 When a change affects public behavior, configuration, setup, or project guidance:
 
 1. Update the relevant page under `src\CrestApps.Docs\docs`
@@ -512,6 +514,17 @@ public sealed class FeatureStartup : StartupBase
 - Add tests for new features and bug fixes
 - Focus on business logic and service implementations
 - Test edge cases and error conditions
+
+### Test-Driven Development
+
+Work test-first so refactoring is done confidently and behavior that was already fixed does not silently break again:
+
+- **Write the test before the change.** For new behavior, add the failing test first. For a bug fix, first add a test that reproduces the bug and fails on the current code, then make it pass — the failing-first test is what proves the fix and locks the behavior against regression.
+- **Red → Green → Refactor.** Confirm the test fails for the right reason, make it pass with the smallest change, then refactor with the test holding the behavior in place.
+- **Do not refactor untested logic blind.** If you are about to change logic that has no coverage, first add characterization tests that pin the current behavior, then refactor against them.
+- **Every bug fix ships with a regression test** named for the scenario it prevents, so the same defect cannot quietly return in a later change.
+- **Run the affected tests after every change and before reporting work done** — never rely on "it builds". Run the specific test class or namespace for fast feedback while iterating, and the broader suite before finishing a change set. See the build/test commands under *Working Effectively → Unit Tests*.
+- **When a change alters a public API surface** tracked by the PublicApi approval tests, update the approved baseline in the same change and review the diff as a deliberate surface change, not an afterthought.
 
 ## Documentation Standards
 

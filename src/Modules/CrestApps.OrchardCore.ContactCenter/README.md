@@ -1,4 +1,4 @@
-# CrestApps.OrchardCore.ContactCenter
+﻿# CrestApps.OrchardCore.ContactCenter
 
 Provides the **contact center orchestration layer** that turns the CrestApps CRM (Omnichannel) into a full contact center. It owns the orchestration boundary between the CRM (which owns business work data) and Telephony providers (which execute media): the interaction lifecycle, a durable domain-event log, agent presence and availability, work queues and routing, an outbound dialer with compliance, recording orchestration, administration, real-time experiences, and analytics.
 
@@ -19,6 +19,7 @@ The module ships as feature-gated capabilities so a tenant enables only what it 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | Contact Center Agents | `CrestApps.OrchardCore.ContactCenter.Agents` | Agent profiles, presence, capacity, skills, and queue/campaign sign-in, plus canonical availability, durable sessions, heartbeat state, and after-call recovery without requiring real-time transport. |
+| Contact Center Agent Entitlements | `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | Restricts which queues and campaigns each agent may sign in to, with an administration screen to grant that access. When disabled, any agent may sign in to any queue or campaign with no per-agent setup. |
 | Contact Center Work Distribution | `CrestApps.OrchardCore.ContactCenter.Queues` | Work queues, queue items, reservations, and policy-based routing strategies with availability-based activity assignment. |
 
 ### Voice and dialing
@@ -77,6 +78,12 @@ Configure each enabled capability from its Contact Center or Interaction Center 
 - Business code interacts with the interaction lifecycle and domain-event log; voice execution is delegated to Telephony providers through the Voice Contact Center Call Router.
 - Real-time experiences (agent desktop, supervisor dashboard, soft phone projection) consume the shared SignalR hub exposed by the Real-Time feature, which is enabled automatically as a dependency of those experiences.
 - Domain events can be observed through the Workflows bridge for custom automation.
+
+### Presence and queue membership
+
+Presence and membership are separate. An agent is offered queue or campaign work only when all three hold: they are `Available`, they have a live session (a heartbeat inside the timeout), and they are signed in to that queue or campaign.
+
+Because presence alone already gates routing, losing a connection does not sign an agent out. When a session goes stale the agent is taken **offline** and keeps their queue and campaign memberships, so reconnecting and setting themselves `Available` is enough to receive work again. Only an explicit sign-out clears memberships.
 
 ## Dependencies
 

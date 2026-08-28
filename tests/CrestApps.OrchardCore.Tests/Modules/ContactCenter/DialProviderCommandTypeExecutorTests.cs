@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
 
@@ -649,7 +650,8 @@ public sealed class DialProviderCommandTypeExecutorTests
             new FakeContactCenterActivityWriter(activityManager.Object),
             clock.Object,
             callSessionManager.Object,
-            dialAgentManager.Object);
+            dialAgentManager.Object,
+            NullLogger<DialProviderCommandTypeExecutor>.Instance);
 
         return new TestHarness(command, claim, interaction, activity, validator, router, executor, callSessionManager, callSession);
     }

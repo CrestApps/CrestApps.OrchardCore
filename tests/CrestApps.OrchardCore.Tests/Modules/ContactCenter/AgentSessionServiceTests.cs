@@ -1,4 +1,4 @@
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -120,6 +120,49 @@ public sealed class AgentSessionServiceTests
         presenceManager.Verify(
             m => m.SignOutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenSessionWriteLosesVersionCheckOnce_RetriesAndRemovesConnection()
+    {
+        // Arrange
+        // The connection removal races the heartbeat, connect, and cleanup writers that rewrite the same session
+        // document, so the first commit can lose the version check. The disconnect must re-read and re-apply the
+        // removal instead of crashing the hub's OnDisconnectedAsync and leaving the connection stranded (which
+        // keeps an agent who has gone away looking online).
+        var existing = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1"], IsOnline = true };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var scopeExecutor = new FlakyScopeExecutor(sessionManager.Object, new ConcurrencyException(new Document()), failuresBeforeSuccess: 1);
+        var service = CreateService(sessionManager, new Mock<IAgentProfileManager>(), scopeExecutor: scopeExecutor);
+
+        // Act
+        var session = await service.DisconnectAsync("u1", "c1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(session);
+        Assert.Empty(session.ConnectionIds);
+        Assert.False(session.IsOnline);
+        Assert.Equal(2, scopeExecutor.InvocationCount);
+    }
+
+    [Fact]
+    public async Task DisconnectAsync_WhenSessionWriteKeepsLosingVersionCheck_DoesNotThrow()
+    {
+        // Arrange
+        // A sustained write storm can lose every attempt. The disconnect must not surface that as an exception,
+        // because it runs from the hub's OnDisconnectedAsync where an unhandled failure aborts the disconnect.
+        var existing = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1"], IsOnline = true };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var scopeExecutor = new FlakyScopeExecutor(sessionManager.Object, new ConcurrencyException(new Document()), failuresBeforeSuccess: int.MaxValue);
+        var service = CreateService(sessionManager, new Mock<IAgentProfileManager>(), scopeExecutor: scopeExecutor);
+
+        // Act
+        var session = await service.DisconnectAsync("u1", "c1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(session);
     }
 
     [Fact]
@@ -271,8 +314,15 @@ public sealed class AgentSessionServiceTests
         Assert.Empty(snapshot.CampaignIds);
     }
 
+    /// <summary>
+    /// An agent whose connection simply lapsed never chose to stop working, so the durable cleanup takes them
+    /// offline but must not surrender the queues and campaigns they were signed into. Signing them out here is
+    /// what produced the "Available but signed into nothing" state: presence is trivially flipped back to
+    /// Available from the agent bar, while the cleared memberships stay cleared, and routing then correctly but
+    /// invisibly refuses to offer the agent any work.
+    /// </summary>
     [Fact]
-    public async Task ExpireStaleAsync_SignsOutAndDeletesStaleSession()
+    public async Task ExpireStaleAsync_TakesAgentOfflineAndKeepsMembership()
     {
         // Arrange
         var stale = new AgentSession { ItemId = "s1", UserId = "u1", IsOnline = true, LastHeartbeatUtc = _now.AddMinutes(-5) };
@@ -293,8 +343,46 @@ public sealed class AgentSessionServiceTests
 
         // Assert
         Assert.Equal(1, count);
-        presenceManager.Verify(m => m.SignOutAsync("u1", It.IsAny<CancellationToken>()), Times.Once);
+        presenceManager.Verify(m => m.MarkOfflineAsync("u1", "session-expired", It.IsAny<CancellationToken>()), Times.Once);
+        presenceManager.Verify(m => m.SignOutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         sessionManager.Verify(m => m.DeleteAsync(stale, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// The round trip the agent actually experiences: their connection lapses, the sweep takes them offline, and
+    /// when the browser comes back the reconnect restores the queues they were working -- so setting themselves
+    /// Available is enough to receive work again, with no hidden re-sign-in step.
+    /// </summary>
+    [Fact]
+    public async Task ConnectAsync_AfterStaleExpiry_RestoresSessionMembershipFromPreservedProfile()
+    {
+        // Arrange: the profile the offline sweep left behind still carries the memberships.
+        var offlineProfile = new AgentProfile
+        {
+            ItemId = "a1",
+            UserId = "u1",
+            PresenceStatus = AgentPresenceStatus.Offline,
+            QueueIds = ["q1"],
+            CampaignIds = ["c1"],
+            AllowedQueueIds = ["q1"],
+            AllowedCampaignIds = ["c1"],
+        };
+
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync((AgentSession)null);
+        sessionManager.Setup(m => m.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new AgentSession { ItemId = "s2" });
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(offlineProfile);
+
+        var service = CreateService(sessionManager, agentManager);
+
+        // Act
+        var session = await service.ConnectAsync("u1", "c9", "user1", "User One", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["q1"], session.QueueIds);
+        Assert.Equal(["c1"], session.CampaignIds);
     }
 
     [Fact]
@@ -344,6 +432,7 @@ public sealed class AgentSessionServiceTests
         // Assert
         Assert.Equal(0, count);
         presenceManager.Verify(m => m.SignOutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        presenceManager.Verify(m => m.MarkOfflineAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         sessionManager.Verify(m => m.DeleteAsync(It.IsAny<AgentSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -513,6 +602,48 @@ public sealed class AgentSessionServiceTests
         public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
             where TContext : notnull
             => throw _exception;
+
+        public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
+            where TContext : notnull
+            => false;
+
+        public bool ScheduleAfterCommit(Func<Task> operation)
+            => false;
+    }
+
+    /// <summary>
+    /// Fails the child unit of work a fixed number of times before delegating to the real operation, standing
+    /// in for a version check that a concurrent writer causes the first attempts to lose.
+    /// </summary>
+    private sealed class FlakyScopeExecutor : IContactCenterScopeExecutor
+    {
+        private readonly object _context;
+        private readonly Exception _exception;
+        private int _remainingFailures;
+
+        public FlakyScopeExecutor(object context, Exception exception, int failuresBeforeSuccess)
+        {
+            _context = context;
+            _exception = exception;
+            _remainingFailures = failuresBeforeSuccess;
+        }
+
+        public int InvocationCount { get; private set; }
+
+        public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
+            where TContext : notnull
+        {
+            InvocationCount++;
+
+            if (_remainingFailures > 0)
+            {
+                _remainingFailures--;
+
+                throw _exception;
+            }
+
+            return operation((TContext)_context);
+        }
 
         public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
             where TContext : notnull

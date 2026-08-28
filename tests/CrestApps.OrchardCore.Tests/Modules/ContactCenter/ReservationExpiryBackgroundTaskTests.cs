@@ -257,6 +257,127 @@ public sealed class ReservationExpiryBackgroundTaskTests
             Times.Never);
     }
 
+    [Theory]
+    [InlineData(ActivitySources.PreviewDial)]
+    [InlineData(ActivitySources.Dialer)]
+    public async Task DoWorkAsync_WhenCampaignQueueHoldsAgentDrivenInventory_AssignsIt(string activitySource)
+    {
+        // Arrange
+        // Campaign queues are virtual and never returned by GetEnabledAsync, so the persisted-queue sweep cannot
+        // see them. Agent-driven (Preview/Manual) outbound inventory must still be offered, so the task lists the
+        // campaign queues with waiting work and assigns them here.
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.CreateId("campaign-1");
+        var reservationService = new Mock<IActivityReservationService>();
+        var assignmentService = new Mock<IActivityAssignmentService>();
+        var queueService = new Mock<IActivityQueueService>();
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore
+            .Setup(store => store.GetWaitingQueueIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([campaignQueueId]);
+        queueItemStore
+            .Setup(store => store.FindNextWaitingAsync(campaignQueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ActivityItemId = "activity-1" });
+        var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "activity-1",
+                Source = activitySource,
+            });
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var session = new Mock<ISession>();
+
+        await using var serviceProvider = CreateServiceProvider(
+            reservationService,
+            assignmentService,
+            queueService,
+            queueManager,
+            queueItemManager,
+            interactionManager,
+            activityManager,
+            inboundVoiceService,
+            clock,
+            session,
+            queueItemStore: queueItemStore);
+
+        // Act
+        await new ReservationExpiryBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+
+        // Assert
+        assignmentService.Verify(
+            service => service.AssignQueueAsync(campaignQueueId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData(ActivitySources.PowerDial)]
+    [InlineData(ActivitySources.ProgressiveDial)]
+    public async Task DoWorkAsync_WhenCampaignQueueHoldsPacedInventory_LeavesItToTheDialerPacer(string activitySource)
+    {
+        // Arrange
+        // Power/Progressive campaign inventory is paced and offered by DialerPacingBackgroundTask. This task must
+        // not also drive it, or the two would both assign the same campaign queue.
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.CreateId("campaign-1");
+        var reservationService = new Mock<IActivityReservationService>();
+        var assignmentService = new Mock<IActivityAssignmentService>();
+        var queueService = new Mock<IActivityQueueService>();
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore
+            .Setup(store => store.GetWaitingQueueIdsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([campaignQueueId]);
+        queueItemStore
+            .Setup(store => store.FindNextWaitingAsync(campaignQueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ActivityItemId = "activity-1" });
+        var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager
+            .Setup(manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new OmnichannelActivity
+            {
+                ItemId = "activity-1",
+                Source = activitySource,
+            });
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var session = new Mock<ISession>();
+
+        await using var serviceProvider = CreateServiceProvider(
+            reservationService,
+            assignmentService,
+            queueService,
+            queueManager,
+            queueItemManager,
+            interactionManager,
+            activityManager,
+            inboundVoiceService,
+            clock,
+            session,
+            queueItemStore: queueItemStore);
+
+        // Act
+        await new ReservationExpiryBackgroundTask().DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+
+        // Assert
+        assignmentService.Verify(
+            service => service.AssignQueueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     [Fact]
     public async Task DoWorkAsync_WhenRoutingFeatureIsQuiescing_DoesNoWork()
     {
@@ -457,14 +578,27 @@ public sealed class ReservationExpiryBackgroundTaskTests
         Mock<IInboundVoiceService> inboundVoiceService,
         Mock<IClock> clock,
         Mock<ISession> session,
-        IContactCenterFeatureWorkManager workManager = null)
+        IContactCenterFeatureWorkManager workManager = null,
+        Mock<IQueueItemStore> queueItemStore = null)
     {
+        // The task lists campaign queues with waiting inventory from the store. Tests that do not exercise the
+        // campaign path get a store that reports none, so the persisted-queue assertions are unaffected.
+        var store = queueItemStore ?? new Mock<IQueueItemStore>();
+
+        if (queueItemStore is null)
+        {
+            store
+                .Setup(value => value.GetWaitingQueueIdsAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync([]);
+        }
+
         var services = new ServiceCollection();
         services.AddSingleton(reservationService.Object);
         services.AddSingleton(assignmentService.Object);
         services.AddSingleton(queueService.Object);
         services.AddSingleton(queueManager.Object);
         services.AddSingleton(queueItemManager.Object);
+        services.AddSingleton(store.Object);
         services.AddSingleton(interactionManager.Object);
         services.AddSingleton(activityManager.Object);
         services.AddSingleton(inboundVoiceService.Object);

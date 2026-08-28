@@ -255,7 +255,6 @@ public sealed class ContactCenterDeploymentAdminStartup : StartupBase
     {
         services.AddDisplayDriver<DeploymentStep, AgentStateReasonCodeDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, ContactCenterSkillDeploymentStepDisplayDriver>();
-        services.AddDisplayDriver<DeploymentStep, ContactCenterAgentEntitlementDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, ContactCenterQueueGroupDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, ContactCenterBusinessHoursCalendarDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, ContactCenterQueueDeploymentStepDisplayDriver>();

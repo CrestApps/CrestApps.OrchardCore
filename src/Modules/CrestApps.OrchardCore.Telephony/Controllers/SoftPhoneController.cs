@@ -49,7 +49,7 @@ public sealed class SoftPhoneController : Controller
     /// <returns>The chromeless full-window soft phone view.</returns>
     // The view sets Layout = null so the page renders chromeless (no theme layout), filling the extension
     // window; it emits its own <head>/<body> and renders the registered soft phone resources itself.
-    [Route("softphone", Name = "TelephonySoftPhonePage")]
+    [Route("softphone", Name = TelephonyConstants.RouteNames.SoftPhonePage)]
     public async Task<IActionResult> Index(string answerCallId = null)
     {
         if (!await _authorizationService.AuthorizeAsync(User, TelephonyPermissions.UseSoftPhone))

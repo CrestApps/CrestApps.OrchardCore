@@ -78,6 +78,9 @@ public sealed class AgentsStartup : StartupBase
             .ValidateOnStart();
 
         services
+            // The permissive default: no entitlement restriction. The Agent Entitlements feature replaces this
+            // with an enforcing policy when enabled.
+            .AddScoped<IAgentEntitlementPolicy, PermissiveAgentEntitlementPolicy>()
             .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
             .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
             .AddScoped<IAgentSessionStore, AgentSessionStore>()

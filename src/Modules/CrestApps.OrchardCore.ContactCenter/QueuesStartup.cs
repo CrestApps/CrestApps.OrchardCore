@@ -95,7 +95,6 @@ public sealed class QueuesStartup : StartupBase
             .AddDisplayDriver<BusinessHoursCalendar, BusinessHoursCalendarDisplayDriver>();
 
         services.AddNavigationProvider<ContactCenterAdminMenu>();
-        services.AddNavigationProvider<ContactCenterAgentEntitlementsAdminMenu>();
 
         // Policy-based routing strategies and activity assignment orchestration.
         services
@@ -106,7 +105,8 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, RoundRobinRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
-            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>();
+            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
+            .AddScoped<IOrphanedActivityRecoveryService, OrphanedActivityRecoveryService>();
 
         services.AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
             new ContactCenterFeatureWorkLifecycleParticipant(
@@ -116,6 +116,7 @@ public sealed class QueuesStartup : StartupBase
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ReservationExpiryBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DirectRingTimeoutBackgroundTask>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, OrphanedActivityRecoveryBackgroundTask>());
     }
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -135,7 +136,6 @@ public sealed class QueuesDeploymentStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDeployment<ContactCenterSkillDeploymentSource, ContactCenterSkillDeploymentStep>();
-        services.AddDeployment<ContactCenterAgentEntitlementDeploymentSource, ContactCenterAgentEntitlementDeploymentStep>();
         services.AddDeployment<ContactCenterQueueGroupDeploymentSource, ContactCenterQueueGroupDeploymentStep>();
         services.AddDeployment<ContactCenterBusinessHoursCalendarDeploymentSource, ContactCenterBusinessHoursCalendarDeploymentStep>();
         services.AddDeployment<ContactCenterQueueDeploymentSource, ContactCenterQueueDeploymentStep>();
@@ -153,7 +153,6 @@ public sealed class QueuesRecipesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddRecipeExecutionStep<ContactCenterSkillStep>();
-        services.AddRecipeExecutionStep<ContactCenterAgentEntitlementStep>();
         services.AddRecipeExecutionStep<ContactCenterQueueGroupStep>();
         services.AddRecipeExecutionStep<ContactCenterBusinessHoursCalendarStep>();
         services.AddRecipeExecutionStep<ContactCenterQueueStep>();

@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Contact Center persistent docked agent bar.
  *
  * The bar is injected into the admin chrome on every page for a signed-in agent. It is the CRM-side bridge to
@@ -190,27 +190,7 @@
             return strings[key] || fallback;
         }
 
-        // Anchor the fixed bar to the left edge of the admin content column so it clears the left sidebar and is
-        // not full width. It re-measures on resize and when the sidebar collapses (which resizes the content).
-        function positionBar() {
-            var content = document.querySelector('.ta-content');
-
-            if (content) {
-                // Leave a small gap between the left menu and the bar.
-                root.style.left = Math.max(0, Math.round(content.getBoundingClientRect().left) + 8) + 'px';
-            }
-        }
-
-        positionBar();
-        window.addEventListener('resize', positionBar);
-
-        if (window.ResizeObserver) {
-            var contentColumn = document.querySelector('.ta-content');
-
-            if (contentColumn) {
-                new window.ResizeObserver(positionBar).observe(contentColumn);
-            }
-        }
+        // The bar is fixed and horizontally centered entirely in CSS (see contact-center-agent-bar.scss).
 
         function computeOffset(serverTimeUtc) {
             var serverMs = parseUtc(serverTimeUtc);
@@ -300,10 +280,16 @@
 
             activeSignature = signature;
 
+            // The bar stacks vertically: a compact top row carries the read-only status chip and the connection
+            // tail (headphone), and the work context — the ringing offer, active call, or wrap-up — expands as a
+            // full-width block *below* that row rather than being squeezed between the two. The context collapses
+            // to nothing when idle, so the bar is just the top row until work arrives.
             inner.innerHTML =
-                renderPresence(status, reason) +
-                '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active) + '</div>' +
-                renderTail();
+                '<div class="cc-agent-bar__top">' +
+                    renderPresence(status, reason) +
+                    renderTail() +
+                '</div>' +
+                '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active) + '</div>';
 
             bindEvents();
         }
@@ -335,22 +321,31 @@
             return '';
         }
 
+        // When work is offered the bar expands into a taller card: a heading with the countdown, then the offer
+        // details stacked as labelled rows (method, contact, number, and the queue or campaign), and finally the
+        // Dial/Skip (or Accept/Decline) actions along the bottom. The extra room is what lets the bar carry the
+        // context an agent needs to decide before dialing, instead of a single cramped line.
         function renderOffer(offer) {
             var preview = offer.kind === 'PreviewDial';
-            var customer = offer.customerLabel || offer.customerAddress || label('unknownCaller', 'Unknown caller');
+            var contactRaw = offer.customerLabel || '';
+            var contact = contactRaw
+                ? (/[a-z]/i.test(contactRaw) ? contactRaw : formatPhone(contactRaw))
+                : label('unknownCaller', 'Unknown caller');
+            var number = offer.customerAddress ? formatPhone(offer.customerAddress) : '';
             var heading = preview ? label('previewDial', 'Preview — review then dial') : label('incomingCall', 'Incoming call');
             var acceptLabel = preview ? label('dial', 'Dial') : label('accept', 'Accept');
             var declineLabel = preview ? label('skip', 'Skip') : label('decline', 'Decline');
 
-            return '<div class="cc-bar__offer' + (preview ? ' is-preview' : ' is-ringing') + '" data-cc-offer>' +
-                '<div class="cc-bar__offer-info">' +
-                    '<div class="cc-bar__offer-head">' + escapeHtml(heading) +
-                        '<span class="cc-bar__countdown" data-cc-countdown></span>' +
-                    '</div>' +
-                    '<div class="cc-bar__offer-customer">' + escapeHtml(customer) +
-                        (offer.queueName ? ' <span class="cc-bar__muted">· ' + escapeHtml(offer.queueName) + '</span>' : '') +
-                    '</div>' +
+            var rows = detailRow(label('method', 'Method'), offerMethodLabel(offer.kind)) +
+                detailRow(label('contact', 'Contact'), contact) +
+                (number ? detailRow(label('number', 'Number'), number) : '') +
+                (offer.queueName ? detailRow(preview ? label('campaign', 'Campaign') : label('queue', 'Queue'), offer.queueName) : '');
+
+            return '<div class="cc-bar__offer is-expanded' + (preview ? ' is-preview' : ' is-ringing') + '" data-cc-offer>' +
+                '<div class="cc-bar__offer-head">' + escapeHtml(heading) +
+                    '<span class="cc-bar__countdown" data-cc-countdown></span>' +
                 '</div>' +
+                '<div class="cc-bar__offer-details">' + rows + '</div>' +
                 '<div class="cc-bar__offer-actions">' +
                     '<button type="button" class="btn btn-success btn-sm" data-cc-accept><i class="fa-solid fa-phone" aria-hidden="true"></i> ' + escapeHtml(acceptLabel) + '</button>' +
                     '<button type="button" class="btn btn-outline-danger btn-sm" data-cc-decline>' + escapeHtml(declineLabel) + '</button>' +
@@ -358,19 +353,50 @@
             '</div>';
         }
 
+        function detailRow(labelText, value) {
+            if (!value) {
+                return '';
+            }
+
+            return '<div class="cc-bar__offer-row">' +
+                '<span class="cc-bar__offer-label">' + escapeHtml(labelText) + '</span>' +
+                '<span class="cc-bar__offer-value">' + escapeHtml(value) + '</span>' +
+            '</div>';
+        }
+
+        function offerMethodLabel(kind) {
+            switch (kind) {
+                case 'PreviewDial': return label('previewDialMethod', 'Preview dial');
+                case 'AutoDial': return label('autoDialMethod', 'Automatic dial');
+                case 'InboundCall': return label('inboundCallMethod', 'Inbound call');
+                default: return label('callMethod', 'Call');
+            }
+        }
+
+        // A live or just-ended call uses the same expanded card shape as an offer: a heading, the call details
+        // stacked as labelled rows, and full-width actions along the bottom. Keeping the two states structurally
+        // identical means the bar does not reshape itself the moment an offer is accepted, and the details have
+        // room to grow vertically rather than being squeezed onto one line.
         function renderActive(active) {
             var inbound = active.direction === 'Inbound';
             // Prefer the contact's name; otherwise show the destination formatted for readability. The server falls
             // back to the raw address as the label when there is no contact, so format any label that is just a
             // number (no letters) and leave real names alone.
-            var customerRaw = active.customerLabel || active.customerAddress || '';
-            var customer = /[a-z]/i.test(customerRaw) ? customerRaw : formatPhone(customerRaw);
-
-            if (!customer) {
-                customer = label('unknownCaller', 'Unknown caller');
-            }
+            var contactRaw = active.customerLabel || active.customerAddress || '';
+            var contact = contactRaw
+                ? (/[a-z]/i.test(contactRaw) ? contactRaw : formatPhone(contactRaw))
+                : label('unknownCaller', 'Unknown caller');
+            var number = active.customerAddress ? formatPhone(active.customerAddress) : '';
             var ended = isEnded(active);
-            var directionTitle = inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound');
+            var heading = ended
+                ? label('callEnded', 'Call ended — complete the activity')
+                : (inbound ? label('inboundCall', 'Inbound call') : label('outboundCall', 'Outbound call'));
+
+            var rows = detailRow(label('direction', 'Direction'), inbound ? label('inbound', 'Inbound') : label('outbound', 'Outbound')) +
+                detailRow(label('contact', 'Contact'), contact) +
+                (number ? detailRow(label('number', 'Number'), number) : '') +
+                (active.queueName ? detailRow(label('queue', 'Queue'), active.queueName) : '') +
+                (ended ? '' : detailRow(label('status', 'Status'), active.status));
 
             // "Complete activity" only appears when the call router assigned a CRM activity (dialer or queue work).
             // The agent never creates an activity or picks a contact from the bar, so a direct inbound call — which
@@ -378,17 +404,17 @@
             var activityButton = active.activityItemId
                 ? '<button type="button" class="btn btn-primary btn-sm" data-cc-open-activity="' + escapeHtml(active.activityItemId) + '"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i> ' + escapeHtml(ended ? label('completeActivity', 'Complete activity') : label('openActivity', 'Open activity')) + '</button>'
                 : '';
+            var contactButton = active.contactUrl
+                ? '<a class="btn btn-outline-secondary btn-sm" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener"><i class="fa-solid fa-address-card" aria-hidden="true"></i> ' + escapeHtml(label('openContact', 'Customer record')) + '</a>'
+                : '';
+            var actions = contactButton + activityButton;
 
-            return '<div class="cc-bar__active" data-cc-active>' +
-                '<span class="cc-bar__active-dir" title="' + escapeHtml(directionTitle) + '"><i class="fa-solid fa-phone" aria-hidden="true"></i></span>' +
-                '<div class="cc-bar__active-info">' +
-                    '<div class="cc-bar__active-customer">' + escapeHtml(customer) + '</div>' +
-                    (ended ? '' : '<div class="cc-bar__muted">' + escapeHtml(active.status) + ' · <span data-cc-talk-time>0:00</span></div>') +
+            return '<div class="cc-bar__offer cc-bar__active is-expanded' + (ended ? ' is-ended' : ' is-connected') + '" data-cc-active>' +
+                '<div class="cc-bar__offer-head">' + escapeHtml(heading) +
+                    (ended ? '' : '<span class="cc-bar__countdown" data-cc-talk-time>0:00</span>') +
                 '</div>' +
-                '<div class="cc-bar__active-actions">' +
-                    (active.contactUrl ? '<a class="btn btn-outline-secondary btn-sm" href="' + escapeHtml(active.contactUrl) + '" target="_blank" rel="noopener" title="' + escapeHtml(label('openContact', 'Open customer record')) + '"><i class="fa-solid fa-address-card" aria-hidden="true"></i></a>' : '') +
-                    activityButton +
-                '</div>' +
+                '<div class="cc-bar__offer-details">' + rows + '</div>' +
+                (actions ? '<div class="cc-bar__offer-actions">' + actions + '</div>' : '') +
             '</div>';
         }
 

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+﻿using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -35,6 +35,19 @@ public interface IAgentPresenceManager
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The agent profile after sign-out, or <see langword="null"/> when none exists.</returns>
     Task<AgentProfile> SignOutAsync(string userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Takes the agent offline without giving up their queue and campaign memberships. This is the durable
+    /// cleanup path for an agent who simply stopped being reachable (a dropped connection or an expired cookie)
+    /// rather than one who chose to stop working: routing already refuses an agent who is not
+    /// <see cref="AgentPresenceStatus.Available"/> with a live session, so the memberships are kept and the agent
+    /// resumes the queues they were working the moment they come back.
+    /// </summary>
+    /// <param name="userId">The Orchard user identifier.</param>
+    /// <param name="reason">The optional reason code recorded against the presence change.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent profile after going offline, or <see langword="null"/> when none exists.</returns>
+    Task<AgentProfile> MarkOfflineAsync(string userId, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sets the agent presence state and optional reason code.

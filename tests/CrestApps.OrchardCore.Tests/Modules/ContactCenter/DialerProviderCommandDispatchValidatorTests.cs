@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -28,13 +29,18 @@ public sealed class DialerProviderCommandDispatchValidatorTests
         eligibilityService
             .Setup(value => value.EvaluateAsync(
                 It.Is<DialerEligibilityContext>(context =>
-                    context.Profile == profile && context.Activity == activity),
+                    context.Profile == profile &&
+                    context.Activity == activity &&
+                    // The dispatch re-validation must exclude the already-counted in-flight attempt from the
+                    // maximum-attempts gate, or a single-attempt profile would suppress its own only dial.
+                    context.AttemptAlreadyCounted),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(DialerEligibilityResult.Eligible());
         var validator = new DialerProviderCommandDispatchValidator(
             profileManager.Object,
             activityManager.Object,
-            eligibilityService.Object);
+            eligibilityService.Object,
+            NullLogger<DialerProviderCommandDispatchValidator>.Instance);
 
         // Act
         var result = await validator.CanDispatchAsync(Command(), TestContext.Current.CancellationToken);
@@ -66,7 +72,8 @@ public sealed class DialerProviderCommandDispatchValidatorTests
         var validator = new DialerProviderCommandDispatchValidator(
             profileManager.Object,
             activityManager.Object,
-            eligibilityService.Object);
+            eligibilityService.Object,
+            NullLogger<DialerProviderCommandDispatchValidator>.Instance);
 
         // Act
         var result = await validator.CanDispatchAsync(Command(), TestContext.Current.CancellationToken);
@@ -82,7 +89,8 @@ public sealed class DialerProviderCommandDispatchValidatorTests
         var validator = new DialerProviderCommandDispatchValidator(
             new Mock<IDialerProfileManager>().Object,
             new Mock<IOmnichannelActivityManager>().Object,
-            new Mock<IDialerEligibilityService>().Object);
+            new Mock<IDialerEligibilityService>().Object,
+            NullLogger<DialerProviderCommandDispatchValidator>.Instance);
 
         // Act
         var result = await validator.CanDispatchAsync(Command(), TestContext.Current.CancellationToken);

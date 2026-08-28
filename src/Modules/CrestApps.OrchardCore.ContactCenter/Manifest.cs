@@ -47,6 +47,17 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.AgentEntitlements,
+    Name = "Contact Center Agent Entitlements",
+    Description = "Restricts which queues and campaigns each agent may sign in to, with an administration screen to grant that access. When this feature is disabled, any agent may sign in to any queue or campaign with no per-agent setup.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        ContactCenterConstants.Feature.Agents,
+    ]
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Queues,
     Name = "Contact Center Work Distribution",
     Description = "Adds work queues, queue items, reservations, business hours, and the policy-based routing strategies and activity assignment that distribute work to available agents, together with their administration screens.",

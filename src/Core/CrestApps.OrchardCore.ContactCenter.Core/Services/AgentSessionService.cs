@@ -1,3 +1,4 @@
+﻿using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
@@ -19,6 +20,12 @@ public sealed class AgentSessionService : IAgentSessionService
     /// The number of seconds without a heartbeat after which a session is considered abandoned.
     /// </summary>
     public const int StaleThresholdSeconds = 90;
+
+    /// <summary>
+    /// The number of times a disconnect re-reads and re-applies the connection removal after losing the
+    /// session's version check to a concurrent writer before giving up without throwing.
+    /// </summary>
+    private const int MaxSessionWriteAttempts = 3;
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromSeconds(30);
@@ -141,34 +148,64 @@ public sealed class AgentSessionService : IAgentSessionService
         ArgumentException.ThrowIfNullOrEmpty(userId);
         ArgumentException.ThrowIfNullOrEmpty(connectionId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(userId), _lockTimeout, _lockExpiration);
+        // Removing a connection id races the heartbeat, connect, membership sync, and stale-cleanup writers
+        // that all rewrite the same session document. A distributed lock cannot make that safe here: the
+        // store's version check runs when the shell scope commits, which is after any lock this method could
+        // release, so the removal is applied in its own unit of work that commits before returning. That keeps
+        // a lost version check contained here instead of surfacing it at the hub's OnDisconnectedAsync commit,
+        // where it crashed the disconnect and left the connection stranded in the list -- keeping an agent who
+        // had gone away looking online. Unlike a heartbeat, a disconnect must not be dropped on a conflict, so
+        // it retries: each attempt re-reads the current session and re-applies the removal against the newest
+        // committed version.
+        AgentSession result = null;
 
-        if (!locked)
+        for (var attempt = 1; attempt <= MaxSessionWriteAttempts; attempt++)
         {
-            return null;
+            try
+            {
+                await _scopeExecutor.ExecuteAsync<IAgentSessionManager>(async manager =>
+                {
+                    var session = await manager.FindByUserIdAsync(userId, cancellationToken);
+
+                    if (session is null)
+                    {
+                        return;
+                    }
+
+                    session.ConnectionIds.Remove(connectionId);
+                    session.IsOnline = session.ConnectionIds.Count > 0;
+                    session.ModifiedUtc = _clock.UtcNow;
+
+                    if (!session.IsOnline)
+                    {
+                        session.LastDisconnectedUtc = _clock.UtcNow;
+                    }
+
+                    await manager.UpdateAsync(session, cancellationToken: cancellationToken);
+
+                    result = session;
+                });
+
+                return result;
+            }
+            catch (ConcurrencyException)
+            {
+                // Another writer committed a newer session between the read and this commit. Re-read and
+                // re-apply the removal on the next attempt so the connection is not left stranded in the list.
+                result = null;
+            }
         }
 
-        await using var acquiredLock = locker;
+        // Every attempt lost the version check, so the connection could not be removed. Return without throwing
+        // so the hub disconnect does not crash; the stale-cleanup pass reconciles a connection list that a
+        // sustained write storm left behind.
+        _logger.LogWarning(
+            "Could not remove Contact Center connection '{ConnectionId}' for user '{UserId}' after {Attempts} attempts because each lost the session version check.",
+            connectionId.SanitizeLogValue(),
+            userId.SanitizeLogValue(),
+            MaxSessionWriteAttempts);
 
-        var session = await _sessionManager.FindByUserIdAsync(userId, cancellationToken);
-
-        if (session is null)
-        {
-            return null;
-        }
-
-        session.ConnectionIds.Remove(connectionId);
-        session.IsOnline = session.ConnectionIds.Count > 0;
-        session.ModifiedUtc = _clock.UtcNow;
-
-        if (!session.IsOnline)
-        {
-            session.LastDisconnectedUtc = _clock.UtcNow;
-        }
-
-        await _sessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
-
-        return session;
+        return null;
     }
 
     /// <inheritdoc/>
@@ -312,7 +349,13 @@ public sealed class AgentSessionService : IAgentSessionService
 
             if (profile is not null && profile.PresenceStatus != AgentPresenceStatus.Offline)
             {
-                await _presenceManager.SignOutAsync(session.UserId, cancellationToken);
+                // Take the agent offline but leave their queue and campaign memberships intact. A lapsed
+                // heartbeat means the agent stopped being reachable, not that they chose to stop working, and
+                // routing already refuses anyone who is not Available with a live session. Signing them out here
+                // instead stranded agents in an "Available but signed into nothing" state: the agent bar happily
+                // restores presence to Available on reconnect, but nothing restores the memberships, so routing
+                // silently skipped them with "no agents are currently available for this queue".
+                await _presenceManager.MarkOfflineAsync(session.UserId, "session-expired", cancellationToken);
             }
 
             // A session can reach this cleanup path purely by cookie expiry, which never raises a sign-out and so

@@ -1,4 +1,4 @@
-using CrestApps.Core.Support;
+﻿using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
@@ -18,6 +18,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentSessionManager _sessionManager;
     private readonly IAgentWorkStateHealingService _agentWorkStateHealingService;
+    private readonly IAgentEntitlementPolicy _entitlementPolicy;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IDistributedLock _distributedLock;
     private readonly IClock _clock;
@@ -29,6 +30,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="sessionManagers">The optional real-time agent session managers.</param>
     /// <param name="agentWorkStateHealingServices">The optional agent state healers.</param>
+    /// <param name="entitlementPolicy">The policy that decides which queues and campaigns an agent may join. The
+    /// permissive default imposes no restriction; the Agent Entitlements feature replaces it with an enforcing one.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="distributedLock">The distributed lock used to serialize sign-in updates.</param>
     /// <param name="clock">The clock used to stamp presence changes.</param>
@@ -37,6 +40,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         IAgentProfileManager agentManager,
         IEnumerable<IAgentSessionManager> sessionManagers,
         IEnumerable<IAgentWorkStateHealingService> agentWorkStateHealingServices,
+        IAgentEntitlementPolicy entitlementPolicy,
         IContactCenterEventPublisher publisher,
         IDistributedLock distributedLock,
         IClock clock,
@@ -45,6 +49,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         _agentManager = agentManager;
         _sessionManager = sessionManagers.FirstOrDefault();
         _agentWorkStateHealingService = agentWorkStateHealingServices.FirstOrDefault();
+        _entitlementPolicy = entitlementPolicy;
         _publisher = publisher;
         _distributedLock = distributedLock;
         _clock = clock;
@@ -95,8 +100,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             profile.Name = userId;
         }
 
-        var entitledQueueIds = AgentEntitlementUtilities.FilterEntitled(selectedQueueIds, profile.AllowedQueueIds);
-        var entitledCampaignIds = AgentEntitlementUtilities.FilterEntitled(selectedCampaignIds, profile.AllowedCampaignIds);
+        var (entitledQueueIds, entitledCampaignIds) = _entitlementPolicy.ResolveMemberships(profile, selectedQueueIds, selectedCampaignIds);
 
         if (entitledQueueIds.Count == 0 && entitledCampaignIds.Count == 0)
         {
@@ -156,8 +160,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             return null;
         }
 
-        var entitledQueueIds = AgentEntitlementUtilities.FilterEntitled(queueIds, profile.AllowedQueueIds);
-        var entitledCampaignIds = AgentEntitlementUtilities.FilterEntitled(campaignIds, profile.AllowedCampaignIds);
+        var (entitledQueueIds, entitledCampaignIds) = _entitlementPolicy.ResolveMemberships(profile, queueIds, campaignIds);
 
         if (entitledQueueIds.Count == 0 && entitledCampaignIds.Count == 0)
         {
@@ -278,6 +281,73 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         {
             _logger.LogInformation("Completed Contact Center sign-out for agent '{AgentId}'.", profile.ItemId.SanitizeLogValue());
         }
+
+        return profile;
+    }
+
+    /// <inheritdoc/>
+    public async Task<AgentProfile> MarkOfflineAsync(string userId, string reason, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
+        if (profile.PresenceStatus == AgentPresenceStatus.Offline)
+        {
+            return profile;
+        }
+
+        // Release any work the absent agent was holding so a reservation cannot outlive the connection that owned
+        // it, exactly as an explicit sign-out does. Only the memberships survive.
+        if (_agentWorkStateHealingService is not null)
+        {
+            await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
+        }
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            AgentProfileLock.GetKey(userId),
+            _signInLockTimeout,
+            _signInLockExpiration);
+
+        if (!locked)
+        {
+            throw new InvalidOperationException($"The Contact Center agent profile for user '{userId}' is currently being updated.");
+        }
+
+        await using var acquiredLock = locker;
+
+        profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+
+        if (profile is null)
+        {
+            return null;
+        }
+
+        var previousStatus = profile.PresenceStatus;
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Taking Contact Center agent '{AgentId}' for user '{UserId}' offline for reason '{Reason}', keeping {QueueCount} queue and {CampaignCount} campaign memberships.",
+                profile.ItemId.SanitizeLogValue(),
+                userId.SanitizeLogValue(),
+                reason.SanitizeLogValue(),
+                profile.QueueIds.Count,
+                profile.CampaignIds.Count);
+        }
+
+        profile.PresenceStatus = AgentPresenceStatus.Offline;
+        profile.PresenceReason = reason;
+        profile.RequestedPresenceStatus = null;
+        profile.PresenceChangedUtc = _clock.UtcNow;
+
+        await SaveAsync(profile, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
 
         return profile;
     }

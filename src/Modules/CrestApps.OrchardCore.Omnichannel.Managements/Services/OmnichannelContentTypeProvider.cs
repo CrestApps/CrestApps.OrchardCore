@@ -18,6 +18,11 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     private readonly object _lock = new();
     private readonly IServiceScopeFactory _scopeFactory;
 
+    // Bumped under _lock whenever a relevant content definition change is observed, including before the
+    // sets are warmed. A warm captures this value before reading the definitions and discards its snapshot
+    // if the version moved while the read was in flight, so an attach or detach that races the warm is
+    // never lost.
+    private long _version;
     private volatile HashSet<string> _subjectContentTypes;
     private volatile HashSet<string> _contactContentTypes;
 
@@ -112,33 +117,58 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
     {
         ArgumentNullException.ThrowIfNull(contentDefinitionManager);
 
-        if (_subjectContentTypes is not null && _contactContentTypes is not null)
+        while (true)
         {
-            return;
-        }
+            long versionSnapshot;
 
-        var definitions = await contentDefinitionManager.ListTypeDefinitionsAsync();
-
-        var subjectContentTypes = new HashSet<string>(StringComparer.Ordinal);
-        var contactContentTypes = new HashSet<string>(StringComparer.Ordinal);
-
-        foreach (var definition in definitions)
-        {
-            if (OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(definition))
+            lock (_lock)
             {
-                subjectContentTypes.Add(definition.Name);
+                if (_subjectContentTypes is not null && _contactContentTypes is not null)
+                {
+                    return;
+                }
+
+                versionSnapshot = _version;
             }
 
-            if (OmnichannelContactDefinitionService.HasOmnichannelContactPart(definition))
-            {
-                contactContentTypes.Add(definition.Name);
-            }
-        }
+            var definitions = await contentDefinitionManager.ListTypeDefinitionsAsync();
 
-        lock (_lock)
-        {
-            _subjectContentTypes ??= subjectContentTypes;
-            _contactContentTypes ??= contactContentTypes;
+            var subjectContentTypes = new HashSet<string>(StringComparer.Ordinal);
+            var contactContentTypes = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var definition in definitions)
+            {
+                if (OmnichannelSubjectDefinitionService.HasOmnichannelSubjectPart(definition))
+                {
+                    subjectContentTypes.Add(definition.Name);
+                }
+
+                if (OmnichannelContactDefinitionService.HasOmnichannelContactPart(definition))
+                {
+                    contactContentTypes.Add(definition.Name);
+                }
+            }
+
+            lock (_lock)
+            {
+                if (_subjectContentTypes is not null && _contactContentTypes is not null)
+                {
+                    // Another thread finished warming while this read was in flight. Its result already
+                    // reflects every event applied incrementally, so keep it.
+                    return;
+                }
+
+                if (_version == versionSnapshot)
+                {
+                    _subjectContentTypes = subjectContentTypes;
+                    _contactContentTypes = contactContentTypes;
+
+                    return;
+                }
+
+                // A content definition change was observed while the definitions were being read, so this
+                // snapshot may predate it. Discard it and read again from the now-current definitions.
+            }
         }
     }
 
@@ -264,6 +294,9 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
         lock (_lock)
         {
+            // Bump the version even when the set is still null so an in-flight warm re-reads. The
+            // incremental update below is a no-op until the set has been warmed.
+            _version++;
             _subjectContentTypes = WithMembership(_subjectContentTypes, contentType, isMember);
         }
     }
@@ -277,6 +310,9 @@ public sealed class OmnichannelContentTypeProvider : IContentDefinitionEventHand
 
         lock (_lock)
         {
+            // Bump the version even when the set is still null so an in-flight warm re-reads. The
+            // incremental update below is a no-op until the set has been warmed.
+            _version++;
             _contactContentTypes = WithMembership(_contactContentTypes, contentType, isMember);
         }
     }

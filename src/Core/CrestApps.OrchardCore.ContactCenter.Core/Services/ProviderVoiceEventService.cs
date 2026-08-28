@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -22,6 +22,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
+    private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly ITelephonyProviderResolver _telephonyProviderResolver;
     private readonly IInteractionEventStore _eventStore;
@@ -40,6 +41,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// </summary>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="callSessionManager">The call session manager.</param>
+    /// <param name="agentManager">The agent profile manager used to resolve the agent's user id when bridging an answered outbound call.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to bridge answered outbound calls.</param>
     /// <param name="telephonyProviderResolver">The telephony provider resolver used to protect provider-scoped call identities.</param>
     /// <param name="eventStore">The interaction event store used to de-duplicate provider events.</param>
@@ -55,6 +57,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     public ProviderVoiceEventService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
+        IAgentProfileManager agentManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ITelephonyProviderResolver telephonyProviderResolver,
         IInteractionEventStore eventStore,
@@ -70,6 +73,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
+        _agentManager = agentManager;
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyProviderResolver = telephonyProviderResolver;
         _eventStore = eventStore;
@@ -156,11 +160,19 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         if (interaction is null)
         {
-            if (_logger.IsEnabled(LogLevel.Debug))
+            // An unmatched event is usually noise, but it is also how a leg the platform itself originated -- the
+            // agent leg of an answered outbound call -- reports that it failed: the leg is not registered against
+            // the interaction, so its lifecycle lands here and is dropped. Record the state and hangup cause so a
+            // leg that clears without ringing can be diagnosed from the log instead of only from its silence.
+            if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogDebug(
-                    "Received a provider voice event for call '{ProviderCallId}' that does not match any interaction.",
-                    providerEvent.ProviderCallId.SanitizeLogValue());
+                _logger.LogInformation(
+                    "Received a provider voice event for call '{ProviderCallId}' that does not match any interaction. State={State}, HangupCause={HangupCause}, From={FromAddress}, To={ToAddress}.",
+                    providerEvent.ProviderCallId.SanitizeLogValue(),
+                    providerEvent.State,
+                    providerEvent.HangupCause,
+                    providerEvent.FromAddress.SanitizeLogValue(),
+                    providerEvent.ToAddress.SanitizeLogValue());
             }
 
             return null;
@@ -893,6 +905,24 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             return;
         }
 
+        // The answer command that bridges the agent's soft-phone leg is only dispatchable when it carries the
+        // agent's user id (call-control authorization is keyed on the user, not the agent record). The session
+        // knows only the agent id, so resolve the user here; without it the bridge command would be refused at
+        // dispatch and compensated, which strands the answered outbound call in dead air and drops the agent
+        // straight into wrap-up.
+        var agent = await _agentManager.FindByIdAsync(session.AgentId, cancellationToken);
+
+        if (agent is null || string.IsNullOrWhiteSpace(agent.UserId))
+        {
+            _logger.LogWarning(
+                "Skipped bridging answered outbound call '{ProviderCallId}' for interaction '{InteractionId}' because agent '{AgentId}' could not be resolved to a user to authorize the connect.",
+                session.ProviderCallId.SanitizeLogValue(),
+                interaction.ItemId.SanitizeLogValue(),
+                session.AgentId.SanitizeLogValue());
+
+            return;
+        }
+
         if (!session.Metadata.TryGetValue(ContactCenterConstants.CommandMetadata.CommandId, out var commandId) ||
             string.IsNullOrEmpty(commandId))
         {
@@ -915,6 +945,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                 InteractionId = interaction.ItemId,
                 ProviderCallId = session.ProviderCallId,
                 AgentId = session.AgentId,
+                AgentUserId = agent.UserId,
                 QueueId = session.QueueId,
             }),
         }, cancellationToken);

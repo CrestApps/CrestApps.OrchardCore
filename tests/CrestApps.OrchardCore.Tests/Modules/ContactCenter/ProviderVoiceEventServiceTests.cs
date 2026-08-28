@@ -2051,6 +2051,9 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Equal("interaction-1", request.InteractionId);
         Assert.Equal("call-1", request.ProviderCallId);
         Assert.Equal("agent-1", request.AgentId);
+        // The bridge command is refused at dispatch without the agent's user id (authorization is keyed on the
+        // user), which strands the answered call in dead air. The resolved user id must be carried on the request.
+        Assert.Equal("user-agent-1", request.AgentUserId);
         Assert.Equal("queue-1", request.QueueId);
 
         Assert.Collection(
@@ -2442,16 +2445,19 @@ public sealed class ProviderVoiceEventServiceTests
         IProviderCommandStateService? providerCommandStateService = null,
         IContactCenterScopeExecutor? scopeExecutor = null,
         ISession? session = null,
-        IDistributedLock? distributedLock = null)
+        IDistributedLock? distributedLock = null,
+        IAgentProfileManager? agentManager = null)
     {
         providerCommandStateService ??= new Mock<IProviderCommandStateService>(MockBehavior.Strict).Object;
         scopeExecutor ??= new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict).Object;
         session ??= new Mock<ISession>().Object;
         distributedLock ??= CreateDistributedLock();
+        agentManager ??= CreateAgentManager();
 
         return new ProviderVoiceEventService(
             interactionManager,
             callSessionManager,
+            agentManager,
             voiceProviderResolver,
             telephonyProviderResolver,
             eventStore,
@@ -2464,6 +2470,19 @@ public sealed class ProviderVoiceEventServiceTests
             new VoiceIngressGate(distributedLock),
             clock,
             logger);
+    }
+
+    private static IAgentProfileManager CreateAgentManager()
+    {
+        // The answered-outbound bridge resolves the reserved agent to a user id to authorize the connect, so the
+        // default manager answers with an agent that carries a user id. Tests that need the "no user" path pass
+        // their own manager.
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string id, CancellationToken _) => new AgentProfile { ItemId = id, UserId = "user-" + id });
+
+        return agentManager.Object;
     }
 
     private static IDistributedLock CreateDistributedLock()

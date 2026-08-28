@@ -28,6 +28,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         }
         public static class Components
         {
+            public const string AgentEntitlements = "AgentEntitlements";
             public const string Agents = "Agents";
             public const string CallSessions = "CallSessions";
             public const string Dialer = "Dialer";
@@ -116,6 +117,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         }
         public static class Feature
         {
+            public const string AgentEntitlements = "CrestApps.OrchardCore.ContactCenter.AgentEntitlements";
             public const string AgentServices = "CrestApps.OrchardCore.ContactCenter.AgentServices";
             public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
             public const string Area = "CrestApps.OrchardCore.ContactCenter";

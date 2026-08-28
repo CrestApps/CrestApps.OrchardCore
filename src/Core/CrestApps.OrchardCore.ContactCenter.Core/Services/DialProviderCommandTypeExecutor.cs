@@ -1,10 +1,12 @@
 using System.Globalization;
 using System.Text.Json;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -28,6 +30,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialProviderCommandTypeExecutor"/> class.
@@ -39,6 +42,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     /// <param name="clock">The clock used to stamp UTC timestamps on projections.</param>
     /// <param name="callSessionManager">The call session manager used to persist first-command ownership.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the dialing user.</param>
+    /// <param name="logger">The logger used to surface why an outbound dial was rejected by the provider.</param>
     public DialProviderCommandTypeExecutor(
         IEnumerable<IProviderCommandDispatchValidator> dispatchValidators,
         IVoiceContactCenterCallRouter voiceCallRouter,
@@ -46,7 +50,8 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         IContactCenterActivityWriter activityWriter,
         IClock clock,
         ICallSessionManager callSessionManager,
-        IAgentProfileManager agentManager)
+        IAgentProfileManager agentManager,
+        ILogger<DialProviderCommandTypeExecutor> logger)
     {
         _dispatchValidators = dispatchValidators;
         _voiceCallRouter = voiceCallRouter;
@@ -55,6 +60,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         _agentManager = agentManager;
         _activityWriter = activityWriter;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -126,7 +132,23 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
 
         await EnsureOwnedDialSessionAsync(request, command, cancellationToken);
 
-        return await _voiceCallRouter.RouteOutboundAsync(request, command.ProviderName, cancellationToken);
+        var result = await _voiceCallRouter.RouteOutboundAsync(request, command.ProviderName, cancellationToken);
+
+        // The provider result is the only place the reason a dial did not connect surfaces; the failure
+        // projection that follows records just that it failed. Log it here so a dial that silently produces no
+        // call (for example a caller id the provider rejects) is diagnosable from the application log.
+        if (result is not null && !result.Succeeded)
+        {
+            _logger.LogWarning(
+                "Outbound dial for activity '{ActivityItemId}' (interaction '{InteractionId}') was not placed by provider '{ProviderName}': {ErrorCode} - {ErrorMessage}.",
+                command.ActivityItemId.SanitizeLogValue(),
+                command.InteractionId.SanitizeLogValue(),
+                (result.ProviderName ?? command.ProviderName).SanitizeLogValue(),
+                result.ErrorCode.SanitizeLogValue(),
+                result.ErrorMessage.SanitizeLogValue());
+        }
+
+        return result;
     }
 
     /// <inheritdoc/>

@@ -85,5 +85,10 @@ public static partial class ContactCenterConstants
         /// The identifier of the shared Contact Center real-time transport feature.
         /// </summary>
         public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
+
+        /// <summary>
+        /// The identifier of the Agent Entitlements feature.
+        /// </summary>
+        public const string AgentEntitlements = "CrestApps.OrchardCore.ContactCenter.AgentEntitlements";
     }
 }

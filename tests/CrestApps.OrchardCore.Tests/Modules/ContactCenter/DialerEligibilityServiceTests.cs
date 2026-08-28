@@ -48,6 +48,41 @@ public sealed class DialerEligibilityServiceTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_WhenAttemptAlreadyCounted_AllowsTheInFlightAttemptAtTheLimit()
+    {
+        // Arrange
+        // The dispatch re-validation runs after the dial attempt was recorded. A single-attempt profile whose one
+        // attempt is already counted must still be allowed to place that call, otherwise the dial is suppressed
+        // before it ever reaches the provider and the agent sees nothing happen when they click Dial.
+        var harness = new Harness();
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+14255551212", Attempts = 1 };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(maxAttempts: 1), activity, attemptAlreadyCounted: true);
+
+        // Assert
+        Assert.True(result.IsEligible);
+        Assert.Equal(DialerSuppressionReason.None, result.Reason);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenAttemptAlreadyCounted_StillSuppressesBeyondTheLimit()
+    {
+        // Arrange
+        // Excluding the in-flight attempt must not disable the limit: once the counter exceeds the maximum, the
+        // re-validation still suppresses, so a profile can never dial more times than it allows.
+        var harness = new Harness();
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+14255551212", Attempts = 2 };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(maxAttempts: 1), activity, attemptAlreadyCounted: true);
+
+        // Assert
+        Assert.False(result.IsEligible);
+        Assert.Equal(DialerSuppressionReason.MaxAttemptsReached, result.Reason);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_WhenWithinRetryCoolDown_SuppressesCoolDown()
     {
         // Arrange
@@ -396,7 +431,10 @@ public sealed class DialerEligibilityServiceTests
                 .ReturnsAsync(DialerAbandonmentEvaluation.Permitted(true, 0, 0, "Not enforced."));
         }
 
-        public Task<DialerEligibilityResult> EvaluateAsync(DialerProfile profile, OmnichannelActivity activity)
+        public Task<DialerEligibilityResult> EvaluateAsync(
+            DialerProfile profile,
+            OmnichannelActivity activity,
+            bool attemptAlreadyCounted = false)
         {
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -419,6 +457,7 @@ public sealed class DialerEligibilityServiceTests
             {
                 Profile = profile,
                 Activity = activity,
+                AttemptAlreadyCounted = attemptAlreadyCounted,
             }, CancellationToken.None);
         }
     }

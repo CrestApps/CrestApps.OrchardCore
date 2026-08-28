@@ -451,9 +451,15 @@ public sealed class VoiceEventFanOutIntegrationTests
                 clock,
                 NullLogger<DefaultContactCenterEventPublisher>.Instance);
 
+            var agentManager = new Mock<IAgentProfileManager>();
+            agentManager
+                .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((string id, CancellationToken _) => new AgentProfile { ItemId = id, UserId = "user-" + id });
+
             return new ProviderVoiceEventService(
                 interactionManager.Object,
                 callSessionManager.Object,
+                agentManager.Object,
                 new Mock<IContactCenterVoiceProviderResolver>().Object,
                 new Mock<ITelephonyProviderResolver>().Object,
                 eventStore.Object,

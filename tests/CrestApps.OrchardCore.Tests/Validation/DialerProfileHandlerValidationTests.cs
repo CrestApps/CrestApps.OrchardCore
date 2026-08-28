@@ -1,9 +1,10 @@
-using CrestApps.Core.Models;
+﻿using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
 using OrchardCore.Environment.Extensions.Features;
@@ -239,7 +240,47 @@ public class DialerProfileHandlerValidationTests
         return new DialerProfileHandler(
             new Mock<IClock>().Object,
             featuresManager.Object,
+            new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<DialerProfileHandler>());
+    }
+
+    /// <summary>
+    /// A caller id that is not a real phone number is rejected by the voice provider the instant it is dialed,
+    /// with no call placed and nothing obvious to point at. The rule lives on the handler so a recipe import is
+    /// held to it as well as the editor.
+    /// </summary>
+    [Theory]
+    [InlineData("CrestApps")]
+    [InlineData("not a number")]
+    [InlineData("+1555")]
+    public async Task ValidatingAsync_WhenTheCallerIdIsNotAPhoneNumber_Fails(string callerId)
+    {
+        // Arrange
+        var profile = CreateValidProfile();
+        profile.CallerId = callerId;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        Assert.False(context.Result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("+14155552671")]
+    public async Task ValidatingAsync_WhenTheCallerIdIsBlankOrAPhoneNumber_Succeeds(string callerId)
+    {
+        // Arrange
+        var profile = CreateValidProfile();
+        profile.CallerId = callerId;
+
+        // Act
+        var context = await ValidateAsync(profile);
+
+        // Assert
+        Assert.True(context.Result.Succeeded);
     }
 
     private static DialerProfile CreateValidProfile()

@@ -95,6 +95,13 @@ public static class TelephonyConstants
         /// The route that disconnects the current user from the provider.
         /// </summary>
         public const string OAuthDisconnect = "TelephonyOAuthDisconnect";
+
+        /// <summary>
+        /// The route of the standalone <c>/softphone</c> page hosted by the soft phone browser extension. Shared
+        /// so callers that must recognize the soft phone page (such as the Contact Center agent bar, which never
+        /// injects itself there) stay in sync with the route through any rename.
+        /// </summary>
+        public const string SoftPhonePage = "TelephonySoftPhonePage";
     }
 
     /// <summary>
