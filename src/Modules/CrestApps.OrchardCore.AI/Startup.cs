@@ -385,19 +385,17 @@ public sealed class ToolInstancesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        // The default registry surfaces every stored instance to the model, so it is skipped in favor of
-        // OrchardCoreToolInstanceRegistryProvider, which only surfaces instances the current user may access.
+        // Tool-instance access is enforced when a profile, template, or chat interaction is configured, so
+        // the default registry is used to surface the instances stored on the completion context at chat time
+        // without re-checking permissions during the AI session.
         services.AddCrestAppsCore(crestApps => crestApps
             .AddAISuite(ai => ai
                 .AddToolInstances(toolInstances => toolInstances
                     .AddHttpApiRequestSource()
                     .AddDocumentationSearchSources()
-                    .AddYesSqlStores(),
-                    useDefaultRegistry: false)
+                    .AddYesSqlStores())
             )
         );
-
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IToolRegistryProvider, OrchardCoreToolInstanceRegistryProvider>());
 
         services.TryAddEnumerable(
         [
