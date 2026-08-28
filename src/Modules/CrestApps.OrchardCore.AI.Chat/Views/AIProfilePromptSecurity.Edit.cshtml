@@ -3,6 +3,7 @@
 @model AIProfilePromptSecurityViewModel
 
 <p class="hint">@T["Override the site-wide anti-spam throttle limits for this profile. Leave a field blank to inherit the site default. These overrides only affect this profile; the shared prompt-injection and output guards remain site-wide."]</p>
+<p class="hint">@T["The message window governs authenticated callers, and anonymous callers only when no anonymous message tiers apply. The anonymous session window is likewise the fallback for the session-start tiers."]</p>
 
 <div class="ocat-wrapper">
     <label asp-for="MaxMessagesPerWindow" class="ocat-label">
@@ -33,6 +34,25 @@
 </div>
 
 <div class="ocat-wrapper">
+    <label asp-for="AnonymousMessageRateLimitTiers" class="ocat-label">
+        @T["Anonymous message rate-limit tiers"]
+        <span class="text-muted ms-1" data-bs-toggle="tooltip" title="@T["Multi-tier sliding-window message limits applied to anonymous callers for this profile. One tier per line as 'limit, window'. Leave blank to inherit the site tiers."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <div class="ocat-end">
+        <textarea asp-for="AnonymousMessageRateLimitTiers" class="form-control" rows="4" placeholder="@T["Inherit site tiers ({0})", Model.SiteAnonymousMessageRateLimitTiers]"></textarea>
+        <span asp-validation-for="AnonymousMessageRateLimitTiers" class="text-danger"></span>
+        <span class="hint">@T["One tier per line as 'limit, window', where the window is a time span such as 00:00:30 or 1.00:00:00 for a day. Applies to anonymous callers only; a message is throttled when it would exceed any tier."]</span>
+        <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" asp-for="DisableAnonymousMessageRateLimitTiers" />
+            <label class="form-check-label" asp-for="DisableAnonymousMessageRateLimitTiers">@T["Do not use tiered anonymous message limits for this profile"]</label>
+            <span class="hint dashed">@T["Checked, this profile ignores the site tiers and uses the message window above instead. Leave unchecked and the box empty to inherit the site tiers."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
     <label asp-for="MaxAnonymousSessionsPerWindow" class="ocat-label">
         @T["Maximum anonymous sessions per window"]
         <span class="text-muted ms-1" data-bs-toggle="tooltip" title="@T["Limits how many new anonymous chat sessions can be started within the window below. Leave blank to inherit the site default. Set to 0 to disable anonymous session-start throttling for this profile."]">
@@ -57,5 +77,24 @@
         <input asp-for="AnonymousSessionRateLimitWindowSeconds" class="form-control" type="number" min="1" max="86400" placeholder="@T["Inherit site default ({0})", Model.SiteAnonymousSessionRateLimitWindowSeconds]" />
         <span asp-validation-for="AnonymousSessionRateLimitWindowSeconds" class="text-danger"></span>
         <span class="hint">@T["Duration of the anonymous chat session-start rate-limit window for this profile."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AnonymousSessionStartRateLimitTiers" class="ocat-label">
+        @T["Anonymous session-start rate-limit tiers"]
+        <span class="text-muted ms-1" data-bs-toggle="tooltip" title="@T["Multi-tier sliding-window session-start limits applied to anonymous callers for this profile. One tier per line as 'limit, window'. Leave blank to inherit the site tiers."]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <div class="ocat-end">
+        <textarea asp-for="AnonymousSessionStartRateLimitTiers" class="form-control" rows="4" placeholder="@T["Inherit site tiers ({0})", Model.SiteAnonymousSessionStartRateLimitTiers]"></textarea>
+        <span asp-validation-for="AnonymousSessionStartRateLimitTiers" class="text-danger"></span>
+        <span class="hint">@T["One tier per line as 'limit, window', where the window is a time span such as 00:00:30 or 1.00:00:00 for a day. Applies to anonymous callers only; a session start is throttled when it would exceed any tier."]</span>
+        <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" asp-for="DisableAnonymousSessionStartRateLimitTiers" />
+            <label class="form-check-label" asp-for="DisableAnonymousSessionStartRateLimitTiers">@T["Do not use tiered anonymous session-start limits for this profile"]</label>
+            <span class="hint dashed">@T["Checked, this profile ignores the site tiers and uses the anonymous session window above instead. Leave unchecked and the box empty to inherit the site tiers."]</span>
+        </div>
     </div>
 </div>

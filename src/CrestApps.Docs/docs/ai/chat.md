@@ -279,23 +279,51 @@ The **Prompt Security** section tunes the shared AI chat protections.
 | Enable audit logging | Enabled | Records prompt security decisions for diagnostics and abuse investigations. |
 | Maximum prompt length | `8000` | Prompts longer than this character count are rejected. Must be between `1` and `100000`. |
 | Blocking threshold | `High` | Prompts classified at or above this risk level (`None`, `Low`, `Medium`, `High`, `Critical`) are blocked. |
-| Maximum messages per window | `20` | How many chat messages one rate-limit partition can send within the message window. Set to `0` to disable message throttling. |
+| Maximum messages per window | `20` | How many chat messages one rate-limit partition can send within the message window. Governs authenticated callers, and anonymous callers only when no anonymous message tiers are configured. Set to `0` to disable message throttling. |
 | Message rate-limit window (seconds) | `60` | Duration of the shared chat message rate-limit window. Must be between `1` and `86400`. |
-| Maximum anonymous sessions per window | `5` | Limits how many new anonymous chat sessions can be started within the anonymous session window. Set to `0` to disable anonymous session-start throttling. |
+| Anonymous message rate-limit tiers | `5, 00:00:30`<br />`30, 00:05:00`<br />`150, 01:00:00`<br />`500, 1.00:00:00` | Multi-tier sliding-window message limits applied to anonymous callers only. Leave blank to fall back to the single message window above. |
+| Maximum anonymous sessions per window | `20` | Limits how many new anonymous chat sessions can be started within the anonymous session window. Used only when no anonymous session-start tiers are configured. Set to `0` to disable anonymous session-start throttling. |
 | Anonymous session window (seconds) | `600` | Duration of the anonymous chat session-start rate-limit window. Must be between `1` and `86400`. |
+| Anonymous session-start rate-limit tiers | `5, 00:00:30`<br />`10, 00:05:00`<br />`150, 01:00:00`<br />`500, 1.00:00:00` | Multi-tier sliding-window session-start limits applied to anonymous callers only. Leave blank to fall back to the single session window above. |
 
-Message and session-start throttling are keyed by the resolved visitor identity (authenticated user id or anonymous visitor id) together with the configured remote-address mode described below.
+Message and session-start throttling are keyed by the resolved visitor identity (authenticated user id or anonymous visitor id) together with the configured remote-address mode described below. Authenticated callers are additionally keyed by their network address, so signing out does not shed the per-address allowance.
+
+When a visitor is throttled while starting a new chat, the message shown to them is deliberately generic and discloses neither the configured limit, the current count, nor the retry delay, since those values would let an abuser tune their traffic to sit just under the throttle.
+
+##### Anonymous rate-limit tiers
+
+The two tier fields accept one tier per line in the form `limit, window`, where the window is a .NET `TimeSpan` such as `00:00:30`, `01:00:00`, or `1.00:00:00` for a day. A request is throttled when it would exceed **any** configured tier, which lets a short burst tier sit alongside longer sustained tiers. Blank lines are ignored, and clearing the field falls back to the single-window limits above. Tiers apply to anonymous callers only — authenticated callers are always governed by **Maximum messages per window** and **Message rate-limit window**.
+
+:::caution Tiers take precedence over the single-window values
+The single-window settings are **fallbacks used only when the matching tier field is empty**. Because the shipped defaults populate both tier fields, lowering **Maximum anonymous sessions per window** on its own has **no effect**.
+
+For example, setting **Maximum anonymous sessions per window** to `5` while the default `10, 00:05:00` tier is still present throttles anonymous visitors at **10**, not `5`. To make the single-window value authoritative, clear the tier field; to tighten the limit while keeping tiers, lower the relevant tier instead. The same applies to **Maximum messages per window** for anonymous callers.
+:::
 
 ##### Per-profile throttle overrides
 
-The four anti-spam **throttle** limits above are site-wide defaults. Individual AI profiles can raise or lower them for their own use case from a **Prompt Security** tab on the AI Profile editor, and AI profile templates (source `Profile`) can seed the same overrides so a template acts as a reusable throttle preset.
+The six anti-spam **throttle** limits above are site-wide defaults. Individual AI profiles can raise or lower them for their own use case from a **Prompt Security** tab on the AI Profile editor, and AI profile templates (source `Profile`) can seed the same overrides so a template acts as a reusable throttle preset.
 
 | Override | Behavior |
 | --- | --- |
 | Maximum messages per window | When left blank, inherits the site default. Set to `0` to disable message throttling for this profile only. |
 | Message rate-limit window (seconds) | When left blank, inherits the site default. Must be between `1` and `86400`. |
+| Anonymous message rate-limit tiers | When left blank, inherits the site tiers. Enter one tier per line as `limit, window` to replace them for this profile. |
 | Maximum anonymous sessions per window | When left blank, inherits the site default. Set to `0` to disable anonymous session-start throttling for this profile only. |
 | Anonymous session window (seconds) | When left blank, inherits the site default. Must be between `1` and `86400`. |
+| Anonymous session-start rate-limit tiers | When left blank, inherits the site tiers. Enter one tier per line as `limit, window` to replace them for this profile. |
+
+Each tier field also has a **Do not use tiered ... limits for this profile** checkbox. The three states are:
+
+| Tier field | Checkbox | Result |
+| --- | --- | --- |
+| Blank | Unchecked | Inherits the site tiers. |
+| One tier per line | Unchecked | Uses the profile's tiers instead of the site tiers. |
+| Blank | Checked | Opts this profile out of tiered limits entirely, falling back to the profile's single-window values. |
+
+Filling in the tiers *and* checking the box is rejected, because one of the two would have to be silently discarded.
+
+The same precedence trap applies per profile: while a profile inherits or defines tiers, its **Maximum anonymous sessions per window** override is ignored. Check the box to make the single-window overrides authoritative for that profile.
 
 Each override is optional and independent: an unset field always falls back to the corresponding site-wide default, so a profile can override only the message limit while still inheriting the anonymous session limits. Overrides are stored on the profile settings and applied by the chat message and session-start rate limiters. When a profile is created from a profile-source template, the template's throttle overrides are copied onto the new profile. The higher-level prompt-injection, output-filtering, and prompt-length guards remain site-wide only and cannot be overridden per profile.
 
