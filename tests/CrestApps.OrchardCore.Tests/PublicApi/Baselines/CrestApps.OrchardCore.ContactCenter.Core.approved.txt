@@ -421,6 +421,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.DateTime CreatedUtc { get; set; }
         public string DialerProfileId { get; set; }
         public System.DateTime ExpiresUtc { get; set; }
+        [System.Text.Json.Serialization.JsonInclude]
+        public int ExtensionCount { get; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsResolved { get; }
         public System.DateTime? ModifiedUtc { get; set; }
@@ -429,6 +431,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         [System.Text.Json.Serialization.JsonInclude]
         public CrestApps.OrchardCore.ContactCenter.Models.ReservationStatus Status { get; }
         public bool CanTransitionTo(CrestApps.OrchardCore.ContactCenter.Models.ReservationStatus status) { }
+        public bool Extend(System.TimeSpan extension, int maximumExtensions, System.DateTime nowUtc) { }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityReservation RestorePersistedStatus(CrestApps.OrchardCore.ContactCenter.Models.ReservationStatus status) { }
         public void TransitionTo(CrestApps.OrchardCore.ContactCenter.Models.ReservationStatus status) { }
     }
@@ -1188,9 +1191,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool EnforceCallingWindow { get; set; }
         public double MaxAbandonmentRatePercent { get; set; }
         public int MaxAttempts { get; set; }
+        public int MaxPreviewExtensions { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.DialerMode Mode { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
         public string Name { get; set; }
+        public int PreviewExtensionSeconds { get; set; }
         public string ProviderName { get; set; }
         public System.Collections.Generic.IDictionary<string, string> RegionalCallingCalendarIds { get; set; }
         public bool RespectDoNotCall { get; set; }

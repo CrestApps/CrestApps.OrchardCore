@@ -47,6 +47,25 @@ public sealed class DialerProfile : CatalogItem, INameAwareModel, IModifiedUtcAw
     public int RetryDelayMinutes { get; set; } = 60;
 
     /// <summary>
+    /// Gets or sets the seconds added to a preview offer when the agent asks for more time.
+    /// </summary>
+    /// <remarks>
+    /// Reviewing a record before dialing sometimes takes longer than the offer allows, and losing the offer
+    /// means the review work is thrown away and the record goes back to the queue. Asking for more time keeps
+    /// the record with the agent who has already started on it.
+    /// </remarks>
+    public int PreviewExtensionSeconds { get; set; } = 120;
+
+    /// <summary>
+    /// Gets or sets how many times one preview offer may be extended.
+    /// </summary>
+    /// <remarks>
+    /// A cap is what keeps "more time" from becoming "indefinitely", which would let one agent hold a record
+    /// out of the queue for as long as they liked.
+    /// </remarks>
+    public int MaxPreviewExtensions { get; set; } = 2;
+
+    /// <summary>
     /// Gets or sets the caller identifier presented to the customer when supported.
     /// </summary>
     public string CallerId { get; set; }

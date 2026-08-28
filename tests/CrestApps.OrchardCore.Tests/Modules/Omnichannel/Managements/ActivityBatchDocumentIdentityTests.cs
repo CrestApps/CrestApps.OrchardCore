@@ -71,6 +71,121 @@ public sealed class ActivityBatchDocumentIdentityTests
     }
 
     /// <summary>
+    /// Characterizes the hazard the loader has to work around: a commit -- not a flush -- costs the session its
+    /// tracking of the batch, so saving the same instance afterwards inserts a second document rather than
+    /// updating the first. This is how the store behaves, so the loader must not save a batch instance it held
+    /// across a commit; the test below covers the pattern that does the right thing. The earlier tests here only
+    /// ever flushed, which is why they cleared the loader of a defect it does have.
+    /// </summary>
+    [Fact]
+    public async Task SavingABatchInstanceHeldAcrossACommit_InsertsASecondDocument()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"omnichannel-activity-batch-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using var session = store.CreateSession();
+
+            var batch = new OmnichannelActivityBatch
+            {
+                ItemId = "batch-commit",
+                DisplayText = "Committed batch",
+                Source = "Dialer",
+                Status = OmnichannelActivityBatchStatus.Loading,
+                CreatedUtc = DateTime.UtcNow,
+            };
+
+            await session.SaveAsync(batch, collection: OmnichannelConstants.CollectionName, cancellationToken: TestContext.Current.CancellationToken);
+
+            // The loader commits partway through so a long load does not hold one transaction open for its
+            // whole run.
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            // Act: the same batch instance is then marked Loaded and saved again.
+            batch.Status = OmnichannelActivityBatchStatus.Loaded;
+
+            await session.SaveAsync(batch, collection: OmnichannelConstants.CollectionName, cancellationToken: TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            await using var querySession = store.CreateSession();
+
+            var batches = await querySession
+                .Query<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(
+                    index => index.ItemId == "batch-commit",
+                    collection: OmnichannelConstants.CollectionName)
+                .ListAsync(TestContext.Current.CancellationToken);
+
+            // Two documents for one batch: the duplicate rows on the batches list, one stuck at Loading and one
+            // at Loaded.
+            Assert.Equal(2, batches.Count);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    /// <summary>
+    /// The pattern the loader must use: re-read the batch after a commit so the session tracks the document it
+    /// is about to update, instead of saving an instance whose identity the commit discarded.
+    /// </summary>
+    [Fact]
+    public async Task SavingABatchReReadAfterCommitting_UpdatesTheSameDocument()
+    {
+        // Arrange
+        var databasePath = Path.Combine(Path.GetTempPath(), $"omnichannel-activity-batch-{Guid.NewGuid():N}.db");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            await using var session = store.CreateSession();
+
+            var batch = new OmnichannelActivityBatch
+            {
+                ItemId = "batch-reread",
+                DisplayText = "Re-read batch",
+                Source = "Dialer",
+                Status = OmnichannelActivityBatchStatus.Loading,
+                CreatedUtc = DateTime.UtcNow,
+            };
+
+            await session.SaveAsync(batch, collection: OmnichannelConstants.CollectionName, cancellationToken: TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            // Act: read the batch back before marking it Loaded, so the session knows the document.
+            var tracked = await session
+                .Query<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(
+                    index => index.ItemId == "batch-reread",
+                    collection: OmnichannelConstants.CollectionName)
+                .FirstOrDefaultAsync();
+
+            tracked.Status = OmnichannelActivityBatchStatus.Loaded;
+
+            await session.SaveAsync(tracked, collection: OmnichannelConstants.CollectionName, cancellationToken: TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            // Assert
+            await using var querySession = store.CreateSession();
+
+            var batches = await querySession
+                .Query<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(
+                    index => index.ItemId == "batch-reread",
+                    collection: OmnichannelConstants.CollectionName)
+                .ListAsync(TestContext.Current.CancellationToken);
+
+            var stored = Assert.Single(batches);
+            Assert.Equal(OmnichannelActivityBatchStatus.Loaded, stored.Status);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    /// <summary>
     /// The production sequence: the batch is read back through a query (as the coordinator does with
     /// FindByIdAsync) before it is mutated and saved, so the session knows it from the identity map rather than
     /// from having saved it.

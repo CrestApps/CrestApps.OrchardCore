@@ -102,6 +102,40 @@ public sealed class ActivityReservation : CatalogItem, IModifiedUtcAwareModel
     public DateTime ExpiresUtc { get; set; }
 
     /// <summary>
+    /// Gets the number of times the agent has been granted more time on this offer.
+    /// </summary>
+    [JsonInclude]
+    public int ExtensionCount { get; private set; }
+
+    /// <summary>
+    /// Grants the agent more time on this offer.
+    /// </summary>
+    /// <remarks>
+    /// Refused once the offer is resolved -- an accepted, rejected or expired offer is no longer the agent's to
+    /// hold -- and once the cap is reached, so more time cannot become indefinite. The extension is measured
+    /// from whichever is later, the current expiry or now, so extending an offer that has just lapsed still
+    /// grants the full period rather than a fraction of it.
+    /// </remarks>
+    /// <param name="extension">How much more time to grant.</param>
+    /// <param name="maximumExtensions">The number of extensions this offer is allowed.</param>
+    /// <param name="nowUtc">The current time.</param>
+    /// <returns><see langword="true"/> when the offer was extended; otherwise <see langword="false"/>.</returns>
+    public bool Extend(TimeSpan extension, int maximumExtensions, DateTime nowUtc)
+    {
+        if (extension <= TimeSpan.Zero || IsResolved || ExtensionCount >= maximumExtensions)
+        {
+            return false;
+        }
+
+        var from = ExpiresUtc > nowUtc ? ExpiresUtc : nowUtc;
+
+        ExpiresUtc = from.Add(extension);
+        ExtensionCount++;
+
+        return true;
+    }
+
+    /// <summary>
     /// Gets or sets the UTC time the reservation was last modified.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
