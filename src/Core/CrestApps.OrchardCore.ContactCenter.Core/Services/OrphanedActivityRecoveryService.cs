@@ -89,9 +89,16 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         // Bound the scan to records that have not been reserved recently. The interaction and reservation checks
         // below are what actually make a live call safe from recovery; this predicate only keeps the candidate
         // set small on a busy campaign, where most intermediate-status records are fresh active offers.
+        //
+        // Exclude AI-automatic activities entirely. Those are owned end to end by the omnichannel AI voice
+        // processor, not by the Contact Center agent machinery: they carry no CC reservation or interaction, so
+        // this recovery would always read them as orphans and either requeue them onto an agent campaign queue or
+        // mark a live AI call Failed — racing the call's own conclusion. InteractionType is the authoritative
+        // AI-vs-agent axis (every agent-dialed mode, including Power/Progressive/Preview, is Manual) and is indexed.
         var candidates = await _session
             .Query<OmnichannelActivity, OmnichannelActivityIndex>(
                 index => index.Status.IsIn(_intermediateStatuses) &&
+                    index.InteractionType != ActivityInteractionType.Automated &&
                     (index.ReservedUtc == null || index.ReservedUtc < cutoff),
                 collection: OmnichannelConstants.CollectionName)
             .OrderBy(index => index.Id)
@@ -135,6 +142,17 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
 
     private async Task<bool> RecoverOneAsync(OmnichannelActivity activity, DateTime now, CancellationToken cancellationToken)
     {
+        // AI-automatic work is owned end to end by the omnichannel AI voice processor, not by the Contact Center
+        // agent machinery. It carries no CC reservation or interaction, so the checks below would always read it as
+        // an orphan and either requeue it onto an agent campaign queue or mark a live AI call Failed — racing the
+        // call's own conclusion. The candidate query already excludes these; this guard makes the exclusion hold
+        // even when a caller supplies candidates directly. InteractionType is the authoritative AI-vs-agent axis
+        // (every agent-dialed mode, including Power/Progressive/Preview, is Manual).
+        if (activity.InteractionType == ActivityInteractionType.Automated)
+        {
+            return false;
+        }
+
         // A live reservation means this is still a ringing offer the reservation-expiry sweep owns, not an orphan.
         if (!string.IsNullOrEmpty(activity.ReservationId))
         {

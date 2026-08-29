@@ -127,6 +127,27 @@ public sealed class OrphanedActivityRecoveryServiceTests
     }
 
     [Fact]
+    public async Task RecoverCandidates_WhenActivityIsAiAutomatic_LeavesTheRecordAlone()
+    {
+        // Arrange - an AI-automatic activity is owned end to end by the omnichannel AI voice processor. It carries
+        // no Contact Center reservation or interaction, so without this guard an InProgress AI call would be read as
+        // a connected orphan and terminated to Failed, racing the call's own hangup conclusion.
+        var harness = new Harness();
+        var activity = harness.NewActivity(
+            ActivityStatus.InProgress,
+            campaignId: "campaign-1",
+            interactionType: ActivityInteractionType.Automated);
+
+        // Act
+        var recovered = await harness.Service.RecoverCandidatesAsync([activity], _now, CancellationToken.None);
+
+        // Assert - it is neither counted, mutated, nor re-enqueued.
+        Assert.Equal(0, recovered);
+        Assert.Equal(ActivityStatus.InProgress, activity.Status);
+        harness.VerifyNoRecovery();
+    }
+
+    [Fact]
     public async Task RecoverCandidates_WhenOneRecordThrows_StillRecoversTheRest()
     {
         // Arrange - a failure on one record must not abort the batch.
@@ -213,7 +234,8 @@ public sealed class OrphanedActivityRecoveryServiceTests
             ActivityStatus status,
             string itemId = "activity-1",
             string reservationId = null,
-            string campaignId = null)
+            string campaignId = null,
+            ActivityInteractionType interactionType = ActivityInteractionType.Manual)
         {
             var activity = new OmnichannelActivity
             {
@@ -222,6 +244,7 @@ public sealed class OrphanedActivityRecoveryServiceTests
                 ReservationId = reservationId,
                 ReservedUtc = _now.AddMinutes(-30),
                 CampaignId = campaignId,
+                InteractionType = interactionType,
             };
 
             _activities[itemId] = activity;

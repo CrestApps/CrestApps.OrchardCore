@@ -179,6 +179,12 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                 {
                     var activity = await activityManager.FindByIdAsync(nextGenericItem.ActivityItemId, runToken);
 
+                    // AI-automatic work is owned by the omnichannel AI voice processor; never offer it to an agent.
+                    if (activity?.InteractionType == ActivityInteractionType.Automated)
+                    {
+                        continue;
+                    }
+
                     if (activity?.Source is ActivitySources.PowerDial or ActivitySources.ProgressiveDial)
                     {
                         if (logger.IsEnabled(LogLevel.Debug))
@@ -277,6 +283,14 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                 }
 
                 var activity = await activityManager.FindByIdAsync(headItem.ActivityItemId, runToken);
+
+                // AI-automatic work is owned end to end by the omnichannel AI voice processor and must never be
+                // offered to a human agent. It carries no Contact Center interaction, so an agent offer can only be
+                // rejected and re-swept in a loop; more importantly this is not agent-staffed work at all.
+                if (activity?.InteractionType == ActivityInteractionType.Automated)
+                {
+                    continue;
+                }
 
                 // Automated dialer inventory is paced and offered by DialerPacingBackgroundTask; skip it here so
                 // the pacer remains the sole owner of Power/Progressive (and the blocked Predictive) work.
