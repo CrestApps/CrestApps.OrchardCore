@@ -2,40 +2,50 @@
 
 @model WebCrawlerFieldsViewModel
 
-<div class="mb-3" asp-validation-class-for="DisplayText">
-    <label asp-for="DisplayText" class="form-label">@T["Name"]</label>
-    <input asp-for="DisplayText" class="form-control" />
-    <span asp-validation-for="DisplayText"></span>
-    <span class="hint">@T["A human-readable name that identifies this crawler in the list."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        <span class="hint">@T["A human-readable name that identifies this crawler in the list."]</span>
+    </div>
 </div>
 
-<div class="mb-3" asp-validation-class-for="AIDataSourceId">
-    <label asp-for="AIDataSourceId" class="form-label">@T["Target Web data source"]</label>
-    @if (Model.HasDataSources)
-    {
-        <select asp-for="AIDataSourceId" asp-items="Model.DataSources" class="form-select">
-            <option value="">@T["Select a Web data source..."]</option>
-        </select>
-        <span asp-validation-for="AIDataSourceId"></span>
-        <span class="hint">@T["The Web AI data source whose knowledge base receives the pages scraped by this crawler. Multiple crawlers can target the same data source."]</span>
-    }
-    else
-    {
-        <div class="alert alert-warning" role="alert">
-            @T["No Web data sources exist yet. Create a data source of type <strong>Web</strong> under <strong>Artificial Intelligence &gt; Data Sources</strong>, then return here to point a crawler at it."]
+<div class="ocat-wrapper">
+    <label asp-for="AIDataSourceId" class="ocat-label">@T["Target Web data source"]</label>
+    <div class="ocat-end">
+        @if (Model.HasDataSources)
+        {
+            <select asp-for="AIDataSourceId" asp-items="Model.DataSources" class="form-select">
+                <option value="">@T["Select a Web data source..."]</option>
+            </select>
+            <span asp-validation-for="AIDataSourceId" class="text-danger"></span>
+            <span class="hint">@T["The Web AI data source whose knowledge base receives the pages scraped by this crawler. Multiple crawlers can target the same data source."]</span>
+        }
+        else
+        {
+            <div class="alert alert-warning mb-0" role="alert">
+                @T["No Web data sources exist yet. Create a data source of type <strong>Web</strong> under <strong>Artificial Intelligence &gt; Data Sources</strong>, then return here to point a crawler at it."]
+            </div>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" type="checkbox" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+            <span class="hint">@T["Disabled crawlers are skipped by the hourly re-index task and are not read during a full data source synchronization."]</span>
         </div>
-    }
+    </div>
 </div>
 
-<div class="mb-3 form-check">
-    <input asp-for="Enabled" class="form-check-input" />
-    <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
-    <span class="hint">@T["Disabled crawlers are skipped by the hourly re-index task and are not read during a full data source synchronization."]</span>
-</div>
-
-<div class="mb-3" asp-validation-class-for="ReindexIntervalMinutes">
-    <label asp-for="ReindexIntervalMinutes" class="form-label">@T["Re-index interval (minutes)"]</label>
-    <input asp-for="ReindexIntervalMinutes" class="form-control" type="number" min="1" />
-    <span asp-validation-for="ReindexIntervalMinutes"></span>
-    <span class="hint">@T["How often the background task re-crawls this site and re-indexes changed pages. Leave empty to use the global default (24 hours). The task evaluates crawlers hourly, so intervals are honored to the nearest hour."]</span>
+<div class="ocat-wrapper">
+    <label asp-for="ReindexIntervalMinutes" class="ocat-label">@T["Re-index interval (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReindexIntervalMinutes" class="form-control" type="number" min="1" />
+        <span asp-validation-for="ReindexIntervalMinutes" class="text-danger"></span>
+        <span class="hint">@T["How often the background task re-crawls this site and re-indexes changed pages. Leave empty to use the global default (24 hours). The task evaluates crawlers hourly, so intervals are honored to the nearest hour."]</span>
+    </div>
 </div>

@@ -6,7 +6,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.WebCrawlers.ViewModels;
 /// <summary>
 /// View model for the fields shared by every web-crawler strategy.
 /// </summary>
-public sealed class WebCrawlerFieldsViewModel
+public class WebCrawlerFieldsViewModel
 {
     /// <summary>
     /// Gets or sets the human-readable display name of the crawler.

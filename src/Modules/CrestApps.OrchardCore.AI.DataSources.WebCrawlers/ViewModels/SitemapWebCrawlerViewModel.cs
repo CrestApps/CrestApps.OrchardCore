@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.WebCrawlers.ViewModels;
 /// View model for the sitemap crawl-strategy settings. Include/exclude patterns are edited as one
 /// newline-separated value per box and are stored as a list of regular-expression patterns.
 /// </summary>
-public sealed class SitemapWebCrawlerViewModel
+public class SitemapWebCrawlerViewModel
 {
     /// <summary>
     /// Gets or sets the base URL of the site to scrape.
