@@ -171,13 +171,139 @@ public sealed class QueuedVoiceWorkOfferServiceTests
         inboundVoiceService.Verify(voice => voice.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    [Fact]
+    public async Task OfferForAgentAsync_WhenCampaignQueueIsAutomatedPacedDial_DoesNotOfferFromIt()
+    {
+        // Arrange: an available agent signed into an outbound campaign queue whose head item is dialed by a
+        // Power (automated pacing) profile. The pacing engine owns dialing these, so the offer scan must not
+        // touch the queue - otherwise it reserves and immediately rejects the head item on every poll, churning
+        // reservations and starving the pacing engine that actually places the call.
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.Prefix + "camp1";
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Available,
+                QueueIds = [campaignQueueId],
+            });
+
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore
+            .Setup(store => store.FindNextWaitingAsync(campaignQueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem
+            {
+                ItemId = "qi1",
+                ActivityItemId = "act1",
+                QueueId = campaignQueueId,
+                DialerProfileId = "prof-power",
+            });
+
+        var dialerProfileManager = new Mock<IDialerProfileManager>();
+        dialerProfileManager
+            .Setup(manager => manager.FindByIdAsync("prof-power", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DialerProfile { ItemId = "prof-power", Mode = DialerMode.Power });
+
+        var healer = new Mock<IAgentWorkStateHealingService>();
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+
+        var service = CreateService(
+            agentManager,
+            healer,
+            inboundVoiceService,
+            new Mock<ISession>(),
+            queueItemStore: queueItemStore,
+            dialerProfileManager: dialerProfileManager);
+
+        // Act
+        var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, offered);
+        inboundVoiceService.Verify(
+            voice => voice.OfferNextAsync(campaignQueueId, It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task OfferForAgentAsync_WhenCampaignQueueIsPreviewDial_StillOffersFromIt()
+    {
+        // Arrange: a campaign queue dialed by a Preview profile is agent-initiated, so the offer scan must
+        // still offer from it - the fix must only skip the automated (paced) modes, not every campaign queue.
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.Prefix + "camp1";
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.SetupSequence(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Available,
+                QueueIds = [campaignQueueId],
+            })
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Available,
+                QueueIds = [campaignQueueId],
+            })
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Reserved,
+                ActiveReservationId = "r1",
+                QueueIds = [campaignQueueId],
+            });
+
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore
+            .Setup(store => store.FindNextWaitingAsync(campaignQueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem
+            {
+                ItemId = "qi1",
+                ActivityItemId = "act1",
+                QueueId = campaignQueueId,
+                DialerProfileId = "prof-preview",
+            });
+
+        var dialerProfileManager = new Mock<IDialerProfileManager>();
+        dialerProfileManager
+            .Setup(manager => manager.FindByIdAsync("prof-preview", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DialerProfile { ItemId = "prof-preview", Mode = DialerMode.Preview });
+
+        var healer = new Mock<IAgentWorkStateHealingService>();
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+        inboundVoiceService
+            .Setup(service => service.OfferNextAsync(campaignQueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync("user-1");
+
+        var service = CreateService(
+            agentManager,
+            healer,
+            inboundVoiceService,
+            new Mock<ISession>(),
+            queueItemStore: queueItemStore,
+            dialerProfileManager: dialerProfileManager);
+
+        // Act
+        var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, offered);
+        inboundVoiceService.Verify(
+            voice => voice.OfferNextAsync(campaignQueueId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static QueuedVoiceWorkOfferService CreateService(
         Mock<IAgentProfileManager> agentManager,
         Mock<IAgentWorkStateHealingService> healer,
         Mock<IInboundVoiceService> inboundVoiceService,
         Mock<ISession> session,
         Mock<IQueueItemManager> queueItemManager = null,
-        Mock<IInteractionManager> interactionManager = null)
+        Mock<IInteractionManager> interactionManager = null,
+        Mock<IQueueItemStore> queueItemStore = null,
+        Mock<IDialerProfileManager> dialerProfileManager = null)
     {
         if (queueItemManager is null)
         {
@@ -194,7 +320,9 @@ public sealed class QueuedVoiceWorkOfferServiceTests
             [healer.Object],
             inboundVoiceService.Object,
             queueItemManager.Object,
+            (queueItemStore ?? new Mock<IQueueItemStore>()).Object,
             (interactionManager ?? new Mock<IInteractionManager>()).Object,
+            dialerProfileManager is null ? [] : [dialerProfileManager.Object],
             session.Object,
             Mock.Of<ILogger<QueuedVoiceWorkOfferService>>());
     }

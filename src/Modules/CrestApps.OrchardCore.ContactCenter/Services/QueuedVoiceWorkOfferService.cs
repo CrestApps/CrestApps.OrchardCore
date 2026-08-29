@@ -16,7 +16,9 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     private readonly IAgentWorkStateHealingService _agentWorkStateHealingService;
     private readonly IInboundVoiceService _inboundVoiceService;
     private readonly IQueueItemManager _queueItemManager;
+    private readonly IQueueItemStore _queueItemStore;
     private readonly IInteractionManager _interactionManager;
+    private readonly IDialerProfileManager _dialerProfileManager;
     private readonly ISession _session;
     private readonly ILogger _logger;
 
@@ -27,7 +29,13 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     /// <param name="agentWorkStateHealingServices">The optional agent state healers.</param>
     /// <param name="inboundVoiceService">The inbound voice service.</param>
     /// <param name="queueItemManager">The queue item manager used to find held direct-to-agent calls.</param>
+    /// <param name="queueItemStore">The queue item store used to peek a campaign queue's head item.</param>
     /// <param name="interactionManager">The interaction manager used to resolve a held call's direct target.</param>
+    /// <param name="dialerProfileManagers">
+    /// The optional dialer profile managers, present only when the Outbound Dialer feature is enabled. Used to
+    /// classify a campaign queue's dialing mode so automated (paced) outbound work is left to the pacing engine
+    /// instead of being offered here.
+    /// </param>
     /// <param name="session">The YesSql session used to persist availability before querying routing indexes.</param>
     /// <param name="logger">The logger.</param>
     public QueuedVoiceWorkOfferService(
@@ -35,7 +43,9 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         IEnumerable<IAgentWorkStateHealingService> agentWorkStateHealingServices,
         IInboundVoiceService inboundVoiceService,
         IQueueItemManager queueItemManager,
+        IQueueItemStore queueItemStore,
         IInteractionManager interactionManager,
+        IEnumerable<IDialerProfileManager> dialerProfileManagers,
         ISession session,
         ILogger<QueuedVoiceWorkOfferService> logger)
     {
@@ -43,7 +53,9 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         _agentWorkStateHealingService = agentWorkStateHealingServices.FirstOrDefault();
         _inboundVoiceService = inboundVoiceService;
         _queueItemManager = queueItemManager;
+        _queueItemStore = queueItemStore;
         _interactionManager = interactionManager;
+        _dialerProfileManager = dialerProfileManagers.FirstOrDefault();
         _session = session;
         _logger = logger;
     }
@@ -121,6 +133,16 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             .Where(queueId => !string.IsNullOrWhiteSpace(queueId))
             .Distinct(StringComparer.OrdinalIgnoreCase))
         {
+            // Outbound campaign work dialed by an automated (paced) mode - Power, Progressive, or Predictive -
+            // is placed by the dialer pacing engine, which reserves the agent itself. Offering it here would
+            // reserve the head item and immediately reject it (it has no interaction yet and is not a preview
+            // offer), and the soft phone re-runs this scan roughly once a second, so the reservation would churn
+            // and starve the pacing engine that actually places the call. Leave those queues to the pacing engine.
+            if (await IsAutomatedPacedCampaignQueueAsync(queueId, cancellationToken))
+            {
+                continue;
+            }
+
             var agentUserId = await _inboundVoiceService.OfferNextAsync(queueId, cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(agentUserId))
@@ -148,6 +170,30 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         }
 
         return offered;
+    }
+
+    // Determines whether a queue is an outbound campaign queue whose head waiting item is dialed by an automated
+    // (paced) mode. Only campaign queues can carry automated dialing, so an inbound queue short-circuits without a
+    // lookup. The dialer profile manager is absent when the Outbound Dialer feature is disabled, in which case no
+    // automated pacing exists and the queue is offered normally.
+    private async Task<bool> IsAutomatedPacedCampaignQueueAsync(string queueId, CancellationToken cancellationToken)
+    {
+        if (_dialerProfileManager is null ||
+            !ContactCenterConstants.IsCampaignQueue(queueId))
+        {
+            return false;
+        }
+
+        var headItem = await _queueItemStore.FindNextWaitingAsync(queueId, cancellationToken);
+
+        if (headItem is null || string.IsNullOrEmpty(headItem.DialerProfileId))
+        {
+            return false;
+        }
+
+        var profile = await _dialerProfileManager.FindByIdAsync(headItem.DialerProfileId, cancellationToken);
+
+        return profile is not null && profile.Mode.IsAutomated();
     }
 
     // Offers a call that was held for this specific agent while they were unavailable. Held direct calls wait
