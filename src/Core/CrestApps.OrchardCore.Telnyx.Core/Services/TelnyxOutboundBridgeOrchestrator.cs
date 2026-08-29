@@ -107,7 +107,7 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
                 await _agentLegFailureService.FailAsync(
                     TelnyxConstants.ProviderTechnicalName,
                     state.PeerCallControlId,
-                    MapHangupCause(callEvent.HangupCause),
+                    ResolveAgentLegFailureCause(callEvent),
                     cancellationToken);
             }
 
@@ -210,17 +210,69 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
     private static bool IsHangup(TelnyxCallEvent callEvent)
         => string.Equals(callEvent.EventType?.Trim(), "call.hangup", StringComparison.OrdinalIgnoreCase);
 
+    // SIP responses that mean an agent leg the platform originated was never answered: the endpoint timed out,
+    // was unreachable, was busy, was unavailable, or declined the invite. These are read straight from the SIP
+    // layer because the provider does not always normalize them faithfully -- an unreachable endpoint (for
+    // example a lapsed registration answering 480) can arrive as NORMAL_CLEARING, which reads as an ordinary end
+    // and would leave the customer on a call with an agent who was never reached. A leg that carried a real
+    // conversation clears with 200, so it is never in this set.
+    private static readonly HashSet<string> _agentLegConnectFailureSipCauses = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "408",
+        "480",
+        "486",
+        "503",
+        "603",
+    };
+
     private static bool IsAgentLegConnectFailure(TelnyxCallEvent callEvent)
     {
-        if (!string.Equals(callEvent.EventType?.Trim(), "call.hangup", StringComparison.OrdinalIgnoreCase))
+        if (!IsHangup(callEvent))
         {
             return false;
         }
 
         var cause = callEvent.HangupCause?.Trim();
 
-        return !string.IsNullOrEmpty(cause) && _agentLegConnectFailureCauses.Contains(cause);
+        if (!string.IsNullOrEmpty(cause) && _agentLegConnectFailureCauses.Contains(cause))
+        {
+            return true;
+        }
+
+        var sipCause = callEvent.SipHangupCause?.Trim();
+
+        return !string.IsNullOrEmpty(sipCause) && _agentLegConnectFailureSipCauses.Contains(sipCause);
     }
+
+    // The recorded failure cause prefers the provider's normalized cause, but falls back to the SIP response when
+    // the provider normalized an unreachable-endpoint response to a non-failure cause, so a released call is not
+    // recorded as having ended normally.
+    private static HangupCause? ResolveAgentLegFailureCause(TelnyxCallEvent callEvent)
+    {
+        var mapped = MapHangupCause(callEvent.HangupCause);
+
+        if (mapped is null or HangupCause.NormalClearing)
+        {
+            var sipMapped = MapSipHangupCause(callEvent.SipHangupCause);
+
+            if (sipMapped.HasValue)
+            {
+                return sipMapped;
+            }
+        }
+
+        return mapped;
+    }
+
+    private static HangupCause? MapSipHangupCause(string sipHangupCause)
+        => sipHangupCause?.Trim() switch
+        {
+            "408" or "480" => HangupCause.NoAnswer,
+            "486" => HangupCause.Busy,
+            "603" => HangupCause.Rejected,
+            "503" => HangupCause.Failed,
+            _ => null,
+        };
 
     private static HangupCause? MapHangupCause(string hangupCause)
         => hangupCause?.Trim().ToUpperInvariant() switch

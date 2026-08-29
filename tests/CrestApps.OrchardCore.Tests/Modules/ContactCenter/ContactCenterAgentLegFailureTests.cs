@@ -344,6 +344,95 @@ public sealed class ContactCenterAgentLegFailureTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task AdvanceAsync_WhenTheContactCenterAgentLegIsUnavailable_ReportsTheFailureAgainstThePeerCall()
+    {
+        // Arrange
+        // Telnyx can normalize an unreachable agent endpoint (for example a lapsed registration that answers the
+        // invite with SIP 480) to a NORMAL_CLEARING hangup cause, which reads as an ordinary end and would leave
+        // the customer connected to an agent who was never reached. The SIP response separates a leg that never
+        // answered from one that carried a real conversation and cleared with 200.
+        var failureService = new Mock<IContactCenterAgentLegFailureService>();
+        failureService
+            .Setup(service => service.FailAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<HangupCause?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var orchestrator = new TelnyxOutboundBridgeOrchestrator(
+            new Mock<IHttpClientFactory>().Object,
+            NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
+            CreateMonitor(),
+            failureService.Object);
+
+        var clientState = DecodeClientState(new TelnyxOutboundBridgeState
+        {
+            Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
+            PeerCallControlId = "call-1",
+        }.ToClientState());
+
+        // Act
+        var leg = await orchestrator.AdvanceAsync(new TelnyxCallEvent
+        {
+            EventType = "call.hangup",
+            CallControlId = "agent-leg-1",
+            HangupCause = "NORMAL_CLEARING",
+            SipHangupCause = "480",
+            ClientState = clientState,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TelnyxOutboundBridgeLeg.None, leg);
+
+        failureService.Verify(
+            service => service.FailAsync("Telnyx", "call-1", HangupCause.NoAnswer, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AdvanceAsync_WhenTheContactCenterAgentLegEndsNormallyWithSip200_DoesNotReportAConnectFailure()
+    {
+        // Arrange
+        // A leg that carried a real conversation clears with SIP 200. It must not be read as a connect failure
+        // just because a SIP response accompanies the hangup.
+        var failureService = new Mock<IContactCenterAgentLegFailureService>(MockBehavior.Strict);
+
+        var orchestrator = new TelnyxOutboundBridgeOrchestrator(
+            new Mock<IHttpClientFactory>().Object,
+            NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
+            CreateMonitor(),
+            failureService.Object);
+
+        var clientState = DecodeClientState(new TelnyxOutboundBridgeState
+        {
+            Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
+            PeerCallControlId = "call-1",
+        }.ToClientState());
+
+        // Act
+        var leg = await orchestrator.AdvanceAsync(new TelnyxCallEvent
+        {
+            EventType = "call.hangup",
+            CallControlId = "agent-leg-1",
+            HangupCause = "NORMAL_CLEARING",
+            SipHangupCause = "200",
+            ClientState = clientState,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TelnyxOutboundBridgeLeg.None, leg);
+
+        failureService.Verify(
+            service => service.FailAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<HangupCause?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private static string DecodeClientState(string clientState)
         => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(clientState));
 
