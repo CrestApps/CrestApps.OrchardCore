@@ -300,6 +300,9 @@ tests/
 3. Include `Manifest.cs` with module definition
 4. Add module reference to appropriate target package
 5. **Update Targets**: Add a reference to the new module in the targets project `src/Targets/CrestApps.OrchardCore.Cms.Core.Targets/CrestApps.OrchardCore.Cms.Core.Targets.targets` so it is discoverable by Orchard Core.
+6. **Work test-first**: add the failing test before the implementation and drive the module with TDD (see *Test-Driven Development*).
+7. **Document it**: add/refresh the module `README.md` and the relevant page under `src/CrestApps.Docs/docs` in the same change (see *Documentation expectations*).
+8. **Consider a development AI skill**: if the module introduces extension points others (or an AI agent) will build against, add a skill under `.agents/skills/` (see *AI Development Skills*).
 
 ### Working with AI Modules
 - **Base AI Module**: `CrestApps.OrchardCore.AI` - start here for AI-related changes; manages deployments and provider connections
@@ -319,6 +322,30 @@ tests/
 - **SMS Channel**: `CrestApps.OrchardCore.Omnichannel.Sms` - SMS messaging support
 - **Event Grid**: `CrestApps.OrchardCore.Omnichannel.EventGrid` - Azure Event Grid integration
 - **Management UI**: `CrestApps.OrchardCore.Omnichannel.Managements` - admin management interface
+
+### AI Development Skills (`.agents/skills/`)
+
+Repo-level development skills live under `.agents/skills/<skill-name>/SKILL.md` (with optional
+`references/*.md`). These teach an AI agent how to correctly extend this codebase — they are distinct from the
+runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which come from the
+`crestapps.agentskills.mcp` NuGet package and appear only under `bin/.../.agents`).
+
+- **Add a skill whenever a module introduces reusable extension points** — a provider abstraction, a set of
+  capability interfaces, a display-driver/handler pattern, an event-ingress seam, or any "implement this
+  contract to plug in" surface that others (or an AI agent) will build against. The goal is that a future
+  agent can extend the infrastructure accurately without missing a capability or a required registration.
+- **Model the skill on the most complete existing implementation** and enumerate *every* contract/capability
+  the extension point exposes, marking which are required vs. optional, so nothing is silently omitted.
+- **Format**: `SKILL.md` starts with YAML frontmatter (`name`, `description`, `license: Apache-2.0`,
+  `metadata: { author: CrestApps Team, version }`). The `description` must be specific enough to trigger on
+  the right requests. Put deep detail in `references/` and link to the authoritative source files and the
+  matching docs page under `src/CrestApps.Docs/docs`.
+- **Keep skills honest and current**, exactly like the docs: when you change an extension point, update its
+  skill in the same change; when a skill no longer matches the code, fix or remove it rather than leaving it
+  stale. A skill that misdescribes a contract is worse than no skill.
+- **Example**: `.agents/skills/crestapps-phone-provider` — how to add a new telephony/phone provider (Twilio,
+  Vonage, …) modeled on the Telnyx implementation, covering every telephony/Contact Center/SMS/media/webhook
+  capability contract.
 
 ### Frontend Development
 - CSS/SCSS files are in individual module `Assets/` directories
