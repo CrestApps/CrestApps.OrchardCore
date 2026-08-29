@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore AI Data Sources - Web Crawlers</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Adds a Web AI data source that is populated by strategy-based web crawlers (starting with sitemap discovery). Crawlers scrape public websites, index each page into the AI Knowledge Base for RAG, and are re-crawled on a schedule.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS AI DataSources RAG WebCrawler Sitemap</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core.AI.WebCrawlers" />
+    <PackageReference Include="CrestApps.Core.Data.YesSql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Ensure this module directly depends on the AI Data Sources module so that enabling it also enables
+      the Data Sources feature this module extends, without any manual step.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

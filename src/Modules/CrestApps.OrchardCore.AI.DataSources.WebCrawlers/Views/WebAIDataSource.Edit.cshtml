@@ -1,0 +1,11 @@
+@using CrestApps.Core.AI.Models
+
+@model AIDataSource
+
+<div class="alert alert-info" role="alert">
+    <h5 class="alert-heading">@T["Web data source"]</h5>
+    <p class="mb-1">@T["This data source has no connection settings of its own. It is a target bucket that aggregates every enabled web crawler pointing at it."]</p>
+    <p class="mb-0">
+        @T["After you save, configure the sites to scrape under <strong>Artificial Intelligence &gt; Web Crawlers</strong>. Each scraped page is indexed with its URL kept for citations."]
+    </p>
+</div>
