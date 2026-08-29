@@ -34,10 +34,25 @@ public sealed class TelnyxOutboundBridgeState
     public const string ConferenceExtensionLegIntent = "ext-conf";
 
     /// <summary>
+    /// The intent marking an outbound leg the platform dials to a customer to be handled by an automated AI
+    /// voice agent. The leg's own call-control events (answered, transcription, speak-ended, hangup) drive the
+    /// AI conversation loop; <see cref="ActivityId"/> ties the leg back to the omnichannel activity it fulfills.
+    /// The leg is never bridged to a human agent, so its events are kept out of Contact Center normalization.
+    /// </summary>
+    public const string AiVoiceLegIntent = "ai-voice";
+
+    /// <summary>
     /// Gets or sets the leg intent, one of <see cref="AgentLegIntent"/> or <see cref="DestinationLegIntent"/>.
     /// </summary>
     [JsonPropertyName("i")]
     public string Intent { get; set; }
+
+    /// <summary>
+    /// Gets or sets the omnichannel activity identifier an automated AI voice leg fulfills (AI-voice state only).
+    /// The webhook loop resolves the activity, its AI session, and its AI profile from this id.
+    /// </summary>
+    [JsonPropertyName("a")]
+    public string ActivityId { get; set; }
 
     /// <summary>
     /// Gets or sets the destination address to dial once the agent leg answers (agent-leg state only).
@@ -122,7 +137,8 @@ public sealed class TelnyxOutboundBridgeState
                 (parsed.Intent != AgentLegIntent &&
                  parsed.Intent != DestinationLegIntent &&
                  parsed.Intent != ContactCenterAgentLegIntent &&
-                 parsed.Intent != ConferenceExtensionLegIntent))
+                 parsed.Intent != ConferenceExtensionLegIntent &&
+                 parsed.Intent != AiVoiceLegIntent))
             {
                 return false;
             }

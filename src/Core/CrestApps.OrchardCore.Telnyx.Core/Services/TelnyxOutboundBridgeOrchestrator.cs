@@ -19,18 +19,21 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<TelnyxOutboundBridgeOrchestrator> _logger;
     private readonly IContactCenterAgentLegFailureService _agentLegFailureService;
+    private readonly IEnumerable<ITelnyxAiVoiceEventHandler> _aiVoiceEventHandlers;
     private readonly TelnyxOptions _options;
 
     public TelnyxOutboundBridgeOrchestrator(
         IHttpClientFactory httpClientFactory,
         ILogger<TelnyxOutboundBridgeOrchestrator> logger,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
-        IContactCenterAgentLegFailureService agentLegFailureService)
+        IContactCenterAgentLegFailureService agentLegFailureService,
+        IEnumerable<ITelnyxAiVoiceEventHandler> aiVoiceEventHandlers)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
         _agentLegFailureService = agentLegFailureService;
+        _aiVoiceEventHandlers = aiVoiceEventHandlers;
     }
 
     /// <inheritdoc/>
@@ -44,6 +47,20 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         }
 
         var isAnswered = string.Equals(callEvent.EventType?.Trim(), "call.answered", StringComparison.OrdinalIgnoreCase);
+
+        if (state.Intent == TelnyxOutboundBridgeState.AiVoiceLegIntent)
+        {
+            // A leg an automated AI voice agent handles. Its lifecycle (answered, transcription, speak-ended,
+            // hangup) drives the conversation loop in the optional AI voice handler. The leg is never a human
+            // agent's call, so it is reported as a hidden internal leg (DestinationLeg) to keep its events out of
+            // Contact Center normalization -- otherwise the webhook pipeline would try to reserve an agent for it.
+            foreach (var handler in _aiVoiceEventHandlers)
+            {
+                await handler.HandleAsync(callEvent, state, cancellationToken);
+            }
+
+            return TelnyxOutboundBridgeLeg.DestinationLeg;
+        }
 
         if (state.Intent == TelnyxOutboundBridgeState.AgentLegIntent)
         {

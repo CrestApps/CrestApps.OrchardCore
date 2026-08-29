@@ -74,6 +74,17 @@ public sealed class TelnyxCallEvent
     public string RecordingId { get; set; }
 
     /// <summary>
+    /// Gets or sets the recognized transcript text, when the event is a <c>call.transcription</c>.
+    /// </summary>
+    public string TranscriptionText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the transcript is final (an utterance the caller finished)
+    /// rather than an interim hypothesis, when the event is a <c>call.transcription</c>.
+    /// </summary>
+    public bool TranscriptionIsFinal { get; set; }
+
+    /// <summary>
     /// Gets or sets the Telnyx event identifier used for delivery de-duplication.
     /// </summary>
     public string EventId { get; set; }

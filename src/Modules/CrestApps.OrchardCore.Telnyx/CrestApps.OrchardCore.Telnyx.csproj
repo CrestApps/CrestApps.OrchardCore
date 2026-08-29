@@ -32,6 +32,7 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Telnyx.Core/CrestApps.OrchardCore.Telnyx.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Sms.Workspace.Core/CrestApps.OrchardCore.Sms.Workspace.Core.csproj" />

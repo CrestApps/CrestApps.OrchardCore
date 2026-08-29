@@ -64,6 +64,8 @@ public static class TelnyxCallEventParser
                 HangupSource = ReadString(payload, "hangup_source"),
                 SipHangupCause = ReadString(payload, "sip_hangup_cause"),
                 RecordingId = ReadString(payload, "recording_id"),
+                TranscriptionText = ReadNestedString(payload, "transcription_data", "transcript"),
+                TranscriptionIsFinal = ReadNestedBool(payload, "transcription_data", "is_final"),
                 ClientState = ReadClientState(payload),
             };
 
@@ -133,6 +135,20 @@ public static class TelnyxCallEventParser
         }
 
         return null;
+    }
+
+    private static bool ReadNestedBool(JsonElement element, string propertyName, string nestedPropertyName)
+    {
+        if (element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty(propertyName, out var value) &&
+            value.ValueKind == JsonValueKind.Object &&
+            value.TryGetProperty(nestedPropertyName, out var nested))
+        {
+            return nested.ValueKind == JsonValueKind.True ||
+                (nested.ValueKind == JsonValueKind.String && bool.TryParse(nested.GetString(), out var parsed) && parsed);
+        }
+
+        return false;
     }
 
     private static DateTime? ReadDateTime(JsonElement element, string propertyName)

@@ -247,5 +247,12 @@ public static class TelnyxConstants
         /// and delivery-receipt messaging webhook.
         /// </summary>
         public const string Sms = "CrestApps.OrchardCore.Telnyx.Sms";
+
+        /// <summary>
+        /// The identifier of the Telnyx AI Voice Agent feature: an automated outbound voice agent that dials a
+        /// contact, converses using Telnyx text-to-speech and transcription driven by an AI profile, and settles
+        /// the omnichannel activity with a summary and disposition.
+        /// </summary>
+        public const string AiVoice = "CrestApps.OrchardCore.Telnyx.AiVoice";
     }
 }

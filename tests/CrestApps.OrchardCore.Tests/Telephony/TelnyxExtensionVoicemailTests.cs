@@ -152,7 +152,8 @@ public sealed class TelnyxExtensionVoicemailTests
                 ApiBaseUrl = "https://api.telnyx.test/v2/",
                 OutboundVoiceProfileId = outboundVoiceProfileId,
             }),
-            new Mock<IContactCenterAgentLegFailureService>().Object);
+            new Mock<IContactCenterAgentLegFailureService>().Object,
+            []);
 
     private static string DecodeClientState(string clientState)
         => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(clientState));

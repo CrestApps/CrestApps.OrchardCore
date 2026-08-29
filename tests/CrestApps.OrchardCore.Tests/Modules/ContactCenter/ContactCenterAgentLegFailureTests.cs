@@ -155,7 +155,8 @@ public sealed class ContactCenterAgentLegFailureTests
             new Mock<IHttpClientFactory>().Object,
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
-            failureService.Object);
+            failureService.Object,
+            []);
 
         // The webhook parser base64-decodes client_state before the orchestrator sees it, so the event carries
         // decoded JSON.
@@ -194,7 +195,8 @@ public sealed class ContactCenterAgentLegFailureTests
             new Mock<IHttpClientFactory>().Object,
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
-            failureService.Object);
+            failureService.Object,
+            []);
 
         // The webhook parser base64-decodes client_state before the orchestrator sees it, so the event carries
         // decoded JSON.
@@ -320,7 +322,8 @@ public sealed class ContactCenterAgentLegFailureTests
             new Mock<IHttpClientFactory>().Object,
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
-            failureService.Object);
+            failureService.Object,
+            []);
 
         var clientState = DecodeClientState(new TelnyxOutboundBridgeState
         {
@@ -365,7 +368,8 @@ public sealed class ContactCenterAgentLegFailureTests
             new Mock<IHttpClientFactory>().Object,
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
-            failureService.Object);
+            failureService.Object,
+            []);
 
         var clientState = DecodeClientState(new TelnyxOutboundBridgeState
         {
@@ -403,7 +407,8 @@ public sealed class ContactCenterAgentLegFailureTests
             new Mock<IHttpClientFactory>().Object,
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
-            failureService.Object);
+            failureService.Object,
+            []);
 
         var clientState = DecodeClientState(new TelnyxOutboundBridgeState
         {

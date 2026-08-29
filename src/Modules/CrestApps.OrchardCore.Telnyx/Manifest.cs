@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.WebSockets;
@@ -34,5 +36,19 @@ using OrchardCore.Modules.Manifest;
     [
         TelnyxConstants.Feature.Area,
         "OrchardCore.Sms",
+    ]
+)]
+
+[assembly: Feature(
+    Id = TelnyxConstants.Feature.AiVoice,
+    Name = "Telnyx AI Voice Agent",
+    Description = "Adds an automated outbound AI voice agent: the Phone omnichannel processor dials a contact over Telnyx, converses using Telnyx text-to-speech and real-time transcription driven by an AI chat profile, and settles the activity with a summary and a disposition.",
+    Category = "Contact Center",
+    Dependencies =
+    [
+        TelnyxConstants.Feature.Area,
+        AIConstants.Feature.Area,
+        AIConstants.Feature.ChatCore,
+        OmnichannelConstants.Features.Managements,
     ]
 )]
