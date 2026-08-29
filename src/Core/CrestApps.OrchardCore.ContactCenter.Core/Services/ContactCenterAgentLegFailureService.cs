@@ -109,4 +109,57 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
 
         return true;
     }
+
+    /// <inheritdoc />
+    public async Task<bool> RecordAnsweredAsync(
+        string providerName,
+        string peerProviderCallId,
+        string agentLegProviderCallId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(peerProviderCallId) ||
+            string.IsNullOrWhiteSpace(agentLegProviderCallId))
+        {
+            return false;
+        }
+
+        var interaction = string.IsNullOrWhiteSpace(providerName)
+            ? await _interactionManager.FindByProviderInteractionIdAsync(peerProviderCallId, cancellationToken)
+            : await _interactionManager.FindByProviderInteractionIdAsync(providerName, peerProviderCallId, cancellationToken);
+
+        // A settled interaction has already recorded its outcome. An agent leg answer arriving after the call was
+        // settled is an artifact of teardown ordering and must not reopen a finished call.
+        if (interaction is null || interaction.IsSettled)
+        {
+            return false;
+        }
+
+        var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
+
+        if (session is null || CallSessionLifecycle.IsTerminal(session.State))
+        {
+            return false;
+        }
+
+        var now = _clock.UtcNow;
+
+        // Advance the agent leg the connect command already recorded (at dialing) to answered, and place it on
+        // the call's bridge, so the topology reports that the agent was connected and its talk time is measured.
+        // The leg is keyed by the agent-leg call id the provider named; UpsertLeg preserves its recorded Agent
+        // role and stamps its answered time. A leg that is already answered is left as it is.
+        CallTopologyProjector.UpsertLeg(
+            session,
+            agentLegProviderCallId,
+            CallPartyRole.Agent,
+            CallLegStatus.Answered,
+            now,
+            agentId: session.AgentId);
+
+        CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
+        CallTopologyProjector.Join(session, agentLegProviderCallId, CallPartyRole.Agent, now, agentId: session.AgentId);
+
+        await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+
+        return true;
+    }
 }

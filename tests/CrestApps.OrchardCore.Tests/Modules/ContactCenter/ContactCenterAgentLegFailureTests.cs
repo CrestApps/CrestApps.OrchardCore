@@ -225,6 +225,125 @@ public sealed class ContactCenterAgentLegFailureTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task RecordAnsweredAsync_WhenTheAgentLegAnswers_AdvancesTheAgentLegToAnswered()
+    {
+        // Arrange
+        // The platform records the agent leg on the call topology at dialing when it originates it, but the
+        // agent leg's own call.answered is keyed by the agent-leg id, which belongs to no interaction, so it is
+        // discarded by normalization. Left unadvanced the leg is later marked failed with no answered time,
+        // misreporting who was on the call. The peer id in the leg's client_state is the customer call it joined.
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "Telnyx",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Outbound,
+            AnsweredUtc = _now.AddSeconds(-5),
+        }.RestorePersistedStatus(InteractionStatus.Connected);
+
+        var session = new CallSession
+        {
+            ItemId = "call-session-1",
+            InteractionId = "interaction-1",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-1",
+            AgentId = "agent-1",
+            Direction = InteractionDirection.Outbound,
+            AnsweredUtc = _now.AddSeconds(-5),
+        }.RestorePersistedState(VoiceCallState.Connected);
+
+        CallTopologyProjector.UpsertLeg(session, "call-1", CallPartyRole.Customer, CallLegStatus.Answered, _now.AddSeconds(-5));
+        CallTopologyProjector.EnsureBridge(session, "bridge-1", _now.AddSeconds(-5));
+        CallTopologyProjector.Join(session, "call-1", CallPartyRole.Customer, _now.AddSeconds(-5));
+
+        // The agent leg as the connect command left it: recorded, but only dialing and not yet answered.
+        CallTopologyProjector.UpsertLeg(session, "agent-leg-1", CallPartyRole.Agent, CallLegStatus.Dialing, _now.AddSeconds(-3), agentId: "agent-1");
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Telnyx", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(session);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+
+        var service = new ContactCenterAgentLegFailureService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<ITelephonyService>(MockBehavior.Strict).Object,
+            clock.Object,
+            NullLogger<ContactCenterAgentLegFailureService>.Instance);
+
+        // Act
+        var advanced = await service.RecordAnsweredAsync("Telnyx", "call-1", "agent-leg-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(advanced);
+
+        var agentLeg = Assert.Single(session.Legs, leg => leg.ProviderLegId == "agent-leg-1");
+        Assert.Equal(CallLegStatus.Answered, agentLeg.Status);
+        Assert.Equal(CallPartyRole.Agent, agentLeg.Role);
+        Assert.Equal(_now, agentLeg.AnsweredUtc);
+        Assert.Null(agentLeg.EndedUtc);
+
+        // The agent is a party on the bridge, so the call correctly reports who was on it.
+        Assert.Contains(session.Bridge.ActiveParticipants, participant => participant.ProviderLegId == "agent-leg-1");
+
+        callSessionManager.Verify(
+            manager => manager.UpdateAsync(session, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AdvanceAsync_WhenTheContactCenterAgentLegAnswers_RecordsTheAnswerAgainstThePeerCall()
+    {
+        // Arrange
+        // The answered agent leg carries its own identifier, which matches no interaction, so this is the point
+        // that still knows which customer call the leg joined -- the peer id in its client_state.
+        var failureService = new Mock<IContactCenterAgentLegFailureService>();
+        failureService
+            .Setup(service => service.RecordAnsweredAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var orchestrator = new TelnyxOutboundBridgeOrchestrator(
+            new Mock<IHttpClientFactory>().Object,
+            NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
+            CreateMonitor(),
+            failureService.Object);
+
+        var clientState = DecodeClientState(new TelnyxOutboundBridgeState
+        {
+            Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
+            PeerCallControlId = "call-1",
+        }.ToClientState());
+
+        // Act
+        var leg = await orchestrator.AdvanceAsync(new TelnyxCallEvent
+        {
+            EventType = "call.answered",
+            CallControlId = "agent-leg-1",
+            ClientState = clientState,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TelnyxOutboundBridgeLeg.None, leg);
+
+        failureService.Verify(
+            service => service.RecordAnsweredAsync("Telnyx", "call-1", "agent-leg-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static string DecodeClientState(string clientState)
         => System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(clientState));
 

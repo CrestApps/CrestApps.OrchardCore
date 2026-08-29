@@ -61,9 +61,23 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
             // The Contact Center agent's browser answered; bridge it to the already-answered caller leg. The
             // agent leg is a tracked leg of the interaction, so let its events flow to normalization (return
             // None) rather than treating it as an internal leg to hide.
-            if (isAnswered && _options.IsConfigured && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
+            if (isAnswered && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
             {
-                await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken);
+                if (_options.IsConfigured)
+                {
+                    await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken);
+                }
+
+                // The agent leg's own call.answered is keyed by the agent-leg call id, which belongs to no
+                // interaction, so normalization discards it and the agent leg already recorded on the call
+                // topology never advances past dialing -- and is later marked failed with no answered time,
+                // misreporting who was on the call and its talk time. Record the answer against the customer call
+                // the leg was joining (carried in client_state) so the topology reflects that the agent connected.
+                await _agentLegFailureService.RecordAnsweredAsync(
+                    TelnyxConstants.ProviderTechnicalName,
+                    peerProviderCallId: state.PeerCallControlId,
+                    agentLegProviderCallId: callEvent.CallControlId,
+                    cancellationToken);
             }
             else if (IsHangup(callEvent))
             {

@@ -2223,6 +2223,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ContactCenterAgentLegFailureService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.Telephony.ITelephonyService telephonyService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterAgentLegFailureService> logger) { }
         public System.Threading.Tasks.Task<bool> FailAsync(string providerName, string peerProviderCallId, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> RecordAnsweredAsync(string providerName, string peerProviderCallId, string agentLegProviderCallId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterAssistService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAssistService
     {
@@ -2802,6 +2803,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IContactCenterAgentLegFailureService
     {
         System.Threading.Tasks.Task<bool> FailAsync(string providerName, string peerProviderCallId, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RecordAnsweredAsync(string providerName, string peerProviderCallId, string agentLegProviderCallId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterAssistProvider
     {
