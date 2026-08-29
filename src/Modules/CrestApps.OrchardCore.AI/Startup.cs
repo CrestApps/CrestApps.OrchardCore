@@ -393,7 +393,8 @@ public sealed class ToolInstancesStartup : StartupBase
                 .AddToolInstances(toolInstances => toolInstances
                     .AddHttpApiRequestSource()
                     .AddDocumentationSearchSources()
-                    .AddYesSqlStores())
+                    .AddYesSqlStores()
+                )
             )
         );
 
@@ -410,6 +411,7 @@ public sealed class ToolInstancesStartup : StartupBase
             .AddDisplayDriver<AIToolInstance, SitemapDocumentationToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, SearchIndexDocumentationToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, AlgoliaDocumentationToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, WebsiteSearchToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileToolInstancesDisplayDriver>()
             .AddDisplayDriver<AIProfileTemplate, AIProfileTemplateToolInstancesDisplayDriver>()
             .AddNavigationProvider<AIToolInstanceAdminMenu>()

@@ -56,7 +56,8 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("HttpApiRequestToolSettings", BuildHttpApiRequestSettingsSchema().Description("Settings for the built-in 'http-api-request' source.")),
                 ("SitemapDocumentationToolSettings", BuildSitemapSettingsSchema().Description("Settings for the built-in sitemap documentation search source.")),
                 ("SearchIndexDocumentationToolSettings", BuildSearchIndexSettingsSchema().Description("Settings for the built-in prebuilt search index documentation source.")),
-                ("AlgoliaDocumentationToolSettings", BuildAlgoliaSettingsSchema().Description("Settings for the built-in Algolia DocSearch documentation source.")))
+                ("AlgoliaDocumentationToolSettings", BuildAlgoliaSettingsSchema().Description("Settings for the built-in Algolia DocSearch documentation source.")),
+                ("WebsiteSearchToolSettings", BuildWebsiteSearchSettingsSchema().Description("Settings for the built-in live website search source.")))
             .AdditionalProperties(true)
             .Description("Source-specific tool instance settings, grouped by settings object name. Secrets are stored encrypted at rest.");
 
@@ -133,5 +134,20 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("ApiKey", RecipeStepSchemaBuilders.String().Description("Algolia search-only API key. Stored encrypted at rest.")),
                 ("IndexName", RecipeStepSchemaBuilders.String().Description("Algolia index name.")),
                 ("MaxResults", RecipeStepSchemaBuilders.Integer().Description("Maximum passages returned for a single search.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildWebsiteSearchSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("BaseUrl", RecipeStepSchemaBuilders.String().Description("Root URL of the site to search (for example https://www.example.com).")),
+                ("SearchPath", RecipeStepSchemaBuilders.String().Description("Search endpoint path appended to the base URL. Defaults to the WordPress REST search endpoint.")),
+                ("QueryParameter", RecipeStepSchemaBuilders.String().Description("Query-string parameter that carries the model's free-text query. Defaults to 'search'.")),
+                ("ExtraQuery", RecipeStepSchemaBuilders.String().Description("Fixed extra query-string parameters always appended to the request. Defaults to '_embed=1'.")),
+                ("ResultsPath", RecipeStepSchemaBuilders.String().Description("Dotted path to the results array in the response. Empty means the response body is itself the array.")),
+                ("TitlePath", RecipeStepSchemaBuilders.String().Description("Dotted path, relative to each result, to the result title. Defaults to 'title'.")),
+                ("UrlPath", RecipeStepSchemaBuilders.String().Description("Dotted path, relative to each result, to the result URL. Defaults to 'url'.")),
+                ("SnippetPath", RecipeStepSchemaBuilders.String().Description("Dotted path, relative to each result, to the text snippet. Defaults to the embedded WordPress excerpt.")),
+                ("MaxResults", RecipeStepSchemaBuilders.Integer().Description("Maximum results returned for a single search.")))
             .AdditionalProperties(true);
 }
