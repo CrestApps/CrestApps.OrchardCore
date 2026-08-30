@@ -184,10 +184,73 @@
         var lastOfferReservationId = null;
 
         var inner = root.querySelector('[data-cc-agent-bar-inner]');
+        var handle = root.querySelector('[data-cc-agent-bar-handle]');
         root.hidden = false;
+
+        // The bar stays out of the way by default: it is collapsed to a small tab the agent clicks to open. A new
+        // phone offer forces it open on its own (tracked by reservation id so any one offer only auto-opens once,
+        // and the agent can still collapse it back down); every other state — an active call, a post-call wrap-up
+        // prompt — waits behind the tab until the agent opens it, so a lingering record never sits in their way.
+        var collapsed = true;
+        var autoOpenedOfferId = null;
+
+        applyCollapsed();
+
+        if (handle) {
+            handle.addEventListener('click', function () { setCollapsed(false); });
+        }
 
         function label(key, fallback) {
             return strings[key] || fallback;
+        }
+
+        function applyCollapsed() {
+            root.classList.toggle('is-collapsed', collapsed);
+
+            if (handle) {
+                handle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+                handle.setAttribute('title', collapsed
+                    ? label('expandBar', 'Open the Contact Center bar')
+                    : label('collapseBar', 'Hide the Contact Center bar'));
+            }
+
+            updateHandleDot();
+        }
+
+        function setCollapsed(value) {
+            if (collapsed === value) {
+                return;
+            }
+
+            collapsed = value;
+            applyCollapsed();
+        }
+
+        // Keep the collapsed tab's dot in step with the live presence colour so the agent can read their status
+        // without opening the bar.
+        function updateHandleDot() {
+            var dot = handle ? handle.querySelector('[data-cc-handle-dot]') : null;
+
+            if (dot) {
+                dot.className = 'cc-bar__dot is-' + presenceStatus().toLowerCase();
+            }
+        }
+
+        // A ringing/preview offer pulls the bar open on its own; once the offer clears the auto-open latch resets so
+        // the next distinct offer opens it again, while an offer the agent has deliberately collapsed stays down.
+        function syncCollapsedWithOffer() {
+            var offer = state && state.offer;
+
+            if (offer && offer.reservationId) {
+                if (offer.reservationId !== autoOpenedOfferId) {
+                    autoOpenedOfferId = offer.reservationId;
+                    collapsed = false;
+                }
+            } else {
+                autoOpenedOfferId = null;
+            }
+
+            applyCollapsed();
         }
 
         // The bar is fixed and horizontally centered entirely in CSS (see contact-center-agent-bar.scss).
@@ -249,6 +312,7 @@
         function render(data) {
             state = data;
             computeOffset(data.serverTimeUtc);
+            syncCollapsedWithOffer();
             renderBar();
             tick();
         }
@@ -419,9 +483,12 @@
         }
 
         function renderTail() {
+            var collapseTitle = label('collapseBar', 'Hide the Contact Center bar');
+
             return '<div class="cc-bar__tail">' +
                 '<span class="cc-bar__conn" data-cc-connection role="status" aria-live="polite"></span>' +
                 (config.workspaceUrl ? '<a class="cc-bar__workspace" href="' + escapeHtml(config.workspaceUrl) + '" title="' + escapeHtml(label('openWorkspace', 'Open full workspace')) + '"><i class="fa-solid fa-headset" aria-hidden="true"></i></a>' : '') +
+                '<button type="button" class="cc-bar__collapse" data-cc-collapse title="' + escapeHtml(collapseTitle) + '" aria-label="' + escapeHtml(collapseTitle) + '"><i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>' +
             '</div>';
         }
 
@@ -430,6 +497,12 @@
         }
 
         function bindEvents() {
+            var collapseButton = inner.querySelector('[data-cc-collapse]');
+
+            if (collapseButton) {
+                collapseButton.addEventListener('click', function () { setCollapsed(true); });
+            }
+
             var acceptButton = inner.querySelector('[data-cc-accept]');
             var declineButton = inner.querySelector('[data-cc-decline]');
 
