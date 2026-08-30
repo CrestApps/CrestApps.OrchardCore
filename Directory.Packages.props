@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>4.0.0-preview-19124</OrchardCoreVersion>
-    <CrestAppsCoreVersion>2.0.0-preview.237</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>2.0.0-preview.239</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -112,6 +112,7 @@
     <PackageVersion Include="CrestApps.Core" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Abstractions" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.WebCrawlers" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.A2A" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.AzureAIInference" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Chat" Version="$(CrestAppsCoreVersion)" />
@@ -176,7 +177,7 @@
     <!-- Transitive Packages -->
     <PackageVersion Include="System.Memory.Data" Version="10.0.11" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.11" />
-    <PackageVersion Include="AngleSharp" Version="1.7.0" />
+    <PackageVersion Include="AngleSharp" Version="1.7.1" />
     <PackageVersion Include="Nerdbank.MessagePack" Version="1.2.4" />
     <PackageVersion Include="SSH.NET" Version="2026.0.0" />
   </ItemGroup>

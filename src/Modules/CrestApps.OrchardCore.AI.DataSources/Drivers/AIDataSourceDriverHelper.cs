@@ -13,6 +13,14 @@ internal static class AIDataSourceDriverHelper
             : dataSource.Source;
     }
 
+    /// <summary>
+    /// Returns whether the given source type needs the shared field mapping (content, title, key). Sources
+    /// that produce fully-formed documents themselves — such as the <see cref="AIDataSourceSourceTypes.Web"/>
+    /// source — supply the title, content, and reference key directly, so the mapping does not apply.
+    /// </summary>
+    public static bool RequiresFieldMapping(string sourceType)
+        => !string.Equals(sourceType, AIDataSourceSourceTypes.Web, StringComparison.OrdinalIgnoreCase);
+
     public static bool IsConfigurationLocked(AIDataSource dataSource)
     {
         ArgumentNullException.ThrowIfNull(dataSource);

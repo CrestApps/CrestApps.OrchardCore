@@ -1,0 +1,74 @@
+@using CrestApps.OrchardCore.AI.DataSources.WebCrawlers.ViewModels
+@using CrestApps.Core.AI.WebCrawlers
+@using Microsoft.Extensions.Options
+
+@inject IOptions<WebCrawlerOptions> WebCrawlerOptions
+
+@model SitemapWebCrawlerViewModel
+
+@{
+    var crawlerDefaults = WebCrawlerOptions.Value;
+}
+
+<fieldset class="ocat-wrapper">
+    <legend class="ocat-label">@T["Sitemap Strategy"]</legend>
+    <div class="ocat-end">
+        <div class="mb-3">
+            <label asp-for="BaseUrl" class="form-label">@T["Base URL"]</label>
+            <input asp-for="BaseUrl" class="form-control" placeholder="https://example.com" />
+            <span asp-validation-for="BaseUrl" class="text-danger"></span>
+            <span class="hint">@T["The site to scrape. The crawler discovers the sitemap from <code>robots.txt</code> and the conventional locations (for example <code>/sitemap.xml</code>). Provide this or an explicit sitemap URL below."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="SitemapUrl" class="form-label">@T["Sitemap URL (optional)"]</label>
+            <input asp-for="SitemapUrl" class="form-control" placeholder="https://example.com/sitemap.xml" />
+            <span asp-validation-for="SitemapUrl" class="text-danger"></span>
+            <span class="hint">@T["An explicit sitemap or sitemap-index URL. When set, discovery starts here instead of probing the base URL. Supports nested sitemap indexes, gzip, plain-text, and RSS/Atom feeds."]</span>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <label asp-for="MaxPages" class="form-label">@T["Max pages"]</label>
+                <input asp-for="MaxPages" class="form-control" type="number" min="1" />
+                <span asp-validation-for="MaxPages" class="text-danger"></span>
+                <span class="hint">@T["The most pages to scrape per crawl. Leave empty to use the default ({0}).", crawlerDefaults.DefaultMaxPages]</span>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label asp-for="MaxConcurrentRequests" class="form-label">@T["Max concurrent requests"]</label>
+                <input asp-for="MaxConcurrentRequests" class="form-control" type="number" min="1" />
+                <span asp-validation-for="MaxConcurrentRequests" class="text-danger"></span>
+                <span class="hint">@T["How many pages are fetched in parallel. Leave empty to use the default ({0}). Keep this low to be polite to the target site.", crawlerDefaults.DefaultMaxConcurrentRequests]</span>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <label asp-for="RequestTimeoutSeconds" class="form-label">@T["Request timeout (seconds)"]</label>
+                <input asp-for="RequestTimeoutSeconds" class="form-control" type="number" min="1" />
+                <span asp-validation-for="RequestTimeoutSeconds" class="text-danger"></span>
+                <span class="hint">@T["Per-request fetch timeout. Leave empty to use the default ({0} seconds).", crawlerDefaults.DefaultRequestTimeoutSeconds]</span>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="IncludeUrlPatterns" class="form-label">@T["Include URL patterns"]</label>
+            <textarea asp-for="IncludeUrlPatterns" class="form-control" rows="3" placeholder="^https://example\.com/docs/"></textarea>
+            <span asp-validation-for="IncludeUrlPatterns" class="text-danger"></span>
+            <span class="hint">@T["One <strong>regular expression</strong> per line. A discovered page is scraped only when its full URL matches <strong>at least one</strong> of these patterns. Leave empty to allow every discovered page. Example: <code>^https://example\\.com/docs/</code> keeps only pages under <code>/docs/</code>."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ExcludeUrlPatterns" class="form-label">@T["Exclude URL patterns"]</label>
+            <textarea asp-for="ExcludeUrlPatterns" class="form-control" rows="3" placeholder="/tag/|/author/|\.pdf$"></textarea>
+            <span asp-validation-for="ExcludeUrlPatterns" class="text-danger"></span>
+            <span class="hint">@T["One <strong>regular expression</strong> per line. A page is skipped when its URL matches <strong>any</strong> of these patterns. Exclusions are applied <strong>after</strong> the include patterns, so exclude wins. Example: <code>/tag/|/author/</code> drops taxonomy and author pages."]</span>
+        </div>
+
+        <div class="mb-0">
+            <label asp-for="UserAgent" class="form-label">@T["User-Agent (optional)"]</label>
+            <input asp-for="UserAgent" class="form-control" />
+            <span asp-validation-for="UserAgent" class="text-danger"></span>
+            <span class="hint">@T["The <code>User-Agent</code> header sent while crawling. Leave empty to use the default. Some sites require a recognizable agent to serve content."]</span>
+        </div>
+    </div>
+</fieldset>
