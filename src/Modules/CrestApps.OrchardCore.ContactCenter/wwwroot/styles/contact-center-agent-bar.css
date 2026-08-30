@@ -8,9 +8,10 @@
  * and disposition are intentionally NOT editable here — the soft phone owns status, and dispositioning happens on
  * the activity screen — so the bar stays compact.
  *
- * It docks inside `.ta-content` (JS adds `--docked`) so its left edge clears the fixed left sidebar and it reserves
- * its own height in the content flow instead of covering the page's action buttons. When the content column is not
- * found it falls back to a fixed full-width strip.
+ * The bar is fixed to the viewport bottom and horizontally centered. It starts collapsed to a small tab that is
+ * always on screen; the admin content column (`.ta-content`) reserves that tab's height at its bottom so the tab
+ * never covers page content. Expanding the bar grows it upward, overlaying the content above the tab — that
+ * overlay is deliberate and only happens while the agent has it open.
  */
 .cc-agent-bar {
   position: fixed;
@@ -37,6 +38,10 @@
 }
 .cc-agent-bar.is-collapsed .cc-agent-bar__handle {
   display: flex;
+}
+
+body .ta-content {
+  padding-bottom: 3rem;
 }
 
 .cc-agent-bar__inner {
