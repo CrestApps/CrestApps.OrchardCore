@@ -53,7 +53,7 @@ All secrets (API key, token, password, and client secret) are encrypted with ASP
 
 ## The documentation search sources
 
-The feature also registers three built-in sources that turn a public documentation site into a searchable tool instance, so the AI model can answer questions from product or framework documentation without indexing it into a vector store. Each configured instance binds one site and is exposed to the model as its own function, so you can offer "search the CrestApps docs" and "search the Orchard Core docs" as two distinct tools.
+The feature also registers four built-in sources that turn a public documentation site into a searchable tool instance, so the AI model can answer questions from product or framework documentation without indexing it into a vector store. Each configured instance binds one site and is exposed to the model as its own function, so you can offer "search the CrestApps docs" and "search the Orchard Core docs" as two distinct tools.
 
 Pick the source that matches how the site publishes its content:
 
@@ -62,14 +62,16 @@ Pick the source that matches how the site publishes its content:
 | **Documentation search (sitemap)** (`sitemap-documentation`) | Any site that publishes a `sitemap.xml`, such as Docusaurus, MkDocs, and most static sites. | Crawls pages, strips the HTML, and ranks passages locally with keyword scoring. |
 | **Documentation search (search index)** (`search-index-documentation`) | MkDocs Material and other sites that publish a fetchable `search_index.json`. | Downloads the prebuilt index once and ranks its entries locally. |
 | **Documentation search (Algolia)** (`algolia-documentation`) | Docusaurus sites (and others) wired to hosted Algolia DocSearch. | Forwards the query to Algolia, which performs the ranking. |
+| **Website search (live API)** (`website-search`) | WordPress sites and any site that exposes its own search API. | Calls the site's own search API live on each request — no crawling, no local corpus, and no cold-start indexing delay. The site performs the ranking. |
 
-All three sources carry the **Knowledgebase** category. Each source captures its own fields:
+All four sources carry the **Knowledgebase** category. Each source captures its own fields:
 
 - **Sitemap** — a **Base URL** (the site root, for example `https://example.com`), an optional **Sitemap URL** (defaults to `{BaseUrl}/sitemap.xml`), an optional **Maximum results**, and an optional **Maximum pages**.
 - **Search index** — a **Base URL** (used to resolve relative links and the default index URL), an optional **Index URL** (defaults to `{BaseUrl}/search/search_index.json`), and an optional **Maximum results**.
 - **Algolia** — an **Application id**, a **search-only API key** (never a write key), an **Index name**, and an optional **Maximum results**. The API key is encrypted with ASP.NET Core data protection before it is stored; when you edit an existing instance, leaving the API key field empty keeps the previously stored key.
+- **Website search** — a **Base URL** (the site root) plus overridable request and response-mapping fields, all defaulting to the WordPress REST search endpoint, so a WordPress site needs only a base URL. The **Search endpoint path** (`/wp-json/wp/v2/search`), **Query parameter** (`search`), and **Extra query parameters** (`_embed=1`) shape the request; the **Results array path**, **Title path** (`title`), **URL path** (`url`), and **Snippet path** (`_embedded.self[0].excerpt.rendered`) are dotted paths (supporting `[index]`) that map the JSON response to each result's title, URL, and text snippet. An optional **Maximum results** caps how many results a search returns.
 
-The first search materializes the corpus (the crawled pages or the downloaded index) and caches it. Later searches reuse the cache until the instance settings change.
+The sitemap and search index sources materialize a corpus (the crawled pages or the downloaded index) on the first search and cache it; later searches reuse the cache until the instance settings change. The website search source keeps no corpus — it issues a live query per request — so there is no cold-start indexing delay and results reflect the site's own relevance ranking.
 
 These instances are usable anywhere tool instances are — on a profile, a chat interaction, or exposed to external clients through the [MCP server](mcp/server#tool-exposure).
 

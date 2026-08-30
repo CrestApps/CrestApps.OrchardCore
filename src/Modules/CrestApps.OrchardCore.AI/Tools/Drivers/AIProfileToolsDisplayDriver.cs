@@ -1,9 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -19,7 +17,7 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
-    private readonly IAuthorizationService _authorizationService;
+    private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
@@ -28,17 +26,17 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
     /// Initializes a new instance of the <see cref="AIProfileToolsDisplayDriver"/> class.
     /// </summary>
     /// <param name="toolDefinitions">The options containing registered AI tool definitions.</param>
-    /// <param name="authorizationService">The authorization service for checking tool access permissions.</param>
+    /// <param name="toolAccessEvaluator">The evaluator for checking tool access permissions.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor for retrieving the current user.</param>
     /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IAuthorizationService authorizationService,
+        IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileToolsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
-        _authorizationService = authorizationService;
+        _toolAccessEvaluator = toolAccessEvaluator;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -57,7 +55,7 @@ internal sealed class AIProfileToolsDisplayDriver : DisplayDriver<AIProfile>
         foreach (var tool in _toolDefinitions.GetSelectableTools())
         {
             // Check if user has access to this tool
-            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
+            if (await _toolAccessEvaluator.IsAuthorizedAsync(user, tool.Key))
             {
                 accessibleTools[tool.Key] = tool.Value;
             }

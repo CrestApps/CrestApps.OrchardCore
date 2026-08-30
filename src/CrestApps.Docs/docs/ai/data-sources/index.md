@@ -50,6 +50,7 @@ The data source list now follows the deployments-style creation flow. **Add Data
 - **Elasticsearch** — read directly from an external Elasticsearch index
 - **Azure AI Search** — read directly from an external Azure AI Search index
 - **PostgreSQL** — read directly from a PostgreSQL table
+- **Web** — populated by [web crawlers](web-crawlers.md) that scrape public websites
 
 After you choose a source type from the modal, the create screen keeps that source type fixed for the new data source instead of showing it as another editable field. When **Search Index Profile** is selected, the editor shows the Orchard-managed source index picker and excludes internal AI-managed index types such as **AI Documents**, **AI Memory**, and other **Data Source** knowledge-base indexes so only valid source indexes appear in the selector.
 
@@ -173,6 +174,8 @@ Enable one of the following provider modules to get started:
 - `CrestApps.OrchardCore.AI.DataSources.Elasticsearch`
 - `CrestApps.OrchardCore.AI.DataSources.AzureAI`
 - `CrestApps.OrchardCore.AI.DataSources.PostgreSQL`
+
+Or enable the **[Web Crawlers](web-crawlers.md)** module (`CrestApps.OrchardCore.AI.DataSources.WebCrawlers`) to scrape public websites into a **Web** data source.
 
 ## Keeping the AI KB index in sync
 

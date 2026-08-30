@@ -5,10 +5,12 @@ using CrestApps.Core.AI.Chat.Hubs;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Exceptions;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.Core.AI.Security;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
@@ -113,6 +115,22 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
 
     protected override string GetNotAuthorizedMessage()
         => S["You are not authorized to interact with the given profile."].Value;
+
+    /// <summary>
+    /// Gets the message shown when a caller is throttled while starting a new chat session.
+    /// </summary>
+    /// <param name="result">The rate-limit result.</param>
+    /// <remarks>
+    /// The message deliberately discloses neither the configured limit, the current count, nor the
+    /// retry delay: those values let an abuser tune their traffic to sit just under the throttle. It
+    /// still tells a legitimate visitor what happened and that waiting resolves it.
+    /// </remarks>
+    protected override string GetSessionStartRateLimitMessage(RateLimitResult result)
+    {
+        ArgumentNullException.ThrowIfNull(result);
+
+        return S["You've reached the limit for starting new chats. Please wait a few minutes and try again."].Value;
+    }
 
     protected override string GetFriendlyErrorMessage(Exception ex)
         => AIHubErrorMessageHelper.GetFriendlyErrorMessage(ex, S).Value;
@@ -305,8 +323,27 @@ public class AIChatHub : AIChatHubCore<IAIChatHubClient>
         var liquidTemplateManager = services.GetRequiredService<ILiquidTemplateManager>();
         var completionContextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var completionService = services.GetRequiredService<IAICompletionService>();
+        AIChatSession chatSession;
 
-        var (chatSession, _) = await GetOrCreateSessionAsync(services, sessionId, parentProfile, userPrompt: profile.Name);
+        // This override replaces the base implementation entirely, so it has to repeat the base
+        // class's session-start error handling. A throttled session start is signalled distinctly
+        // from a generic error so the client can show it without its clear-and-retry recovery.
+        try
+        {
+            (chatSession, _) = await GetOrCreateSessionAsync(services, sessionId, parentProfile, userPrompt: profile.Name);
+        }
+        catch (ChatSessionStartRateLimitedException ex)
+        {
+            await Clients.Caller.ReceiveSessionStartRejected(ex.Message);
+
+            return;
+        }
+        catch (InvalidOperationException ex)
+        {
+            await Clients.Caller.ReceiveError(ex.Message);
+
+            return;
+        }
 
         var generatedPrompt = await liquidTemplateManager.RenderStringAsync(profile.PromptTemplate, NullEncoder.Default,
         new Dictionary<string, FluidValue>

@@ -1,9 +1,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Tools.Services;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -19,7 +17,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
-    private readonly IAuthorizationService _authorizationService;
+    private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIToolInstanceAccessor _instanceAccessor;
 
@@ -29,19 +27,19 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
     /// Initializes a new instance of the <see cref="AIProfilePostSessionDisplayDriver"/> class.
     /// </summary>
     /// <param name="toolDefinitions">The tool definitions.</param>
-    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="toolAccessEvaluator">The evaluator used to check tool access permissions.</param>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="instanceAccessor">The accessor used to resolve the tool instances the current user may assign.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfilePostSessionDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IAuthorizationService authorizationService,
+        IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
         IAIToolInstanceAccessor instanceAccessor,
         IStringLocalizer<AIProfilePostSessionDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
-        _authorizationService = authorizationService;
+        _toolAccessEvaluator = toolAccessEvaluator;
         _httpContextAccessor = httpContextAccessor;
         _instanceAccessor = instanceAccessor;
         S = stringLocalizer;
@@ -229,7 +227,7 @@ public sealed class AIProfilePostSessionDisplayDriver : DisplayDriver<AIProfile>
 
         foreach (var tool in _toolDefinitions.GetSelectableTools())
         {
-            if (user is not null && await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
+            if (user is not null && await _toolAccessEvaluator.IsAuthorizedAsync(user, tool.Key))
             {
                 accessibleTools[tool.Key] = tool.Value;
             }

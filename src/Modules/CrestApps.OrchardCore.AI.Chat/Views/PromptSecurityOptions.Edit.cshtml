@@ -79,7 +79,7 @@
         <div class="ocat-end">
             <input asp-for="MaxMessagesPerWindow" class="form-control" type="number" min="0" max="1000" />
             <span asp-validation-for="MaxMessagesPerWindow" class="text-danger"></span>
-            <span class="hint">@T["How many chat messages one rate-limit partition can send within the window below. Set to 0 to disable message throttling."]</span>
+            <span class="hint">@T["Governs authenticated callers, and anonymous callers only when no anonymous message tiers are configured below. Set to 0 to disable message throttling."]</span>
         </div>
     </div>
 
@@ -93,11 +93,20 @@
     </div>
 
     <div class="ocat-wrapper">
+        <label asp-for="AnonymousMessageRateLimitTiers" class="ocat-label">@T["Anonymous message rate-limit tiers"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="AnonymousMessageRateLimitTiers" class="form-control" rows="4" placeholder="5, 00:00:30&#10;30, 00:05:00&#10;150, 01:00:00&#10;500, 1.00:00:00"></textarea>
+            <span asp-validation-for="AnonymousMessageRateLimitTiers" class="text-danger"></span>
+            <span class="hint">@T["One tier per line as 'limit, window', where the window is a time span such as 00:00:30 or 1.00:00:00 for a day. Applies to anonymous callers only; a message is throttled when it would exceed any tier. Leave blank to use the single window above."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
         <label asp-for="MaxAnonymousSessionsPerWindow" class="ocat-label">@T["Maximum anonymous sessions per window"]</label>
         <div class="ocat-end">
             <input asp-for="MaxAnonymousSessionsPerWindow" class="form-control" type="number" min="0" max="1000" />
             <span asp-validation-for="MaxAnonymousSessionsPerWindow" class="text-danger"></span>
-            <span class="hint">@T["Limits how many new anonymous chat sessions can be started within the window below. Set to 0 to disable anonymous session-start throttling."]</span>
+            <span class="hint">@T["Limits how many new anonymous chat sessions can be started within the window below. Used only when no anonymous session-start tiers are configured below. Set to 0 to disable anonymous session-start throttling."]</span>
         </div>
     </div>
 
@@ -107,6 +116,15 @@
             <input asp-for="AnonymousSessionRateLimitWindowSeconds" class="form-control" type="number" min="1" max="86400" />
             <span asp-validation-for="AnonymousSessionRateLimitWindowSeconds" class="text-danger"></span>
             <span class="hint">@T["Duration of the anonymous chat session-start rate-limit window."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="AnonymousSessionStartRateLimitTiers" class="ocat-label">@T["Anonymous session-start rate-limit tiers"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="AnonymousSessionStartRateLimitTiers" class="form-control" rows="4" placeholder="5, 00:00:30&#10;10, 00:05:00&#10;150, 01:00:00&#10;500, 1.00:00:00"></textarea>
+            <span asp-validation-for="AnonymousSessionStartRateLimitTiers" class="text-danger"></span>
+            <span class="hint">@T["One tier per line as 'limit, window', where the window is a time span such as 00:00:30 or 1.00:00:00 for a day. Applies to anonymous callers only; a session start is throttled when it would exceed any tier. Leave blank to use the single window above."]</span>
         </div>
     </div>
 </fieldset>
