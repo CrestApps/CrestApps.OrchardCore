@@ -242,6 +242,16 @@ public class OmnichannelActivityBatchViewModel
     public bool ShowAIProfile { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the contact during automated conversations.
+    /// </summary>
+    public bool AllowAIToUpdateContact { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the subject during automated conversations.
+    /// </summary>
+    public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the available AI profiles for automated activities.
     /// </summary>
     [BindNever]

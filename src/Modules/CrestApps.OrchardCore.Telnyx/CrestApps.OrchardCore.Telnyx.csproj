@@ -23,6 +23,7 @@
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Core" />
+    <PackageReference Include="OrchardCore.Flows.Core" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
   </ItemGroup>
 

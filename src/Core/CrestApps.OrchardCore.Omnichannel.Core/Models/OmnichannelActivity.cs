@@ -68,6 +68,18 @@ public sealed class OmnichannelActivity : CatalogItem
     public string TextToSpeechVoiceId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the contact during this automated conversation.
+    /// This is a snapshot of the guard chosen when the automated inventory was loaded.
+    /// </summary>
+    public bool AllowAIToUpdateContact { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the subject during this automated conversation.
+    /// This is a snapshot of the guard chosen when the automated inventory was loaded.
+    /// </summary>
+    public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
     /// When the interaction type is Automatic, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
     /// </summary>
     public string PreferredDestination { get; set; }

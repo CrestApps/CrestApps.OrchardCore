@@ -956,6 +956,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public string AIProfileId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AIProfiles { get; set; }
+        public bool AllowAIToUpdateContact { get; set; }
+        public bool AllowAIToUpdateSubject { get; set; }
         public string CampaignId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Campaigns { get; set; }

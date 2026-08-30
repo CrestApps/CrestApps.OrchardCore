@@ -299,6 +299,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public AutomatedVoiceActivitySettings() { }
         public string AIProfileId { get; set; }
+        public bool AllowAIToUpdateContact { get; set; }
+        public bool AllowAIToUpdateSubject { get; set; }
         public string SpeechToTextDeploymentName { get; set; }
         public string TextToSpeechDeploymentName { get; set; }
         public string TextToSpeechVoiceId { get; set; }
@@ -416,6 +418,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OmnichannelActivity() { }
         public string AIProfileId { get; set; }
         public string AISessionId { get; set; }
+        public bool AllowAIToUpdateContact { get; set; }
+        public bool AllowAIToUpdateSubject { get; set; }
         public string AssignedToId { get; set; }
         public string AssignedToUsername { get; set; }
         public System.DateTime? AssignedToUtc { get; set; }
@@ -469,6 +473,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
     {
         public OmnichannelActivityBatch() { }
         public string AIProfileId { get; set; }
+        public bool AllowAIToUpdateContact { get; set; }
+        public bool AllowAIToUpdateSubject { get; set; }
         public string Author { get; set; }
         public string CampaignId { get; set; }
         public string Channel { get; set; }

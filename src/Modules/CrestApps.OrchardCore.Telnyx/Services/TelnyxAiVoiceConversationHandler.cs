@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -19,8 +20,12 @@ using Fluid.Values;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
+using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;
+using OrchardCore.Flows.Models;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Json;
 using OrchardCore.Liquid;
@@ -40,6 +45,12 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
     // Marker the model appends to its final line when it wants to end the call. It is spoken-stripped, but kept
     // in the stored transcript so the speak.ended handler can hang up gracefully after the goodbye finishes.
     private const string HangupMarker = "[[HANGUP]]";
+
+    // Default text-to-speech voice used when the activity has no configured voice. A neural voice (rather than the
+    // basic "female"/"male" Telnyx voices) is the single biggest lever against robotic-sounding delivery. This must
+    // be a voice the Telnyx account supports for the speak command; it is overridden per-activity by the configured
+    // TextToSpeechVoiceId chosen at inventory load / on the subject flow.
+    private const string DefaultVoice = "AWS.Polly.Joanna-Neural";
 
     private readonly IOmnichannelActivityStore _activityStore;
     private readonly IAIChatSessionManager _chatSessionManager;
@@ -153,7 +164,7 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         }
 
         await StorePromptAsync(session, ChatRole.Assistant, greeting, cancellationToken);
-        await SpeakAsync(callEvent.CallControlId, profile, greeting, cancellationToken);
+        await SpeakAsync(callEvent.CallControlId, activity, greeting, cancellationToken);
 
         // The customer answered: advance out of AwaitingCustomerAnswer into the live in-progress state. This both
         // records the correct status and takes the activity out of the automated no-response expiry pass window
@@ -210,8 +221,10 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             return;
         }
 
-        // Stop listening while we think and speak, so the agent's own text-to-speech is never transcribed.
-        await _voiceClient.StopTranscriptionAsync(callEvent.CallControlId, cancellationToken);
+        // Stop listening while we think and speak, so the agent's own text-to-speech is never transcribed. Start
+        // the stop now but let the LLM turn run concurrently, so its Telnyx round-trip overlaps the model latency
+        // rather than adding to it. The stop is awaited before we speak, so the ordering guarantee is preserved.
+        var stopListening = _voiceClient.StopTranscriptionAsync(callEvent.CallControlId, cancellationToken);
 
         var caller = callEvent.TranscriptionText.Trim();
 
@@ -221,12 +234,15 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         // Redelivery / duplicate final guard.
         if (lastUser is not null && string.Equals(lastUser.Content?.Trim(), caller, StringComparison.OrdinalIgnoreCase))
         {
+            await stopListening;
             return;
         }
 
         await StorePromptAsync(session, ChatRole.User, caller, cancellationToken);
 
         var reply = await CompleteAsync(profile, session, cancellationToken);
+
+        await stopListening;
 
         if (string.IsNullOrWhiteSpace(reply))
         {
@@ -238,7 +254,7 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         await StorePromptAsync(session, ChatRole.Assistant, reply, cancellationToken);
 
         var spoken = reply.Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
-        await SpeakAsync(callEvent.CallControlId, profile, spoken, cancellationToken);
+        await SpeakAsync(callEvent.CallControlId, activity, spoken, cancellationToken);
     }
 
     private async Task OnHangupAsync(TelnyxCallEvent callEvent, TelnyxOutboundBridgeState state, CancellationToken cancellationToken)
@@ -322,12 +338,38 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             .Where(p => !p.IsGeneratedPrompt)
             .Select(p => $"{(p.Role == ChatRole.Assistant ? "Agent" : "Customer")}: {p.Content?.Replace(HangupMarker, string.Empty)}"));
 
-        var systemPrompt = """
+        // The AI field-update guards are a snapshot taken when the automated inventory was loaded (the subject
+        // AI-settings UI is inbound-only, so an outbound automated inventory configures these on the batch). Only
+        // when a guard is on do we both show the model the current content item and apply what it returns.
+        var allowUpdateSubject = activity.AllowAIToUpdateSubject;
+        var allowUpdateContact = activity.AllowAIToUpdateContact;
+
+        // Resolve the content items the analysis and subject actions operate on up front. These are content-manager
+        // reads that trigger a YesSql session flush; doing them here — before the activity is mutated — keeps that
+        // flush from ever trying to persist a dirty, stale activity (which surfaced as a ConcurrencyException when
+        // the background expiry pass concurrently transitioned the same AwaitingCustomerAnswer activity to Failed).
+        var contact = string.IsNullOrWhiteSpace(activity.ContactContentItemId)
+            ? null
+            : await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+        var subject = activity.Subject ?? (string.IsNullOrWhiteSpace(activity.SubjectContentType) ? null : await contentManager.NewAsync(activity.SubjectContentType));
+
+        // The subject's updatable text fields, read from the content type definition so the model is asked for the
+        // exact fields that exist (rather than authoring a free-form content item, which produced values in shapes
+        // the field editors could not read).
+        var definitionManager = services.GetRequiredService<IContentDefinitionManager>();
+        var subjectTextFields = allowUpdateSubject && !string.IsNullOrWhiteSpace(activity.SubjectContentType)
+            ? GetSubjectTextFields(await definitionManager.GetTypeDefinitionAsync(activity.SubjectContentType))
+            : [];
+
+        var systemPrompt = $$"""
             You review a finished outbound sales phone call between an AI agent and a customer, and produce a
-            structured result as JSON. Write a concise, factual Summary (2-4 sentences) capturing what the
+            structured result as JSON. Always write a concise, factual Summary (2-4 sentences) capturing what the
             customer is looking for (vehicle type, timeline, budget, trade-in, any contact details they gave)
-            and the outcome. Choose the single DispositionId from the provided list that best matches the
-            outcome. If none clearly fits, choose the closest. Only output the requested fields.
+            and the outcome. Always choose the single DispositionId from the provided list that best matches the
+            outcome; if none clearly fits, choose the closest.
+            {{((allowUpdateSubject && subjectTextFields.Count > 0) ? "You are given a list of subject fields. Return SubjectFields as a JSON object mapping the exact field key shown to a short plain-text value, for any field the call clearly revealed; omit fields you did not learn and never invent keys." : "Do not return SubjectFields.")}}
+            {{(allowUpdateContact ? "If, and only if, the customer clearly stated an email address to use for follow-up, set ContactEmail to that exact address (lowercased, with no surrounding words); if it matches the current email on file or none was given, omit ContactEmail." : "Do not return ContactEmail.")}}
+            Only output the requested fields.
             """;
 
         var userPrompt = $"""
@@ -338,6 +380,24 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
 
             Available dispositions (choose one DispositionId): {JsonSerializer.Serialize(dispositions.Select(d => new { Id = d.ItemId, d.Name, d.Description }))}
             """;
+
+        if (allowUpdateSubject && subject is not null && subjectTextFields.Count > 0)
+        {
+            var subjectContent = (JsonObject)subject.Content;
+            var fieldList = subjectTextFields.Select(f =>
+            {
+                var key = $"{f.Part}.{f.Field}";
+                var current = (subjectContent[f.Part]?[f.Field]?["Text"])?.ToString();
+                return string.IsNullOrWhiteSpace(current) ? key : $"{key} (current: {current})";
+            });
+
+            userPrompt += $"{Environment.NewLine}{Environment.NewLine}Subject fields you may set (return these keys in SubjectFields): {string.Join("; ", fieldList)}";
+        }
+
+        if (allowUpdateContact && contact is not null)
+        {
+            userPrompt += $"{Environment.NewLine}{Environment.NewLine}Current contact email on file: {GetContactEmail(contact) ?? "(none)"}";
+        }
 
         var conclusionContext = await contextBuilder.BuildAsync(profile, context =>
         {
@@ -377,15 +437,6 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             ? "Automated AI voice call completed."
             : result.Summary;
 
-        // Resolve the content items the subject actions operate on up front. These are content-manager reads that
-        // trigger a YesSql session flush; doing them here — before the activity is mutated — keeps that flush from
-        // ever trying to persist a dirty, stale activity (which is what surfaced as a ConcurrencyException when the
-        // background expiry pass concurrently transitioned the same AwaitingCustomerAnswer activity to Failed).
-        var contact = string.IsNullOrWhiteSpace(activity.ContactContentItemId)
-            ? null
-            : await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
-        var subject = activity.Subject ?? (string.IsNullOrWhiteSpace(activity.SubjectContentType) ? null : await contentManager.NewAsync(activity.SubjectContentType));
-
         // Terminal write. Reload the activity fresh (the analysis above ran a slow LLM call, during which the row
         // may have moved on) and apply the conclusion. The answered call was advanced to InProgress, which keeps
         // the automated no-response expiry pass — the only other writer of these rows — out of this window, so
@@ -400,8 +451,20 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
 
         concluded.Status = ActivityStatus.Completed;
         concluded.CompletedUtc = clock.UtcNow;
+
+        // Notes and disposition are written together in this single terminal update, so a concluded call is never
+        // dispositioned without notes: the notes fall back to a default line when the model returns no summary.
         concluded.Notes = notes;
         concluded.DispositionId = dispositionId;
+
+        // Gated subject write-back: only when the inventory-load guard allowed it and the model returned values for
+        // known fields. Each value is written into the field's real structure (a TextField's Text property) rather
+        // than merging a model-authored content item, which produced shapes the field editors could not read. The
+        // subject lives on the activity, so it must be applied before the activity is persisted below.
+        if (allowUpdateSubject && subject is not null && ApplySubjectFields(subject, result?.SubjectFields, subjectTextFields))
+        {
+            concluded.Subject = subject;
+        }
 
         await store.UpdateAsync(concluded);
 
@@ -417,6 +480,18 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             _logger.LogWarning("Concurrency conflict while concluding AI voice activity '{ActivityId}'; another process updated it.", activityId.SanitizeLogValue());
 
             return;
+        }
+
+        // Gated contact write-back: the contact is a separate content item, so it is updated after the conclusion
+        // is durably committed above — a failing contact save cannot then roll back the disposition. Rather than
+        // deep-merging a model-authored content item (which appends duplicate contact-method items and cannot
+        // build a correctly structured EmailAddress), we upsert only a captured email into the ContactMethods bag,
+        // mirroring how the contact importer constructs those items.
+        if (allowUpdateContact && contact is not null && TryApplyContactEmail(contact, result?.ContactEmail))
+        {
+            await contentManager.UpdateAsync(contact);
+
+            _logger.LogInformation("AI voice activity '{ActivityId}' saved a customer-provided email to the contact.", activityId.SanitizeLogValue());
         }
 
         if (disposition is not null)
@@ -532,12 +607,15 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         return completion?.Messages?.FirstOrDefault()?.Text;
     }
 
-    private Task SpeakAsync(string callControlId, AIProfile profile, string text, CancellationToken cancellationToken)
+    private Task SpeakAsync(string callControlId, OmnichannelActivity activity, string text, CancellationToken cancellationToken)
     {
-        // Telnyx built-in text-to-speech. A basic named voice keeps this independent of per-account TTS engines.
-        _ = profile;
+        // Honor the configured neural text-to-speech voice for a natural (non-robotic) delivery, falling back to a
+        // Telnyx-native neural voice. The value must be a voice the Telnyx account supports for the speak command.
+        var voice = string.IsNullOrWhiteSpace(activity?.TextToSpeechVoiceId)
+            ? DefaultVoice
+            : activity.TextToSpeechVoiceId.Trim();
 
-        return _voiceClient.SpeakAsync(callControlId, text, voice: "female", language: "en-US", commandId: null, cancellationToken);
+        return _voiceClient.SpeakAsync(callControlId, text, voice: voice, language: "en-US", commandId: null, cancellationToken);
     }
 
     private async Task StorePromptAsync(AIChatSession session, ChatRole role, string content, CancellationToken cancellationToken)
@@ -554,10 +632,155 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         await _chatSessionManager.SaveAsync(session, cancellationToken);
     }
 
+    /// <summary>
+    /// Reads the current email address stored on the contact's ContactMethods bag, if any.
+    /// </summary>
+    internal static string GetContactEmail(ContentItem contact)
+    {
+        if (!contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bag) || bag.ContentItems is null)
+        {
+            return null;
+        }
+
+        foreach (var method in bag.ContentItems)
+        {
+            if (string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal) &&
+                method.TryGet<EmailInfoPart>(out var emailPart) &&
+                !string.IsNullOrWhiteSpace(emailPart.Email?.Text))
+            {
+                return emailPart.Email.Text.Trim();
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Upserts a customer-provided email into the contact's ContactMethods bag as a properly structured
+    /// EmailAddress content item, replacing any existing one. Returns whether the contact was changed. This
+    /// mirrors the construction the contact importer uses, so downstream indexing and exports read it the same
+    /// way, and it never appends duplicates the way a raw content-item merge did.
+    /// </summary>
+    internal static bool TryApplyContactEmail(ContentItem contact, string email)
+    {
+        if (contact is null || string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        email = email.Trim();
+
+        // A conservative sanity check so a mis-transcribed phrase is never written as an email.
+        if (email.Length < 5 || !email.Contains('@', StringComparison.Ordinal) || email.Contains(' ', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        // Nothing to do when the same address is already on file.
+        if (string.Equals(GetContactEmail(contact), email, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var bag = contact.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods);
+        bag.ContentItems ??= [];
+        bag.ContentItems.RemoveAll(method => string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal));
+
+        var emailItem = new ContentItem
+        {
+            ContentType = OmnichannelConstants.ContentTypes.EmailAddress,
+            DisplayText = email,
+        };
+
+        emailItem.Alter<EmailInfoPart>(part => part.Email = new TextField { Text = email });
+        bag.ContentItems.Add(emailItem);
+        contact.Apply(OmnichannelConstants.NamedParts.ContactMethods, bag);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Lists the TextField fields declared on the subject content type, as (part, field) pairs. These are the only
+    /// fields the conclusion is allowed to set, so the model is never asked to author arbitrary structure.
+    /// </summary>
+    internal static List<(string Part, string Field)> GetSubjectTextFields(ContentTypeDefinition typeDefinition)
+    {
+        var fields = new List<(string, string)>();
+
+        if (typeDefinition is null)
+        {
+            return fields;
+        }
+
+        foreach (var part in typeDefinition.Parts)
+        {
+            foreach (var field in part.PartDefinition.Fields)
+            {
+                if (string.Equals(field.FieldDefinition?.Name, nameof(TextField), StringComparison.Ordinal))
+                {
+                    fields.Add((part.Name, field.Name));
+                }
+            }
+        }
+
+        return fields;
+    }
+
+    /// <summary>
+    /// Writes the model-provided values into the subject's TextField fields using their real <c>Text</c> structure.
+    /// Only keys that match a known field (by "Part.Field" or bare field name) and carry a non-empty value are
+    /// applied. Returns whether the subject changed.
+    /// </summary>
+    internal static bool ApplySubjectFields(ContentItem subject, IDictionary<string, string> values, List<(string Part, string Field)> fields)
+    {
+        if (subject is null || values is null || values.Count == 0 || fields.Count == 0)
+        {
+            return false;
+        }
+
+        var changed = false;
+
+        // ContentItem.Content is a dynamic JsonDynamicObject; cast to the underlying JsonObject so type checks and
+        // writes operate on the real node. Going through the dynamic on every access hands back a wrapper that is
+        // never a JsonObject, which made each field create a fresh part object that clobbered the previous ones.
+        var content = (JsonObject)subject.Content;
+
+        foreach (var (part, field) in fields)
+        {
+            if (!(values.TryGetValue($"{part}.{field}", out var value) || values.TryGetValue(field, out value)) ||
+                string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            if (content[part] is not JsonObject partObject)
+            {
+                partObject = new JsonObject();
+                content[part] = partObject;
+            }
+
+            partObject[field] = new JsonObject { ["Text"] = value.Trim() };
+            changed = true;
+        }
+
+        return changed;
+    }
+
     private sealed class VoiceConclusionResult
     {
         public string Summary { get; set; }
 
         public string DispositionId { get; set; }
+
+        /// <summary>
+        /// Gets or sets the subject field values the AI captured, keyed by the "Part.Field" path shown to it, when
+        /// allowed. Null otherwise.
+        /// </summary>
+        public Dictionary<string, string> SubjectFields { get; set; }
+
+        /// <summary>
+        /// Gets or sets the email address the customer provided for follow-up, when allowed. Null otherwise.
+        /// </summary>
+        public string ContactEmail { get; set; }
     }
 }

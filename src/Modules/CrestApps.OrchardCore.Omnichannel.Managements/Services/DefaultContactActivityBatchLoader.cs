@@ -429,6 +429,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     automatedSettings.SpeechToTextDeploymentName = null;
                     automatedSettings.TextToSpeechDeploymentName = null;
                     automatedSettings.TextToSpeechVoiceId = null;
+                    automatedSettings.AllowAIToUpdateContact = false;
+                    automatedSettings.AllowAIToUpdateSubject = false;
                 }
 
                 activity.Kind = GetActivityKind(channel);
@@ -439,6 +441,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 activity.SpeechToTextDeploymentName = automatedSettings.SpeechToTextDeploymentName;
                 activity.TextToSpeechDeploymentName = automatedSettings.TextToSpeechDeploymentName;
                 activity.TextToSpeechVoiceId = automatedSettings.TextToSpeechVoiceId;
+                activity.AllowAIToUpdateContact = automatedSettings.AllowAIToUpdateContact;
+                activity.AllowAIToUpdateSubject = automatedSettings.AllowAIToUpdateSubject;
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = batch.ContactContentType;
                 activity.SubjectContentType = batch.SubjectContentType;

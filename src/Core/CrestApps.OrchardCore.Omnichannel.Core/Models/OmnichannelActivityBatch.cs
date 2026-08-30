@@ -67,6 +67,18 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string TextToSpeechVoiceId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the contact during automated conversations
+    /// loaded from this batch. Chosen when the automated inventory is loaded and snapshotted onto each activity.
+    /// </summary>
+    public bool AllowAIToUpdateContact { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the subject during automated conversations
+    /// loaded from this batch. Chosen when the automated inventory is loaded and snapshotted onto each activity.
+    /// </summary>
+    public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the dialer profile identifier assigned to dialer activities loaded from this batch.
     /// </summary>
     public string DialerProfileId { get; set; }
@@ -207,6 +219,8 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             SpeechToTextDeploymentName = SpeechToTextDeploymentName,
             TextToSpeechDeploymentName = TextToSpeechDeploymentName,
             TextToSpeechVoiceId = TextToSpeechVoiceId,
+            AllowAIToUpdateContact = AllowAIToUpdateContact,
+            AllowAIToUpdateSubject = AllowAIToUpdateSubject,
             DialerProfileId = DialerProfileId,
             UserIds = UserIds?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,

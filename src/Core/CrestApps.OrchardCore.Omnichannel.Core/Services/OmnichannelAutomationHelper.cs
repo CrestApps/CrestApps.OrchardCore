@@ -74,6 +74,12 @@ public static class OmnichannelAutomationHelper
             TextToSpeechVoiceId = FirstValue(
                 batch.TextToSpeechVoiceId,
                 flowSettings?.TextToSpeechVoiceId),
+
+            // The batch is the source of truth for the AI field-update guards: the subject AI-settings UI is
+            // only shown for inbound subjects, so an outbound automated inventory can only configure these when
+            // it is loaded. They are chosen on the batch and snapshotted onto each loaded activity.
+            AllowAIToUpdateContact = batch.AllowAIToUpdateContact,
+            AllowAIToUpdateSubject = batch.AllowAIToUpdateSubject,
         };
     }
 

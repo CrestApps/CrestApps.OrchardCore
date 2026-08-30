@@ -236,6 +236,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             {
                 model.AIProfileId = batch.AIProfileId;
                 model.AIProfiles = await GetAIProfileOptionsAsync(batch.AIProfileId);
+                model.AllowAIToUpdateContact = batch.AllowAIToUpdateContact;
+                model.AllowAIToUpdateSubject = batch.AllowAIToUpdateSubject;
             }
 
             model.Channels =
@@ -370,6 +372,8 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             }
 
             batch.AIProfileId = model.AIProfileId?.Trim();
+            batch.AllowAIToUpdateContact = model.AllowAIToUpdateContact;
+            batch.AllowAIToUpdateSubject = model.AllowAIToUpdateSubject;
         }
         else
         {

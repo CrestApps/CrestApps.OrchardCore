@@ -24,4 +24,14 @@ public sealed class AutomatedVoiceActivitySettings
     /// Gets or sets the effective text-to-speech voice identifier.
     /// </summary>
     public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the contact during an automated conversation.
+    /// </summary>
+    public bool AllowAIToUpdateContact { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the subject during an automated conversation.
+    /// </summary>
+    public bool AllowAIToUpdateSubject { get; set; } = true;
 }
