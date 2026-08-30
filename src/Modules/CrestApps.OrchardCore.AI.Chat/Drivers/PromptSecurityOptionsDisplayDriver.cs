@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Security;
+using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Authorization;
@@ -60,8 +61,10 @@ public sealed class PromptSecurityOptionsDisplayDriver : SiteDisplayDriver<Promp
             model.BlockingThreshold = settings.BlockingThreshold;
             model.MaxMessagesPerWindow = settings.MaxMessagesPerWindow;
             model.RateLimitWindowSeconds = (int)Math.Round(settings.RateLimitWindow.TotalSeconds);
+            model.AnonymousMessageRateLimitTiers = ChatRateLimitTierTextFormatter.Format(settings.AnonymousMessageRateLimitTiers);
             model.MaxAnonymousSessionsPerWindow = settings.MaxAnonymousSessionsPerWindow;
             model.AnonymousSessionRateLimitWindowSeconds = (int)Math.Round(settings.AnonymousSessionRateLimitWindow.TotalSeconds);
+            model.AnonymousSessionStartRateLimitTiers = ChatRateLimitTierTextFormatter.Format(settings.AnonymousSessionStartRateLimitTiers);
         }).Location("Content:2%Prompt Security;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
@@ -103,6 +106,16 @@ public sealed class PromptSecurityOptionsDisplayDriver : SiteDisplayDriver<Promp
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.AnonymousSessionRateLimitWindowSeconds), S["Anonymous session window must be between {0} and {1} second(s).", 1, 86_400]);
         }
 
+        if (!ChatRateLimitTierTextFormatter.TryParse(model.AnonymousMessageRateLimitTiers, out var anonymousMessageTiers, out var anonymousMessageTiersError))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AnonymousMessageRateLimitTiers), ChatRateLimitTierTextFormatter.Describe(anonymousMessageTiersError, S));
+        }
+
+        if (!ChatRateLimitTierTextFormatter.TryParse(model.AnonymousSessionStartRateLimitTiers, out var anonymousSessionStartTiers, out var anonymousSessionStartTiersError))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.AnonymousSessionStartRateLimitTiers), ChatRateLimitTierTextFormatter.Describe(anonymousSessionStartTiersError, S));
+        }
+
         if (!context.Updater.ModelState.IsValid)
         {
             return Edit(site, settings, context);
@@ -121,7 +134,9 @@ public sealed class PromptSecurityOptionsDisplayDriver : SiteDisplayDriver<Promp
             settings.MaxMessagesPerWindow != model.MaxMessagesPerWindow ||
             settings.RateLimitWindow != rateLimitWindow ||
             settings.MaxAnonymousSessionsPerWindow != model.MaxAnonymousSessionsPerWindow ||
-            settings.AnonymousSessionRateLimitWindow != anonymousSessionRateLimitWindow;
+            settings.AnonymousSessionRateLimitWindow != anonymousSessionRateLimitWindow ||
+            !ChatRateLimitTierTextFormatter.AreEquivalent(settings.AnonymousMessageRateLimitTiers, anonymousMessageTiers) ||
+            !ChatRateLimitTierTextFormatter.AreEquivalent(settings.AnonymousSessionStartRateLimitTiers, anonymousSessionStartTiers);
 
         settings.EnableInjectionDetection = model.EnableInjectionDetection;
         settings.EnableOutputFiltering = model.EnableOutputFiltering;
@@ -134,6 +149,8 @@ public sealed class PromptSecurityOptionsDisplayDriver : SiteDisplayDriver<Promp
         settings.RateLimitWindow = rateLimitWindow;
         settings.MaxAnonymousSessionsPerWindow = model.MaxAnonymousSessionsPerWindow;
         settings.AnonymousSessionRateLimitWindow = anonymousSessionRateLimitWindow;
+        settings.AnonymousMessageRateLimitTiers = anonymousMessageTiers;
+        settings.AnonymousSessionStartRateLimitTiers = anonymousSessionStartTiers;
 
         if (settingsChanged)
         {
@@ -142,4 +159,5 @@ public sealed class PromptSecurityOptionsDisplayDriver : SiteDisplayDriver<Promp
 
         return Edit(site, settings, context);
     }
+
 }

@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Users;
@@ -32,6 +33,8 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
 {
     private const int QueueCount = 12;
     private const int RecentInteractionCount = 8;
+
+    private static readonly DateTime ClockNow = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     [Fact]
     public async Task WorkspacePoll_ReadsQueueDepthOnceForEveryQueueTheAgentCovers()
@@ -190,9 +193,11 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
                     ItemId = $"interaction-{index:D4}",
                     AgentId = "agent-0001",
                     ActivityItemId = $"activity-{index:D4}",
-                    // Answered so each ended interaction qualifies as a wrap-up candidate, forcing the worst-case
-                    // batch activity lookup this budget guards.
-                    AnsweredUtc = DateTime.UtcNow,
+                    // Answered and just ended (at the stub clock's now) so each interaction qualifies as a live
+                    // wrap-up candidate within the wrap-up window, forcing the worst-case batch activity lookup
+                    // this budget guards.
+                    AnsweredUtc = ClockNow,
+                    EndedUtc = ClockNow,
                 }.RestorePersistedStatus(InteractionStatus.Ended))
                 .ToArray();
 
@@ -237,7 +242,8 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
                 MockUserManager(),
                 _displayNameProvider.Object,
                 Mock.Of<IContactCenterVoiceProviderResolver>(),
-                new StubClock(),
+                new StubClock(ClockNow),
+                Options.Create(new AgentAvailabilityOptions()),
                 CreateLinkGenerator(),
                 CreateHttpContext());
         }

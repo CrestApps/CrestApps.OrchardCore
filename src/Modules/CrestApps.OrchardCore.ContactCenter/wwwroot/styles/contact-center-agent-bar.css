@@ -8,9 +8,10 @@
  * and disposition are intentionally NOT editable here — the soft phone owns status, and dispositioning happens on
  * the activity screen — so the bar stays compact.
  *
- * It docks inside `.ta-content` (JS adds `--docked`) so its left edge clears the fixed left sidebar and it reserves
- * its own height in the content flow instead of covering the page's action buttons. When the content column is not
- * found it falls back to a fixed full-width strip.
+ * The bar is fixed to the viewport bottom and horizontally centered. It starts collapsed to a small tab that is
+ * always on screen; the admin content column (`.ta-content`) reserves that tab's height at its bottom so the tab
+ * never covers page content. Expanding the bar grows it upward, overlaying the content above the tab — that
+ * overlay is deliberate and only happens while the agent has it open.
  */
 .cc-agent-bar {
   position: fixed;
@@ -32,6 +33,16 @@
 .cc-agent-bar[hidden] {
   display: none;
 }
+.cc-agent-bar.is-collapsed .cc-agent-bar__inner {
+  display: none;
+}
+.cc-agent-bar.is-collapsed .cc-agent-bar__handle {
+  display: flex;
+}
+
+body .ta-content {
+  padding-bottom: 3rem;
+}
 
 .cc-agent-bar__inner {
   display: flex;
@@ -42,6 +53,59 @@
   padding: 0.15rem 0.6rem;
 }
 
+.cc-agent-bar__handle {
+  display: none;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 30px;
+  padding: 0.2rem 0.7rem;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cc-agent-bar__handle .fa-chevron-up {
+  margin-left: auto;
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+.cc-agent-bar__handle:hover .fa-chevron-up {
+  opacity: 1;
+}
+
+.cc-agent-bar__handle-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-agent-bar__handle-badge {
+  display: none;
+  flex: 0 0 auto;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #f1c40f;
+  box-shadow: 0 0 0 rgba(241, 196, 15, 0.6);
+}
+.cc-agent-bar__handle-badge.is-visible {
+  display: inline-block;
+  animation: cc-bar-badge-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes cc-bar-badge-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(241, 196, 15, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(241, 196, 15, 0);
+  }
+}
 .cc-agent-bar__top {
   display: flex;
   align-items: center;
@@ -99,6 +163,7 @@
 
 .cc-bar__context {
   min-width: 0;
+  margin-bottom: 0.35rem;
 }
 .cc-bar__context:empty {
   display: none;
@@ -211,6 +276,22 @@
   text-decoration: none;
 }
 .cc-bar__workspace:hover {
+  color: #fff;
+}
+
+.cc-bar__collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.2rem;
+  background: transparent;
+  border: 0;
+  line-height: 1;
+  font-size: 0.72rem;
+  color: rgba(244, 246, 248, 0.7);
+  cursor: pointer;
+}
+.cc-bar__collapse:hover {
   color: #fff;
 }
 

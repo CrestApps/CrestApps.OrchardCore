@@ -1,0 +1,15 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<WebCrawler>
+
+<h5>
+    @(Model.Value.DisplayText)
+    @if (!Model.Value.Enabled)
+    {
+        <span class="badge bg-secondary align-middle">@T["Disabled"]</span>
+    }
+</h5>
+<div class="text-muted small">
+    <span class="badge bg-light text-dark">@Model.Value.Source</span>
+</div>

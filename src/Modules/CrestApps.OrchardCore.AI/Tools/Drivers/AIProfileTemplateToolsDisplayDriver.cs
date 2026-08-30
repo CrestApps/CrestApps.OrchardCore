@@ -2,9 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Tooling;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -16,7 +14,7 @@ namespace CrestApps.OrchardCore.AI.Tools.Drivers;
 internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly AIToolDefinitionOptions _toolDefinitions;
-    private readonly IAuthorizationService _authorizationService;
+    private readonly IAIToolAccessEvaluator _toolAccessEvaluator;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     internal readonly IStringLocalizer S;
@@ -25,17 +23,17 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
     /// Initializes a new instance of the <see cref="AIProfileTemplateToolsDisplayDriver"/> class.
     /// </summary>
     /// <param name="toolDefinitions">The AI tool definition options.</param>
-    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="toolAccessEvaluator">The evaluator used to check tool access permissions.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateToolsDisplayDriver(
         IOptions<AIToolDefinitionOptions> toolDefinitions,
-        IAuthorizationService authorizationService,
+        IAIToolAccessEvaluator toolAccessEvaluator,
         IHttpContextAccessor httpContextAccessor,
         IStringLocalizer<AIProfileTemplateToolsDisplayDriver> stringLocalizer)
     {
         _toolDefinitions = toolDefinitions.Value;
-        _authorizationService = authorizationService;
+        _toolAccessEvaluator = toolAccessEvaluator;
         _httpContextAccessor = httpContextAccessor;
         S = stringLocalizer;
     }
@@ -52,7 +50,7 @@ internal sealed class AIProfileTemplateToolsDisplayDriver : DisplayDriver<AIProf
 
         foreach (var tool in _toolDefinitions.GetSelectableTools())
         {
-            if (await _authorizationService.AuthorizeAsync(user, AIPermissions.AccessAITool, tool.Key as object))
+            if (await _toolAccessEvaluator.IsAuthorizedAsync(user, tool.Key))
             {
                 accessibleTools[tool.Key] = tool.Value;
             }

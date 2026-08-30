@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Security;
+using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -25,6 +26,8 @@ internal static class AIProfilePromptSecurityMapper
         model.SiteRateLimitWindowSeconds = (int)Math.Round(options.RateLimitWindow.TotalSeconds);
         model.SiteMaxAnonymousSessionsPerWindow = options.MaxAnonymousSessionsPerWindow;
         model.SiteAnonymousSessionRateLimitWindowSeconds = (int)Math.Round(options.AnonymousSessionRateLimitWindow.TotalSeconds);
+        model.SiteAnonymousMessageRateLimitTiers = ChatRateLimitTierTextFormatter.FormatInline(options.AnonymousMessageRateLimitTiers);
+        model.SiteAnonymousSessionStartRateLimitTiers = ChatRateLimitTierTextFormatter.FormatInline(options.AnonymousSessionStartRateLimitTiers);
     }
 
     /// <summary>
@@ -42,6 +45,13 @@ internal static class AIProfilePromptSecurityMapper
         model.AnonymousSessionRateLimitWindowSeconds = settings.AnonymousSessionRateLimitWindow.HasValue
             ? (int)Math.Round(settings.AnonymousSessionRateLimitWindow.Value.TotalSeconds)
             : null;
+
+        // A null list inherits the site tiers; an empty list is a deliberate opt-out that falls back to
+        // this profile's single-window values.
+        model.AnonymousMessageRateLimitTiers = ChatRateLimitTierTextFormatter.Format(settings.AnonymousMessageRateLimitTiers);
+        model.DisableAnonymousMessageRateLimitTiers = settings.AnonymousMessageRateLimitTiers?.Count == 0;
+        model.AnonymousSessionStartRateLimitTiers = ChatRateLimitTierTextFormatter.Format(settings.AnonymousSessionStartRateLimitTiers);
+        model.DisableAnonymousSessionStartRateLimitTiers = settings.AnonymousSessionStartRateLimitTiers?.Count == 0;
     }
 
     /// <summary>
@@ -58,6 +68,35 @@ internal static class AIProfilePromptSecurityMapper
         settings.MaxAnonymousSessionsPerWindow = model.MaxAnonymousSessionsPerWindow;
         settings.AnonymousSessionRateLimitWindow = model.AnonymousSessionRateLimitWindowSeconds.HasValue
             ? TimeSpan.FromSeconds(model.AnonymousSessionRateLimitWindowSeconds.Value)
+            : null;
+        settings.AnonymousMessageRateLimitTiers = ResolveTiers(model.AnonymousMessageRateLimitTiers, model.DisableAnonymousMessageRateLimitTiers);
+        settings.AnonymousSessionStartRateLimitTiers = ResolveTiers(model.AnonymousSessionStartRateLimitTiers, model.DisableAnonymousSessionStartRateLimitTiers);
+    }
+
+    /// <summary>
+    /// Resolves the stored tier list for one field. Returns an empty list when the profile opts out of
+    /// tiered limits, <see langword="null"/> when the field is blank so the site tiers are inherited,
+    /// and the parsed tiers otherwise.
+    /// </summary>
+    /// <param name="text">The submitted tier text.</param>
+    /// <param name="isDisabled">Whether the profile opts out of tiered limits for this field.</param>
+    /// <returns>The list to store on the profile settings.</returns>
+    private static List<ChatRateLimitTier> ResolveTiers(string text, bool isDisabled)
+    {
+        if (isDisabled)
+        {
+            return [];
+        }
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        // Validation runs before this, so a failure here is not expected; inherit rather than store
+        // an unusable list if it ever happens.
+        return ChatRateLimitTierTextFormatter.TryParse(text, out var tiers, out _)
+            ? tiers
             : null;
     }
 
@@ -92,6 +131,48 @@ internal static class AIProfilePromptSecurityMapper
         if (model.AnonymousSessionRateLimitWindowSeconds.HasValue && (model.AnonymousSessionRateLimitWindowSeconds < 1 || model.AnonymousSessionRateLimitWindowSeconds > MaxWindowSeconds))
         {
             updater.ModelState.AddModelError(prefix, nameof(model.AnonymousSessionRateLimitWindowSeconds), S["Anonymous session window must be between {0} and {1} second(s).", 1, MaxWindowSeconds]);
+        }
+
+        ValidateTiers(
+            model.AnonymousMessageRateLimitTiers,
+            model.DisableAnonymousMessageRateLimitTiers,
+            nameof(model.AnonymousMessageRateLimitTiers),
+            updater,
+            prefix,
+            S);
+
+        ValidateTiers(
+            model.AnonymousSessionStartRateLimitTiers,
+            model.DisableAnonymousSessionStartRateLimitTiers,
+            nameof(model.AnonymousSessionStartRateLimitTiers),
+            updater,
+            prefix,
+            S);
+    }
+
+    private static void ValidateTiers(
+        string text,
+        bool isDisabled,
+        string field,
+        IUpdateModel updater,
+        string prefix,
+        IStringLocalizer S)
+    {
+        if (isDisabled)
+        {
+            // Keeping both would hide one of them, so make the contradiction explicit rather than
+            // silently discarding the tiers the author typed.
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                updater.ModelState.AddModelError(prefix, field, S["Clear the tiers or uncheck the option that disables them; they cannot both be set."]);
+            }
+
+            return;
+        }
+
+        if (!ChatRateLimitTierTextFormatter.TryParse(text, out _, out var error))
+        {
+            updater.ModelState.AddModelError(prefix, field, ChatRateLimitTierTextFormatter.Describe(error, S));
         }
     }
 }

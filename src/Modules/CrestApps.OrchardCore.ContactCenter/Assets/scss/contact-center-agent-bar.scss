@@ -7,9 +7,10 @@
  * and disposition are intentionally NOT editable here — the soft phone owns status, and dispositioning happens on
  * the activity screen — so the bar stays compact.
  *
- * It docks inside `.ta-content` (JS adds `--docked`) so its left edge clears the fixed left sidebar and it reserves
- * its own height in the content flow instead of covering the page's action buttons. When the content column is not
- * found it falls back to a fixed full-width strip.
+ * The bar is fixed to the viewport bottom and horizontally centered. It starts collapsed to a small tab that is
+ * always on screen; the admin content column (`.ta-content`) reserves that tab's height at its bottom so the tab
+ * never covers page content. Expanding the bar grows it upward, overlaying the content above the tab — that
+ * overlay is deliberate and only happens while the agent has it open.
  */
 .cc-agent-bar {
     // Fixed to the viewport bottom and horizontally centered, so it never sits under the left sidebar and never
@@ -34,6 +35,28 @@
     &[hidden] {
         display: none;
     }
+
+    // Collapsed: the bar shrinks to just the tab handle. The full inner content is taken out of the flow so the
+    // strip is only as tall as the tab, tucked against the bottom edge and out of the agent's way.
+    &.is-collapsed {
+        .cc-agent-bar__inner {
+            display: none;
+        }
+
+        .cc-agent-bar__handle {
+            display: flex;
+        }
+    }
+}
+
+// Reserve the always-visible collapsed tab's height at the bottom of the admin content column so the tab never
+// sits over page content. Only the tab height is reserved: the expanded bar is allowed to overlay content above
+// the tab. This rule only ships on pages that load the bar (the stylesheet is registered with it). The `body`
+// prefix lifts specificity above the admin theme's own `.ta-content` gutter so the reservation wins regardless of
+// stylesheet order, while full-height pages that manage their own layout (for example the AI chat screen) still
+// opt out by zeroing this padding with `!important`.
+body .ta-content {
+    padding-bottom: 3rem;
 }
 
 .cc-agent-bar__inner {
@@ -43,6 +66,64 @@
     gap: 0.5rem;
     min-height: 34px;
     padding: 0.15rem 0.6rem;
+}
+
+// The collapsed tab: a slim, full-width button carrying the live presence dot and a chevron the agent clicks to
+// open the bar. Hidden while the bar is expanded (the tail's chevron collapses it again).
+.cc-agent-bar__handle {
+    display: none;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    min-height: 30px;
+    padding: 0.2rem 0.7rem;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+
+    .fa-chevron-up {
+        margin-left: auto;
+        font-size: 0.7rem;
+        opacity: 0.7;
+    }
+
+    &:hover .fa-chevron-up {
+        opacity: 1;
+    }
+}
+
+.cc-agent-bar__handle-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+// "Work waiting" cue: a small amber dot shown on the collapsed tab when there is a call in progress or a wrap-up
+// still to complete behind it. Pushed to the right so it sits just before the chevron. Hidden unless the script
+// marks it visible (a class, not the hidden attribute, so it never fights the element's own display rule).
+.cc-agent-bar__handle-badge {
+    display: none;
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #f1c40f;
+    box-shadow: 0 0 0 rgba(241, 196, 15, 0.6);
+
+    &.is-visible {
+        display: inline-block;
+        animation: cc-bar-badge-pulse 1.6s ease-in-out infinite;
+    }
+}
+
+@keyframes cc-bar-badge-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(241, 196, 15, 0.5); }
+    50% { box-shadow: 0 0 0 4px rgba(241, 196, 15, 0); }
 }
 
 // The always-present top row: read-only status chip on the left, connection tail (headphone) on the right.
@@ -97,6 +178,10 @@
 
 .cc-bar__context {
     min-width: 0;
+    // A small bottom margin under the work context (the connected-call / offer / wrap-up card) so it clears the
+    // bar's bottom edge and the card sits evenly rather than flush against it. Only present when work is showing,
+    // since the empty context is collapsed out below.
+    margin-bottom: 0.35rem;
 
     // Idle renders nothing into the context; collapse it so the bar is just the top row until work arrives and
     // no empty gap is left below the status chip.
@@ -205,6 +290,22 @@
 .cc-bar__workspace {
     color: rgba(244, 246, 248, 0.85);
     text-decoration: none;
+
+    &:hover { color: #fff; }
+}
+
+// Collapse chevron in the tail: mirrors the tab's expand chevron so the agent can tuck the bar away again.
+.cc-bar__collapse {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.1rem 0.2rem;
+    background: transparent;
+    border: 0;
+    line-height: 1;
+    font-size: 0.72rem;
+    color: rgba(244, 246, 248, 0.7);
+    cursor: pointer;
 
     &:hover { color: #fff; }
 }

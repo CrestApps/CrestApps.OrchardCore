@@ -1,0 +1,10 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<WebCrawler>
+
+<a asp-action="Edit"
+   asp-controller="WebCrawlers"
+   asp-area="CrestApps.OrchardCore.AI.DataSources.WebCrawlers"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>

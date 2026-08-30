@@ -73,7 +73,9 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             context.Updater.ModelState.AddModelError(Prefix, nameof(sharedModel.AIKnowledgeBaseIndexProfileName), S["The destination index is required."]);
         }
 
-        if (string.IsNullOrWhiteSpace(sharedModel.ContentFieldName))
+        var requiresFieldMapping = AIDataSourceDriverHelper.RequiresFieldMapping(AIDataSourceDriverHelper.GetSourceType(dataSource));
+
+        if (requiresFieldMapping && string.IsNullOrWhiteSpace(sharedModel.ContentFieldName))
         {
             context.Updater.ModelState.AddModelError(Prefix, nameof(sharedModel.ContentFieldName), S["The content field is required."]);
         }
@@ -158,6 +160,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
         model.TitleFieldName = dataSource.TitleFieldName;
         model.ContentFieldName = dataSource.ContentFieldName;
         model.IsConfigurationLocked = isConfigurationLocked;
+        model.ShowFieldMapping = AIDataSourceDriverHelper.RequiresFieldMapping(sourceType);
 
         var allIndexes = await _indexProfileStore.GetAllAsync();
         var knowledgeBaseIndexes = allIndexes

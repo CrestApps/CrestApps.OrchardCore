@@ -40,6 +40,13 @@ public class EditAIDataSourceSharedViewModel
     public bool IsConfigurationLocked { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the field mapping section is shown. Sources that supply
+    /// their own document title, content, and key (for example the <c>Web</c> source) hide it.
+    /// </summary>
+    [BindNever]
+    public bool ShowFieldMapping { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the AI knowledge base index profile names.
     /// </summary>
     [BindNever]
