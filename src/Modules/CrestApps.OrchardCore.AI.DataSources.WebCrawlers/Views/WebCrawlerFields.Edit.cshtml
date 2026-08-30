@@ -1,6 +1,14 @@
 @using CrestApps.OrchardCore.AI.DataSources.WebCrawlers.ViewModels
+@using CrestApps.Core.AI.WebCrawlers
+@using Microsoft.Extensions.Options
+
+@inject IOptions<WebCrawlerOptions> WebCrawlerOptions
 
 @model WebCrawlerFieldsViewModel
+
+@{
+    var crawlerDefaults = WebCrawlerOptions.Value;
+}
 
 <div class="ocat-wrapper">
     <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
@@ -46,6 +54,6 @@
     <div class="ocat-end">
         <input asp-for="ReindexIntervalMinutes" class="form-control" type="number" min="1" />
         <span asp-validation-for="ReindexIntervalMinutes" class="text-danger"></span>
-        <span class="hint">@T["How often the background task re-crawls this site and re-indexes changed pages. Leave empty to use the global default (24 hours). The task evaluates crawlers hourly, so intervals are honored to the nearest hour."]</span>
+        <span class="hint">@T["How often the background task re-crawls this site and re-indexes changed pages. Leave empty to use the global default ({0} minutes). The task evaluates crawlers hourly, so intervals are honored to the nearest hour.", crawlerDefaults.DefaultReindexIntervalMinutes]</span>
     </div>
 </div>

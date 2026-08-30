@@ -1,6 +1,14 @@
 @using CrestApps.OrchardCore.AI.DataSources.WebCrawlers.ViewModels
+@using CrestApps.Core.AI.WebCrawlers
+@using Microsoft.Extensions.Options
+
+@inject IOptions<WebCrawlerOptions> WebCrawlerOptions
 
 @model SitemapWebCrawlerViewModel
+
+@{
+    var crawlerDefaults = WebCrawlerOptions.Value;
+}
 
 <fieldset class="ocat-wrapper">
     <legend class="ocat-label">@T["Sitemap Strategy"]</legend>
@@ -24,21 +32,21 @@
                 <label asp-for="MaxPages" class="form-label">@T["Max pages"]</label>
                 <input asp-for="MaxPages" class="form-control" type="number" min="1" />
                 <span asp-validation-for="MaxPages" class="text-danger"></span>
-                <span class="hint">@T["The most pages to scrape per crawl. Leave empty to use the default (500)."]</span>
+                <span class="hint">@T["The most pages to scrape per crawl. Leave empty to use the default ({0}).", crawlerDefaults.DefaultMaxPages]</span>
             </div>
 
             <div class="col-md-4 mb-3">
                 <label asp-for="MaxConcurrentRequests" class="form-label">@T["Max concurrent requests"]</label>
                 <input asp-for="MaxConcurrentRequests" class="form-control" type="number" min="1" />
                 <span asp-validation-for="MaxConcurrentRequests" class="text-danger"></span>
-                <span class="hint">@T["How many pages are fetched in parallel. Leave empty to use the default (4). Keep this low to be polite to the target site."]</span>
+                <span class="hint">@T["How many pages are fetched in parallel. Leave empty to use the default ({0}). Keep this low to be polite to the target site.", crawlerDefaults.DefaultMaxConcurrentRequests]</span>
             </div>
 
             <div class="col-md-4 mb-3">
                 <label asp-for="RequestTimeoutSeconds" class="form-label">@T["Request timeout (seconds)"]</label>
                 <input asp-for="RequestTimeoutSeconds" class="form-control" type="number" min="1" />
                 <span asp-validation-for="RequestTimeoutSeconds" class="text-danger"></span>
-                <span class="hint">@T["Per-request fetch timeout. Leave empty to use the default (30 seconds)."]</span>
+                <span class="hint">@T["Per-request fetch timeout. Leave empty to use the default ({0} seconds).", crawlerDefaults.DefaultRequestTimeoutSeconds]</span>
             </div>
         </div>
 
