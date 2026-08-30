@@ -172,17 +172,28 @@
     root.hidden = false;
 
     // The bar stays out of the way by default: it is collapsed to a small tab the agent clicks to open. A new
-    // phone offer forces it open on its own (tracked by reservation id so any one offer only auto-opens once,
-    // and the agent can still collapse it back down); every other state — an active call, a post-call wrap-up
-    // prompt — waits behind the tab until the agent opens it, so a lingering record never sits in their way.
+    // phone offer opens it on its own; when that work is finished it tucks itself away again, and tapping off
+    // the bar closes it too, so an open bar never stands between the agent and the page. A post-call wrap-up
+    // waits behind the tab (a small cue marks it) until the agent opens it, so nothing lingers in their way.
     var collapsed = true;
-    var autoOpenedOfferId = null;
+    var autoOpenedWorkId = null;
     applyCollapsed();
     if (handle) {
       handle.addEventListener('click', function () {
         setCollapsed(false);
       });
     }
+
+    // Tapping anywhere off the bar tucks it away, so an open bar is never a trap in front of the page — the one
+    // exception is a ringing offer, which is the moment the bar is the thing that needs answering.
+    document.addEventListener('pointerdown', function (event) {
+      if (collapsed || state && state.offer) {
+        return;
+      }
+      if (root && !root.contains(event.target)) {
+        setCollapsed(true);
+      }
+    }, true);
     function label(key, fallback) {
       return strings[key] || fallback;
     }
@@ -193,6 +204,7 @@
         handle.setAttribute('title', collapsed ? label('expandBar', 'Open the Contact Center bar') : label('collapseBar', 'Hide the Contact Center bar'));
       }
       updateHandleDot();
+      updateHandleBadge();
     }
     function setCollapsed(value) {
       if (collapsed === value) {
@@ -211,17 +223,37 @@
       }
     }
 
-    // A ringing/preview offer pulls the bar open on its own; once the offer clears the auto-open latch resets so
-    // the next distinct offer opens it again, while an offer the agent has deliberately collapsed stays down.
-    function syncCollapsedWithOffer() {
+    // While the bar is closed but there is still work behind it (a call in progress, or a wrap-up waiting to be
+    // completed), mark the tab so the agent knows there is something to open it for.
+    function updateHandleBadge() {
+      var badge = handle ? handle.querySelector('[data-cc-handle-badge]') : null;
+      if (badge) {
+        badge.classList.toggle('is-visible', collapsed && hasPendingWork());
+      }
+    }
+    function hasPendingWork() {
+      return !!(state && (state.offer || state.activeInteraction));
+    }
+
+    // Drive the bar open or closed from the work state. A new offer opens it (tracked by reservation id so any
+    // one offer only opens it once). When the bar is fully idle it always returns to the tucked-away default,
+    // since there is nothing to show. When an auto-opened call drops into wrap-up it tucks away once too — but a
+    // wrap-up the agent then opens by hand is left alone until the work finally clears.
+    function syncBarState() {
       var offer = state && state.offer;
+      var active = state && state.activeInteraction;
+      var liveCall = !!(active && !isEnded(active));
       if (offer && offer.reservationId) {
-        if (offer.reservationId !== autoOpenedOfferId) {
-          autoOpenedOfferId = offer.reservationId;
+        if (offer.reservationId !== autoOpenedWorkId) {
+          autoOpenedWorkId = offer.reservationId;
           collapsed = false;
         }
-      } else {
-        autoOpenedOfferId = null;
+      } else if (!offer && !active) {
+        autoOpenedWorkId = null;
+        collapsed = true;
+      } else if (!liveCall && autoOpenedWorkId !== null) {
+        autoOpenedWorkId = null;
+        collapsed = true;
       }
       applyCollapsed();
     }
@@ -278,7 +310,7 @@
     function render(data) {
       state = data;
       computeOffset(data.serverTimeUtc);
-      syncCollapsedWithOffer();
+      syncBarState();
       renderBar();
       tick();
     }

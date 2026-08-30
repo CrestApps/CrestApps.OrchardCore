@@ -103,6 +103,29 @@ body .ta-content {
     white-space: nowrap;
 }
 
+// "Work waiting" cue: a small amber dot shown on the collapsed tab when there is a call in progress or a wrap-up
+// still to complete behind it. Pushed to the right so it sits just before the chevron. Hidden unless the script
+// marks it visible (a class, not the hidden attribute, so it never fights the element's own display rule).
+.cc-agent-bar__handle-badge {
+    display: none;
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #f1c40f;
+    box-shadow: 0 0 0 rgba(241, 196, 15, 0.6);
+
+    &.is-visible {
+        display: inline-block;
+        animation: cc-bar-badge-pulse 1.6s ease-in-out infinite;
+    }
+}
+
+@keyframes cc-bar-badge-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(241, 196, 15, 0.5); }
+    50% { box-shadow: 0 0 0 4px rgba(241, 196, 15, 0); }
+}
+
 // The always-present top row: read-only status chip on the left, connection tail (headphone) on the right.
 .cc-agent-bar__top {
     display: flex;
