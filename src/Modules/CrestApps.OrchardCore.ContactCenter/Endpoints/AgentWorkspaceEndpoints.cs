@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -82,6 +83,7 @@ internal static class AgentWorkspaceEndpoints
         IDisplayNameProvider displayNameProvider,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IClock clock,
+        IOptions<AgentAvailabilityOptions> availabilityOptions,
         LinkGenerator linkGenerator,
         HttpContext httpContext)
     {
@@ -148,7 +150,7 @@ internal static class AgentWorkspaceEndpoints
         var recentInteractions = await interactionManager.GetRecentByAgentAsync(profile.ItemId, RecentHistoryCount, httpContext.RequestAborted);
 
         model.Offer = await BuildOfferAsync(profile.ItemId, now, reservationManager, activityManager, queueManager, contentManager, httpContext.RequestAborted);
-        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, recentInteractions, authorizationService, interactionManager, activityManager, queueManager, contentManager, voiceProviderResolver, linkGenerator, httpContext, httpContext.RequestAborted);
+        model.ActiveInteraction = await BuildActiveInteractionAsync(profile, recentInteractions, now, availabilityOptions.Value.MaximumWrapUpDuration, authorizationService, interactionManager, activityManager, queueManager, contentManager, voiceProviderResolver, linkGenerator, httpContext, httpContext.RequestAborted);
         model.RecentHistory = BuildRecentHistory(recentInteractions);
 
         return TypedResults.Ok(model);
@@ -609,6 +611,8 @@ internal static class AgentWorkspaceEndpoints
     private static async Task<WorkspaceActiveInteractionViewModel> BuildActiveInteractionAsync(
         AgentProfile profile,
         IReadOnlyCollection<Interaction> recentInteractions,
+        DateTime now,
+        TimeSpan wrapUpWindow,
         IAuthorizationService authorizationService,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
@@ -623,7 +627,10 @@ internal static class AgentWorkspaceEndpoints
 
         if (interaction is null)
         {
-            interaction = await FindPendingWrapUpInteractionAsync(profile, recentInteractions, activityManager, cancellationToken);
+            // Bound the post-call wrap-up the bar shows to the wrap-up window. Past that, the interaction is no
+            // longer the agent's live after-call work (the availability recovery pass would have closed it out),
+            // so a call finished a while ago must not keep sitting in the bar demanding completion.
+            interaction = await FindPendingWrapUpInteractionAsync(profile, recentInteractions, activityManager, now, wrapUpWindow, cancellationToken);
         }
 
         if (interaction is null)
@@ -684,24 +691,46 @@ internal static class AgentWorkspaceEndpoints
         }
 
         var recentInteractions = await interactionManager.GetRecentByAgentAsync(profile.ItemId, RecentHistoryCount, cancellationToken);
-        var wrapUpInteraction = await FindPendingWrapUpInteractionAsync(profile, recentInteractions, activityManager, cancellationToken);
+        // No recency bound here: this authorizes the agent to complete work they genuinely handled, which stays
+        // valid even after the bar has stopped surfacing the wrap-up prompt for it.
+        var wrapUpInteraction = await FindPendingWrapUpInteractionAsync(profile, recentInteractions, activityManager, now: default, wrapUpWindow: null, cancellationToken);
 
         return string.Equals(wrapUpInteraction?.ActivityItemId, activityId, StringComparison.Ordinal);
+    }
+
+    // A just-ended call is live after-call work only within the wrap-up window; past it the availability recovery
+    // pass would have closed the wrap-up out, so the bar must stop offering it too. A null window disables the
+    // bound (used by the completion-authorization path, which stays valid regardless of how long ago the call ended).
+    private static bool IsWithinWrapUpWindow(Interaction interaction, DateTime now, TimeSpan? wrapUpWindow)
+    {
+        if (wrapUpWindow is null)
+        {
+            return true;
+        }
+
+        var endedUtc = interaction.EndedUtc ?? interaction.ModifiedUtc ?? interaction.CreatedUtc;
+
+        return endedUtc + wrapUpWindow.Value >= now;
     }
 
     private static async Task<Interaction> FindPendingWrapUpInteractionAsync(
         AgentProfile profile,
         IReadOnlyCollection<Interaction> recentInteractions,
         IOmnichannelActivityManager activityManager,
+        DateTime now,
+        TimeSpan? wrapUpWindow,
         CancellationToken cancellationToken)
     {
         // Wrap-up (disposition) applies only to a call the agent actually handled: it must have ended normally and
         // have been answered. A failed or never-answered call — an unanswered inbound ring, a busy/failed dial —
         // was not handled, so it must never linger in the bar or workspace demanding an activity completion.
+        // When a wrap-up window is supplied, a call that ended longer ago than that window is no longer live
+        // after-call work and is dropped, so a stale record cannot stick around indefinitely.
         var candidates = recentInteractions
             .Where(interaction => interaction.Status == InteractionStatus.Ended &&
                 interaction.AnsweredUtc.HasValue &&
-                !string.IsNullOrEmpty(interaction.ActivityItemId))
+                !string.IsNullOrEmpty(interaction.ActivityItemId) &&
+                IsWithinWrapUpWindow(interaction, now, wrapUpWindow))
             .ToArray();
 
         if (candidates.Length == 0)
