@@ -106,6 +106,12 @@ internal sealed class AdminMenu : AdminNavigationProvider
                         .Action("Index", "Dispositions", "CrestApps.OrchardCore.Omnichannel.Managements")
                         .Permission(OmnichannelConstants.Permissions.ManageDispositions)
                         .LocalNav())
+                    .Add(S["Cadences"], S["Cadences"].PrefixPosition(), cadences => cadences
+                        .AddClass("cadences")
+                        .Id("cadences")
+                        .Action("Index", "Cadences", "CrestApps.OrchardCore.Omnichannel.Managements")
+                        .Permission(OmnichannelConstants.Permissions.ManageCadences)
+                        .LocalNav())
                 ),
                 priority: 1);
     }

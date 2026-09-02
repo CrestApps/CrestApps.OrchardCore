@@ -121,6 +121,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string AgentServices = "CrestApps.OrchardCore.ContactCenter.AgentServices";
             public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
             public const string Area = "CrestApps.OrchardCore.ContactCenter";
+            public const string BusinessHours = "CrestApps.OrchardCore.ContactCenter.BusinessHours";
             public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
             public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
             public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";

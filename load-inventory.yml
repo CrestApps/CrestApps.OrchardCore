@@ -1,0 +1,243 @@
+- generic [ref=f23e2]:
+  - navigation [ref=f23e3]:
+    - generic [ref=f23e5]:
+      - link "DialPad DialPad" [ref=f23e8] [cursor=pointer]:
+        - /url: /Admin
+        - generic [ref=f23e9]:
+          - img "DialPad" [ref=f23e10]
+          - generic [ref=f23e11]: DialPad
+      - list [ref=f23e12]:
+        - listitem [ref=f23e13]:
+          - button "Toggle theme (light)" [ref=f23e15] [cursor=pointer]
+        - listitem [ref=f23e18]:
+          - button "Visit Site" [ref=f23e19] [cursor=pointer]
+        - listitem [ref=f23e21]:
+          - button [ref=f23e23] [cursor=pointer]
+  - generic [ref=f23e25]:
+    - navigation [ref=f23e26]:
+      - list [ref=f23e27]:
+        - listitem [ref=f23e28]:
+          - figure [ref=f23e29]:
+            - button "Content" [ref=f23e31] [cursor=pointer]
+        - listitem [ref=f23e37]:
+          - figure [ref=f23e38]:
+            - button "Design" [ref=f23e40] [cursor=pointer]
+        - listitem [ref=f23e46]:
+          - figure [ref=f23e47]:
+            - button "Access Control" [ref=f23e49] [cursor=pointer]
+        - listitem [ref=f23e55]:
+          - figure [ref=f23e56]:
+            - button "Interaction Center" [expanded] [ref=f23e58] [cursor=pointer]
+            - list [ref=f23e64]:
+              - listitem [ref=f23e65]:
+                - figure [ref=f23e66]:
+                  - link "My workspace My workspace" [ref=f23e68] [cursor=pointer]:
+                    - /url: /Admin/contact-center/workspace
+                    - generic "My workspace" [ref=f23e69]
+                    - generic [ref=f23e70]: My workspace
+              - listitem [ref=f23e71]:
+                - figure [ref=f23e72]:
+                  - link "My voicemail greeting My voicemail greeting" [ref=f23e74] [cursor=pointer]:
+                    - /url: /Admin/contact-center/my-voicemail-greeting
+                    - generic "My voicemail greeting" [ref=f23e75]
+                    - generic [ref=f23e76]: My voicemail greeting
+              - listitem [ref=f23e77]:
+                - figure [ref=f23e78]:
+                  - button "Management Management" [ref=f23e80] [cursor=pointer]:
+                    - generic "Management" [ref=f23e81]
+                    - generic [ref=f23e82]: Management
+              - listitem [ref=f23e85]:
+                - figure [ref=f23e86]:
+                  - link "Activities Activities" [ref=f23e88] [cursor=pointer]:
+                    - /url: /Admin/omnichannel/activities
+                    - generic "Activities" [ref=f23e89]
+                    - generic [ref=f23e90]: Activities
+              - listitem [ref=f23e91]:
+                - figure [ref=f23e92]:
+                  - link "Contacts Contacts" [ref=f23e94] [cursor=pointer]:
+                    - /url: /Admin/Contents/ContentItems/Customer
+                    - generic "Contacts" [ref=f23e95]
+                    - generic [ref=f23e96]: Contacts
+        - listitem [ref=f23e97]:
+          - figure [ref=f23e98]:
+            - button "Artificial Intelligence" [ref=f23e100] [cursor=pointer]
+        - listitem [ref=f23e106]:
+          - figure [ref=f23e107]:
+            - button "Multi-Tenancy" [ref=f23e109] [cursor=pointer]
+        - listitem [ref=f23e115]:
+          - figure [ref=f23e116]:
+            - button "Reports" [ref=f23e118] [cursor=pointer]
+        - listitem [ref=f23e124]:
+          - figure [ref=f23e125]:
+            - button "Tools" [ref=f23e127] [cursor=pointer]
+        - listitem [ref=f23e133]:
+          - figure [ref=f23e134]:
+            - button "Settings" [ref=f23e136] [cursor=pointer]
+    - button "⟪" [ref=f23e143] [cursor=pointer]
+  - generic [ref=f23e144]:
+    - heading "Load Inventory" [level=1] [ref=f23e145]
+    - generic [ref=f23e146]:
+      - button "Submit" [ref=f23e147] [cursor=pointer]
+      - button "Submit" [ref=f23e148] [cursor=pointer]
+      - generic [ref=f23e151]:
+        - searchbox "Search" [active] [ref=f23e154]
+        - button "Add Inventory Load" [ref=f23e156] [cursor=pointer]
+      - list [ref=f23e157]:
+        - listitem [ref=f23e158]:
+          - generic [ref=f23e161]:
+            - checkbox "Select All 10 items / 35 items in total 0 selected" [ref=f23e162]
+            - generic "Select All"
+            - generic [ref=f23e163]: 10 items / 35 items in total
+        - listitem [ref=f23e165]:
+          - checkbox [ref=f23e168]
+          - generic [ref=f23e171]:
+            - generic [ref=f23e174]:
+              - heading "AI SMS conversation test" [level=5] [ref=f23e176]
+              - generic [ref=f23e177]:
+                - time [ref=f23e180]: 1 day ago
+                - generic [ref=f23e181]: malhayek
+                - generic [ref=f23e183]: Loaded
+                - generic [ref=f23e185]: Automatic
+                - generic [ref=f23e187]: 1 activity
+            - link "View" [ref=f23e191] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/4hvzvbr9bncgq3nxgnyf43pyxm
+        - listitem [ref=f23e192]:
+          - checkbox [ref=f23e195]
+          - generic [ref=f23e198]:
+            - generic [ref=f23e201]:
+              - heading "AI SMS no-endpoint test" [level=5] [ref=f23e203]
+              - generic [ref=f23e204]:
+                - time [ref=f23e207]: 1 day ago
+                - generic [ref=f23e208]: malhayek
+                - generic [ref=f23e210]: Loaded
+                - generic [ref=f23e212]: Automatic
+                - generic [ref=f23e214]: 1 activity
+            - link "View" [ref=f23e218] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/4rctc8wfxr70etpf6354ssy24p
+        - listitem [ref=f23e219]:
+          - checkbox [ref=f23e222]
+          - generic [ref=f23e225]:
+            - generic [ref=f23e228]:
+              - heading "AI SMS lead gen v2" [level=5] [ref=f23e230]
+              - generic [ref=f23e231]:
+                - time [ref=f23e234]: 1 day ago
+                - generic [ref=f23e235]: malhayek
+                - generic [ref=f23e237]: Loaded
+                - generic [ref=f23e239]: Automatic
+                - generic [ref=f23e241]: 1 activity
+            - link "View" [ref=f23e245] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/4vk8154f83pns54b91q97ff0wp
+        - listitem [ref=f23e246]:
+          - checkbox [ref=f23e249]
+          - generic [ref=f23e252]:
+            - generic [ref=f23e255]:
+              - heading "AI SMS lead gen test" [level=5] [ref=f23e257]
+              - generic [ref=f23e258]:
+                - time [ref=f23e261]: 1 day ago
+                - generic [ref=f23e262]: malhayek
+                - generic [ref=f23e264]: Loaded
+                - generic [ref=f23e266]: Automatic
+                - generic [ref=f23e268]: 1 activity
+            - link "View" [ref=f23e272] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/4a178ej9yfw3c1khyjnqqtfs4y
+        - listitem [ref=f23e273]:
+          - checkbox [ref=f23e276]
+          - generic [ref=f23e279]:
+            - generic [ref=f23e282]:
+              - heading "AI Voice subject-fields v3" [level=5] [ref=f23e284]
+              - generic [ref=f23e285]:
+                - time [ref=f23e288]: 1 day ago
+                - generic [ref=f23e289]: malhayek
+                - generic [ref=f23e291]: Loaded
+                - generic [ref=f23e293]: Automatic
+                - generic [ref=f23e295]: 1 activity
+            - link "View" [ref=f23e299] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/49y74xek6snwh21z9gaysn62dy
+        - listitem [ref=f23e300]:
+          - checkbox [ref=f23e303]
+          - generic [ref=f23e306]:
+            - generic [ref=f23e309]:
+              - heading "AI Voice subject-fields v2" [level=5] [ref=f23e311]
+              - generic [ref=f23e312]:
+                - time [ref=f23e315]: 1 day ago
+                - generic [ref=f23e316]: malhayek
+                - generic [ref=f23e318]: Loaded
+                - generic [ref=f23e320]: Automatic
+                - generic [ref=f23e322]: 1 activity
+            - link "View" [ref=f23e326] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/49cwmbff0ms9d7rtsdp5br2rcz
+        - listitem [ref=f23e327]:
+          - checkbox [ref=f23e330]
+          - generic [ref=f23e333]:
+            - generic [ref=f23e336]:
+              - heading "AI Voice subject-update test" [level=5] [ref=f23e338]
+              - generic [ref=f23e339]:
+                - time [ref=f23e342]: 1 day ago
+                - generic [ref=f23e343]: malhayek
+                - generic [ref=f23e345]: Loaded
+                - generic [ref=f23e347]: Automatic
+                - generic [ref=f23e349]: 1 activity
+            - link "View" [ref=f23e353] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/42k8yp938ya8b0m0dfrn26zjxc
+        - listitem [ref=f23e354]:
+          - checkbox [ref=f23e357]
+          - generic [ref=f23e360]:
+            - generic [ref=f23e363]:
+              - heading "AI Voice sales-prompt test" [level=5] [ref=f23e365]
+              - generic [ref=f23e366]:
+                - time [ref=f23e369]: 1 day ago
+                - generic [ref=f23e370]: malhayek
+                - generic [ref=f23e372]: Loaded
+                - generic [ref=f23e374]: Automatic
+                - generic [ref=f23e376]: 1 activity
+            - link "View" [ref=f23e380] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/41dq1nmwvct98vzydx48c83a4h
+        - listitem [ref=f23e381]:
+          - checkbox [ref=f23e384]
+          - generic [ref=f23e387]:
+            - generic [ref=f23e390]:
+              - heading "AI Voice name+email demo" [level=5] [ref=f23e392]
+              - generic [ref=f23e393]:
+                - time [ref=f23e396]: 2 days ago
+                - generic [ref=f23e397]: malhayek
+                - generic [ref=f23e399]: Loaded
+                - generic [ref=f23e401]: Automatic
+                - generic [ref=f23e403]: 1 activity
+            - link "View" [ref=f23e407] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/42d0h35j6nrrpzyrd0emzntd51
+        - listitem [ref=f23e408]:
+          - checkbox [ref=f23e411]
+          - generic [ref=f23e414]:
+            - generic [ref=f23e417]:
+              - heading "AI Voice email confirm 2" [level=5] [ref=f23e419]
+              - generic [ref=f23e420]:
+                - time [ref=f23e423]: 2 days ago
+                - generic [ref=f23e424]: malhayek
+                - generic [ref=f23e426]: Loaded
+                - generic [ref=f23e428]: Automatic
+                - generic [ref=f23e430]: 1 activity
+            - link "View" [ref=f23e434] [cursor=pointer]:
+              - /url: /Admin/omnichannel/activity/batches/edit/4hfwy0we11c4x0bqfp0qw90gnx
+    - navigation "Listing pages" [ref=f23e435]:
+      - list [ref=f23e436]:
+        - listitem "Go to first page." [ref=f23e437]
+        - listitem "Go to previous page." [ref=f23e438]
+        - listitem [ref=f23e439]:
+          - link "1" [ref=f23e440] [cursor=pointer]:
+            - /url: /Admin/omnichannel/activity/batches
+        - listitem [ref=f23e441]:
+          - link "2" [ref=f23e442] [cursor=pointer]:
+            - /url: /Admin/omnichannel/activity/batches?pagenum=2
+        - listitem [ref=f23e443]:
+          - link "3" [ref=f23e444] [cursor=pointer]:
+            - /url: /Admin/omnichannel/activity/batches?pagenum=3
+        - listitem [ref=f23e445]:
+          - link "4" [ref=f23e446] [cursor=pointer]:
+            - /url: /Admin/omnichannel/activity/batches?pagenum=4
+        - listitem "Go to next page." [ref=f23e447]:
+          - link [ref=f23e448] [cursor=pointer]:
+            - /url: /Admin/omnichannel/activity/batches?pagenum=2
+        - listitem "Go to last page." [ref=f23e450]:
+          - link [ref=f23e451] [cursor=pointer]:
+            - /url: /Admin/omnichannel/activity/batches?pagenum=4
+  - button "session-expired" [ref=f23e454] [cursor=pointer]

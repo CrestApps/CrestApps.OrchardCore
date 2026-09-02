@@ -46,9 +46,9 @@ public sealed class TelnyxSmsProvider : ISmsProvider
     {
         ArgumentNullException.ThrowIfNull(message);
 
-        if (string.IsNullOrEmpty(message.To) || string.IsNullOrEmpty(message.From))
+        if (string.IsNullOrEmpty(message.To))
         {
-            return Failed("Both the sending number (From) and the recipient (To) are required.");
+            return Failed("The recipient (To) is required.");
         }
 
         var options = _options.CurrentValue;
@@ -60,12 +60,24 @@ public sealed class TelnyxSmsProvider : ISmsProvider
             return Failed("The Telnyx SMS provider is not configured.");
         }
 
+        // A from-number is optional when a messaging profile is configured: Telnyx selects the sender from the
+        // profile's number pool. This lets automated flows send without a per-message channel endpoint. Without a
+        // messaging profile, an explicit From is required because Telnyx has no pool to choose from.
+        if (string.IsNullOrEmpty(message.From) && string.IsNullOrEmpty(options.MessagingProfileId))
+        {
+            return Failed("A sending number (From) is required unless a Telnyx messaging profile is configured.");
+        }
+
         var payload = new Dictionary<string, object>
         {
-            ["from"] = message.From,
             ["to"] = message.To,
             ["text"] = message.Body ?? string.Empty,
         };
+
+        if (!string.IsNullOrEmpty(message.From))
+        {
+            payload["from"] = message.From;
+        }
 
         if (!string.IsNullOrEmpty(options.MessagingProfileId))
         {
@@ -84,7 +96,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
-                _logger.LogWarning("Telnyx SMS send failed with status {StatusCode}.", (int)response.StatusCode);
+                _logger.LogWarning("Telnyx SMS send failed with status {StatusCode}. Response: {Response}", (int)response.StatusCode, Truncate(errorBody));
 
                 return Failed($"The Telnyx messaging API returned {(int)response.StatusCode}: {Truncate(errorBody)}");
             }

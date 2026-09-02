@@ -43,6 +43,12 @@ public static class ContactCenterPermissions
     public static readonly Permission ManageSkills = new("ManageContactCenterSkills", "Manage Contact Center skills", [ManageContactCenter]);
 
     /// <summary>
+    /// Grants management of business-hours calendars used to gate work distribution and automated sends. Declared so
+    /// the Business Hours feature can be administered on its own, without enabling the full Work Distribution feature.
+    /// </summary>
+    public static readonly Permission ManageBusinessHours = new("ManageContactCenterBusinessHours", "Manage Contact Center business hours", [ManageContactCenter]);
+
+    /// <summary>
     /// Grants management of dialer profiles and outbound dialing.
     /// </summary>
     public static readonly Permission ManageDialer = new("ManageContactCenterDialer", "Manage the Contact Center dialer", [ManageContactCenter]);

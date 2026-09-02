@@ -28,6 +28,14 @@ public static partial class ContactCenterConstants
         public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
 
         /// <summary>
+        /// The identifier of the Business Hours feature that provides business-hours calendars, their administration,
+        /// and the evaluation service (including the Omnichannel business-hours gate). It is shared by work
+        /// distribution, the outbound dialer, and automated Omnichannel conversations (which use it to keep
+        /// background-initiated sends within hours), so any of them can depend on it without pulling in the others.
+        /// </summary>
+        public const string BusinessHours = "CrestApps.OrchardCore.ContactCenter.BusinessHours";
+
+        /// <summary>
         /// The identifier of the work-distribution feature that adds queues, reservations, and routing strategies.
         /// </summary>
         public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";

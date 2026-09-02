@@ -75,6 +75,13 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();
 
+        // Reusable re-engagement cadences selected on automated loading campaigns.
+        services
+            .AddYesSqlDocumentCatalog<Cadence, CadenceIndex>(collection: OmnichannelConstants.CollectionName)
+            .AddScoped<ICatalogEntryHandler<Cadence>, CadenceHandler>()
+            .AddIndexProvider<CadenceIndexProvider>()
+            .AddDataMigration<CadenceIndexMigrations>();
+
         services.AddContentPart<OmnichannelContactPart>();
         services.AddContentPart<OmnichannelSubjectPart>();
         services.AddScoped<OmnichannelContactDefinitionService>();

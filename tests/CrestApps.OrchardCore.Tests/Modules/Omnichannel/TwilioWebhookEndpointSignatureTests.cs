@@ -7,11 +7,11 @@ using Microsoft.Extensions.Primitives;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 
-public sealed class TwilioEventGridEndpointSignatureTests
+public sealed class TwilioWebhookEndpointSignatureTests
 {
     private const string AuthToken = "test-auth-token";
 
-    private const string WebhookPath = "/Omnichannel/webhook/TwilioEventGrid";
+    private const string WebhookPath = "/api/twilio/webhook/sms";
 
     [Fact]
     public void IsRequestValid_WhenSignatureMatches_ReturnsTrue()
@@ -27,7 +27,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);
@@ -47,7 +47,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Convert.ToBase64String(Encoding.UTF8.GetBytes("not-a-signature"));
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
 
         // Assert
         Assert.False(isValid);
@@ -69,7 +69,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com{WebhookPath}?tenant=trusted", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
 
         // Assert
         Assert.False(isValid);
@@ -88,7 +88,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com{WebhookPath}?tenant=trusted", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);
@@ -106,7 +106,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
             });
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
 
         // Assert
         Assert.False(isValid);
@@ -125,7 +125,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, authToken: null, siteBaseUrl: null, NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, authToken: null, siteBaseUrl: null, NullLogger.Instance);
 
         // Assert
         Assert.False(isValid);
@@ -150,7 +150,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com", NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com", NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);
@@ -174,7 +174,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
 
         // Assert
         Assert.False(isValid);
@@ -193,7 +193,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com:8443{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com:8443", NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com:8443", NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);
@@ -212,7 +212,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/", NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/", NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);
@@ -237,7 +237,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
             });
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, siteBaseUrl: null, NullLogger.Instance);
 
         // Assert
         Assert.False(isValid);
@@ -261,7 +261,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com/support{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/support", NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/support", NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);
@@ -282,7 +282,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com/support{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/support", NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/support", NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);
@@ -302,7 +302,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com/support{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/support", NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/support", NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);
@@ -325,7 +325,7 @@ public sealed class TwilioEventGridEndpointSignatureTests
         context.Request.Headers["X-Twilio-Signature"] = Sign($"https://contact.example.com/support/support-portal{WebhookPath}", form);
 
         // Act
-        var isValid = TwilioEventGridEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/support", NullLogger.Instance);
+        var isValid = TwilioWebhookEndpoint.IsRequestValid(context, AuthToken, "https://contact.example.com/support", NullLogger.Instance);
 
         // Assert
         Assert.True(isValid);

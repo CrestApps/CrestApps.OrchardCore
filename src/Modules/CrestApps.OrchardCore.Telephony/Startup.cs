@@ -170,6 +170,13 @@ public sealed class SoftPhoneCoreStartup : StartupBase
         // Loads the phone-field dialer "call" button on demand, only where a phone field renders (see the provider).
         services.AddShapeTableProvider<PhoneFieldDialerShapeTableProvider>();
     }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        // The phone-field "call" button posts here to start a call on the caller's own soft phone, wherever it is
+        // connected. It belongs to the soft phone core so it is available in both the widget and extension surfaces.
+        routes.AddSoftPhoneDialerEndpoints();
+    }
 }
 
 /// <summary>
@@ -201,6 +208,17 @@ public sealed class SoftPhoneWidgetStartup : StartupBase
 [Feature(TelephonyConstants.Feature.SoftPhoneExtension)]
 public sealed class SoftPhoneExtensionStartup : StartupBase
 {
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // The browser-extension soft phone has no in-page widget filter, so signal soft-phone presence here too;
+        // otherwise the phone-field dialer "call" button (gated on that flag) never renders when the extension is
+        // the only soft phone surface.
+        services.Configure<MvcOptions>(options =>
+        {
+            options.Filters.Add<SoftPhoneExtensionDialerFilter>();
+        });
+    }
+
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes.AddSoftPhoneExtensionEndpoints();

@@ -33,11 +33,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private readonly ISession _session;
     private readonly INamedCatalog<OmnichannelDisposition> _dispositionsCatalog;
     private readonly ICatalog<OmnichannelCampaign> _campaignCatalog;
+    private readonly ICatalog<Cadence> _cadenceCatalog;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointsCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly BulkActivityAdminFormOptionsProvider _optionsProvider;
     private readonly ActivityBatchSourceOptions _activityBatchSourceOptions;
     private readonly IAIProfileManager _aiProfileManager;
+    private readonly IBusinessHoursGate _businessHoursGate;
 
     internal readonly IStringLocalizer S;
 
@@ -67,11 +69,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         ISession session,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
         ICatalog<OmnichannelCampaign> campaignCatalog,
+        ICatalog<Cadence> cadenceCatalog,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointsCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         BulkActivityAdminFormOptionsProvider optionsProvider,
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IEnumerable<IAIProfileManager> aiProfileManagers,
+        IEnumerable<IBusinessHoursGate> businessHoursGates,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _displayNameProvider = displayNameProvider;
@@ -82,11 +86,13 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _session = session;
         _dispositionsCatalog = dispositionsCatalog;
         _campaignCatalog = campaignCatalog;
+        _cadenceCatalog = cadenceCatalog;
         _channelEndpointsCatalog = channelEndpointsCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _optionsProvider = optionsProvider;
         _activityBatchSourceOptions = activityBatchSourceOptions.Value;
         _aiProfileManager = aiProfileManagers.FirstOrDefault();
+        _businessHoursGate = businessHoursGates.FirstOrDefault();
         S = stringLocalizer;
     }
 
@@ -238,6 +244,56 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 model.AIProfiles = await GetAIProfileOptionsAsync(batch.AIProfileId);
                 model.AllowAIToUpdateContact = batch.AllowAIToUpdateContact;
                 model.AllowAIToUpdateSubject = batch.AllowAIToUpdateSubject;
+                model.ResponseDelayMode = batch.ResponseDelayMode;
+                model.ResponseDelaySeconds = batch.ResponseDelaySeconds;
+                model.ResponseDelayJitterSeconds = batch.ResponseDelayJitterSeconds;
+                model.ResponseDelayModes =
+                [
+                    new(S["No delay"], nameof(OmnichannelResponseDelayMode.None)),
+                    new(S["Fixed"], nameof(OmnichannelResponseDelayMode.Fixed)),
+                    new(S["Random (base ± jitter)"], nameof(OmnichannelResponseDelayMode.Random)),
+                ];
+
+                model.CadenceId = batch.CadenceId;
+
+                var cadenceItems = new List<SelectListItem>
+                {
+                    new(S["No follow-up cadence"], ""),
+                };
+
+                foreach (var schedule in (await _cadenceCatalog.GetAllAsync())
+                    .Where(schedule => schedule.Enabled)
+                    .OrderBy(schedule => schedule.DisplayText))
+                {
+                    cadenceItems.Add(new SelectListItem(schedule.DisplayText ?? schedule.ItemId, schedule.ItemId)
+                    {
+                        Selected = string.Equals(schedule.ItemId, batch.CadenceId, StringComparison.OrdinalIgnoreCase),
+                    });
+                }
+
+                model.Cadences = cadenceItems;
+                model.BusinessHoursCalendarId = batch.BusinessHoursCalendarId;
+
+                // The business-hours calendar picker is available only when a feature provides calendars (ContactCenter).
+                // When none is registered the gate is null; leave the picker empty and treat conversations as always open.
+                var calendarItems = new List<SelectListItem>
+                {
+                    new(S["Always open (no restriction)"], ""),
+                };
+
+                if (_businessHoursGate is not null)
+                {
+                    foreach (var calendar in await _businessHoursGate.GetCalendarOptionsAsync())
+                    {
+                        calendarItems.Add(new SelectListItem(calendar.Name, calendar.Id)
+                        {
+                            Selected = string.Equals(calendar.Id, batch.BusinessHoursCalendarId, StringComparison.OrdinalIgnoreCase),
+                        });
+                    }
+                }
+
+                model.BusinessHoursCalendars = calendarItems;
+                model.ShowBusinessHoursCalendar = _businessHoursGate is not null;
             }
 
             model.Channels =
@@ -374,6 +430,22 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             batch.AIProfileId = model.AIProfileId?.Trim();
             batch.AllowAIToUpdateContact = model.AllowAIToUpdateContact;
             batch.AllowAIToUpdateSubject = model.AllowAIToUpdateSubject;
+            batch.ResponseDelayMode = model.ResponseDelayMode;
+            batch.ResponseDelaySeconds = Math.Max(0, model.ResponseDelaySeconds);
+            batch.ResponseDelayJitterSeconds = Math.Max(0, model.ResponseDelayJitterSeconds);
+
+            batch.CadenceId = string.IsNullOrWhiteSpace(model.CadenceId)
+                ? null
+                : model.CadenceId.Trim();
+            batch.BusinessHoursCalendarId = string.IsNullOrWhiteSpace(model.BusinessHoursCalendarId)
+                ? null
+                : model.BusinessHoursCalendarId.Trim();
+
+            if (!string.IsNullOrWhiteSpace(batch.CadenceId) &&
+                await _cadenceCatalog.FindByIdAsync(batch.CadenceId) is null)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.CadenceId), S["The selected cadence is invalid."]);
+            }
         }
         else
         {

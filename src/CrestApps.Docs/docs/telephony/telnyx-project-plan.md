@@ -37,7 +37,7 @@ One feature plus an auto-activating adapter:
 ### Base telephony feature
 
 - ✅ `TelnyxTelephonyProvider` over Telnyx Call Control (`POST /v2/calls`, `.../actions/*`): dial, hangup, answer, reject, blind transfer, attended transfer, merge (conference), send DTMF, call‑state lookup. Hold/mute are handled by the browser media adapter (SIP re‑INVITE / local track toggle) and reported optimistically.
-- ✅ Browser **WebRTC** soft phone: `TelnyxTelephonyCredentialIssuer` mints short‑lived Telnyx telephony credentials (`POST /v2/telephony_credentials`), `TelnyxSoftPhoneRegistrationConfigContributor` returns the SIP‑over‑WSS registration config for the shared `sipjs` adapter, `TelnyxSoftPhoneCredentialRevoker` deletes them on sign‑out, and `TelnyxAgentCredentialStore` (index + migration) persists user → SIP username with a per‑user cap.
+- ✅ Browser **WebRTC** soft phone: short‑lived Telnyx telephony credentials are minted (`POST /v2/telephony_credentials`) and the browser logs in to Telnyx's WebRTC gateway through the **Telnyx WebRTC SDK** (`@telnyx/webrtc`, the vendored `telnyx-webrtc` media adapter) rather than the shared SIP.js adapter — the SDK owns the peer connection, media, and SDP/codec negotiation. Credentials are deleted at Telnyx on sign‑out, and user → SIP username is persisted (index + migration) with a per‑user cap so the Contact Center can resolve the agent's live endpoint when bridging.
 - ✅ **Ed25519‑signed webhooks** at `/api/telnyx/webhook/call`: `TelnyxWebhookSignatureValidator` (BouncyCastle), `TelnyxCallEventParser`, `TelnyxWebhookEndpoint` (anonymous, antiforgery‑disabled, 1 MiB cap, freshness + rate/concurrency limits, durable provider inbox), `TelnyxWebhookService` normalizing to `ProviderVoiceEvent`, and `TelnyxWebhookInboxHandler`.
 - ✅ Settings screen (API key, Call Control connection id, SIP connection id, default caller id, webhook public key, WebRTC advanced) with encrypted secrets and default‑provider handling.
 - ✅ Single tenant **API‑key** auth (no per‑user OAuth), idempotent outbound dials via Telnyx `command_id`, and non‑replay resilience for unsafe HTTP methods.
@@ -48,7 +48,21 @@ One feature plus an auto-activating adapter:
 - ✅ `DialerDial` — routes outbound lead calls through the telephony provider.
 - ✅ `AgentConnect` — `ConnectToAgentAsync` originates the agent's browser SIP leg (`sip:{user}@sip.telnyx.com`, auto‑answered by the soft phone) and bridges it to the caller (`POST /v2/calls/{caller}/actions/bridge`).
 - ✅ `CallTransfer` — live‑call transfer via `.../actions/transfer`.
+- ✅ `Recording` — `TelnyxContactCenterVoiceProvider` implements `IContactCenterVoiceRecordingProvider` (`record_start` / `record_pause` / `record_resume` / `record_stop`), with `call.recording.saved` ingested into the encrypted media store and the Telnyx‑hosted copy deleted afterwards.
+- ✅ **Bidirectional media streaming** — `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoiceMediaSession` over the `api/telnyx/media/stream` WebSocket (G.711 mu‑law), the Telnyx equivalent of Asterisk ARI External Media.
 - ✅ Inbound router into the Contact Center front door, provider identity, and feature lifecycle participant.
+
+### Extension dialing
+
+- ✅ `TelnyxTelephonyProvider` implements `ITelephonyExtensionDialProvider` and advertises `ExtensionDial | ExtensionConference`: a two‑leg originate‑and‑bridge between two Telnyx SIP‑over‑WebSocket registrations, plus conference‑add. See [Extension Dialing](./extension-dialing.md).
+
+### AI Voice Agent (`CrestApps.OrchardCore.Telnyx.AiVoice`)
+
+- ✅ Automated outbound AI voice agent: `VoiceOmnichannelProcessor` (the Phone‑channel `IOmnichannelProcessor`) dials the contact and tags `client_state` with the activity; `TelnyxAiVoiceConversationHandler` drives the speak/listen loop from webhooks using Telnyx text‑to‑speech and real‑time transcription against a selected AI chat profile, then settles the activity with a summary and disposition. See [Telnyx AI Voice Agent](./telnyx.md#telnyx-ai-voice-agent).
+
+### SMS (`CrestApps.OrchardCore.Telnyx.Sms`)
+
+- ✅ Telnyx SMS/MMS provider (appsettings‑ and UI‑configured, resolved via `IOptionsMonitor`) with an Ed25519‑signed messaging webhook at `/api/telnyx/webhook/sms` for inbound `message.received` and `message.finalized` delivery receipts. See [Telnyx SMS](./telnyx.md#telnyx-sms).
 
 ### DID → agent routing (Contact Center)
 
@@ -58,22 +72,30 @@ One feature plus an auto-activating adapter:
 
 ### Documentation
 
-- ✅ User‑facing [Telnyx](./telnyx.md) page (the module has no `README.md`; documentation lives on the docs site) and `3.0.0` changelog entries (Telnyx provider + entry‑point agent routing).
+- ✅ User‑facing [Telnyx](./telnyx.md) page (provider, WebRTC soft phone, Contact Center voice, DID → agent routing, call recording, [AI Voice Agent](./telnyx.md#telnyx-ai-voice-agent), and [Telnyx SMS](./telnyx.md#telnyx-sms)) and the [Extension Dialing](./extension-dialing.md) page (the module has no `README.md`; documentation lives on the docs site), plus `3.0.0` changelog entries (Telnyx provider + entry‑point agent routing).
 
 ## Remaining
 
-### 1. Supervisor & advanced voice features (monitor / whisper / barge, conference, recording)
+### 1. Supervisor & advanced voice features (monitor / whisper / barge, conference)
 
-**Status:** not implemented. The provider advertises only the capabilities it implements
-(`DialerDial | AgentConnect | CallTransfer`), so nothing fails closed — but the chosen scope
-("Core + supervisor/advanced") is not yet fully met.
+**Status:** partially implemented. **Recording is done** — `TelnyxContactCenterVoiceProvider` now
+implements `IContactCenterVoiceRecordingProvider` and advertises
+`DialerDial | AgentConnect | CallTransfer | Recording`, with `record_start` / `record_pause` /
+`record_resume` / `record_stop` driven by Contact Center recording governance and `call.recording.saved`
+ingestion into the encrypted media store (see [Call recording](./telnyx.md#call-recording)). **Monitor /
+whisper / barge and multi-party conference remain unimplemented**; the provider advertises only the
+capabilities it implements, so nothing fails closed.
 
-**Needed to complete:**
+Separately, **bidirectional media streaming** (the Telnyx equivalent of Asterisk ARI External Media) is now
+implemented as `TelnyxContactCenterVoiceMediaProvider` / `TelnyxContactCenterVoiceMediaSession` over the
+`api/telnyx/media/stream` WebSocket, which is what powers the [Telnyx AI Voice Agent](./telnyx.md#telnyx-ai-voice-agent).
+
+**Needed to complete the supervisor scope:**
 
 - Implement `IContactCenterVoiceMonitoringProvider` (monitor/whisper/barge) on the Telnyx CC provider using the Telnyx **Conference API**: move the live call into a conference, then join the supervisor leg muted (monitor), with `whisper_call_control_ids` (whisper), or unmuted (barge).
-- Implement `IContactCenterVoiceConferenceProvider` (add participants) and `IContactCenterVoiceRecordingProvider` (`record_start` / `record_stop` / `record_pause` / `record_resume`, and recording‑saved webhook ingestion into the recording media store).
-- Add the matching flags to `TelnyxContactCenterVoiceProvider.Capabilities` (`Monitor | Whisper | Barge | Conference | Recording`).
-- Extend `TelnyxWebhookService` to normalize conference and recording events (`conference.*`, `call.recording.saved`) into `ProviderVoiceEvent` recording/conference fields.
+- Implement `IContactCenterVoiceConferenceProvider` (add participants).
+- Add the matching flags to `TelnyxContactCenterVoiceProvider.Capabilities` (`Monitor | Whisper | Barge | Conference`).
+- Extend `TelnyxWebhookService` to normalize conference events (`conference.*`) into `ProviderVoiceEvent` conference fields.
 
 ### 2. Per‑agent outbound caller id — editor UI + dial‑path wiring
 

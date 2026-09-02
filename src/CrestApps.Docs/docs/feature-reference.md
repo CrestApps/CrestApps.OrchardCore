@@ -59,10 +59,12 @@ This page tracks every manifest-backed **module ID** or **feature ID** declared 
 | --- | --- | --- | --- |
 | `CrestApps.OrchardCore.Omnichannel` | Omnichannel | Feature | [Omnichannel Communications](./omnichannel/) |
 | `CrestApps.OrchardCore.Omnichannel.Managements` | Omnichannel Management | Feature | [Management (CRM)](./omnichannel/management) |
+| `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` | Omnichannel Channel Endpoints | Feature | [Management (CRM)](./omnichannel/management#channel-endpoint) |
 | `CrestApps.OrchardCore.Omnichannel.Activities` | Omnichannel Activities | Feature | [Management (CRM)](./omnichannel/management) |
 | `CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices` | Omnichannel - Azure Communication Services | Feature | [Azure Communication Services](./omnichannel/azure-communication-services) |
 | `CrestApps.OrchardCore.Omnichannel.EventGrid` | Omnichannel - Azure Event Grid | Feature | [Azure Event Grid](./omnichannel/event-grid) |
 | `CrestApps.OrchardCore.Omnichannel.Sms` | SMS Omnichannel Automation | Feature | [SMS Automation](./omnichannel/sms) |
+| `CrestApps.OrchardCore.Sms.Workspace` | SMS Workspace | Feature | [SMS Workspace](./omnichannel/sms-workspace) |
 
 ## Contact Center
 
@@ -71,13 +73,16 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Manifest ID | Name | Kind | Docs |
 | --- | --- | --- | --- |
 | `CrestApps.OrchardCore.ContactCenter` | Contact Center | Feature | [Contact Center](./contact-center/) |
+| `CrestApps.OrchardCore.ContactCenter.AgentServices` | Contact Center Agent Services | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Agents` | Contact Center Agents | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
+| `CrestApps.OrchardCore.ContactCenter.AgentEntitlements` | Contact Center Agent Entitlements | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Queues` | Contact Center Work Distribution | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Dialer` | Contact Center Outbound Dialer | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Dialer.Paced` | Contact Center Paced Dialing | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Voice` | Contact Center Voice | Feature | [Voice routing](./contact-center/voice-routing) |
 | `CrestApps.OrchardCore.ContactCenter.Voice.Media` | Contact Center Voice Media | Feature | [Voice routing](./contact-center/voice-routing) |
 | `CrestApps.OrchardCore.ContactCenter.InboundVoice` | Contact Center Inbound Voice | Feature | [Voice routing](./contact-center/voice-routing) |
+| `CrestApps.OrchardCore.ContactCenter.RecordingCore` | Contact Center Recording Governance | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Recording` | Contact Center Call Recording | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.SecureCapture` | Contact Center Secure Data Capture | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
 | `CrestApps.OrchardCore.ContactCenter.Supervision` | Contact Center Supervision & Live Dashboard | Feature | [Agents, Queues & Dialer](./contact-center/agents-queues-dialer) |
@@ -88,8 +93,13 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | Manifest ID | Name | Kind | Docs |
 | --- | --- | --- | --- |
 | `CrestApps.OrchardCore.Telephony` | Telephony | Feature | [Telephony](./telephony/) |
+| `CrestApps.OrchardCore.Telephony.SoftPhone.Core` | Telephony Soft Phone Core | Feature | [Telephony](./telephony/) |
 | `CrestApps.OrchardCore.Telephony.SoftPhone` | Telephony Soft Phone | Feature | [Telephony](./telephony/) |
+| `CrestApps.OrchardCore.Telephony.SoftPhone.Extension` | Telephony Soft Phone Extension | Feature | [Telephony](./telephony/) |
+| `CrestApps.OrchardCore.Telephony.Azure` | Telephony - Azure Blob Storage | Module | [Recording — Azure Blob Storage](./telephony/recording-azure-blob-storage) |
 | `CrestApps.OrchardCore.Telnyx` | Telnyx | Feature | [Telnyx](./telephony/telnyx) |
+| `CrestApps.OrchardCore.Telnyx.Sms` | Telnyx SMS | Feature | [Telnyx SMS](./telephony/telnyx#telnyx-sms) |
+| `CrestApps.OrchardCore.Telnyx.AiVoice` | Telnyx AI Voice Agent | Feature | [Telnyx AI Voice Agent](./telephony/telnyx#telnyx-ai-voice-agent) |
 | `CrestApps.OrchardCore.Asterisk` | Asterisk | Feature | [Asterisk](./telephony/asterisk) |
 | `CrestApps.OrchardCore.Dialpad` | Dialpad | Feature | [Dialpad](./telephony/dialpad) |
 

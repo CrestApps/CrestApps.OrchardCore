@@ -146,6 +146,11 @@ public static class OmnichannelConstants
         public readonly static Permission ManageCampaigns = new("ManageCampaigns", "Manage campaigns");
 
         /// <summary>
+        /// Gets the permission to manage re-engagement (nudge) schedules.
+        /// </summary>
+        public readonly static Permission ManageCadences = new("ManageCadences", "Manage cadences");
+
+        /// <summary>
         /// Gets the permission to manage campaign groups.
         /// </summary>
         public readonly static Permission ManageCampaignGroups = new("ManageCampaignGroups", "Manage campaign groups");

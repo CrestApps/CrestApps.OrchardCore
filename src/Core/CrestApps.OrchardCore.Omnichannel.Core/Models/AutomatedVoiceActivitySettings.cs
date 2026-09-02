@@ -34,4 +34,30 @@ public sealed class AutomatedVoiceActivitySettings
     /// Gets or sets a value indicating whether the AI may update the subject during an automated conversation.
     /// </summary>
     public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets how long the automated conversation waits before sending each AI reply.
+    /// </summary>
+    public OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reply delay in seconds (the exact wait when fixed, or the base when random).
+    /// </summary>
+    public int ResponseDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jitter, in seconds, applied around <see cref="ResponseDelaySeconds"/> when random.
+    /// </summary>
+    public int ResponseDelayJitterSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the business-hours calendar id that gates background-initiated sends (re-engagement nudges),
+    /// evaluated in the contact's local time zone. Empty is unrestricted.
+    /// </summary>
+    public string BusinessHoursCalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the reusable cadence that governs re-engagement. Empty means never nudge.
+    /// </summary>
+    public string CadenceId { get; set; }
 }

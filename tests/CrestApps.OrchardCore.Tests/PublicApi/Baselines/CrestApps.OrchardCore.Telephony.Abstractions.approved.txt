@@ -97,6 +97,7 @@ namespace CrestApps.OrchardCore.Telephony
     {
         System.Threading.Tasks.Task CallStateChanged(CrestApps.OrchardCore.Telephony.Models.TelephonyCall call);
         System.Threading.Tasks.Task CredentialsIssued(CrestApps.OrchardCore.Telephony.Models.TelephonyClientCredentials credentials);
+        System.Threading.Tasks.Task DialRequested(CrestApps.OrchardCore.Telephony.Models.TelephonyDialRequest request);
         System.Threading.Tasks.Task IncomingCall(CrestApps.OrchardCore.Telephony.Models.TelephonyCall call, CrestApps.OrchardCore.Telephony.Models.IncomingCallContext context);
         System.Threading.Tasks.Task ReceiveError(string message);
     }
@@ -712,6 +713,11 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public bool IsConnected { get; set; }
         public string ProviderName { get; set; }
         public bool RequiresAuthentication { get; set; }
+    }
+    public sealed class TelephonyDialRequest
+    {
+        public TelephonyDialRequest() { }
+        public string Number { get; set; }
     }
     public sealed class TelephonyDirectoryEntry
     {

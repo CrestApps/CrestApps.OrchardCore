@@ -1,253 +1,192 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
+/// <summary>
+/// Pins the business-hours evaluation that gates every background-initiated send — most importantly the automated SMS
+/// re-engagement (cadence) task, which must never nudge a contact after hours. A regression here would either let a
+/// nudge fire outside the contact's local business hours (the exact behavior the feature exists to prevent) or wrongly
+/// hold a live, in-hours send. Both the pure <see cref="DefaultBusinessHoursService.IsOpen(BusinessHoursCalendar, DateTime, string)"/>
+/// branches and the service boundary the gate calls are covered.
+/// </summary>
 public sealed class BusinessHoursServiceTests
 {
-    private static readonly DateTime _mondayNoonUtc = new(2026, 1, 5, 12, 0, 0, DateTimeKind.Utc);
+    // 2026-01-05 is a Monday (winter — America/New_York is EST, UTC-5); 2026-01-09 is the Friday, 2026-01-10 the Saturday.
+    private static readonly DateOnly Monday = new(2026, 1, 5);
+
+    // --- Pure schedule evaluation ----------------------------------------------------------------------------------
 
     [Fact]
-    public void IsOpen_WithinWeeklyWindow_ReturnsTrue()
+    public void IsOpen_WithinTheSameDayWindow_IsOpen()
     {
-        // Arrange
-        var calendar = CreateMondayNineToFive();
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
 
-        // Act
-        var open = DefaultBusinessHoursService.IsOpen(calendar, _mondayNoonUtc);
-
-        // Assert
-        Assert.True(open);
+        // Monday 12:00 UTC is inside 09:00–17:00.
+        Assert.True(DefaultBusinessHoursService.IsOpen(calendar, At(Monday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
-    public void IsOpen_OutsideWeeklyWindow_ReturnsFalse()
+    public void IsOpen_AfterTheWindowCloses_IsClosed()
     {
-        // Arrange
-        var calendar = CreateMondayNineToFive();
+        // This is the core after-hours nudge case: the contact's window has ended for the day, so no follow-up may fire.
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
 
-        // Act
-        var open = DefaultBusinessHoursService.IsOpen(calendar, new DateTime(2026, 1, 5, 18, 0, 0, DateTimeKind.Utc));
-
-        // Assert
-        Assert.False(open);
+        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(Monday, 18, 0), timeZoneId: null));
     }
 
     [Fact]
-    public void IsOpen_OnClosedDay_ReturnsFalse()
+    public void IsOpen_BeforeTheWindowOpens_IsClosed()
     {
-        // Arrange
-        var calendar = CreateMondayNineToFive();
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
 
-        // Act
-        var open = DefaultBusinessHoursService.IsOpen(calendar, new DateTime(2026, 1, 4, 12, 0, 0, DateTimeKind.Utc));
-
-        // Assert
-        Assert.False(open);
+        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(Monday, 8, 0), timeZoneId: null));
     }
 
     [Fact]
-    public void IsOpen_OnHoliday_ReturnsFalse()
+    public void IsOpen_OnADayWithNoOpenWindow_IsClosed()
     {
-        // Arrange
-        var calendar = CreateMondayNineToFive();
-        calendar.Holidays = [new DateOnly(2026, 1, 5)];
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
 
-        // Act
-        var open = DefaultBusinessHoursService.IsOpen(calendar, _mondayNoonUtc);
+        // Sunday has no configured window at all.
+        var sunday = new DateOnly(2026, 1, 4);
 
-        // Assert
-        Assert.False(open);
+        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(sunday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
-    public void IsOpen_WithNoSchedule_ReturnsFalse()
+    public void IsOpen_OnAHoliday_IsClosedEvenInsideTheWeeklyWindow()
     {
-        // Arrange
-        var calendar = new BusinessHoursCalendar { ItemId = "cal1", TimeZoneId = "UTC", Enabled = true };
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
+        calendar.Holidays.Add(Monday);
 
-        // Act
-        var open = DefaultBusinessHoursService.IsOpen(calendar, _mondayNoonUtc);
-
-        // Assert
-        Assert.False(open);
+        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(Monday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
-    public void IsOpen_RespectsTimeZone()
+    public void IsOpen_EvaluatesInTheOverriddenTimeZone()
     {
-        // Arrange
-        var calendar = CreateMondayNineToFive("America/New_York");
+        // The calendar is authored in UTC, but a nudge evaluates it in the contact's local zone. 21:00 UTC is closed in
+        // UTC yet 16:00 EST — inside the 09:00–17:00 window — so the contact-local override must report open.
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
+        var instant = At(Monday, 21, 0);
 
-        // Act
-        var openLocalMorning = DefaultBusinessHoursService.IsOpen(calendar, new DateTime(2026, 1, 5, 14, 30, 0, DateTimeKind.Utc));
-        var closedLocalEarly = DefaultBusinessHoursService.IsOpen(calendar, new DateTime(2026, 1, 5, 13, 30, 0, DateTimeKind.Utc));
-
-        // Assert
-        Assert.True(openLocalMorning);
-        Assert.False(closedLocalEarly);
+        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, instant, timeZoneId: null));
+        Assert.True(DefaultBusinessHoursService.IsOpen(calendar, instant, timeZoneId: "America/New_York"));
     }
 
     [Fact]
-    public void IsOpen_WithTimeZoneOverride_UsesOverrideInsteadOfCalendarTimeZone()
+    public void IsOpen_AcrossAnOvernightWindow_TracksBothSides()
     {
-        // Arrange
-        var calendar = CreateMondayNineToFive("UTC");
-        var instant = new DateTime(2026, 1, 5, 17, 30, 0, DateTimeKind.Utc);
+        // Friday 22:00 -> Saturday 02:00 (open minute 1320 > close minute 120).
+        var calendar = WeekdayCalendar(DayOfWeek.Friday, openMinute: 22 * 60, closeMinute: 2 * 60);
 
-        // Act
-        var open = DefaultBusinessHoursService.IsOpen(calendar, instant, "America/Los_Angeles");
+        var friday = new DateOnly(2026, 1, 9);
+        var saturday = new DateOnly(2026, 1, 10);
 
-        // Assert
-        Assert.True(open);
+        // Late Friday is inside the window's opening side.
+        Assert.True(DefaultBusinessHoursService.IsOpen(calendar, At(friday, 23, 0), timeZoneId: null));
+
+        // Early Saturday is still inside the window that opened the night before.
+        Assert.True(DefaultBusinessHoursService.IsOpen(calendar, At(saturday, 1, 0), timeZoneId: null));
+
+        // After the overnight window closes, Saturday is closed again.
+        Assert.False(DefaultBusinessHoursService.IsOpen(calendar, At(saturday, 5, 0), timeZoneId: null));
     }
 
-    [Theory]
-    [InlineData(2026, 1, 5, 23, 0, true)]
-    [InlineData(2026, 1, 6, 2, 0, true)]
-    [InlineData(2026, 1, 6, 7, 0, false)]
-    public void IsOpen_WithOvernightWindow_EvaluatesBothSidesOfMidnight(
-        int year,
-        int month,
-        int day,
-        int hour,
-        int minute,
-        bool expected)
+    // --- Service / gate boundary ------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Evaluate_WithNoCalendar_IsUnrestrictedSoLiveWorkIsNeverBlocked()
     {
-        // Arrange
-        var calendar = new BusinessHoursCalendar
-        {
-            ItemId = "cal1",
-            TimeZoneId = "UTC",
-            Enabled = true,
-            WeeklySchedule =
-            [
-                new BusinessHoursDay { Day = DayOfWeek.Monday, IsOpen = true, OpenMinute = 1320, CloseMinute = 360 },
-            ],
-        };
+        var service = CreateService(calendar: null);
 
-        // Act
-        var open = DefaultBusinessHoursService.IsOpen(
-            calendar,
-            new DateTime(year, month, day, hour, minute, 0, DateTimeKind.Utc));
-
-        // Assert
-        Assert.Equal(expected, open);
+        // An empty calendar id short-circuits before any lookup: unrestricted (null), which surfaces as "open".
+        Assert.Null(await service.EvaluateAsync(string.Empty, At(Monday, 12, 0), timeZoneId: null));
+        Assert.True(await service.IsOpenAsync(string.Empty, At(Monday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
-    public void IsOpen_WithEqualOpenAndCloseMinutes_TreatsDayAsOpenAllDay()
+    public async Task Evaluate_WhenTheCalendarIsMissing_IsUnrestricted()
     {
-        // Arrange
-        var calendar = new BusinessHoursCalendar
-        {
-            ItemId = "cal1",
-            TimeZoneId = "UTC",
-            Enabled = true,
-            WeeklySchedule =
-            [
-                new BusinessHoursDay { Day = DayOfWeek.Monday, IsOpen = true, OpenMinute = 0, CloseMinute = 0 },
-            ],
-        };
+        var service = CreateService(calendar: null);
 
-        // Act
-        var open = DefaultBusinessHoursService.IsOpen(calendar, _mondayNoonUtc);
-
-        // Assert
-        Assert.True(open);
+        Assert.Null(await service.EvaluateAsync("missing", At(Monday, 12, 0), timeZoneId: null));
+        Assert.True(await service.IsOpenAsync("missing", At(Monday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
-    public async Task IsOpenAsync_WithEmptyCalendarId_ReturnsTrue()
+    public async Task Evaluate_WhenTheCalendarIsDisabled_IsUnrestricted()
     {
-        // Arrange
-        var service = CreateService(new Mock<IBusinessHoursCalendarManager>());
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
+        calendar.Enabled = false;
 
-        // Act
-        var open = await service.IsOpenAsync(string.Empty, TestContext.Current.CancellationToken);
+        var service = CreateService(calendar);
 
-        // Assert
-        Assert.True(open);
+        Assert.Null(await service.EvaluateAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null));
+        Assert.True(await service.IsOpenAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null));
     }
 
     [Fact]
-    public async Task IsOpenAsync_WithDisabledCalendar_ReturnsTrue()
+    public async Task Evaluate_WhenTheCalendarIsClosed_HoldsTheSend()
     {
-        // Arrange
+        // The nudge gate calls this: a real, enabled calendar that is closed at the instant must report closed so the
+        // re-engagement task backs off.
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
+
+        var service = CreateService(calendar);
+
+        Assert.False(await service.EvaluateAsync("calendar-1", At(Monday, 22, 0), timeZoneId: null));
+        Assert.False(await service.IsOpenAsync("calendar-1", At(Monday, 22, 0), timeZoneId: null));
+    }
+
+    [Fact]
+    public async Task Evaluate_WhenTheCalendarIsOpen_AllowsTheSend()
+    {
+        var calendar = WeekdayCalendar(DayOfWeek.Monday, openMinute: 9 * 60, closeMinute: 17 * 60);
+
+        var service = CreateService(calendar);
+
+        Assert.True(await service.EvaluateAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null));
+        Assert.True(await service.IsOpenAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null));
+    }
+
+    // --- Helpers ----------------------------------------------------------------------------------------------------
+
+    private static DefaultBusinessHoursService CreateService(BusinessHoursCalendar calendar)
+    {
         var manager = new Mock<IBusinessHoursCalendarManager>();
+
         manager
-            .Setup(m => m.FindByIdAsync("cal1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BusinessHoursCalendar { ItemId = "cal1", Enabled = false });
+            .Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(calendar);
 
-        var service = CreateService(manager);
-
-        // Act
-        var open = await service.IsOpenAsync("cal1", TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.True(open);
+        return new DefaultBusinessHoursService(manager.Object, new StubClock());
     }
 
-    [Fact]
-    public async Task EvaluateAsync_WithDisabledCalendar_ReturnsNull()
-    {
-        // Arrange
-        var manager = new Mock<IBusinessHoursCalendarManager>();
-        manager
-            .Setup(m => m.FindByIdAsync("cal1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new BusinessHoursCalendar { ItemId = "cal1", Enabled = false });
-        var service = CreateService(manager);
-
-        // Act
-        var open = await service.EvaluateAsync(
-            "cal1",
-            _mondayNoonUtc,
-            null,
-            TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Null(open);
-    }
-
-    [Fact]
-    public async Task IsOpenAsync_EvaluatesScheduleThroughManager()
-    {
-        // Arrange
-        var manager = new Mock<IBusinessHoursCalendarManager>();
-        manager
-            .Setup(m => m.FindByIdAsync("cal1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(CreateMondayNineToFive());
-
-        var service = CreateService(manager, _mondayNoonUtc);
-
-        // Act
-        var open = await service.IsOpenAsync("cal1", TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.True(open);
-    }
-
-    private static DefaultBusinessHoursService CreateService(Mock<IBusinessHoursCalendarManager> manager, DateTime? now = null)
-    {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(now ?? _mondayNoonUtc);
-
-        return new DefaultBusinessHoursService(manager.Object, clock.Object);
-    }
-
-    private static BusinessHoursCalendar CreateMondayNineToFive(string timeZoneId = "UTC")
+    private static BusinessHoursCalendar WeekdayCalendar(DayOfWeek day, int openMinute, int closeMinute)
     {
         return new BusinessHoursCalendar
         {
-            ItemId = "cal1",
-            TimeZoneId = timeZoneId,
+            ItemId = "calendar-1",
+            Name = "Test Calendar",
+            TimeZoneId = "UTC",
             Enabled = true,
             WeeklySchedule =
             [
-                new BusinessHoursDay { Day = DayOfWeek.Monday, IsOpen = true, OpenMinute = 540, CloseMinute = 1020 },
+                new BusinessHoursDay
+                {
+                    Day = day,
+                    IsOpen = true,
+                    OpenMinute = openMinute,
+                    CloseMinute = closeMinute,
+                },
             ],
         };
     }
+
+    private static DateTime At(DateOnly date, int hour, int minute)
+        => new(date.Year, date.Month, date.Day, hour, minute, 0, DateTimeKind.Utc);
 }

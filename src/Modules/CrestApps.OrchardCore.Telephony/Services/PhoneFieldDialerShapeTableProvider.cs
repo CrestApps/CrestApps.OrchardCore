@@ -1,4 +1,8 @@
+using System.Text.Json;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.DisplayManagement.Descriptors;
 using OrchardCore.ResourceManagement;
@@ -61,8 +65,26 @@ internal sealed class PhoneFieldDialerShapeTableProvider : IShapeTableProvider
 
         httpContext.Items[DialerRegisteredRequestKey] = true;
 
-        httpContext.RequestServices
-            .GetRequiredService<IResourceManager>()
+        var services = httpContext.RequestServices;
+        var resourceManager = services.GetRequiredService<IResourceManager>();
+
+        // The button posts to the dial endpoint (which pushes the request to the caller's own soft phone) instead
+        // of talking to an in-page instance, so it works whether the soft phone is the in-page widget or the
+        // browser-extension window. Give the script the endpoint URL and a request-validation token to post with.
+        var dialUrl = services.GetRequiredService<LinkGenerator>()
+            .GetPathByName(httpContext, "TelephonySoftPhoneDial", values: null);
+
+        if (!string.IsNullOrEmpty(dialUrl))
+        {
+            var token = services.GetRequiredService<IAntiforgery>().GetAndStoreTokens(httpContext).RequestToken;
+
+            var config = JsonSerializer.Serialize(new { dialUrl, antiforgeryToken = token });
+
+            resourceManager.RegisterFootScript(new HtmlString(
+                $"<script>window.__telephonyPhoneFieldDialer = {config};</script>"));
+        }
+
+        resourceManager
             .RegisterResource("script", "telephony-phone-field")
             .AtFoot();
     }

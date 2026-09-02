@@ -11,6 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
     {
         public static readonly OrchardCore.Security.Permissions.Permission InitiateSecureCapture;
         public static readonly OrchardCore.Security.Permissions.Permission ManageAgents;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageBusinessHours;
         public static readonly OrchardCore.Security.Permissions.Permission ManageContactCenter;
         public static readonly OrchardCore.Security.Permissions.Permission ManageDialer;
         public static readonly OrchardCore.Security.Permissions.Permission ManageInteractions;
@@ -2139,6 +2140,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public BusinessHoursCalendarStore(YesSql.ISession session) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class BusinessHoursGate : CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate
+    {
+        public BusinessHoursGate(CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService businessHoursService, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarManager calendarManager) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class CallControlAuthorizationService : CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService
     {

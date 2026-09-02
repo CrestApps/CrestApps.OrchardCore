@@ -29,7 +29,9 @@ internal static class AzureEventGridEndpoint
     /// <param name="builder">The builder.</param>
     public static IEndpointRouteBuilder AddAzureEventGridEndpoint(this IEndpointRouteBuilder builder)
     {
-        _ = builder.MapPost("Omnichannel/webhook/AzureEventGrid", HandleAsync)
+        // Provider webhooks follow the api/{provider}/webhook/{action} convention. This endpoint is the Azure
+        // Event Grid delivery firehose (not SMS-specific), so the action names the mechanism it receives.
+        _ = builder.MapPost("api/azure/webhook/eventgrid", HandleAsync)
             .DisableAntiforgery()
             .AllowAnonymous();
 

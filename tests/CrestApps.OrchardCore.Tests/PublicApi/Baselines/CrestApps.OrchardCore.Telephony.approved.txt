@@ -42,6 +42,7 @@ namespace CrestApps.OrchardCore.Telephony
     public sealed class SoftPhoneCoreStartup : OrchardCore.Modules.StartupBase
     {
         public SoftPhoneCoreStartup() { }
+        public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony.SoftPhone.Extension")]
@@ -49,6 +50,7 @@ namespace CrestApps.OrchardCore.Telephony
     {
         public SoftPhoneExtensionStartup() { }
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Telephony.SoftPhone")]
     public sealed class SoftPhoneWidgetStartup : OrchardCore.Modules.StartupBase
@@ -144,6 +146,11 @@ namespace CrestApps.OrchardCore.Telephony.Drivers
 }
 namespace CrestApps.OrchardCore.Telephony.Filters
 {
+    public sealed class SoftPhoneExtensionDialerFilter : Microsoft.AspNetCore.Mvc.Filters.IAsyncResultFilter, Microsoft.AspNetCore.Mvc.Filters.IFilterMetadata
+    {
+        public SoftPhoneExtensionDialerFilter(Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, Microsoft.Extensions.Options.IOptions<OrchardCore.Admin.AdminOptions> adminOptions) { }
+        public System.Threading.Tasks.Task OnResultExecutionAsync(Microsoft.AspNetCore.Mvc.Filters.ResultExecutingContext context, Microsoft.AspNetCore.Mvc.Filters.ResultExecutionDelegate next) { }
+    }
     public sealed class SoftPhoneWidgetFilter : Microsoft.AspNetCore.Mvc.Filters.IAsyncResultFilter, Microsoft.AspNetCore.Mvc.Filters.IFilterMetadata
     {
         public SoftPhoneWidgetFilter(OrchardCore.DisplayManagement.Layout.ILayoutAccessor layoutAccessor, OrchardCore.Settings.ISiteService siteService, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.Telephony.Services.ISoftPhoneWidgetPresenter presenter, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Telephony.Models.SoftPhoneWidget> displayManager, Microsoft.Extensions.Options.IOptions<OrchardCore.Admin.AdminOptions> adminOptions) { }

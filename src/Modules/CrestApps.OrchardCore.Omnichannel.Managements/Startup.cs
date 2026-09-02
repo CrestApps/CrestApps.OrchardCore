@@ -80,6 +80,9 @@ public sealed class Startup : StartupBase
             .AddDisplayDriver<OmnichannelCampaignGroup, OmnichannelCampaignGroupDisplayDriver>();
 
         services
+            .AddDisplayDriver<Cadence, CadenceDisplayDriver>();
+
+        services
             .AddDisplayDriver<SubjectAction, SubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, TryAgainSubjectActionDisplayDriver>()
             .AddDisplayDriver<SubjectAction, NewActivitySubjectActionDisplayDriver>();

@@ -217,7 +217,7 @@ When the browser receives a terminal event for a different call id than the call
 
 A call is sent to voicemail when an entry point is closed and configured for voicemail, when a direct-to-agent line's ring window elapses without an answer, when a queued offer times out, or when an agent sends a ringing call to voicemail from the soft phone. In every case the interaction is flagged and projected to the recipient agent as a **missed** call before the recording leg is answered, so the agent never sees a live "in call" state for a call they did not take.
 
-### Greeting, then beep, then record {#voicemail-greeting}
+### Greeting, then beep, then record
 
 The provider answers the caller's leg, plays the greeting, and only **after the greeting finishes** starts recording with a leading **beep**. This keeps the spoken greeting out of the caller's recorded message and gives the caller the "after the tone" cue. With Telnyx this is sequenced through the provider webhook: the greeting is played with a correlation `client_state`, and its `call.speak.ended` / `call.playback.ended` event triggers `record_start` with `play_beep`. That greeting-ended signal is handled as a fast path in the webhook endpoint, ahead of the durable inbox write, so the beep-and-record starts within about a second of the greeting ending rather than queuing behind other event processing.
 

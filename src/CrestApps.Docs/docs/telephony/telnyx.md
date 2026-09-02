@@ -21,14 +21,25 @@ calls to agents server-side** (`ServerSideAcd`), which is what makes true power 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | **Telnyx** | `CrestApps.OrchardCore.Telnyx` | Provides the Telnyx telephony provider, the browser WebRTC soft phone, and signed call-event webhooks. Depends on Telephony. When Contact Center Voice is also enabled, the Telnyx contact center voice adapter (outbound contact center calls, bridging live calls to agents via `ServerSideAcd`, and their real-time call events) activates automatically — it is integration glue, not a separately selectable feature. |
-| **Telnyx SMS** | `CrestApps.OrchardCore.Telnyx.Sms` | Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text through the [SMS Workspace](../omnichannel/sms-workspace) or [SMS Automation](../omnichannel/sms). Category **Communication**. Depends on `OrchardCore.Sms`. See [Telnyx SMS](#telnyx-sms). |
+| **Telnyx SMS** | `CrestApps.OrchardCore.Telnyx.Sms` | Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text through the [SMS Workspace](../omnichannel/sms-workspace) or [SMS Automation](../omnichannel/sms). Category **Communication**. Depends on **Telnyx** and `OrchardCore.Sms`, so enabling it also enables the Telnyx voice provider. See [Telnyx SMS](#telnyx-sms). |
+| **Telnyx AI Voice Agent** | `CrestApps.OrchardCore.Telnyx.AiVoice` | Adds an automated outbound AI voice agent: the **Phone** omnichannel processor dials a contact over Telnyx, converses using Telnyx text-to-speech and real-time transcription driven by an AI chat profile, and settles the omnichannel activity with a summary and disposition. Category **Contact Center**. Depends on **Telnyx**, the **AI** and **AI Chat** features, and **Omnichannel Management**. See [Telnyx AI Voice Agent](#telnyx-ai-voice-agent). |
 
 ## Dependencies
 
-Enabling **Telnyx** automatically enables the **Telephony** feature it depends on. Install the Contact
-Center module before enabling **Telnyx Contact Center Voice**; its manifest dependency then enables
-Contact Center Voice for that tenant. Webhook signature verification uses `BouncyCastle.Cryptography`
-(Ed25519), referenced by the Telnyx Core library.
+Enabling **Telnyx** automatically enables the **Telephony** and **WebSockets** features it depends on.
+There is no separate "Telnyx Contact Center Voice" feature to enable: the Telnyx contact center voice
+adapter is integration glue that activates automatically whenever the Telnyx provider and Contact Center
+Voice are both enabled, so install and enable the Contact Center module to turn it on.
+
+The two add-on features build on the Telnyx provider:
+
+- **Telnyx SMS** depends on **Telnyx** and `OrchardCore.Sms`, so enabling it also enables the Telnyx voice
+  provider.
+- **Telnyx AI Voice Agent** depends on **Telnyx**, the **AI** and **AI Chat** features, and **Omnichannel
+  Management**.
+
+Webhook signature verification uses `BouncyCastle.Cryptography` (Ed25519), referenced by the Telnyx Core
+library.
 
 ## Authentication
 
@@ -139,9 +150,10 @@ idempotency, so a retried request after a lost response is de-duplicated rather 
 
 ## Contact Center integration
 
-Enable **Telnyx Contact Center Voice** to use Telnyx as the phone provider for the Contact Center. It
-advertises the `ServerSideAcd` delivery model and supports outbound dialing, agent connect (bridge), and
-call transfer.
+Enable the **Contact Center Voice** feature (from the Contact Center module) alongside Telnyx to use Telnyx
+as the phone provider for the Contact Center. There is no separate Telnyx feature to turn on — the Telnyx
+contact center voice adapter activates automatically whenever both are enabled. It advertises the
+`ServerSideAcd` delivery model and supports outbound dialing, agent connect (bridge), and call transfer.
 
 - **Outbound / dialer** — the dialer routes outbound calls through the Voice Contact Center Call Router to
   Telnyx, which places the lead call.
@@ -163,8 +175,14 @@ entry point maps one or more DIDs and now chooses a **Route to** target:
   agent is unavailable, the call falls back to the entry point's target queue for normal routing.
 
 To give an agent a dedicated inbound line, create an entry point with the agent's DID, set **Route to** to
-**Specific agent**, pick the agent, and set a **Target queue** as the fallback. For outbound, set the same
-number as the agent's **Outbound caller id** on their agent profile so callbacks reach them.
+**Specific agent**, pick the agent, and set a **Target queue** as the fallback.
+
+:::note
+A **per-agent** outbound caller id is not yet wired up: the `AgentProfile.OutboundCallerId` field exists on
+the model but has no editor UI and is not resolved on the dial path. Today outbound calls present the tenant
+**Default outbound caller id** (or a per-call/campaign number), so a caller who dials back an agent's personal
+DID still reaches them through that DID's entry point rather than because the agent dialed out from it.
+:::
 
 ## Call recording
 
@@ -192,13 +210,42 @@ browser media adapter because Telnyx delivers this call's audio to the browser. 
 provider advertises dialer dialing, agent connect (bridge), call transfer, and — with the Call Recording
 feature — recording.
 
+## Telnyx AI Voice Agent
+
+The **Telnyx AI Voice Agent** feature (`CrestApps.OrchardCore.Telnyx.AiVoice`) is the **voice** counterpart
+to [SMS Automation](../omnichannel/sms): instead of a human agent or a text conversation, an **AI agent**
+places an outbound call over Telnyx and talks to the contact. It registers the **Phone**-channel omnichannel
+processor, so it is driven entirely by the [Omnichannel Management](../omnichannel/management) automated
+activity pipeline — the same **subject flow → campaign → load inventory** model used by automated SMS.
+
+How a call runs:
+
+1. An automated **Phone** activity starts. The processor dials the contact over Telnyx (`POST /v2/calls`),
+   using the activity's channel endpoint as the caller id when one is set, and tags the call's `client_state`
+   with the activity so the webhook conversation loop can correlate later events back to it.
+2. When the contact answers, the agent **speaks a greeting** and then runs a speak/listen loop: Telnyx
+   **text-to-speech** renders each AI reply, and **real-time transcription** turns the contact's speech into
+   text that is appended to the AI chat session. The selected AI chat profile generates the next turn.
+3. When the conversation ends, the activity is **settled** with an AI-generated summary and a disposition,
+   just like any other omnichannel activity.
+
+The AI profile, speech-to-text deployment, text-to-speech deployment, voice, update permissions, and reply
+delay are the **automated voice settings** configured on the subject flow (and overridable per activity
+batch), resolved in order **activity batch → subject flow → global AI site settings**. See
+[Subject Flow](../omnichannel/management#subject-flow) for where these fields live and how they cascade.
+
+Bidirectional call audio is carried over a Telnyx **media-streaming WebSocket** (`api/telnyx/media/stream`,
+G.711 mu-law) — the Telnyx equivalent of Asterisk's ARI External Media seam — so the agent both hears the
+contact and injects its spoken audio on the same live leg. That endpoint must be reachable at the tenant's
+public base URL, because Telnyx dials it after the streaming command starts.
+
 ## Telnyx SMS
 
 The **Telnyx SMS** feature (`CrestApps.OrchardCore.Telnyx.Sms`) adds Telnyx as an Orchard Core **SMS
 provider**, so Telnyx numbers can send and receive text messages through the
 [SMS Workspace](../omnichannel/sms-workspace) (human two-way) and [SMS Automation](../omnichannel/sms)
-(AI-driven). It is categorized under **Communication**, not Telephony, and can be enabled independently of
-the Telnyx voice soft phone — it only depends on `OrchardCore.Sms`.
+(AI-driven). It is categorized under **Communication**, not Telephony. It depends on both **Telnyx** and
+`OrchardCore.Sms`, so enabling Telnyx SMS also enables the Telnyx voice provider on the tenant.
 
 It follows the same two-provider pattern as Orchard Core's built-in Twilio provider:
 

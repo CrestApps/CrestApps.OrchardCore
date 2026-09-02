@@ -63,6 +63,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
             public static readonly OrchardCore.Security.Permissions.Permission ListContactActivities;
             public static readonly OrchardCore.Security.Permissions.Permission ManageActivities;
             public static readonly OrchardCore.Security.Permissions.Permission ManageActivityBatches;
+            public static readonly OrchardCore.Security.Permissions.Permission ManageCadences;
             public static readonly OrchardCore.Security.Permissions.Permission ManageCampaignGroups;
             public static readonly OrchardCore.Security.Permissions.Permission ManageCampaigns;
             public static readonly OrchardCore.Security.Permissions.Permission ManageChannelEndpoints;
@@ -88,6 +89,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core
 }
 namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
 {
+    public sealed class CadenceIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public CadenceIndex() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DisplayText { get; set; }
+        public bool Enabled { get; set; }
+    }
     public sealed class OmnichannelActivityBatchIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
         public OmnichannelActivityBatchIndex() { }
@@ -301,6 +309,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string AIProfileId { get; set; }
         public bool AllowAIToUpdateContact { get; set; }
         public bool AllowAIToUpdateSubject { get; set; }
+        public string BusinessHoursCalendarId { get; set; }
+        public string CadenceId { get; set; }
+        public int ResponseDelayJitterSeconds { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+        public int ResponseDelaySeconds { get; set; }
         public string SpeechToTextDeploymentName { get; set; }
         public string TextToSpeechDeploymentName { get; set; }
         public string TextToSpeechVoiceId { get; set; }
@@ -347,6 +360,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string SubjectContentType { get; set; }
         public string[] TimeZoneIds { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityUrgencyLevel? UrgencyLevel { get; set; }
+    }
+    public sealed class Cadence : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public Cadence() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public string DisplayText { get; set; }
+        public bool Enabled { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Core.Models.CadenceStep> Steps { get; set; }
+    }
+    public sealed class CadenceStep
+    {
+        public CadenceStep() { }
+        public int DelayMinutes { get; set; }
+        public bool IsAiGenerated { get; set; }
+        public string Message { get; set; }
     }
     public sealed class ChannelEndpointSource
     {
@@ -425,6 +455,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public System.DateTime? AssignedToUtc { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus AssignmentStatus { get; set; }
         public int Attempts { get; set; }
+        public string BusinessHoursCalendarId { get; set; }
+        public string CadenceId { get; set; }
         public string CampaignId { get; set; }
         public string Channel { get; set; }
         public string ChannelEndpointId { get; set; }
@@ -446,17 +478,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string Instructions { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType InteractionType { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityKind Kind { get; set; }
+        public System.DateTime? LastReEngagementUtc { get; set; }
         public string Notes { get; set; }
         public string PreferredDestination { get; set; }
         public int ProcessingAttempts { get; set; }
         public System.DateTime? PurgedAtUtc { get; set; }
         public string PurgedById { get; set; }
         public string PurgedByUsername { get; set; }
+        public int ReEngagementAttempts { get; set; }
         public System.DateTime? ReservationExpiresUtc { get; set; }
         public string ReservationId { get; set; }
         public string ReservedById { get; set; }
         public string ReservedByUsername { get; set; }
         public System.DateTime? ReservedUtc { get; set; }
+        public int ResponseDelayJitterSeconds { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+        public int ResponseDelaySeconds { get; set; }
         public System.DateTime ScheduledUtc { get; set; }
         public string Source { get; set; }
         public string SpeechToTextDeploymentName { get; set; }
@@ -476,6 +513,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool AllowAIToUpdateContact { get; set; }
         public bool AllowAIToUpdateSubject { get; set; }
         public string Author { get; set; }
+        public string BusinessHoursCalendarId { get; set; }
+        public string CadenceId { get; set; }
         public string CampaignId { get; set; }
         public string Channel { get; set; }
         public string ChannelEndpointId { get; set; }
@@ -498,6 +537,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string PhoneNumber { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.PhoneNumberMatchType PhoneNumberMatchType { get; set; }
         public bool PreventDuplicates { get; set; }
+        public int ResponseDelayJitterSeconds { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+        public int ResponseDelaySeconds { get; set; }
         public System.DateTime ScheduleAt { get; set; }
         public string Source { get; set; }
         public string SpeechToTextDeploymentName { get; set; }
@@ -655,6 +697,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string SentByAgentId { get; set; }
         public string ServiceAddress { get; set; }
     }
+    public enum OmnichannelResponseDelayMode
+    {
+        None = 0,
+        Fixed = 1,
+        Random = 2,
+    }
     public sealed class OmnichannelSubjectAISettings
     {
         public OmnichannelSubjectAISettings() { }
@@ -802,6 +850,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public YesSql.ITableNameConvention TableNameConvention { get; }
         public string TablePrefix { get; }
     }
+    public sealed class BusinessHoursCalendarOption : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>
+    {
+        public BusinessHoursCalendarOption(string Id, string Name) { }
+        public string Id { get; init; }
+        public string Name { get; init; }
+    }
     public interface IActivityBatchLoader
     {
         string Source { get; }
@@ -832,6 +886,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public interface IBulkManageActivityFilterHandler
     {
         System.Threading.Tasks.Task FilteringAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.BulkManageActivityFilterContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IBusinessHoursGate
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IListOmnichannelActivityFilterHandler
     {
@@ -906,10 +965,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public static class OmnichannelAutomationHelper
     {
+        public const int MinimumHumanizedReplyDelaySeconds = 3;
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityStatus GetInitialActivityStatus(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType interactionType, bool hasAssignedUser) { }
         public static bool HasNoResponseTimeout(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.AutomatedVoiceActivitySettings ResolveActivitySettings(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch batch, CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
+        public static System.TimeSpan ResolveHumanizedReadingDelay(System.TimeSpan? configuredDelay, int inboundCharacterCount) { }
+        public static System.TimeSpan ResolveHumanizedTypingDelay(int replyCharacterCount) { }
         public static System.DateTime ResolveNoResponseDeadline(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings, System.DateTime utcNow) { }
+        public static System.TimeSpan? ResolveResponseDelay(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelResponseDelayMode mode, int seconds, int jitterSeconds) { }
     }
     public sealed class OmnichannelChannelEndpointManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager
     {

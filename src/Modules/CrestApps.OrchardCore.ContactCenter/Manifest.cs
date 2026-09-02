@@ -58,13 +58,21 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
+    Id = ContactCenterConstants.Feature.BusinessHours,
+    Name = "Contact Center Business Hours",
+    Description = "Adds business-hours calendars, their administration, and the evaluation service used to gate work distribution and automated Omnichannel sends. Enabled on its own or pulled in by any feature that needs it.",
+    Category = "Contact Center"
+)]
+
+[assembly: Feature(
     Id = ContactCenterConstants.Feature.Queues,
     Name = "Contact Center Work Distribution",
-    Description = "Adds work queues, queue items, reservations, business hours, and the policy-based routing strategies and activity assignment that distribute work to available agents, together with their administration screens.",
+    Description = "Adds work queues, queue items, reservations, and the policy-based routing strategies and activity assignment that distribute work to available agents, together with their administration screens.",
     Category = "Contact Center",
     Dependencies =
     [
         ContactCenterConstants.Feature.Agents,
+        ContactCenterConstants.Feature.BusinessHours,
     ]
 )]
 

@@ -217,9 +217,21 @@
     // Keep the collapsed tab's dot in step with the live presence colour so the agent can read their status
     // without opening the bar.
     function updateHandleDot() {
-      var dot = handle ? handle.querySelector('[data-cc-handle-dot]') : null;
+      if (!handle) {
+        return;
+      }
+      var status = presenceStatus();
+      var reason = state && state.presence && state.presence.reason;
+      var dot = handle.querySelector('[data-cc-handle-dot]');
       if (dot) {
-        dot.className = 'cc-bar__dot is-' + presenceStatus().toLowerCase();
+        dot.className = 'cc-bar__dot is-' + status.toLowerCase();
+      }
+
+      // Show the live presence on the collapsed tab instead of a static product name, so a minimized bar
+      // still tells the agent their status at a glance.
+      var labelEl = handle.querySelector('[data-cc-handle-label]');
+      if (labelEl) {
+        labelEl.textContent = reason || status;
       }
     }
 
@@ -312,6 +324,7 @@
       computeOffset(data.serverTimeUtc);
       syncBarState();
       renderBar();
+      updateHandleDot();
       tick();
     }
     function presenceStatus() {

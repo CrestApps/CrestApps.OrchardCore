@@ -12,9 +12,12 @@ workspace where agents send, receive, and manage SMS the way a phone's messaging
 provider and routing foundations we already own. It complements the automated (AI) SMS path documented under
 [Omnichannel](../omnichannel/index.md) and reuses the [Contact Center](../contact-center/index.md) routing model.
 
-> **Status: planning only.** No code has been written for this feature. This document records the intended
-> architecture, the reuse boundaries, the known limits, and a phased roadmap so implementation can start from
-> an agreed shape.
+> **Status: implemented — this is a historical design record.** This feature has since been built and shipped
+> as the **[SMS Workspace](../omnichannel/sms-workspace)** module; use that page as the current reference. This
+> plan is kept for its architectural rationale, reuse boundaries, and known limits, but it does **not** track
+> the final implementation. Notably, the separate **`SmsNumberRoute`** routing entity described below was
+> **not** built: all SMS routing (target, distribution mode, auto-reply) now lives on the **Omnichannel channel
+> endpoint** instead. Treat any `SmsNumberRoute` references here as the retired original design.
 
 ## Goals
 
@@ -70,7 +73,7 @@ small number-routing table instead.
 | Capability | State | Where |
 | --- | --- | --- |
 | Send SMS (provider-agnostic) | Exists | `OrchardCore.Sms.ISmsService` → `ISmsProvider` |
-| Inbound SMS webhook (Twilio) | Exists, AI-only | `TwilioWebhookEndpoint`, `TwilioEventGridEndpoint` (Omnichannel.Sms) |
+| Inbound SMS webhook (Twilio) | Exists, AI-only | `TwilioWebhookEndpoint` (Omnichannel.Sms) |
 | Inbound persisted as a message | Exists | `OmnichannelMessage` (customer/service address, inbound flag) |
 | Automated (AI) two-way SMS | Exists | `SmsOmnichannelEventHandler` — routes only to an automated activity |
 | Channel → number catalog | Exists | `OmnichannelChannelEndpoint` (Channel="SMS", Value=DID) |
@@ -287,7 +290,7 @@ Add a parallel `ISmsRealTimeNotifier` + an `SmsPortalHub` (SignalR), mirroring
   (`OmnichannelSmsComplianceHelper.IsOptOutRequest` already exists) → set `DoNotSms` + auto-close.
 - Redact addresses/PII in logs with the existing redactor pattern (`IRedactorProvider`,
   `LogDataClassifications.AddressSet`).
-- Per-provider webhook auth (Telnyx Ed25519, Twilio HMAC via the existing `TwilioEventGridEndpoint.IsRequestValid`,
+- Per-provider webhook auth (Telnyx Ed25519, Twilio HMAC via the existing `TwilioWebhookEndpoint.IsRequestValid`,
   Azure ACS Event Grid validation).
 - 10DLC / messaging-window awareness on the conversation (`WindowExpiresUtc`) so the UI can warn before a
   session-expired send.

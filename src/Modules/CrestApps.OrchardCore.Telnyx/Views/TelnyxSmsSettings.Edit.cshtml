@@ -13,16 +13,16 @@
         <h6 class="alert-heading">@T["Where to find these values in Telnyx"]</h6>
         <ol class="mb-0 ps-3">
             <li>
-                @T["<strong>API key</strong> — in the Telnyx portal, go to <em>Account → Keys &amp; Credentials → API Keys</em> and create a V2 API key."]
-                <a href="https://portal.telnyx.com/#/app/api-keys" target="_blank" rel="noopener noreferrer">@T["Open API Keys"]</a>
+                @T["<strong>API key</strong> — in the Telnyx portal, click your user icon, then <em>API Keys</em>, and create a V2 API key."]
+                <a href="https://portal.telnyx.com/#/api-keys" target="_blank" rel="noopener noreferrer">@T["Open API Keys"]</a>
             </li>
             <li>
                 @T["<strong>Messaging profile</strong> — go to <em>Messaging Suite → Programmable Messaging</em> and click <em>Create profile</em>. Select your destinations, then set both the <em>Webhook URL</em> and <em>Webhook Failover URL</em> to the address shown below. Copy the profile's ID into the <em>Messaging profile id</em> field."]
-                <a href="https://portal.telnyx.com/#/app/messaging" target="_blank" rel="noopener noreferrer">@T["Open Programmable Messaging"]</a>
+                <a href="https://portal.telnyx.com/#/programmable-messaging/profiles" target="_blank" rel="noopener noreferrer">@T["Open Programmable Messaging"]</a>
             </li>
             <li>
-                @T["<strong>Webhook public key</strong> — copy the account's public (Ed25519) key from <em>Account → Keys &amp; Credentials → Public Key</em>. It verifies inbound and delivery webhooks."]
-                <a href="https://portal.telnyx.com/#/app/account/public-keys" target="_blank" rel="noopener noreferrer">@T["Open Public Key"]</a>
+                @T["<strong>Webhook public key</strong> — click your user icon, then <em>API Keys</em>, and open the <em>Public Keys</em> tab to copy the account's public (Ed25519) key. It verifies inbound and delivery webhooks."]
+                <a href="https://portal.telnyx.com/#/api-keys/public-key" target="_blank" rel="noopener noreferrer">@T["Open Public Key"]</a>
             </li>
         </ol>
     </div>
@@ -47,9 +47,9 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="WebhookPublicKey" class="form-label">@T["Webhook public key"]</label>
+        <label asp-for="WebhookPublicKey" class="form-label">@T["Public Key"]</label>
         <input asp-for="WebhookPublicKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasWebhookPublicKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx Ed25519 public key (base64)"].Value)" />
-        <span class="hint">@T["Used to verify inbound and delivery-receipt webhooks."]</span>
+        <span class="hint">@T["Public key to validate Telnyx API V2 webhooks."]</span>
     </div>
 
     <div class="mb-3">

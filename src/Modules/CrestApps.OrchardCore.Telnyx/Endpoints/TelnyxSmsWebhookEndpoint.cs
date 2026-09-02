@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
@@ -37,7 +38,6 @@ internal static class TelnyxSmsWebhookEndpoint
         HttpContext httpContext,
         IOptionsMonitor<TelnyxSmsOptions> optionsMonitor,
         IEnumerable<IOmnichannelEventHandler> handlers,
-        ISmsConversationService conversationService,
         YesSqlSession session,
         IClock clock,
         ILogger<TelnyxSmsProvider> logger)
@@ -96,14 +96,33 @@ internal static class TelnyxSmsWebhookEndpoint
         }
         else
         {
-            await conversationService.ApplyDeliveryReceiptAsync(new SmsDeliveryReceipt
+            // Surface the carrier delivery outcome so an "accepted by Telnyx but never delivered" case (for example
+            // an unregistered A2P/10DLC or unverified toll-free sender) is diagnosable from the logs.
+            if (logger.IsEnabled(LogLevel.Information))
             {
-                ServiceAddress = messagingEvent.From,
-                ContactAddress = messagingEvent.To,
-                ProviderMessageId = messagingEvent.ProviderMessageId,
-                Status = messagingEvent.DeliveryStatus,
-                ErrorCode = messagingEvent.ErrorCode,
-            }, httpContext.RequestAborted);
+                logger.LogInformation(
+                    "Telnyx SMS delivery receipt for message '{ProviderMessageId}': status '{Status}', error code '{ErrorCode}'.",
+                    messagingEvent.ProviderMessageId,
+                    messagingEvent.DeliveryStatus,
+                    messagingEvent.ErrorCode);
+            }
+
+            // Delivery receipts update manual SMS conversations, whose tracking service ships with the SMS Workspace
+            // feature. Automated-only deployments do not enable it, so resolve it optionally and skip when absent —
+            // the inbound path above never needs it, which is why this webhook must not hard-depend on it.
+            var conversationService = httpContext.RequestServices.GetService<ISmsConversationService>();
+
+            if (conversationService is not null)
+            {
+                await conversationService.ApplyDeliveryReceiptAsync(new SmsDeliveryReceipt
+                {
+                    ServiceAddress = messagingEvent.From,
+                    ContactAddress = messagingEvent.To,
+                    ProviderMessageId = messagingEvent.ProviderMessageId,
+                    Status = messagingEvent.DeliveryStatus,
+                    ErrorCode = messagingEvent.ErrorCode,
+                }, httpContext.RequestAborted);
+            }
         }
 
         return TypedResults.Ok();

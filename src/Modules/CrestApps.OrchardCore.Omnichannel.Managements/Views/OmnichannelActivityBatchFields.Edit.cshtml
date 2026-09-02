@@ -107,6 +107,62 @@
                     </div>
                 </div>
             </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="ResponseDelayMode" class="ocat-label">@T["Reply delay"]</label>
+                <div class="ocat-end">
+                    <select asp-for="ResponseDelayMode" asp-items="Model.ResponseDelayModes" class="form-select" data-response-delay-mode></select>
+                    <span class="hint">@T["How long to wait before sending each AI reply, so responses do not feel instant. Applied to automated conversations loaded from this batch."]</span>
+
+                    <div class="mt-2" data-response-delay-seconds hidden>
+                        <label asp-for="ResponseDelaySeconds" class="form-label" data-response-delay-seconds-label>@T["Delay (seconds)"]</label>
+                        <input type="number" min="0" class="form-control" asp-for="ResponseDelaySeconds">
+                    </div>
+
+                    <div class="mt-2" data-response-delay-jitter hidden>
+                        <label asp-for="ResponseDelayJitterSeconds" class="form-label">@T["Jitter ± (seconds)"]</label>
+                        <input type="number" min="0" class="form-control" asp-for="ResponseDelayJitterSeconds">
+                        <span class="hint dashed">@T["Each reply waits a random time between (base − jitter) and (base + jitter) seconds, never less than zero."]</span>
+                    </div>
+                </div>
+            </div>
+            <script at="Foot">
+            (function () {
+                var mode = document.querySelector('[data-response-delay-mode]');
+                if (!mode) { return; }
+                var seconds = document.querySelector('[data-response-delay-seconds]');
+                var secondsLabel = document.querySelector('[data-response-delay-seconds-label]');
+                var jitter = document.querySelector('[data-response-delay-jitter]');
+                function sync() {
+                    var v = mode.value;
+                    seconds.hidden = !(v === 'Fixed' || v === 'Random');
+                    jitter.hidden = v !== 'Random';
+                    if (secondsLabel) { secondsLabel.textContent = v === 'Random' ? '@T["Base (seconds)"]' : '@T["Delay (seconds)"]'; }
+                }
+                mode.addEventListener('change', sync);
+                sync();
+            })();
+            </script>
+
+            <div class="ocat-wrapper">
+                <label asp-for="CadenceId" class="ocat-label">@T["Re-engagement"]</label>
+                <div class="ocat-end">
+                    <select asp-for="CadenceId" asp-items="Model.Cadences" class="form-select"></select>
+                    <span asp-validation-for="CadenceId" class="text-danger"></span>
+                    <span class="hint">@T["Optionally follow up with contacts who go quiet using a reusable cadence. Nudges are sent on the schedule's cadence, respect the business hours below, and stop after the schedule's last step. Leave as \"No follow-up cadence\" to never follow up."]</span>
+                </div>
+            </div>
+
+            @if (Model.ShowBusinessHoursCalendar)
+            {
+                <div class="ocat-wrapper">
+                    <label asp-for="BusinessHoursCalendarId" class="ocat-label">@T["Business hours"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="BusinessHoursCalendarId" asp-items="Model.BusinessHoursCalendars" class="form-select"></select>
+                        <span class="hint">@T["Background follow-ups (re-engagement nudges) are only sent while this calendar is open, evaluated in the contact's local time zone. A live reply to a contact who is actively messaging is always sent."]</span>
+                    </div>
+                </div>
+            }
         }
 
         @if (!string.Equals(Model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase))

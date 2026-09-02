@@ -232,6 +232,34 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Load(string id) { }
     }
     [OrchardCore.Admin.Admin(null, null)]
+    public sealed class CadencesController : Microsoft.AspNetCore.Mvc.Controller
+    {
+        public CadencesController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.Cadence> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.Cadence> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CadencesController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CadencesController> stringLocalizer) { }
+        [OrchardCore.Admin.Admin("omnichannel/cadences/create", "OmnichannelCadencesCreate")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Create() { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Create")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/cadences/create", "OmnichannelCadencesCreate")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreatePost() { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Delete")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/cadences/delete/{id}", "OmnichannelCadencesDelete")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> DeletePost(string id) { }
+        [OrchardCore.Admin.Admin("omnichannel/cadences/edit/{id}", "OmnichannelCadencesEdit")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> Edit(string id) { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Edit")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/cadences/edit/{id}", "OmnichannelCadencesEdit")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> EditPost(string id) { }
+        [OrchardCore.Admin.Admin("omnichannel/cadences", "OmnichannelCadencesIndex")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Index(CrestApps.OrchardCore.Core.Models.CatalogEntryOptions options, OrchardCore.Navigation.PagerParameters pagerParameters, [Microsoft.AspNetCore.Mvc.FromServices] Microsoft.Extensions.Options.IOptions<OrchardCore.Navigation.PagerOptions> pagerOptions, [Microsoft.AspNetCore.Mvc.FromServices] OrchardCore.DisplayManagement.IShapeFactory shapeFactory) { }
+        [Microsoft.AspNetCore.Mvc.ActionName("Index")]
+        [Microsoft.AspNetCore.Mvc.HttpPost]
+        [OrchardCore.Admin.Admin("omnichannel/cadences", "OmnichannelCadencesIndex")]
+        [OrchardCore.Routing.FormValueRequired("submit.Filter")]
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> IndexFilterPost(CrestApps.OrchardCore.Core.Models.ListCatalogEntryViewModel model) { }
+    }
+    [OrchardCore.Admin.Admin(null, null)]
     public sealed class CampaignGroupsController : Microsoft.AspNetCore.Mvc.Controller
     {
         public CampaignGroupsController(CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> manager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> displayManager, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CampaignGroupsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.CampaignGroupsController> stringLocalizer) { }
@@ -361,6 +389,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments
 {
     public static class OmnichannelDeploymentSteps
     {
+        public const string Cadence = "OmnichannelCadence";
         public const string Campaign = "OmnichannelCampaign";
         public const string CampaignGroup = "OmnichannelCampaignGroup";
         public const string ChannelEndpoint = "OmnichannelChannelEndpoint";
@@ -371,6 +400,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps
 {
+    public sealed class CadenceDeploymentStep : OrchardCore.Deployment.DeploymentStep
+    {
+        public CadenceDeploymentStep() { }
+        public CadenceDeploymentStep(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Deployments.Steps.CadenceDeploymentStep> stringLocalizer) { }
+    }
     public sealed class OmnichannelCampaignDeploymentStep : OrchardCore.Deployment.DeploymentStep
     {
         public OmnichannelCampaignDeploymentStep() { }
@@ -814,6 +848,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public int TotalCount { get; set; }
     }
+    public class CadenceViewModel
+    {
+        public CadenceViewModel() { }
+        public string Description { get; set; }
+        public string DisplayText { get; set; }
+        public bool Enabled { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Core.Models.CadenceStep> Steps { get; set; }
+    }
     public class ContactNavigationAdminShapeViewModel : OrchardCore.DisplayManagement.Views.ShapeViewModel
     {
         public ContactNavigationAdminShapeViewModel() { }
@@ -958,6 +1000,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AIProfiles { get; set; }
         public bool AllowAIToUpdateContact { get; set; }
         public bool AllowAIToUpdateSubject { get; set; }
+        public string BusinessHoursCalendarId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> BusinessHoursCalendars { get; set; }
+        public string CadenceId { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Cadences { get; set; }
         public string CampaignId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Campaigns { get; set; }
@@ -997,12 +1045,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public bool PreventDuplicates { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool RequiresUserAssignment { get; set; }
+        public int ResponseDelayJitterSeconds { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ResponseDelayModes { get; set; }
+        public int ResponseDelaySeconds { get; set; }
         [System.ComponentModel.DataAnnotations.DisplayFormat(ApplyFormatInEditMode=true, DataFormatString="{0:yyyy-MM-ddTHH:mm}")]
         public System.DateTime? ScheduleAt { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> SelectedUsers { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool ShowAIProfile { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public bool ShowBusinessHoursCalendar { get; set; }
         public string Source { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public string SourceDisplayName { get; set; }

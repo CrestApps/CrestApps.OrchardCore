@@ -49,9 +49,6 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<ISupervisorQueueAuthorizationService, SupervisorQueueAuthorizationService>()
             .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
             .AddScoped<IContactCenterSkillManager, ContactCenterSkillManager>()
-            .AddScoped<IBusinessHoursCalendarStore, BusinessHoursCalendarStore>()
-            .AddScoped<IBusinessHoursCalendarManager, BusinessHoursCalendarManager>()
-            .AddScoped<IBusinessHoursService, DefaultBusinessHoursService>()
             .AddScoped<IQueueItemStore, QueueItemStore>()
             .AddScoped<IQueueItemManager, QueueItemManager>()
             .AddScoped<IActivityReservationStore, ActivityReservationStore>()
@@ -65,34 +62,33 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>();
 
+        // Shared Contact Center configuration cache. The Business Hours feature also registers it; TryAdd keeps a
+        // single instance whichever feature configures services first.
+        services.TryAddSingleton<IContactCenterConfigurationCache, ContactCenterConfigurationCache>();
+
         services
-            .AddSingleton<IContactCenterConfigurationCache, ContactCenterConfigurationCache>()
             .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ActivityQueueHandler>()
             .AddScoped<ICatalogEntryHandler<ActivityQueue>, ContactCenterConfigurationCacheInvalidationHandler<ActivityQueue>>()
             .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterSkillHandler>()
             .AddScoped<ICatalogEntryHandler<ContactCenterSkill>, ContactCenterConfigurationCacheInvalidationHandler<ContactCenterSkill>>()
-            .AddScoped<ICatalogEntryHandler<BusinessHoursCalendar>, BusinessHoursCalendarHandler>()
-            .AddScoped<ICatalogEntryHandler<BusinessHoursCalendar>, ContactCenterConfigurationCacheInvalidationHandler<BusinessHoursCalendar>>()
             .AddIndexProvider<ActivityQueueGroupIndexProvider>()
             .AddDataMigration<ActivityQueueGroupIndexMigrations>()
             .AddIndexProvider<ActivityQueueIndexProvider>()
             .AddDataMigration<ActivityQueueIndexMigrations>()
             .AddIndexProvider<ContactCenterSkillIndexProvider>()
             .AddDataMigration<ContactCenterSkillIndexMigrations>()
-            .AddIndexProvider<BusinessHoursCalendarIndexProvider>()
-            .AddDataMigration<BusinessHoursCalendarIndexMigrations>()
             .AddIndexProvider<QueueItemIndexProvider>()
             .AddDataMigration<QueueItemIndexMigrations>()
             .AddIndexProvider<ActivityReservationIndexProvider>()
             .AddDataMigration<ActivityReservationIndexMigrations>();
 
-        // Queue, skill, business-hours, and agent-entitlement administration screens.
+        // Queue and skill administration screens. (Business-hours calendars are administered by the Business Hours
+        // feature this feature depends on.)
         services
             .AddDisplayDriver<ActivityQueueGroup, ActivityQueueGroupDisplayDriver>()
             .AddDisplayDriver<ActivityQueue, ActivityQueueDisplayDriver>()
-            .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>()
-            .AddDisplayDriver<BusinessHoursCalendar, BusinessHoursCalendarDisplayDriver>();
+            .AddDisplayDriver<ContactCenterSkill, ContactCenterSkillDisplayDriver>();
 
         services.AddNavigationProvider<ContactCenterAdminMenu>();
 
@@ -137,7 +133,6 @@ public sealed class QueuesDeploymentStartup : StartupBase
     {
         services.AddDeployment<ContactCenterSkillDeploymentSource, ContactCenterSkillDeploymentStep>();
         services.AddDeployment<ContactCenterQueueGroupDeploymentSource, ContactCenterQueueGroupDeploymentStep>();
-        services.AddDeployment<ContactCenterBusinessHoursCalendarDeploymentSource, ContactCenterBusinessHoursCalendarDeploymentStep>();
         services.AddDeployment<ContactCenterQueueDeploymentSource, ContactCenterQueueDeploymentStep>();
     }
 }
@@ -154,7 +149,6 @@ public sealed class QueuesRecipesStartup : StartupBase
     {
         services.AddRecipeExecutionStep<ContactCenterSkillStep>();
         services.AddRecipeExecutionStep<ContactCenterQueueGroupStep>();
-        services.AddRecipeExecutionStep<ContactCenterBusinessHoursCalendarStep>();
         services.AddRecipeExecutionStep<ContactCenterQueueStep>();
     }
 }

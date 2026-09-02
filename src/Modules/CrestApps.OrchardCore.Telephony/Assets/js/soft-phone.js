@@ -5784,6 +5784,17 @@
                 showError(message);
             });
 
+            connection.on('DialRequested', function (request) {
+                // A call was started from outside the phone (for example, the "call" button next to a phone-number
+                // field). Place it on this soft phone. dialNumber registers first when needed and holds an active
+                // call, so presence is left untouched here.
+                var number = request && request.number ? String(request.number).trim() : '';
+
+                if (number) {
+                    dialNumber(number);
+                }
+            });
+
             connection.on('CredentialsIssued', function () { });
 
             if (typeof connection.onreconnecting === 'function') {

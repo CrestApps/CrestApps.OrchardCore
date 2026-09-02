@@ -32,6 +32,19 @@ The corresponding entries appear independently under **Interaction Center**:
 - **My workspace** - the Agent Workspace, available to anyone with the `ContactCenterSignIntoQueues` permission.
 - **Live dashboard** - the Supervisor Dashboard, available to anyone with the `MonitorContactCenter` permission (granted to the built-in **Supervisor** role).
 
+## The docked agent bar
+
+Agents do not have to keep the Agent Workspace (or even the soft phone) focused to receive work. When the full-desktop agent experience is active — that is, whenever **Contact Center Agents**, **Contact Center Real-Time**, **Contact Center Voice**, and the **Telephony soft phone** are all enabled — a persistent **docked agent bar** is injected into the **admin** chrome (the layout `Footer` zone) of **every** admin page for any signed-in user who has the `ContactCenterSignIntoQueues` permission. It is admin chrome, not a placeable widget, so no page can accidentally omit it, and it auto-manages itself: it appears and disappears with the agent's live state rather than being added by hand.
+
+The bar is the **CRM-side bridge to the call router**. It holds its own live Contact Center hub connection *outside* the soft phone, so a work assignment reaches the agent wherever they are in the CRM even when the soft phone is running in its own window or the [browser extension](../telephony/index.md). When work is assigned, the bar pops the matched record and drives the disposition, exactly like the in-page workspace.
+
+The bar is deliberately **not** injected on:
+
+- the standalone soft-phone page (`/softphone`) — that page *is* the phone, and a second hub connection there would pop the matched record over the live call and navigate the phone away; and
+- non-admin (front-end) pages, and any non-view response (JSON, files, redirects) that has no layout to inject into.
+
+Because it rides the soft phone's capability model, a provider without in-browser audio (for example [Dialpad](../telephony/dialpad.md)) still gets the provider-neutral bar and workspace.
+
 ## For contact center managers: preparing the environment
 
 Agents can only receive work once the routing environment exists. Configure these in the **Interaction Center** before your team signs in. Each item links to its detailed reference in [Agents, Queues & Dialer](agents-queues-dialer.md).
@@ -235,7 +248,7 @@ Open **Interaction Center → My voicemail greeting**. This is the message calle
 - Or switch to **Upload a file** and choose an audio file (mp3 or wav).
 - **Remove greeting** falls back to the line's default greeting.
 
-A saved greeting is uploaded to the telephony provider's own media storage (for Telnyx, Media Storage) and played back from there, so no publicly reachable URL of your own is required. When you have no recorded greeting, the caller hears the entry point's **Default voicemail greeting** (configured per dialed number), and if that is also empty, a built-in system greeting. See [Voice routing](voice-routing.md#voicemail-greeting).
+A saved greeting is uploaded to the telephony provider's own media storage (for Telnyx, Media Storage) and played back from there, so no publicly reachable URL of your own is required. When you have no recorded greeting, the caller hears the entry point's **Default voicemail greeting** (configured per dialed number), and if that is also empty, a built-in system greeting. See [Voice routing](voice-routing.md#greeting-then-beep-then-record).
 
 ## How it works
 

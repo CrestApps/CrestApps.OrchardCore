@@ -74,7 +74,7 @@ Live agent audio is advertised separately through the optional `ITelephonyAudioP
 - A provider that supports both must expose a provider setting and return the administrator-selected `ConfiguredAudioMode`.
 - Browser audio fails closed unless the provider also names an executable browser media adapter.
 
-The current built-in Dialpad and Asterisk Telephony providers explicitly advertise `ExternalDevice`. Dialpad call control currently relies on its REST integration and provider-owned clients, while the Asterisk provider currently controls calls through ARI. Asterisk External Media is a server-side Contact Center media seam and is not an embedded browser WebRTC endpoint. Neither provider currently advertises embedded browser audio.
+The built-in providers differ in how they carry audio. **[Telnyx](telnyx)** advertises `Browser` and delivers the call audio to the browser over WebRTC through the vendored `@telnyx/webrtc` SDK adapter. **Asterisk** advertises `Browser` when the tenant supplies the required WebRTC configuration (a just-in-time SIP.js browser endpoint) and otherwise advertises no browser audio while controlling calls through ARI. **Dialpad** advertises `ExternalDevice`: its call control relies on its REST integration and provider-owned clients, so microphone and speaker handling stay outside Orchard. Asterisk *External Media* is a separate server-side Contact Center media seam, not the same thing as the embedded browser WebRTC endpoint.
 
 Call operations can also carry an optional provider-neutral metadata bag through `CallReference` and
 `TelephonyCall`. This keeps the shared contracts clean while still letting integrations exchange

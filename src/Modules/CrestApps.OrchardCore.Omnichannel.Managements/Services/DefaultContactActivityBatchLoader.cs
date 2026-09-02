@@ -431,6 +431,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     automatedSettings.TextToSpeechVoiceId = null;
                     automatedSettings.AllowAIToUpdateContact = false;
                     automatedSettings.AllowAIToUpdateSubject = false;
+                    automatedSettings.ResponseDelayMode = OmnichannelResponseDelayMode.None;
+                    automatedSettings.ResponseDelaySeconds = 0;
+                    automatedSettings.ResponseDelayJitterSeconds = 0;
+                    automatedSettings.BusinessHoursCalendarId = null;
+                    automatedSettings.CadenceId = null;
                 }
 
                 activity.Kind = GetActivityKind(channel);
@@ -443,6 +448,11 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 activity.TextToSpeechVoiceId = automatedSettings.TextToSpeechVoiceId;
                 activity.AllowAIToUpdateContact = automatedSettings.AllowAIToUpdateContact;
                 activity.AllowAIToUpdateSubject = automatedSettings.AllowAIToUpdateSubject;
+                activity.ResponseDelayMode = automatedSettings.ResponseDelayMode;
+                activity.ResponseDelaySeconds = automatedSettings.ResponseDelaySeconds;
+                activity.ResponseDelayJitterSeconds = automatedSettings.ResponseDelayJitterSeconds;
+                activity.BusinessHoursCalendarId = automatedSettings.BusinessHoursCalendarId;
+                activity.CadenceId = automatedSettings.CadenceId;
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = batch.ContactContentType;
                 activity.SubjectContentType = batch.SubjectContentType;
