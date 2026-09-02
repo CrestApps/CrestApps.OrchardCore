@@ -10,6 +10,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Entities;
+using OrchardCore.FileStorage;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -39,6 +40,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
         var fileStore = serviceProvider.GetRequiredService<IContentTransferFileStore>();
         var contentDefinitionManager = serviceProvider.GetRequiredService<IContentDefinitionManager>();
         var contentImportManager = serviceProvider.GetRequiredService<IContentImportManager>();
+        var tempDirectoryProvider = serviceProvider.GetRequiredService<ITempDirectoryProvider>();
 
         var entries = await session.Query<ContentTransferEntry, ContentTransferEntryIndex>(x =>
             (x.Status == ContentTransferEntryStatus.New || x.Status == ContentTransferEntryStatus.Processing)
@@ -125,7 +127,7 @@ public sealed class ExportFilesBackgroundTask : IBackgroundTask
                 }
 
                 var fileName = entry.StoredFileName;
-                var tempFilePath = Path.GetTempFileName();
+                var tempFilePath = tempDirectoryProvider.GetTempFileName();
 
                 using var tempStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, bufferSize: 4096, FileOptions.DeleteOnClose);
                 var columnNames = exportColumns.Select(c => c.Name).ToList();
