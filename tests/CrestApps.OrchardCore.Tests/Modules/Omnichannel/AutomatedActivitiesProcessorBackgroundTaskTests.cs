@@ -304,7 +304,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<ActivityUrgencyLevel>("UrgencyLevel")
             .Column<ActivityStatus>("Status")
-            .Column<ActivityInteractionType>("InteractionType"),
+            .Column<ActivityInteractionType>("InteractionType")
+            .Column<bool>("AiEscalated"),
             collection: OmnichannelConstants.CollectionName);
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

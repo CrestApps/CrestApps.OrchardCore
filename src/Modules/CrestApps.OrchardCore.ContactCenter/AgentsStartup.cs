@@ -58,7 +58,9 @@ public sealed class AgentsStartup : StartupBase
 
         services
             .AddIndexProvider<AgentQueueMembershipIndexProvider>()
-            .AddDataMigration<AgentQueueMembershipIndexMigrations>();
+            .AddDataMigration<AgentQueueMembershipIndexMigrations>()
+            .AddIndexProvider<AgentAllowedQueueIndexProvider>()
+            .AddDataMigration<AgentAllowedQueueIndexMigrations>();
 
         services
             .AddScoped<ICatalogEntryHandler<AgentStateReasonCode>, AgentStateReasonCodeHandler>()

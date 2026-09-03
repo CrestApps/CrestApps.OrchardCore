@@ -1,0 +1,48 @@
+@model SmsMessageBubbleViewModel
+
+@{
+    var message = Model.Message;
+    var outbound = !message.IsInbound;
+    // Among outbound messages, a human agent sets SentByAgentId; automated (AI) replies leave it null.
+    var isAgent = outbound && !string.IsNullOrEmpty(message.SentByAgentId);
+    var isAi = outbound && string.IsNullOrEmpty(message.SentByAgentId);
+
+    var bubbleClass = isAgent
+        ? "bg-primary-subtle border border-primary-subtle text-body"
+        : isAi
+            ? "bg-info-subtle border border-info-subtle text-body"
+            : "bg-body border text-body";
+
+    // Trim leading/trailing blank lines so a message the AI padded with newlines does not inflate the bubble;
+    // pre-wrap still preserves intentional line breaks inside the message.
+    var content = (message.Content ?? string.Empty).Trim();
+}
+
+<div class="sms-message d-flex flex-column mb-2 @(outbound ? "align-items-end" : "align-items-start")"
+     data-message-id="@message.Id"
+     data-created-ticks="@message.CreatedUtc.Ticks">
+    <div class="small text-muted mb-1 px-1">
+        @if (isAgent)
+        {
+            <i class="fa-solid fa-headset me-1" aria-hidden="true"></i><text>@T["Agent"]</text>
+        }
+        else if (isAi)
+        {
+            <i class="fa-solid fa-robot me-1" aria-hidden="true"></i><text>@T["AI assistant"]</text>
+        }
+        else
+        {
+            <i class="fa-solid fa-user me-1" aria-hidden="true"></i><text>@Model.ContactLabel</text>
+        }
+    </div>
+    <div class="p-2 px-3 rounded-4 @bubbleClass" style="max-width: 80%; white-space: pre-wrap; word-break: break-word;">
+        <div>@content</div>
+        <div class="small text-muted mt-1">
+            @message.CreatedUtc.ToLocalTime().ToString("t")
+            @if (outbound && !string.IsNullOrEmpty(message.DeliveryStatus))
+            {
+                <text>&middot; @message.DeliveryStatus</text>
+            }
+        </div>
+    </div>
+</div>

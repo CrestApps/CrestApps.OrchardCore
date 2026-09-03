@@ -7,6 +7,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Resilience;
@@ -86,6 +87,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly ISmsService _smsService;
 
     private readonly IOmnichannelActivityStore _omnichannelActivityStore;
+    private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
     private readonly ILocalLock _localLock;
     private readonly DocumentJsonSerializerOptions _jsonSerializerOptions;
     private readonly Redactor _addressRedactor;
@@ -130,6 +132,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         ISession session,
         ISmsService smsService,
         IOmnichannelActivityStore omnichannelActivityStore,
+        IEnumerable<IOmnichannelHandoffService> handoffServices,
         ILocalLock localLock,
         IOptions<DocumentJsonSerializerOptions> jsonSerializerOptions,
         IRedactorProvider redactorProvider,
@@ -151,6 +154,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _session = session;
         _smsService = smsService;
         _omnichannelActivityStore = omnichannelActivityStore;
+        _handoffServices = handoffServices;
         _localLock = localLock;
 
         _jsonSerializerOptions = jsonSerializerOptions.Value;
@@ -328,6 +332,14 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         // run the conclusion check, so a skipped reply never strands a naturally-ended thread.
         var handledTurn = false;
 
+        // Resolve the SMS handoff destination once for this turn. Handoff is only offered to the model, and only
+        // honored, when the flow both enables it (with a target queue) and a channel implementation is registered
+        // (the SMS Workspace feature). This prevents the model from promising a human when there is nowhere to route.
+        var smsHandoffService = _handoffServices?.FirstOrDefault(service => service.CanHandle(OmnichannelConstants.Channels.Sms));
+        var handoffAvailable = smsHandoffService is not null && OmnichannelHandoffHelper.IsHandoffEnabled(flowSettings);
+        var handoffRequested = false;
+        string handoffReason = null;
+
         try
         {
             var (locker, locked) = await _localLock.TryAcquireLockAsync(
@@ -424,15 +436,40 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         var context = await _completionContextBuilder.BuildAsync(profile, cancellationToken: generationToken);
                         context.AdditionalProperties["Session"] = chatSession;
 
+                        // When a live agent is available, enable the transfer tool for this turn and guide the model
+                        // on when to escalate. Guidance is injected as a leading system message so it never leaks into
+                        // the separate should-respond evaluation above, which runs on the un-augmented transcript.
+                        if (handoffAvailable)
+                        {
+                            AttachTransferToAgentTool(context);
+
+                            var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
+
+                            if (!string.IsNullOrEmpty(handoffInstructions))
+                            {
+                                transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
+                            }
+                        }
+
                         var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: generationToken)
                             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for AI profile '{profile.ItemId}'.");
 
                         // One AI request per turn, cancelled by generationToken the moment a newer inbound message arrives.
                         // A cancelled request unwinds the whole turn so the newer message regenerates the single reply
                         // against the full history, rather than this stale request answering a superseded transcript.
+                        // The completion auto-invokes the transfer tool when the model decides to escalate; the tool
+                        // records the decision on the ambient turn, which we read back once the completion returns.
+                        using var handoffTurn = OmnichannelHandoffTurnContext.Begin();
+
                         var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, generationToken);
 
                         bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
+                        handoffRequested = handoffAvailable && handoffTurn.Turn.HandoffRequested;
+
+                        if (handoffRequested)
+                        {
+                            handoffReason = handoffTurn.Turn.Reason;
+                        }
                     }
                     catch (Exception ex) when (generationToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
                     {
@@ -466,10 +503,14 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         bestChoice = bestChoice.Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
                     }
 
+                    // handoffRequested was set from the transfer tool the model invoked during the completion above.
                     if (string.IsNullOrWhiteSpace(bestChoice))
                     {
-                        // The model ended with only the marker and no closing words; send a neutral sign-off.
-                        bestChoice = S["Thanks for your time. Goodbye."].Value;
+                        // The model ended with only a marker and no words. Send the neutral bridge line for a handoff,
+                        // or a neutral sign-off otherwise.
+                        bestChoice = handoffRequested
+                            ? S["Thanks! I'm connecting you with a specialist who will continue from here."].Value
+                            : S["Thanks for your time. Goodbye."].Value;
                     }
 
                     // Humanized typing: a longer reply appears to take longer to type, so pause proportionally before it
@@ -535,7 +576,14 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     break;
                 }
 
-                if (handledTurn)
+                // The bridge message has been sent; move the thread to a human and conclude the automated activity so
+                // the AI never replies again (the terminal-status guard at the top of HandleAsync enforces that).
+                if (handledTurn && handoffRequested)
+                {
+                    await PerformSmsHandoffAsync(activity, profile, chatSession.SessionId, flowSettings, endpoint.Value, handoffReason, smsHandoffService, cancellationToken);
+                }
+
+                if (handledTurn && !handoffRequested)
                 {
                     activity.Status = ActivityStatus.AwaitingCustomerAnswer;
 
@@ -811,6 +859,172 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 _logger.LogDebug("SMS reply generation for session {SessionId} was superseded by a newer inbound message.", chatSession.SessionId.SanitizeLogValue());
             }
         }
+    }
+
+    // Hands the automated SMS conversation off to a live agent: it hydrates the human thread with the transcript
+    // (via the resolved SMS handoff service) and, on success, concludes the automated activity as handed-off so the
+    // AI never replies again. On failure it leaves the activity awaiting the customer so the conversation is not
+    // stranded after the bridge message was already sent.
+    private async Task PerformSmsHandoffAsync(
+        OmnichannelActivity activity,
+        AIProfile profile,
+        string sessionId,
+        SubjectFlowSettings flowSettings,
+        string serviceAddress,
+        string reason,
+        IOmnichannelHandoffService handoffService,
+        CancellationToken cancellationToken)
+    {
+        var conversation = (await _promptStore.GetPromptsAsync(sessionId))
+            .Where(prompt => !prompt.IsGeneratedPrompt)
+            .ToList();
+
+        var prompts = conversation
+            .Select(prompt => new OmnichannelHandoffMessage
+            {
+                IsInbound = prompt.Role == ChatRole.User,
+                Content = prompt.Content,
+                CreatedUtc = prompt.CreatedUtc,
+            })
+            .ToList();
+
+        // Warm context for the agent taking over: a short AI-written summary of what happened. Best-effort — a
+        // summary failure must never block the handoff.
+        var summary = await GenerateHandoffSummaryAsync(profile, conversation, activity, cancellationToken);
+
+        OmnichannelHandoffResult result;
+
+        try
+        {
+            result = await handoffService.RequestHandoffAsync(new OmnichannelHandoffRequest
+            {
+                Activity = activity,
+                TargetQueueId = flowSettings.HandoffQueueId,
+                Reason = string.IsNullOrWhiteSpace(reason)
+                    ? "The automated assistant escalated the conversation to a live agent."
+                    : reason,
+                Summary = summary,
+                ServiceAddress = serviceAddress,
+                ContactAddress = activity.PreferredDestination,
+                Transcript = prompts,
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "The SMS handoff for Activity {ActivityId} threw; leaving the conversation open.", activity.ItemId.SanitizeLogValue());
+            result = OmnichannelHandoffResult.Failure(ex.Message);
+        }
+
+        if (!result.Succeeded)
+        {
+            // The bridge message was already sent, but there is no human thread to continue in. Keep the activity
+            // awaiting the customer so the automated agent can still respond rather than going silent.
+            _logger.LogWarning("The SMS handoff for Activity {ActivityId} did not complete: {Reason}. The conversation stays with the automated agent.", activity.ItemId.SanitizeLogValue(), result.Message);
+
+            activity.Status = ActivityStatus.AwaitingCustomerAnswer;
+
+            if (OmnichannelAutomationHelper.HasNoResponseTimeout(flowSettings))
+            {
+                activity.ScheduledUtc = OmnichannelAutomationHelper.ResolveNoResponseDeadline(flowSettings, _clock.UtcNow);
+            }
+
+            await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
+
+            return;
+        }
+
+        // Conclude the automated activity as handed off. This is a distinct terminal path from a natural conclusion:
+        // no disposition executor runs, and the terminal reason lets reporting separate escalations from bot-contained
+        // conversations.
+        activity.Status = ActivityStatus.Completed;
+        activity.CompletedUtc = _clock.UtcNow;
+        activity.TerminalReasonCode = OmnichannelConstants.TerminalReasons.HandedOffToAgent;
+        activity.AiEscalated = true;
+        activity.CompletedById = activity.AssignedToId;
+        activity.CompletedByUsername = activity.AssignedToUsername;
+
+        if (string.IsNullOrWhiteSpace(activity.Notes))
+        {
+            activity.Notes = "The automated SMS conversation was handed off to a live agent.";
+        }
+
+        await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Concluded automated SMS Activity {ActivityId} as handed off to a live agent (conversation {ConversationId}).", activity.ItemId.SanitizeLogValue(), (result.ConversationId ?? "(none)").SanitizeLogValue());
+        }
+    }
+
+    // Produces a short, plain-text summary of the conversation for the agent taking over. Best-effort: any failure
+    // returns null so the handoff proceeds without a summary.
+    private async Task<string> GenerateHandoffSummaryAsync(
+        AIProfile profile,
+        List<AIChatSessionPrompt> conversation,
+        OmnichannelActivity activity,
+        CancellationToken cancellationToken)
+    {
+        const string summaryPrompt =
+            "You are handing this SMS conversation to a human agent. In 2-3 short sentences of plain text (no " +
+            "preamble, labels, or quotes), summarize for the agent what the customer wants, the key facts they " +
+            "shared, and why they are being transferred.";
+
+        try
+        {
+            var context = await _completionContextBuilder.BuildAsync(profile, builder =>
+            {
+                builder.SystemMessage = summaryPrompt;
+                builder.DisableTools = true;
+            }, cancellationToken);
+
+            var deployment = await _deploymentManager.ResolveOrDefaultAsync(
+                AIDeploymentPurpose.Chat,
+                deploymentName: context.ChatDeploymentName,
+                cancellationToken: cancellationToken);
+
+            if (deployment is null)
+            {
+                return null;
+            }
+
+            var client = await _aiClientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
+
+            var messages = new List<ChatMessage> { new(ChatRole.System, summaryPrompt) };
+            messages.AddRange(conversation.Select(prompt => new ChatMessage(prompt.Role, prompt.Content)));
+
+            var response = await client.GetResponseAsync(messages, cancellationToken: cancellationToken);
+
+            return response?.Text?.Trim();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to generate an SMS handoff summary for Activity {ActivityId}; continuing without one.", activity.ItemId.SanitizeLogValue());
+
+            return null;
+        }
+    }
+
+    // Attaches the transfer-to-agent tool to this single completion. The automated conversation calls the completion
+    // service directly rather than through the tool orchestrator, so the scoped-tool key the function-invocation
+    // service handler reads is otherwise never populated here and no tools reach the model at all. We register the
+    // transfer tool as a scoped system-tool entry for this turn only (the context is built per turn and never
+    // persisted), so the model can actually invoke it. Enabling it through the profile's tool-name list does not
+    // work: the profile tool provider reads the names snapshotted when the context was built and, either way, skips
+    // system tools — which the transfer tool is.
+    private static void AttachTransferToAgentTool(AICompletionContext context)
+    {
+        var entry = new ToolRegistryEntry
+        {
+            Id = OmnichannelHandoffHelper.TransferToAgentToolName,
+            Name = OmnichannelHandoffHelper.TransferToAgentToolName,
+            Description = "Transfers the current conversation to a live human agent.",
+            Source = ToolRegistryEntrySource.System,
+            CreateAsync = serviceProvider => ValueTask.FromResult(
+                serviceProvider.GetKeyedService<AITool>(OmnichannelHandoffHelper.TransferToAgentToolName)),
+        };
+
+        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] =
+            new List<ToolRegistryEntry> { entry };
     }
 
     private async Task<SubjectFlowSettings> FindFlowSettingsAsync(

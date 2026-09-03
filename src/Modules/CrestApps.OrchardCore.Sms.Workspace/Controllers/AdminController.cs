@@ -43,6 +43,7 @@ public sealed class AdminController : Controller
     private readonly ISmsTemplateManager _templateManager;
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly ISmsAgentAvailabilityService _availabilityService;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
     private readonly IDisplayManager<SmsConversation> _displayManager;
@@ -62,6 +63,7 @@ public sealed class AdminController : Controller
         ISmsTemplateManager templateManager,
         IOmnichannelChannelEndpointManager endpointManager,
         IAgentProfileManager agentProfileManager,
+        ISmsAgentAvailabilityService availabilityService,
         IContentManager contentManager,
         IAuthorizationService authorizationService,
         IDisplayManager<SmsConversation> displayManager,
@@ -79,6 +81,7 @@ public sealed class AdminController : Controller
         _templateManager = templateManager;
         _endpointManager = endpointManager;
         _agentProfileManager = agentProfileManager;
+        _availabilityService = availabilityService;
         _contentManager = contentManager;
         _authorizationService = authorizationService;
         _displayManager = displayManager;
@@ -92,7 +95,7 @@ public sealed class AdminController : Controller
     }
 
     [Admin("sms/portal", "SmsPortalIndex")]
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(string show)
     {
         if (!await _authorizationService.AuthorizeAsync(User, SmsWorkspacePermissions.UseSmsPortal))
         {
@@ -103,13 +106,51 @@ public sealed class AdminController : Controller
         // assigned to them or owned by a queue they belong to.
         var canViewAll = await _authorizationService.AuthorizeAsync(User, SmsWorkspacePermissions.ViewAllConversations);
 
-        var conversations = canViewAll
+        var conversations = (canViewAll
             ? await _conversationStore.GetAllAsync()
-            : await GetVisibleConversationsAsync();
+            : await GetVisibleConversationsAsync())
+            .ToList();
 
         var viewModel = new SmsInboxViewModel();
 
-        foreach (var conversation in conversations.OrderByDescending(c => c.LastMessageUtc))
+        // Surface the agent's routed-SMS availability toggle (independent of voice presence). A viewer without an
+        // agent profile (for example an admin) simply does not see the toggle.
+        var currentAgent = await GetCurrentAgentAsync();
+
+        if (currentAgent is not null)
+        {
+            viewModel.HasAgentProfile = true;
+            viewModel.SmsAvailable = _availabilityService.Get(currentAgent).Available;
+        }
+
+        // Filter tabs, mirroring the OrchardCore content list: "mine" is assigned to the current agent,
+        // "unassigned" is anything not yet owned by a specific agent (unassigned or pooled), "all" is the default.
+        var filter = show?.Trim().ToLowerInvariant() switch
+        {
+            "mine" => SmsInboxFilter.Mine,
+            "unassigned" => SmsInboxFilter.Unassigned,
+            _ => SmsInboxFilter.All,
+        };
+
+        bool IsMine(SmsConversation c) => currentAgent is not null &&
+            c.AssignmentStatus == SmsConversationAssignmentStatus.Assigned &&
+            string.Equals(c.AssignedAgentId, currentAgent.ItemId, StringComparison.Ordinal);
+
+        static bool IsUnassigned(SmsConversation c) => c.AssignmentStatus != SmsConversationAssignmentStatus.Assigned;
+
+        viewModel.Filter = filter;
+        viewModel.AllCount = conversations.Count;
+        viewModel.MineCount = conversations.Count(IsMine);
+        viewModel.UnassignedCount = conversations.Count(IsUnassigned);
+
+        var filtered = filter switch
+        {
+            SmsInboxFilter.Mine => conversations.Where(IsMine),
+            SmsInboxFilter.Unassigned => conversations.Where(IsUnassigned),
+            _ => conversations,
+        };
+
+        foreach (var conversation in filtered.OrderByDescending(c => c.LastMessageUtc))
         {
             viewModel.Rows.Add(new SmsInboxRow
             {
@@ -382,11 +423,13 @@ public sealed class AdminController : Controller
             return NotFound();
         }
 
-        // Mark the thread read for the viewing agent.
-        if (conversation.UnreadCount != 0 || !conversation.IsRead)
+        // Mark the thread read for the viewing agent, and pick up a routed thread so it is no longer reassigned.
+        if (conversation.UnreadCount != 0 || !conversation.IsRead || conversation.AssignedUtc is not null)
         {
             conversation.IsRead = true;
             conversation.UnreadCount = 0;
+            conversation.AssignedUtc = null;
+            conversation.ReassignmentAttempts = 0;
             await _conversationStore.UpdateAsync(conversation);
         }
 
@@ -401,6 +444,75 @@ public sealed class AdminController : Controller
             ContactDisplayText = titleContact?.DisplayName,
             Contacts = contacts,
         });
+    }
+
+    // Returns the message bubbles added since a client-supplied high-water mark (UTC ticks), rendered with the
+    // same partial the full thread uses, so the open conversation can append new messages live over SignalR (and
+    // a light fallback poll) without a page refresh.
+    [Admin("sms/portal/conversation/{id}/messages", "SmsPortalConversationMessages")]
+    public async Task<IActionResult> ThreadMessages(string id, long afterTicks)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, SmsWorkspacePermissions.UseSmsPortal))
+        {
+            return Forbid();
+        }
+
+        var conversation = await _conversationStore.FindByIdAsync(id);
+
+        if (conversation is null)
+        {
+            return NotFound();
+        }
+
+        var after = afterTicks > 0 && afterTicks <= DateTime.MaxValue.Ticks
+            ? new DateTime(afterTicks, DateTimeKind.Utc)
+            : DateTime.MinValue;
+
+        var messages = (await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.ConversationId == id && index.CreatedUtc > after,
+                collection: OmnichannelConstants.CollectionName)
+            .OrderBy(index => index.CreatedUtc)
+            .ThenBy(index => index.Id)
+            .ListAsync())
+            .ToArray();
+
+        if (messages.Length == 0)
+        {
+            return PartialView("_MessageBubbles", Array.Empty<SmsMessageBubbleViewModel>());
+        }
+
+        // A message arriving in the open thread should not leave it flagged unread for the viewing agent.
+        if (conversation.UnreadCount != 0 || !conversation.IsRead)
+        {
+            conversation.IsRead = true;
+            conversation.UnreadCount = 0;
+            await _conversationStore.UpdateAsync(conversation);
+        }
+
+        var contactLabel = await ResolveContactLabelAsync(conversation);
+
+        var bubbles = messages
+            .Select(message => new SmsMessageBubbleViewModel { Message = message, ContactLabel = contactLabel })
+            .ToArray();
+
+        return PartialView("_MessageBubbles", bubbles);
+    }
+
+    // Resolves the label shown above inbound (customer) bubbles: the linked contact's display name, falling back
+    // to the conversation's contact address when no contact is linked or it has no title.
+    private async Task<string> ResolveContactLabelAsync(SmsConversation conversation)
+    {
+        if (!string.IsNullOrEmpty(conversation.ContactContentItemId))
+        {
+            var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+
+            if (contact is not null && !string.IsNullOrEmpty(contact.DisplayText))
+            {
+                return contact.DisplayText;
+            }
+        }
+
+        return conversation.ContactAddress;
     }
 
     // Lists every contact record that matches the conversation's number, with the linked contact first. A
@@ -481,6 +593,27 @@ public sealed class AdminController : Controller
         }
 
         return RedirectToAction(nameof(Conversation), new { id });
+    }
+
+    [HttpPost]
+    [Admin("sms/portal/availability", "SmsPortalAvailability")]
+    public async Task<IActionResult> SetAvailability(bool available)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, SmsWorkspacePermissions.UseSmsPortal))
+        {
+            return Forbid();
+        }
+
+        var agent = await GetCurrentAgentAsync();
+
+        if (agent is null)
+        {
+            return BadRequest();
+        }
+
+        var availability = await _availabilityService.SetAvailableAsync(agent, available);
+
+        return Ok(new { available = availability.Available });
     }
 
     [HttpPost]
@@ -584,6 +717,9 @@ public sealed class AdminController : Controller
                 index => index.ConversationId == conversationId,
                 collection: OmnichannelConstants.CollectionName)
             .OrderBy(index => index.CreatedUtc)
+            // Insertion order breaks ties so rapid bursts (for example several AI bubbles sent within the same
+            // second) keep a stable chronological order.
+            .ThenBy(index => index.Id)
             .ListAsync();
 
         return messages.ToArray();

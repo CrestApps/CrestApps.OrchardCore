@@ -89,6 +89,30 @@ public static class OmnichannelConstants
     }
 
     /// <summary>
+    /// Well-known stable reason codes recorded on <see cref="Models.OmnichannelActivity.TerminalReasonCode"/>
+    /// when an automated activity reaches a terminal state.
+    /// </summary>
+    public static class TerminalReasons
+    {
+        /// <summary>
+        /// The automated conversation was concluded because it was handed off to a live human agent.
+        /// </summary>
+        public const string HandedOffToAgent = "handed_off_to_agent";
+
+        /// <summary>
+        /// The automated conversation could not be routed live (for example the destination queue was closed
+        /// after hours), so a callback was scheduled instead.
+        /// </summary>
+        public const string HandedOffAfterHoursCallback = "handed_off_after_hours_callback";
+
+        /// <summary>
+        /// The set of terminal reason codes that count as an escalation to a human for reporting.
+        /// </summary>
+        public static bool IsHandoff(string terminalReasonCode)
+            => terminalReasonCode is HandedOffToAgent or HandedOffAfterHoursCallback;
+    }
+
+    /// <summary>
     /// Represents the features.
     /// </summary>
     public static class Features

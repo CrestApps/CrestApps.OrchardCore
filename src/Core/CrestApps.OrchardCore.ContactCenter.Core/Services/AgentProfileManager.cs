@@ -54,6 +54,19 @@ public sealed class AgentProfileManager : CatalogManager<AgentProfile>, IAgentPr
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentProfile>> GetMembersForQueueAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        var profiles = await _store.GetMembersForQueueAsync(queueId, cancellationToken);
+
+        foreach (var profile in profiles)
+        {
+            await LoadAsync(profile, cancellationToken);
+        }
+
+        return profiles;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<AgentProfile>> GetByPresenceAsync(
         AgentPresenceStatus presenceStatus,
         CancellationToken cancellationToken = default)

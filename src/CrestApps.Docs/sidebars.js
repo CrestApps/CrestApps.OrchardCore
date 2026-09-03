@@ -96,6 +96,7 @@ const sidebars = {
                 'omnichannel/cadences',
                 'omnichannel/sms',
                 'omnichannel/sms-workspace',
+                'omnichannel/ai-agent-handoff-project-plan',
             ],
         },
         {

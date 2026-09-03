@@ -70,6 +70,58 @@ public class SmsInboxViewModel
     /// Gets or sets the rendered conversation rows.
     /// </summary>
     public IList<SmsInboxRow> Rows { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current user has an agent profile, so the SMS-availability
+    /// toggle is only shown to agents who can receive routed assignments.
+    /// </summary>
+    public bool HasAgentProfile { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the current agent is accepting routed (push) SMS assignments.
+    /// </summary>
+    public bool SmsAvailable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the active inbox filter.
+    /// </summary>
+    public SmsInboxFilter Filter { get; set; } = SmsInboxFilter.All;
+
+    /// <summary>
+    /// Gets or sets the number of conversations visible to the current user, across all filters.
+    /// </summary>
+    public int AllCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of conversations assigned to the current agent.
+    /// </summary>
+    public int MineCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of conversations not yet assigned to a specific agent.
+    /// </summary>
+    public int UnassignedCount { get; set; }
+}
+
+/// <summary>
+/// The inbox filter tabs, mirroring the OrchardCore content list's quick filters.
+/// </summary>
+public enum SmsInboxFilter
+{
+    /// <summary>
+    /// Every conversation the current user can see.
+    /// </summary>
+    All,
+
+    /// <summary>
+    /// Conversations assigned to the current agent.
+    /// </summary>
+    Mine,
+
+    /// <summary>
+    /// Conversations not yet assigned to a specific agent (unassigned or pooled).
+    /// </summary>
+    Unassigned,
 }
 
 /// <summary>
@@ -123,6 +175,48 @@ public class SmsThreadViewModel
     /// normally a single contact; it holds more than one only when several CRM records share the same number.
     /// </summary>
     public IReadOnlyList<SmsThreadContact> Contacts { get; set; } = [];
+}
+
+/// <summary>
+/// The inbox row model rendered by the conversation summary driver: the conversation plus the display names it
+/// needs (the contact and the assigned agent), resolved once by the driver so the row can show them as badges.
+/// </summary>
+public class SmsConversationRowViewModel
+{
+    /// <summary>
+    /// Gets or sets the conversation.
+    /// </summary>
+    public SmsConversation Conversation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact's display name, or <see langword="null"/> when the conversation is not linked to
+    /// a named contact (the row then falls back to the contact address).
+    /// </summary>
+    public string ContactName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name of the agent the conversation is assigned to, when it is assigned to a
+    /// specific agent.
+    /// </summary>
+    public string AssignedToName { get; set; }
+}
+
+/// <summary>
+/// The data a single message bubble needs to render. Shared by the full thread render and the live delta partial
+/// so the bubble markup lives in one place.
+/// </summary>
+public class SmsMessageBubbleViewModel
+{
+    /// <summary>
+    /// Gets or sets the message rendered by the bubble.
+    /// </summary>
+    public OmnichannelMessage Message { get; set; }
+
+    /// <summary>
+    /// Gets or sets the label shown above an inbound (customer) bubble — the contact's display name, or the
+    /// contact address when no name is known.
+    /// </summary>
+    public string ContactLabel { get; set; }
 }
 
 /// <summary>

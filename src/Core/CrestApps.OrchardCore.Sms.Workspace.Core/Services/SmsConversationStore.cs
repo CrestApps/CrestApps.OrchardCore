@@ -76,4 +76,22 @@ public sealed class SmsConversationStore : DocumentCatalog<SmsConversation, SmsC
 
         return conversations.ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<SmsConversation>> GetRoutedAwaitingPickupAsync(CancellationToken cancellationToken = default)
+    {
+        var queue = SmsConversationOwnerType.Queue.ToString();
+        var assigned = SmsConversationAssignmentStatus.Assigned.ToString();
+
+        // AssignedUtc is not indexed (it is cleared on pickup), so query the indexed queue-assigned set and let
+        // the caller filter by age. The set is small in practice — only routed conversations awaiting pickup.
+        var conversations = await Session.Query<SmsConversation, SmsConversationIndex>(
+            index => index.OwnerType == queue && index.AssignmentStatus == assigned,
+            collection: SmsWorkspaceStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return conversations
+            .Where(conversation => conversation.AssignedUtc is not null)
+            .ToArray();
+    }
 }

@@ -1,5 +1,12 @@
+@using CrestApps.OrchardCore.Sms.Workspace.Hubs
 @using CrestApps.OrchardCore.Sms.Workspace.Models
 @model SmsThreadViewModel
+
+@{
+    var contactLabel = string.IsNullOrEmpty(Model.ContactDisplayText) ? Model.Conversation.ContactAddress : Model.ContactDisplayText;
+    var smsHubUrl = Html.SignalRHubUrl<SmsPortalHub>();
+    var smsMessagesUrl = Url.Action("ThreadMessages", new { id = Model.Conversation.ItemId });
+}
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["Conversation with {0}", string.IsNullOrEmpty(Model.ContactDisplayText) ? Model.Conversation.ContactAddress : Model.ContactDisplayText])</h1></zone>
 
@@ -10,7 +17,15 @@
                 <a class="btn btn-sm btn-link" asp-route-action="Index">&laquo; @T["Back to inbox"]</a>
                 <span class="text-muted small ms-2">@T["on"] @Model.Conversation.ServiceAddress &middot; @Model.Conversation.Status.ToString()</span>
             </div>
-            <div class="btn-group">
+            <div class="d-flex flex-wrap gap-2">
+                @if (Model.Conversation.AssignmentStatus != SmsConversationAssignmentStatus.Assigned)
+                {
+                    <form method="post" asp-route-action="Claim" asp-route-id="@Model.Conversation.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-primary" title="@T["Claim to own it and remove it from the shared inbox."]">
+                            <i class="fa-solid fa-hand me-1" aria-hidden="true"></i>@T["Claim"]
+                        </button>
+                    </form>
+                }
                 @if (Model.Conversation.Status == SmsConversationStatus.Open)
                 {
                     <form asp-route-action="SetStatus" asp-route-id="@Model.Conversation.ItemId" method="post" class="d-inline">
@@ -32,39 +47,31 @@
             </div>
         </div>
 
-        <div class="sms-thread border rounded p-3 mb-3" style="max-height: 60vh; overflow-y: auto; background: var(--bs-tertiary-bg);">
+        <div id="sms-thread" class="sms-thread border rounded p-3 mb-3" style="max-height: 72vh; overflow-y: auto; background: var(--bs-tertiary-bg);">
             @if (Model.Messages.Count == 0)
             {
-                <div class="text-muted">@T["No messages yet."]</div>
+                <div class="text-muted" data-empty>@T["No messages yet."]</div>
             }
             else
             {
+                DateTime? lastDay = null;
+
                 foreach (var message in Model.Messages)
                 {
-                    var outbound = !message.IsInbound;
-                    <div class="d-flex mb-2 @(outbound ? "justify-content-end" : "justify-content-start")">
-                        <div class="p-2 rounded-3 @(outbound ? "bg-primary text-white" : "bg-white border")" style="max-width: 75%;">
-                            <div>@message.Content</div>
-                            <div class="small @(outbound ? "text-white-50" : "text-muted")">
-                                @message.CreatedUtc.ToString("g")
-                                @if (outbound && !string.IsNullOrEmpty(message.DeliveryStatus))
-                                {
-                                    <text>&middot; @message.DeliveryStatus</text>
-                                }
-                            </div>
+                    // A day separator, phone-style, whenever the calendar date changes.
+                    var localDay = message.CreatedUtc.ToLocalTime().Date;
+                    if (lastDay != localDay)
+                    {
+                        lastDay = localDay;
+                        <div class="text-center my-3">
+                            <span class="badge rounded-pill text-bg-secondary">@message.CreatedUtc.ToLocalTime().ToString("D")</span>
                         </div>
-                    </div>
+                    }
+
+                    @await Html.PartialAsync("_MessageBubble", new SmsMessageBubbleViewModel { Message = message, ContactLabel = contactLabel })
                 }
             }
         </div>
-
-        @if (Model.Conversation.AssignmentStatus != SmsConversationAssignmentStatus.Assigned)
-        {
-            <form method="post" asp-route-action="Claim" asp-route-id="@Model.Conversation.ItemId" class="mb-2">
-                <button type="submit" class="btn btn-outline-primary btn-sm">@T["Claim this conversation"]</button>
-                <span class="text-muted small ms-1">@T["Claim to own it and remove it from the shared inbox."]</span>
-            </form>
-        }
 
         @if (Model.Conversation.Status != SmsConversationStatus.Closed && Model.Conversation.Status != SmsConversationStatus.Spam)
         {
@@ -80,9 +87,13 @@
                     </select>
                 </div>
             }
-            <form method="post" asp-route-action="Send" asp-route-id="@Model.Conversation.ItemId" class="d-flex gap-2 align-items-end">
-                <textarea name="body" id="sms-composer-body" class="form-control" rows="2" placeholder="@T["Type a message…"]" autofocus required></textarea>
-                <button type="submit" class="btn btn-primary">@T["Send"]</button>
+            <form method="post" asp-route-action="Send" asp-route-id="@Model.Conversation.ItemId">
+                <textarea name="body" id="sms-composer-body" class="form-control" rows="3" placeholder="@T["Type a message…"]" autofocus required></textarea>
+                <div class="d-flex justify-content-end mt-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@T["Send"]
+                    </button>
+                </div>
             </form>
             <script at="Foot">
                 (function () {
@@ -107,6 +118,19 @@
     </div>
 
     <div class="col-lg-4">
+        @if (!string.IsNullOrWhiteSpace(Model.Conversation.Summary))
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center">
+                    <i class="fa-solid fa-robot text-primary me-2" aria-hidden="true"></i>
+                    <span>@T["AI summary"]</span>
+                </div>
+                <div class="card-body">
+                    @Model.Conversation.Summary
+                </div>
+            </div>
+        }
+
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span>@T["Contact"]</span>
@@ -158,3 +182,100 @@
         </div>
     </div>
 </div>
+
+<script asp-name="signalr" at="Foot"></script>
+<script at="Foot" depends-on="signalr"
+        data-sms-hub-url="@smsHubUrl"
+        data-sms-conversation-id="@Model.Conversation.ItemId"
+        data-sms-messages-url="@smsMessagesUrl">
+    (function () {
+        var thread = document.getElementById('sms-thread');
+        if (!thread) { return; }
+
+        var script = document.currentScript;
+        var hubUrl = script.getAttribute('data-sms-hub-url');
+        var conversationId = script.getAttribute('data-sms-conversation-id');
+        var messagesUrl = script.getAttribute('data-sms-messages-url');
+
+        function scrollToBottom() {
+            thread.scrollTop = thread.scrollHeight;
+        }
+
+        // The high-water mark for what the thread already shows, as UTC ticks, so we only ask for newer messages.
+        function lastTicks() {
+            var max = 0;
+            thread.querySelectorAll('.sms-message[data-created-ticks]').forEach(function (node) {
+                var ticks = parseInt(node.getAttribute('data-created-ticks'), 10) || 0;
+                if (ticks > max) { max = ticks; }
+            });
+            return max;
+        }
+
+        function hasMessage(id) {
+            if (!id) { return false; }
+            var selector = (window.CSS && CSS.escape) ? CSS.escape(id) : id.replace(/"/g, '\\"');
+            return !!thread.querySelector('.sms-message[data-message-id="' + selector + '"]');
+        }
+
+        var fetching = false;
+
+        function pull() {
+            if (fetching) { return; }
+            fetching = true;
+
+            var url = messagesUrl + (messagesUrl.indexOf('?') >= 0 ? '&' : '?') + 'afterTicks=' + lastTicks();
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                .then(function (response) { return response.ok ? response.text() : ''; })
+                .then(function (html) {
+                    if (!html || !html.trim()) { return; }
+
+                    var holder = document.createElement('div');
+                    holder.innerHTML = html;
+
+                    var added = false;
+
+                    holder.querySelectorAll('.sms-message').forEach(function (node) {
+                        if (hasMessage(node.getAttribute('data-message-id'))) { return; }
+
+                        var empty = thread.querySelector('[data-empty]');
+                        if (empty) { empty.remove(); }
+
+                        thread.appendChild(node);
+                        added = true;
+                    });
+
+                    // Always keep the newest message in view, as requested.
+                    if (added) { scrollToBottom(); }
+                })
+                .catch(function () { /* transient network error; the next poll retries */ })
+                .finally(function () { fetching = false; });
+        }
+
+        scrollToBottom();
+
+        // A light fallback poll catches AI replies, messages sent by other agents, and any missed push.
+        setInterval(pull, 7000);
+
+        // SignalR gives an instant refresh the moment a customer's message lands.
+        if (window.signalR && hubUrl) {
+            try {
+                var connection = new signalR.HubConnectionBuilder()
+                    .withUrl(hubUrl)
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on('NewInboundMessage', function (notification) {
+                    if (notification && notification.conversationId === conversationId) {
+                        pull();
+                    }
+                });
+
+                // After a dropped connection is restored, reconcile anything missed while offline.
+                connection.onreconnected(function () { pull(); });
+
+                connection.start().catch(function () { /* the fallback poll keeps the thread current */ });
+            } catch (e) { /* SignalR unavailable; the fallback poll keeps the thread current */ }
+        }
+    })();
+</script>

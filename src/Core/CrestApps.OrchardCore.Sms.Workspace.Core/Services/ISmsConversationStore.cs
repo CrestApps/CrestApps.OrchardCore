@@ -42,4 +42,13 @@ public interface ISmsConversationStore : ICatalog<SmsConversation>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The queue's conversations.</returns>
     Task<IReadOnlyCollection<SmsConversation>> GetForQueueAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists queue-owned conversations that were routed (push-assigned) to a specific agent and are still
+    /// awaiting pickup (their assignment timestamp has not been cleared by the agent engaging). Used by the
+    /// reassignment sweep to detect routed conversations the assigned agent has not picked up in time.
+    /// </summary>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The routed, still-unpicked conversations.</returns>
+    Task<IReadOnlyCollection<SmsConversation>> GetRoutedAwaitingPickupAsync(CancellationToken cancellationToken = default);
 }

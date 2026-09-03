@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Resilience;
@@ -60,6 +61,7 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
     private readonly IAICompletionContextBuilder _contextBuilder;
     private readonly IAIProfileManager _profileManager;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
+    private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
     private readonly ITelnyxVoiceAgentClient _voiceClient;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
@@ -75,6 +77,7 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         IAICompletionContextBuilder contextBuilder,
         IAIProfileManager profileManager,
         ISubjectFlowSettingsService subjectFlowSettingsService,
+        IEnumerable<IOmnichannelHandoffService> handoffServices,
         ITelnyxVoiceAgentClient voiceClient,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
@@ -89,6 +92,7 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         _contextBuilder = contextBuilder;
         _profileManager = profileManager;
         _subjectFlowSettingsService = subjectFlowSettingsService;
+        _handoffServices = handoffServices;
         _voiceClient = voiceClient;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
@@ -189,6 +193,14 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         var prompts = await _promptStore.GetPromptsAsync(activity.AISessionId);
         var lastAssistant = prompts.LastOrDefault(p => p.Role == ChatRole.Assistant);
 
+        // The model invoked the transfer tool this turn (recorded durably on the activity): it finished speaking
+        // the bridge line, so seat the live call in the queue and offer it rather than hanging up or listening again.
+        if (activity.TryGet<PendingVoiceHandoff>(out _))
+        {
+            await PerformVoiceHandoffAsync(callEvent, activity, cancellationToken);
+            return;
+        }
+
         // The model asked to end the call: it finished speaking its goodbye, so hang up now.
         if (lastAssistant is not null && lastAssistant.Content.Contains(HangupMarker, StringComparison.Ordinal))
         {
@@ -240,20 +252,40 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
 
         await StorePromptAsync(session, ChatRole.User, caller, cancellationToken);
 
-        var reply = await CompleteAsync(profile, session, cancellationToken);
+        var (reply, handoffRequested, handoffReason) = await CompleteAsync(profile, session, activity, cancellationToken);
 
         await stopListening;
 
-        if (string.IsNullOrWhiteSpace(reply))
+        if (string.IsNullOrWhiteSpace(reply) && !handoffRequested)
         {
             // Nothing to say; keep listening so the call is not stranded silent.
             await _voiceClient.StartTranscriptionAsync(callEvent.CallControlId, language: "en", commandId: $"ai-tx-retry-{prompts.Count}", cancellationToken);
             return;
         }
 
-        await StorePromptAsync(session, ChatRole.Assistant, reply, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(reply))
+        {
+            await StorePromptAsync(session, ChatRole.Assistant, reply, cancellationToken);
+        }
 
-        var spoken = reply.Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
+        if (handoffRequested)
+        {
+            // The model invoked the transfer tool. Record a durable request on the activity so the speak.ended
+            // handler bridges the call once the closing line finishes (a text marker is no longer used).
+            activity.Put(new PendingVoiceHandoff { Reason = handoffReason });
+            await _activityStore.UpdateAsync(activity, cancellationToken);
+        }
+
+        // Only the hangup marker remains a text control token; strip it so the caller never hears it.
+        var spoken = (reply ?? string.Empty).Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
+
+        if (string.IsNullOrWhiteSpace(spoken) && handoffRequested)
+        {
+            // The model called the tool without a closing line; speak a neutral bridge line so the caller is not
+            // met with silence before the transfer.
+            spoken = "Thanks. Let me connect you with a specialist who can help. Please hold for just a moment.";
+        }
+
         await SpeakAsync(callEvent.CallControlId, activity, spoken, cancellationToken);
     }
 
@@ -584,27 +616,187 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         return rendered?.Trim();
     }
 
-    private async Task<string> CompleteAsync(AIProfile profile, AIChatSession session, CancellationToken cancellationToken)
+    private async Task<(string Reply, bool HandoffRequested, string Reason)> CompleteAsync(AIProfile profile, AIChatSession session, OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         var prompts = await _promptStore.GetPromptsAsync(session.SessionId);
 
         var transcript = prompts
             .Where(p => !p.IsGeneratedPrompt)
-            .Select(p => new ChatMessage(p.Role, (p.Content ?? string.Empty).Replace(HangupMarker, string.Empty)));
+            .Select(p => new ChatMessage(p.Role, (p.Content ?? string.Empty).Replace(HangupMarker, string.Empty)))
+            .ToList();
+
+        // When a live agent is available, enable the transfer tool for this turn and guide the model on when to
+        // escalate. Guidance is injected as a leading system message so the persona system prompt is preserved.
+        var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
+
+        if (handoffService is not null)
+        {
+            var handoffInstructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flowSettings);
+
+            if (!string.IsNullOrEmpty(handoffInstructions))
+            {
+                transcript.Insert(0, new ChatMessage(ChatRole.System, handoffInstructions));
+            }
+        }
 
         var context = await _contextBuilder.BuildAsync(profile, cancellationToken: cancellationToken);
         context.AdditionalProperties["Session"] = session;
+
+        // Attach the transfer tool to this completion once the context exists. The automated conversation calls the
+        // completion service directly rather than through the tool orchestrator, so the tool must be added here or
+        // the model never receives it. See the identical fix in the SMS handler.
+        if (handoffService is not null)
+        {
+            AttachTransferToAgentTool(context);
+        }
 
         var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 
         if (deployment is null)
         {
-            return null;
+            return (null, false, null);
         }
+
+        // The completion auto-invokes the transfer tool when the model decides to escalate; the tool records the
+        // decision on the ambient turn, read back once the completion returns.
+        using var handoffTurn = OmnichannelHandoffTurnContext.Begin();
 
         var completion = await _completionService.CompleteAsync(deployment, transcript, context, cancellationToken);
 
-        return completion?.Messages?.FirstOrDefault()?.Text;
+        var reply = completion?.Messages?.FirstOrDefault()?.Text;
+        var handoffRequested = handoffService is not null && handoffTurn.Turn.HandoffRequested;
+
+        return (reply, handoffRequested, handoffTurn.Turn.Reason);
+    }
+
+    // Attaches the transfer-to-agent tool to this single completion. The automated conversation calls the completion
+    // service directly rather than through the tool orchestrator, so the scoped-tool key the function-invocation
+    // service handler reads is otherwise never populated and no tools reach the model. We register the transfer tool
+    // as a scoped system-tool entry for this turn only (the context is built per turn and never persisted). Enabling
+    // it through the profile's tool-name list does not work: the profile tool provider reads the names snapshotted
+    // when the context was built and, either way, skips system tools — which the transfer tool is.
+    private static void AttachTransferToAgentTool(AICompletionContext context)
+    {
+        var entry = new ToolRegistryEntry
+        {
+            Id = OmnichannelHandoffHelper.TransferToAgentToolName,
+            Name = OmnichannelHandoffHelper.TransferToAgentToolName,
+            Description = "Transfers the current conversation to a live human agent.",
+            Source = ToolRegistryEntrySource.System,
+            CreateAsync = serviceProvider => ValueTask.FromResult(
+                serviceProvider.GetKeyedService<AITool>(OmnichannelHandoffHelper.TransferToAgentToolName)),
+        };
+
+        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] =
+            new List<ToolRegistryEntry> { entry };
+    }
+
+    // Resolves the phone handoff service and this subject's flow settings, returning a non-null service only when
+    // handoff is both configured (enabled with a target queue) and a channel implementation is registered. The flow
+    // settings are always returned so callers can read the target queue.
+    private async Task<(IOmnichannelHandoffService Service, SubjectFlowSettings FlowSettings)> ResolveVoiceHandoffAsync(
+        OmnichannelActivity activity,
+        CancellationToken cancellationToken)
+    {
+        var flowSettings = string.IsNullOrWhiteSpace(activity.SubjectContentType)
+            ? null
+            : await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType, cancellationToken);
+
+        if (!OmnichannelHandoffHelper.IsHandoffEnabled(flowSettings))
+        {
+            return (null, flowSettings);
+        }
+
+        var service = _handoffServices?.FirstOrDefault(candidate => candidate.CanHandle(OmnichannelConstants.Channels.Phone));
+
+        return (service, flowSettings);
+    }
+
+    // Seats the still-connected caller in the configured queue and offers the call to an agent, reusing the inbound
+    // enqueue-and-offer pipeline. On success the call stays up while the queue rings an agent; on failure there is
+    // nowhere to route the caller, so the call is ended.
+    private async Task PerformVoiceHandoffAsync(TelnyxCallEvent callEvent, OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
+
+        if (handoffService is null)
+        {
+            _logger.LogWarning("An AI voice handoff was requested for Activity {ActivityId} but no handoff destination is available; ending the call.", activity.ItemId.SanitizeLogValue());
+            await _voiceClient.HangupAsync(callEvent.CallControlId, cancellationToken);
+
+            return;
+        }
+
+        OmnichannelHandoffResult result;
+
+        try
+        {
+            result = await handoffService.RequestHandoffAsync(new OmnichannelHandoffRequest
+            {
+                Activity = activity,
+                TargetQueueId = flowSettings.HandoffQueueId,
+                Reason = "The automated assistant escalated the call to a live agent.",
+                ContactAddress = activity.PreferredDestination,
+                ProviderName = TelnyxConstants.ProviderTechnicalName,
+                ProviderCallId = callEvent.CallControlId,
+            }, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "The AI voice handoff for Activity {ActivityId} threw; ending the call.", activity.ItemId.SanitizeLogValue());
+            await _voiceClient.HangupAsync(callEvent.CallControlId, cancellationToken);
+
+            return;
+        }
+
+        if (!result.Succeeded)
+        {
+            _logger.LogWarning("The AI voice handoff for Activity {ActivityId} did not complete: {Reason}. Ending the call.", activity.ItemId.SanitizeLogValue(), result.Message);
+            await _voiceClient.HangupAsync(callEvent.CallControlId, cancellationToken);
+
+            return;
+        }
+
+        // After hours the destination queue is closed, so a callback was scheduled instead of routing the live
+        // call. Tell the caller and end the call gracefully. The closing line is spoken and stored with the hangup
+        // marker; the durable handoff flag is cleared first so the next speak.ended reaches the hangup path
+        // instead of re-entering the handoff.
+        if (result.Disposition == HandoffDisposition.CallbackScheduled)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("AI voice Activity {ActivityId} could not route live (after hours); a callback was scheduled.", activity.ItemId.SanitizeLogValue());
+            }
+
+            var concluded = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
+
+            if (concluded is not null && concluded.Properties.Remove(nameof(PendingVoiceHandoff)))
+            {
+                await _activityStore.UpdateAsync(concluded, cancellationToken);
+            }
+
+            const string closing = "Thanks for your patience. Our specialists aren't available right now, so we've scheduled a callback and someone will reach out to you shortly. Goodbye.";
+
+            if (!string.IsNullOrWhiteSpace(activity.AISessionId))
+            {
+                var session = await _chatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
+
+                if (session is not null)
+                {
+                    // Store with the hangup marker so the next speak.ended ends the call.
+                    await StorePromptAsync(session, ChatRole.Assistant, closing + " " + HangupMarker, cancellationToken);
+                }
+            }
+
+            await SpeakAsync(callEvent.CallControlId, activity, closing, cancellationToken);
+
+            return;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Handed off AI voice Activity {ActivityId} to a live agent; the call is held while the queue offers it.", activity.ItemId.SanitizeLogValue());
+        }
     }
 
     private Task SpeakAsync(string callControlId, OmnichannelActivity activity, string text, CancellationToken cancellationToken)

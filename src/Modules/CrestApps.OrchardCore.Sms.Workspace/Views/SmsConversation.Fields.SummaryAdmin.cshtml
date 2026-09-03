@@ -1,26 +1,82 @@
-@model SmsConversation
+@using CrestApps.OrchardCore.Sms.Workspace.Models
+@model SmsConversationRowViewModel
 
-<div class="d-flex justify-content-between align-items-start">
-    <div>
-        <strong>@Model.ContactAddress</strong>
-        @if (!Model.IsRead || Model.UnreadCount > 0)
-        {
-            <span class="badge bg-primary ms-1">@(Model.UnreadCount > 0 ? Model.UnreadCount.ToString() : T["New"].Value)</span>
-        }
-        <div class="text-muted small text-truncate" style="max-width: 32rem;">@Model.LastMessagePreview</div>
-        <div class="text-muted small">
-            @T["on"] @Model.ServiceAddress
-            &middot; @Model.Status.ToString()
-            @if (Model.AssignmentStatus == CrestApps.OrchardCore.Sms.Workspace.Models.SmsConversationAssignmentStatus.Unassigned)
+@{
+    var conversation = Model.Conversation;
+    var hasContactName = !string.IsNullOrEmpty(Model.ContactName);
+    var contactName = hasContactName ? Model.ContactName : conversation.ContactAddress;
+    var unread = !conversation.IsRead || conversation.UnreadCount > 0;
+}
+
+<div class="d-flex justify-content-between align-items-start gap-2">
+    <div class="flex-grow-1" style="min-width: 0;">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            @if (unread)
             {
-                <span class="badge bg-warning text-dark ms-1">@T["Unassigned"]</span>
+                <span class="d-inline-block rounded-circle bg-primary flex-shrink-0" style="width: .5rem; height: .5rem;" title="@T["Unread"]" aria-hidden="true"></span>
+            }
+            <span class="@(unread ? "fw-bold text-body" : "fw-normal")">@contactName</span>
+            @if (hasContactName)
+            {
+                <span class="text-muted small">@conversation.ContactAddress</span>
+            }
+            @if (unread)
+            {
+                <span class="badge rounded-pill text-bg-primary">@(conversation.UnreadCount > 0 ? conversation.UnreadCount.ToString() : T["New"].Value)</span>
             }
         </div>
-    </div>
-    <div class="text-muted small">
-        @if (Model.LastMessageUtc.HasValue)
+
+        @if (!string.IsNullOrEmpty(conversation.LastMessagePreview))
         {
-            <text>@Model.LastMessageUtc.Value.ToString("g")</text>
+            <div class="small text-truncate @(unread ? "fw-semibold text-body" : "text-muted")">@conversation.LastMessagePreview</div>
+        }
+
+        <div class="d-flex align-items-center gap-1 flex-wrap mt-1">
+            @switch (conversation.Status)
+            {
+                case SmsConversationStatus.Open:
+                    <span class="badge text-bg-success">@T["Open"]</span>
+                    break;
+                case SmsConversationStatus.Snoozed:
+                    <span class="badge text-bg-warning">@T["Snoozed"]</span>
+                    break;
+                case SmsConversationStatus.Closed:
+                    <span class="badge text-bg-secondary">@T["Closed"]</span>
+                    break;
+                case SmsConversationStatus.Spam:
+                    <span class="badge text-bg-danger">@T["Spam"]</span>
+                    break;
+            }
+
+            @if (conversation.AssignmentStatus == SmsConversationAssignmentStatus.Assigned && !string.IsNullOrEmpty(Model.AssignedToName))
+            {
+                <span class="badge text-bg-info" title="@T["Assigned to"]">
+                    <i class="fa-solid fa-user me-1" aria-hidden="true"></i>@Model.AssignedToName
+                </span>
+            }
+            else if (conversation.AssignmentStatus == SmsConversationAssignmentStatus.Pooled)
+            {
+                <span class="badge text-bg-secondary" title="@T["Available for any member of the queue to claim."]">
+                    <i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Pooled"]
+                </span>
+            }
+            else if (conversation.AssignmentStatus == SmsConversationAssignmentStatus.Unassigned)
+            {
+                <span class="badge text-bg-warning" title="@T["Not yet assigned to an agent."]">
+                    <i class="fa-solid fa-inbox me-1" aria-hidden="true"></i>@T["Unassigned"]
+                </span>
+            }
+
+            <span class="text-muted small ms-1" title="@T["Received on"]">
+                <i class="fa-solid fa-hashtag me-1" aria-hidden="true"></i>@conversation.ServiceAddress
+            </span>
+        </div>
+    </div>
+
+    <div class="text-muted small text-nowrap flex-shrink-0">
+        @if (conversation.LastMessageUtc.HasValue)
+        {
+            <text>@conversation.LastMessageUtc.Value.ToLocalTime().ToString("g")</text>
         }
     </div>
 </div>

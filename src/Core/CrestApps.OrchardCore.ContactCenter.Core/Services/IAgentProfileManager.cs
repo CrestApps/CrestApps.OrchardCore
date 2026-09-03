@@ -26,6 +26,15 @@ public interface IAgentProfileManager : ICatalogManager<AgentProfile>
     Task<IReadOnlyCollection<AgentProfile>> GetAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists every agent profile that is a member of (entitled to) the specified queue, independent of presence
+    /// or sign-in. Used by channels that route without a sign-in gate, such as routed SMS.
+    /// </summary>
+    /// <param name="queueId">The queue identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The queue's members.</returns>
+    Task<IReadOnlyCollection<AgentProfile>> GetMembersForQueueAsync(string queueId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists agent profiles in the specified presence state.
     /// </summary>
     /// <param name="presenceStatus">The presence state to match.</param>

@@ -317,6 +317,13 @@ public sealed class OmnichannelActivity : CatalogItem
     public string TerminalReasonCode { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this automated conversation was escalated to a live human agent.
+    /// Stamped at handoff and durable even after the activity leaves the automated lane (a routed voice call
+    /// becomes an agent call), so containment reporting can count escalations across channels.
+    /// </summary>
+    public bool AiEscalated { get; set; }
+
+    /// <summary>
     /// Attempts to resolve the activity to the supplied contact while enforcing the persisted candidate set.
     /// </summary>
     /// <param name="contact">The contact selected for the activity.</param>

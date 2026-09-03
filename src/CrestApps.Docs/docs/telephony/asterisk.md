@@ -143,6 +143,56 @@ Browser audio is advertised only when the tenant or default provider has executa
 
 The credential lifecycle uses PJSIP Realtime rather than static pre-provisioning. ARI cannot create endpoint, auth, or AOR objects, and static pre-provisioning cannot bind every browser registration to a tenant, session, and expiry. Orchard issues short-lived PJSIP credentials through a scoped issuer, persists a durable per-tenant credential **lease** in the tenant's own YesSql store as the single source of truth for ownership and expiry, materializes endpoint/auth/AOR rows through the Realtime store seam, rotates by revoking the prior session credential, and cleans up expired or revoked registrations. The reference templates live under `src/Startup/CrestApps.Aspire.AppHost/Asterisk/pjsip-webrtc-realtime.conf.template` and `src/Startup/CrestApps.Aspire.AppHost/Coturn/turnserver-webrtc.conf.template`.
 
+### STUN and TURN (coturn)
+
+ICE (NAT traversal) decides how browser media reaches Asterisk. The browser tries a **direct/host** path
+first, then **STUN** (server-reflexive), and relays through **TURN** only when a direct path is impossible
+(strict or symmetric NAT, blocked UDP). Unlike Telnyx — whose SDK ships default relays — Asterisk advertises
+**only the ICE servers you configure**, so agents behind a restrictive NAT get relayed audio only when you
+supply a TURN server. Without one, those agents can register and signal but may have **one-way or no audio**.
+
+Configure this with three tenant settings (all covered in the settings table above):
+
+| Setting | Purpose |
+| --- | --- |
+| **ICE server URLs** | The `stun:`/`turn:`/`turns:` URLs advertised to the browser. List your STUN and TURN servers here. |
+| **TURN shared secret** | The coturn REST/`use-auth-secret` shared secret. When set, the server issues **ephemeral** TURN credentials instead of a static username/password. Stored encrypted. |
+| **ICE transport policy** | `all` (host + STUN + TURN) or `relay` (force all media through TURN — useful to validate TURN or on locked-down networks). |
+
+**Ephemeral TURN credentials.** This module does not store or serve a static TURN password. When a
+**TURN shared secret** is configured, each browser registration is minted a time-limited credential using
+coturn's long-term `use-auth-secret` (a.k.a. REST/TURN-REST) scheme, identical to the one Core's real-time
+voice uses:
+
+- **username** = `{unixExpiry}:{tenant}:{session}` — an epoch-seconds expiry stamped with tenant/session so
+  the credential is short-lived and scoped.
+- **credential** = `Base64(HMAC-SHA1(sharedSecret, username))` — computed by both Orchard and coturn from the
+  shared secret, so coturn accepts it without the credential ever being stored.
+
+The same shared secret must be set as coturn's `static-auth-secret`. A minimal coturn config (see
+`src/Startup/CrestApps.Aspire.AppHost/Coturn/turnserver-webrtc.conf.template`):
+
+```ini
+# turnserver.conf
+use-auth-secret
+static-auth-secret=<same value as the TURN shared secret setting>
+realm=<your-domain>
+listening-port=3478
+tls-listening-port=5349
+# TCP/TLS relay improves reachability from restrictive networks
+```
+
+Then point **ICE server URLs** at that server, for example:
+
+```text
+stun:turn.example.com:3478
+turn:turn.example.com:3478?transport=udp
+turns:turn.example.com:5349?transport=tcp
+```
+
+For production-safety, the contributor refuses to serve a checked-in development shared secret; supply a real
+secret through tenant settings (stored encrypted) or configuration.
+
 Each credential is bound to an authoritative, server-owned media session. The issuer derives ownership from the authenticated user, generates the session id itself, and never trusts a caller-supplied identifier (such as an interaction id) to authorize issuance — an interaction id may still travel as non-authoritative metadata. Every issue, rotate, revoke, and cleanup state transition runs under a tenant-qualified `IDistributedLock`. Ownership, expiry, the per-user cap, and revocation are all resolved from the durable lease store, which is inherently isolated to the current tenant because each query runs through the tenant's own YesSql session — there is no `LIKE` prefix scan over the shared Realtime tables, so one tenant can never observe or delete another tenant's rows. Issuance writes the durable lease **first**, then the Realtime SIP row, then the cache, so a Realtime row can never exist without a lease the current tenant owns; if the Realtime write fails, the lease is marked revoked and cleanup reclaims any partial row by exact authorization user. The distributed cache is only a read-through performance cache: a cache miss is reconciled against the durable lease (expiry is read from the lease and is never inferred from a cache miss). Cleanup queries only the current tenant's expired or revoked leases and deletes each corresponding Realtime row by its exact authorization user. Authorization-user identifiers additionally incorporate a fixed-width stable hash of the raw tenant name so tenants that share one Realtime database and whose sanitized names would otherwise collide (for example `acme`, `acme-east`, and `Acme`) receive distinct identifier namespaces. Each authenticated user is capped at a small number of concurrent live browser credentials; issuing beyond the cap revokes the oldest session first so the newest browser session wins. Signing out of the soft phone (or terminating the agent session) revokes all of the user's live credentials immediately instead of waiting for natural expiry.
 
 ## How call control works

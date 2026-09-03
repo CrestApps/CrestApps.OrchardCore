@@ -50,6 +50,20 @@ public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfi
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentProfile>> GetMembersForQueueAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        var normalizedQueueId = queueId.ToLowerInvariant();
+        var members = await Session.Query<AgentProfile, AgentAllowedQueueIndex>(
+            index => index.QueueId == normalizedQueueId,
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return members.ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<AgentProfile>> GetByPresenceAsync(
         AgentPresenceStatus presenceStatus,
         CancellationToken cancellationToken = default)

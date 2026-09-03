@@ -129,6 +129,9 @@ public sealed class SmsConversationService : ISmsConversationService
         conversation.LastMessagePreview = BuildPreview(request.Body);
         conversation.IsRead = true;
         conversation.UnreadCount = 0;
+        // The agent engaged, so a routed thread is picked up and no longer subject to reassignment.
+        conversation.AssignedUtc = null;
+        conversation.ReassignmentAttempts = 0;
         conversation.ModifiedUtc = _clock.UtcNow;
 
         if (!string.IsNullOrEmpty(request.ActingAgentId) &&

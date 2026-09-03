@@ -103,7 +103,7 @@ Telnyx** button. The rest appear after you connect:
 | **Call Control / SIP / outbound voice profile ids** | After connecting | Managed by Connect and shown read-only. |
 | **Default outbound caller id** | After connecting | The E.164 number presented on outbound calls when no per-agent or per-request caller id is supplied. Connect suggests one; editable. Must be a Telnyx-owned number for STIR/SHAKEN attestation. |
 | **Webhook public key** | After connecting | The Telnyx account **Ed25519 public key** (from the portal) used to verify signed webhooks. Stored encrypted. Inbound webhooks are rejected when empty. |
-| **Browser WebRTC (advanced)** | After connecting | Credential lifetime, SIP WebSocket URL (`wss://sip.telnyx.com:7443`), SIP domain (`sip.telnyx.com`), preferred codecs, ICE (STUN/TURN) URLs, TURN username/credential, ICE transport policy, and an optional REST API base URL override. Defaults work out of the box. |
+| **Browser WebRTC (advanced)** | After connecting | Credential lifetime, SIP signaling, codecs, and ICE (STUN/TURN) settings — see [Browser WebRTC settings](#browser-webrtc-settings) for each field. Defaults work out of the box. |
 
 When you enable Telnyx and no default provider is set yet, Telnyx becomes the default automatically. When
 you disable Telnyx while it is the default provider, the default is cleared and the soft phone is disabled
@@ -139,6 +139,47 @@ loads the Telnyx SDK, a SIP provider such as Asterisk loads SIP.js, and neither 
 Credentials are capped per user, expire on their own, and are deleted at Telnyx on sign-out. The mapping of
 user → SIP username is stored durably so the Contact Center can resolve the agent's live endpoint when
 bridging a call.
+
+### Browser WebRTC settings
+
+These live under **Browser WebRTC (advanced)** in the provider settings and are only shown after you connect.
+Every one has a working default, so you can leave them empty unless your network or account requires otherwise.
+
+| Setting | Default | Description |
+| --- | --- | --- |
+| **Credential lifetime (minutes)** | `180` | How long a browser SIP telephony credential is valid. Kept short so a lost session cannot register indefinitely; renewal is deferred during a live call so media is never dropped mid-call. |
+| **SIP WebSocket URL** | `wss://sip.telnyx.com:7443` | The SIP-over-WebSocket signaling endpoint the browser registers against. Telnyx SIP-over-WSS is on **:7443** (not :443); a wrong port produces a `1006` socket close. |
+| **SIP domain** | `sip.telnyx.com` | The SIP domain browser credentials register under. |
+| **Preferred codecs** | Telnyx SDK default | Comma- or space-separated preferred WebRTC audio codecs advertised to the browser (for example `opus,g722,pcmu`). |
+| **ICE (STUN/TURN) URLs** | Telnyx SDK default | Comma- or space-separated STUN/TURN URLs advertised to the browser. See [STUN and TURN](#stun-and-turn) — the behavior here is Telnyx-specific. |
+| **TURN username** | — | Optional static TURN username advertised alongside the ICE URLs. |
+| **TURN credential** | — | Optional static TURN credential (password) advertised alongside the ICE URLs. Stored encrypted. |
+| **ICE transport policy** | `all` | `all` uses direct/host, STUN, and TURN candidates; `relay` forces all media through TURN (useful for locked-down networks or TURN validation). |
+| **Echo test destination** | — | Optional Telnyx number or SIP URI that echoes audio back, used by the diagnostics **Run audio test** action and the health canary to verify round-trip audio without a second person. When empty, the audio test is unavailable. |
+| **REST API base URL** | `https://api.telnyx.com/v2/` | Optional override of the Telnyx REST API base address (internal/testing use). |
+
+### STUN and TURN
+
+ICE (NAT traversal) decides how browser media reaches Telnyx. It always tries a **direct/host** path first,
+then **STUN** (server-reflexive), and relays through **TURN** only when a direct path is impossible (strict or
+symmetric NAT, blocked UDP).
+
+Telnyx behaves differently from a raw SIP provider here, because the **`@telnyx/webrtc` SDK ships with its own
+default ICE servers — including Telnyx's TURN relays**. Because of that:
+
+- **Leave *ICE URLs* empty (the default)** and every agent gets Telnyx's STUN **and** TURN out of the box —
+  direct when possible, relayed when not.
+- **A STUN-only *ICE URLs* value is deliberately ignored.** Supplying only STUN would *replace* the SDK's
+  defaults and strip its TURN relays, leaving agents behind a restrictive NAT able to send but not receive
+  audio (**one-way audio**). To prevent that, the module only overrides the SDK's ICE servers when your list
+  **includes a TURN URL** (`turn:`/`turns:`); a STUN-only list is left unused and the SDK defaults stay in place.
+- **To use your own TURN**, put a `turn:`/`turns:` URL in *ICE URLs* (with a **TURN username/credential** if
+  your TURN server requires them). That set then replaces the SDK defaults.
+- Set **ICE transport policy** to `relay` to force all media through TURN — useful on networks where host/STUN
+  never works, or to validate your TURN server.
+
+Unlike the Asterisk provider, Telnyx does **not** mint ephemeral coturn credentials; it uses the SDK's default
+relays or the static TURN username/credential you supply.
 
 ## Outbound calls and caller id
 

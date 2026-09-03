@@ -2,11 +2,13 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Sms.Workspace.BackgroundTasks;
 using CrestApps.OrchardCore.Sms.Workspace.Core;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routers;
+using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routing;
 using CrestApps.OrchardCore.Sms.Workspace.Drivers;
 using CrestApps.OrchardCore.Sms.Workspace.Handlers;
 using CrestApps.OrchardCore.Sms.Workspace.Hubs;
@@ -17,7 +19,9 @@ using CrestApps.OrchardCore.Sms.Workspace.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Environment.Shell.Configuration;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -38,14 +42,20 @@ namespace CrestApps.OrchardCore.Sms.Workspace;
 public sealed class Startup : StartupBase
 {
     internal readonly IStringLocalizer S;
+    private readonly IShellConfiguration _shellConfiguration;
 
-    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    public Startup(IStringLocalizer<Startup> stringLocalizer, IShellConfiguration shellConfiguration)
     {
         S = stringLocalizer;
+        _shellConfiguration = shellConfiguration;
     }
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Routed (push) SMS distribution tunables, overridable via the CrestApps:Sms:RoutedDistribution section.
+        services.Configure<SmsRoutedDistributionOptions>(
+            _shellConfiguration.GetSection("CrestApps:Sms:RoutedDistribution"));
+
         // Conversation catalog.
         services
             .AddScoped<ISmsConversationStore, SmsConversationStore>()
@@ -72,8 +82,16 @@ public sealed class Startup : StartupBase
         // Inbound routing chain (deterministic order via ISmsInboundRouter.Order).
         services
             .AddScoped<ISmsInboundRouter, ExistingConversationRouter>()
+            .AddScoped<ISmsInboundRouter, RoutedQueueRouter>()
             .AddScoped<ISmsInboundRouter, NumberRouteRouter>()
             .AddScoped<ISmsInboundRouter, FallbackRouter>();
+
+        // Routed (push) queue distribution: agent selection, per-agent SMS availability, and the sweep that
+        // returns unpicked routed conversations to their shared pool.
+        services
+            .AddScoped<ISmsRoutingStrategy, LeastLoadedSmsRoutingStrategy>()
+            .AddScoped<ISmsAgentAvailabilityService, SmsAgentAvailabilityService>()
+            .AddScoped<ISmsRoutedReassignmentService, SmsRoutedReassignmentService>();
 
         // The inbound processor is both the portal's orchestration service and an Omnichannel event handler, so
         // any provider webhook that raises SmsReceived feeds the human conversation pipeline.
@@ -87,6 +105,10 @@ public sealed class Startup : StartupBase
         // Real-time messaging notifications over the SMS portal SignalR hub.
         services.AddScoped<ISmsRealTimeNotifier, SmsRealTimeNotifier>();
 
+        // Receives AI-to-agent handoffs for the SMS channel: moves an escalated automated conversation into a
+        // queue-owned human thread in the inbox.
+        services.AddScoped<IOmnichannelHandoffService, SmsAgentHandoffService>();
+
         // Storage schema + indexes.
         // The SMS portal stores its catalog documents in a dedicated YesSql collection. Registering it makes
         // OrchardCore initialize the collection's "{prefix}_Document" table for the tenant.
@@ -99,6 +121,7 @@ public sealed class Startup : StartupBase
 
         // Background fan-out for queued broadcasts.
         services.AddSingleton<IBackgroundTask, SmsBroadcastBackgroundTask>();
+        services.AddSingleton<IBackgroundTask, SmsRoutedReassignmentBackgroundTask>();
 
         // Admin surfaces. SMS routing is edited on the channel-endpoint screen (no separate routing catalog).
         // Register the SMS channel as a channel-endpoint source, and the SMS-specific endpoint editors

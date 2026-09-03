@@ -43,35 +43,59 @@
 
 <script at="Foot" depends-on="bootstrap-select">
     (function () {
-        var $ = window.jQuery;
-        if (!$) { return; }
-        var url = '@Url.Action("SearchContacts")';
+        // The CrestApps bootstrap-select fork is a vanilla-JS plugin (no jQuery); drive it through its
+        // native window.Selectpicker API.
+        var Selectpicker = window.Selectpicker;
+        var url = '@Url.RouteUrl("SmsPortalSearchContacts")';
+        if (!Selectpicker || !url) { return; }
 
-        $(function () {
-            var $picker = $('#recipient-select');
-            $picker.selectpicker();
+        var select = document.getElementById('recipient-select');
+        if (!select) { return; }
 
-            // Server-side live search: as the agent types in the picker's search box, query contacts and add
-            // matching options (keeping any already-selected options so selections persist across searches).
-            var $wrapper = $picker.closest('.bootstrap-select');
-            var timer = null;
+        var picker = Selectpicker.getOrCreateInstance(select);
+        if (!picker || !picker.searchbox) { return; }
 
-            $wrapper.on('input', '.bs-searchbox input', function () {
-                var q = $(this).val().trim();
-                clearTimeout(timer);
-                if (q.length < 2) { return; }
-                timer = setTimeout(function () {
-                    $.getJSON(url, { q: q }).done(function (items) {
+        var timer = null;
+        // Guards the synthetic input event we dispatch to re-apply the filter, so it never re-issues a request.
+        var suppress = false;
+
+        // Server-side live search: as the agent types in the picker's search box, query contacts and add
+        // matching options (keeping any already-selected options so selections persist across searches).
+        picker.searchbox.addEventListener('input', function () {
+            if (suppress) { return; }
+
+            var q = picker.searchbox.value.trim();
+            clearTimeout(timer);
+            if (q.length < 2) { return; }
+
+            timer = setTimeout(function () {
+                fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                    .then(function (response) { return response.ok ? response.json() : []; })
+                    .then(function (items) {
+                        var added = false;
+
                         (items || []).forEach(function (item) {
                             if (!item.phone) { return; }
-                            if ($picker.find('option[value="' + item.phone.replace(/"/g, '\\"') + '"]').length === 0) {
-                                $picker.append($('<option>').attr('value', item.phone).attr('data-subtext', item.phone).text(item.name || item.phone));
+                            if (!select.querySelector('option[value="' + CSS.escape(item.phone) + '"]')) {
+                                var option = document.createElement('option');
+                                option.value = item.phone;
+                                option.textContent = item.name || item.phone;
+                                option.setAttribute('data-subtext', item.phone);
+                                select.appendChild(option);
+                                added = true;
                             }
                         });
-                        $picker.selectpicker('refresh');
-                    });
-                }, 250);
-            });
+
+                        if (added) { picker.refresh(); }
+
+                        // refresh() rebuilds the list but drops the active live-search filter, so re-apply it
+                        // to the freshly added options. The suppress guard keeps this from fetching again.
+                        suppress = true;
+                        picker.searchbox.dispatchEvent(new Event('input', { bubbles: true }));
+                        suppress = false;
+                    })
+                    .catch(function () { });
+            }, 250);
         });
     })();
 </script>

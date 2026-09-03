@@ -27,7 +27,7 @@ public sealed class TelephonyExtensionsAdminMenu : AdminNavigationProvider
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
                 .AddClass("interaction-center")
                 .Id("interactionCenter")
-                .Add(S["Management"], "100", management => management
+                .Add(S["Management"], S["Management"].PrefixPosition(), management => management
                     .AddClass("interaction-center-management")
                     .Id("interactionCenterManagement")
                     .Add(S["Extensions"], S["Extensions"].PrefixPosition(), extensions => extensions

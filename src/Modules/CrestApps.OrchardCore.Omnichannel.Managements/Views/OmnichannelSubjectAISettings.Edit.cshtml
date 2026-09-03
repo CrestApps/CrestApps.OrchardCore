@@ -86,3 +86,47 @@
         </div>
     </div>
 </div>
+
+@* Handoff applies to any automated conversation for this subject, including outbound campaigns whose AI settings
+   are chosen at inventory load, so it lives in its own card rather than the inbound-only AI configuration above. *@
+<div class="card mb-3 subject-ai-handoff@(Model.ShowHandoffSettings ? string.Empty : " d-none")">
+    <div class="card-header">@T["Live agent handoff"]</div>
+    <div class="card-body">
+        <div class="form-check">
+            <input asp-for="EnableAgentHandoff" class="form-check-input" type="checkbox" />
+            <label asp-for="EnableAgentHandoff" class="form-check-label">@T["Allow the AI to hand off to a live agent"]</label>
+        </div>
+        <span class="hint dashed">@T["When enabled, the AI can escalate the conversation to a human. SMS threads move into the SMS Workspace inbox owned by the queue below; phone calls are placed into the queue and offered to an agent. Applies to inbound and outbound automated conversations for this subject."]</span>
+        <div class="mt-3">
+            <label asp-for="HandoffQueueId" class="form-label">@T["Handoff queue"]</label>
+            @if (Model.HasHandoffQueuePicker)
+            {
+                <select asp-for="HandoffQueueId" asp-items="Model.HandoffQueues" class="form-select">
+                    <option value="">@T["Select a queue"]</option>
+                </select>
+            }
+            else
+            {
+                <input asp-for="HandoffQueueId" class="form-control" />
+            }
+            <span asp-validation-for="HandoffQueueId" class="text-danger"></span>
+            <span class="hint">@T["The Contact Center queue that receives escalated conversations. Handoff is only performed when this is set."]</span>
+        </div>
+        <div class="mt-3">
+            <label class="form-label">@T["Escalate when"]</label>
+            <div class="form-check">
+                <input asp-for="HandoffOnUserRequest" class="form-check-input" type="checkbox" />
+                <label asp-for="HandoffOnUserRequest" class="form-check-label">@T["The customer asks for a human"]</label>
+            </div>
+            <div class="form-check">
+                <input asp-for="HandoffOnQualifiedLead" class="form-check-input" type="checkbox" />
+                <label asp-for="HandoffOnQualifiedLead" class="form-check-label">@T["The customer is a qualified, ready lead"]</label>
+            </div>
+            <div class="form-check">
+                <input asp-for="HandoffOnFrustration" class="form-check-input" type="checkbox" />
+                <label asp-for="HandoffOnFrustration" class="form-check-label">@T["The customer is frustrated or the AI cannot help"]</label>
+            </div>
+            <span class="hint dashed">@T["These conditions guide when the AI escalates. Select at least one, or handoff is never triggered."]</span>
+        </div>
+    </div>
+</div>

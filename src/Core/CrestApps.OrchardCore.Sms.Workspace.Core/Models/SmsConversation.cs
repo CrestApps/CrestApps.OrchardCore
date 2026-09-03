@@ -86,6 +86,25 @@ public sealed class SmsConversation : CatalogItem, IModifiedUtcAwareModel
     public string AISessionId { get; set; }
 
     /// <summary>
+    /// Gets or sets a short AI-written summary of the automated conversation, captured at handoff so the agent
+    /// taking over sees why the customer was transferred and what the AI learned without reading the whole thread.
+    /// </summary>
+    public string Summary { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the thread was routed (push-assigned) to <see cref="AssignedAgentId"/>. Used by
+    /// the reassignment sweep to detect a routed conversation the assigned agent has not picked up in time.
+    /// </summary>
+    public DateTime? AssignedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of times a routed conversation has been re-routed to another agent after not being
+    /// picked up. Bounds the re-routing so a thread ignored by successive agents falls back to the shared pool
+    /// instead of bouncing between them forever. Reset to zero once an agent engages.
+    /// </summary>
+    public int ReassignmentAttempts { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifiers of the labels applied to the thread.
     /// </summary>
     public IList<string> LabelIds { get; set; } = [];

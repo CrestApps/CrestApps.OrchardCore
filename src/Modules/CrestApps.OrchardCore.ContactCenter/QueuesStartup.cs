@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using Microsoft.AspNetCore.Builder;
@@ -60,7 +61,8 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityReservationReclaimer>(static sp => sp.GetRequiredService<ActivityReservationService>())
             .AddScoped<IContactCenterRetentionPolicy, QueueItemRetentionPolicy>()
             .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
-            .AddScoped<ContactCenterAdminFormOptionsProvider>();
+            .AddScoped<ContactCenterAdminFormOptionsProvider>()
+            .AddScoped<IHandoffQueueOptionsProvider, ContactCenterHandoffQueueOptionsProvider>();
 
         // Shared Contact Center configuration cache. The Business Hours feature also registers it; TryAdd keeps a
         // single instance whichever feature configures services first.
