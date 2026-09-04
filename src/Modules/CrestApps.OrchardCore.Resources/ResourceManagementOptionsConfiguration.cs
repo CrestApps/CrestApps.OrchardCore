@@ -198,6 +198,22 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-NLPKccGh39Ymb5v2aC3tD6zdtg+MhT/Sa+QpCRmDVY2xXSC10rxBNBh0iRqLUQkK")
             .SetVersion("2.0.0");
 
+        // Shared realtime (speech-to-speech) audio controller (window.CoreAIRealtime), consumed by the AI
+        // chat and chat interaction apps. Registered once here; those features depend on this resource.
+        _manifest
+            .DefineScript("realtime-audio")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/realtime-audio.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/realtime-audio.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/realtime-audio.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/realtime-audio.js")
+            .SetCdnIntegrity(
+                "sha384-fD4C17UUFI6dfWhbk26WmEVCiZZZ0mqYc/ga7UX/Mtqw0+Zlm4kXKxmeKBncQ3zQ",
+                "sha384-1R2+ottVAdwsVFtVO64VTNlgOwWhNN5cIO4uFTFzQwy6Ai1vN1Za6x/1kUYtS/3k")
+            .SetDependencies("signalr", "dompurify")
+            .SetVersion("2.0.0");
+
         _manifest
             .DefineStyle("intl-tel-input")
             .SetUrl(

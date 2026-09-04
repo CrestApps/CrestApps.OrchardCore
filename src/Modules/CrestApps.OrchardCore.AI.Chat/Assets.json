@@ -102,26 +102,5 @@
       "Assets/css/speech-to-text.css"
     ],
     "output": "wwwroot/css/speech-to-text.css"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.js"
-    ],
-    "output": "wwwroot/scripts/realtime-audio.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js"
-    ],
-    "output": "wwwroot/scripts/realtime-audio.min.js"
-  },
-  {
-    "copy": true,
-    "inputs": [
-      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js.map"
-    ],
-    "output": "wwwroot/scripts/realtime-audio.min.js.map"
   }
 ]

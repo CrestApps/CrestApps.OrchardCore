@@ -205,6 +205,27 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/realtime-audio.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js"
+    ],
+    "output": "wwwroot/vendors/crestapps/realtime-audio.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/@crestapps/ai-chat-ui/dist/realtime-audio.min.js.map"
+    ],
+    "output": "wwwroot/vendors/crestapps/realtime-audio.min.js.map"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/intl-tel-input/dist/js/intlTelInputWithUtils.js"
     ],
     "output": "wwwroot/vendors/intl-tel-input/js/intlTelInputWithUtils.js"

@@ -1,128 +1,14 @@
-@using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.ViewModels
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
 @model EditDeploymentModelCapabilitiesViewModel
 
 @{
+    var indexedParameters = Model.ModelParameters
+        .Select((parameter, index) => new { Parameter = parameter, Index = index })
+        .ToList();
+
     bool FeatureEnabled(string featureName)
         => Model.SelectedFeatures?.Contains(featureName, StringComparer.OrdinalIgnoreCase) ?? false;
-
-    var indexed = Model.ModelParameters
-        .Select((parameter, index) => (Parameter: parameter, Index: index))
-        .ToList();
-}
-
-@* Renders a single model parameter card. The structural fields (Index, Name, IsSupported) always post,
-   even while a feature-dependent card is disabled, so the collection binder never sees a gap that would
-   drop or misalign the remaining rows. *@
-@{
-    Func<(DeploymentModelParameterViewModel Parameter, int Index, bool Hidden), Microsoft.AspNetCore.Html.IHtmlContent> renderCard =
-        @<text>
-    @{
-        var parameter = item.Parameter;
-        var descriptor = parameter.Descriptor;
-        var i = item.Index;
-        var bodyId = $"{Html.IdFor(m => m.ModelParameters)}_{parameter.ElementId}_body";
-    }
-    <div class="border rounded p-3 mb-2 @(item.Hidden ? "d-none" : string.Empty)"
-         data-model-parameter-card
-         data-required-feature="@descriptor.RequiredFeature">
-        <input type="hidden" name="@(Html.NameFor(m => m.ModelParameters)).Index" value="@i" data-structural="true" />
-        <input type="hidden" name="@Html.NameFor(m => m.ModelParameters[i].Name)" value="@parameter.Name" data-structural="true" />
-        <div class="form-check">
-            <input id="@Html.IdFor(m => m.ModelParameters[i].IsSupported)"
-                   name="@Html.NameFor(m => m.ModelParameters[i].IsSupported)"
-                   type="checkbox"
-                   value="true"
-                   class="form-check-input model-parameter-toggle"
-                   data-target="@bodyId"
-                   checked="@parameter.IsSupported" />
-            <input type="hidden" name="@Html.NameFor(m => m.ModelParameters[i].IsSupported)" value="false" data-structural="true" />
-            <label class="form-check-label" for="@Html.IdFor(m => m.ModelParameters[i].IsSupported)">
-                @descriptor.DisplayName
-                @if (descriptor.Description is not null && !string.IsNullOrWhiteSpace(descriptor.Description.Value))
-                {
-                    <span class="text-muted small d-block">@descriptor.Description</span>
-                }
-            </label>
-        </div>
-        <div class="mt-3 @(parameter.IsSupported ? string.Empty : "d-none")" id="@bodyId">
-            @if (descriptor.Kind == AIDeploymentParameterKind.Choice && descriptor.AllowedValues.Any())
-            {
-                <div class="row g-2">
-                    <div class="col-md-7">
-                        <label class="form-label small" for="@Html.IdFor(m => m.ModelParameters[i].SelectedAllowedValues)">@T["Supported values"]</label>
-                        <select id="@Html.IdFor(m => m.ModelParameters[i].SelectedAllowedValues)"
-                                name="@Html.NameFor(m => m.ModelParameters[i].SelectedAllowedValues)"
-                                class="form-select"
-                                data-model-allowed-values
-                                multiple
-                                title="@T["All registered values"]"
-                                size="@Math.Min(descriptor.AllowedValues.Count, 6)">
-                            @foreach (var option in descriptor.AllowedValues)
-                            {
-                                var isSelected = parameter.SelectedAllowedValues?.Contains(option.Value, StringComparer.OrdinalIgnoreCase) ?? false;
-                                <option value="@option.Value" selected="@isSelected">@option.DisplayName</option>
-                            }
-                        </select>
-                        <div class="form-text">@T["Leave nothing selected to support every registered value."]</div>
-                    </div>
-                    <div class="col-md-5">
-                        <label class="form-label small" for="@Html.IdFor(m => m.ModelParameters[i].DefaultValue)">@T["Default value"]</label>
-                        <select id="@Html.IdFor(m => m.ModelParameters[i].DefaultValue)"
-                                name="@Html.NameFor(m => m.ModelParameters[i].DefaultValue)"
-                                class="form-select">
-                            <option value="">@T["No default"]</option>
-                            @foreach (var option in descriptor.AllowedValues)
-                            {
-                                <option value="@option.Value" selected="@(string.Equals(option.Value, parameter.DefaultValue, StringComparison.OrdinalIgnoreCase))">@option.DisplayName</option>
-                            }
-                        </select>
-                        <div class="form-text">@T["Applied when an operator does not select a value."]</div>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="row g-2">
-                    <div class="col-md-3">
-                        <label class="form-label small" for="@Html.IdFor(m => m.ModelParameters[i].DefaultValue)">@T["Default value"]</label>
-                        <input id="@Html.IdFor(m => m.ModelParameters[i].DefaultValue)"
-                               name="@Html.NameFor(m => m.ModelParameters[i].DefaultValue)"
-                               class="form-control"
-                               value="@parameter.DefaultValue" />
-                    </div>
-                    @if (descriptor.Kind == AIDeploymentParameterKind.Number || descriptor.Kind == AIDeploymentParameterKind.Integer)
-                    {
-                        <div class="col-md-3">
-                            <label class="form-label small" for="@Html.IdFor(m => m.ModelParameters[i].Minimum)">@T["Minimum"]</label>
-                            <input id="@Html.IdFor(m => m.ModelParameters[i].Minimum)"
-                                   name="@Html.NameFor(m => m.ModelParameters[i].Minimum)"
-                                   type="number" step="any"
-                                   class="form-control"
-                                   value="@parameter.Minimum" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small" for="@Html.IdFor(m => m.ModelParameters[i].Maximum)">@T["Maximum"]</label>
-                            <input id="@Html.IdFor(m => m.ModelParameters[i].Maximum)"
-                                   name="@Html.NameFor(m => m.ModelParameters[i].Maximum)"
-                                   type="number" step="any"
-                                   class="form-control"
-                                   value="@parameter.Maximum" />
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label small" for="@Html.IdFor(m => m.ModelParameters[i].Step)">@T["Step"]</label>
-                            <input id="@Html.IdFor(m => m.ModelParameters[i].Step)"
-                                   name="@Html.NameFor(m => m.ModelParameters[i].Step)"
-                                   type="number" step="any"
-                                   class="form-control"
-                                   value="@parameter.Step" />
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-    </div>
-</text>;
 }
 
 <div class="card mb-3">
@@ -146,18 +32,19 @@
                         @foreach (var feature in group.OrderBy(feature => feature.DisplayName?.Value ?? feature.Name, StringComparer.OrdinalIgnoreCase))
                         {
                             var isChecked = FeatureEnabled(feature.Name);
-                            var dependentCards = indexed
+                            var elementId = feature.Name?.Replace('.', '_');
+                            var dependentCards = indexedParameters
                                 .Where(card => string.Equals(card.Parameter.Descriptor.RequiredFeature, feature.Name, StringComparison.OrdinalIgnoreCase))
                                 .ToList();
                             <div class="form-check">
-                                <input id="@(Html.IdFor(m => m.SelectedFeatures))_@feature.Name?.Replace('.', '_')"
-                                       name="@Html.NameFor(m => m.SelectedFeatures)"
+                                <input id="SelectedFeatures_@elementId"
+                                       name="SelectedFeatures"
                                        type="checkbox"
                                        value="@feature.Name"
                                        class="form-check-input model-feature-toggle"
                                        data-feature-name="@feature.Name"
-                                       checked="@isChecked" />
-                                <label class="form-check-label" for="@(Html.IdFor(m => m.SelectedFeatures))_@feature.Name?.Replace('.', '_')">
+                                       @(isChecked ? "checked" : "") />
+                                <label class="form-check-label" for="SelectedFeatures_@elementId">
                                     @(feature.DisplayName?.Value ?? feature.Name)
                                     @if (feature.Description is not null && !string.IsNullOrWhiteSpace(feature.Description.Value))
                                     {
@@ -170,7 +57,11 @@
                                 <div class="ms-4 mt-2">
                                     @foreach (var card in dependentCards)
                                     {
-                                        @renderCard((card.Parameter, card.Index, !isChecked))
+                                        @await Html.PartialAsync("_DeploymentModelParameterCard", card.Parameter, new ViewDataDictionary(ViewData)
+                                        {
+                                            { "Index", card.Index },
+                                            { "Hidden", !isChecked },
+                                        })
                                     }
                                 </div>
                             }
@@ -181,7 +72,7 @@
         }
 
         @{
-            var standaloneCards = indexed
+            var standaloneCards = indexedParameters
                 .Where(card => string.IsNullOrWhiteSpace(card.Parameter.Descriptor.RequiredFeature))
                 .ToList();
         }
@@ -191,7 +82,11 @@
             <label class="form-label fw-semibold">@T["Model parameters"]</label>
             @foreach (var card in standaloneCards)
             {
-                @renderCard((card.Parameter, card.Index, false))
+                @await Html.PartialAsync("_DeploymentModelParameterCard", card.Parameter, new ViewDataDictionary(ViewData)
+                {
+                    { "Index", card.Index },
+                    { "Hidden", false },
+                })
             }
         }
     </div>
