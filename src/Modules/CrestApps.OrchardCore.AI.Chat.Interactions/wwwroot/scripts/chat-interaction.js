@@ -588,6 +588,8 @@ window.chatInteractionManager = function () {
           conversationModeEnabled: config.chatMode === 'Conversation',
           conversationButton: null,
           isConversationMode: false,
+          // Realtime (speech-to-speech) controller from the shared CoreAIRealtime module.
+          realtimeController: null,
           notifications: [],
           notificationDismissTimers: {},
           copyTitle: config.copyTitle,
@@ -692,19 +694,28 @@ window.chatInteractionManager = function () {
                       }
                     }
                   });
-                  _this.connection.on("ReceiveConversationUserMessage", function (itemId, text) {
+                  _this.connection.on("ReceiveConversationUserMessage", function (itemId, turnId, text) {
+                    // Realtime: a placeholder for this turn was already inserted in the right position when
+                    // the utterance was captured (see onUserTurnPending), so just fill in its text.
+                    if (turnId && _this._realtimePendingTurns && _this._realtimePendingTurns[turnId]) {
+                      var pending = _this._realtimePendingTurns[turnId];
+                      delete _this._realtimePendingTurns[turnId];
+                      _this.stopAudio();
+                      if (text) {
+                        pending.content = text;
+                        pending.rawContent = text;
+                        pending.isPartial = false;
+                        updateMessagePresentation(pending, pending.references);
+                      } else {
+                        var emptyIndex = _this.messages.indexOf(pending);
+                        if (emptyIndex >= 0) {
+                          _this.messages.splice(emptyIndex, 1);
+                        }
+                      }
+                      return;
+                    }
                     if (text) {
                       _this.stopAudio();
-
-                      // If there's an interrupted assistant message still streaming,
-                      // mark it as done to stop the spinner animation.
-                      if (_this._conversationAssistantMessage) {
-                        var oldMsg = _this.messages[_this._conversationAssistantMessage.index];
-                        if (oldMsg) {
-                          oldMsg.isStreaming = false;
-                        }
-                        _this._conversationAssistantMessage = null;
-                      }
 
                       // Replace the partial transcript message with the final one.
                       if (_this._conversationPartialMessage) {
@@ -713,6 +724,21 @@ window.chatInteractionManager = function () {
                         _this._conversationPartialMessage.htmlContent = '<p>' + escaped + '</p>';
                         _this._conversationPartialMessage.isPartial = false;
                         _this._conversationPartialMessage = null;
+                      } else if (_this._conversationAssistantMessage) {
+                        // Realtime: the user's transcript lags the assistant's reply for the SAME turn (the
+                        // model answers the audio before speech-to-text finishes). Insert the user message
+                        // just before the streaming assistant message so the order stays You -> Assistant,
+                        // and keep that message streaming — ending it here split one reply into two bubbles.
+                        var at = _this._conversationAssistantMessage.index;
+                        var userMsg = {
+                          role: 'user',
+                          content: text,
+                          rawContent: text,
+                          references: {}
+                        };
+                        updateMessagePresentation(userMsg, userMsg.references);
+                        _this.messages.splice(at, 0, userMsg);
+                        _this._conversationAssistantMessage.index = at + 1;
                       } else {
                         _this.addMessage({
                           role: 'user',
@@ -723,6 +749,15 @@ window.chatInteractionManager = function () {
                     }
                   });
                   _this.connection.on("ReceiveConversationAssistantToken", function (itemId, messageId, token, responseId, references, appearance) {
+                    // A new response id means a new turn — finalize the previous assistant message so two replies
+                    // never merge into one bubble (also covers barge-in, which starts a fresh response).
+                    if (_this._conversationAssistantMessage && _this._conversationAssistantResponseId && responseId && _this._conversationAssistantResponseId !== responseId) {
+                      var prev = _this.messages[_this._conversationAssistantMessage.index];
+                      if (prev) {
+                        prev.isStreaming = false;
+                      }
+                      _this._conversationAssistantMessage = null;
+                    }
                     if (!_this._conversationAssistantMessage) {
                       _this.stopAudio();
                       _this.hideTypingIndicator();
@@ -748,6 +783,7 @@ window.chatInteractionManager = function () {
                         index: msgIndex,
                         content: ''
                       };
+                      _this._conversationAssistantResponseId = responseId;
                     }
                     _this._conversationAssistantMessage.content += token;
                     var msg = _this.messages[_this._conversationAssistantMessage.index];
@@ -773,6 +809,7 @@ window.chatInteractionManager = function () {
                         updateMessagePresentation(msg, msg.references);
                       }
                       _this._conversationAssistantMessage = null;
+                      _this._conversationAssistantResponseId = null;
                     }
                   });
                   _this.connection.on("ReceiveAudioChunk", function (itemId, base64Audio, contentType) {
@@ -782,7 +819,12 @@ window.chatInteractionManager = function () {
                       for (var i = 0; i < binaryString.length; i++) {
                         bytes[i] = binaryString.charCodeAt(i);
                       }
-                      _this.audioChunks.push(bytes);
+                      // Realtime PCM streams straight to the low-latency player; other formats (TTS) are buffered.
+                      if (contentType === 'audio/pcm' && _this.realtimeController) {
+                        _this.realtimeController.receivePcm(bytes);
+                      } else {
+                        _this.audioChunks.push(bytes);
+                      }
                     }
                   });
                   _this.connection.on("ReceiveAudioComplete", function (itemId) {
@@ -1982,6 +2024,205 @@ window.chatInteractionManager = function () {
               });
             }
           }
+
+          // Initialize realtime (speech-to-speech) mode via the shared CoreAIRealtime module. The
+          // module owns the mic capture, playback, echo guard, push-to-talk and audio settings; the
+          // callbacks below plug it into this app's connection and conversation-transcript display.
+          if (window.CoreAIRealtime && config.realtimeButtonElementSelector) {
+            this.realtimeController = window.CoreAIRealtime.attach({
+              connection: this.connection,
+              ensureConnected: function ensureConnected() {
+                return Promise.resolve(_this18.connection);
+              },
+              sendStart: function sendStart(subject, voice, language, silenceMs, vadThreshold, allowInterruption) {
+                _this18.connection.send('StartRealtimeConversation', _this18.getItemId(), subject, voice, language, silenceMs, vadThreshold, allowInterruption);
+              },
+              // Prefer WebRTC (server-relay) when the server advertises it; the shared module falls back
+              // to the WebSocket sendStart above if the peer cannot connect.
+              webRtcEnabled: config.realtimeWebRtcEnabled === true,
+              sendStartWebRtc: function sendStartWebRtc(offerSdp, voice, language, silenceMs, vadThreshold, allowInterruption) {
+                _this18.connection.send('StartRealtimeWebRtc', _this18.getItemId(), offerSdp, voice, language, silenceMs, vadThreshold, allowInterruption);
+              },
+              webRtcIceServers: Array.isArray(config.realtimeWebRtcIceServers) ? config.realtimeWebRtcIceServers : undefined,
+              voiceName: config.realtimeVoiceName || '',
+              getVoiceName: function getVoiceName() {
+                var el = config.realtimeVoiceSelectElementSelector ? document.querySelector(config.realtimeVoiceSelectElementSelector) : null;
+                return el ? el.value : '';
+              },
+              capableDeployments: config.realtimeCapableDeployments || [],
+              realtimeEnabled: config.realtimeEnabled === true,
+              selectors: {
+                realtimeButton: config.realtimeButtonElementSelector,
+                input: config.inputElementSelector,
+                sendButton: config.sendButtonElementSelector,
+                micButton: config.micButtonElementSelector,
+                conversationButton: config.conversationButtonElementSelector,
+                deploymentSelect: config.deploymentSelectElementSelector
+              },
+              onActivate: function onActivate() {
+                _this18.isConversationMode = true;
+                _this18._conversationPartialMessage = null;
+                _this18._conversationAssistantMessage = null;
+              },
+              onDeactivate: function onDeactivate() {
+                _this18.isConversationMode = false;
+                if (_this18._conversationAssistantMessage) {
+                  var m = _this18.messages[_this18._conversationAssistantMessage.index];
+                  if (m) {
+                    m.isStreaming = false;
+                  }
+                  _this18._conversationAssistantMessage = null;
+                }
+              },
+              onEnterRealtimeMode: function onEnterRealtimeMode() {
+                if (_this18.isRecording) {
+                  _this18.stopRecording();
+                }
+                if (_this18.isConversationMode && (!_this18.realtimeController || !_this18.realtimeController.isActive())) {
+                  _this18.stopConversationMode();
+                }
+              },
+              // The utterance has been captured but not transcribed yet. Showing a placeholder now
+              // puts the prompt above the reply it produces: transcription lags the spoken answer, so
+              // a bubble added only when the text arrives lands underneath its own reply.
+              onUserTurnPending: function onUserTurnPending(turnId) {
+                if (!turnId) {
+                  return;
+                }
+                var placeholder = {
+                  role: 'user',
+                  content: '',
+                  rawContent: '',
+                  references: {},
+                  isPartial: true
+                };
+                updateMessagePresentation(placeholder, placeholder.references);
+                _this18._realtimePendingTurns = _this18._realtimePendingTurns || {};
+                _this18._realtimePendingTurns[turnId] = placeholder;
+                _this18.messages.push(placeholder);
+                _this18.scrollToBottom();
+              },
+              onUserTurnDropped: function onUserTurnDropped(turnId) {
+                if (!turnId || !_this18._realtimePendingTurns) {
+                  return;
+                }
+                var dropped = _this18._realtimePendingTurns[turnId];
+                if (!dropped) {
+                  return;
+                }
+                delete _this18._realtimePendingTurns[turnId];
+                var at = _this18.messages.indexOf(dropped);
+                if (at >= 0) {
+                  _this18.messages.splice(at, 1);
+                }
+              }
+            });
+            this.setupRealtimeVoicePicker(config);
+          }
+        },
+        // Populates the per-interaction realtime voice picker from the selected realtime deployment's
+        // voices (via the realtime-voices endpoint), and shows it only for realtime-capable deployments.
+        setupRealtimeVoicePicker: function setupRealtimeVoicePicker(config) {
+          if (!config.realtimeVoiceSelectElementSelector || !config.realtimeVoicesUrl) {
+            return;
+          }
+          var voiceSelect = document.querySelector(config.realtimeVoiceSelectElementSelector);
+          if (!voiceSelect) {
+            return;
+          }
+          var voiceGroup = config.realtimeVoiceGroupElementSelector ? document.querySelector(config.realtimeVoiceGroupElementSelector) : null;
+          var deploymentSelect = config.deploymentSelectElementSelector ? document.querySelector(config.deploymentSelectElementSelector) : null;
+          var capable = (config.realtimeCapableDeployments || []).map(function (n) {
+            return (n || '').toLowerCase();
+          });
+          var savedVoiceId = config.realtimeVoiceName || '';
+          function isRealtimeDeployment(name) {
+            return name && capable.indexOf(name.toLowerCase()) !== -1;
+          }
+          function loadVoices() {
+            return _loadVoices.apply(this, arguments);
+          }
+          function _loadVoices() {
+            _loadVoices = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+              var deploymentName, realtime, response, result, grouped, _iterator7, _step7, voice, groupName, _t2;
+              return _regenerator().w(function (_context4) {
+                while (1) switch (_context4.p = _context4.n) {
+                  case 0:
+                    deploymentName = deploymentSelect ? deploymentSelect.value : '';
+                    realtime = isRealtimeDeployment(deploymentName);
+                    if (voiceGroup) {
+                      voiceGroup.classList.toggle('d-none', !realtime);
+                    }
+                    if (realtime) {
+                      _context4.n = 1;
+                      break;
+                    }
+                    return _context4.a(2);
+                  case 1:
+                    voiceSelect.innerHTML = '<option value="">Default voice</option>';
+                    _context4.p = 2;
+                    _context4.n = 3;
+                    return fetch(config.realtimeVoicesUrl + '?deploymentName=' + encodeURIComponent(deploymentName), {
+                      credentials: 'same-origin'
+                    });
+                  case 3:
+                    response = _context4.v;
+                    _context4.n = 4;
+                    return response.json();
+                  case 4:
+                    result = _context4.v;
+                    if (!(!result || !Array.isArray(result.voices))) {
+                      _context4.n = 5;
+                      break;
+                    }
+                    return _context4.a(2);
+                  case 5:
+                    grouped = new Map();
+                    _iterator7 = _createForOfIteratorHelper(result.voices);
+                    try {
+                      for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+                        voice = _step7.value;
+                        groupName = voice.gender || 'Voices';
+                        if (!grouped.has(groupName)) {
+                          grouped.set(groupName, []);
+                        }
+                        grouped.get(groupName).push(voice);
+                      }
+                    } catch (err) {
+                      _iterator7.e(err);
+                    } finally {
+                      _iterator7.f();
+                    }
+                    Array.from(grouped.keys()).sort(function (a, b) {
+                      return a.localeCompare(b);
+                    }).forEach(function (groupName) {
+                      var optgroup = document.createElement('optgroup');
+                      optgroup.label = groupName;
+                      grouped.get(groupName).forEach(function (voice) {
+                        var option = document.createElement('option');
+                        option.value = voice.id;
+                        option.textContent = voice.name;
+                        option.selected = voice.id === savedVoiceId;
+                        optgroup.appendChild(option);
+                      });
+                      voiceSelect.appendChild(optgroup);
+                    });
+                    _context4.n = 7;
+                    break;
+                  case 6:
+                    _context4.p = 6;
+                    _t2 = _context4.v;
+                  case 7:
+                    return _context4.a(2);
+                }
+              }, _callee4, null, [[2, 6]]);
+            }));
+            return _loadVoices.apply(this, arguments);
+          }
+          if (deploymentSelect) {
+            deploymentSelect.addEventListener('change', loadVoices);
+          }
+          loadVoices();
         },
         loadInteraction: function loadInteraction(itemId) {
           this.connection.invoke("LoadInteraction", itemId)["catch"](function (err) {
@@ -1997,6 +2238,11 @@ window.chatInteractionManager = function () {
         clearHistory: function clearHistory(itemId) {
           var self = this;
           var clearHistoryConfirmed = function clearHistoryConfirmed() {
+            // Force-stop any live realtime voice session before clearing history.
+            if (self.realtimeController && self.realtimeController.isActive()) {
+              self.realtimeController.stop();
+            }
+
             // Cancel any active stream before clearing history.
             if (self.stream) {
               self.stream.dispose();
@@ -2193,15 +2439,15 @@ window.chatInteractionManager = function () {
             var pendingChunk = Promise.resolve();
             _this22.mediaRecorder.addEventListener('dataavailable', function (e) {
               if (e.data && e.data.size > 0) {
-                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
                   var data, uint8Array, binaryString, base64;
-                  return _regenerator().w(function (_context4) {
-                    while (1) switch (_context4.n) {
+                  return _regenerator().w(function (_context5) {
+                    while (1) switch (_context5.n) {
                       case 0:
-                        _context4.n = 1;
+                        _context5.n = 1;
                         return e.data.arrayBuffer();
                       case 1:
-                        data = _context4.v;
+                        data = _context5.v;
                         uint8Array = new Uint8Array(data);
                         binaryString = uint8Array.reduce(function (str, _byte2) {
                           return str + String.fromCharCode(_byte2);
@@ -2209,9 +2455,9 @@ window.chatInteractionManager = function () {
                         base64 = btoa(binaryString);
                         subject.next(base64);
                       case 2:
-                        return _context4.a(2);
+                        return _context5.a(2);
                     }
-                  }, _callee4);
+                  }, _callee5);
                 })));
               }
             });
@@ -2288,11 +2534,11 @@ window.chatInteractionManager = function () {
       },
       mounted: function mounted() {
         var _this24 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
-          return _regenerator().w(function (_context5) {
-            while (1) switch (_context5.n) {
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6() {
+          return _regenerator().w(function (_context6) {
+            while (1) switch (_context6.n) {
               case 0:
-                _context5.n = 1;
+                _context6.n = 1;
                 return _this24.startConnection();
               case 1:
                 _this24.initializeApp();
@@ -2302,9 +2548,9 @@ window.chatInteractionManager = function () {
                   _this24.fontAwesomeObserver = observeFontAwesomeIcons(_this24.$el);
                 });
               case 2:
-                return _context5.a(2);
+                return _context6.a(2);
             }
-          }, _callee5);
+          }, _callee6);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
         window.addEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
@@ -2668,23 +2914,23 @@ window.chatInteractionDocumentManager = function () {
       return _uploadDocuments.apply(this, arguments);
     }
     function _uploadDocuments() {
-      _uploadDocuments = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee6(files) {
-        var filesToUpload, duplicateItems, knownDocumentKeys, pendingItems, uploadedCount, failedUploads, i, file, pendingItem, result, uploaded, failed, missingUploadMessage, failedMessage, errorMessage, _t2, _t3;
-        return _regenerator().w(function (_context6) {
-          while (1) switch (_context6.p = _context6.n) {
+      _uploadDocuments = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(files) {
+        var filesToUpload, duplicateItems, knownDocumentKeys, pendingItems, uploadedCount, failedUploads, i, file, pendingItem, result, uploaded, failed, missingUploadMessage, failedMessage, errorMessage, _t3, _t4;
+        return _regenerator().w(function (_context7) {
+          while (1) switch (_context7.p = _context7.n) {
             case 0:
               if (!(!config.uploadDocumentUrl || !files || files.length === 0)) {
-                _context6.n = 1;
+                _context7.n = 1;
                 break;
               }
-              return _context6.a(2);
+              return _context7.a(2);
             case 1:
               if (!isUploadingDocuments) {
-                _context6.n = 2;
+                _context7.n = 2;
                 break;
               }
               showUploadStatus('A document upload is already in progress.', 'text-warning');
-              return _context6.a(2);
+              return _context7.a(2);
             case 2:
               isUploadingDocuments = true;
               filesToUpload = [];
@@ -2711,7 +2957,7 @@ window.chatInteractionDocumentManager = function () {
                 renderUploadQueue();
               }
               if (!(filesToUpload.length === 0)) {
-                _context6.n = 3;
+                _context7.n = 3;
                 break;
               }
               isUploadingDocuments = false;
@@ -2719,14 +2965,14 @@ window.chatInteractionDocumentManager = function () {
                 return file.name + ': This document is already attached.';
               }).join(' | '), 'text-warning');
               showUploadProgress(null);
-              return _context6.a(2);
+              return _context7.a(2);
             case 3:
               pendingItems = filesToUpload.map(createUploadItem);
               uploadItems = uploadItems.concat(pendingItems);
               renderUploadQueue();
               showUploadProgress(0, 'Preparing upload...', 'progress-bar-striped progress-bar-animated');
               fileInput.disabled = true;
-              _context6.p = 4;
+              _context7.p = 4;
               uploadedCount = 0;
               failedUploads = duplicateItems.map(function (file) {
                 return file.name + ': This document is already attached.';
@@ -2734,7 +2980,7 @@ window.chatInteractionDocumentManager = function () {
               i = 0;
             case 5:
               if (!(i < filesToUpload.length)) {
-                _context6.n = 10;
+                _context7.n = 10;
                 break;
               }
               file = filesToUpload[i];
@@ -2745,11 +2991,11 @@ window.chatInteractionDocumentManager = function () {
                 error: null
               });
               showUploadStatus('Uploading ' + (i + 1) + ' of ' + filesToUpload.length + ' document(s)...', 'text-warning');
-              _context6.p = 6;
-              _context6.n = 7;
+              _context7.p = 6;
+              _context7.n = 7;
               return uploadSingleDocument(file, pendingItem.id, i, filesToUpload.length);
             case 7:
-              result = _context6.v;
+              result = _context7.v;
               uploaded = (Array.isArray(result.uploaded) ? result.uploaded : []).map(normalizeDocumentInfo).filter(function (document) {
                 return document && document.documentId;
               });
@@ -2786,13 +3032,13 @@ window.chatInteractionDocumentManager = function () {
                   error: failedMessage
                 });
               }
-              _context6.n = 9;
+              _context7.n = 9;
               break;
             case 8:
-              _context6.p = 8;
-              _t2 = _context6.v;
-              errorMessage = _t2 && _t2.message ? _t2.message : 'Upload failed. Please try again.';
-              console.error('Upload failed:', _t2);
+              _context7.p = 8;
+              _t3 = _context7.v;
+              errorMessage = _t3 && _t3.message ? _t3.message : 'Upload failed. Please try again.';
+              console.error('Upload failed:', _t3);
               failedUploads.push(file.name + ': ' + errorMessage);
               updateUploadItem(pendingItem.id, {
                 status: 'failed',
@@ -2801,12 +3047,12 @@ window.chatInteractionDocumentManager = function () {
               });
             case 9:
               i++;
-              _context6.n = 5;
+              _context7.n = 5;
               break;
             case 10:
               renderDocuments();
               if (!(failedUploads.length > 0)) {
-                _context6.n = 11;
+                _context7.n = 11;
                 break;
               }
               removeUploadItems(function (item) {
@@ -2814,31 +3060,31 @@ window.chatInteractionDocumentManager = function () {
               });
               showUploadStatus((uploadedCount > 0 ? 'Uploaded ' + uploadedCount + ' document(s). ' : '') + failedUploads.join(' | '), uploadedCount > 0 ? 'text-warning' : 'text-danger');
               showUploadProgress(null);
-              return _context6.a(2);
+              return _context7.a(2);
             case 11:
               removeUploadItems(function () {
                 return true;
               });
               showUploadStatus('Uploaded ' + uploadedCount + ' document(s).', 'text-success');
               showUploadProgress(null);
-              _context6.n = 13;
+              _context7.n = 13;
               break;
             case 12:
-              _context6.p = 12;
-              _t3 = _context6.v;
-              console.error('Upload failed:', _t3);
+              _context7.p = 12;
+              _t4 = _context7.v;
+              console.error('Upload failed:', _t4);
               showUploadStatus('Upload failed. Please try again.', 'text-danger');
               showUploadProgress(null);
             case 13:
-              _context6.p = 13;
+              _context7.p = 13;
               isUploadingDocuments = false;
               fileInput.disabled = false;
               fileInput.value = '';
-              return _context6.f(13);
+              return _context7.f(13);
             case 14:
-              return _context6.a(2);
+              return _context7.a(2);
           }
-        }, _callee6, null, [[6, 8], [4, 12, 13, 14]]);
+        }, _callee7, null, [[6, 8], [4, 12, 13, 14]]);
       }));
       return _uploadDocuments.apply(this, arguments);
     }
@@ -2846,19 +3092,19 @@ window.chatInteractionDocumentManager = function () {
       return _removeDocument.apply(this, arguments);
     }
     function _removeDocument() {
-      _removeDocument = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7(documentId) {
-        var response, result, serverDocuments, _t4, _t5;
-        return _regenerator().w(function (_context7) {
-          while (1) switch (_context7.p = _context7.n) {
+      _removeDocument = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8(documentId) {
+        var response, result, serverDocuments, _t5, _t6;
+        return _regenerator().w(function (_context8) {
+          while (1) switch (_context8.p = _context8.n) {
             case 0:
               if (!(!config.removeDocumentUrl || !documentId || !window.confirm('Remove this document?'))) {
-                _context7.n = 1;
+                _context8.n = 1;
                 break;
               }
-              return _context7.a(2);
+              return _context8.a(2);
             case 1:
-              _context7.p = 1;
-              _context7.n = 2;
+              _context8.p = 1;
+              _context8.n = 2;
               return fetch(config.removeDocumentUrl, {
                 method: 'POST',
                 headers: {
@@ -2870,23 +3116,23 @@ window.chatInteractionDocumentManager = function () {
                 })
               });
             case 2:
-              response = _context7.v;
+              response = _context8.v;
               if (response.ok) {
-                _context7.n = 4;
+                _context8.n = 4;
                 break;
               }
-              _t4 = console;
-              _context7.n = 3;
+              _t5 = console;
+              _context8.n = 3;
               return response.text();
             case 3:
-              _t4.error.call(_t4, 'Failed to remove document:', _context7.v);
+              _t5.error.call(_t5, 'Failed to remove document:', _context8.v);
               showUploadStatus('Failed to remove document.', 'text-danger');
-              return _context7.a(2);
+              return _context8.a(2);
             case 4:
-              _context7.n = 5;
+              _context8.n = 5;
               return response.json();
             case 5:
-              result = _context7.v;
+              result = _context8.v;
               serverDocuments = (Array.isArray(result.documents) ? result.documents : []).map(normalizeDocumentInfo).filter(function (document) {
                 return document && document.documentId;
               });
@@ -2895,17 +3141,17 @@ window.chatInteractionDocumentManager = function () {
               });
               renderDocuments();
               showUploadStatus('Document removed.', 'text-success');
-              _context7.n = 7;
+              _context8.n = 7;
               break;
             case 6:
-              _context7.p = 6;
-              _t5 = _context7.v;
-              console.error('Remove failed:', _t5);
+              _context8.p = 6;
+              _t6 = _context8.v;
+              console.error('Remove failed:', _t6);
               showUploadStatus('Failed to remove document.', 'text-danger');
             case 7:
-              return _context7.a(2);
+              return _context8.a(2);
           }
-        }, _callee7, null, [[1, 6]]);
+        }, _callee8, null, [[1, 6]]);
       }));
       return _removeDocument.apply(this, arguments);
     }

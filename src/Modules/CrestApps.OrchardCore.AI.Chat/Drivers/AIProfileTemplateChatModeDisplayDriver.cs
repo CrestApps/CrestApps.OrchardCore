@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
@@ -17,6 +18,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly DefaultSpeechVoicePresenter _speechVoiceMenuService;
 
     internal readonly IStringLocalizer S;
@@ -25,14 +27,17 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
     /// Initializes a new instance of the <see cref="AIProfileTemplateChatModeDisplayDriver"/> class.
     /// </summary>
     /// <param name="deploymentManager">The deployment manager.</param>
+    /// <param name="capabilityService">The deployment capability service.</param>
     /// <param name="speechVoiceMenuService">The speech voice menu service.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileTemplateChatModeDisplayDriver(
         IAIDeploymentManager deploymentManager,
+        IAIDeploymentCapabilityService capabilityService,
         DefaultSpeechVoicePresenter speechVoiceMenuService,
         IStringLocalizer<AIProfileTemplateChatModeDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
+        _capabilityService = capabilityService;
         _speechVoiceMenuService = speechVoiceMenuService;
         S = stringLocalizer;
     }
@@ -48,9 +53,11 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 model.VoiceName = settings.VoiceName;
             }
 
-            var (availableModes, hasConversation) = GetAvailableModes();
-            model.AvailableModes = availableModes;
-            model.AvailableVoices = hasConversation ? await GetAvailableVoicesAsync() : [];
+            var hasSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
+            var hasRealtime = await HasRealtimeDeploymentAsync();
+
+            model.AvailableModes = GetAvailableModes(hasSpeech, hasRealtime);
+            model.AvailableVoices = hasSpeech ? await GetAvailableVoicesAsync() : [];
         }).Location("Content:8%General;1")
         .RenderWhen(async () =>
         {
@@ -59,7 +66,8 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 return false;
             }
 
-            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
+            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null
+                || await HasRealtimeDeploymentAsync();
         });
     }
 
@@ -84,16 +92,32 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         return Edit(template, context);
     }
 
-    private (IEnumerable<SelectListItem> Items, bool HasConversation) GetAvailableModes()
+    private List<SelectListItem> GetAvailableModes(bool hasSpeech, bool hasRealtime)
     {
         var modes = new List<SelectListItem>
         {
             new(S["Text only"], nameof(ChatMode.TextInput)),
-            new(S["Audio input"], nameof(ChatMode.AudioInput)),
-            new(S["Conversation"], nameof(ChatMode.Conversation)),
         };
 
-        return (modes, true);
+        if (hasSpeech)
+        {
+            modes.Add(new(S["Audio input"], nameof(ChatMode.AudioInput)));
+            modes.Add(new(S["Conversation"], nameof(ChatMode.Conversation)));
+        }
+
+        if (hasRealtime)
+        {
+            modes.Add(new(S["Realtime (speech-to-speech)"], nameof(ChatMode.Realtime)));
+        }
+
+        return modes;
+    }
+
+    private async Task<bool> HasRealtimeDeploymentAsync()
+    {
+        var deployments = await _capabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
+
+        return deployments.Count > 0;
     }
 
     private async Task<IEnumerable<SelectListItem>> GetAvailableVoicesAsync()

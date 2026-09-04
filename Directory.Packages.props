@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
     <OrchardCoreVersion>4.0.0-preview-19133</OrchardCoreVersion>
-    <CrestAppsCoreVersion>2.0.0-preview.239</CrestAppsCoreVersion>
+    <CrestAppsCoreVersion>2.0.0-preview.246</CrestAppsCoreVersion>
     <ModelContextProtocolVersion>2.2.0</ModelContextProtocolVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -116,6 +116,7 @@
     <PackageVersion Include="CrestApps.Core.AI.A2A" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.AzureAIInference" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Chat" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.Realtime.WebRtc" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Claude" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Copilot" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Mcp.Ftp" Version="$(CrestAppsCoreVersion)" />

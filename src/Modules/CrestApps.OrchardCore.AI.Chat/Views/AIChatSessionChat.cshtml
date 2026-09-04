@@ -1,6 +1,8 @@
 @using System.Text.Json
 @using CrestApps.Core
 @using CrestApps.Core.AI
+@using CrestApps.Core.AI.Capabilities
+@using CrestApps.Core.AI.Chat.Realtime
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Documents.Models
 @using CrestApps.Core.AI.Models
@@ -23,6 +25,7 @@
 @inject IAIProfileStore ProfilesCatalog
 @inject IAIChatSessionPromptStore PromptStore
 @inject IAIDeploymentManager AIDeploymentManager
+@inject IAIDeploymentCapabilityService CapabilityService
 
 @{
     var baseId = Html.IdForModel();
@@ -80,15 +83,32 @@
 
     var ttsVoiceName = chatModeSettings?.VoiceName;
 
+    // Realtime (speech-to-speech): enabled when the profile's chat mode is Realtime and either the profile's
+    // deployment declares the realtime capability or a default realtime deployment is available. Realtime is
+    // audio-only and reuses the conversation button as the "Start speaking" toggle (see ai-chat.js).
+    var selectedDeploymentName = Model.Profile?.ChatDeploymentName;
+    var selectedDeploymentIsRealtime = !string.IsNullOrWhiteSpace(selectedDeploymentName)
+        && (await CapabilityService.GetCapabilitiesAsync(selectedDeploymentName)).SupportsFeature(AIDeploymentFeatureNames.Realtime);
+    var hasRealtime = selectedDeploymentIsRealtime
+        || await CapabilityService.ResolveDeploymentWithFeatureAsync(AIDeploymentFeatureNames.Realtime) is not null;
+
     var effectiveChatMode = chatMode switch
     {
+        ChatMode.Realtime when hasRealtime => ChatMode.Realtime,
+        ChatMode.Realtime when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
         ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
         ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
         ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
         _ => ChatMode.TextInput,
     };
 
+    var realtimeEnabled = effectiveChatMode == ChatMode.Realtime;
+    var realtimeWebRtcEnabled = realtimeEnabled && RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
+    var realtimeVoiceName = chatModeSettings?.VoiceName;
+
+    // The conversation button doubles as the realtime "Start speaking" toggle, so render it for both modes.
     var conversationModeEnabled = effectiveChatMode == ChatMode.Conversation;
+    var conversationButtonVisible = conversationModeEnabled || realtimeEnabled;
 
     var micBtnHtmlId = $"{baseId}_MicBtn";
 
@@ -176,9 +196,10 @@
                         <i class="fa-solid fa-microphone"></i>
                     </button>
 
-                    @if (conversationModeEnabled)
+                    @if (conversationButtonVisible)
                     {
-                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@T["Start Conversation"]" data-start-title="@T["Start Conversation"]" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+                        var startTitle = realtimeEnabled ? T["Start speaking"] : T["Start Conversation"];
+                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@startTitle" data-start-title="@startTitle" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
                             <i class="fa-solid fa-wave-square"></i>
                         </button>
                     }
@@ -236,6 +257,12 @@
         conversationButtonElementSelector = $"#{conversationBtnHtmlId}",
         textToSpeechEnabled,
         visionEnabled,
+        // Realtime (speech-to-speech). ai-chat.js reuses the conversation button as the realtime toggle and
+        // drives capture/playback via the shared realtime-audio.js controller (window.CoreAIRealtime). ICE
+        // servers are fetched per session over the hub, so they are not embedded here.
+        realtimeEnabled,
+        realtimeWebRtcEnabled,
+        realtimeVoiceName = string.IsNullOrWhiteSpace(realtimeVoiceName) ? null : realtimeVoiceName,
         isOrchestratorAvailable = orchestratorAvailability.IsAvailable,
         orchestratorUnavailableMessage = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
         sessionDocumentsEnabled,
