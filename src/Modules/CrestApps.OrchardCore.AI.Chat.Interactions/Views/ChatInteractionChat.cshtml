@@ -99,10 +99,23 @@
         <div class="ai-chat-prompt-container bg-body text-body rounded border w-100">
             <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
-            <div class="d-flex justify-content-between px-3 my-2">
-                <div></div>
+            @* Single flex row: the realtime "Start speaking" button (flex-grow-1) can span the full input
+               width when the client hides the text controls (audio-only). The shared realtime-audio
+               controller inserts its settings gear as a sibling of this button (beside it) and appends the
+               status line + push-to-talk bar to this row's parent (the prompt container), below the row —
+               mirroring the CrestApps.Core layout. *@
+            <div class="d-flex gap-2 align-items-center px-3 my-2">
+                @* Realtime toggle. Hidden until the client detects a realtime deployment; then it spans the row. *@
+                <button class="btn btn-outline-dark flex-grow-1" type="button" id="@realtimeBtnHtmlId" title="@T["Start speaking"]"
+                        data-start-title="@T["Start speaking"]" data-end-title="@T["End Conversation"]"
+                        data-start-html="<i class='fa-solid fa-wave-square me-1'></i> @T["Start speaking"]"
+                        data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]"
+                        hidden>
+                    <i class="fa-solid fa-wave-square me-1"></i>
+                    <span>@T["Start speaking"]</span>
+                </button>
 
-                <div>
+                <div class="d-flex gap-2 align-items-center ms-auto">
                     <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
                         <i class="fa-solid fa-microphone"></i>
                     </button>
@@ -112,18 +125,8 @@
                             <i class="fa-solid fa-wave-square"></i>
                         </button>
                     }
-                    <button class="btn btn-dark" type="button" id="@buttonHtmlId"disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <button class="btn btn-dark" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
-                    </button>
-                    @* Realtime (speech-to-speech) toggle. Rendered hidden and shown by the client when the
-                       selected deployment is a realtime model, in which case the text input is hidden (audio-only). *@
-                    <button class="btn btn-outline-dark flex-grow-1" type="button" id="@realtimeBtnHtmlId" title="@T["Start speaking"]"
-                            data-start-title="@T["Start speaking"]" data-end-title="@T["End Conversation"]"
-                            data-start-html="<i class='fa-solid fa-wave-square me-1'></i> @T["Start speaking"]"
-                            data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]"
-                            hidden>
-                        <i class="fa-solid fa-wave-square me-1"></i>
-                        <span>@T["Start speaking"]</span>
                     </button>
                 </div>
             </div>
