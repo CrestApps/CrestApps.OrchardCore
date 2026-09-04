@@ -165,8 +165,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/technical-name-generator.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/technical-name-generator.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.163/dist/technical-name-generator.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.163/dist/technical-name-generator.js")
             .SetCdnIntegrity(
                 "sha384-vk5MiCC6biz7ygKi3CY+whjnNoLe2Ol+ZWoxUr/aoifSyfm9c2WFazGMhNLi8g7I",
                 "sha384-9cJ5WEY0z1tJkCLND8ZMhN+rT6IySJKbK/R1yJcaSqmWgiCMuOyZJ+UUobxuScNs")
@@ -178,8 +178,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/document-drop-zone.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/document-drop-zone.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.163/dist/document-drop-zone.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.163/dist/document-drop-zone.js")
             .SetCdnIntegrity(
                 "sha384-AvXYh7cCLTVJu3IoIikt5045awzgrmZ4S6e8Z5mHQydf5f9mHIPAbZ2xTP+LT5BC",
                 "sha384-8W/wOs7j6d1l50bR3wLRiY6M3/yf0acllYpEJRFraFBwtAXwvYcoyITxQ6FxyNkb")
@@ -191,8 +191,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/document-drop-zone.min.css",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/document-drop-zone.css")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.163/dist/document-drop-zone.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.163/dist/document-drop-zone.css")
             .SetCdnIntegrity(
                 "sha384-cTjcD1YHMzaJ5FIvmpJhm3VZDBheTcbiNfGCQfFvBTDg1pZi7PWE5lO6VHRYX9zq",
                 "sha384-NLPKccGh39Ymb5v2aC3tD6zdtg+MhT/Sa+QpCRmDVY2xXSC10rxBNBh0iRqLUQkK")
@@ -206,11 +206,11 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/realtime-audio.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/realtime-audio.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/realtime-audio.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.162/dist/realtime-audio.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.163/dist/realtime-audio.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.163/dist/realtime-audio.js")
             .SetCdnIntegrity(
-                "sha384-fD4C17UUFI6dfWhbk26WmEVCiZZZ0mqYc/ga7UX/Mtqw0+Zlm4kXKxmeKBncQ3zQ",
-                "sha384-1R2+ottVAdwsVFtVO64VTNlgOwWhNN5cIO4uFTFzQwy6Ai1vN1Za6x/1kUYtS/3k")
+                "sha384-wuivl9bXPUtMt3dCnj1Oye36rssOjPfhCula0wx+oKs+02z8u6GqznZ8KZORVnx7",
+                "sha384-Gxnk/EPC6dYnUiEHpQqp9++pqTVNMWZqYIvKRaB0xyBz42AePKfa7O1pFRCQ0Pz2")
             .SetDependencies("signalr", "dompurify")
             .SetVersion("2.0.0");
 

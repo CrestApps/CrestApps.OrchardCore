@@ -2735,7 +2735,7 @@ window.chatInteractionDocumentManager = function () {
         details.className = 'me-2 min-w-0';
         var name = createTextElement('div', 'fw-semibold small', documentInfo.fileName || 'Document');
         var icon = window.document.createElement('i');
-        icon.className = 'bi bi-file-earmark-text me-1';
+        icon.className = 'fa-solid fa-file-lines me-1';
         name.prepend(icon);
         var size = createTextElement('div', 'text-muted small', formatFileSize(documentInfo.fileSize));
         details.appendChild(name);
@@ -2744,7 +2744,7 @@ window.chatInteractionDocumentManager = function () {
         removeButton.type = 'button';
         removeButton.dataset.documentId = documentInfo.documentId;
         var removeIcon = window.document.createElement('i');
-        removeIcon.className = 'bi bi-trash';
+        removeIcon.className = 'fa-solid fa-trash';
         removeButton.prepend(removeIcon);
         removeButton.addEventListener('click', function () {
           return removeDocument(documentInfo.documentId);

@@ -9,6 +9,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@crestapps/ai-chat-ui": "2.0.0-preview.162"
+    "@crestapps/ai-chat-ui": "2.0.0-preview.163"
   }
 }

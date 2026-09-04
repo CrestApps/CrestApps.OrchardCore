@@ -293,24 +293,6 @@
     <style asp-name="SpeechToText" at="Head"></style>
 }
 
-@if (realtimeEnabled)
-{
-    @* The shared realtime-audio controller renders its settings popover with a few Bootstrap Icons classes
-       (bi-gear, bi-mic). This host uses Font Awesome, so map those classes to the equivalent Font Awesome
-       glyphs instead of loading Bootstrap Icons. *@
-    <style at="Head">
-        .bi-gear::before,
-        .bi-mic::before,
-        .bi-mic-fill::before {
-            font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "FontAwesome";
-            font-weight: 900;
-            font-style: normal;
-            display: inline-block;
-        }
-        .bi-gear::before { content: "\f013"; }
-        .bi-mic::before, .bi-mic-fill::before { content: "\f130"; }
-    </style>
-}
 <script asp-name="AIChatApp" at="Foot"></script>
 
 <div id="@($"{baseId}_Config")"
