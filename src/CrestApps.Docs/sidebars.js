@@ -97,6 +97,7 @@ const sidebars = {
                 'omnichannel/sms',
                 'omnichannel/sms-workspace',
                 'omnichannel/ai-agent-handoff-project-plan',
+                'omnichannel/production-readiness-sms-workspace',
             ],
         },
         {
@@ -110,6 +111,7 @@ const sidebars = {
                 'telephony/extension-dialing',
                 'telephony/recording-azure-blob-storage',
                 'telephony/custom-providers',
+                'telephony/production-readiness-soft-phone-telnyx',
             ],
         },
         {
@@ -130,6 +132,10 @@ const sidebars = {
                 'contact-center/runbooks',
                 'contact-center/production-support',
                 'contact-center/public-api-surface',
+                'contact-center/production-readiness-plan',
+                'contact-center/production-readiness-routing',
+                'contact-center/production-readiness-code-quality',
+                'contact-center/production-readiness-implementation-guide',
             ],
         },
         {
