@@ -12,7 +12,9 @@ using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
 using CrestApps.OrchardCore.Sms.Workspace.Models;
 using CrestApps.OrchardCore.Sms.Workspace.ViewModels;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -25,6 +27,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
+using OrchardCore.Users;
 using YesSql;
 using YesSql.Services;
 
@@ -43,6 +46,8 @@ public sealed class AdminController : Controller
     private readonly ISmsTemplateManager _templateManager;
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
     private readonly ISmsAgentAvailabilityService _availabilityService;
     private readonly IContentManager _contentManager;
     private readonly IAuthorizationService _authorizationService;
@@ -63,6 +68,8 @@ public sealed class AdminController : Controller
         ISmsTemplateManager templateManager,
         IOmnichannelChannelEndpointManager endpointManager,
         IAgentProfileManager agentProfileManager,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
         ISmsAgentAvailabilityService availabilityService,
         IContentManager contentManager,
         IAuthorizationService authorizationService,
@@ -81,6 +88,8 @@ public sealed class AdminController : Controller
         _templateManager = templateManager;
         _endpointManager = endpointManager;
         _agentProfileManager = agentProfileManager;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
         _availabilityService = availabilityService;
         _contentManager = contentManager;
         _authorizationService = authorizationService;
@@ -435,15 +444,70 @@ public sealed class AdminController : Controller
 
         var contacts = await ResolveThreadContactsAsync(conversation);
         var titleContact = contacts.FirstOrDefault(contact => contact.IsPrimary) ?? (contacts.Count > 0 ? contacts[0] : null);
+        var messages = await GetMessagesAsync(id);
 
         return View(new SmsThreadViewModel
         {
             Conversation = conversation,
-            Messages = await GetMessagesAsync(id),
+            Messages = messages,
             Templates = (await _templateManager.GetAllAsync()).ToArray(),
             ContactDisplayText = titleContact?.DisplayName,
             Contacts = contacts,
+            AgentNames = await ResolveAgentNamesAsync(messages),
         });
+    }
+
+    // Resolves the display name of each distinct human agent that sent a message in the thread, keyed by agent id.
+    // The name comes from the underlying user through IDisplayNameProvider (the real full name), falling back to the
+    // agent profile's own labels only when the user cannot be resolved — so a bubble never shows a raw id.
+    private async Task<IReadOnlyDictionary<string, string>> ResolveAgentNamesAsync(IEnumerable<OmnichannelMessage> messages)
+    {
+        var agentIds = messages
+            .Where(message => !message.IsInbound && !string.IsNullOrEmpty(message.SentByAgentId))
+            .Select(message => message.SentByAgentId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (agentIds.Length == 0)
+        {
+            return new Dictionary<string, string>();
+        }
+
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var agentId in agentIds)
+        {
+            var agent = await _agentProfileManager.FindByIdAsync(agentId);
+
+            if (agent is null)
+            {
+                continue;
+            }
+
+            string name = null;
+
+            if (!string.IsNullOrEmpty(agent.UserId))
+            {
+                var user = await _userManager.FindByIdAsync(agent.UserId);
+
+                if (user is not null)
+                {
+                    name = await _displayNameProvider.GetAsync(user);
+                }
+            }
+
+            name = !string.IsNullOrWhiteSpace(name)
+                ? name
+                : !string.IsNullOrEmpty(agent.DisplayName) ? agent.DisplayName
+                : !string.IsNullOrEmpty(agent.UserName) ? agent.UserName : agent.Name;
+
+            if (!string.IsNullOrEmpty(name))
+            {
+                names[agentId] = name;
+            }
+        }
+
+        return names;
     }
 
     // Returns the message bubbles added since a client-supplied high-water mark (UTC ticks), rendered with the
@@ -490,9 +554,17 @@ public sealed class AdminController : Controller
         }
 
         var contactLabel = await ResolveContactLabelAsync(conversation);
+        var agentNames = await ResolveAgentNamesAsync(messages);
 
         var bubbles = messages
-            .Select(message => new SmsMessageBubbleViewModel { Message = message, ContactLabel = contactLabel })
+            .Select(message => new SmsMessageBubbleViewModel
+            {
+                Message = message,
+                ContactLabel = contactLabel,
+                AgentName = !message.IsInbound && !string.IsNullOrEmpty(message.SentByAgentId) && agentNames.TryGetValue(message.SentByAgentId, out var agentName)
+                    ? agentName
+                    : null,
+            })
             .ToArray();
 
         return PartialView("_MessageBubbles", bubbles);

@@ -112,6 +112,7 @@ public sealed class SmsAgentHandoffService : IOmnichannelHandoffService
         if (!string.IsNullOrWhiteSpace(summary))
         {
             conversation.Summary = summary;
+            conversation.SummaryGeneratedUtc = now;
         }
 
         if (string.IsNullOrEmpty(conversation.ContactContentItemId))

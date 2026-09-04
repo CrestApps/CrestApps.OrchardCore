@@ -2,10 +2,13 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
 using CrestApps.OrchardCore.Sms.Workspace.Models;
 using CrestApps.OrchardCore.Sms.Workspace.ViewModels;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Identity;
 using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.Sms.Workspace.Drivers;
 
@@ -18,13 +21,19 @@ public sealed class SmsConversationDisplayDriver : DisplayDriver<SmsConversation
 {
     private readonly IContentManager _contentManager;
     private readonly IAgentProfileManager _agentProfileManager;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
 
     public SmsConversationDisplayDriver(
         IContentManager contentManager,
-        IAgentProfileManager agentProfileManager)
+        IAgentProfileManager agentProfileManager,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider)
     {
         _contentManager = contentManager;
         _agentProfileManager = agentProfileManager;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
     }
 
     public override IDisplayResult Display(SmsConversation conversation, BuildDisplayContext context)
@@ -62,6 +71,24 @@ public sealed class SmsConversationDisplayDriver : DisplayDriver<SmsConversation
         if (agent is null)
         {
             return null;
+        }
+
+        // Prefer the user's real full name resolved through IDisplayNameProvider (first/last name, etc.) so the
+        // inbox never surfaces an opaque user id or a bare user name. Fall back to the agent profile's own labels
+        // only when the underlying user cannot be resolved or has no display name configured.
+        if (!string.IsNullOrEmpty(agent.UserId))
+        {
+            var user = await _userManager.FindByIdAsync(agent.UserId);
+
+            if (user is not null)
+            {
+                var displayName = await _displayNameProvider.GetAsync(user);
+
+                if (!string.IsNullOrWhiteSpace(displayName))
+                {
+                    return displayName;
+                }
+            }
         }
 
         return !string.IsNullOrEmpty(agent.DisplayName)

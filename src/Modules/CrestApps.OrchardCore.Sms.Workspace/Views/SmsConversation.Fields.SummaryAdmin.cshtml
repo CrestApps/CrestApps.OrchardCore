@@ -1,15 +1,18 @@
 @using CrestApps.OrchardCore.Sms.Workspace.Models
+@using CrestApps.OrchardCore.Sms.Workspace.Support
 @model SmsConversationRowViewModel
 
 @{
     var conversation = Model.Conversation;
     var hasContactName = !string.IsNullOrEmpty(Model.ContactName);
-    var contactName = hasContactName ? Model.ContactName : conversation.ContactAddress;
+    var formattedContact = PhoneDisplayFormatter.Format(conversation.ContactAddress);
+    var contactName = hasContactName ? Model.ContactName : formattedContact;
     var unread = !conversation.IsRead || conversation.UnreadCount > 0;
 }
 
 <div class="d-flex justify-content-between align-items-start gap-2">
     <div class="flex-grow-1" style="min-width: 0;">
+        @* Name, formatted phone number, and status/assignment badges all sit on one line. *@
         <div class="d-flex align-items-center gap-2 flex-wrap">
             @if (unread)
             {
@@ -18,20 +21,9 @@
             <span class="@(unread ? "fw-bold text-body" : "fw-normal")">@contactName</span>
             @if (hasContactName)
             {
-                <span class="text-muted small">@conversation.ContactAddress</span>
+                <span class="text-muted small">@formattedContact</span>
             }
-            @if (unread)
-            {
-                <span class="badge rounded-pill text-bg-primary">@(conversation.UnreadCount > 0 ? conversation.UnreadCount.ToString() : T["New"].Value)</span>
-            }
-        </div>
 
-        @if (!string.IsNullOrEmpty(conversation.LastMessagePreview))
-        {
-            <div class="small text-truncate @(unread ? "fw-semibold text-body" : "text-muted")">@conversation.LastMessagePreview</div>
-        }
-
-        <div class="d-flex align-items-center gap-1 flex-wrap mt-1">
             @switch (conversation.Status)
             {
                 case SmsConversationStatus.Open:
@@ -67,10 +59,22 @@
                 </span>
             }
 
-            <span class="text-muted small ms-1" title="@T["Received on"]">
-                <i class="fa-solid fa-hashtag me-1" aria-hidden="true"></i>@conversation.ServiceAddress
+            @* The number the message came in on, next to the assignment, as a badge. *@
+            <span class="badge text-bg-light border" title="@T["Received on"]">
+                <i class="fa-solid fa-hashtag me-1" aria-hidden="true"></i>@PhoneDisplayFormatter.Format(conversation.ServiceAddress)
             </span>
+
+            @if (unread)
+            {
+                <span class="badge rounded-pill text-bg-primary">@(conversation.UnreadCount > 0 ? conversation.UnreadCount.ToString() : T["New"].Value)</span>
+            }
         </div>
+
+        @* Description zone: the last message preview. *@
+        @if (!string.IsNullOrEmpty(conversation.LastMessagePreview))
+        {
+            <div class="small text-truncate @(unread ? "fw-semibold text-body" : "text-muted")">@conversation.LastMessagePreview</div>
+        }
     </div>
 
     <div class="text-muted small text-nowrap flex-shrink-0">

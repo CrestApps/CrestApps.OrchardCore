@@ -88,8 +88,16 @@ public sealed class SmsConversation : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets a short AI-written summary of the automated conversation, captured at handoff so the agent
     /// taking over sees why the customer was transferred and what the AI learned without reading the whole thread.
+    /// A single summary is kept: if the same customer is re-engaged and handed off again later, the newer summary
+    /// replaces this one (see <see cref="SummaryGeneratedUtc"/> for when the current one was written).
     /// </summary>
     public string Summary { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the current <see cref="Summary"/> was generated. Shown next to the summary so the
+    /// agent knows how recent it is, since a later handoff of the same thread overwrites the summary in place.
+    /// </summary>
+    public DateTime? SummaryGeneratedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the thread was routed (push-assigned) to <see cref="AssignedAgentId"/>. Used by

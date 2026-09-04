@@ -25,36 +25,6 @@
                         <input id="search-box" class="form-control" placeholder="@T["Search conversations"]" type="search" autofocus autocomplete="off" />
                     </div>
                 </div>
-                <div class="col-auto">
-                    <div class="dropdown">
-                        <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Filter conversations"]">
-                            <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@filterLabel
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(Model.Filter == SmsInboxFilter.All ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="all">
-                                    <span>@T["All conversations"]</span>
-                                    <span class="badge rounded-pill text-bg-secondary">@Model.AllCount</span>
-                                </a>
-                            </li>
-                            @if (Model.HasAgentProfile)
-                            {
-                                <li>
-                                    <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(Model.Filter == SmsInboxFilter.Mine ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="mine">
-                                        <span>@T["My conversations"]</span>
-                                        <span class="badge rounded-pill text-bg-secondary">@Model.MineCount</span>
-                                    </a>
-                                </li>
-                            }
-                            <li>
-                                <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(Model.Filter == SmsInboxFilter.Unassigned ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="unassigned">
-                                    <span>@T["Unassigned"]</span>
-                                    <span class="badge rounded-pill text-bg-secondary">@Model.UnassignedCount</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
                 @if (Model.HasAgentProfile)
                 {
                     <div class="col-auto d-flex align-items-center">
@@ -71,6 +41,38 @@
         </div>
     </div>
 
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 px-1">
+        <span class="text-muted small">@(Model.Rows.Count == 1 ? T["1 conversation"] : T["{0} conversations", Model.Rows.Count])</span>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="@T["Filter conversations"]">
+                <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@filterLabel
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(Model.Filter == SmsInboxFilter.All ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="all">
+                        <span>@T["All conversations"]</span>
+                        <span class="badge rounded-pill text-bg-secondary">@Model.AllCount</span>
+                    </a>
+                </li>
+                @if (Model.HasAgentProfile)
+                {
+                    <li>
+                        <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(Model.Filter == SmsInboxFilter.Mine ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="mine">
+                            <span>@T["My conversations"]</span>
+                            <span class="badge rounded-pill text-bg-secondary">@Model.MineCount</span>
+                        </a>
+                    </li>
+                }
+                <li>
+                    <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(Model.Filter == SmsInboxFilter.Unassigned ? "active" : string.Empty)" asp-route-action="Index" asp-route-show="unassigned">
+                        <span>@T["Unassigned"]</span>
+                        <span class="badge rounded-pill text-bg-secondary">@Model.UnassignedCount</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
     @if (Model.Rows.Count == 0)
     {
         <div class="alert alert-info">@T["Nothing here yet. Start a new conversation, or inbound messages on the numbers you serve will appear here."]</div>
@@ -80,13 +82,24 @@
         <div class="list-group" id="sms-inbox-list">
             @foreach (var row in Model.Rows)
             {
-                <a class="list-group-item list-group-item-action" asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId"
+                var unread = !row.Conversation.IsRead || row.Conversation.UnreadCount > 0;
+                <a class="list-group-item list-group-item-action @(unread ? "sms-unread" : string.Empty)" asp-route-action="Conversation" asp-route-id="@row.Conversation.ItemId"
                    data-conversation-id="@row.Conversation.ItemId"
                    data-filter-value="@($"{row.Conversation.ContactAddress} {row.Conversation.ServiceAddress} {row.Conversation.LastMessagePreview}")">
                     @await DisplayAsync(row.Shape)
                 </a>
             }
         </div>
+
+        @* Conversations with unread messages get a subtle highlighted background so updated threads stand out even
+           when the list is long. The colour holds through hover/focus so it does not read as merely a hover state. *@
+        <style at="Head">
+            #sms-inbox-list .list-group-item.sms-unread,
+            #sms-inbox-list .list-group-item.sms-unread:hover,
+            #sms-inbox-list .list-group-item.sms-unread:focus {
+                background-color: var(--bs-primary-bg-subtle);
+            }
+        </style>
 
         <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
             @T["Your search returned no results."]
@@ -176,7 +189,9 @@
             container.appendChild(toast);
 
             if (window.bootstrap && bootstrap.Toast) {
-                var instance = new bootstrap.Toast(toast, { delay: 8000 });
+                // Do not auto-dismiss: a new-message toast stays until the agent closes it, so a notification is
+                // never missed while they are looking away. The toast header carries a close button for that.
+                var instance = new bootstrap.Toast(toast, { autohide: false });
                 instance.show();
                 toast.addEventListener('hidden.bs.toast', function () { toast.remove(); });
             } else {

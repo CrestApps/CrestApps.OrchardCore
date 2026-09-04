@@ -175,6 +175,12 @@ public class SmsThreadViewModel
     /// normally a single contact; it holds more than one only when several CRM records share the same number.
     /// </summary>
     public IReadOnlyList<SmsThreadContact> Contacts { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the resolved display names of the agents who sent messages in this thread, keyed by agent id.
+    /// Populated once so each outbound (human) bubble can show the sending agent's full name instead of an id.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> AgentNames { get; set; } = new Dictionary<string, string>();
 }
 
 /// <summary>
@@ -213,10 +219,16 @@ public class SmsMessageBubbleViewModel
     public OmnichannelMessage Message { get; set; }
 
     /// <summary>
-    /// Gets or sets the label shown above an inbound (customer) bubble — the contact's display name, or the
+    /// Gets or sets the label shown on an inbound (customer) bubble — the contact's display name, or the
     /// contact address when no name is known.
     /// </summary>
     public string ContactLabel { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name of the human agent who sent an outbound message, when one did. Left
+    /// <see langword="null"/> for customer and automated (AI) messages.
+    /// </summary>
+    public string AgentName { get; set; }
 }
 
 /// <summary>
