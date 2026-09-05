@@ -48,7 +48,8 @@ public static class ServiceCollectionExtensions
         services
             .AddCatalogManagers()
             .AddScoped<ISearchIndexProfileStore, OrchardCoreSearchIndexProfileStore>()
-            .AddScoped<DefaultSpeechVoicePresenter>();
+            .AddScoped<DefaultSpeechVoicePresenter>()
+            .AddScoped<AIModelParameterViewService>();
 
         services
             .AddScoped<IAuthorizationHandler, AIProfileAuthorizationHandler>()

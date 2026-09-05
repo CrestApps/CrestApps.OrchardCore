@@ -43,6 +43,8 @@ public sealed class Startup : StartupBase
             .AddScoped<IAuthorizationHandler, ChatInteractionAuthorizationHandler>()
             .AddPermissionProvider<ChatInteractionPermissionProvider>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionDisplayDriver>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionModelParametersDisplayDriver>()
+            .AddDisplayDriver<ChatInteraction, ChatInteractionUtilityModelParametersDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionToolsDisplayDriver>()
             .AddDisplayDriver<ChatInteraction, ChatInteractionAgentsDisplayDriver>()
             .AddDisplayDriver<ChatInteractionListOptions, ChatInteractionListOptionsDisplayDriver>()
@@ -60,6 +62,10 @@ public sealed class Startup : StartupBase
         // Chat Interaction notification transport and hub options.
         services.AddKeyedScoped<IChatNotificationTransport, ChatInteractionNotificationTransport>(ChatContextType.ChatInteraction);
         services.ConfigureCrestAppsChatHubOptions<ChatInteractionHub>();
+
+        // Enables realtime (speech-to-speech) voice over the server-relay WebRTC transport, with automatic
+        // WebSocket fallback. Idempotent when also registered by the AI Chat feature.
+        services.AddWebRtcRealtimeTransport();
 
         services.AddDisplayDriver<ChatInteraction, ChatInteractionConnectionDisplayDriver>();
     }

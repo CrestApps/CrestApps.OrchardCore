@@ -29,6 +29,8 @@ const sidebars = {
                 'ai/memory',
                 'ai/memory-azure-ai',
                 'ai/memory-elasticsearch',
+                'ai/model-capabilities',
+                'ai/realtime-voice',
                 'ai/workflows',
                 {
                     type: 'category',

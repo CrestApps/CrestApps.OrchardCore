@@ -630,10 +630,11 @@ window.coreAIChatWidgetManager = window.coreAIChatWidgetManager || function () {
     var profileInitialPrompt = getAttributeValue(element, 'data-coreai-chat-widget-profile-initial-prompt');
     var profileChatMode = getAttributeValue(element, 'data-coreai-chat-widget-profile-chat-mode');
     var profileTtsVoiceName = getAttributeValue(element, 'data-coreai-chat-widget-profile-tts-voice-name');
+    var profileRealtimeVoiceName = getAttributeValue(element, 'data-coreai-chat-widget-profile-realtime-voice-name');
     var profileMetricsEnabled = parseBooleanAttributeValue(getAttributeValue(element, 'data-coreai-chat-widget-profile-enable-session-metrics'));
     var profileSessionDocuments = parseBooleanAttributeValue(getAttributeValue(element, 'data-coreai-chat-widget-profile-allow-session-documents'));
     var profile = null;
-    if (profileId || profileName || profileDisplayText || profileWelcomeMessage || profileChatMode || profileTtsVoiceName || profileMetricsEnabled !== null || profileSessionDocuments !== null) {
+    if (profileId || profileName || profileDisplayText || profileWelcomeMessage || profileChatMode || profileTtsVoiceName || profileRealtimeVoiceName || profileMetricsEnabled !== null || profileSessionDocuments !== null) {
       profile = {
         id: profileId,
         name: profileName,
@@ -642,6 +643,7 @@ window.coreAIChatWidgetManager = window.coreAIChatWidgetManager || function () {
         initialPrompt: profileInitialPrompt,
         chatMode: profileChatMode,
         ttsVoiceName: profileTtsVoiceName,
+        realtimeVoiceName: profileRealtimeVoiceName,
         enableSessionMetrics: profileMetricsEnabled === true,
         allowSessionDocuments: profileSessionDocuments === true
       };
@@ -665,6 +667,7 @@ window.coreAIChatWidgetManager = window.coreAIChatWidgetManager || function () {
       closedIconHtml: getAttributeValue(element, 'data-coreai-chat-widget-closed-icon-html'),
       chatConfig: chatConfig ? Object.assign({}, chatConfig, {
         initialPrompt: profileInitialPrompt || chatConfig.initialPrompt,
+        realtimeVoiceName: profileRealtimeVoiceName || chatConfig.realtimeVoiceName,
         widget: Object.assign({}, chatConfig.widget || {}, {
           chatWidgetContainer: widgetContainerSelector,
           chatWidgetStateName: getAttributeValue(element, 'data-coreai-chat-widget-state-name'),

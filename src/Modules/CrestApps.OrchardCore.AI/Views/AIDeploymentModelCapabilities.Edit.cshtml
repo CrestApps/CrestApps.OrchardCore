@@ -1,0 +1,171 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@model EditDeploymentModelCapabilitiesViewModel
+
+@{
+    var indexedParameters = Model.ModelParameters
+        .Select((parameter, index) => new { Parameter = parameter, Index = index })
+        .ToList();
+
+    bool FeatureEnabled(string featureName)
+        => Model.SelectedFeatures?.Contains(featureName, StringComparer.OrdinalIgnoreCase) ?? false;
+
+    // The deployment editor drivers post under a field prefix (e.g. "AIDeployment"), so every field the
+    // model binder must read has to carry it. Html.NameFor applies it automatically in this shape, but the
+    // parameter card partial builds its own indexed names, so the prefix is passed through to it.
+    var fieldPrefix = ViewData.TemplateInfo.HtmlFieldPrefix;
+    var namePrefix = string.IsNullOrEmpty(fieldPrefix) ? string.Empty : fieldPrefix + ".";
+}
+
+@* The CrestApps bootstrap-select picker powers the multi-select "Supported values" editor, matching the
+   selectpicker used elsewhere in the admin. *@
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" at="Foot"></script>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h6 class="card-title mb-0"><i class="fa-solid fa-sliders"></i> @T["Model capabilities"]</h6>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small">
+            @T["Declare what the underlying model supports. Features are capabilities the model either has or does not have. Parameters are options an operator can configure on an AI profile, profile template, or chat interaction. Anything not declared here is never rendered in those editors and is never sent to the provider."]
+        </p>
+
+        @if (Model.AvailableFeatures.Any())
+        {
+            <div class="mb-4">
+                <label class="form-label fw-semibold">@T["Trained features"]</label>
+                <p class="text-muted small mb-2">@T["Capabilities the underlying model was trained with. Only declared features are sent to the provider."]</p>
+                @foreach (var group in Model.AvailableFeatures.GroupBy(feature => feature.Category ?? "Trained Features").OrderBy(group => group.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    <div class="mb-2">
+                        <div class="text-uppercase text-muted small">@group.Key</div>
+                        @foreach (var feature in group.OrderBy(feature => feature.DisplayName?.Value ?? feature.Name, StringComparer.OrdinalIgnoreCase))
+                        {
+                            var isChecked = FeatureEnabled(feature.Name);
+                            var elementId = feature.Name?.Replace('.', '_');
+                            var dependentCards = indexedParameters
+                                .Where(card => string.Equals(card.Parameter.Descriptor.RequiredFeature, feature.Name, StringComparison.OrdinalIgnoreCase))
+                                .ToList();
+                            <div class="form-check">
+                                <input id="SelectedFeatures_@elementId"
+                                       name="@(namePrefix)SelectedFeatures"
+                                       type="checkbox"
+                                       value="@feature.Name"
+                                       class="form-check-input model-feature-toggle"
+                                       data-feature-name="@feature.Name"
+                                       @(isChecked ? "checked" : "") />
+                                <label class="form-check-label" for="SelectedFeatures_@elementId">
+                                    @(feature.DisplayName?.Value ?? feature.Name)
+                                    @if (feature.Description is not null && !string.IsNullOrWhiteSpace(feature.Description.Value))
+                                    {
+                                        <span class="text-muted small d-block">@feature.Description</span>
+                                    }
+                                </label>
+                            </div>
+                            @if (dependentCards.Count > 0)
+                            {
+                                <div class="ms-4 mt-2">
+                                    @foreach (var card in dependentCards)
+                                    {
+                                        @await Html.PartialAsync("_DeploymentModelParameterCard", card.Parameter, new ViewDataDictionary(ViewData)
+                                        {
+                                            { "Index", card.Index },
+                                            { "Hidden", !isChecked },
+                                            { "NamePrefix", namePrefix },
+                                        })
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        @{
+            var standaloneCards = indexedParameters
+                .Where(card => string.IsNullOrWhiteSpace(card.Parameter.Descriptor.RequiredFeature))
+                .ToList();
+        }
+
+        @if (standaloneCards.Count > 0)
+        {
+            <label class="form-label fw-semibold">@T["Model parameters"]</label>
+            @foreach (var card in standaloneCards)
+            {
+                @await Html.PartialAsync("_DeploymentModelParameterCard", card.Parameter, new ViewDataDictionary(ViewData)
+                {
+                    { "Index", card.Index },
+                    { "Hidden", false },
+                    { "NamePrefix", namePrefix },
+                })
+            }
+        }
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        function init() {
+            Array.prototype.forEach.call(document.querySelectorAll('.model-parameter-toggle'), function (toggle) {
+                if (toggle.dataset.initialized === 'true') {
+                    return;
+                }
+
+                toggle.dataset.initialized = 'true';
+
+                toggle.addEventListener('change', function () {
+                    var body = document.getElementById(toggle.getAttribute('data-target'));
+
+                    if (body) {
+                        body.classList.toggle('d-none', !toggle.checked);
+                    }
+                });
+            });
+
+            function applyFeatureDependencies() {
+                Array.prototype.forEach.call(document.querySelectorAll('[data-model-parameter-card]'), function (card) {
+                    var required = card.getAttribute('data-required-feature');
+
+                    if (!required) {
+                        return;
+                    }
+
+                    var toggle = document.querySelector('.model-feature-toggle[data-feature-name="' + required + '"]');
+                    var enabled = !!(toggle && toggle.checked);
+                    card.classList.toggle('d-none', !enabled);
+
+                    Array.prototype.forEach.call(card.querySelectorAll('input, select'), function (field) {
+                        // Structural fields must always post so the collection binder never sees a gap.
+                        if (field.getAttribute('data-structural') === 'true') {
+                            field.disabled = false;
+
+                            return;
+                        }
+
+                        field.disabled = !enabled;
+                    });
+                });
+            }
+
+            Array.prototype.forEach.call(document.querySelectorAll('.model-feature-toggle'), function (toggle) {
+                if (toggle.dataset.featureInitialized === 'true') {
+                    return;
+                }
+
+                toggle.dataset.featureInitialized = 'true';
+
+                toggle.addEventListener('change', applyFeatureDependencies);
+            });
+
+            applyFeatureDependencies();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
+</script>

@@ -78,6 +78,11 @@ public sealed class Startup : StartupBase
 
         services.AddKeyedScoped<IChatNotificationTransport, AIChatNotificationTransport>(ChatContextType.AIChatSession);
         services.ConfigureCrestAppsChatHubOptions<AIChatHub>();
+
+        // Enables realtime (speech-to-speech) voice over the server-relay WebRTC transport, with automatic
+        // WebSocket fallback. The realtime hubs advertise WebRTC to the browser when this is registered.
+        services.AddWebRtcRealtimeTransport();
+
         services.AddDataProtection();
         services.AddOptions<AIVisitorIdentityOptions>();
         services.Replace(ServiceDescriptor.Singleton<IAIVisitorIdentityResolver, DefaultAIVisitorIdentityResolver>());
