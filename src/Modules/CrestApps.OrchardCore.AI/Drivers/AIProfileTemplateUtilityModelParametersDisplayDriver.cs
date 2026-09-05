@@ -1,6 +1,5 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
@@ -10,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 
 /// <summary>
 /// Renders the metadata-driven model parameter editor for the <em>utility</em> deployment on the AI profile
-/// template editor and persists the selected values onto <see cref="UtilityDeploymentParametersMetadata"/>.
+/// template editor and persists the selected values onto <see cref="AIDeploymentParametersMetadata.UtilityValues"/>.
 /// Profiles created from the template inherit these values.
 /// </summary>
 internal sealed class AIProfileTemplateUtilityModelParametersDisplayDriver : DisplayDriver<AIProfileTemplate>
@@ -28,9 +27,9 @@ internal sealed class AIProfileTemplateUtilityModelParametersDisplayDriver : Dis
     {
         return Initialize<ModelParameterEditorViewModel>("AIModelParameters_Edit", async model =>
         {
-            template.TryGet<UtilityDeploymentParametersMetadata>(out var metadata);
+            template.TryGet<AIDeploymentParametersMetadata>(out var metadata);
 
-            var built = await _viewService.BuildAsync(metadata?.Values, "UtilityDeploymentName", "templateUtilityModelParameters", BindingPrefix);
+            var built = await _viewService.BuildAsync(metadata?.UtilityValues, "UtilityDeploymentName", "templateUtilityModelParameters", BindingPrefix);
 
             model.DeploymentFieldName = built.DeploymentFieldName;
             model.ElementPrefix = built.ElementPrefix;
@@ -47,9 +46,9 @@ internal sealed class AIProfileTemplateUtilityModelParametersDisplayDriver : Dis
 
         await context.Updater.TryUpdateModelAsync(model, $"{Prefix}.{BindingPrefix}");
 
-        var metadata = template.GetOrCreate<UtilityDeploymentParametersMetadata>();
+        var metadata = template.GetOrCreate<AIDeploymentParametersMetadata>();
 
-        metadata.Values = (model.Values ?? [])
+        metadata.UtilityValues = (model.Values ?? [])
             .Where(entry => !string.IsNullOrWhiteSpace(entry.Value))
             .ToDictionary(entry => entry.Key, entry => entry.Value.Trim(), StringComparer.OrdinalIgnoreCase);
 

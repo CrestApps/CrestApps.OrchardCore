@@ -7,7 +7,6 @@ using CrestApps.Core.AI.ResponseHandling;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -204,19 +203,12 @@ public class ChatInteractionHub : ChatInteractionHubBase
 
         // The chat interaction saves its editor through this hub (there is no form POST), so the
         // metadata-driven model parameters are collected as namespaced "setting-input" values and persisted
-        // here: chat parameters onto AIDeploymentParametersMetadata, utility parameters onto
-        // UtilityDeploymentParametersMetadata.
-        var chatValues = ExtractModelParameters(settings, ChatInteractionModelParameterSettingKeys.ChatDeployment);
-        var utilityValues = ExtractModelParameters(settings, ChatInteractionModelParameterSettingKeys.UtilityDeployment);
-
+        // here onto AIDeploymentParametersMetadata: the chat deployment selection in Values and the utility
+        // deployment selection in UtilityValues, both of which the framework applies at runtime.
         interaction.Put(new AIDeploymentParametersMetadata
         {
-            Values = chatValues,
-        });
-
-        interaction.Put(new UtilityDeploymentParametersMetadata
-        {
-            Values = utilityValues,
+            Values = ExtractModelParameters(settings, ChatInteractionModelParameterSettingKeys.ChatDeployment),
+            UtilityValues = ExtractModelParameters(settings, ChatInteractionModelParameterSettingKeys.UtilityDeployment),
         });
     }
 
