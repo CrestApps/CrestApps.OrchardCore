@@ -25,6 +25,12 @@
   },
   {
     "inputs": [
+      "Assets/js/tool-instance-parameters.js"
+    ],
+    "output": "wwwroot/scripts/tool-instance-parameters.js"
+  },
+  {
+    "inputs": [
       "Assets/css/item-selector.css"
     ],
     "output": "wwwroot/styles/item-selector.css"

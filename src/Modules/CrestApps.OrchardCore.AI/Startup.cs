@@ -410,6 +410,7 @@ public sealed class ToolInstancesStartup : StartupBase
         services
             .AddDataMigration<AIToolInstanceIndexMigrations>()
             .AddDisplayDriver<AIToolInstance, AIToolInstanceDisplayDriver>()
+            .AddDisplayDriver<AIToolInstance, AIToolInstanceParametersDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, HttpApiRequestToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, SitemapDocumentationToolInstanceDisplayDriver>()
             .AddDisplayDriver<AIToolInstance, SearchIndexDocumentationToolInstanceDisplayDriver>()

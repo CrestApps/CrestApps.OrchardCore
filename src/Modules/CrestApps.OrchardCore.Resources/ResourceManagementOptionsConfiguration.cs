@@ -127,6 +127,13 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
             .SetVersion("1.0.0");
 
         _manifest
+            .DefineScript("tool-instance-parameters")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/scripts/tool-instance-parameters.min.js",
+                "~/CrestApps.OrchardCore.Resources/scripts/tool-instance-parameters.js")
+            .SetVersion("1.0.0");
+
+        _manifest
             .DefineScript("dompurify")
             .SetUrl(
                 "~/CrestApps.OrchardCore.Resources/vendors/dompurify/purify.min.js",

@@ -5,6 +5,7 @@
     var descriptor = Model.Descriptor;
     var i = (int)ViewData["Index"];
     var hidden = ViewData["Hidden"] is true;
+    var prefix = ViewData["NamePrefix"] as string ?? string.Empty;
     var bodyId = $"modelParameterBody_{Model.ElementId}";
 }
 @* Emit a non-sequential binding index so the default collection binder never truncates the list when a
@@ -13,17 +14,17 @@
 <div class="border rounded p-3 mb-2 @(hidden ? "d-none" : string.Empty)"
      data-model-parameter-card
      data-required-feature="@descriptor.RequiredFeature">
-    <input type="hidden" name="ModelParameters.Index" value="@i" data-structural="true" />
-    <input type="hidden" name="ModelParameters[@i].Name" value="@Model.Name" data-structural="true" />
+    <input type="hidden" name="@(prefix)ModelParameters.Index" value="@i" data-structural="true" />
+    <input type="hidden" name="@(prefix)ModelParameters[@i].Name" value="@Model.Name" data-structural="true" />
     <div class="form-check">
         <input id="ModelParameters_@(Model.ElementId)_IsSupported"
-               name="ModelParameters[@i].IsSupported"
+               name="@(prefix)ModelParameters[@i].IsSupported"
                type="checkbox"
                value="true"
                class="form-check-input model-parameter-toggle"
                data-target="@bodyId"
                @(Model.IsSupported ? "checked" : "") />
-        <input type="hidden" name="ModelParameters[@i].IsSupported" value="false" data-structural="true" />
+        <input type="hidden" name="@(prefix)ModelParameters[@i].IsSupported" value="false" data-structural="true" />
         <label class="form-check-label" for="ModelParameters_@(Model.ElementId)_IsSupported">
             @descriptor.DisplayName
             @if (descriptor.Description is not null && !string.IsNullOrWhiteSpace(descriptor.Description.Value))
@@ -39,12 +40,18 @@
                 <div class="col-md-7">
                     <label class="form-label small" for="ModelParameters_@(Model.ElementId)_SelectedAllowedValues">@T["Supported values"]</label>
                     <select id="ModelParameters_@(Model.ElementId)_SelectedAllowedValues"
-                            name="ModelParameters[@i].SelectedAllowedValues"
-                            class="form-select"
+                            name="@(prefix)ModelParameters[@i].SelectedAllowedValues"
+                            class="selectpicker"
                             data-model-allowed-values
                             multiple
-                            title="@T["All registered values"]"
-                            size="@Math.Min(descriptor.AllowedValues.Count, 6)">
+                            data-live-search="true"
+                            data-actions-box="true"
+                            data-width="100%"
+                            data-selected-text-format="count > 2"
+                            data-count-selected-text="@T["{0} values selected", "{0}"]"
+                            data-none-selected-text="@T["All registered values"]"
+                            data-style="btn-light"
+                            title="@T["All registered values"]">
                         @foreach (var option in descriptor.AllowedValues)
                         {
                             var isSelected = Model.SelectedAllowedValues?.Contains(option.Value, StringComparer.OrdinalIgnoreCase) ?? false;
@@ -56,7 +63,7 @@
                 <div class="col-md-5">
                     <label class="form-label small" for="ModelParameters_@(Model.ElementId)_DefaultValue">@T["Default value"]</label>
                     <select id="ModelParameters_@(Model.ElementId)_DefaultValue"
-                            name="ModelParameters[@i].DefaultValue"
+                            name="@(prefix)ModelParameters[@i].DefaultValue"
                             class="form-select">
                         <option value="">@T["No default"]</option>
                         @foreach (var option in descriptor.AllowedValues)
@@ -74,7 +81,7 @@
                 <div class="col-md-3">
                     <label class="form-label small" for="ModelParameters_@(Model.ElementId)_DefaultValue">@T["Default value"]</label>
                     <input id="ModelParameters_@(Model.ElementId)_DefaultValue"
-                           name="ModelParameters[@i].DefaultValue"
+                           name="@(prefix)ModelParameters[@i].DefaultValue"
                            class="form-control"
                            value="@Model.DefaultValue" />
                 </div>
@@ -83,7 +90,7 @@
                     <div class="col-md-3">
                         <label class="form-label small" for="ModelParameters_@(Model.ElementId)_Minimum">@T["Minimum"]</label>
                         <input id="ModelParameters_@(Model.ElementId)_Minimum"
-                               name="ModelParameters[@i].Minimum"
+                               name="@(prefix)ModelParameters[@i].Minimum"
                                type="number" step="any"
                                class="form-control"
                                value="@Model.Minimum" />
@@ -91,7 +98,7 @@
                     <div class="col-md-3">
                         <label class="form-label small" for="ModelParameters_@(Model.ElementId)_Maximum">@T["Maximum"]</label>
                         <input id="ModelParameters_@(Model.ElementId)_Maximum"
-                               name="ModelParameters[@i].Maximum"
+                               name="@(prefix)ModelParameters[@i].Maximum"
                                type="number" step="any"
                                class="form-control"
                                value="@Model.Maximum" />
@@ -99,7 +106,7 @@
                     <div class="col-md-3">
                         <label class="form-label small" for="ModelParameters_@(Model.ElementId)_Step">@T["Step"]</label>
                         <input id="ModelParameters_@(Model.ElementId)_Step"
-                               name="ModelParameters[@i].Step"
+                               name="@(prefix)ModelParameters[@i].Step"
                                type="number" step="any"
                                class="form-control"
                                value="@Model.Step" />

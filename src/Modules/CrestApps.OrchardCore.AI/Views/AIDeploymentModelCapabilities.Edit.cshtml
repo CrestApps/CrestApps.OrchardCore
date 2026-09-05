@@ -9,7 +9,18 @@
 
     bool FeatureEnabled(string featureName)
         => Model.SelectedFeatures?.Contains(featureName, StringComparer.OrdinalIgnoreCase) ?? false;
+
+    // The deployment editor drivers post under a field prefix (e.g. "AIDeployment"), so every field the
+    // model binder must read has to carry it. Html.NameFor applies it automatically in this shape, but the
+    // parameter card partial builds its own indexed names, so the prefix is passed through to it.
+    var fieldPrefix = ViewData.TemplateInfo.HtmlFieldPrefix;
+    var namePrefix = string.IsNullOrEmpty(fieldPrefix) ? string.Empty : fieldPrefix + ".";
 }
+
+@* The CrestApps bootstrap-select picker powers the multi-select "Supported values" editor, matching the
+   selectpicker used elsewhere in the admin. *@
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" at="Foot"></script>
 
 <div class="card mb-3">
     <div class="card-header">
@@ -38,7 +49,7 @@
                                 .ToList();
                             <div class="form-check">
                                 <input id="SelectedFeatures_@elementId"
-                                       name="SelectedFeatures"
+                                       name="@(namePrefix)SelectedFeatures"
                                        type="checkbox"
                                        value="@feature.Name"
                                        class="form-check-input model-feature-toggle"
@@ -61,6 +72,7 @@
                                         {
                                             { "Index", card.Index },
                                             { "Hidden", !isChecked },
+                                            { "NamePrefix", namePrefix },
                                         })
                                     }
                                 </div>
@@ -86,6 +98,7 @@
                 {
                     { "Index", card.Index },
                     { "Hidden", false },
+                    { "NamePrefix", namePrefix },
                 })
             }
         }

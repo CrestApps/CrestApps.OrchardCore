@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.AI.Core.ViewModels;
 /// the AI profile, profile template, and chat interaction editors. Only the parameters exposed by the
 /// selected deployment are rendered and posted; every other registered parameter is hidden.
 /// </summary>
-public sealed class ModelParameterEditorViewModel
+public class ModelParameterEditorViewModel
 {
     /// <summary>
     /// Gets or sets the selected parameter values keyed by their registered technical name. This is the
