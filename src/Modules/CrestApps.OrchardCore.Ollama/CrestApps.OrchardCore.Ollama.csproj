@@ -40,6 +40,16 @@
     <Analyzer Remove="$(NuGetPackageRoot)ollamasharp/**/OllamaSharp.SourceGenerators.dll" />
   </ItemGroup>
 
+  <!--
+    Ship the source-generator removal to downstream consumers. Transitive source generators
+    flow into consuming projects regardless of ExcludeAssets, so a buildTransitive target is
+    the only reliable way to keep OllamaSharp's incompatible generator from breaking consumer
+    builds on earlier .NET 10 SDKs. See https://github.com/CrestApps/CrestApps.OrchardCore/issues/640.
+  -->
+  <ItemGroup>
+    <None Include="buildTransitive\CrestApps.OrchardCore.Ollama.targets" Pack="true" PackagePath="buildTransitive\CrestApps.OrchardCore.Ollama.targets" />
+  </ItemGroup>
+
   <Target Name="RemoveOllamaSharpSourceGenerator" BeforeTargets="CoreCompile">
     <ItemGroup>
       <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'OllamaSharp.SourceGenerators'" />

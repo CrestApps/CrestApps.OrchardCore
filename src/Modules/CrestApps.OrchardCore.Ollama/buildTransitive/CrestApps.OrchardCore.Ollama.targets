@@ -1,0 +1,23 @@
+<Project>
+
+  <!--
+    OllamaSharp ships a Roslyn source generator (OllamaSharp.SourceGenerators) that is
+    compiled against a newer version of the C# compiler than earlier .NET 10 SDKs provide.
+    Loading it on such an SDK produces CS9057, which breaks builds that treat warnings as
+    errors (for example: dotnet build ... --warnaserror -p:TreatWarningsAsErrors=True).
+
+    Transitive analyzers and source generators flow into consuming projects regardless of
+    ExcludeAssets/exclude metadata on the intermediate dependencies
+    (see https://github.com/NuGet/Home/issues/13813). Because this package brings OllamaSharp
+    into the dependency graph, that incompatible generator would otherwise run in downstream
+    projects. This target removes it so consuming builds are not broken.
+
+    See https://github.com/CrestApps/CrestApps.OrchardCore/issues/640.
+  -->
+  <Target Name="RemoveIncompatibleOllamaSharpSourceGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'OllamaSharp.SourceGenerators'" />
+    </ItemGroup>
+  </Target>
+
+</Project>
