@@ -3,9 +3,9 @@
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
         <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="DisplayOnAdmin" checked="@Model.DisplayOnAdmin" />
-            <label class="form-check-label" asp-for="DisplayOnAdmin">@T["Show the soft phone on the admin dashboard"]</label>
-            <span class="hint">@T["Displays the floating soft phone on admin pages for users who can use the soft phone."]</span>
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" checked="@Model.Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Enable the soft phone"]</label>
+            <span class="hint">@T["Master switch for the soft phone. When turned off, the widget is not shown anywhere and its scripts are not loaded, so it can be shut off site-wide instantly without a redeploy."]</span>
         </div>
     </div>
 </div>
@@ -13,9 +13,19 @@
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
         <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="DisplayOnFrontend" checked="@Model.DisplayOnFrontend" />
-            <label class="form-check-label" asp-for="DisplayOnFrontend">@T["Show the soft phone on the front end"]</label>
-            <span class="hint">@T["Displays the floating soft phone on the website for users who can use the soft phone. You can also place the soft phone manually in a theme or template."]</span>
+            <input type="checkbox" class="form-check-input" asp-for="DisplayOnAdmin" checked="@Model.DisplayOnAdmin" />
+            <label class="form-check-label" asp-for="DisplayOnAdmin">@T["Show the soft phone on the admin dashboard"]</label>
+            <span class="hint">@T["Displays the floating soft phone on admin pages for users who can use the soft phone. To show it on the front end, add the Soft Phone widget to your site from Design &gt; Widgets."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="EnableDiagnostics" checked="@Model.EnableDiagnostics" />
+            <label class="form-check-label" asp-for="EnableDiagnostics">@T["Enable the diagnostics tab"]</label>
+            <span class="hint">@T["Shows a Diagnostics tab on the soft phone with live media stats, a microphone level meter, provider warnings, an SDP dump, and an audio test. Turn it on to troubleshoot (including in production), then turn it off. It can also be enabled for one session by adding ?diag=1 to the URL."]</span>
         </div>
     </div>
 </div>
@@ -26,6 +36,15 @@
         <input asp-for="RecentCallsCount" class="form-control" min="1" max="200" />
         <span asp-validation-for="RecentCallsCount"></span>
         <span class="hint">@T["The maximum number of calls shown on the soft phone's Recent tab. The default is 30."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultCountryCode">
+    <label asp-for="DefaultCountryCode" class="ocat-label">@T["Default country"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultCountryCode" asp-items="Model.Countries" class="form-select"></select>
+        <span asp-validation-for="DefaultCountryCode"></span>
+        <span class="hint">@T["The country the soft phone's phone number input selects by default, used to normalize a national number to E.164. When set to automatic, the country is derived from the current culture."]</span>
     </div>
 </div>
 

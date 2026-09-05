@@ -1,0 +1,72 @@
+@using System.Text.Json
+@using CrestApps.OrchardCore.ContactCenter.ViewModels
+@{
+    var config = Model.Config as AgentBarViewModel;
+}
+@if (config is not null)
+{
+    var payload = new Dictionary<string, object>
+    {
+        ["hubUrl"] = config.HubUrl,
+        ["stateUrl"] = config.StateUrl,
+        ["setPresenceUrl"] = config.SetPresenceUrl,
+        ["acceptOfferUrl"] = config.AcceptOfferUrl,
+        ["declineOfferUrl"] = config.DeclineOfferUrl,
+        ["completeUrl"] = config.CompleteUrl,
+        ["completeActivityUrlTemplate"] = config.CompleteActivityUrlTemplate,
+        ["workspaceUrl"] = config.WorkspaceUrl,
+        ["antiForgeryToken"] = config.AntiForgeryToken,
+        ["dispositions"] = config.Dispositions.Select(d => new { id = d.Id, name = d.Name }).ToArray(),
+        ["reasonCodes"] = config.ReasonCodes.Select(r => new { id = r.Id, name = r.Name }).ToArray(),
+        ["strings"] = new Dictionary<string, string>
+        {
+            ["title"] = T["Contact Center"].Value,
+            ["unknownCaller"] = T["Unknown caller"].Value,
+            ["inbound"] = T["Inbound"].Value,
+            ["outbound"] = T["Outbound"].Value,
+            ["available"] = T["Available"].Value,
+            ["requestBreak"] = T["Request break"].Value,
+            ["changePresence"] = T["Change your presence"].Value,
+            ["presenceReadonly"] = T["Change your status from the soft phone"].Value,
+            ["incomingCall"] = T["Incoming call"].Value,
+            ["previewDial"] = T["Preview — review then dial"].Value,
+            ["accept"] = T["Accept"].Value,
+            ["decline"] = T["Decline"].Value,
+            ["dial"] = T["Dial"].Value,
+            ["skip"] = T["Skip"].Value,
+            ["respondIn"] = T["Respond in"].Value,
+            ["activeInteraction"] = T["Active interaction"].Value,
+            ["talkTime"] = T["Talk time"].Value,
+            ["openActivity"] = T["Open activity"].Value,
+            ["openContact"] = T["Open customer record"].Value,
+            ["completeActivity"] = T["Complete activity"].Value,
+            ["wrapUp"] = T["Wrap-up — disposition this interaction"].Value,
+            ["quickDisposition"] = T["Quick disposition"].Value,
+            ["selectDisposition"] = T["Select a disposition…"].Value,
+            ["notesPlaceholder"] = T["Notes (optional)"].Value,
+            ["save"] = T["Save"].Value,
+            ["saved"] = T["Saved"].Value,
+            ["idle"] = T["No active work. Assignments will appear here."].Value,
+            ["assignedAlert"] = T["A new interaction was assigned to you."].Value,
+            ["openWorkspace"] = T["Open full workspace"].Value,
+            ["collapseBar"] = T["Hide the Contact Center bar"].Value,
+            ["expandBar"] = T["Open the Contact Center bar"].Value,
+            ["connected"] = T["Connected"].Value,
+            ["reconnecting"] = T["Reconnecting…"].Value,
+            ["disconnected"] = T["Disconnected"].Value,
+            ["actionFailed"] = T["The action could not be completed. Try again."].Value,
+        },
+    };
+
+    var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+
+    <div class="cc-agent-bar is-collapsed" data-cc-agent-bar data-config="@json" hidden>
+        <button type="button" class="cc-agent-bar__handle" data-cc-agent-bar-handle aria-expanded="false" title="@T["Open the Contact Center bar"]">
+            <span class="cc-bar__dot" data-cc-handle-dot></span>
+            <span class="cc-agent-bar__handle-label" data-cc-handle-label>@T["Offline"]</span>
+            <span class="cc-agent-bar__handle-badge" data-cc-handle-badge title="@T["Work waiting"]" aria-hidden="true"></span>
+            <i class="fa-solid fa-chevron-up" aria-hidden="true"></i>
+        </button>
+        <div class="cc-agent-bar__inner" data-cc-agent-bar-inner></div>
+    </div>
+}

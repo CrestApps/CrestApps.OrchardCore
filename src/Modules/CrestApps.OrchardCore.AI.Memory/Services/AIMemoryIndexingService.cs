@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.AI.Memory.Services;
 internal sealed class AIMemoryIndexingService
 {
     private readonly IAIMemoryStore _memoryStore;
-    private readonly AIMemoryOptions _memoryOptions;
+    private readonly IOptionsMonitor<AIMemoryOptions> _memoryOptions;
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIClientFactory _aiClientFactory;
@@ -39,7 +39,7 @@ internal sealed class AIMemoryIndexingService
     /// <param name="logger">The logger.</param>
     public AIMemoryIndexingService(
         IAIMemoryStore memoryStore,
-        IOptions<AIMemoryOptions> memoryOptions,
+        IOptionsMonitor<AIMemoryOptions> memoryOptions,
         IIndexProfileStore indexProfileStore,
         IAIDeploymentManager deploymentManager,
         IAIClientFactory aiClientFactory,
@@ -48,7 +48,7 @@ internal sealed class AIMemoryIndexingService
         ILogger<AIMemoryIndexingService> logger)
     {
         _memoryStore = memoryStore;
-        _memoryOptions = memoryOptions.Value;
+        _memoryOptions = memoryOptions;
         _indexProfileStore = indexProfileStore;
         _deploymentManager = deploymentManager;
         _aiClientFactory = aiClientFactory;
@@ -64,12 +64,12 @@ internal sealed class AIMemoryIndexingService
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task IndexAsync(AIMemoryEntry memory, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(_memoryOptions.IndexProfileName))
+        if (string.IsNullOrWhiteSpace(_memoryOptions.CurrentValue.IndexProfileName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.IndexProfileName);
+        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.CurrentValue.IndexProfileName);
 
         if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
         {
@@ -151,12 +151,12 @@ internal sealed class AIMemoryIndexingService
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(_memoryOptions.IndexProfileName))
+        if (string.IsNullOrWhiteSpace(_memoryOptions.CurrentValue.IndexProfileName))
         {
             return;
         }
 
-        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.IndexProfileName);
+        var indexProfile = await _indexProfileStore.FindByNameAsync(_memoryOptions.CurrentValue.IndexProfileName);
 
         if (indexProfile is null || !string.Equals(indexProfile.Type, MemoryConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase))
         {

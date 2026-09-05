@@ -1,0 +1,32 @@
+# Single-node Redis-on infrastructure lane without the Aspire dashboard.
+# Start from this directory with: docker compose -f docker-compose.singlenode.yml up --build
+# Attach the CMS with OrchardCore__OrchardCore_Redis__Configuration=localhost:6379,allowAdmin=true.
+services:
+  redis:
+    image: redis:7.4.2
+    ports:
+      - "6379:6379"
+
+  asterisk:
+    image: crestapps/asterisk-webrtc:22.6.0-dev
+    build:
+      context: ./Asterisk
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8088"
+      - "8089:8089"
+    volumes:
+      - ./Asterisk/http.conf:/etc/asterisk/http.conf:ro
+      - ./Asterisk/ari.conf:/etc/asterisk/ari.conf:ro
+      - ./Asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./Asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+
+  coturn:
+    image: coturn/coturn:4.6.3
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "5349:5349/tcp"
+      - "5349:5349/udp"
+    volumes:
+      - ./Coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro

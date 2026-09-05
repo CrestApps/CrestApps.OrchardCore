@@ -1,0 +1,331 @@
+@using CrestApps.OrchardCore.Sms.Workspace.Hubs
+@using CrestApps.OrchardCore.Sms.Workspace.Models
+@using CrestApps.OrchardCore.Sms.Workspace.Support
+@model SmsThreadViewModel
+
+@{
+    var contactLabel = string.IsNullOrEmpty(Model.ContactDisplayText) ? Model.Conversation.ContactAddress : Model.ContactDisplayText;
+    var smsHubUrl = Html.SignalRHubUrl<SmsPortalHub>();
+    var smsMessagesUrl = Url.Action("ThreadMessages", new { id = Model.Conversation.ItemId });
+}
+
+<div class="d-flex flex-row gap-3" style="height: calc(100vh - 2rem - var(--oc-top-nav-height, 0));">
+    <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2 flex-shrink-0">
+            <div class="d-flex align-items-center gap-2 text-truncate">
+                <a class="btn btn-sm btn-link px-1" asp-route-action="Index" title="@T["Back to inbox"]">&laquo;</a>
+                <span class="fw-semibold text-truncate">@contactLabel</span>
+                <span class="text-muted small text-nowrap">@T["on"] @PhoneDisplayFormatter.Format(Model.Conversation.ServiceAddress) &middot; @Model.Conversation.Status.ToString()</span>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                @if (Model.Conversation.AssignmentStatus != SmsConversationAssignmentStatus.Assigned)
+                {
+                    <form method="post" asp-route-action="Claim" asp-route-id="@Model.Conversation.ItemId" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-primary" title="@T["Claim to own it and remove it from the shared inbox."]">
+                            <i class="fa-solid fa-hand me-1" aria-hidden="true"></i>@T["Claim"]
+                        </button>
+                    </form>
+                }
+                @if (Model.Conversation.Status == SmsConversationStatus.Open)
+                {
+                    <form asp-route-action="SetStatus" asp-route-id="@Model.Conversation.ItemId" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="@nameof(SmsConversationStatus.Closed)" />
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Close"]</button>
+                    </form>
+                    <form asp-route-action="SetStatus" asp-route-id="@Model.Conversation.ItemId" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="@nameof(SmsConversationStatus.Spam)" />
+                        <button type="submit" class="btn btn-sm btn-outline-danger">@T["Mark spam"]</button>
+                    </form>
+                }
+                else
+                {
+                    <form asp-route-action="SetStatus" asp-route-id="@Model.Conversation.ItemId" method="post" class="d-inline">
+                        <input type="hidden" name="status" value="@nameof(SmsConversationStatus.Open)" />
+                        <button type="submit" class="btn btn-sm btn-outline-primary">@T["Reopen"]</button>
+                    </form>
+                }
+            </div>
+        </div>
+
+        <div id="sms-thread" class="sms-thread flex-grow-1 overflow-y-auto border rounded p-3 mb-3" style="background: var(--bs-tertiary-bg);">
+            @if (Model.Messages.Count == 0)
+            {
+                <div class="text-muted" data-empty>@T["No messages yet."]</div>
+            }
+            else
+            {
+                DateTime? lastDay = null;
+
+                foreach (var message in Model.Messages)
+                {
+                    // A day separator, phone-style, whenever the calendar date changes.
+                    var localDay = message.CreatedUtc.ToLocalTime().Date;
+                    if (lastDay != localDay)
+                    {
+                        lastDay = localDay;
+                        <div class="text-center my-3">
+                            <span class="badge rounded-pill text-bg-secondary">@message.CreatedUtc.ToLocalTime().ToString("D")</span>
+                        </div>
+                    }
+
+                    string agentName = null;
+                    if (!message.IsInbound && !string.IsNullOrEmpty(message.SentByAgentId))
+                    {
+                        Model.AgentNames.TryGetValue(message.SentByAgentId, out agentName);
+                    }
+                    @await Html.PartialAsync("_MessageBubble", new SmsMessageBubbleViewModel { Message = message, ContactLabel = contactLabel, AgentName = agentName })
+                }
+            }
+        </div>
+
+        @if (Model.Conversation.Status != SmsConversationStatus.Closed && Model.Conversation.Status != SmsConversationStatus.Spam)
+        {
+            <form method="post" asp-route-action="Send" asp-route-id="@Model.Conversation.ItemId" class="flex-shrink-0">
+                <div class="sms-composer bg-body text-body rounded border w-100">
+                    <textarea name="body" id="sms-composer-body" class="form-control bg-transparent border-0 px-3 pt-2" rows="2" placeholder="@T["Type a message…"]" autofocus required></textarea>
+                    <div class="d-flex justify-content-between align-items-center px-3 pb-2 gap-2">
+                        <div>
+                            @if (Model.Templates.Count > 0)
+                            {
+                                <select class="form-select form-select-sm" style="max-width: 18rem;" id="sms-template-picker" aria-label="@T["Insert a canned response"]">
+                                    <option value="">@T["Insert a canned response…"]</option>
+                                    @foreach (var template in Model.Templates)
+                                    {
+                                        <option value="@template.Body">@template.Name</option>
+                                    }
+                                </select>
+                            }
+                        </div>
+                        <button type="submit" class="btn btn-dark rounded" title="@T["Send"]" aria-label="@T["Send"]">
+                            <i class="fa-solid fa-arrow-up" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <script at="Foot">
+                (function () {
+                    var picker = document.getElementById('sms-template-picker');
+                    var body = document.getElementById('sms-composer-body');
+                    if (picker && body) {
+                        picker.addEventListener('change', function () {
+                            if (this.value) {
+                                body.value = body.value ? (body.value + '\n' + this.value) : this.value;
+                                body.focus();
+                                this.selectedIndex = 0;
+                            }
+                        });
+                    }
+                })();
+            </script>
+        }
+        else
+        {
+            <div class="alert alert-secondary flex-shrink-0">@T["This conversation is {0} and cannot be replied to.", Model.Conversation.Status.ToString().ToLowerInvariant()]</div>
+        }
+    </div>
+
+    <div class="d-none d-lg-flex flex-column flex-shrink-0 overflow-y-auto" style="width: 22rem;">
+        @if (!string.IsNullOrWhiteSpace(Model.Conversation.Summary))
+        {
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                    <span>
+                        <i class="fa-solid fa-robot text-primary me-2" aria-hidden="true"></i>@T["AI summary"]
+                    </span>
+                    @if (Model.Conversation.SummaryGeneratedUtc.HasValue)
+                    {
+                        <span class="text-muted small text-nowrap" title="@T["When this summary was generated"]">@Model.Conversation.SummaryGeneratedUtc.Value.ToLocalTime().ToString("g")</span>
+                    }
+                </div>
+                <div class="card-body">
+                    @Model.Conversation.Summary
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>@T["Contact"]</span>
+                @if (Model.Contacts.Count > 1)
+                {
+                    <span class="badge bg-secondary" title="@T["Several contact records share this number."]">@Model.Contacts.Count</span>
+                }
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <i class="fa-solid fa-phone text-muted me-1" aria-hidden="true"></i>
+                    <span class="user-select-all">@Model.Conversation.ContactAddress</span>
+                </div>
+
+                @if (Model.Contacts.Count == 0)
+                {
+                    <p class="text-muted mb-0">
+                        <i class="fa-solid fa-user-slash me-1" aria-hidden="true"></i>
+                        @T["No contact record matches this number."]
+                    </p>
+                }
+                else
+                {
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var contact in Model.Contacts)
+                        {
+                            <li class="d-flex justify-content-between align-items-center gap-2 py-2 border-top">
+                                <span class="text-truncate">
+                                    <i class="fa-solid fa-user text-muted me-1" aria-hidden="true"></i>
+                                    @(string.IsNullOrWhiteSpace(contact.DisplayName) ? T["(untitled contact)"] : contact.DisplayName)
+                                    @if (contact.IsPrimary && Model.Contacts.Count > 1)
+                                    {
+                                        <span class="badge bg-info text-dark ms-1" title="@T["The contact this conversation is linked to."]">@T["linked"]</span>
+                                    }
+                                </span>
+                                <a class="btn btn-sm btn-outline-primary flex-shrink-0"
+                                   asp-action="Edit"
+                                   asp-controller="Admin"
+                                   asp-area="OrchardCore.Contents"
+                                   asp-route-contentItemId="@contact.ContentItemId"
+                                   title="@T["Open this contact's account."]">
+                                    @T["View account"]
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Make the admin content region fill the viewport so the conversation is a self-contained chat surface: the page
+   itself never scrolls — only the message list (and the right-hand panel) scroll inside their own containers. *@
+<style at="Head">
+    .ta-content {
+        height: 100% !important;
+        padding-bottom: 0 !important;
+    }
+</style>
+
+<script asp-name="signalr" at="Foot"></script>
+<script at="Foot" depends-on="signalr"
+        data-sms-hub-url="@smsHubUrl"
+        data-sms-conversation-id="@Model.Conversation.ItemId"
+        data-sms-messages-url="@smsMessagesUrl">
+    (function () {
+        var thread = document.getElementById('sms-thread');
+        if (!thread) { return; }
+
+        var script = document.currentScript;
+        var hubUrl = script.getAttribute('data-sms-hub-url');
+        var conversationId = script.getAttribute('data-sms-conversation-id');
+        var messagesUrl = script.getAttribute('data-sms-messages-url');
+
+        function scrollToBottom() {
+            thread.scrollTop = thread.scrollHeight;
+        }
+
+        // "Pinned" means the user is already at (or within a hair of) the bottom. We only auto-scroll on a new
+        // message when they are pinned, so a new arrival never yanks the view away from someone who has scrolled up
+        // to read earlier messages. The small tolerance absorbs sub-pixel rounding and lets "almost at the bottom"
+        // still count as pinned.
+        function isPinnedToBottom() {
+            return (thread.scrollHeight - thread.scrollTop - thread.clientHeight) <= 60;
+        }
+
+        // The high-water mark for what the thread already shows, as UTC ticks, so we only ask for newer messages.
+        // .NET ticks are ~18-digit values that exceed JavaScript's safe-integer range, so we compare them as BigInt
+        // and send the exact decimal string. Using parseInt here silently rounded the value down, so the server kept
+        // re-sending the newest message on every poll — which then piled up as visible duplicates in the thread.
+        function lastTicks() {
+            var max = 0n;
+            thread.querySelectorAll('.sms-message[data-created-ticks]').forEach(function (node) {
+                var raw = node.getAttribute('data-created-ticks');
+                if (!raw) { return; }
+                try {
+                    var ticks = BigInt(raw);
+                    if (ticks > max) { max = ticks; }
+                } catch (e) { /* ignore a malformed value */ }
+            });
+            return max.toString();
+        }
+
+        var fetching = false;
+
+        function pull() {
+            if (fetching) { return; }
+            fetching = true;
+
+            var url = messagesUrl + (messagesUrl.indexOf('?') >= 0 ? '&' : '?') + 'afterTicks=' + lastTicks();
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                .then(function (response) { return response.ok ? response.text() : ''; })
+                .then(function (html) {
+                    if (!html || !html.trim()) { return; }
+
+                    var holder = document.createElement('div');
+                    holder.innerHTML = html;
+
+                    // Decide whether to follow the new message BEFORE appending it, based on where the user is now.
+                    var pinned = isPinnedToBottom();
+                    var added = false;
+
+                    // Snapshot what is already on screen so we never re-append a message the server re-sends. We key
+                    // on the message id, falling back to the created-ticks value for any message that has no id, and
+                    // extend the snapshot as we append so a batch cannot double-add either.
+                    var seenIds = {};
+                    var seenTicks = {};
+                    thread.querySelectorAll('.sms-message').forEach(function (node) {
+                        var existingId = node.getAttribute('data-message-id');
+                        var existingTicks = node.getAttribute('data-created-ticks');
+                        if (existingId) { seenIds[existingId] = true; }
+                        if (existingTicks) { seenTicks[existingTicks] = true; }
+                    });
+
+                    holder.querySelectorAll('.sms-message').forEach(function (node) {
+                        var id = node.getAttribute('data-message-id');
+                        var ticks = node.getAttribute('data-created-ticks');
+
+                        if ((id && seenIds[id]) || (!id && ticks && seenTicks[ticks])) { return; }
+
+                        var empty = thread.querySelector('[data-empty]');
+                        if (empty) { empty.remove(); }
+
+                        thread.appendChild(node);
+                        if (id) { seenIds[id] = true; }
+                        if (ticks) { seenTicks[ticks] = true; }
+                        added = true;
+                    });
+
+                    // Only follow to the newest message when the user was already at the bottom. If they had scrolled
+                    // up to read, leave their position untouched so we never interrupt them mid-scroll.
+                    if (added && pinned) { scrollToBottom(); }
+                })
+                .catch(function () { /* transient network error; the next poll retries */ })
+                .finally(function () { fetching = false; });
+        }
+
+        scrollToBottom();
+
+        // A light fallback poll catches AI replies, messages sent by other agents, and any missed push.
+        setInterval(pull, 7000);
+
+        // SignalR gives an instant refresh the moment a customer's message lands.
+        if (window.signalR && hubUrl) {
+            try {
+                var connection = new signalR.HubConnectionBuilder()
+                    .withUrl(hubUrl)
+                    .withAutomaticReconnect()
+                    .build();
+
+                connection.on('NewInboundMessage', function (notification) {
+                    if (notification && notification.conversationId === conversationId) {
+                        pull();
+                    }
+                });
+
+                // After a dropped connection is restored, reconcile anything missed while offline.
+                connection.onreconnected(function () { pull(); });
+
+                connection.start().catch(function () { /* the fallback poll keeps the thread current */ });
+            } catch (e) { /* SignalR unavailable; the fallback poll keeps the thread current */ }
+        }
+    })();
+</script>

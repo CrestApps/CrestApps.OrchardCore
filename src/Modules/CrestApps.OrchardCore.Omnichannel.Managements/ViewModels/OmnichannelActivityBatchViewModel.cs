@@ -242,8 +242,68 @@ public class OmnichannelActivityBatchViewModel
     public bool ShowAIProfile { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the contact during automated conversations.
+    /// </summary>
+    public bool AllowAIToUpdateContact { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the subject during automated conversations.
+    /// </summary>
+    public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the available AI profiles for automated activities.
     /// </summary>
     [BindNever]
     public IEnumerable<SelectListItem> AIProfiles { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long automated conversations wait before sending each AI reply.
+    /// </summary>
+    public OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reply delay in seconds (the exact wait when fixed, or the base when random).
+    /// </summary>
+    public int ResponseDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the +/- jitter, in seconds, applied to the base delay when the mode is random.
+    /// </summary>
+    public int ResponseDelayJitterSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available response-delay modes.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> ResponseDelayModes { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selected reusable cadence id. Empty means never nudge.
+    /// </summary>
+    public string CadenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available cadences.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> Cadences { get; set; }
+
+    /// <summary>
+    /// Gets or sets the id of the business-hours calendar that gates background-initiated sends.
+    /// </summary>
+    public string BusinessHoursCalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the business-hours calendar picker should be shown (a calendar
+    /// provider such as ContactCenter is available).
+    /// </summary>
+    [BindNever]
+    public bool ShowBusinessHoursCalendar { get; set; }
+
+    /// <summary>
+    /// Gets or sets the available business-hours calendars.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> BusinessHoursCalendars { get; set; }
 }

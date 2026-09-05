@@ -34,11 +34,17 @@ public interface ITelephonyAuthenticationService
     Task<TelephonyResult> CompleteAuthorizationAsync(string code, string redirectUri, string codeVerifier, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Disconnects the current user from the configured provider by removing the stored tokens.
+    /// Disconnects the current user from the configured provider by removing the stored tokens. The
+    /// local tokens are always removed so the interactive credentials are cleared immediately, even when
+    /// the provider could not confirm that the remote grant was revoked.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>A task that represents the asynchronous operation.</returns>
-    Task DisconnectAsync(CancellationToken cancellationToken = default);
+    /// <returns>
+    /// A successful result when the provider confirmed the grant was revoked (or when the provider does
+    /// not require revocation); otherwise a failed or indeterminate result describing that the remote
+    /// grant may still be active even though the local connection was cleared.
+    /// </returns>
+    Task<TelephonyResult> DisconnectAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a valid set of tokens for the current user and the given provider, refreshing them when they are expired.

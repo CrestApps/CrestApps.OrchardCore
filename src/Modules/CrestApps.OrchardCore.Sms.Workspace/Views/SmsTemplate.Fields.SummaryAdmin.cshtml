@@ -1,0 +1,10 @@
+@model ShapeViewModel<SmsTemplate>
+
+@{
+    var template = Model.Value;
+}
+
+<div>
+    <strong>@template.Name</strong>
+    <div class="text-muted small text-truncate" style="max-width: 40rem;">@template.Body</div>
+</div>

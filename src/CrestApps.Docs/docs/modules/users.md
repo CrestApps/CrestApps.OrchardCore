@@ -16,6 +16,39 @@ Extends the Orchard Core Users module by adding functionality to cache users.
 This feature is enabled by dependency only.
 :::
 
+## Reusable user picker
+
+The module ships a reusable **`UserPicker`** view component: a searchable user selector you can drop into any admin screen so an operator can find and select one or more users, instead of typing an id. It shows the top matches and filters as you type (server-side search), and it resolves the currently-selected users so their display names appear when the picker first renders.
+
+Invoke it from a Razor view:
+
+```razor
+@await Component.InvokeAsync("UserPicker", new
+{
+    name = Html.NameFor(m => m.OwnerUserId).ToString(),
+    selectedValues = new[] { Model.OwnerUserId },
+    valueType = "userId",
+    multiple = false,
+    buttonText = T["Select a user"].Value,
+    searchPlaceholder = T["Search users"].Value,
+})
+```
+
+Parameters:
+
+| Parameter | Purpose |
+| --- | --- |
+| `name` | The form field name the selection posts under. Use `Html.NameFor(...)` inside a display driver so the value binds back under the driver's prefix. |
+| `selectedValues` | The currently-selected values (matching `valueType`), used to pre-populate the picker. |
+| `valueType` | What the picker stores and posts: `userId` (default), `userName`, or `normalizedUserName`. |
+| `multiple` | Allow more than one user to be selected. |
+| `roles` | Restrict the searchable users to these role names. |
+| `label`, `buttonText`, `searchPlaceholder` | Optional display text. |
+
+The picker is backed by the shared user-search endpoint (`Admin/api/crestapps/users/search`, which returns the top 50 enabled matches) and renders through the shared **`ItemSelector`** component, so the **CrestApps Resources** feature must be enabled wherever the picker is used.
+
+For example, the [SMS Workspace](../omnichannel/sms-workspace) uses `UserPicker` to choose the agent an SMS number routes inbound messages to.
+
 ## User Display Name
 
 | | |

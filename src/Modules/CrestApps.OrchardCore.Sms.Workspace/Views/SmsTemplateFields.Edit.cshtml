@@ -1,0 +1,13 @@
+@model SmsTemplateViewModel
+
+<div class="mb-3">
+    <label asp-for="Name" class="form-label">@T["Name"]</label>
+    <input asp-for="Name" class="form-control" />
+    <span asp-validation-for="Name" class="text-danger"></span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Body" class="form-label">@T["Body"]</label>
+    <textarea asp-for="Body" class="form-control" rows="3"></textarea>
+    <span asp-validation-for="Body" class="text-danger"></span>
+</div>

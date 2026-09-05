@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
+using OrchardCore;
 using OrchardCore.Entities;
 using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
@@ -560,6 +561,11 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     {
         var contentItem = new ContentItem();
         contentItem.ContentType = OmnichannelConstants.ContentTypes.EmailAddress;
+        // Each bag item must carry its own unique identifiers. Without them, multiple communication methods share
+        // an empty/duplicated ContentItemId, and OrchardCore's BagPart editor throws on the duplicate key when the
+        // contact is edited, silently dropping every change in the bag.
+        contentItem.ContentItemId = IdGenerator.GenerateId();
+        contentItem.ContentItemVersionId = IdGenerator.GenerateId();
         contentItem.DisplayText = email;
 
         contentItem.Alter<EmailInfoPart>(part =>
@@ -574,6 +580,11 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     {
         var contentItem = new ContentItem();
         contentItem.ContentType = OmnichannelConstants.ContentTypes.PhoneNumber;
+        // Each bag item must carry its own unique identifiers. Without them, the cell and home phone methods share
+        // an empty/duplicated ContentItemId, and OrchardCore's BagPart editor throws on the duplicate key when the
+        // contact is edited, silently dropping every change in the bag.
+        contentItem.ContentItemId = IdGenerator.GenerateId();
+        contentItem.ContentItemVersionId = IdGenerator.GenerateId();
         contentItem.DisplayText = $"{type}: {number}";
 
         contentItem.Alter<PhoneNumberInfoPart>(part =>

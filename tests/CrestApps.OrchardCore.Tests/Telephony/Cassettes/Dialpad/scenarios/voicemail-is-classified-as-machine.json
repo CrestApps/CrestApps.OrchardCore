@@ -1,0 +1,15 @@
+{
+  "description": "Voicemail detection must normalize to an ended call with a machine answer classification.",
+  "payload": {
+    "call_id": "3456789012345681",
+    "state": "voicemail",
+    "direction": "outbound",
+    "external_number": "+15125550188",
+    "event_timestamp": 1699887630000
+  },
+  "expected": {
+    "result": "Ignored",
+    "state": "Ended",
+    "answerClassification": "Machine"
+  }
+}

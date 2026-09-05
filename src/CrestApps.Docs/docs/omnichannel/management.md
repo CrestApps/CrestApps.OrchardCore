@@ -21,7 +21,7 @@ The screencast below enables **Omnichannel Management**, opens the **Management*
 
 The module ships as two features. `CrestApps.OrchardCore.Omnichannel.Activities` is the headless half: contact, subject, campaign, and activity catalogs, their stores and managers, the content parts and indexes, the migrations, the permissions, and the subject-disposition endpoint. `CrestApps.OrchardCore.Omnichannel.Managements` adds the CRM administration experience on top of it - the screens, display drivers, and admin menus described below - and enabling it brings the headless feature with it.
 
-The split exists so that a headless consumer of the activity model can depend on the work-item data without dragging an administration experience into a tenant that serves no user interface.
+The split exists so that a headless consumer of the activity model, such as the [Contact Center](../contact-center/index.md), can depend on the work-item data without dragging an administration experience into a tenant that serves no user interface.
 
 ## Overview
 
@@ -30,6 +30,34 @@ The `CrestApps.OrchardCore.Omnichannel.Managements` module is a lightweight **Cu
 It provides the admin tools you need to manage **contacts**, define **subject-level flows**, group work under **campaigns**, and run activity-driven processes (manual or automated) across channels such as SMS, email, and phone.
 
 ## Core concepts
+
+### Channel endpoint
+A **Channel endpoint** is an addressable point on a channel — most commonly an SMS or phone number — that the platform sends from and receives on. Each endpoint carries its channel, its normalized value (numbers are stored as international `+<country code><number>`), and its **provider**, and channel-specific settings can be attached to it (for example the [SMS Workspace](sms-workspace) stores its inbound routing on the SMS endpoint).
+
+Channel endpoints are administered under **Interaction Center → Channel Endpoints**. This administration is provided by a small **dependency-only** feature:
+
+| | |
+| --- | --- |
+| **Feature Name** | Omnichannel Channel Endpoints |
+| **Feature ID** | `CrestApps.OrchardCore.Omnichannel.ChannelEndpoints` |
+
+The feature is `EnabledByDependencyOnly` — you do not enable it directly. It depends only on the headless **Omnichannel Activities** feature, so a module that just needs channel endpoints (such as the SMS Workspace) can depend on it and reuse the endpoint administration and services **without** pulling in the full Omnichannel Management CRM screens. Enabling **Omnichannel Management** enables it automatically, so the channel-endpoint screens appear exactly as before.
+
+#### Channels are sources (extensible)
+
+Each **channel** is a registered **source**. The "Add endpoint" button opens a picker that lists the channels wired up on the tenant, and choosing one builds the right editor from display drivers that target that channel — so an SMS endpoint shows the SMS provider and routing, while a Phone endpoint shows only what voice needs. The channel is fixed when the endpoint is created and shown read-only afterwards.
+
+A feature contributes a channel by registering a source from its own startup:
+
+```csharp
+services.AddChannelEndpointSource("SMS", source =>
+{
+    source.DisplayName = S["SMS"];
+    source.Description = S["A number that sends and receives text messages."];
+});
+```
+
+Because the source is registered by the owning feature, a channel only appears in the picker when its feature is enabled. The **Phone** source ships with the Channel Endpoints feature (inbound voice); the **SMS** source is registered by the [SMS Workspace](sms-workspace), which also adds the **provider dropdown** (the enabled SMS providers) and the inbound-routing editor to SMS endpoints. To capture channel-specific fields, add a `DisplayDriver<OmnichannelChannelEndpoint>` that returns `null` unless the endpoint's `Channel` matches your source.
 
 ### Contact
 A **Contact** is any content item that has `OmnichannelContactPart` attached.
@@ -157,7 +185,7 @@ The loader runs as a background process to avoid overloading the system and to a
 
 The **Load Inventory** list is ordered by creation date with the newest inventory loads first, so a load you just created appears at the top. The list is paged and supports the standard admin bulk-selection controls (the header checkbox selects every row on the page).
 
-Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when no dialer contributor is enabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
+Dialer profile selection is an optional integration supplied through the Omnichannel-owned `IActivityDialerContributor` contract. Omnichannel Management remains independently activatable when Contact Center Outbound Dialer is disabled; in that configuration, dialer profile choices are unavailable and non-dialer inventory management continues to work normally.
 
 #### Loading Automated SMS Activities with an AI Profile
 
@@ -440,6 +468,10 @@ Content Admin supports these named search terms:
 
 National-number searches can match contacts from more than one country. Use a leading `+` when the country calling code must be part of the search.
 
+When the content list is scoped exclusively to contact content types — which is the case for the **Interaction Center → Contacts** menu item, or any Content Admin URL whose `contentTypeId` lists only types that attach `OmnichannelContactPart` — the standard search box does double duty: a plain entry matches the **Display Text** *or* a contact phone number (a contains match on the primary Cell and Home numbers). This lets an agent type either a name or a number in the same box and find the contact. On any other content list the search box behaves exactly as the framework default and matches Display Text only, so the phone behavior never leaks onto unrelated types. The explicit `phone:` terms above still work everywhere.
+
+On those same contact-scoped lists, a **Phone** card also appears in the Content Admin **Filters** popover, next to Display Text, Type, Stereotype, Status, and Sort, documenting the `phone:` term and its `phone-exact:`, `phone-starts:`, and `phone-ends:` variants.
+
 ## Bulk Activity Management
 
 The **Manage Activities** page provides a centralized interface for managing active omnichannel inventory across manual, automated, and dialer-oriented activities. It targets editable work states such as `NotStarted`, `Scheduled`, `Pending`, `AwaitingAgentResponse`, `Failed`, and `Cancelled` so managers can clean up, re-route, or reclassify queued work without opening each activity one by one. Historical activities without a subject content type remain manageable and are represented by the generic **Activity** type instead of failing the page or completion action.
@@ -516,7 +548,7 @@ The page also includes a **Page size** selector so managers can review more than
 | **Change Subject** | Change the subject content type for all selected activities. |
 | **Clear Assignment** | Remove the current assignee and clear reservation state so the activity can be re-routed or dialed again. |
 | **Change Source** | Change the activity source and optionally clear assignment and reservation state. This is useful when reclassifying inventory between manual, automatic, and dialer-style workflows. |
-| **Change Dialer Profile** | When a dialer contributor feature is available, update the activity campaign and dialer source to match a selected dialer profile. This can also clear assignment and reservation state so the dialer can pick the activity up again. |
+| **Change Dialer Profile** | When the Contact Center dialer feature is available, update the activity campaign and dialer source to match a selected dialer profile. This can also clear assignment and reservation state so the dialer can pick the activity up again. |
 
 Use **Change Source** and **Clear Assignment** together when you need to convert assigned manual work back into dialer-ready inventory. Use **Change Dialer Profile** when you want to move selected outbound inventory to a different dialer campaign path without recreating the activities.
 
@@ -541,3 +573,11 @@ On import, entries are matched by their identifier: an entry that already exists
 When a plan carries several of these steps, order them so that referenced entities import first: dispositions and channel endpoints, then campaign groups, then campaigns, and finally subject actions.
 
 Subject flow configuration is stored on the `OmnichannelSubjectPart` content-type part settings, so it travels with the content type definition through the standard **Content Definition** deployment step rather than a dedicated omnichannel step.
+
+## Data at rest and privacy
+
+The omnichannel/CRM layer stores customer communication content and contact addresses as **plaintext** in the tenant SQL database. `OmnichannelMessage.Content` (the message body), `OmnichannelMessage.CustomerAddress`, and `OmnichannelMessage.ServiceAddress` are persisted unencrypted in the YesSql document, and the two addresses are additionally projected — still in plaintext — into the `OmnichannelMessageIndex` table so they can be queried. No application-level encryption is applied to this data.
+
+This is a deliberate contrast with telephony **recording media**, which the media-execution layer encrypts at rest through the data protection provider. That asymmetry matters operationally: encrypting the recording bytes does not encrypt the message bodies or the phone numbers/addresses that the CRM stores alongside them. Protecting this content at rest is therefore a **deployment responsibility** — enable database- or disk-level encryption (for example, transparent data encryption) and restrict access to the database and its backups accordingly. Treat message content and contact addresses as personal data.
+
+There is currently **no automated per-contact subject erasure** (right-to-be-forgotten) across the CRM. The activity **Purge** action marks an activity as `Purged` and removes it from the work queue, but it does **not** delete the underlying message content, the customer/service addresses, or the contact record — that data remains in the database and its index. Comprehensive per-contact erasure across omnichannel activities, messages, and contacts is a known limitation and a general-availability blocker; until it ships, satisfy erasure requests through direct, audited database operations against the tenant store.

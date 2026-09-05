@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Telephony.Drivers;
@@ -17,10 +16,9 @@ namespace CrestApps.OrchardCore.Telephony.Drivers;
 /// </summary>
 public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<TelephonySettings>
 {
-    private readonly IShellReleaseManager _shellReleaseManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly TelephonyProviderOptions _providerOptions;
+    private readonly IOptionsMonitor<TelephonyProviderOptions> _providerOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -30,22 +28,19 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
     /// <summary>
     /// Initializes a new instance of the <see cref="TelephonySettingsDisplayDriver"/> class.
     /// </summary>
-    /// <param name="shellReleaseManager">The shell release manager used to apply provider changes.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="providerOptions">The registered telephony provider options.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TelephonySettingsDisplayDriver(
-        IShellReleaseManager shellReleaseManager,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IOptions<TelephonyProviderOptions> providerOptions,
+        IOptionsMonitor<TelephonyProviderOptions> providerOptions,
         IStringLocalizer<TelephonySettingsDisplayDriver> stringLocalizer)
     {
-        _shellReleaseManager = shellReleaseManager;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _providerOptions = providerOptions.Value;
+        _providerOptions = providerOptions;
         S = stringLocalizer;
     }
 
@@ -54,7 +49,7 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
         return Initialize<TelephonySettingsViewModel>("TelephonySettings_Edit", model =>
         {
             model.DefaultProvider = settings.DefaultProviderName;
-            model.Providers = _providerOptions.Providers
+            model.Providers = _providerOptions.CurrentValue.Providers
                 .Where(entry => entry.Value.IsEnabled)
                 .Select(entry => new SelectListItem(entry.Key, entry.Key))
                 .OrderBy(item => item.Text)
@@ -77,12 +72,10 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (settings.DefaultProviderName != model.DefaultProvider)
-        {
-            settings.DefaultProviderName = model.DefaultProvider;
-
-            _shellReleaseManager.RequestRelease();
-        }
+        // The default provider name is read live from the site settings by every consumer
+        // (via ISiteService or IOptionsSnapshot<TelephonySettings>), so changing it does not
+        // require releasing the shell.
+        settings.DefaultProviderName = model.DefaultProvider;
 
         return Edit(site, settings, context);
     }

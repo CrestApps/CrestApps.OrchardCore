@@ -1,0 +1,180 @@
+{
+  "description": "Binds every Asterisk REST Interface event the realtime voice mapper interprets to the property paths the mapper reads. Every specification-backed path must resolve against the vendored Asterisk declarations for the pinned release, and every tolerated path must remain absent from them, so an Asterisk upgrade that renames or relocates a field fails the build instead of silently degrading call control.",
+  "events": [
+    {
+      "ariEventType": "StasisStart",
+      "specificationBackedPaths": [
+        "application",
+        "args",
+        "asterisk_id",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type"
+      ]
+    },
+    {
+      "ariEventType": "StasisEnd",
+      "specificationBackedPaths": [
+        "application",
+        "asterisk_id",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type"
+      ]
+    },
+    {
+      "ariEventType": "ChannelHold",
+      "specificationBackedPaths": [
+        "application",
+        "asterisk_id",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type"
+      ]
+    },
+    {
+      "ariEventType": "ChannelUnhold",
+      "specificationBackedPaths": [
+        "application",
+        "asterisk_id",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type"
+      ]
+    },
+    {
+      "ariEventType": "ChannelEnteredBridge",
+      "specificationBackedPaths": [
+        "application",
+        "asterisk_id",
+        "bridge.channels",
+        "bridge.id",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type"
+      ]
+    },
+    {
+      "ariEventType": "ChannelLeftBridge",
+      "specificationBackedPaths": [
+        "application",
+        "asterisk_id",
+        "bridge.channels",
+        "bridge.id",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type"
+      ]
+    },
+    {
+      "ariEventType": "ChannelVarset",
+      "specificationBackedPaths": [
+        "application",
+        "asterisk_id",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type",
+        "value",
+        "variable"
+      ]
+    },
+    {
+      "ariEventType": "ChannelHangupRequest",
+      "specificationBackedPaths": [
+        "application",
+        "asterisk_id",
+        "cause",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type"
+      ]
+    },
+    {
+      "ariEventType": "ChannelDestroyed",
+      "specificationBackedPaths": [
+        "application",
+        "asterisk_id",
+        "cause",
+        "cause_txt",
+        "channel.caller.number",
+        "channel.channelvars",
+        "channel.connected.number",
+        "channel.dialplan.exten",
+        "channel.id",
+        "channel.state",
+        "timestamp",
+        "type"
+      ]
+    }
+  ],
+  "toleratedNonSpecificationPaths": [
+    {
+      "path": "peer",
+      "justification": "Compatibility fallback for gateways that deliver the far-end channel under 'peer'. Asterisk itself never carries 'peer' on the events this mapper interprets, so the fallback must stay inert against a conforming release."
+    },
+    {
+      "path": "channel.variables",
+      "justification": "Compatibility fallback for gateways that rename Channel.channelvars. A conforming Asterisk release never emits it."
+    },
+    {
+      "path": "variables",
+      "justification": "Compatibility fallback for gateways that hoist channel variables to the event root. A conforming Asterisk release never emits it."
+    },
+    {
+      "path": "channelvars",
+      "justification": "Compatibility fallback for gateways that hoist Channel.channelvars to the event root. A conforming Asterisk release declares channelvars on Channel only."
+    },
+    {
+      "path": "channel_variables",
+      "justification": "Compatibility fallback for gateways that snake-case the channel variable bag. A conforming Asterisk release never emits it."
+    },
+    {
+      "path": "parent_channel_id",
+      "justification": "Compatibility fallback for gateways that project an originating channel identifier. Asterisk conveys channel lineage through Local channel naming instead, so this fallback must stay inert."
+    },
+    {
+      "path": "channel.parent_channel_id",
+      "justification": "Compatibility fallback for gateways that project an originating channel identifier onto the channel object. A conforming Asterisk release never emits it."
+    }
+  ]
+}

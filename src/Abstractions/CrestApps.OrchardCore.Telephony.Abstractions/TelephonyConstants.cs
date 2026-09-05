@@ -43,6 +43,26 @@ public static class TelephonyConstants
         /// Identifies the monotonic fence token associated with an idempotent provider command.
         /// </summary>
         public const string FenceToken = "commandFenceToken";
+
+        /// <summary>
+        /// Identifies the authenticated user placing a soft phone command. Providers that deliver audio to a
+        /// per-user browser endpoint (such as Telnyx WebRTC) use it to resolve the caller's live soft-phone
+        /// registration so an outbound call can be bridged to their browser.
+        /// </summary>
+        public const string SoftPhoneUserId = "softPhoneUserId";
+    }
+
+    /// <summary>
+    /// Contains metadata keys carried on a <see cref="Models.TelephonyCall"/> to convey provider-neutral context
+    /// back to the caller (for example, to record call history).
+    /// </summary>
+    public static class CallMetadata
+    {
+        /// <summary>
+        /// The dialed extension number for an internal extension call, carried so the interaction can be recorded
+        /// as an extension call and redialed by extension from the Recent tab.
+        /// </summary>
+        public const string ExtensionNumber = "extensionNumber";
     }
 
     /// <summary>
@@ -51,7 +71,7 @@ public static class TelephonyConstants
     public static class AuthenticationSchemes
     {
         /// <summary>
-        /// The OAuth 2.0 authorization code scheme, used by providers such as Dialpad.
+        /// The OAuth 2.0 authorization code scheme, used by providers that authenticate over OAuth 2.0.
         /// </summary>
         public const string OAuth2 = "oauth2";
     }
@@ -75,6 +95,13 @@ public static class TelephonyConstants
         /// The route that disconnects the current user from the provider.
         /// </summary>
         public const string OAuthDisconnect = "TelephonyOAuthDisconnect";
+
+        /// <summary>
+        /// The route of the standalone <c>/softphone</c> page hosted by the soft phone browser extension. Shared
+        /// so callers that must recognize the soft phone page (such as the Contact Center agent bar, which never
+        /// injects itself there) stay in sync with the route through any rename.
+        /// </summary>
+        public const string SoftPhonePage = "TelephonySoftPhonePage";
     }
 
     /// <summary>
@@ -88,13 +115,23 @@ public static class TelephonyConstants
         public const string Area = "CrestApps.OrchardCore.Telephony";
 
         /// <summary>
-        /// The identifier of the soft phone feature.
+        /// The identifier of the shared soft phone client feature. It is enabled by dependency only and
+        /// carries the reusable soft phone component, presenter, and resources shared by the widget and the
+        /// browser-extension endpoint.
+        /// </summary>
+        public const string SoftPhoneCore = "CrestApps.OrchardCore.Telephony.SoftPhone.Core";
+
+        /// <summary>
+        /// The identifier of the soft phone widget feature. It adds the floating soft phone to the admin
+        /// dashboard and provides the placeable front-end Soft Phone widget.
         /// </summary>
         public const string SoftPhone = "CrestApps.OrchardCore.Telephony.SoftPhone";
 
         /// <summary>
-        /// The identifier of the Telephony administration feature.
+        /// The identifier of the soft phone browser-extension feature. It exposes the standalone
+        /// <c>/softphone</c> page and its configuration endpoint that the CrestApps Soft Phone browser
+        /// extension hosts.
         /// </summary>
-        public const string Admin = "CrestApps.OrchardCore.Telephony.Admin";
+        public const string SoftPhoneExtension = "CrestApps.OrchardCore.Telephony.SoftPhone.Extension";
     }
 }

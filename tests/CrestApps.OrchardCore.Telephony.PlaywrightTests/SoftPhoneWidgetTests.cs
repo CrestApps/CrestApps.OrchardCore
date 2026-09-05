@@ -110,6 +110,86 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task InboundAutoAnswer_WhenTheOfferWasAcceptedOutsideThePhone_AnswersTheRoutedLegOnceInsteadOfRingingIt()
+    {
+        // Arrange
+        // A Contact Center offer can be accepted from the docked agent bar in the CRM chrome rather than from the
+        // phone, and the platform then delivers the routed leg to this browser. Nothing about that accept is
+        // pending inside the phone, so without arming, the arriving leg is treated as an unsolicited incoming
+        // call and torn down -- the provider reports the refusal as busy and the agent is never connected, with
+        // the customer left on a call nobody is on. Arming is one-shot so a later, genuine incoming call still
+        // rings the agent instead of being answered silently.
+        var page = await _browser.NewPageAsync();
+        await page.AddInitScriptAsync(
+            """
+            window.browserAudioState = {
+                decisions: [],
+                track: {
+                    enabled: false,
+                    stopped: false,
+                    stop: function () { this.stopped = true; }
+                }
+            };
+            Object.defineProperty(navigator, 'mediaDevices', {
+                configurable: true,
+                value: {
+                    getUserMedia: function () {
+                        var track = window.browserAudioState.track;
+                        return Promise.resolve({
+                            getTracks: function () { return [track]; },
+                            getAudioTracks: function () { return [track]; }
+                        });
+                    }
+                }
+            });
+            """);
+        await page.GotoAsync(_server.BaseUrl + "?browserAudio=true");
+        await WaitForConnectedAsync(page);
+        await page.EvaluateAsync(
+            """
+            () => {
+                window.telephonySoftPhone.getInstance().registerMediaAdapter('in-memory', function (context) {
+                    window.browserAudioState.shouldAutoAnswerInbound = context.shouldAutoAnswerInbound;
+                    return {
+                        handleCallState: function () { },
+                        dispose: function () { }
+                    };
+                });
+            }
+            """);
+        await page.ClickAsync("[data-telephony-toggle]");
+        await page.FillAsync("[data-telephony-number]", "+15551234567");
+        await page.ClickAsync("[data-telephony-dial]");
+        await page.WaitForFunctionAsync("() => typeof window.browserAudioState.shouldAutoAnswerInbound === 'function'");
+
+        // Act
+        await page.EvaluateAsync(
+            """
+            () => {
+                var api = window.telephonySoftPhone.getInstance();
+                var state = window.browserAudioState;
+
+                // Consume the window the outbound dial itself armed, so the decisions below describe only the
+                // Contact Center accept this test is about.
+                state.shouldAutoAnswerInbound();
+
+                state.decisions.push(state.shouldAutoAnswerInbound());
+                api.armInboundAutoAnswer();
+                state.decisions.push(state.shouldAutoAnswerInbound());
+                state.decisions.push(state.shouldAutoAnswerInbound());
+            }
+            """);
+
+        // Assert
+        var decisions = await page.EvaluateAsync<JsonElement>("() => window.browserAudioState.decisions");
+
+        Assert.Equal(3, decisions.GetArrayLength());
+        Assert.False(decisions[0].GetBoolean(), "An unsolicited inbound leg must ring, not be answered.");
+        Assert.True(decisions[1].GetBoolean(), "The leg for an offer accepted outside the phone must be answered.");
+        Assert.False(decisions[2].GetBoolean(), "Arming must be one-shot so a later genuine call still rings.");
+    }
+
+    [Fact]
     public async Task BrowserAudio_WhenAdapterIsNotRegistered_FailsClosedWithoutAcquiringTheMicrophone()
     {
         // Arrange
@@ -159,9 +239,12 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         // Act
         await page.ClickAsync("[data-telephony-dial]");
 
-        // Assert - the command response alone does not change the call state.
-        Assert.Equal("Ready", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
+        // Assert - the widget shows the dial as connecting while the round-trip is in flight, but no in-call
+        // controls (hangup) appear until the provider publishes the authoritative call state. The dial button
+        // stays visible throughout the pending round-trip.
+        Assert.Equal("Connecting...", (await page.Locator("[data-telephony-status]").InnerTextAsync()).Trim());
         Assert.True(await page.Locator("[data-telephony-dial]").IsVisibleAsync());
+        Assert.True(await page.Locator("[data-telephony-hangup]").IsHiddenAsync());
 
         // Act - publish the provider-authoritative state.
         await PublishLatestCallStateAsync(page);
@@ -208,7 +291,10 @@ public sealed class SoftPhoneWidgetTests : IAsyncLifetime
         await page.WaitForFunctionAsync(
             "([count]) => window.telephonySoftPhone.getInstance().getConnection().invoke('GetDialRequestCount').then(value => value === count + 1)",
             new[] { baselineCount });
-        Assert.Equal(string.Empty, await page.Locator("[data-telephony-number]").InputValueAsync());
+
+        // While the dial is in flight the widget mirrors the number being connected in the (now read-only) input,
+        // so the display does not jump when the first authoritative call state arrives.
+        Assert.Equal("+1 (555) 123-4567", await page.Locator("[data-telephony-number]").InputValueAsync());
     }
 
     [Fact]

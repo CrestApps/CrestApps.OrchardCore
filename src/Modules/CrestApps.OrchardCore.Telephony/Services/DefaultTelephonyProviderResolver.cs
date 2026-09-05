@@ -13,7 +13,7 @@ public sealed class DefaultTelephonyProviderResolver : ITelephonyProviderResolve
 {
     private readonly ISiteService _siteService;
     private readonly IServiceProvider _serviceProvider;
-    private readonly TelephonyProviderOptions _providerOptions;
+    private readonly IOptionsMonitor<TelephonyProviderOptions> _providerOptions;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -25,13 +25,13 @@ public sealed class DefaultTelephonyProviderResolver : ITelephonyProviderResolve
     /// <param name="logger">The logger.</param>
     public DefaultTelephonyProviderResolver(
         ISiteService siteService,
-        IOptions<TelephonyProviderOptions> providerOptions,
+        IOptionsMonitor<TelephonyProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
         ILogger<DefaultTelephonyProviderResolver> logger)
     {
         _siteService = siteService;
         _serviceProvider = serviceProvider;
-        _providerOptions = providerOptions.Value;
+        _providerOptions = providerOptions;
         _logger = logger;
     }
 
@@ -55,7 +55,7 @@ public sealed class DefaultTelephonyProviderResolver : ITelephonyProviderResolve
             return null;
         }
 
-        if (_providerOptions.Providers.TryGetValue(name, out var providerType) && providerType.IsEnabled)
+        if (_providerOptions.CurrentValue.Providers.TryGetValue(name, out var providerType) && providerType.IsEnabled)
         {
             return _serviceProvider.CreateInstance<ITelephonyProvider>(providerType.Type);
         }

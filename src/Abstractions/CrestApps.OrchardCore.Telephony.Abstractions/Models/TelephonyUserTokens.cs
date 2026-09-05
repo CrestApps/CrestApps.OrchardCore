@@ -34,4 +34,24 @@ public sealed class TelephonyUserTokens
     /// Gets or sets the scopes granted to the access token.
     /// </summary>
     public string Scope { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's stable identifier for the connected remote user account.
+    /// </summary>
+    public string RemoteUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the display name of the connected remote user account.
+    /// </summary>
+    public string RemoteUserName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the email address of the connected remote user account.
+    /// </summary>
+    public string RemoteUserEmail { get; set; }
+
+    /// <summary>
+    /// Gets or sets the phone number assigned to the connected remote user account, when the provider exposes one.
+    /// </summary>
+    public string RemotePhoneNumber { get; set; }
 }

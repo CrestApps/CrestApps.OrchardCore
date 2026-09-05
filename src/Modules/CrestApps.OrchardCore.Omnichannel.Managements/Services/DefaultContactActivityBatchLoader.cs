@@ -358,11 +358,18 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
             {
                 var contentItemsIds = contacts.Select(x => x.ContentItemId).ToArray();
 
+                // A contact counts as a duplicate only while it still has an OPEN activity. Every terminal state
+                // is excluded so a finished contact can be re-loaded: a completed or purged activity was already
+                // excluded, and a failed or cancelled one is just as terminal — leaving those in would let a
+                // single failed dial (for example a busy or no-answer) permanently bar the lead from ever being
+                // loaded again.
                 inQueueActivities = (await readonlySession.QueryIndex<OmnichannelActivityIndex>(index =>
                     index.ContactContentType == batch.ContactContentType &&
                     index.ContactContentItemId.IsIn(contentItemsIds) &&
                     index.Status != ActivityStatus.Completed &&
-                    index.Status != ActivityStatus.Purged, collection: OmnichannelConstants.CollectionName)
+                    index.Status != ActivityStatus.Purged &&
+                    index.Status != ActivityStatus.Failed &&
+                    index.Status != ActivityStatus.Cancelled, collection: OmnichannelConstants.CollectionName)
                 .ListAsync(cancellationToken))
                 .Select(x => x.ContactContentItemId)
                 .ToHashSet();
@@ -413,14 +420,22 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 if (dialerProfile is not null)
                 {
+                    // The campaign comes from the batch (resolved above); the profile only decides how the
+                    // contacts are dialed, so it no longer overrides which campaign they belong to.
                     activitySource = dialerProfile.ActivitySource;
-                    campaignId = dialerProfile.CampaignId;
                     interactionType = ActivityInteractionType.Manual;
                     channel = OmnichannelConstants.Channels.Phone;
                     automatedSettings.AIProfileId = null;
                     automatedSettings.SpeechToTextDeploymentName = null;
                     automatedSettings.TextToSpeechDeploymentName = null;
                     automatedSettings.TextToSpeechVoiceId = null;
+                    automatedSettings.AllowAIToUpdateContact = false;
+                    automatedSettings.AllowAIToUpdateSubject = false;
+                    automatedSettings.ResponseDelayMode = OmnichannelResponseDelayMode.None;
+                    automatedSettings.ResponseDelaySeconds = 0;
+                    automatedSettings.ResponseDelayJitterSeconds = 0;
+                    automatedSettings.BusinessHoursCalendarId = null;
+                    automatedSettings.CadenceId = null;
                 }
 
                 activity.Kind = GetActivityKind(channel);
@@ -431,6 +446,13 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 activity.SpeechToTextDeploymentName = automatedSettings.SpeechToTextDeploymentName;
                 activity.TextToSpeechDeploymentName = automatedSettings.TextToSpeechDeploymentName;
                 activity.TextToSpeechVoiceId = automatedSettings.TextToSpeechVoiceId;
+                activity.AllowAIToUpdateContact = automatedSettings.AllowAIToUpdateContact;
+                activity.AllowAIToUpdateSubject = automatedSettings.AllowAIToUpdateSubject;
+                activity.ResponseDelayMode = automatedSettings.ResponseDelayMode;
+                activity.ResponseDelaySeconds = automatedSettings.ResponseDelaySeconds;
+                activity.ResponseDelayJitterSeconds = automatedSettings.ResponseDelayJitterSeconds;
+                activity.BusinessHoursCalendarId = automatedSettings.BusinessHoursCalendarId;
+                activity.CadenceId = automatedSettings.CadenceId;
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = batch.ContactContentType;
                 activity.SubjectContentType = batch.SubjectContentType;
@@ -475,6 +497,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 {
                     await dialerContributor.EnqueueAsync(
                         activity.ItemId,
+                        campaignId,
                         dialerProfile,
                         cancellationToken);
                 }

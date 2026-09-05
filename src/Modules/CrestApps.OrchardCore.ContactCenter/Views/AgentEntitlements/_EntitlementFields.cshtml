@@ -1,0 +1,22 @@
+@model AgentEntitlementViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="AllowedQueueIds">
+    <label asp-for="AllowedQueueIds" class="ocat-label">@T["Allowed queues"]</label>
+    <div class="ocat-end">
+        <select asp-for="AllowedQueueIds" asp-items="Model.QueueOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" title="@T["Select allowed queue(s)"]"></select>
+        <span asp-validation-for="AllowedQueueIds" class="text-danger"></span>
+        <span class="hint">@T["The agent can sign in only to these queues. Removing a queue also removes any current live membership in that queue."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AllowedCampaignIds">
+    <label asp-for="AllowedCampaignIds" class="ocat-label">@T["Allowed campaigns"]</label>
+    <div class="ocat-end">
+        <select asp-for="AllowedCampaignIds" asp-items="Model.CampaignOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" title="@T["Select allowed campaign(s)"]"></select>
+        <span asp-validation-for="AllowedCampaignIds" class="text-danger"></span>
+        <span class="hint">@T["The agent can sign in only to these dialer campaigns. Removing a campaign also removes any current live membership in that campaign."]</span>
+    </div>
+</div>

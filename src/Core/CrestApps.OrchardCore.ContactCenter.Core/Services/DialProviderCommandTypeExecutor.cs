@@ -1,0 +1,348 @@
+using System.Globalization;
+using System.Text.Json;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+
+/// <summary>
+/// Handles provider command execution for <see cref="ProviderCommandType.Dial"/> commands.
+/// Deserializes the dial request, stamps idempotency metadata, routes the outbound call, and projects
+/// outcomes onto the linked interaction and CRM activity.
+/// </summary>
+public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecutor
+{
+    private static readonly JsonSerializerOptions _serializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
+    private readonly IEnumerable<IProviderCommandDispatchValidator> _dispatchValidators;
+    private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
+    private readonly IInteractionManager _interactionManager;
+    private readonly ICallSessionManager _callSessionManager;
+    private readonly IAgentProfileManager _agentManager;
+    private readonly IContactCenterActivityWriter _activityWriter;
+    private readonly IClock _clock;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DialProviderCommandTypeExecutor"/> class.
+    /// </summary>
+    /// <param name="dispatchValidators">The policy validators applied before recovering a pending dispatch.</param>
+    /// <param name="voiceCallRouter">The router used to execute outbound voice commands.</param>
+    /// <param name="interactionManager">The manager used to project interaction outcomes.</param>
+    /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
+    /// <param name="clock">The clock used to stamp UTC timestamps on projections.</param>
+    /// <param name="callSessionManager">The call session manager used to persist first-command ownership.</param>
+    /// <param name="agentManager">The agent profile manager used to resolve the dialing user.</param>
+    /// <param name="logger">The logger used to surface why an outbound dial was rejected by the provider.</param>
+    public DialProviderCommandTypeExecutor(
+        IEnumerable<IProviderCommandDispatchValidator> dispatchValidators,
+        IVoiceContactCenterCallRouter voiceCallRouter,
+        IInteractionManager interactionManager,
+        IContactCenterActivityWriter activityWriter,
+        IClock clock,
+        ICallSessionManager callSessionManager,
+        IAgentProfileManager agentManager,
+        ILogger<DialProviderCommandTypeExecutor> logger)
+    {
+        _dispatchValidators = dispatchValidators;
+        _voiceCallRouter = voiceCallRouter;
+        _interactionManager = interactionManager;
+        _callSessionManager = callSessionManager;
+        _agentManager = agentManager;
+        _activityWriter = activityWriter;
+        _clock = clock;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public ProviderCommandType CommandType => ProviderCommandType.Dial;
+
+    /// <inheritdoc/>
+    public async Task<bool> CanDispatchAsync(ProviderCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        if (string.IsNullOrWhiteSpace(command.RequestPayload))
+        {
+            return false;
+        }
+
+        var validated = false;
+
+        foreach (var validator in _dispatchValidators)
+        {
+            validated = true;
+
+            if (!await validator.CanDispatchAsync(command, cancellationToken))
+            {
+                return false;
+            }
+        }
+
+        if (!validated)
+        {
+            return false;
+        }
+
+        var request = DeserializeDialRequest(command);
+
+        if (!await IsAuthorizedFirstDialAsync(request, cancellationToken))
+        {
+            return false;
+        }
+
+        await EnsureOwnedDialSessionAsync(request, command, cancellationToken);
+
+        return true;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterVoiceProviderResult> ExecuteAsync(
+        ProviderCommand command,
+        ProviderCommandClaim claim,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(claim);
+
+        var request = DeserializeDialRequest(command);
+
+        StampRequest(request, command, claim);
+
+        if (!await IsAuthorizedFirstDialAsync(request, cancellationToken))
+        {
+            return new ContactCenterVoiceProviderResult
+            {
+                Succeeded = false,
+                OutcomeUnknown = true,
+                ProviderName = command.ProviderName,
+                ErrorCode = "dial_denied",
+                ErrorMessage = "The requested dial is not available.",
+            };
+        }
+
+        await EnsureOwnedDialSessionAsync(request, command, cancellationToken);
+
+        var result = await _voiceCallRouter.RouteOutboundAsync(request, command.ProviderName, cancellationToken);
+
+        // The provider result is the only place the reason a dial did not connect surfaces; the failure
+        // projection that follows records just that it failed. Log it here so a dial that silently produces no
+        // call (for example a caller id the provider rejects) is diagnosable from the application log.
+        if (result is not null && !result.Succeeded)
+        {
+            _logger.LogWarning(
+                "Outbound dial for activity '{ActivityItemId}' (interaction '{InteractionId}') was not placed by provider '{ProviderName}': {ErrorCode} - {ErrorMessage}.",
+                command.ActivityItemId.SanitizeLogValue(),
+                command.InteractionId.SanitizeLogValue(),
+                (result.ProviderName ?? command.ProviderName).SanitizeLogValue(),
+                result.ErrorCode.SanitizeLogValue(),
+                result.ErrorMessage.SanitizeLogValue());
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectSuccessAsync(
+        ProviderCommand command,
+        ContactCenterVoiceProviderResult result,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(result);
+
+        // Resolve the owned session first so the interaction projection never diverges
+        // from the session binding. A conflict (session already bound to a DIFFERENT call)
+        // means the new dial outcome must be treated as unknown: do not repoint the
+        // interaction's ProviderInteractionId at the new call id.
+        var sessionConflict = false;
+        CallSession ownedSession = null;
+
+        if (!string.IsNullOrWhiteSpace(command.InteractionId) &&
+            !string.IsNullOrWhiteSpace(result.ProviderCallId))
+        {
+            ownedSession = await _callSessionManager.FindByInteractionIdAsync(command.InteractionId, cancellationToken);
+
+            if (ownedSession is not null &&
+                !string.IsNullOrWhiteSpace(ownedSession.ProviderCallId) &&
+                !string.Equals(ownedSession.ProviderCallId, result.ProviderCallId, StringComparison.Ordinal))
+            {
+                sessionConflict = true;
+            }
+        }
+
+        if (!sessionConflict && !string.IsNullOrWhiteSpace(command.InteractionId))
+        {
+            var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+            if (interaction is not null)
+            {
+                interaction.TransitionTo(InteractionStatus.Ringing);
+                interaction.ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
+                    ? command.ProviderName
+                    : result.ProviderName;
+                interaction.ProviderInteractionId = result.ProviderCallId;
+                interaction.StartedUtc = _clock.UtcNow;
+                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
+        {
+            await _activityWriter.ScheduleUpdateAsync(
+                command.ActivityItemId,
+                activity => activity.Status = ActivityStatus.Dialing,
+                cancellationToken);
+        }
+
+        if (!sessionConflict && ownedSession is not null && string.IsNullOrWhiteSpace(ownedSession.ProviderCallId))
+        {
+            ownedSession.ProviderCallId = result.ProviderCallId;
+            ownedSession.ProviderName = string.IsNullOrWhiteSpace(result.ProviderName)
+                ? command.ProviderName
+                : result.ProviderName;
+            ownedSession.TransitionTo(VoiceCallState.Ringing);
+
+            await _callSessionManager.UpdateAsync(ownedSession, cancellationToken: cancellationToken);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectFailureAsync(ProviderCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        if (!string.IsNullOrWhiteSpace(command.InteractionId))
+        {
+            var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+            // A dial can fail because the interaction already ended: an outbound attempt is cancelled while the
+            // provider request is in flight, or the compensation for an unproven dial arrives after the record
+            // was closed. A settled interaction already carries its real outcome, and this projection is what
+            // lets a compensating command finish, so refusing to overwrite that outcome matters more than
+            // recording a second failure.
+            if (interaction is not null && !interaction.IsSettled)
+            {
+                interaction.TransitionTo(InteractionStatus.Failed);
+                interaction.EndedUtc = _clock.UtcNow;
+                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
+        {
+            await _activityWriter.ScheduleUpdateAsync(
+                command.ActivityItemId,
+                activity => activity.Status = ActivityStatus.Failed,
+                cancellationToken);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectOutcomeUnknownAsync(
+        ProviderCommand command,
+        string errorCode,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        if (!string.IsNullOrWhiteSpace(command.InteractionId))
+        {
+            var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+            if (interaction is not null)
+            {
+                interaction.TechnicalMetadata["providerErrorCode"] = errorCode;
+                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(command.ActivityItemId))
+        {
+            await _activityWriter.ScheduleUpdateAsync(
+                command.ActivityItemId,
+                activity => activity.Status = ActivityStatus.Dialing,
+                cancellationToken);
+        }
+    }
+
+    private static ContactCenterDialRequest DeserializeDialRequest(ProviderCommand command)
+    {
+        var request = JsonSerializer.Deserialize<ContactCenterDialRequest>(
+            command.RequestPayload,
+            _serializerOptions);
+
+        return request ?? throw new JsonException("The provider command request payload deserialized to null.");
+    }
+
+    private static void StampRequest(
+        ContactCenterDialRequest request,
+        ProviderCommand command,
+        ProviderCommandClaim claim)
+    {
+        request.CommandId = command.CommandId;
+        request.Metadata ??= new Dictionary<string, string>();
+        request.Metadata[ContactCenterConstants.CommandMetadata.CommandId] = command.CommandId;
+        request.Metadata[TelephonyConstants.RequestMetadata.IdempotencyKey] = command.CommandId;
+        request.Metadata[ContactCenterConstants.CommandMetadata.FenceToken] = claim.FenceToken.ToString(CultureInfo.InvariantCulture);
+        request.Metadata[TelephonyConstants.RequestMetadata.FenceToken] = claim.FenceToken.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private async Task<bool> IsAuthorizedFirstDialAsync(
+        ContactCenterDialRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.InteractionId) ||
+            string.IsNullOrWhiteSpace(request.AgentId) ||
+            string.IsNullOrWhiteSpace(request.AgentUserId) ||
+            !ExternalDestinationPolicy.IsAllowed(request.Destination) ||
+            (!string.IsNullOrWhiteSpace(request.CallerId) && !ExternalDestinationPolicy.IsAllowed(request.CallerId)))
+        {
+            return false;
+        }
+
+        var agent = await _agentManager.FindByUserIdAsync(request.AgentUserId, cancellationToken);
+
+        return agent is not null &&
+            string.Equals(agent.ItemId, request.AgentId, StringComparison.Ordinal);
+    }
+
+    private async Task EnsureOwnedDialSessionAsync(
+        ContactCenterDialRequest request,
+        ProviderCommand command,
+        CancellationToken cancellationToken)
+    {
+        var session = await _callSessionManager.FindByInteractionIdAsync(request.InteractionId, cancellationToken);
+
+        if (session is not null)
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+        session = await _callSessionManager.NewAsync(cancellationToken: cancellationToken);
+        session.InteractionId = request.InteractionId;
+        session.ActivityItemId = request.ActivityId;
+        session.ProviderName = command.ProviderName;
+        session.Direction = InteractionDirection.Outbound;
+        session.DeliveryModel = VoiceProviderDeliveryModel.ServerSideAcd;
+        session.AgentId = request.AgentId;
+        session.QueueId = request.QueueId;
+        session.FromAddress = request.CallerId;
+        session.ToAddress = request.Destination;
+        session.TransitionTo(VoiceCallState.Planned);
+        session.DurableCommandId = command.CommandId;
+        session.CreatedUtc = now;
+
+        await _callSessionManager.CreateAsync(session, cancellationToken: cancellationToken);
+    }
+}

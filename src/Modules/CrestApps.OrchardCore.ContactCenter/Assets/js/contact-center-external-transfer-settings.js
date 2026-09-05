@@ -1,0 +1,120 @@
+/*
+ * Contact Center external transfer settings editor.
+ *
+ * Progressively enhances the approved external transfer destinations table on the Contact Center
+ * settings screen: it adds and removes destination rows and renumbers the model-bound field names so
+ * the collection posts back correctly. Localized strings for dynamically created rows (the display-name
+ * placeholder and the remove-destination button title) are read from the root element's data-config
+ * attribute so added rows match the culture of the server-rendered rows.
+ */
+(function (window, document) {
+    'use strict';
+
+    function parseConfig(root) {
+        var raw = root.getAttribute('data-config');
+
+        if (!raw) {
+            return { strings: {} };
+        }
+
+        try {
+            var config = JSON.parse(raw);
+            config.strings = config.strings || {};
+
+            return config;
+        } catch (error) {
+            return { strings: {} };
+        }
+    }
+
+    function encodeAttribute(value) {
+        var node = document.createElement('div');
+        node.textContent = value == null ? '' : String(value);
+
+        return node.innerHTML.replace(/"/g, '&quot;');
+    }
+
+    function initialize(root) {
+        var config = parseConfig(root);
+        var strings = config.strings;
+        var displayNamePlaceholder = encodeAttribute(strings.displayName);
+        var removeDestinationTitle = encodeAttribute(strings.removeDestination);
+        var addressPlaceholder = encodeAttribute(strings.addressExample || '+15551234567');
+        var tbody = root.querySelector('[data-cc-ext-dest-tbody]');
+        var addButton = root.querySelector('[data-cc-add-dest]');
+
+        if (!tbody || !addButton) {
+            return;
+        }
+
+        var rowIndex = tbody.querySelectorAll('tr.cc-dest-row').length;
+
+        function renumberRows() {
+            var rows = tbody.querySelectorAll('tr.cc-dest-row');
+            rows.forEach(function (row, idx) {
+                row.querySelectorAll('[name]').forEach(function (el) {
+                    el.name = el.name.replace(/Destinations\[\d+\]/, 'Destinations[' + idx + ']');
+                    el.id = el.id.replace(/Destinations_\d+__/, 'Destinations_' + idx + '__');
+
+                    if (el.htmlFor) {
+                        el.htmlFor = el.htmlFor.replace(/Destinations_\d+__/, 'Destinations_' + idx + '__');
+                    }
+                });
+            });
+            rowIndex = rows.length;
+        }
+
+        addButton.addEventListener('click', function () {
+            var idx = rowIndex;
+            var tr = document.createElement('tr');
+            tr.className = 'cc-dest-row';
+            tr.innerHTML =
+                '<td>' +
+                    '<input type="hidden" name="Destinations[' + idx + '].Id" value="" />' +
+                    '<input name="Destinations[' + idx + '].DisplayName" id="Destinations_' + idx + '__DisplayName"' +
+                        ' class="form-control form-control-sm" placeholder="' + displayNamePlaceholder + '" />' +
+                '</td>' +
+                '<td>' +
+                    '<input name="Destinations[' + idx + '].E164Address" id="Destinations_' + idx + '__E164Address"' +
+                        ' class="form-control form-control-sm" placeholder="' + addressPlaceholder + '" autocomplete="off" />' +
+                '</td>' +
+                '<td><code class="text-muted small">&mdash;</code></td>' +
+                '<td class="text-center">' +
+                    '<input type="checkbox" name="Destinations[' + idx + '].Enabled" id="Destinations_' + idx + '__Enabled"' +
+                        ' class="form-check-input" value="true" checked />' +
+                '</td>' +
+                '<td>' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger cc-remove-dest"' +
+                        ' title="' + removeDestinationTitle + '"><i class="fa-solid fa-trash-can"></i></button>' +
+                '</td>';
+            tbody.appendChild(tr);
+            rowIndex++;
+        });
+
+        tbody.addEventListener('click', function (e) {
+            var btn = e.target.closest('.cc-remove-dest');
+
+            if (!btn) {
+                return;
+            }
+
+            var row = btn.closest('tr.cc-dest-row');
+
+            if (row) {
+                row.remove();
+                renumberRows();
+            }
+        });
+    }
+
+    function boot() {
+        var roots = document.querySelectorAll('[data-cc-ext-transfer]');
+        roots.forEach(initialize);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+}(window, document));

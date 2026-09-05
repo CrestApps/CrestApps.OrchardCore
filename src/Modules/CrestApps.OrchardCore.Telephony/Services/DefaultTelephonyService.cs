@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Localization;
 
@@ -10,6 +11,8 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 public sealed class DefaultTelephonyService : ITelephonyService
 {
     private readonly ITelephonyProviderResolver _resolver;
+    private readonly IOutboundCallScreeningService _screeningService;
+    private readonly ITelephonyExtensionResolver _extensionResolver;
 
     internal readonly IStringLocalizer S;
 
@@ -17,21 +20,48 @@ public sealed class DefaultTelephonyService : ITelephonyService
     /// Initializes a new instance of the <see cref="DefaultTelephonyService"/> class.
     /// </summary>
     /// <param name="resolver">The provider resolver.</param>
+    /// <param name="screeningService">The outbound origination screening gate.</param>
+    /// <param name="extensionResolver">The internal extension resolver.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultTelephonyService(
         ITelephonyProviderResolver resolver,
+        IOutboundCallScreeningService screeningService,
+        ITelephonyExtensionResolver extensionResolver,
         IStringLocalizer<DefaultTelephonyService> stringLocalizer)
     {
         _resolver = resolver;
+        _screeningService = screeningService;
+        _extensionResolver = extensionResolver;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
-    public Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
-        => InvokeAsync<ITelephonyCallControlProvider>(
+    /// <inheritdoc/>
+    public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // Every origination passes the shared compliance gate before it can reach a provider, so a soft-phone
+        // dial cannot bypass the do-not-call and calling-window rules that a compliance module contributes.
+        var screening = await _screeningService.ScreenAsync(
+            new OutboundCallScreeningContext
+            {
+                Request = request,
+                Origin = OutboundCallOrigin.SoftPhone,
+            },
+            cancellationToken);
+
+        if (screening is null || !screening.IsAllowed)
+        {
+            return TelephonyResult.Failed(
+                screening?.Description ?? S["This call cannot be placed because it did not pass outbound compliance screening."].Value);
+        }
+
+        return await InvokeAsync<ITelephonyCallControlProvider>(
             TelephonyCapabilities.Dial,
             (provider, token) => provider.DialAsync(request, token),
             cancellationToken);
+    }
 
     /// <inheritdoc/>
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
@@ -121,6 +151,77 @@ public sealed class DefaultTelephonyService : ITelephonyService
             TelephonyCapabilities.Voicemail,
             (provider, token) => provider.SendToVoicemailAsync(call, token),
             cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<TelephonyResult> DialExtensionAsync(ExtensionDialRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.Extension))
+        {
+            return TelephonyResult.Failed(S["An extension is required to place an internal call."].Value);
+        }
+
+        // Internal extension calls are not consumer outreach, so they skip outbound compliance screening. The
+        // extension must resolve to an enabled on-platform user, otherwise the call fails closed here rather
+        // than reaching a provider with an unknown destination.
+        var resolution = await _extensionResolver.ResolveAsync(request.Extension, cancellationToken);
+
+        if (!resolution.Found)
+        {
+            return TelephonyResult.Failed(S["Extension {0} was not found.", request.Extension].Value);
+        }
+
+        request.TargetUserId = resolution.UserId;
+        request.TargetDisplayName = resolution.DisplayName;
+
+        var result = await InvokeAsync<ITelephonyExtensionDialProvider>(
+            TelephonyCapabilities.ExtensionDial,
+            (provider, token) => provider.DialExtensionAsync(request, token),
+            cancellationToken);
+
+        // Carry the dialed extension number on the resulting call so it is recorded as an extension interaction
+        // (the call's To holds the target's display name, not a dialable number) and can be redialed by extension
+        // from the Recent tab.
+        if (result?.Call is not null && !string.IsNullOrWhiteSpace(request.Extension))
+        {
+            result.Call.Metadata ??= new Dictionary<string, object>();
+            result.Call.Metadata[TelephonyConstants.CallMetadata.ExtensionNumber] = request.Extension;
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<TelephonyResult> AddExtensionToConferenceAsync(ExtensionConferenceRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.Extension))
+        {
+            return TelephonyResult.Failed(S["An extension is required to add to the conference."].Value);
+        }
+
+        if (request.ActiveCall is null || string.IsNullOrWhiteSpace(request.ActiveCall.CallId))
+        {
+            return TelephonyResult.Failed(S["An active call is required to add an extension to a conference."].Value);
+        }
+
+        var resolution = await _extensionResolver.ResolveAsync(request.Extension, cancellationToken);
+
+        if (!resolution.Found)
+        {
+            return TelephonyResult.Failed(S["Extension {0} was not found.", request.Extension].Value);
+        }
+
+        request.TargetUserId = resolution.UserId;
+        request.TargetDisplayName = resolution.DisplayName;
+
+        return await InvokeAsync<ITelephonyExtensionDialProvider>(
+            TelephonyCapabilities.ExtensionConference,
+            (provider, token) => provider.AddExtensionToConferenceAsync(request, token),
+            cancellationToken);
+    }
 
     /// <inheritdoc/>
     public async Task<TelephonyClientCredentials> GetClientCredentialsAsync(CancellationToken cancellationToken = default)

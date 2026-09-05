@@ -26,6 +26,11 @@ public static class OmnichannelDeploymentSteps
     public const string Campaign = "OmnichannelCampaign";
 
     /// <summary>
+    /// The recipe step that carries re-engagement cadences.
+    /// </summary>
+    public const string Cadence = "OmnichannelCadence";
+
+    /// <summary>
     /// The recipe step that carries subject flow settings.
     /// </summary>
     public const string SubjectFlowSettings = "OmnichannelSubjectFlowSettings";

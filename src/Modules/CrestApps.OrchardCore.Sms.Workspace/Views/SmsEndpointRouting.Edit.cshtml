@@ -1,0 +1,94 @@
+@using CrestApps.OrchardCore.Sms.Workspace.Models
+
+@model SmsEndpointRoutingViewModel
+
+@{
+    var isAgent = Model.TargetType == SmsNumberRouteTargetType.Agent;
+    var agentUserIds = string.IsNullOrEmpty(Model.AgentUserId) ? Array.Empty<string>() : new[] { Model.AgentUserId };
+
+    var queueEndpoint = Url.Content("~/Admin/api/crestapps/contact-center/queues/search");
+    var queueInitialJson = string.IsNullOrEmpty(Model.QueueId)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.QueueId, text = Model.QueueId } });
+}
+
+<div class="mb-3" data-sms-routing>
+    <label class="form-label">@T["SMS inbound routing"]</label>
+    <span class="hint d-block mb-2">@T["Where inbound messages on this number go. Leave the target empty to send them to the unassigned inbox."]</span>
+
+    <div class="row g-2">
+        <div class="col-md-4">
+            <label asp-for="TargetType" class="form-label">@T["Routes to"]</label>
+            <select asp-for="TargetType" class="form-select" asp-items="Model.TargetTypes" data-sms-routing-target-type></select>
+        </div>
+        <div class="col-md-8">
+            <div data-sms-routing-agent class="@(isAgent ? "" : "d-none")">
+                <label class="form-label">@T["Agent"]</label>
+                @await Component.InvokeAsync("UserPicker", new
+                {
+                    name = Html.NameFor(m => m.AgentUserId).ToString(),
+                    selectedValues = agentUserIds,
+                    valueType = "userId",
+                    multiple = false,
+                    buttonText = T["Select an agent"].Value,
+                    searchPlaceholder = T["Search agents"].Value,
+                })
+                <span class="hint">@T["Inbound messages become this operator's personal conversation."]</span>
+            </div>
+            <div data-sms-routing-queue class="@(isAgent ? "d-none" : "")">
+                <label class="form-label">@T["Queue (department)"]</label>
+                @await Component.InvokeAsync("ItemSelector", new
+                {
+                    id = "sms-routing-queue-selector",
+                    inputName = Html.NameFor(m => m.QueueId).ToString(),
+                    endpoint = queueEndpoint,
+                    initialItemsJson = queueInitialJson,
+                    multiple = false,
+                    enableSearch = true,
+                    buttonText = T["Select a queue"].Value,
+                    searchPlaceholder = T["Search queues"].Value,
+                    emptyResultsText = T["No queues found. Enable Contact Center Work Distribution to route to a queue."].Value,
+                    noSelectionText = T["No queue selected."].Value,
+                    selectedItemsLabel = T["Selected queue"].Value,
+                    availableItemsLabel = T["Available queues"].Value,
+                })
+                <span class="hint">@T["Inbound messages go to the shared department pool. Requires Contact Center Work Distribution."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-2 mt-1">
+        <div class="col-md-4 @(isAgent ? "d-none" : "")" data-sms-routing-queue-options>
+            <label asp-for="DistributionMode" class="form-label">@T["Queue distribution"]</label>
+            <select asp-for="DistributionMode" class="form-select" asp-items="Model.DistributionModes"></select>
+        </div>
+        <div class="col-md-8">
+            <label asp-for="AutoReplyMessage" class="form-label">@T["Auto-reply"]</label>
+            <input asp-for="AutoReplyMessage" class="form-control" />
+            <span class="hint">@T["Optional message sent to the contact on their first inbound message."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        document.querySelectorAll('[data-sms-routing]').forEach(function (root) {
+            var typeSelect = root.querySelector('[data-sms-routing-target-type]');
+            if (!typeSelect) { return; }
+
+            var agent = root.querySelector('[data-sms-routing-agent]');
+            var queue = root.querySelector('[data-sms-routing-queue]');
+            var queueOptions = root.querySelector('[data-sms-routing-queue-options]');
+
+            var apply = function () {
+                var isAgent = typeSelect.value === 'Agent';
+                if (agent) { agent.classList.toggle('d-none', !isAgent); }
+                if (queue) { queue.classList.toggle('d-none', isAgent); }
+                if (queueOptions) { queueOptions.classList.toggle('d-none', isAgent); }
+            };
+
+            typeSelect.addEventListener('change', apply);
+            apply();
+        });
+    })();
+</script>

@@ -23,6 +23,8 @@ public static class TelephonyCapabilityContracts
         [TelephonyCapabilities.ReceiveCalls] = typeof(ITelephonyInboundCallProvider),
         [TelephonyCapabilities.Voicemail] = typeof(ITelephonyVoicemailProvider),
         [TelephonyCapabilities.Directory] = typeof(ITelephonyDirectoryProvider),
+        [TelephonyCapabilities.ExtensionDial] = typeof(ITelephonyExtensionDialProvider),
+        [TelephonyCapabilities.ExtensionConference] = typeof(ITelephonyExtensionDialProvider),
     }.ToFrozenDictionary();
 
     /// <summary>

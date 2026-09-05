@@ -67,6 +67,50 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     public string TextToSpeechVoiceId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the contact during automated conversations
+    /// loaded from this batch. Chosen when the automated inventory is loaded and snapshotted onto each activity.
+    /// </summary>
+    public bool AllowAIToUpdateContact { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the subject during automated conversations
+    /// loaded from this batch. Chosen when the automated inventory is loaded and snapshotted onto each activity.
+    /// </summary>
+    public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets how long automated conversations loaded from this batch wait before sending each AI reply, so
+    /// responses do not feel instant. Snapshotted onto each activity when the inventory is loaded.
+    /// </summary>
+    public OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reply delay in seconds. For <see cref="OmnichannelResponseDelayMode.Fixed"/> this is the exact
+    /// wait; for <see cref="OmnichannelResponseDelayMode.Random"/> this is the base the jitter is applied around.
+    /// </summary>
+    public int ResponseDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jitter, in seconds, applied around <see cref="ResponseDelaySeconds"/> when
+    /// <see cref="ResponseDelayMode"/> is <see cref="OmnichannelResponseDelayMode.Random"/>.
+    /// </summary>
+    public int ResponseDelayJitterSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the business-hours calendar that gates background-initiated sends (such as
+    /// re-engagement nudges) for conversations loaded from this batch. Evaluated in the contact's local time zone.
+    /// When empty, sends are never restricted by hours. Snapshotted onto each activity when the inventory is loaded.
+    /// </summary>
+    public string BusinessHoursCalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the reusable <c>Cadence</c> that defines the re-engagement cadence and
+    /// messages for contacts who go quiet. When empty, the automation never nudges. Snapshotted onto each activity when
+    /// the inventory is loaded. Every nudge still respects <see cref="BusinessHoursCalendarId"/>.
+    /// </summary>
+    public string CadenceId { get; set; }
+
+    /// <summary>
     /// Gets or sets the dialer profile identifier assigned to dialer activities loaded from this batch.
     /// </summary>
     public string DialerProfileId { get; set; }
@@ -207,6 +251,13 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             SpeechToTextDeploymentName = SpeechToTextDeploymentName,
             TextToSpeechDeploymentName = TextToSpeechDeploymentName,
             TextToSpeechVoiceId = TextToSpeechVoiceId,
+            AllowAIToUpdateContact = AllowAIToUpdateContact,
+            AllowAIToUpdateSubject = AllowAIToUpdateSubject,
+            ResponseDelayMode = ResponseDelayMode,
+            ResponseDelaySeconds = ResponseDelaySeconds,
+            ResponseDelayJitterSeconds = ResponseDelayJitterSeconds,
+            BusinessHoursCalendarId = BusinessHoursCalendarId,
+            CadenceId = CadenceId,
             DialerProfileId = DialerProfileId,
             UserIds = UserIds?.ToArray(),
             IncludeDoNoCalls = IncludeDoNoCalls,

@@ -1,4 +1,15 @@
 .telephony-soft-phone {
+    // Pin the Bootstrap surface variables the widget paints with, scoped to the widget itself, so it
+    // renders identically under any host theme. The front-end (TheTheme) and admin (TheAdmin) define these
+    // to slightly different values, which made the keypad, footer, borders and inputs look inconsistent
+    // between the two. Everything inside the widget reads these, so pinning them here keeps one look
+    // everywhere; the dark override below keeps dark mode working with the widget's own consistent palette.
+    --bs-body-bg: #fff;
+    --bs-body-color: #212529;
+    --bs-secondary-color: #6c757d;
+    --bs-tertiary-bg: #f8f9fa;
+    --bs-secondary-bg: #e9ecef;
+    --bs-border-color: #dee2e6;
     --telephony-accent: #2f6fed;
     --telephony-view-height: 18rem;
     position: fixed;
@@ -57,6 +68,19 @@
         margin-right: auto;
     }
 
+    // The live call status sits on the left of the header (replacing the redundant "Phone" title) so it is
+    // visible on every tab, including the degraded-state messages ("Reconnecting...", "Poor connection").
+    &__header-status {
+        margin-right: auto;
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.9);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 10rem;
+    }
+
     &__header-actions {
         margin-left: auto;
         display: flex;
@@ -109,7 +133,8 @@
         min-height: var(--telephony-view-height);
         max-height: var(--telephony-view-height);
         overflow-y: auto;
-        padding: 0.35rem 0.5rem 0.65rem;
+        // Match the voicemail list's padding so the Recent and Voicemail tabs line up identically.
+        padding: 0 0.5rem 0.5rem;
     }
 
     &__view {
@@ -166,6 +191,221 @@
         &--active .telephony-soft-phone__history-dir {
             color: #1f9d55;
         }
+
+        &--voicemail {
+            cursor: default;
+
+            .telephony-soft-phone__history-body {
+                flex: 1 1 auto;
+                border: none;
+                background: transparent;
+                text-align: left;
+                padding: 0;
+                cursor: pointer;
+                color: inherit;
+            }
+        }
+
+        &--unread {
+            .telephony-soft-phone__history-number {
+                font-weight: 700;
+            }
+
+            .telephony-soft-phone__history-number::after {
+                content: "";
+                display: inline-block;
+                width: 0.5rem;
+                height: 0.5rem;
+                margin-left: 0.35rem;
+                border-radius: 999px;
+                background-color: var(--telephony-accent, #2f6fed);
+                vertical-align: middle;
+            }
+        }
+    }
+
+    &__voicemail-play {
+        flex: 0 0 1.9rem;
+        width: 1.9rem;
+        height: 1.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: #fff;
+        // Deliberately a distinct colour from the accent so the play glyph is not the same colour as its circle.
+        background-color: #d23f3f;
+
+        &:hover {
+            filter: brightness(0.95);
+        }
+
+        &.is-playing {
+            background-color: var(--bs-secondary-color, #6c757d);
+        }
+    }
+
+    &__call-btn {
+        flex: 0 0 1.9rem;
+        width: 1.9rem;
+        height: 1.9rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        line-height: 1;
+        color: #fff;
+        background-color: #1f9d55;
+
+        &:hover {
+            filter: brightness(0.95);
+        }
+    }
+
+    // The voicemail view element is itself the tab panel (it carries the `hidden` attribute), so bound its height
+    // and let only the list scroll -- the player bar stays pinned above it -- matching the Recent tab's behavior.
+    // `display` is guarded with :not([hidden]) so it never overrides the `hidden` attribute that hides the panel.
+    &__voicemail {
+        min-height: var(--telephony-view-height);
+        max-height: var(--telephony-view-height);
+
+        &:not([hidden]) {
+            display: flex;
+            flex-direction: column;
+        }
+    }
+
+    &__voicemail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        // Fill the remaining height under the player and scroll when the voicemails overflow, like the Recent tab.
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        padding: 0 0.5rem 0.5rem;
+    }
+
+    &__voicemail-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        // Left padding lines the "select all" checkbox up with the per-row checkboxes below it, which sit at the
+        // list's 0.5rem padding plus each row's 0.5rem padding.
+        padding: 0.25rem 0.5rem 0.35rem 1rem;
+        border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+    }
+
+    &__voicemail-delete {
+        border: none;
+        border-radius: 0.4rem;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.8rem;
+        line-height: 1.2;
+        cursor: pointer;
+        color: #fff;
+        background-color: #d23f3f;
+
+        &:hover:not(:disabled) {
+            filter: brightness(0.95);
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+    }
+
+    &__voicemail-select {
+        flex: 0 0 auto;
+        width: 0.9rem;
+        height: 0.9rem;
+        margin: 0;
+        cursor: pointer;
+        accent-color: var(--telephony-accent, #2f6fed);
+    }
+
+    &__voicemail-toolbar-select {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-right: auto;
+        font-size: 0.78rem;
+        color: var(--bs-secondary-color, #6c757d);
+        cursor: pointer;
+
+        input {
+            width: 0.9rem;
+            height: 0.9rem;
+            margin: 0;
+            cursor: pointer;
+            accent-color: var(--telephony-accent, #2f6fed);
+        }
+    }
+
+    &__voicemail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.45rem 0.5rem;
+        border-radius: 0.5rem;
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+
+        &--unread .telephony-soft-phone__history-number {
+            font-weight: 700;
+
+            &::after {
+                content: "";
+                display: inline-block;
+                width: 0.5rem;
+                height: 0.5rem;
+                margin-left: 0.35rem;
+                border-radius: 999px;
+                background-color: #d23f3f;
+                vertical-align: middle;
+            }
+        }
+    }
+
+    &__voicemail-body {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    &__voicemail-player {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.35rem 0.5rem 0.5rem;
+
+        .telephony-soft-phone__voicemail-player-info {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .telephony-soft-phone__voicemail-audio {
+            width: 100%;
+            max-width: 15rem;
+            height: 1.85rem;
+            // Center the compact player under the full-width caller info line above it.
+            align-self: center;
+        }
     }
 
     &__history-dir {
@@ -186,6 +426,8 @@
         display: flex;
         flex-direction: column;
         min-width: 0;
+        // Grow to fill the row so the trailing Call button is pushed hard-right, matching the voicemail rows.
+        flex: 1 1 auto;
     }
 
     &__history-number {
@@ -208,6 +450,7 @@
     }
 
     &__tab {
+        position: relative;
         flex: 1 1 0;
         border: none;
         background: transparent;
@@ -233,6 +476,23 @@
             box-shadow: inset 0 -2px 0 var(--telephony-accent);
             font-weight: 600;
         }
+    }
+
+    &__tab-badge {
+        position: absolute;
+        top: 0.2rem;
+        right: 50%;
+        transform: translateX(1.1rem);
+        min-width: 1rem;
+        height: 1rem;
+        padding: 0 0.25rem;
+        border-radius: 999px;
+        background-color: #d23f3f;
+        color: #fff;
+        font-size: 0.62rem;
+        font-weight: 700;
+        line-height: 1rem;
+        text-align: center;
     }
 
     &--dragging {
@@ -271,6 +531,48 @@
         }
     }
 
+    &__number-iti {
+        display: block;
+        width: 100%;
+
+        .telephony-soft-phone__number {
+            width: 100%;
+        }
+    }
+
+    &__dial-mode {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin-top: 0.4rem;
+        padding: 0.15rem 0.5rem;
+        border: 1px solid transparent;
+        border-radius: 0.35rem;
+        background-color: transparent;
+        color: var(--bs-secondary-color, #6c757d);
+        font-size: 0.75rem;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--telephony-accent, #0d6efd);
+        }
+
+        &[aria-pressed="true"] {
+            border-color: var(--telephony-accent, #0d6efd);
+            color: var(--telephony-accent, #0d6efd);
+        }
+    }
+
+    &--extension {
+        .iti__country-container {
+            display: none;
+        }
+
+        .telephony-soft-phone__number {
+            padding-left: 0.65rem !important;
+        }
+    }
+
     &__connect {
         min-height: var(--telephony-view-height);
         max-height: var(--telephony-view-height);
@@ -285,10 +587,173 @@
         color: var(--bs-secondary-color, #6c757d);
     }
 
+    &__connect-error {
+        margin-bottom: 0.75rem;
+        padding: 0.5rem 0.65rem;
+        font-size: 0.78rem;
+        text-align: left;
+    }
+
     &__error {
         margin: 0 0.85rem 0.5rem;
         padding: 0.4rem 0.6rem;
         font-size: 0.78rem;
+    }
+
+    &__settings {
+        min-height: var(--telephony-view-height);
+        max-height: min(32rem, calc(100vh - 8rem));
+        overflow-y: auto;
+        padding: 0.35rem 0.85rem 0.85rem;
+    }
+
+    &__settings-header {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.25rem 0 0.65rem;
+    }
+
+    &__settings-back {
+        border: none;
+        background: transparent;
+        color: var(--bs-body-color, #212529);
+        cursor: pointer;
+        line-height: 1;
+        padding: 0.2rem 0.35rem;
+        border-radius: 0.4rem;
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg, #f8f9fa);
+        }
+    }
+
+    &__settings-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    &__settings-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+    }
+
+    &__settings-group-title {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--bs-secondary-color, #6c757d);
+    }
+
+    &__setting {
+        display: block;
+        margin: 0;
+    }
+
+    &__setting-label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        color: var(--bs-secondary-color, #6c757d);
+        margin-bottom: 0.25rem;
+
+        i {
+            width: 1rem;
+            text-align: center;
+        }
+    }
+
+    // ---- Diagnostics tab ----
+    &__diagnostics-view {
+        min-height: var(--telephony-view-height);
+        max-height: min(32rem, calc(100vh - 8rem));
+        overflow-y: auto;
+        padding: 0.6rem 0.85rem 0.85rem;
+    }
+
+    &__diag-section {
+        margin-bottom: 0.85rem;
+    }
+
+    &__diag-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--bs-secondary-color, #6c757d);
+        margin-bottom: 0.35rem;
+    }
+
+    &__diag-hint {
+        font-size: 0.72rem;
+        color: var(--bs-secondary-color, #6c757d);
+        margin-top: 0.3rem;
+    }
+
+    &__mic-meter {
+        height: 0.65rem;
+        border-radius: 0.4rem;
+        background-color: var(--bs-tertiary-bg, #e9ecef);
+        overflow: hidden;
+    }
+
+    &__mic-meter-fill {
+        height: 100%;
+        width: 0;
+        border-radius: 0.4rem;
+        background-color: var(--bs-secondary-color, #adb5bd);
+        transition: width 0.06s linear;
+
+        &.is-active {
+            background-color: var(--bs-success, #28a745);
+        }
+    }
+
+    &__diag-readout {
+        font-size: 0.74rem;
+        line-height: 1.5;
+        color: var(--bs-body-color, #212529);
+        word-break: break-word;
+    }
+
+    &__diag-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.4rem;
+    }
+
+    &__diag-status {
+        font-size: 0.74rem;
+        margin-top: 0.4rem;
+        color: var(--bs-body-color, #212529);
+    }
+
+    &__diag-warnings {
+        font-size: 0.72rem;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #a05a00;
+        background-color: rgba(255, 193, 7, 0.12);
+        border-radius: 0.4rem;
+        padding: 0.4rem 0.55rem;
+        max-height: 8rem;
+        overflow-y: auto;
+    }
+
+    &__diag-output {
+        font-size: 0.68rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 12rem;
+        overflow: auto;
+        margin: 0.5rem 0 0;
+        padding: 0.5rem;
+        background-color: var(--bs-tertiary-bg, #f8f9fa);
+        border-radius: 0.4rem;
     }
 
     &__active-calls {
@@ -531,6 +996,17 @@
     }
 }
 
+// Keep dark mode consistent across host themes: the widget uses its own dark palette rather than each
+// theme's, so it looks the same in the admin and on the front end when a dark theme is active.
+[data-bs-theme="dark"] .telephony-soft-phone {
+    --bs-body-bg: #1e2126;
+    --bs-body-color: #e9ecef;
+    --bs-secondary-color: #adb5bd;
+    --bs-tertiary-bg: #2b3035;
+    --bs-secondary-bg: #343a40;
+    --bs-border-color: #495057;
+}
+
 .telephony-phone-dial-btn {
     margin-inline-start: 0.5rem;
     line-height: 1;
@@ -702,4 +1178,12 @@
             flex: 1 1 0;
         }
     }
+}
+
+// intl-tel-input detaches the country dropdown to <body> (class .iti--detached-country-selector,
+// z-index 1060 by default), but the floating soft phone panel sits at z-index 1080. Without this
+// override the country list opens behind the panel and appears to be missing. Lift it above the
+// panel and the incoming-call overlay so the country selector is always visible.
+.iti--detached-country-selector {
+    z-index: 1100;
 }

@@ -68,6 +68,62 @@ public sealed class OmnichannelActivity : CatalogItem
     public string TextToSpeechVoiceId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the contact during this automated conversation.
+    /// This is a snapshot of the guard chosen when the automated inventory was loaded.
+    /// </summary>
+    public bool AllowAIToUpdateContact { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may update the subject during this automated conversation.
+    /// This is a snapshot of the guard chosen when the automated inventory was loaded.
+    /// </summary>
+    public bool AllowAIToUpdateSubject { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets how long the automated conversation waits before sending each AI reply. This is a snapshot of
+    /// the choice made when the automated inventory was loaded.
+    /// </summary>
+    public OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reply delay in seconds. For <see cref="OmnichannelResponseDelayMode.Fixed"/> this is the exact
+    /// wait; for <see cref="OmnichannelResponseDelayMode.Random"/> this is the base the jitter is applied around.
+    /// </summary>
+    public int ResponseDelaySeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the jitter, in seconds, applied around <see cref="ResponseDelaySeconds"/> when
+    /// <see cref="ResponseDelayMode"/> is <see cref="OmnichannelResponseDelayMode.Random"/>. Each reply waits a random
+    /// duration in <c>[base - jitter, base + jitter]</c>, never less than zero.
+    /// </summary>
+    public int ResponseDelayJitterSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the business-hours calendar that gates background-initiated sends (such as
+    /// re-engagement nudges) for this conversation. Evaluated in the contact's local time zone; empty is unrestricted.
+    /// Snapshotted from the batch when the activity is loaded.
+    /// </summary>
+    public string BusinessHoursCalendarId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the reusable <c>Cadence</c> that governs re-engagement for this
+    /// conversation. When empty, the conversation is never nudged. Snapshotted from the batch when the activity is
+    /// loaded. Every nudge still respects <see cref="BusinessHoursCalendarId"/>.
+    /// </summary>
+    public string CadenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of re-engagement messages already sent for this conversation, which is the index of the
+    /// next cadence step to apply.
+    /// </summary>
+    public int ReEngagementAttempts { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the most recent re-engagement message was sent, used to space subsequent nudges.
+    /// </summary>
+    public DateTime? LastReEngagementUtc { get; set; }
+
+    /// <summary>
     /// When the interaction type is Automatic, we specify the preferred destination (Customer's Phone number or Email) to reach the Contact.
     /// </summary>
     public string PreferredDestination { get; set; }
@@ -259,6 +315,13 @@ public sealed class OmnichannelActivity : CatalogItem
     /// Gets or sets the stable reason code explaining why the activity reached a terminal state.
     /// </summary>
     public string TerminalReasonCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this automated conversation was escalated to a live human agent.
+    /// Stamped at handoff and durable even after the activity leaves the automated lane (a routed voice call
+    /// becomes an agent call), so containment reporting can count escalations across channels.
+    /// </summary>
+    public bool AiEscalated { get; set; }
 
     /// <summary>
     /// Attempts to resolve the activity to the supplied contact while enforcing the persisted candidate set.

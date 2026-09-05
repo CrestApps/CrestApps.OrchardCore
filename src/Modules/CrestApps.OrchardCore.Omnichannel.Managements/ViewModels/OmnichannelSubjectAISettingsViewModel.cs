@@ -59,6 +59,52 @@ public class OmnichannelSubjectAISettingsViewModel
     public string SmsOptOutKeywords { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the automated conversation may hand off to a live human agent.
+    /// </summary>
+    public bool EnableAgentHandoff { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the Contact Center queue an escalated conversation is handed to.
+    /// </summary>
+    public string HandoffQueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may hand off when the customer asks for a human.
+    /// </summary>
+    public bool HandoffOnUserRequest { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may hand off once the customer is a qualified lead.
+    /// </summary>
+    public bool HandoffOnQualifiedLead { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may hand off when the customer is frustrated.
+    /// </summary>
+    public bool HandoffOnFrustration { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the live-agent handoff settings apply to the subject. Unlike the
+    /// rest of the AI configuration (inbound-only), handoff also applies to outbound automated campaigns whose AI
+    /// settings are chosen at inventory load, so it is shown for those too.
+    /// </summary>
+    [BindNever]
+    public bool ShowHandoffSettings { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a handoff queue picker is available (Contact Center is enabled).
+    /// When false, the editor shows a free-text queue id field instead.
+    /// </summary>
+    [BindNever]
+    public bool HasHandoffQueuePicker { get; set; }
+
+    /// <summary>
+    /// Gets or sets the selectable handoff queues, when a picker is available.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> HandoffQueues { get; set; }
+
+    /// <summary>
     /// Gets or sets the available AI profiles.
     /// </summary>
     [BindNever]

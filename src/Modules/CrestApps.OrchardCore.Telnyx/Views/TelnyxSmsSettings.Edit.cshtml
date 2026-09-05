@@ -1,0 +1,75 @@
+@model CrestApps.OrchardCore.Telnyx.ViewModels.TelnyxSmsSettingsViewModel
+
+<fieldset class="mb-3">
+    <div class="form-check">
+        <input asp-for="IsEnabled" class="form-check-input" data-telnyx-sms-enable />
+        <label asp-for="IsEnabled" class="form-check-label">@T["Enable the Telnyx SMS provider"]</label>
+        <span class="hint">@T["When enabled and configured, Telnyx becomes selectable as the tenant SMS provider."]</span>
+    </div>
+</fieldset>
+
+<div data-telnyx-sms-config class="@(Model.IsEnabled ? "" : "d-none")">
+    <div class="alert alert-info" role="alert">
+        <h6 class="alert-heading">@T["Where to find these values in Telnyx"]</h6>
+        <ol class="mb-0 ps-3">
+            <li>
+                @T["<strong>API key</strong> — in the Telnyx portal, click your user icon, then <em>API Keys</em>, and create a V2 API key."]
+                <a href="https://portal.telnyx.com/#/api-keys" target="_blank" rel="noopener noreferrer">@T["Open API Keys"]</a>
+            </li>
+            <li>
+                @T["<strong>Messaging profile</strong> — go to <em>Messaging Suite → Programmable Messaging</em> and click <em>Create profile</em>. Select your destinations, then set both the <em>Webhook URL</em> and <em>Webhook Failover URL</em> to the address shown below. Copy the profile's ID into the <em>Messaging profile id</em> field."]
+                <a href="https://portal.telnyx.com/#/programmable-messaging/profiles" target="_blank" rel="noopener noreferrer">@T["Open Programmable Messaging"]</a>
+            </li>
+            <li>
+                @T["<strong>Webhook public key</strong> — click your user icon, then <em>API Keys</em>, and open the <em>Public Keys</em> tab to copy the account's public (Ed25519) key. It verifies inbound and delivery webhooks."]
+                <a href="https://portal.telnyx.com/#/api-keys/public-key" target="_blank" rel="noopener noreferrer">@T["Open Public Key"]</a>
+            </li>
+        </ol>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">@T["Webhook URL"]</label>
+        <input class="form-control" value="@Model.WebhookUrl" readonly onclick="this.select();" />
+        <span class="hint">@T["Set this as both the <em>Webhook URL</em> and <em>Webhook Failover URL</em> on your Telnyx messaging profile. Behind a reverse proxy, set the site Base URL (Configuration → Settings → General) or enable the Reverse Proxy feature so this address is correct."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ApiKey" class="form-label">@T["API key"]</label>
+        <input asp-for="ApiKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasApiKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx API v2 key"].Value)" />
+        <span class="hint">@T["The Telnyx account API key used as the bearer token on the Messaging API."]</span>
+        <span asp-validation-for="ApiKey" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="MessagingProfileId" class="form-label">@T["Messaging profile id"]</label>
+        <input asp-for="MessagingProfileId" class="form-control" />
+        <span class="hint">@T["Optional. Sends through a specific Telnyx messaging profile; leave empty to send using only the From number."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="WebhookPublicKey" class="form-label">@T["Public Key"]</label>
+        <input asp-for="WebhookPublicKey" class="form-control" type="password" autocomplete="off" placeholder="@(Model.HasWebhookPublicKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx Ed25519 public key (base64)"].Value)" />
+        <span class="hint">@T["Public key to validate Telnyx API V2 webhooks."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ApiBaseUrl" class="form-label">@T["API base URL"]</label>
+        <input asp-for="ApiBaseUrl" class="form-control" placeholder="https://api.telnyx.com/v2/" />
+        <span class="hint">@T["Optional override for the Telnyx REST API base address."]</span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var toggle = document.querySelector('[data-telnyx-sms-enable]');
+        var config = document.querySelector('[data-telnyx-sms-config]');
+        if (!toggle || !config) { return; }
+
+        var apply = function () {
+            config.classList.toggle('d-none', !toggle.checked);
+        };
+
+        toggle.addEventListener('change', apply);
+        apply();
+    })();
+</script>

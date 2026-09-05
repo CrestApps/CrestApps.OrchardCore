@@ -1,0 +1,101 @@
+@model SmsComposeViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["New conversation"])</h1></zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="mb-3">
+        <label asp-for="EndpointId" class="form-label">@T["Send from (number)"]</label>
+        <select asp-for="EndpointId" asp-items="Model.Endpoints" class="selectpicker show-tick" data-live-search="true" data-width="100%" title="@T["Select an SMS number"]"></select>
+        <span asp-validation-for="EndpointId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ContactPhones" class="form-label">@T["To (contacts)"]</label>
+        <select asp-for="ContactPhones" id="recipient-select" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Search contacts by name or phone…"]"></select>
+        <span class="hint">@T["Type a name or phone number to search your contacts, then select one or more."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Recipients" class="form-label">@T["Additional numbers"]</label>
+        <textarea asp-for="Recipients" class="form-control" rows="2" placeholder="@T["One number per line (E.164), or comma-separated"]"></textarea>
+        <span class="hint">@T["One recipient starts a 1:1 conversation; multiple recipients start a group (each gets their own private 1:1 thread)."]</span>
+        <span asp-validation-for="Recipients" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Body" class="form-label">@T["Message"]</label>
+        <textarea asp-for="Body" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="Body" class="text-danger"></span>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">@T["Send"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
+        </div>
+    </div>
+</form>
+
+<script at="Foot" depends-on="bootstrap-select">
+    (function () {
+        // The CrestApps bootstrap-select fork is a vanilla-JS plugin (no jQuery); drive it through its
+        // native window.Selectpicker API.
+        var Selectpicker = window.Selectpicker;
+        var url = '@Url.RouteUrl("SmsPortalSearchContacts")';
+        if (!Selectpicker || !url) { return; }
+
+        var select = document.getElementById('recipient-select');
+        if (!select) { return; }
+
+        var picker = Selectpicker.getOrCreateInstance(select);
+        if (!picker || !picker.searchbox) { return; }
+
+        var timer = null;
+        // Guards the synthetic input event we dispatch to re-apply the filter, so it never re-issues a request.
+        var suppress = false;
+
+        // Server-side live search: as the agent types in the picker's search box, query contacts and add
+        // matching options (keeping any already-selected options so selections persist across searches).
+        picker.searchbox.addEventListener('input', function () {
+            if (suppress) { return; }
+
+            var q = picker.searchbox.value.trim();
+            clearTimeout(timer);
+            if (q.length < 2) { return; }
+
+            timer = setTimeout(function () {
+                fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                    .then(function (response) { return response.ok ? response.json() : []; })
+                    .then(function (items) {
+                        var added = false;
+
+                        (items || []).forEach(function (item) {
+                            if (!item.phone) { return; }
+                            if (!select.querySelector('option[value="' + CSS.escape(item.phone) + '"]')) {
+                                var option = document.createElement('option');
+                                option.value = item.phone;
+                                option.textContent = item.name || item.phone;
+                                option.setAttribute('data-subtext', item.phone);
+                                select.appendChild(option);
+                                added = true;
+                            }
+                        });
+
+                        if (added) { picker.refresh(); }
+
+                        // refresh() rebuilds the list but drops the active live-search filter, so re-apply it
+                        // to the freshly added options. The suppress guard keeps this from fetching again.
+                        suppress = true;
+                        picker.searchbox.dispatchEvent(new Event('input', { bubbles: true }));
+                        suppress = false;
+                    })
+                    .catch(function () { });
+            }, 250);
+        });
+    })();
+</script>

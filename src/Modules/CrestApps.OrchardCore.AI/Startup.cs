@@ -86,6 +86,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIToolInstanceAccessor, DefaultAIToolInstanceAccessor>()
             .AddDisplayDriver<AIProfile, AIProfileDisplayDriver>()
             .AddTransient<IConfigureOptions<GeneralAIOptions>, GeneralAIOptionsConfiguration>()
+            .AddSignalOptionsChangeTokenSource<GeneralAIOptions>()
             .AddTransient<IConfigureOptions<DefaultAIOptions>, DefaultAIOptionsConfiguration>()
             .AddNavigationProvider<AIProfileAdminMenu>();
 
@@ -261,8 +262,9 @@ public sealed class ChatCoreStartup : StartupBase
         services
             .AddCoreAIChatSessionStoresYesSql()
             .AddScoped<IAIChatSessionManager, DefaultAIChatSessionManager>()
-            .AddDataMigration<AIChatSessionIndexMigrations>()
-            .AddSingleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>();
+            .AddDataMigration<AIChatSessionIndexMigrations>();
+
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AIChatSessionCloseBackgroundTask>());
 
         services.AddDisplayDriver<AIProfile, AIProfileResponseHandlerDisplayDriver>();
 

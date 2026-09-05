@@ -28,6 +28,7 @@ public sealed class OmnichannelConfigurationCoverageTests
     /// </summary>
     private static readonly Dictionary<string, string> _configuration = new(StringComparer.Ordinal)
     {
+        [nameof(Cadence)] = OmnichannelDeploymentSteps.Cadence,
         [nameof(OmnichannelCampaign)] = OmnichannelDeploymentSteps.Campaign,
         [nameof(OmnichannelCampaignGroup)] = OmnichannelDeploymentSteps.CampaignGroup,
         [nameof(OmnichannelChannelEndpoint)] = OmnichannelDeploymentSteps.ChannelEndpoint,
