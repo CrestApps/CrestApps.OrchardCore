@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Moq;
 using OrchardCore.Environment.Shell;
+using OrchardCore.FileStorage;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContentTransfer;
@@ -276,7 +277,8 @@ public sealed class ContentTransferChunkFileUploadServiceTests
             new ShellSettings { Name = "Default" },
             Mock.Of<IClock>(),
             NullLogger<ContentTransferChunkFileUploadService>.Instance,
-            Options.Create(options));
+            Options.Create(options),
+            Mock.Of<ITempDirectoryProvider>(provider => provider.GetRootDirectory() == Path.GetTempPath()));
 
     private static DefaultHttpContext CreateContext(string contentRange, Guid? uploadId, params IFormFile[] files)
     {

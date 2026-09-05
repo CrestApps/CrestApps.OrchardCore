@@ -31,6 +31,7 @@
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Recipes.Core/CrestApps.OrchardCore.Recipes.Core.csproj" />
     <PackageReference Include="CrestApps.Core.AI.Chat" />
+    <PackageReference Include="CrestApps.Core.AI.Realtime.WebRtc" />
   </ItemGroup>
 
   <ItemGroup>

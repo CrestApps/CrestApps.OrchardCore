@@ -1,4 +1,6 @@
 @using System.Text.Json
+@using CrestApps.Core.AI.Capabilities
+@using CrestApps.Core.AI.Chat.Realtime
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Models
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
@@ -12,6 +14,7 @@
 @inject IUpdateModelAccessor UpdateModelAccessor
 @inject ISiteService SiteService
 @inject IAIDeploymentManager AIDeploymentManager
+@inject IAIDeploymentCapabilityService CapabilityService
 @{
     var baseId = Html.IdForModel();
     var chatAppHtmlId = $"{baseId}_ChatApp";
@@ -27,13 +30,48 @@
     var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText);
     var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.TextToSpeech);
     var visionDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision);
-    var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
+
+    // Realtime (speech-to-speech): the interaction runs a realtime session when its selected deployment
+    // declares the realtime capability, or when the site chat mode is Realtime and a realtime deployment
+    // is available. Realtime is audio-only and takes precedence over the STT/TTS conversation pipeline.
+    var realtimeDeployments = await CapabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
+    var realtimeCapableDeploymentNames = realtimeDeployments
+        .Where(d => !string.IsNullOrWhiteSpace(d.Name))
+        .Select(d => d.Name)
+        .ToArray();
+    var selectedDeploymentName = Model.Interaction.ChatDeploymentName;
+    var selectedDeploymentIsRealtime = !string.IsNullOrWhiteSpace(selectedDeploymentName)
+        && realtimeCapableDeploymentNames.Contains(selectedDeploymentName, StringComparer.OrdinalIgnoreCase);
+    var hasRealtime = selectedDeploymentIsRealtime
+        || await CapabilityService.ResolveDeploymentWithFeatureAsync(AIDeploymentFeatureNames.Realtime) is not null;
+
+    var effectiveChatMode = selectedDeploymentIsRealtime
+        ? ChatMode.Realtime
+        : chatMode switch
+        {
+            ChatMode.Realtime when hasRealtime => ChatMode.Realtime,
+            // Realtime configured but no realtime deployment: fall back to STT/TTS conversation when possible.
+            ChatMode.Realtime when speechToTextDeployment != null && textToSpeechDeployment != null => ChatMode.Conversation,
+            ChatMode.Realtime => ChatMode.TextInput,
+            _ => chatMode,
+        };
+
+    var realtimeEnabled = effectiveChatMode == ChatMode.Realtime;
+    var realtimeWebRtcEnabled = realtimeEnabled && RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
+
+    var speechToTextEnabled = !realtimeEnabled
+        && (effectiveChatMode == ChatMode.AudioInput || effectiveChatMode == ChatMode.Conversation)
         && speechToTextDeployment != null;
-    var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings.EnableTextToSpeechPlayback)
+    var textToSpeechEnabled = !realtimeEnabled
+        && (effectiveChatMode == ChatMode.Conversation || chatModeSettings.EnableTextToSpeechPlayback)
         && textToSpeechDeployment != null;
-    var visionEnabled = visionDeployment != null;
+    var visionEnabled = !realtimeEnabled && visionDeployment != null;
     var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
+    var realtimeBtnHtmlId = $"{baseId}_RealtimeBtn";
+    var realtimeVoiceGroupHtmlId = $"{baseId}_RealtimeVoiceGroup";
+    var realtimeVoiceSelectHtmlId = $"{baseId}_RealtimeVoice";
+    var realtimeVoicesUrl = Url.Action("Voices", "Realtime", new { area = "CrestApps.OrchardCore.AI.Chat" });
 }
 
 <div class="d-flex flex-column h-100">
@@ -50,13 +88,34 @@
     </div>
 
     <div class="flex-shrink-0">
+        @* Realtime voice picker. Hidden until the client detects a realtime-capable deployment. Populated
+           from the selected realtime model via the voices endpoint. *@
+        <div class="mb-2 d-none" id="@realtimeVoiceGroupHtmlId">
+            <label class="form-label small mb-1" for="@realtimeVoiceSelectHtmlId">@T["Voice"]</label>
+            <select class="form-select form-select-sm" id="@realtimeVoiceSelectHtmlId">
+                <option value="">@T["Default voice"]</option>
+            </select>
+        </div>
         <div class="ai-chat-prompt-container bg-body text-body rounded border w-100">
             <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
-            <div class="d-flex justify-content-between px-3 my-2">
-                <div></div>
+            @* Single flex row: the realtime "Start speaking" button (flex-grow-1) can span the full input
+               width when the client hides the text controls (audio-only). The shared realtime-audio
+               controller inserts its settings gear as a sibling of this button (beside it) and appends the
+               status line + push-to-talk bar to this row's parent (the prompt container), below the row —
+               mirroring the CrestApps.Core layout. *@
+            <div class="d-flex gap-2 align-items-center px-3 my-2">
+                @* Realtime toggle. Hidden until the client detects a realtime deployment; then it spans the row. *@
+                <button class="btn btn-outline-dark flex-grow-1" type="button" id="@realtimeBtnHtmlId" title="@T["Start speaking"]"
+                        data-start-title="@T["Start speaking"]" data-end-title="@T["End Conversation"]"
+                        data-start-html="<i class='fa-solid fa-wave-square me-1'></i> @T["Start speaking"]"
+                        data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]"
+                        hidden>
+                    <i class="fa-solid fa-wave-square me-1"></i>
+                    <span>@T["Start speaking"]</span>
+                </button>
 
-                <div>
+                <div class="d-flex gap-2 align-items-center ms-auto">
                     <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
                         <i class="fa-solid fa-microphone"></i>
                     </button>
@@ -66,7 +125,7 @@
                             <i class="fa-solid fa-wave-square"></i>
                         </button>
                     }
-                    <button class="btn btn-dark" type="button" id="@buttonHtmlId"disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <button class="btn btn-dark" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>
@@ -107,12 +166,26 @@
         clearHistoryMessage = T["Are you sure you want to clear the chat history? This action cannot be undone. Your documents, parameters, and tools will be preserved."].Value,
         clearHistoryOkText = T["Yes"].Value,
         clearHistoryCancelText = T["Cancel"].Value,
-        chatMode = chatMode.ToString(),
+        chatMode = effectiveChatMode.ToString(),
         micButtonElementSelector = $"#{micBtnHtmlId}",
         conversationButtonElementSelector = $"#{conversationBtnHtmlId}",
         saveIndicatorElementSelector = "#settings-save-indicator",
         textToSpeechEnabled,
         visionEnabled,
+        // Realtime (speech-to-speech). The client shows the realtime button and hides the text input when
+        // the selected deployment is realtime-capable. Audio capture/playback, barge-in, echo control and
+        // push-to-talk are handled by the shared realtime-audio.js controller (window.CoreAIRealtime).
+        realtimeEnabled,
+        realtimeWebRtcEnabled,
+        realtimeCapableDeployments = realtimeCapableDeploymentNames.Select(name => name.ToLowerInvariant()).ToArray(),
+        // The chat deployment picker in the settings panel. The client watches it and switches to realtime
+        // (audio-only Start speaking + voice picker) when a realtime-capable deployment is selected.
+        deploymentSelectElementSelector = "[data-setting=\"deploymentName\"]",
+        realtimeButtonElementSelector = $"#{realtimeBtnHtmlId}",
+        realtimeVoiceName = Model.Interaction.RealtimeVoiceName,
+        realtimeVoiceSelectElementSelector = $"#{realtimeVoiceSelectHtmlId}",
+        realtimeVoiceGroupElementSelector = $"#{realtimeVoiceGroupHtmlId}",
+        realtimeVoicesUrl,
     }, JOptions.CamelCase);
 }
 

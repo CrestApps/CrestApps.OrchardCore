@@ -25,6 +25,7 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.FileStorage;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
@@ -60,6 +61,7 @@ public sealed class AdminController : Controller, IUpdateModel
     private readonly IDisplayManager<ExportRequest> _exportRequestDisplayManager;
     private readonly IContentTransferEntryAdminListFilterParser _entriesAdminListFilterParser;
     private readonly ContentImportOptions _contentImportOptions;
+    private readonly ITempDirectoryProvider _tempDirectoryProvider;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -88,6 +90,7 @@ public sealed class AdminController : Controller, IUpdateModel
         IDisplayManager<ExportRequest> exportRequestDisplayManager,
         IContentTransferEntryAdminListFilterParser entriesAdminListFilterParser,
         IOptions<ContentImportOptions> contentImportOptions,
+        ITempDirectoryProvider tempDirectoryProvider,
         IClock clock)
     {
         _authorizationService = authorizationService;
@@ -113,6 +116,7 @@ public sealed class AdminController : Controller, IUpdateModel
         _exportRequestDisplayManager = exportRequestDisplayManager;
         _entriesAdminListFilterParser = entriesAdminListFilterParser;
         _contentImportOptions = contentImportOptions.Value;
+        _tempDirectoryProvider = tempDirectoryProvider;
         _shapeFactory = shapeFactory;
         _pagerOptions = pagerOptions.Value;
         _clock = clock;
@@ -570,7 +574,7 @@ public sealed class AdminController : Controller, IUpdateModel
         var batchSize = _contentImportOptions.ExportBatchSize < 1 ? 200 : _contentImportOptions.ExportBatchSize;
         var columnNames = exportColumns.Select(c => c.Name).ToList();
 
-        var tempFilePath = Path.GetTempFileName();
+        var tempFilePath = _tempDirectoryProvider.GetTempFileName();
         try
         {
             using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))

@@ -668,6 +668,15 @@ window.coreAIChatManager = function () {
           ttsInstanceId: 'ai-chat-' + Math.random().toString(36).slice(2),
           singleResponseMode: !!config.singleResponseMode,
           conversationModeEnabled: config.chatMode === 'Conversation',
+          realtimeEnabled: config.chatMode === 'Realtime' || !!config.realtimeEnabled,
+          // Server-relay WebRTC transport: primary when advertised and supported; the client falls back
+          // to the WebSocket path below if the peer cannot connect.
+          realtimeWebRtcEnabled: config.realtimeWebRtcEnabled === true && typeof window.RTCPeerConnection === 'function',
+          // A host-supplied override. Normally the servers are fetched from the hub right before the
+          // peer is created (resolveRealtimeIceServers) so configured TURN relays — and their
+          // short-lived credentials — are actually used instead of a public STUN server.
+          realtimeWebRtcIceServers: Array.isArray(config.realtimeWebRtcIceServers) && config.realtimeWebRtcIceServers.length ? config.realtimeWebRtcIceServers : null,
+          realtimeVoiceName: config.realtimeVoiceName || null,
           conversationButton: null,
           isConversationMode: false,
           notificationDismissTimers: {},
@@ -1169,6 +1178,8 @@ window.coreAIChatManager = function () {
                   _this3.connection.keepAliveIntervalInMilliseconds = 15000;
                   _this3.connection.on("LoadSession", function (data) {
                     var _data$messages;
+                    // Switching to another session must not leave a prior realtime/voice session running.
+                    _this3.forceStopActiveVoice();
                     _this3.initializeSession(data.sessionId, true);
                     _this3.messages = [];
                     _this3.documents = data.documents || [];
@@ -1194,6 +1205,10 @@ window.coreAIChatManager = function () {
                       });
                     }
                   });
+
+                  // Realtime lifecycle events (ReceiveRealtimeEvent, and ReceiveError while a voice session is
+                  // live) are handled by the shared CoreAIRealtime module — see setupRealtimeController.
+
                   _this3.connection.on("ReceiveError", function (error) {
                     console.error("SignalR Error: ", error);
                     if (_this3.isRecording) {
@@ -1265,19 +1280,24 @@ window.coreAIChatManager = function () {
                       }
                     }
                   });
-                  _this3.connection.on("ReceiveConversationUserMessage", function (sessionId, text) {
+                  _this3.connection.on("ReceiveConversationUserMessage", function (sessionId, turnId, text) {
+                    // Realtime creates the chat session server-side; adopt its id (and update the page URL)
+                    // on the first turn so a refresh reloads the conversation instead of starting fresh.
+                    if (sessionId && _this3.getSessionId() !== sessionId) {
+                      _this3.initializeSession(sessionId);
+                    }
+
+                    // Realtime: a placeholder for this turn was already inserted in the right position when
+                    // the utterance was captured (see user_turn_pending), so just fill in its text.
+                    if (turnId && _this3._realtimePendingTurns && _this3._realtimePendingTurns[turnId]) {
+                      var pending = _this3._realtimePendingTurns[turnId];
+                      delete _this3._realtimePendingTurns[turnId];
+                      _this3.stopAudio();
+                      _this3.fillRealtimePendingTurn(pending, text);
+                      return;
+                    }
                     if (text) {
                       _this3.stopAudio();
-
-                      // If there's an interrupted assistant message still streaming,
-                      // mark it as done to stop the spinner animation.
-                      if (_this3._conversationAssistantMessage) {
-                        var oldMsg = _this3.messages[_this3._conversationAssistantMessage.index];
-                        if (oldMsg) {
-                          oldMsg.isStreaming = false;
-                        }
-                        _this3._conversationAssistantMessage = null;
-                      }
 
                       // Replace the partial transcript message with the final one.
                       if (_this3._conversationPartialMessage) {
@@ -1286,6 +1306,23 @@ window.coreAIChatManager = function () {
                         _this3._conversationPartialMessage.htmlContent = '<p>' + escaped + '</p>';
                         _this3._conversationPartialMessage.isPartial = false;
                         _this3._conversationPartialMessage = null;
+                      } else if (_this3._conversationAssistantMessage) {
+                        // Realtime: the user's transcript lags the assistant's reply for the SAME turn (the
+                        // model answers the audio before speech-to-text finishes). Insert the user message
+                        // just before the streaming assistant message so the order stays You -> Assistant,
+                        // and keep that message streaming — ending it here split one reply into two bubbles
+                        // above the prompt.
+                        var at = _this3._conversationAssistantMessage.index;
+                        var userMsg = {
+                          role: 'user',
+                          content: text,
+                          rawContent: text,
+                          userRating: null,
+                          references: {}
+                        };
+                        updateMessagePresentation(userMsg, userMsg.references);
+                        _this3.messages.splice(at, 0, userMsg);
+                        _this3._conversationAssistantMessage.index = at + 1;
                       } else {
                         _this3.addMessage({
                           role: 'user',
@@ -1296,6 +1333,15 @@ window.coreAIChatManager = function () {
                     }
                   });
                   _this3.connection.on("ReceiveConversationAssistantToken", function (sessionId, messageId, token, responseId, references, appearance) {
+                    // A new response id means a new turn — finalize the previous assistant message so two replies
+                    // never merge into one bubble (also covers barge-in, which starts a fresh response).
+                    if (_this3._conversationAssistantMessage && _this3._conversationAssistantResponseId && responseId && _this3._conversationAssistantResponseId !== responseId) {
+                      var prev = _this3.messages[_this3._conversationAssistantMessage.index];
+                      if (prev) {
+                        prev.isStreaming = false;
+                      }
+                      _this3._conversationAssistantMessage = null;
+                    }
                     if (!_this3._conversationAssistantMessage) {
                       _this3.stopAudio();
                       _this3.hideTypingIndicator();
@@ -1322,6 +1368,7 @@ window.coreAIChatManager = function () {
                         index: msgIndex,
                         content: ''
                       };
+                      _this3._conversationAssistantResponseId = responseId;
                     }
                     _this3._conversationAssistantMessage.content += token;
                     var msg = _this3.messages[_this3._conversationAssistantMessage.index];
@@ -1347,15 +1394,27 @@ window.coreAIChatManager = function () {
                         updateMessagePresentation(msg, msg.references);
                       }
                       _this3._conversationAssistantMessage = null;
+                      _this3._conversationAssistantResponseId = null;
                     }
                   });
                   _this3.connection.on("ReceiveAudioChunk", function (sessionId, base64Audio, contentType) {
-                    if (base64Audio) {
-                      var binaryString = atob(base64Audio);
-                      var bytes = new Uint8Array(binaryString.length);
-                      for (var i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
+                    if (!base64Audio) {
+                      return;
+                    }
+                    var binaryString = atob(base64Audio);
+                    var bytes = new Uint8Array(binaryString.length);
+                    for (var i = 0; i < binaryString.length; i++) {
+                      bytes[i] = binaryString.charCodeAt(i);
+                    }
+
+                    // Realtime audio arrives as raw PCM16 (WebSocket transport) and is scheduled for immediate
+                    // playback by the shared module; conversation/TTS audio (mp3/wav) is collected and played on
+                    // complete.
+                    if (contentType === 'audio/pcm') {
+                      if (_this3.realtimeController) {
+                        _this3.realtimeController.receivePcm(bytes);
                       }
+                    } else {
                       _this3.audioChunks.push(bytes);
                     }
                   });
@@ -1373,6 +1432,11 @@ window.coreAIChatManager = function () {
                   });
                   _this3.connection.onreconnecting(function () {
                     console.warn("SignalR: reconnecting...");
+
+                    // The realtime session lived inside the dropped connection; it cannot survive a reconnect.
+                    if (_this3.realtimeEnabled && _this3.isConversationMode) {
+                      _this3.stopRealtimeConversation();
+                    }
                   });
                   _this3.connection.onreconnected(function () {
                     console.info("SignalR: reconnected.");
@@ -1383,6 +1447,9 @@ window.coreAIChatManager = function () {
                   _this3.connection.onclose(function (error) {
                     if (_this3.isNavigatingAway) {
                       return;
+                    }
+                    if (_this3.realtimeEnabled && _this3.isConversationMode) {
+                      _this3.stopRealtimeConversation();
                     }
                     if (error) {
                       console.warn("SignalR connection closed with error:", error.message || error);
@@ -1404,8 +1471,69 @@ window.coreAIChatManager = function () {
             }, _callee6, null, [[1, 3]]);
           }))();
         },
-        addMessageInternal: function addMessageInternal(message) {
+        ensureConnectionStarted: function ensureConnectionStarted() {
           var _this4 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
+            var states, _t5;
+            return _regenerator().w(function (_context7) {
+              while (1) switch (_context7.p = _context7.n) {
+                case 0:
+                  if (_this4.connection) {
+                    _context7.n = 1;
+                    break;
+                  }
+                  return _context7.a(2, false);
+                case 1:
+                  states = signalR.HubConnectionState;
+                  if (!(_this4.connection.state === states.Connected)) {
+                    _context7.n = 2;
+                    break;
+                  }
+                  return _context7.a(2, true);
+                case 2:
+                  if (!(_this4.connection.state === states.Disconnected)) {
+                    _context7.n = 7;
+                    break;
+                  }
+                  _context7.p = 3;
+                  _context7.n = 4;
+                  return _this4.connection.start();
+                case 4:
+                  _context7.n = 6;
+                  break;
+                case 5:
+                  _context7.p = 5;
+                  _t5 = _context7.v;
+                  console.error("SignalR Connection Error: ", _t5);
+                case 6:
+                  return _context7.a(2, _this4.connection.state === states.Connected);
+                case 7:
+                  _context7.n = 8;
+                  return new Promise(function (resolve) {
+                    var settle = function settle(value) {
+                      clearTimeout(timeoutId);
+                      clearInterval(intervalId);
+                      resolve(value);
+                    };
+                    var timeoutId = setTimeout(function () {
+                      return settle(_this4.connection.state === states.Connected);
+                    }, 10000);
+                    var intervalId = setInterval(function () {
+                      if (_this4.connection.state === states.Connected) {
+                        settle(true);
+                      } else if (_this4.connection.state === states.Disconnected) {
+                        settle(false);
+                      }
+                    }, 100);
+                  });
+                case 8:
+                  return _context7.a(2, _context7.v);
+              }
+            }, _callee7, null, [[3, 5]]);
+          }))();
+        },
+        addMessageInternal: function addMessageInternal(message) {
+          var _this5 = this;
           if (message.role === 'assistant') {
             message.appearance = this.normalizeAssistantAppearance(message.appearance);
           }
@@ -1419,7 +1547,7 @@ window.coreAIChatManager = function () {
           }));
           this.messages.push(message);
           this.$nextTick(function () {
-            _this4.fireEvent(new CustomEvent("addedCoreAIPromotMessage", {
+            _this5.fireEvent(new CustomEvent("addedCoreAIPromotMessage", {
               detail: {
                 message: message
               }
@@ -1427,7 +1555,7 @@ window.coreAIChatManager = function () {
           });
         },
         addMessage: function addMessage(message) {
-          var _this5 = this;
+          var _this6 = this;
           // Ensure userRating is always defined for Vue reactivity.
           if (message.userRating === undefined) {
             message.userRating = null;
@@ -1442,17 +1570,17 @@ window.coreAIChatManager = function () {
           this.$nextTick(function () {
             // Render any pending charts once the DOM is updated
             renderChartsInMessage(message);
-            _this5.scrollToBottom();
+            _this6.scrollToBottom();
           });
         },
         addMessages: function addMessages(messages) {
-          var _this6 = this;
+          var _this7 = this;
           for (var i = 0; i < messages.length; i++) {
             this.addMessageInternal(messages[i]);
           }
           this.hidePlaceholder();
           this.$nextTick(function () {
-            _this6.scrollToBottom();
+            _this7.scrollToBottom();
           });
         },
         hidePlaceholder: function hidePlaceholder() {
@@ -1529,7 +1657,7 @@ window.coreAIChatManager = function () {
           this.prompt = '';
         },
         startRecording: function startRecording() {
-          var _this7 = this;
+          var _this8 = this;
           if (this.isRecording || !this.connection) {
             return;
           }
@@ -1540,65 +1668,146 @@ window.coreAIChatManager = function () {
               autoGainControl: true
             }
           }).then(function (stream) {
-            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this7.mediaRecorder = new MediaRecorder(stream, {
-              mimeType: mimeType,
-              audioBitsPerSecond: 128000
-            });
-            _this7.preRecordingPrompt = _this7.prompt;
-            _this7._audioInputSent = false;
+            _this8.preRecordingPrompt = _this8.prompt;
+            _this8._audioInputSent = false;
             var subject = new signalR.Subject();
-            var profileId = _this7.getProfileId();
-            var sessionId = _this7.getSessionId() || '';
-            var pendingChunk = Promise.resolve();
-            _this7.mediaRecorder.addEventListener('dataavailable', function (e) {
-              if (e.data && e.data.size > 0) {
-                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee7() {
-                  var data, uint8Array, binaryString, base64;
-                  return _regenerator().w(function (_context7) {
-                    while (1) switch (_context7.n) {
-                      case 0:
-                        _context7.n = 1;
-                        return e.data.arrayBuffer();
-                      case 1:
-                        data = _context7.v;
-                        uint8Array = new Uint8Array(data);
-                        binaryString = uint8Array.reduce(function (str, _byte) {
-                          return str + String.fromCharCode(_byte);
-                        }, '');
-                        base64 = btoa(binaryString);
-                        subject.next(base64);
-                      case 2:
-                        return _context7.a(2);
-                    }
-                  }, _callee7);
-                })));
-              }
+            var profileId = _this8.getProfileId();
+            var sessionId = _this8.getSessionId() || '';
+
+            // Capture raw 16 kHz PCM (16-bit mono) via Web Audio instead of MediaRecorder.
+            // Browsers only agree on WebM/Opus for MediaRecorder, and Azure's speech SDK cannot
+            // demux that container from a streaming push (it fails inside GStreamer). Raw PCM is
+            // decoded natively with no GStreamer and is produced identically by every browser.
+            _this8._sttCapture = _this8._createPcmCapture(stream, function (base64) {
+              try {
+                subject.next(base64);
+              } catch (err) {/* completed */}
             });
-            _this7.mediaRecorder.addEventListener('stop', function () {
-              stream.getTracks().forEach(function (track) {
-                return track.stop();
-              });
-              pendingChunk.then(function () {
-                return subject.complete();
-              });
-            });
+            _this8._sttSubject = subject;
+            var rate = _this8._sttCapture && _this8._sttCapture.sampleRate || 16000;
             var language = navigator.language || document.documentElement.lang || 'en-US';
-            _this7.connection.send("SendAudioStream", profileId, sessionId, subject, mimeType, language);
-            _this7.mediaRecorder.start(250);
-            _this7.isRecording = true;
-            _this7.updateMicButton();
+            _this8.connection.send("SendAudioStream", profileId, sessionId, subject, "audio/pcm;rate=" + rate, language);
+            _this8.isRecording = true;
+            _this8.updateMicButton();
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
           });
         },
         stopRecording: function stopRecording() {
-          if (!this.isRecording || !this.mediaRecorder) {
+          if (!this.isRecording) {
             return;
           }
-          this.mediaRecorder.stop();
+          this._stopPcmCapture(this._sttCapture);
+          this._sttCapture = null;
+          if (this._sttSubject) {
+            try {
+              this._sttSubject.complete();
+            } catch (err) {/* already completed */}
+            this._sttSubject = null;
+          }
           this.isRecording = false;
           this.updateMicButton();
+        },
+        // Captures microphone audio as raw 16 kHz, 16-bit mono PCM using Web Audio and invokes
+        // onChunk(base64Pcm, rms) for each block. Returns a handle for _stopPcmCapture. This replaces
+        // MediaRecorder so every browser streams a format Azure decodes without GStreamer.
+        _createPcmCapture: function _createPcmCapture(stream, onChunk) {
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          // Ask the browser to resample the mic to 16 kHz; fall back to manual resampling if it will not.
+          var audioContext;
+          try {
+            audioContext = new AudioCtx({
+              sampleRate: 16000
+            });
+          } catch (e) {
+            audioContext = new AudioCtx();
+          }
+          var srcRate = audioContext.sampleRate;
+          var source = audioContext.createMediaStreamSource(stream);
+          var processor = audioContext.createScriptProcessor(4096, 1, 1);
+          var self = this;
+          processor.onaudioprocess = function (e) {
+            var input = e.inputBuffer.getChannelData(0);
+            var pcm16 = self._downsampleToInt16(input, srcRate, 16000);
+            if (!pcm16 || pcm16.length === 0) {
+              return;
+            }
+            var sum = 0;
+            for (var i = 0; i < pcm16.length; i++) {
+              var v = pcm16[i] / 32768;
+              sum += v * v;
+            }
+            var rms = Math.sqrt(sum / pcm16.length);
+            var bytes = new Uint8Array(pcm16.buffer);
+            var binary = '';
+            for (var j = 0; j < bytes.length; j++) {
+              binary += String.fromCharCode(bytes[j]);
+            }
+            onChunk(btoa(binary), rms);
+          };
+          source.connect(processor);
+          // Some browsers only fire onaudioprocess while the node is connected to a destination.
+          processor.connect(audioContext.destination);
+          return {
+            audioContext: audioContext,
+            source: source,
+            processor: processor,
+            stream: stream,
+            sampleRate: 16000
+          };
+        },
+        _stopPcmCapture: function _stopPcmCapture(capture) {
+          if (!capture) {
+            return;
+          }
+          try {
+            if (capture.processor) {
+              capture.processor.onaudioprocess = null;
+              capture.processor.disconnect();
+            }
+          } catch (e) {}
+          try {
+            if (capture.source) {
+              capture.source.disconnect();
+            }
+          } catch (e) {}
+          try {
+            if (capture.stream) {
+              capture.stream.getTracks().forEach(function (t) {
+                t.stop();
+              });
+            }
+          } catch (e) {}
+          try {
+            if (capture.audioContext) {
+              capture.audioContext.close();
+            }
+          } catch (e) {}
+        },
+        // Converts a Float32 sample block to 16-bit PCM, resampling from srcRate to dstRate when needed.
+        _downsampleToInt16: function _downsampleToInt16(input, srcRate, dstRate) {
+          var s, i;
+          if (!(dstRate < srcRate)) {
+            var same = new Int16Array(input.length);
+            for (i = 0; i < input.length; i++) {
+              s = Math.max(-1, Math.min(1, input[i]));
+              same[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            return same;
+          }
+          var ratio = srcRate / dstRate;
+          var newLen = Math.floor(input.length / ratio);
+          var out = new Int16Array(newLen);
+          for (var j = 0; j < newLen; j++) {
+            var idx = j * ratio;
+            var i0 = Math.floor(idx);
+            var i1 = i0 + 1 < input.length ? i0 + 1 : input.length - 1;
+            var frac = idx - i0;
+            s = input[i0] * (1 - frac) + input[i1] * frac;
+            s = Math.max(-1, Math.min(1, s));
+            out[j] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+          return out;
         },
         toggleRecording: function toggleRecording() {
           if (this.isRecording) {
@@ -1620,7 +1829,7 @@ window.coreAIChatManager = function () {
           }
         },
         streamMessage: function streamMessage(profileId, trimmedPrompt, sessionProfileId) {
-          var _this8 = this;
+          var _this9 = this;
           if (this.stream) {
             this.stream.dispose();
             this.stream = null;
@@ -1637,14 +1846,14 @@ window.coreAIChatManager = function () {
           var currentSessionId = this.getSessionId();
           this.stream = this.connection.stream("SendMessage", profileId, trimmedPrompt, currentSessionId, sessionProfileId).subscribe({
             next: function next(chunk) {
-              var message = _this8.messages[messageIndex];
+              var message = _this9.messages[messageIndex];
               if (!message) {
                 if (chunk.sessionId && !currentSessionId) {
-                  _this8.initializeSession(chunk.sessionId);
+                  _this9.initializeSession(chunk.sessionId);
                 }
-                _this8.hideTypingIndicator();
+                _this9.hideTypingIndicator();
                 // Re-assign the index after hiding the typing indicator.
-                messageIndex = _this8.messages.length;
+                messageIndex = _this9.messages.length;
                 var newMessage = {
                   id: chunk.messageId,
                   role: "assistant",
@@ -1654,7 +1863,7 @@ window.coreAIChatManager = function () {
                   isStreaming: true,
                   userRating: null
                 };
-                _this8.messages.push(newMessage);
+                _this9.messages.push(newMessage);
                 message = newMessage;
               }
               if (chunk.title && (!message.title || message.title !== chunk.title)) {
@@ -1684,46 +1893,46 @@ window.coreAIChatManager = function () {
               // Update the existing message
               message.rawContent = content;
               updateMessagePresentation(message, references);
-              _this8.messages[messageIndex] = message;
-              _this8.$nextTick(function () {
+              _this9.messages[messageIndex] = message;
+              _this9.$nextTick(function () {
                 renderChartsInMessage(message);
-                _this8.scrollToBottom();
+                _this9.scrollToBottom();
               });
             },
             complete: function complete() {
-              var _this8$stream;
-              _this8.processReferences(references, messageIndex);
-              _this8.streamingFinished();
-              var msg = _this8.messages[messageIndex];
+              var _this9$stream;
+              _this9.processReferences(references, messageIndex);
+              _this9.streamingFinished();
+              var msg = _this9.messages[messageIndex];
               if (msg) {
                 msg.isStreaming = false;
               }
               if (!msg || !msg.content) {
                 // No content received at all.
-                _this8.hideTypingIndicator();
+                _this9.hideTypingIndicator();
               }
 
               // Trigger text-to-speech only in conversation mode.
-              if (_this8.isConversationMode && _this8.textToSpeechEnabled && msg && msg.content) {
-                _this8.synthesizeSpeech(msg.content);
+              if (_this9.isConversationMode && _this9.textToSpeechEnabled && msg && msg.content) {
+                _this9.synthesizeSpeech(msg.content);
               }
-              (_this8$stream = _this8.stream) === null || _this8$stream === void 0 || _this8$stream.dispose();
-              _this8.stream = null;
+              (_this9$stream = _this9.stream) === null || _this9$stream === void 0 || _this9$stream.dispose();
+              _this9.stream = null;
             },
             error: function error(err) {
-              var _this8$stream2;
-              _this8.processReferences(references, messageIndex);
-              _this8.streamingFinished();
-              var msg = _this8.messages[messageIndex];
+              var _this9$stream2;
+              _this9.processReferences(references, messageIndex);
+              _this9.streamingFinished();
+              var msg = _this9.messages[messageIndex];
               if (msg) {
                 msg.isStreaming = false;
               }
-              _this8.hideTypingIndicator();
-              if (!_this8.isNavigatingAway) {
-                _this8.addMessage(_this8.getServiceDownMessage());
+              _this9.hideTypingIndicator();
+              if (!_this9.isNavigatingAway) {
+                _this9.addMessage(_this9.getServiceDownMessage());
               }
-              (_this8$stream2 = _this8.stream) === null || _this8$stream2 === void 0 || _this8$stream2.dispose();
-              _this8.stream = null;
+              (_this9$stream2 = _this9.stream) === null || _this9$stream2 === void 0 || _this9$stream2.dispose();
+              _this9.stream = null;
               console.error("Stream error:", err);
             }
           });
@@ -1745,17 +1954,17 @@ window.coreAIChatManager = function () {
           };
         },
         processReferences: function processReferences(references, messageIndex) {
-          var _this9 = this;
+          var _this0 = this;
           references = normalizeReferences(references);
           if (Object.keys(references).length) {
-            var _ref23, _message$rawContent2;
+            var _ref22, _message$rawContent2;
             var message = this.messages[messageIndex];
-            message.rawContent = (_ref23 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref23 !== void 0 ? _ref23 : '';
+            message.rawContent = (_ref22 = (_message$rawContent2 = message.rawContent) !== null && _message$rawContent2 !== void 0 ? _message$rawContent2 : message.content) !== null && _ref22 !== void 0 ? _ref22 : '';
             updateMessagePresentation(message, references);
             this.messages[messageIndex] = message;
             this.$nextTick(function () {
               renderChartsInMessage(message);
-              _this9.scrollToBottom();
+              _this0.scrollToBottom();
             });
           }
         },
@@ -1806,31 +2015,31 @@ window.coreAIChatManager = function () {
           this.stopAudio(false);
         },
         updateTtsPlaybackButtons: function updateTtsPlaybackButtons() {
-          var _this0 = this;
+          var _this1 = this;
           if (!this.chatContainer) {
             return;
           }
           var buttons = this.chatContainer.querySelectorAll('[data-tts-message-index]');
           buttons.forEach(function (button) {
             var buttonIndex = Number(button.getAttribute('data-tts-message-index'));
-            var isPlaying = buttonIndex === _this0.ttsPlayingMessageIndex;
+            var isPlaying = buttonIndex === _this1.ttsPlayingMessageIndex;
             button.classList.toggle('tts-playing', isPlaying);
             button.setAttribute('title', isPlaying ? 'Pause audio' : 'Read aloud');
           });
         },
         updateCopyButtons: function updateCopyButtons() {
-          var _this1 = this;
+          var _this10 = this;
           if (!this.chatContainer) {
             return;
           }
           var buttons = this.chatContainer.querySelectorAll('[data-copy-message-index]');
           buttons.forEach(function (button) {
             var buttonIndex = Number(button.getAttribute('data-copy-message-index'));
-            var isCopied = buttonIndex === _this1.copiedMessageIndex;
+            var isCopied = buttonIndex === _this10.copiedMessageIndex;
             var iconHtml = isCopied ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-copy"></i>';
             button.classList.toggle('text-success', isCopied);
             button.classList.toggle('text-secondary', !isCopied);
-            button.setAttribute('title', isCopied ? _this1.copiedTitle : _this1.copyTitle);
+            button.setAttribute('title', isCopied ? _this10.copiedTitle : _this10.copyTitle);
             button.replaceChildren(DOMPurify.sanitize(iconHtml, {
               RETURN_DOM_FRAGMENT: true
             }));
@@ -1849,7 +2058,7 @@ window.coreAIChatManager = function () {
           }));
         },
         synthesizeSpeech: function synthesizeSpeech(text, cacheIndex) {
-          var _this10 = this;
+          var _this11 = this;
           if (!this.textToSpeechEnabled || !text || !this.connection) {
             return;
           }
@@ -1858,16 +2067,16 @@ window.coreAIChatManager = function () {
           this._ttsCacheIndex = cacheIndex !== undefined ? cacheIndex : -1;
           this.connection.invoke("SynthesizeSpeech", this.getProfileId(), this.getSessionId(), text, this.ttsVoiceName)["catch"](function (err) {
             console.error("TTS synthesis error:", err);
-            _this10.isPlayingAudio = false;
-            _this10.ttsPlayingMessageIndex = -1;
-            _this10._ttsCacheIndex = -1;
-            _this10.$nextTick(function () {
-              return _this10.updateTtsPlaybackButtons();
+            _this11.isPlayingAudio = false;
+            _this11.ttsPlayingMessageIndex = -1;
+            _this11._ttsCacheIndex = -1;
+            _this11.$nextTick(function () {
+              return _this11.updateTtsPlaybackButtons();
             });
           });
         },
         toggleMessageTts: function toggleMessageTts(message, index) {
-          var _this11 = this;
+          var _this12 = this;
           if (this.ttsPlayingMessageIndex === index) {
             this.stopAudio();
             return;
@@ -1880,7 +2089,7 @@ window.coreAIChatManager = function () {
           }));
           this.ttsPlayingMessageIndex = index;
           this.$nextTick(function () {
-            return _this11.updateTtsPlaybackButtons();
+            return _this12.updateTtsPlaybackButtons();
           });
           if (this.ttsAudioCache[index]) {
             this.playAudioBlob(this.ttsAudioCache[index]);
@@ -1889,13 +2098,13 @@ window.coreAIChatManager = function () {
           this.synthesizeSpeech(message.content, index);
         },
         playCollectedAudio: function playCollectedAudio() {
-          var _this12 = this;
+          var _this13 = this;
           if (this.audioChunks.length === 0) {
             if (!this.currentAudioElement && this.audioPlayQueue.length === 0) {
               this.isPlayingAudio = false;
               this.ttsPlayingMessageIndex = -1;
               this.$nextTick(function () {
-                return _this12.updateTtsPlaybackButtons();
+                return _this13.updateTtsPlaybackButtons();
               });
             }
             return;
@@ -1935,39 +2144,39 @@ window.coreAIChatManager = function () {
           this.playAudioBlob(blob);
         },
         playAudioBlob: function playAudioBlob(blob) {
-          var _this13 = this;
+          var _this14 = this;
           var url = URL.createObjectURL(blob);
           var audio = new Audio(url);
           this.currentAudioUrl = url;
           this.currentAudioElement = audio;
           this.isPlayingAudio = true;
           audio.addEventListener('ended', function () {
-            _this13.currentAudioElement = null;
-            _this13.currentAudioUrl = null;
+            _this14.currentAudioElement = null;
+            _this14.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this13.playNextInQueue();
+            _this14.playNextInQueue();
           });
           audio.addEventListener('error', function () {
-            _this13.currentAudioElement = null;
-            _this13.currentAudioUrl = null;
+            _this14.currentAudioElement = null;
+            _this14.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this13.playNextInQueue();
+            _this14.playNextInQueue();
           });
           audio.play()["catch"](function (err) {
             console.error("Audio playback error:", err);
-            _this13.currentAudioElement = null;
-            _this13.currentAudioUrl = null;
+            _this14.currentAudioElement = null;
+            _this14.currentAudioUrl = null;
             URL.revokeObjectURL(url);
-            _this13.audioPlayQueue = [];
-            _this13.isPlayingAudio = false;
-            _this13.ttsPlayingMessageIndex = -1;
-            _this13.$nextTick(function () {
-              return _this13.updateTtsPlaybackButtons();
+            _this14.audioPlayQueue = [];
+            _this14.isPlayingAudio = false;
+            _this14.ttsPlayingMessageIndex = -1;
+            _this14.$nextTick(function () {
+              return _this14.updateTtsPlaybackButtons();
             });
           });
         },
         playNextInQueue: function playNextInQueue() {
-          var _this14 = this;
+          var _this15 = this;
           if (this.audioPlayQueue.length > 0) {
             var nextBlob = this.audioPlayQueue.shift();
             this.playAudioBlob(nextBlob);
@@ -1975,13 +2184,13 @@ window.coreAIChatManager = function () {
             this.isPlayingAudio = false;
             this.ttsPlayingMessageIndex = -1;
             this.$nextTick(function () {
-              return _this14.updateTtsPlaybackButtons();
+              return _this15.updateTtsPlaybackButtons();
             });
             this.conversationModeOnAudioEnded();
           }
         },
         stopAudio: function stopAudio() {
-          var _this15 = this;
+          var _this16 = this;
           if (this.currentAudioElement) {
             this.currentAudioElement.pause();
             this.currentAudioElement.currentTime = 0;
@@ -1996,18 +2205,177 @@ window.coreAIChatManager = function () {
           this.isPlayingAudio = false;
           this.ttsPlayingMessageIndex = -1;
           this.$nextTick(function () {
-            return _this15.updateTtsPlaybackButtons();
+            return _this16.updateTtsPlaybackButtons();
           });
         },
         toggleConversationMode: function toggleConversationMode() {
+          if (this.realtimeEnabled) {
+            // Realtime is driven by the shared module, which owns the button; this only exists for
+            // callers that toggle programmatically.
+            if (this.realtimeController) {
+              this.realtimeController.toggle();
+            }
+            return;
+          }
           if (this.isConversationMode) {
             this.stopConversationMode();
           } else {
             this.startConversationMode();
           }
         },
+        // Force-stop any in-progress voice/realtime session (mic, playback, and the streamed audio),
+        // e.g. before starting a new chat or switching sessions, so it never keeps running in the background.
+        forceStopActiveVoice: function forceStopActiveVoice() {
+          if (!this.isConversationMode) {
+            return;
+          }
+          if (this.realtimeEnabled) {
+            this.stopRealtimeConversation();
+          } else {
+            this.stopConversationMode();
+          }
+        },
+        startRealtimeConversation: function startRealtimeConversation() {
+          if (this.realtimeController) {
+            this.realtimeController.start();
+          }
+        },
+        stopRealtimeConversation: function stopRealtimeConversation() {
+          if (this.realtimeController) {
+            this.realtimeController.stop();
+          }
+        },
+        // Realtime (speech-to-speech) is the shared CoreAIRealtime module (realtime-audio.js): microphone
+        // capture and gating, the WebRTC transport with its WebSocket fallback, playback, the settings
+        // popover, push-to-talk, and the server-driven session lifecycle all live there, so this app and the
+        // chat-interaction client cannot drift apart. What is wired here is only how the module reaches this
+        // app's hub and transcript.
+        setupRealtimeController: function setupRealtimeController(config) {
+          if (this.realtimeController || !this.conversationButton) {
+            return;
+          }
+          if (!window.CoreAIRealtime || typeof window.CoreAIRealtime.attach !== 'function') {
+            console.error('realtime-audio.js is not loaded; realtime voice is unavailable on this page.');
+            return;
+          }
+          var self = this;
+          this.realtimeController = window.CoreAIRealtime.attach({
+            connection: this.connection,
+            ensureConnected: function ensureConnected() {
+              return self.ensureConnectionStarted().then(function (connected) {
+                if (!connected) {
+                  throw new Error('The chat connection is not available.');
+                }
+                return connected;
+              });
+            },
+            sendStart: function sendStart(subject, voice, language, silenceMs, vadThreshold, allowInterruption) {
+              self.connection.send('StartRealtimeConversation', self.getProfileId(), self.getSessionId() || '', subject, voice, language, silenceMs, vadThreshold, allowInterruption);
+            },
+            webRtcEnabled: this.realtimeWebRtcEnabled,
+            sendStartWebRtc: function sendStartWebRtc(offerSdp, voice, language, silenceMs, vadThreshold, allowInterruption) {
+              self.connection.send('StartRealtimeWebRtc', self.getProfileId(), self.getSessionId() || '', offerSdp, voice, language, silenceMs, vadThreshold, allowInterruption);
+            },
+            webRtcIceServers: this.realtimeWebRtcIceServers || undefined,
+            voiceName: this.realtimeVoiceName || '',
+            getVoiceName: function getVoiceName() {
+              return self.realtimeVoiceName || '';
+            },
+            realtimeEnabled: true,
+            // The conversation button doubles as the realtime button on this host; the module owns its
+            // click, label and state from here on.
+            selectors: {
+              realtimeButton: config.conversationButtonElementSelector
+            },
+            onActivate: function onActivate() {
+              self.isConversationMode = true;
+              self._conversationAssistantMessage = null;
+              self._conversationPartialMessage = null;
+              self.removeNotification('conversation-ended');
+            },
+            onDeactivate: function onDeactivate() {
+              self.isConversationMode = false;
+              self.finishRealtimeConversationCleanup();
+            },
+            onUserTurnPending: function onUserTurnPending(turnId) {
+              self.addRealtimePendingTurn(turnId);
+            },
+            onUserTurnDropped: function onUserTurnDropped(turnId) {
+              self.dropRealtimePendingTurn(turnId);
+            }
+          });
+        },
+        // Shared teardown tail: clears any in-flight streaming state and shows the conversation-ended
+        // notification.
+        finishRealtimeConversationCleanup: function finishRealtimeConversationCleanup() {
+          if (this._conversationAssistantMessage) {
+            var m = this.messages[this._conversationAssistantMessage.index];
+            if (m) {
+              m.isStreaming = false;
+            }
+            this._conversationAssistantMessage = null;
+          }
+          for (var i = 0; i < this.messages.length; i++) {
+            if (this.messages[i].isStreaming) {
+              this.messages[i].isStreaming = false;
+            }
+          }
+          this.receiveNotification({
+            type: 'conversation-ended',
+            content: 'Conversation ended.',
+            icon: 'fa-solid fa-circle-check',
+            dismissible: true,
+            autoDismissMs: 5000
+          });
+        },
+        // The utterance has been captured but not transcribed yet. Showing a placeholder now puts the
+        // prompt above the reply it produces: transcription lags the spoken answer, so a bubble added only
+        // when the text arrives lands underneath its own reply.
+        addRealtimePendingTurn: function addRealtimePendingTurn(turnId) {
+          if (!turnId) {
+            return;
+          }
+          this._realtimePendingTurns = this._realtimePendingTurns || {};
+          var index = this.messages.length;
+          this.addMessage({
+            role: 'user',
+            content: '',
+            isPartial: true
+          });
+          this._realtimePendingTurns[turnId] = this.messages[index];
+        },
+        fillRealtimePendingTurn: function fillRealtimePendingTurn(pending, text) {
+          if (!pending) {
+            return;
+          }
+          if (!text) {
+            var emptyAt = this.messages.indexOf(pending);
+            if (emptyAt >= 0) {
+              this.messages.splice(emptyAt, 1);
+            }
+            return;
+          }
+          var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          pending.content = text;
+          pending.htmlContent = '<p>' + escaped + '</p>';
+          pending.isPartial = false;
+        },
+        dropRealtimePendingTurn: function dropRealtimePendingTurn(turnId) {
+          if (!turnId || !this._realtimePendingTurns) {
+            return;
+          }
+          var dropped = this._realtimePendingTurns[turnId];
+          if (!dropped) {
+            return;
+          }
+          delete this._realtimePendingTurns[turnId];
+          var at = this.messages.indexOf(dropped);
+          if (at >= 0) {
+            this.messages.splice(at, 1);
+          }
+        },
         startConversationMode: function startConversationMode() {
-          var _this16 = this;
+          var _this17 = this;
           if (!this.conversationModeEnabled || this.isConversationMode || !this.connection) {
             return;
           }
@@ -2026,99 +2394,36 @@ window.coreAIChatManager = function () {
               autoGainControl: true
             }
           }).then(function (stream) {
-            var mimeType = MediaRecorder.isTypeSupported('audio/ogg;codecs=opus') ? 'audio/ogg;codecs=opus' : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
-            _this16.mediaRecorder = new MediaRecorder(stream, {
-              mimeType: mimeType,
-              audioBitsPerSecond: 128000
-            });
-            _this16._conversationSubject = new signalR.Subject();
-            _this16._conversationStream = stream;
+            _this17._conversationSubject = new signalR.Subject();
+            _this17._conversationStream = stream;
 
-            // Create an AnalyserNode for volume-based interrupt detection.
-            // During TTS playback, detect when the user speaks above
-            // the threshold to stop TTS (interrupt). Audio chunks are
-            // always forwarded — browser echo cancellation handles
-            // speaker echo so the STT stream has no gaps.
-            var AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (AudioCtx) {
-              _this16._conversationAudioCtx = new AudioCtx();
-              _this16._conversationAnalyser = _this16._conversationAudioCtx.createAnalyser();
-              _this16._conversationAnalyser.fftSize = 256;
-              var micSource = _this16._conversationAudioCtx.createMediaStreamSource(stream);
-              micSource.connect(_this16._conversationAnalyser);
-            }
-            var pendingChunk = Promise.resolve();
-            var analyser = _this16._conversationAnalyser;
-            var interruptVolumeThreshold = 30;
-            _this16.mediaRecorder.addEventListener('dataavailable', function (e) {
-              if (e.data && e.data.size > 0) {
-                // During TTS playback, check mic volume to detect
-                // user interruption (speaking above threshold).
-                if (_this16.isPlayingAudio && analyser) {
-                  var freqData = new Uint8Array(analyser.frequencyBinCount);
-                  analyser.getByteFrequencyData(freqData);
-                  var sum = 0;
-                  for (var k = 0; k < freqData.length; k++) {
-                    sum += freqData[k];
-                  }
-                  var avg = sum / freqData.length;
-                  if (avg >= interruptVolumeThreshold) {
-                    // User is speaking — interrupt TTS playback.
-                    _this16.stopAudio();
-                  }
-                }
+            // RMS (0..1) above which speech during TTS playback counts as an interrupt.
+            var interruptRmsThreshold = 0.12;
 
-                // Always send audio to STT — browser echo cancellation
-                // handles speaker echo; continuous audio avoids gaps
-                // that increase recognition latency.
-                pendingChunk = pendingChunk.then(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
-                  var data, uint8Array, binaryString, base64;
-                  return _regenerator().w(function (_context8) {
-                    while (1) switch (_context8.n) {
-                      case 0:
-                        _context8.n = 1;
-                        return e.data.arrayBuffer();
-                      case 1:
-                        data = _context8.v;
-                        uint8Array = new Uint8Array(data);
-                        binaryString = uint8Array.reduce(function (str, _byte2) {
-                          return str + String.fromCharCode(_byte2);
-                        }, '');
-                        base64 = btoa(binaryString);
-                        try {
-                          _this16._conversationSubject.next(base64);
-                        } catch (err) {
-                          // Subject may have been completed already.
-                        }
-                      case 2:
-                        return _context8.a(2);
-                    }
-                  }, _callee8);
-                })));
+            // Capture raw 16 kHz PCM (16-bit mono) via Web Audio instead of MediaRecorder — see
+            // startRecording for why WebM/Opus is avoided. The per-block RMS drives interrupt
+            // detection during TTS playback, replacing the previous AnalyserNode.
+            _this17._conversationCapture = _this17._createPcmCapture(stream, function (base64, rms) {
+              if (_this17.isPlayingAudio && rms >= interruptRmsThreshold) {
+                // User is speaking over TTS — interrupt playback.
+                _this17.stopAudio();
+              }
+              try {
+                _this17._conversationSubject.next(base64);
+              } catch (err) {
+                // Subject may have been completed already.
               }
             });
-            _this16.mediaRecorder.addEventListener('stop', function () {
-              stream.getTracks().forEach(function (track) {
-                return track.stop();
-              });
-              pendingChunk.then(function () {
-                try {
-                  _this16._conversationSubject.complete();
-                } catch (err) {
-                  // Already completed.
-                }
-              });
-            });
-            var profileId = _this16.getProfileId();
-            var sessionId = _this16.getSessionId() || '';
+            var profileId = _this17.getProfileId();
+            var sessionId = _this17.getSessionId() || '';
             var language = navigator.language || document.documentElement.lang || 'en-US';
-            _this16.connection.send("StartConversation", profileId, sessionId, _this16._conversationSubject, mimeType, language);
-            _this16.mediaRecorder.start(250);
-            _this16.isRecording = true;
+            var rate = _this17._conversationCapture && _this17._conversationCapture.sampleRate || 16000;
+            _this17.connection.send("StartConversation", profileId, sessionId, _this17._conversationSubject, "audio/pcm;rate=" + rate, language);
+            _this17.isRecording = true;
           })["catch"](function (err) {
             console.error('Microphone access denied:', err);
-            _this16.isConversationMode = false;
-            _this16.updateConversationButton();
+            _this17.isConversationMode = false;
+            _this17.updateConversationButton();
           });
         },
         stopConversationMode: function stopConversationMode() {
@@ -2132,20 +2437,19 @@ window.coreAIChatManager = function () {
           if (this.connection) {
             this.connection.invoke("StopConversation")["catch"](function () {});
           }
-          if (this.isRecording && this.mediaRecorder) {
-            this.mediaRecorder.stop();
+          if (this.isRecording) {
+            this._stopPcmCapture(this._conversationCapture);
+            this._conversationCapture = null;
+            if (this._conversationSubject) {
+              try {
+                this._conversationSubject.complete();
+              } catch (err) {/* already completed */}
+            }
             this.isRecording = false;
           }
           this.stopAudio();
           this._conversationPartialTranscript = '';
           this._conversationPartialMessage = null;
-
-          // Clean up the AudioContext used for volume monitoring.
-          if (this._conversationAudioCtx) {
-            this._conversationAudioCtx.close()["catch"](function () {});
-            this._conversationAudioCtx = null;
-            this._conversationAnalyser = null;
-          }
 
           // Mark any in-flight assistant message as done to stop the spinner.
           if (this._conversationAssistantMessage) {
@@ -2245,7 +2549,7 @@ window.coreAIChatManager = function () {
           return removedCount;
         },
         receiveNotification: function receiveNotification(notification) {
-          var _this17 = this;
+          var _this18 = this;
           if (!notification || !notification.type) {
             return;
           }
@@ -2260,7 +2564,7 @@ window.coreAIChatManager = function () {
           }
           this.scheduleNotificationDismiss(notification);
           this.$nextTick(function () {
-            _this17.scrollToBottom();
+            _this18.scrollToBottom();
           });
         },
         updateNotification: function updateNotification(notification) {
@@ -2277,12 +2581,12 @@ window.coreAIChatManager = function () {
           }
         },
         scheduleNotificationDismiss: function scheduleNotificationDismiss(notification) {
-          var _this18 = this;
+          var _this19 = this;
           if (!notification || !notification.type || !notification.autoDismissMs || notification.autoDismissMs <= 0) {
             return;
           }
           this.notificationDismissTimers[notification.type] = setTimeout(function () {
-            _this18.removeNotification(notification.type);
+            _this19.removeNotification(notification.type);
           }, notification.autoDismissMs);
         },
         clearNotificationDismiss: function clearNotificationDismiss(notificationType) {
@@ -2312,12 +2616,12 @@ window.coreAIChatManager = function () {
           });
         },
         scrollToBottom: function scrollToBottom() {
-          var _this19 = this;
+          var _this20 = this;
           if (!this.autoScroll) {
             return;
           }
           setTimeout(function () {
-            _this19.chatContainer.scrollTop = _this19.chatContainer.scrollHeight - _this19.chatContainer.clientHeight;
+            _this20.chatContainer.scrollTop = _this20.chatContainer.scrollHeight - _this20.chatContainer.clientHeight;
           }, 50);
         },
         handleUserInput: function handleUserInput(event) {
@@ -2333,6 +2637,8 @@ window.coreAIChatManager = function () {
           this.inputElement.setAttribute('data-session-id', sessionId || '');
         },
         resetSession: function resetSession() {
+          // Force-stop an in-progress voice/realtime conversation so it doesn't keep running under the new session.
+          this.forceStopActiveVoice();
           this.stopRecording();
           this.rejectPendingSessionRequest('Session was reset.');
           this.setSessionId('');
@@ -2363,40 +2669,43 @@ window.coreAIChatManager = function () {
           if (!profileId || !this.connection) {
             return;
           }
+
+          // Force-stop any live voice/realtime session before starting a new chat.
+          this.forceStopActiveVoice();
           this.requestNewSession(profileId)["catch"](function (err) {
             return console.error(err);
           });
         },
         ensureSessionForDocuments: function ensureSessionForDocuments(profileId) {
-          var _this20 = this;
-          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
+          var _this21 = this;
+          return _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee8() {
             var sessionId;
-            return _regenerator().w(function (_context9) {
-              while (1) switch (_context9.n) {
+            return _regenerator().w(function (_context8) {
+              while (1) switch (_context8.n) {
                 case 0:
-                  sessionId = _this20.getSessionId();
+                  sessionId = _this21.getSessionId();
                   if (!sessionId) {
-                    _context9.n = 1;
+                    _context8.n = 1;
                     break;
                   }
-                  return _context9.a(2, sessionId);
+                  return _context8.a(2, sessionId);
                 case 1:
-                  if (!(!profileId || !_this20.connection)) {
-                    _context9.n = 2;
+                  if (!(!profileId || !_this21.connection)) {
+                    _context8.n = 2;
                     break;
                   }
-                  return _context9.a(2, null);
+                  return _context8.a(2, null);
                 case 2:
-                  _context9.n = 3;
-                  return _this20.requestNewSession(profileId);
+                  _context8.n = 3;
+                  return _this21.requestNewSession(profileId);
                 case 3:
-                  return _context9.a(2, _context9.v);
+                  return _context8.a(2, _context8.v);
               }
-            }, _callee9);
+            }, _callee8);
           }))();
         },
         requestNewSession: function requestNewSession(profileId) {
-          var _this21 = this;
+          var _this22 = this;
           if (this.pendingSessionPromise) {
             return this.pendingSessionPromise;
           }
@@ -2404,14 +2713,14 @@ window.coreAIChatManager = function () {
             return Promise.resolve(null);
           }
           this.pendingSessionPromise = new Promise(function (resolve, reject) {
-            _this21.pendingSessionResolver = resolve;
-            _this21.pendingSessionRejector = reject;
-            _this21.pendingSessionTimeoutId = window.setTimeout(function () {
-              _this21.rejectPendingSessionRequest('Timed out while creating a chat session.');
+            _this22.pendingSessionResolver = resolve;
+            _this22.pendingSessionRejector = reject;
+            _this22.pendingSessionTimeoutId = window.setTimeout(function () {
+              _this22.rejectPendingSessionRequest('Timed out while creating a chat session.');
             }, 15000);
           });
           this.connection.invoke("StartSession", profileId, null)["catch"](function (err) {
-            _this21.rejectPendingSessionRequest(err);
+            _this22.rejectPendingSessionRequest(err);
           });
           return this.pendingSessionPromise;
         },
@@ -2437,7 +2746,7 @@ window.coreAIChatManager = function () {
           this.pendingSessionTimeoutId = null;
         },
         initializeApp: function initializeApp() {
-          var _this22 = this;
+          var _this23 = this;
           this.inputElement = document.querySelector(config.inputElementSelector);
           this.buttonElement = document.querySelector(config.sendButtonElementSelector);
           this.chatContainer = document.querySelector(config.chatContainerElementSelector);
@@ -2473,7 +2782,7 @@ window.coreAIChatManager = function () {
                 fileInput.accept = config.allowedExtensions;
               }
               fileInput.addEventListener('change', function (e) {
-                return _this22.handleFileInputChange(e);
+                return _this23.handleFileInputChange(e);
               });
               this.documentBar.parentElement.appendChild(fileInput);
 
@@ -2481,13 +2790,13 @@ window.coreAIChatManager = function () {
               var inputArea = this.inputElement ? this.inputElement.closest('.ai-admin-widget-input, .text-bg-light') : null;
               if (inputArea) {
                 inputArea.addEventListener('dragover', function (e) {
-                  return _this22.handleDragOver(e);
+                  return _this23.handleDragOver(e);
                 });
                 inputArea.addEventListener('dragleave', function (e) {
-                  return _this22.handleDragLeave(e);
+                  return _this23.handleDragLeave(e);
                 });
                 inputArea.addEventListener('drop', function (e) {
-                  return _this22.handleDrop(e);
+                  return _this23.handleDrop(e);
                 });
               }
             }
@@ -2495,55 +2804,55 @@ window.coreAIChatManager = function () {
 
           // Pause auto-scroll when the user manually scrolls up during streaming.
           this.chatContainer.addEventListener('scroll', function () {
-            if (!_this22.stream) {
+            if (!_this23.stream) {
               return;
             }
             var threshold = 30;
-            var atBottom = _this22.chatContainer.scrollHeight - _this22.chatContainer.clientHeight - _this22.chatContainer.scrollTop <= threshold;
-            _this22.autoScroll = atBottom;
+            var atBottom = _this23.chatContainer.scrollHeight - _this23.chatContainer.clientHeight - _this23.chatContainer.scrollTop <= threshold;
+            _this23.autoScroll = atBottom;
           });
           this.inputElement.addEventListener('keydown', function (event) {
-            if (_this22.stream != null) {
+            if (_this23.stream != null) {
               return;
             }
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
-              _this22.buttonElement.click();
+              _this23.buttonElement.click();
             }
           });
           this.inputElement.addEventListener('input', function (e) {
-            _this22.handleUserInput(e);
+            _this23.handleUserInput(e);
             if (e.target.value.trim()) {
-              _this22.buttonElement.removeAttribute('disabled');
+              _this23.buttonElement.removeAttribute('disabled');
             } else {
-              _this22.buttonElement.setAttribute('disabled', true);
+              _this23.buttonElement.setAttribute('disabled', true);
             }
           });
           this.buttonElement.addEventListener('click', function () {
-            if (_this22.stream != null) {
-              _this22.stream.dispose();
-              _this22.stream = null;
-              _this22.streamingFinished();
-              _this22.hideTypingIndicator();
+            if (_this23.stream != null) {
+              _this23.stream.dispose();
+              _this23.stream = null;
+              _this23.streamingFinished();
+              _this23.hideTypingIndicator();
 
               // Clean up: remove empty assistant message or stop streaming animation.
-              if (_this22.messages.length > 0) {
-                var lastMsg = _this22.messages[_this22.messages.length - 1];
+              if (_this23.messages.length > 0) {
+                var lastMsg = _this23.messages[_this23.messages.length - 1];
                 if (lastMsg.role === 'assistant' && !lastMsg.content) {
-                  _this22.messages.pop();
+                  _this23.messages.pop();
                 } else if (lastMsg.isStreaming) {
                   lastMsg.isStreaming = false;
                 }
               }
               return;
             }
-            _this22.sendMessage();
+            _this23.sendMessage();
           });
           var promptGenerators = document.getElementsByClassName('profile-generated-prompt');
           for (var i = 0; i < promptGenerators.length; i++) {
             promptGenerators[i].addEventListener('click', function (e) {
               e.preventDefault();
-              _this22.generatePrompt(e.target);
+              _this23.generatePrompt(e.target);
             });
           }
           var chatSessions = document.getElementsByClassName('chat-session-history-item');
@@ -2555,8 +2864,8 @@ window.coreAIChatManager = function () {
                 console.error('an element with the class chat-session-history-item with no data-session-id set.');
                 return;
               }
-              _this22.loadSession(sessionId);
-              _this22.showChatScreen();
+              _this23.loadSession(sessionId);
+              _this23.showChatScreen();
             });
           }
           var initialMessages = Array.isArray(config.messages) ? config.messages : [];
@@ -2575,7 +2884,7 @@ window.coreAIChatManager = function () {
 
           // Update feedback icons in the DOM after initial messages have rendered.
           this.$nextTick(function () {
-            _this22.refreshAllFeedbackIcons();
+            _this23.refreshAllFeedbackIcons();
           });
 
           // Delegate click for code block copy buttons.
@@ -2607,18 +2916,24 @@ window.coreAIChatManager = function () {
             if (this.micButton) {
               this.micButton.style.display = '';
               this.micButton.addEventListener('click', function () {
-                _this22.toggleRecording();
+                _this23.toggleRecording();
               });
             }
           }
 
-          // Initialize conversation mode button.
-          if (this.conversationModeEnabled && config.conversationButtonElementSelector) {
+          // Initialize conversation mode button (used for both STT/TTS conversation and realtime).
+          if ((this.conversationModeEnabled || this.realtimeEnabled) && config.conversationButtonElementSelector) {
             this.conversationButton = document.querySelector(config.conversationButtonElementSelector);
             if (this.conversationButton) {
-              this.conversationButton.addEventListener('click', function () {
-                _this22.toggleConversationMode();
-              });
+              if (this.realtimeEnabled) {
+                // The shared realtime module owns the button (click, label, state) and adds the
+                // voice settings popover next to it.
+                this.setupRealtimeController(config);
+              } else {
+                this.conversationButton.addEventListener('click', function () {
+                  _this23.toggleConversationMode();
+                });
+              }
             }
           }
           return true;
@@ -2679,28 +2994,28 @@ window.coreAIChatManager = function () {
           this.copiedMessageIndex = -1;
         },
         copyResponse: function copyResponse(message, index, event) {
-          var _ref25,
+          var _ref23,
             _message$copyContent,
             _event$target,
             _event$target$closest,
-            _this23 = this;
-          var text = message && _typeof(message) === 'object' ? (_ref25 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref25 !== void 0 ? _ref25 : '' : message !== null && message !== void 0 ? message : '';
+            _this24 = this;
+          var text = message && _typeof(message) === 'object' ? (_ref23 = (_message$copyContent = message.copyContent) !== null && _message$copyContent !== void 0 ? _message$copyContent : message.content) !== null && _ref23 !== void 0 ? _ref23 : '' : message !== null && message !== void 0 ? message : '';
           var button = (event === null || event === void 0 ? void 0 : event.currentTarget) || (event === null || event === void 0 || (_event$target = event.target) === null || _event$target === void 0 || (_event$target$closest = _event$target.closest) === null || _event$target$closest === void 0 ? void 0 : _event$target$closest.call(_event$target, '[data-copy-message-index]')) || null;
           navigator.clipboard.writeText(text).then(function () {
-            _this23.clearCopiedMessageState();
-            _this23.copiedMessageIndex = typeof index === 'number' ? index : -1;
-            _this23.activeCopyButton = button;
+            _this24.clearCopiedMessageState();
+            _this24.copiedMessageIndex = typeof index === 'number' ? index : -1;
+            _this24.activeCopyButton = button;
             if (button) {
-              _this23.setCopyButtonState(button, true);
+              _this24.setCopyButtonState(button, true);
             } else {
-              _this23.$nextTick(function () {
-                return _this23.updateCopyButtons();
+              _this24.$nextTick(function () {
+                return _this24.updateCopyButtons();
               });
             }
-            _this23.copyResetTimeoutId = window.setTimeout(function () {
-              _this23.clearCopiedMessageState();
-              _this23.$nextTick(function () {
-                return _this23.updateCopyButtons();
+            _this24.copyResetTimeoutId = window.setTimeout(function () {
+              _this24.clearCopiedMessageState();
+              _this24.$nextTick(function () {
+                return _this24.updateCopyButtons();
               });
             }, Number(config.copyResetDelayMs) || 2000);
           })["catch"](function (err) {
@@ -2801,9 +3116,9 @@ window.coreAIChatManager = function () {
           // no longer mutes tracks; browser echo cancellation handles echo.
         },
         copiedMessageIndex: function copiedMessageIndex() {
-          var _this24 = this;
+          var _this25 = this;
           this.$nextTick(function () {
-            return _this24.updateCopyButtons();
+            return _this25.updateCopyButtons();
           });
         },
         isConversationMode: function isConversationMode(active) {
@@ -2827,28 +3142,28 @@ window.coreAIChatManager = function () {
         }
       },
       mounted: function mounted() {
-        var _this25 = this;
-        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee0() {
+        var _this26 = this;
+        _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee9() {
           var isInitialized;
-          return _regenerator().w(function (_context0) {
-            while (1) switch (_context0.n) {
+          return _regenerator().w(function (_context9) {
+            while (1) switch (_context9.n) {
               case 0:
-                _context0.n = 1;
-                return _this25.startConnection();
+                _context9.n = 1;
+                return _this26.startConnection();
               case 1:
-                isInitialized = _this25.initializeApp();
+                isInitialized = _this26.initializeApp();
                 if (isInitialized && hasWidgetConfig && widgetBehavior && typeof widgetBehavior.onMounted === 'function') {
-                  widgetBehavior.onMounted(_this25, config);
+                  widgetBehavior.onMounted(_this26, config);
                 }
-                _this25.$nextTick(function () {
-                  _this25.updateCopyButtons();
-                  refreshFontAwesomeIcons(_this25.$el);
-                  _this25.fontAwesomeObserver = observeFontAwesomeIcons(_this25.$el);
+                _this26.$nextTick(function () {
+                  _this26.updateCopyButtons();
+                  refreshFontAwesomeIcons(_this26.$el);
+                  _this26.fontAwesomeObserver = observeFontAwesomeIcons(_this26.$el);
                 });
               case 2:
-                return _context0.a(2);
+                return _context9.a(2);
             }
-          }, _callee0);
+          }, _callee9);
         }))();
         window.addEventListener('beforeunload', this.handleBeforeUnload);
         window.addEventListener('crestapps-ai-chat-stop-tts', this.handleExternalTtsStop);
@@ -2936,6 +3251,7 @@ window.coreAIChatManager = function () {
       micButtonElementSelector: getAttributeValue(element, 'data-coreai-chat-mic-button-element-selector'),
       conversationButtonElementSelector: getAttributeValue(element, 'data-coreai-chat-conversation-button-element-selector'),
       ttsVoiceName: getAttributeValue(element, 'data-coreai-chat-tts-voice-name'),
+      realtimeVoiceName: getAttributeValue(element, 'data-coreai-chat-realtime-voice-name'),
       documentBarSelector: getAttributeValue(element, 'data-coreai-chat-document-bar-selector'),
       uploadDocumentUrl: getAttributeValue(element, 'data-coreai-chat-upload-document-url'),
       removeDocumentUrl: getAttributeValue(element, 'data-coreai-chat-remove-document-url'),
@@ -2953,7 +3269,9 @@ window.coreAIChatManager = function () {
       metricsEnabled: 'data-coreai-chat-metrics-enabled',
       textToSpeechEnabled: 'data-coreai-chat-text-to-speech-enabled',
       sessionDocumentsEnabled: 'data-coreai-chat-session-documents-enabled',
-      singleResponseMode: 'data-coreai-chat-single-response-mode'
+      singleResponseMode: 'data-coreai-chat-single-response-mode',
+      realtimeEnabled: 'data-coreai-chat-realtime-enabled',
+      realtimeWebRtcEnabled: 'data-coreai-chat-realtime-webrtc-enabled'
     };
     Object.keys(booleanAttributes).forEach(function (key) {
       var parsed = parseBooleanAttributeValue(getAttributeValue(element, booleanAttributes[key]));

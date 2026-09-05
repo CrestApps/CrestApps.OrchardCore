@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
+using OrchardCore.FileStorage;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContentTransfer.Services;
@@ -19,17 +20,20 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly IOptions<ContentImportOptions> _options;
+    private readonly ITempDirectoryProvider _tempDirectoryProvider;
     private readonly string _tempFileNamePrefix;
 
     public ContentTransferChunkFileUploadService(
         ShellSettings shellSettings,
         IClock clock,
         ILogger<ContentTransferChunkFileUploadService> logger,
-        IOptions<ContentImportOptions> options)
+        IOptions<ContentImportOptions> options,
+        ITempDirectoryProvider tempDirectoryProvider)
     {
         _clock = clock;
         _logger = logger;
         _options = options;
+        _tempDirectoryProvider = tempDirectoryProvider;
         _tempFileNamePrefix = shellSettings.Name + "_";
     }
 
@@ -169,8 +173,8 @@ public sealed class ContentTransferChunkFileUploadService : IContentTransferChun
             FileName = formFile.FileName,
         };
 
-    private static string GetTempFolderPath()
-        => Path.Combine(Path.GetTempPath(), TempFolderName);
+    private string GetTempFolderPath()
+        => Path.Combine(_tempDirectoryProvider.GetRootDirectory(), TempFolderName);
 
     private string GetTempFilePath(Guid uploadId, IFormFile formFile)
         => Path.Combine(GetTempFolderPath(), _tempFileNamePrefix + CalculateHash(uploadId.ToString("N"), formFile.FileName, formFile.Name));

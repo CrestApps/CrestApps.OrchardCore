@@ -1,4 +1,6 @@
 @using CrestApps.Core
+@using CrestApps.Core.AI.Capabilities
+@using CrestApps.Core.AI.Chat.Realtime
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Documents.Models
 @using CrestApps.OrchardCore.AI.Core
@@ -18,6 +20,7 @@
 @inject AIChatProfileAccessEvaluator AIChatProfileAccessEvaluator
 @inject ShellSettings ShellSettings
 @inject IAIDeploymentManager AIDeploymentManager
+@inject IAIDeploymentCapabilityService CapabilityService
 
 @{
     ContentItem contentItem = Model.ContentItem;
@@ -97,14 +100,33 @@
     var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true)
         && textToSpeechDeployment != null;
     var ttsVoiceName = chatModeSettings?.VoiceName;
+
+    // Realtime (speech-to-speech): enabled when the profile's chat mode is Realtime and either the profile's
+    // deployment declares the realtime capability or a default realtime deployment is available. Realtime is
+    // audio-only and reuses the conversation button as the "Start speaking" toggle (see ai-chat.js).
+    var selectedDeploymentName = profile.ChatDeploymentName;
+    var selectedDeploymentIsRealtime = !string.IsNullOrWhiteSpace(selectedDeploymentName)
+        && (await CapabilityService.GetCapabilitiesAsync(selectedDeploymentName)).SupportsFeature(AIDeploymentFeatureNames.Realtime);
+    var hasRealtime = selectedDeploymentIsRealtime
+        || await CapabilityService.ResolveDeploymentWithFeatureAsync(AIDeploymentFeatureNames.Realtime) is not null;
+
     var effectiveChatMode = chatMode switch
     {
+        ChatMode.Realtime when hasRealtime => ChatMode.Realtime,
+        ChatMode.Realtime when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
         ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
         ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
         ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
         _ => ChatMode.TextInput,
     };
+
+    var realtimeEnabled = effectiveChatMode == ChatMode.Realtime;
+    var realtimeWebRtcEnabled = realtimeEnabled && RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
+    var realtimeVoiceName = chatModeSettings?.VoiceName;
+
+    // The conversation button doubles as the realtime "Start speaking" toggle, so render it for both modes.
     var conversationModeEnabled = effectiveChatMode == ChatMode.Conversation;
+    var conversationButtonVisible = conversationModeEnabled || realtimeEnabled;
     var micBtnHtmlId = $"{baseId}_MicBtn";
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
     var orchestratorAvailability = new OrchestratorAvailability();
@@ -227,6 +249,7 @@
                       data-profile-id="@(profile.ItemId)"
                       placeholder="@T["Message..."]"
                       rows="1"
+                      hidden="@realtimeEnabled"
                       aria-label="@T["Message"]"></textarea>
 
             <button class="stt-mic-btn btn btn-outline-secondary btn-sm"
@@ -237,7 +260,21 @@
                 <i class="fa-solid fa-microphone"></i>
             </button>
 
-            @if (conversationModeEnabled)
+            @if (realtimeEnabled)
+            {
+                <button class="btn btn-outline-dark btn-sm flex-grow-1"
+                        type="button"
+                        id="@conversationBtnHtmlId"
+                        title="@T["Start speaking"]"
+                        data-start-title="@T["Start speaking"]"
+                        data-end-title="@T["End Conversation"]"
+                        data-start-html="<i class='fa-solid fa-wave-square me-1'></i> @T["Start speaking"]"
+                        data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+                    <i class="fa-solid fa-wave-square me-1"></i>
+                    <span>@T["Start speaking"]</span>
+                </button>
+            }
+            else if (conversationModeEnabled)
             {
                 <button class="btn btn-outline-dark btn-sm"
                         type="button"
@@ -255,6 +292,7 @@
 
             <button id="@buttonHtmlId"
                     disabled
+                    hidden="@realtimeEnabled"
                     data-start-icon="<i class='fa-solid fa-arrow-up'></i>"
                     data-stop-icon="<i class='fa-solid fa-stop'></i>">
 
@@ -336,6 +374,11 @@
             conversationButtonElementSelector = $"#{conversationBtnHtmlId}",
             textToSpeechEnabled,
             visionEnabled,
+            // Realtime (speech-to-speech). ai-chat.js reuses the conversation button as the realtime toggle and
+            // drives capture/playback via the shared realtime-audio.js controller (window.CoreAIRealtime).
+            realtimeEnabled,
+            realtimeWebRtcEnabled,
+            realtimeVoiceName = string.IsNullOrWhiteSpace(realtimeVoiceName) ? null : realtimeVoiceName,
             isOrchestratorAvailable = orchestratorAvailability.IsAvailable,
             orchestratorUnavailableMessage = orchestratorAvailability.IsAvailable ? null : orchestratorAvailability.Message,
             sessionDocumentsEnabled,

@@ -3,22 +3,40 @@
 
 @model AIProfileChatModeViewModel
 
+@{
+    var realtimeVoicesUrl = Url.Action("Voices", "Realtime", new { area = "CrestApps.OrchardCore.AI.Chat" });
+}
+
 <div class="ocat-wrapper profile-type profile-type-chat">
     <label asp-for="ChatMode" class="ocat-label">@T["Chat mode"]</label>
     <div class="ocat-end">
         <select asp-for="ChatMode" asp-items="Model.AvailableModes" class="form-select" id="chatModeSelector">
         </select>
-        <span class="hint">@T["Controls how users interact with this chat profile. Audio input adds a microphone for dictation. Conversation enables continuous two-way voice interaction."]</span>
+        <span class="hint">@T["Controls how users interact with this chat profile. Audio input adds a microphone for dictation. Conversation enables two-way voice (speech-to-text + text-to-speech). Realtime is a voice-only speech-to-speech session backed by a realtime deployment."]</span>
     </div>
 </div>
+
+@if (Model.HasRealtime)
+{
+    <div class="ocat-wrapper profile-type profile-type-chat" id="realtimeDeploymentSelector" style="display: none;">
+        <label asp-for="RealtimeDeploymentName" class="ocat-label">@T["Realtime deployment"]</label>
+        <div class="ocat-end">
+            <select asp-for="RealtimeDeploymentName" asp-items="Model.RealtimeDeployments" class="form-select" id="realtimeDeploymentSelect">
+                <option value="">@T["Use default realtime deployment"]</option>
+            </select>
+            <span class="hint">@T["The realtime (speech-to-speech) deployment that backs the voice session. Leave empty to use the site's default realtime deployment. Voice uses this deployment, independent of the text orchestrator."]</span>
+        </div>
+    </div>
+}
 
 <div class="ocat-wrapper profile-type profile-type-chat" id="chatModeVoiceSelector" style="display: none;">
     <label asp-for="VoiceName" class="ocat-label">@T["Voice"]</label>
     <div class="ocat-end">
-        <select asp-for="VoiceName" asp-items="Model.AvailableVoices" class="form-select">
+        <select asp-for="VoiceName" asp-items="Model.AvailableVoices" class="form-select" id="chatModeVoiceSelect"
+                data-voice-name="@Model.VoiceName">
             <option value="">@T["Default voice"]</option>
         </select>
-        <span class="hint">@T["Select a voice for text-to-speech synthesis. If no voice is selected, the provider's default voice is used."]</span>
+        <span class="hint">@T["Select a voice for Conversation (text-to-speech) or Realtime (speech-to-speech). Realtime voices come from the selected realtime deployment. Leave empty to use the default voice."]</span>
     </div>
 </div>
 
@@ -33,16 +51,102 @@
 </div>
 
 <script at="Foot">
-    document.addEventListener('DOMContentLoaded', function () {
-        var chatModeSelect = document.getElementById('chatModeSelector');
-        var voiceSelector = document.getElementById('chatModeVoiceSelector');
-        if (!chatModeSelect || !voiceSelector) return;
+    (function () {
+        function init() {
+            var chatModeSelect = document.getElementById('chatModeSelector');
+            var voiceSelector = document.getElementById('chatModeVoiceSelector');
+            var voiceSelect = document.getElementById('chatModeVoiceSelect');
+            var realtimeGroup = document.getElementById('realtimeDeploymentSelector');
+            var realtimeSelect = document.getElementById('realtimeDeploymentSelect');
 
-        function toggleVoiceSelector() {
-            voiceSelector.style.display = chatModeSelect.value === '@nameof(ChatMode.Conversation)' ? '' : 'none';
+            if (!chatModeSelect || !voiceSelector) {
+                return;
+            }
+
+            var conversationMode = '@nameof(ChatMode.Conversation)';
+            var realtimeMode = '@nameof(ChatMode.Realtime)';
+            var voicesUrl = '@realtimeVoicesUrl';
+            var selectedVoice = voiceSelect ? (voiceSelect.getAttribute('data-voice-name') || '') : '';
+
+            // The text-to-speech voices rendered on the server, restored when leaving realtime mode.
+            var ttsOptionsHtml = voiceSelect ? voiceSelect.innerHTML : '';
+
+            function setVoiceOptions(html) {
+                if (voiceSelect) {
+                    voiceSelect.innerHTML = html;
+                    voiceSelect.value = selectedVoice;
+                }
+            }
+
+            async function loadRealtimeVoices() {
+                if (!voiceSelect || !voicesUrl) {
+                    return;
+                }
+
+                var deploymentName = realtimeSelect ? realtimeSelect.value : '';
+                var html = '<option value="">@T["Default voice"]</option>';
+
+                try {
+                    var response = await fetch(voicesUrl + '?deploymentName=' + encodeURIComponent(deploymentName), { credentials: 'same-origin' });
+                    var result = await response.json();
+
+                    if (result && Array.isArray(result.voices)) {
+                        var grouped = {};
+                        result.voices.forEach(function (voice) {
+                            var group = voice.gender || 'Voices';
+                            (grouped[group] = grouped[group] || []).push(voice);
+                        });
+
+                        Object.keys(grouped).sort().forEach(function (group) {
+                            html += '<optgroup label="' + group + '">';
+                            grouped[group].forEach(function (voice) {
+                                html += '<option value="' + voice.id + '">' + voice.name + '</option>';
+                            });
+                            html += '</optgroup>';
+                        });
+                    }
+                } catch (e) {
+                    /* ignore voice load failures */
+                }
+
+                setVoiceOptions(html);
+            }
+
+            function apply() {
+                var mode = chatModeSelect.value;
+                var isRealtime = mode === realtimeMode;
+                var isConversation = mode === conversationMode;
+
+                voiceSelector.style.display = (isRealtime || isConversation) ? '' : 'none';
+
+                if (realtimeGroup) {
+                    realtimeGroup.style.display = isRealtime ? '' : 'none';
+                }
+
+                if (isRealtime) {
+                    loadRealtimeVoices();
+                } else if (isConversation) {
+                    setVoiceOptions(ttsOptionsHtml);
+                }
+            }
+
+            chatModeSelect.addEventListener('change', apply);
+
+            if (realtimeSelect) {
+                realtimeSelect.addEventListener('change', function () {
+                    if (chatModeSelect.value === realtimeMode) {
+                        loadRealtimeVoices();
+                    }
+                });
+            }
+
+            apply();
         }
 
-        chatModeSelect.addEventListener('change', toggleVoiceSelector);
-        toggleVoiceSelector();
-    });
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
 </script>

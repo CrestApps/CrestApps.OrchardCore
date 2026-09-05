@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI.Deployments;
+﻿using CrestApps.Core.AI.Capabilities;
+using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -22,6 +23,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIDeploymentCapabilityService _capabilityService;
 
     internal readonly IStringLocalizer S;
 
@@ -38,11 +40,13 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IAIDeploymentManager deploymentManager,
+        IAIDeploymentCapabilityService capabilityService,
         IStringLocalizer<ChatInteractionChatModeSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _deploymentManager = deploymentManager;
+        _capabilityService = capabilityService;
         S = stringLocalizer;
     }
 
@@ -93,6 +97,13 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
         if (hasSpeechToText && hasTextToSpeech)
         {
             modes.Add(new SelectListItem(S["Conversation"], nameof(ChatMode.Conversation)));
+        }
+
+        var realtimeDeployments = await _capabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
+
+        if (realtimeDeployments.Count > 0)
+        {
+            modes.Add(new SelectListItem(S["Realtime (speech-to-speech)"], nameof(ChatMode.Realtime)));
         }
 
         return modes;

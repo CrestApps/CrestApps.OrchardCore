@@ -1,0 +1,305 @@
+@using CrestApps.Core.AI.Tooling
+@using CrestApps.Core.AI.Tooling.Parameters
+@using CrestApps.OrchardCore.AI.ViewModels
+@model EditToolInstanceParametersViewModel
+
+@{
+    var capabilities = Model.ParameterCapabilities ?? new Dictionary<string, AIToolInstanceParameterCapabilities>();
+    var contextKeys = Model.ContextKeys ?? [];
+    var capableSources = capabilities.Count > 0
+        ? string.Join(",", capabilities.Keys)
+        : "__none__";
+
+    var reservedMap = System.Text.Json.JsonSerializer.Serialize(
+        capabilities.ToDictionary(entry => entry.Key, entry => entry.Value.ReservedNames ?? []));
+
+    var namePrefix = string.IsNullOrEmpty(ViewData.TemplateInfo.HtmlFieldPrefix) ? string.Empty : ViewData.TemplateInfo.HtmlFieldPrefix + ".";
+}
+
+@functions {
+    private static string FillLabel(AIToolParameterFill fill) => fill switch
+    {
+        AIToolParameterFill.Fixed => "Fixed value",
+        AIToolParameterFill.Context => "From context",
+        _ => "AI model provides",
+    };
+}
+
+<script asp-name="tool-instance-parameters" at="Foot"></script>
+
+<div class="source-fields" data-source="@capableSources">
+    <h5 class="mt-4 border-bottom pb-2"><i class="fa-solid fa-sliders"></i> @T["Parameters"]</h5>
+
+    <p class="text-body-secondary small">
+        @T["Parameters define exactly what this tool accepts. The model sees the ones you mark AI model provides and fills them in when it calls the tool; fixed and context values are applied on the server and are never shown to the model."]
+    </p>
+
+    <div id="parametersValidation" class="text-danger small mb-2">
+        @Html.ValidationMessage("Parameters")
+    </div>
+
+    <div id="parametersList" data-reserved-map="@reservedMap">
+        @for (var i = 0; i < Model.Parameters.Count; i++)
+        {
+            var parameter = Model.Parameters[i];
+
+            <div class="card mb-2 parameter-row">
+                <div class="card-body py-3">
+                    <div class="row g-2">
+                        <div class="col-12 col-xl-3">
+                            <label class="form-label small mb-1">@T["Name"] <span class="text-danger">*</span></label>
+                            <input name="@(namePrefix)Parameters[@i].Name" value="@parameter.Name" class="form-control form-control-sm font-monospace param-name" placeholder="orderId" />
+                        </div>
+                        <div class="col-6 col-xl-2">
+                            <label class="form-label small mb-1">@T["Type"]</label>
+                            <select name="@(namePrefix)Parameters[@i].Type" class="form-select form-select-sm param-type">
+                                @foreach (var type in Enum.GetValues<AIToolParameterType>())
+                                {
+                                    <option value="@type" selected="@(parameter.Type == type)">@type</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-6 col-xl-3">
+                            <label class="form-label small mb-1">@T["Filled by"]</label>
+                            <select name="@(namePrefix)Parameters[@i].Fill" class="form-select form-select-sm param-fill">
+                                @foreach (var fill in Enum.GetValues<AIToolParameterFill>())
+                                {
+                                    <option value="@fill" selected="@(parameter.Fill == fill)">@FillLabel(fill)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-10 col-xl-3">
+                            <label class="form-label small mb-1">@T["Send as"] <span class="text-danger">*</span></label>
+                            <select name="@(namePrefix)Parameters[@i].BindingTarget" class="form-select form-select-sm param-binding">
+                                <option value="">@T["Choose…"]</option>
+                                @foreach (var (sourceName, capability) in capabilities)
+                                {
+                                    foreach (var binding in capability.Bindings)
+                                    {
+                                        <option value="@binding.Target"
+                                                data-source="@sourceName"
+                                                data-fills="@string.Join(",", (binding.AllowedFills ?? Enum.GetValues<AIToolParameterFill>()).Select(f => f.ToString()))"
+                                                title="@binding.Hint?.Value"
+                                                selected="@(string.Equals(parameter.BindingTarget, binding.Target, StringComparison.OrdinalIgnoreCase))">
+                                            @(binding.DisplayName?.Value ?? binding.Target)
+                                        </option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-2 col-xl-1 d-flex align-items-end justify-content-end">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-parameter" title="@T["Remove parameter"]">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1 fill-model">
+                        <div class="col-12 col-xl-8">
+                            <label class="form-label small mb-1">@T["Description"] <span class="text-danger">*</span></label>
+                            <input name="@(namePrefix)Parameters[@i].Description" value="@parameter.Description" class="form-control form-control-sm" placeholder="The order to look up." />
+                            <div class="form-text">@T["The model reads this to decide what to pass."]</div>
+                        </div>
+                        <div class="col-6 col-xl-2">
+                            <label class="form-label small mb-1">@T["Default"]</label>
+                            <input name="@(namePrefix)Parameters[@i].DefaultValue" value="@parameter.DefaultValue" class="form-control form-control-sm param-default" />
+                        </div>
+                        <div class="col-6 col-xl-2 d-flex align-items-center pt-3">
+                            <div class="form-check">
+                                <input type="checkbox" name="@(namePrefix)Parameters[@i].Required" value="true" class="form-check-input param-required" checked="@parameter.Required" />
+                                <input type="hidden" name="@(namePrefix)Parameters[@i].Required" value="false" />
+                                <label class="form-check-label small">@T["Required"]</label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small mb-1">@T["Allowed values"]</label>
+                            <input name="@(namePrefix)Parameters[@i].AllowedValues" value="@parameter.AllowedValues" class="form-control form-control-sm" placeholder="open, closed, cancelled" />
+                            <div class="form-text">@T["Optional, comma separated. Leave blank to accept any value of the selected type."]</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1 fill-fixed">
+                        <div class="col-12 col-xl-8">
+                            <label class="form-label small mb-1">@T["Value"] <span class="text-danger">*</span></label>
+                            <input name="@(namePrefix)Parameters[@i].FixedValue" value="@parameter.FixedValue"
+                                   class="form-control form-control-sm param-fixed-value"
+                                   type="@(parameter.IsSecret ? "password" : "text")"
+                                   autocomplete="new-password"
+                                   placeholder="@(parameter.HasStoredSecret ? T["•••• stored — leave blank to keep"].Value : null)" />
+                        </div>
+                        <div class="col-12 col-xl-4 d-flex align-items-center pt-3">
+                            <div class="form-check">
+                                <input type="checkbox" name="@(namePrefix)Parameters[@i].IsSecret" value="true" class="form-check-input param-secret" checked="@parameter.IsSecret" />
+                                <input type="hidden" name="@(namePrefix)Parameters[@i].IsSecret" value="false" />
+                                <label class="form-check-label small">@T["Treat as secret"]</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1 fill-context">
+                        <div class="col-12 col-xl-8">
+                            <label class="form-label small mb-1">@T["Context key"] <span class="text-danger">*</span></label>
+                            <select name="@(namePrefix)Parameters[@i].ContextKey" class="form-select form-select-sm param-context">
+                                <option value="">@T["Choose…"]</option>
+                                @foreach (var key in contextKeys)
+                                {
+                                    <option value="@key.Key" title="@key.Description" selected="@(string.Equals(parameter.ContextKey, key.Key, StringComparison.OrdinalIgnoreCase))">@key.DisplayName</option>
+                                }
+                            </select>
+                            <div class="form-text">@T["Resolved on the server for every call. The model never sees or supplies this value."]</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1">
+                        <div class="col-12">
+                            <a class="small toggle-advanced" href="#" role="button">@T["Advanced"]</a>
+                            <div class="advanced-fields mt-1" style="display:none;">
+                                <label class="form-label small mb-1">@T["Target name"]</label>
+                                <input name="@(namePrefix)Parameters[@i].BindingName" value="@parameter.BindingName" class="form-control form-control-sm font-monospace param-binding-name" />
+                                <div class="form-text">@T["The query key, header name, path token, or dotted body path. Defaults to the parameter name."]</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-danger small mt-1">@Html.ValidationMessage($"Parameters[{i}].Name")</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div id="parametersEmpty" class="border rounded p-3 text-center text-body-secondary" style="display:none;">
+        <p class="mb-2 small">@T["No parameters yet. The model will only see the free-form arguments enabled below."]</p>
+        <button type="button" class="btn btn-sm btn-outline-secondary preset-parameter" data-preset="query">@T["Add a query parameter"]</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary preset-parameter" data-preset="path">@T["Add a path segment"]</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary preset-parameter" data-preset="user">@T["Add current user ID"]</button>
+    </div>
+
+    <button type="button" id="addParameter" class="btn btn-sm btn-outline-primary mt-2">
+        <i class="fa-solid fa-plus"></i> @T["Add parameter"]
+    </button>
+
+    <div class="card bg-body-tertiary mt-3">
+        <div class="card-body py-2">
+            <div class="small text-body-secondary mb-1">@T["Preview"]</div>
+            <div id="parameterPreviewRequest" class="font-monospace small text-break"></div>
+            <div id="parameterPreviewNotes" class="small text-body-secondary mt-2"></div>
+        </div>
+    </div>
+</div>
+
+<template id="parameterRowTemplate">
+    <div class="card mb-2 parameter-row">
+        <div class="card-body py-3">
+            <div class="row g-2">
+                <div class="col-12 col-xl-3">
+                    <label class="form-label small mb-1">@T["Name"] <span class="text-danger">*</span></label>
+                    <input name="@(namePrefix)Parameters[__index__].Name" class="form-control form-control-sm font-monospace param-name" placeholder="orderId" />
+                </div>
+                <div class="col-6 col-xl-2">
+                    <label class="form-label small mb-1">@T["Type"]</label>
+                    <select name="@(namePrefix)Parameters[__index__].Type" class="form-select form-select-sm param-type">
+                        @foreach (var type in Enum.GetValues<AIToolParameterType>())
+                        {
+                            <option value="@type">@type</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-6 col-xl-3">
+                    <label class="form-label small mb-1">@T["Filled by"]</label>
+                    <select name="@(namePrefix)Parameters[__index__].Fill" class="form-select form-select-sm param-fill">
+                        @foreach (var fill in Enum.GetValues<AIToolParameterFill>())
+                        {
+                            <option value="@fill">@FillLabel(fill)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-10 col-xl-3">
+                    <label class="form-label small mb-1">@T["Send as"] <span class="text-danger">*</span></label>
+                    <select name="@(namePrefix)Parameters[__index__].BindingTarget" class="form-select form-select-sm param-binding">
+                        <option value="">@T["Choose…"]</option>
+                        @foreach (var (sourceName, capability) in capabilities)
+                        {
+                            foreach (var binding in capability.Bindings)
+                            {
+                                <option value="@binding.Target"
+                                        data-source="@sourceName"
+                                        data-fills="@string.Join(",", (binding.AllowedFills ?? Enum.GetValues<AIToolParameterFill>()).Select(f => f.ToString()))"
+                                        title="@binding.Hint?.Value">
+                                    @(binding.DisplayName?.Value ?? binding.Target)
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-2 col-xl-1 d-flex align-items-end justify-content-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-parameter" title="@T["Remove parameter"]">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="row g-2 mt-1 fill-model">
+                <div class="col-12 col-xl-8">
+                    <label class="form-label small mb-1">@T["Description"] <span class="text-danger">*</span></label>
+                    <input name="@(namePrefix)Parameters[__index__].Description" class="form-control form-control-sm" placeholder="The order to look up." />
+                    <div class="form-text">@T["The model reads this to decide what to pass."]</div>
+                </div>
+                <div class="col-6 col-xl-2">
+                    <label class="form-label small mb-1">@T["Default"]</label>
+                    <input name="@(namePrefix)Parameters[__index__].DefaultValue" class="form-control form-control-sm param-default" />
+                </div>
+                <div class="col-6 col-xl-2 d-flex align-items-center pt-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="@(namePrefix)Parameters[__index__].Required" value="true" class="form-check-input param-required" />
+                        <input type="hidden" name="@(namePrefix)Parameters[__index__].Required" value="false" />
+                        <label class="form-check-label small">@T["Required"]</label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label class="form-label small mb-1">@T["Allowed values"]</label>
+                    <input name="@(namePrefix)Parameters[__index__].AllowedValues" class="form-control form-control-sm" placeholder="open, closed, cancelled" />
+                    <div class="form-text">@T["Optional, comma separated. Leave blank to accept any value of the selected type."]</div>
+                </div>
+            </div>
+
+            <div class="row g-2 mt-1 fill-fixed">
+                <div class="col-12 col-xl-8">
+                    <label class="form-label small mb-1">@T["Value"] <span class="text-danger">*</span></label>
+                    <input name="@(namePrefix)Parameters[__index__].FixedValue" class="form-control form-control-sm param-fixed-value" autocomplete="new-password" />
+                </div>
+                <div class="col-12 col-xl-4 d-flex align-items-center pt-3">
+                    <div class="form-check">
+                        <input type="checkbox" name="@(namePrefix)Parameters[__index__].IsSecret" value="true" class="form-check-input param-secret" />
+                        <input type="hidden" name="@(namePrefix)Parameters[__index__].IsSecret" value="false" />
+                        <label class="form-check-label small">@T["Treat as secret"]</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2 mt-1 fill-context">
+                <div class="col-12 col-xl-8">
+                    <label class="form-label small mb-1">@T["Context key"] <span class="text-danger">*</span></label>
+                    <select name="@(namePrefix)Parameters[__index__].ContextKey" class="form-select form-select-sm param-context">
+                        <option value="">@T["Choose…"]</option>
+                        @foreach (var key in contextKeys)
+                        {
+                            <option value="@key.Key" title="@key.Description">@key.DisplayName</option>
+                        }
+                    </select>
+                    <div class="form-text">@T["Resolved on the server for every call. The model never sees or supplies this value."]</div>
+                </div>
+            </div>
+
+            <div class="row g-2 mt-1">
+                <div class="col-12">
+                    <a class="small toggle-advanced" href="#" role="button">@T["Advanced"]</a>
+                    <div class="advanced-fields mt-1" style="display:none;">
+                        <label class="form-label small mb-1">@T["Target name"]</label>
+                        <input name="@(namePrefix)Parameters[__index__].BindingName" class="form-control form-control-sm font-monospace param-binding-name" />
+                        <div class="form-text">@T["The query key, header name, path token, or dotted body path. Defaults to the parameter name."]</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>

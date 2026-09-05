@@ -57,7 +57,8 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("SitemapDocumentationToolSettings", BuildSitemapSettingsSchema().Description("Settings for the built-in sitemap documentation search source.")),
                 ("SearchIndexDocumentationToolSettings", BuildSearchIndexSettingsSchema().Description("Settings for the built-in prebuilt search index documentation source.")),
                 ("AlgoliaDocumentationToolSettings", BuildAlgoliaSettingsSchema().Description("Settings for the built-in Algolia DocSearch documentation source.")),
-                ("WebsiteSearchToolSettings", BuildWebsiteSearchSettingsSchema().Description("Settings for the built-in live website search source.")))
+                ("WebsiteSearchToolSettings", BuildWebsiteSearchSettingsSchema().Description("Settings for the built-in live website search source.")),
+                ("AIToolInstanceParametersMetadata", BuildParametersMetadataSchema().Description("User-declared parameters for sources that opt into parameter support.")))
             .AdditionalProperties(true)
             .Description("Source-specific tool instance settings, grouped by settings object name. Secrets are stored encrypted at rest.");
 
@@ -79,6 +80,34 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
             "AIToolInstances",
             [("instances", RecipeStepSchemaBuilders.Array(instanceSchema, 1).Description("The AI tool instances to create or update."))],
             ["instances"]);
+    }
+
+    private static JsonSchemaBuilder BuildParametersMetadataSchema()
+    {
+        var parameterSchema = new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Name", RecipeStepSchemaBuilders.String().Description("Parameter name. For model-filled parameters this is the property name in the function schema and must be a valid identifier, unique within the instance.")),
+                ("Description", RecipeStepSchemaBuilders.String().Description("Natural-language description shown to the AI model. Required for model-filled parameters.")),
+                ("Type", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("String", "Integer", "Number", "Boolean", "Array", "Object").Description("JSON schema type of the parameter.")),
+                ("Fill", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Model", "Fixed", "Context").Description("Who supplies the value at invocation time: Model (the AI model), Fixed (a pinned value), or Context (resolved server-side from the request context).")),
+                ("Required", RecipeStepSchemaBuilders.Boolean().Description("Whether the AI model must supply the value. Only meaningful when Fill is Model.")),
+                ("DefaultValue", new JsonSchemaBuilder().Description("Value applied when the model omits an optional parameter, or the pinned value when Fill is Fixed. A Fixed secret value is stored encrypted at rest.")),
+                ("AllowedValues", new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(new JsonSchemaBuilder().Type(SchemaValueType.String)).Description("Closed set of accepted values, emitted as the schema enum and enforced by the binder. Empty means any value of the declared type.")),
+                ("ContextKey", RecipeStepSchemaBuilders.String().Description("Well-known context key resolved when Fill is Context, for example user.id.")),
+                ("Binding", RecipeStepSchemaBuilders.String().Description("Source-specific placement of the resolved value, expressed as Target or Target:name (for example Query:orderId). Valid targets are declared by the owning source.")),
+                ("IsSecret", RecipeStepSchemaBuilders.Boolean().Description("Whether a Fixed value is a credential. Secret values are stored encrypted at rest and never returned to the UI in clear text.")))
+            .Required("Name")
+            .AdditionalProperties(true);
+
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("Parameters", new JsonSchemaBuilder()
+                    .Type(SchemaValueType.Array)
+                    .Items(parameterSchema)
+                    .Description("The declared parameters, in the order they appear in the function schema the AI model sees.")))
+            .AdditionalProperties(true);
     }
 
     private static JsonSchemaBuilder BuildHttpApiRequestSettingsSchema()
