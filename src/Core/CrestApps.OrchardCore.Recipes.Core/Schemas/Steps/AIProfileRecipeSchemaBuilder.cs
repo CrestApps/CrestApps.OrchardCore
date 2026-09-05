@@ -254,6 +254,7 @@ internal static class AIProfileRecipeSchemaBuilder
                 ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Chat deployment name used when the generated profile needs a chat-capable model.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment name used when the generated profile needs a utility or background model.")),
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Orchestrator name applied to generated profiles.")),
+                ("RealtimeDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Realtime (speech-to-speech) deployment applied to generated profiles when the chat mode is Realtime. Must reference a deployment whose model declares the 'realtime' feature.")),
                 ("InitialResponseHandlerName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional response handler that runs before the main orchestrator.")),
                 ("TitleType", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)

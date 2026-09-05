@@ -55,6 +55,11 @@ internal static class AIProfileTemplateApplicator
             profile.OrchestratorName = templateMetadata.OrchestratorName;
         }
 
+        if (!string.IsNullOrEmpty(templateMetadata.RealtimeDeploymentName))
+        {
+            profile.RealtimeDeploymentName = templateMetadata.RealtimeDeploymentName;
+        }
+
         if (templateMetadata.TitleType.HasValue)
         {
             profile.TitleType = templateMetadata.TitleType;

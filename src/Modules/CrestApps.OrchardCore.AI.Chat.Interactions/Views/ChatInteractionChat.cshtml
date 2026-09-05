@@ -178,6 +178,9 @@
         realtimeEnabled,
         realtimeWebRtcEnabled,
         realtimeCapableDeployments = realtimeCapableDeploymentNames.Select(name => name.ToLowerInvariant()).ToArray(),
+        // The chat deployment picker in the settings panel. The client watches it and switches to realtime
+        // (audio-only Start speaking + voice picker) when a realtime-capable deployment is selected.
+        deploymentSelectElementSelector = "[data-setting=\"deploymentName\"]",
         realtimeButtonElementSelector = $"#{realtimeBtnHtmlId}",
         realtimeVoiceName = Model.Interaction.RealtimeVoiceName,
         realtimeVoiceSelectElementSelector = $"#{realtimeVoiceSelectHtmlId}",

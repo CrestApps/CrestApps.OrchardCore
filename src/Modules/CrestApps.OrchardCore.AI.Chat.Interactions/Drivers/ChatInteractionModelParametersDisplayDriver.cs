@@ -33,7 +33,7 @@ public sealed class ChatInteractionModelParametersDisplayDriver : DisplayDriver<
             model.Parameters = built.Parameters;
             model.CapabilitiesJson = built.CapabilitiesJson;
             model.FeaturesJson = built.FeaturesJson;
-        }).Location("Parameters:3#Settings;1");
+        }).Location("Parameters:3.5#Settings;1");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

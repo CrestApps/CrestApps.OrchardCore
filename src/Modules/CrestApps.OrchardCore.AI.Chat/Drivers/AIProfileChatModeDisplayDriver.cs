@@ -51,11 +51,19 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
                 model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             }
 
-            var hasSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
-            var hasRealtime = await HasRealtimeDeploymentAsync();
+            model.RealtimeDeploymentName = profile.RealtimeDeploymentName;
 
-            model.AvailableModes = GetAvailableModes(hasSpeech, hasRealtime);
+            var hasSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
+            var realtimeDeployments = await _capabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
+
+            model.HasRealtime = realtimeDeployments.Count > 0;
+            model.AvailableModes = GetAvailableModes(hasSpeech, model.HasRealtime);
             model.AvailableVoices = hasSpeech ? await GetAvailableVoicesAsync() : [];
+            model.RealtimeDeployments = realtimeDeployments
+                .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
+                .OrderBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
+                .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
+                .ToList();
         }).Location("Content:8%General;1")
         .RenderWhen(async () =>
         {
@@ -83,11 +91,15 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
         profile.AlterSettings<ChatModeProfileSettings>(settings =>
         {
             settings.ChatMode = model.ChatMode;
-            settings.VoiceName = model.ChatMode == ChatMode.Conversation
+            settings.VoiceName = model.ChatMode is ChatMode.Conversation or ChatMode.Realtime
                 ? model.VoiceName?.Trim()
                 : null;
             settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
         });
+
+        profile.RealtimeDeploymentName = model.ChatMode == ChatMode.Realtime
+            ? model.RealtimeDeploymentName?.Trim()
+            : null;
 
         return Edit(profile, context);
     }

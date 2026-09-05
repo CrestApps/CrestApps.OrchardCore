@@ -6,16 +6,7 @@
 {
     <div class="model-parameters" id="@(Model.ElementPrefix)-container"
          data-deployment-field="@Model.DeploymentFieldName"
-         data-capabilities="@Model.CapabilitiesJson"
-         data-features="@Model.FeaturesJson">
-        <div class="mb-3 d-none" id="@(Model.ElementPrefix)-features" data-model-features>
-            <label class="form-label d-block mb-1">@T["Model capabilities"]</label>
-            <div class="d-flex flex-wrap gap-1" data-model-features-list></div>
-            <div class="form-text">@T["Trained capabilities the selected deployment declares support for."]</div>
-        </div>
-        <div class="alert alert-secondary py-2 mb-3 d-none" id="@(Model.ElementPrefix)-empty" role="status">
-            @T["The selected deployment does not expose any configurable model parameters."]
-        </div>
+         data-capabilities="@Model.CapabilitiesJson">
         @foreach (var parameter in Model.Parameters)
         {
             var fieldId = $"{Model.ElementPrefix}-{parameter.ElementId}";
@@ -76,19 +67,14 @@
                     capabilities = {};
                 }
 
-                var features = {};
-
-                try {
-                    features = JSON.parse(container.dataset.features || '{}');
-                } catch (e) {
-                    features = {};
-                }
-
                 var deploymentField = container.dataset.deploymentField;
-                var deploymentSelect = deploymentField ? document.querySelector('[name="' + deploymentField + '"]') : null;
-                var emptyNotice = container.querySelector('[id$="-empty"]');
-                var featuresContainer = container.querySelector('[data-model-features]');
-                var featuresList = container.querySelector('[data-model-features-list]');
+                // The deployment picker is rendered by a separate editor whose fields carry a form prefix
+                // (for example "ChatInteraction.ChatDeploymentName" or "AIProfile.ChatDeploymentName"), so match
+                // the exact field name first and fall back to any field whose name ends with ".<field>".
+                var deploymentSelect = deploymentField
+                    ? (document.querySelector('[name="' + deploymentField + '"]')
+                        || document.querySelector('[name$=".' + deploymentField + '"]'))
+                    : null;
 
                 function lookupCaseInsensitive(map, key) {
                     if (!key) {
@@ -104,31 +90,6 @@
                     }
 
                     return null;
-                }
-
-                function refreshFeatures(deploymentName) {
-                    if (!featuresContainer || !featuresList) {
-                        return;
-                    }
-
-                    var declared = lookupCaseInsensitive(features, deploymentName);
-
-                    featuresList.textContent = '';
-
-                    if (!declared || !declared.length) {
-                        featuresContainer.classList.add('d-none');
-
-                        return;
-                    }
-
-                    declared.forEach(function (name) {
-                        var badge = document.createElement('span');
-                        badge.className = 'badge rounded-pill text-bg-info';
-                        badge.textContent = name;
-                        featuresList.appendChild(badge);
-                    });
-
-                    featuresContainer.classList.remove('d-none');
                 }
 
                 function applyChoice(input, metadata) {
@@ -188,9 +149,6 @@
                 function refresh() {
                     var deploymentName = deploymentSelect ? deploymentSelect.value : null;
                     var supported = lookupCaseInsensitive(capabilities, deploymentName);
-                    var visibleCount = 0;
-
-                    refreshFeatures(deploymentName);
 
                     Array.prototype.forEach.call(container.querySelectorAll('[data-model-parameter]'), function (wrapper) {
                         var name = wrapper.getAttribute('data-model-parameter');
@@ -207,7 +165,6 @@
                             return;
                         }
 
-                        visibleCount++;
                         wrapper.classList.remove('d-none');
 
                         if (!input) {
@@ -226,10 +183,6 @@
                                 : '@T["Use deployment default"]';
                         }
                     });
-
-                    if (emptyNotice) {
-                        emptyNotice.classList.toggle('d-none', visibleCount > 0);
-                    }
                 }
 
                 if (deploymentSelect) {

@@ -29,12 +29,11 @@ public sealed class RealtimeController : Controller
 
     public async Task<IActionResult> Voices(string deploymentName)
     {
-        if (string.IsNullOrWhiteSpace(deploymentName))
-        {
-            return Json(new { voices = Array.Empty<object>() });
-        }
-
-        var deployment = await _deploymentManager.FindByNameAsync(deploymentName);
+        // An empty deployment name means "use the site's default realtime deployment"; resolve it so the
+        // voice list still populates for that default selection.
+        var deployment = string.IsNullOrWhiteSpace(deploymentName)
+            ? await _capabilityService.ResolveDeploymentWithFeatureAsync(AIDeploymentFeatureNames.Realtime)
+            : await _deploymentManager.FindByNameAsync(deploymentName);
 
         // Only expose voices for a deployment whose model declares the realtime capability.
         if (deployment is null || !_capabilityService.GetCapabilities(deployment).SupportsFeature(AIDeploymentFeatureNames.Realtime))
