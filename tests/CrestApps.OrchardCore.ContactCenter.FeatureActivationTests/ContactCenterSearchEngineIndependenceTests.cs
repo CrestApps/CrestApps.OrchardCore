@@ -429,7 +429,9 @@ public sealed class ContactCenterSearchEngineIndependenceTests
 
             // Routing selection.
             var routing = serviceProvider.GetRequiredService<IActivityRoutingService>();
-            var decision = await routing.SelectAgentAsync(queue, queueItem, [agent], cancellationToken);
+            // The router is handed the availability snapshot it takes once per pass, which is the shape the
+            // strategies score against.
+            var decision = await routing.SelectAgentAsync(queue, queueItem, [new AgentAvailability { Agent = agent }], cancellationToken);
             Assert.True(decision.Succeeded, decision.Reason);
             Assert.Equal(agent.ItemId, decision.Agent.ItemId);
 

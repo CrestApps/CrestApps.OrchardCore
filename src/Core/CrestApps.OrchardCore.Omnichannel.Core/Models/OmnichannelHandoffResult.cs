@@ -43,6 +43,15 @@ public sealed class OmnichannelHandoffResult
         => new() { Succeeded = true, Message = message, ConversationId = conversationId, OfferedToUserId = offeredToUserId, Disposition = HandoffDisposition.Routed };
 
     /// <summary>
+    /// Creates a successful result where the interaction was moved into the human lane but no agent was free to
+    /// take it, so it is waiting in the queue.
+    /// </summary>
+    /// <param name="message">The outcome message.</param>
+    /// <param name="conversationId">The human conversation identifier, when one was created.</param>
+    public static OmnichannelHandoffResult WaitingInQueue(string message = null, string conversationId = null)
+        => new() { Succeeded = true, Message = message, ConversationId = conversationId, Disposition = HandoffDisposition.WaitingInQueue };
+
+    /// <summary>
     /// Creates a successful result where, instead of routing the live interaction, a callback was scheduled
     /// (for example the destination queue is closed after hours). The channel should end the interaction with a
     /// suitable message rather than keeping it waiting.
@@ -68,6 +77,13 @@ public enum HandoffDisposition
     /// The interaction was moved into the human lane (a human thread, or a live call seated in a queue).
     /// </summary>
     Routed,
+
+    /// <summary>
+    /// The interaction was moved into the human lane but no agent was free to take it, so it is waiting in the
+    /// queue. Distinguished from <see cref="Routed"/> because a caller who is waiting should be told that,
+    /// rather than being told they are being connected to someone who is not there.
+    /// </summary>
+    WaitingInQueue,
 
     /// <summary>
     /// The interaction was not routed live; a callback was scheduled instead (for example after hours).

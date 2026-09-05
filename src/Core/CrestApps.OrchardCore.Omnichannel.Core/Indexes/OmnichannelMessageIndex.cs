@@ -37,4 +37,11 @@ public sealed class OmnichannelMessageIndex : MapIndex
     /// a thread loads its message bubbles by conversation. Null for messages not linked to a portal conversation.
     /// </summary>
     public string ConversationId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider's own identifier for the message. Indexed with the channel so a delivery receipt
+    /// finds the message it belongs to in one seek, and so a redelivered provider message is recognised as one
+    /// already stored rather than appended twice.
+    /// </summary>
+    public string ProviderMessageId { get; set; }
 }

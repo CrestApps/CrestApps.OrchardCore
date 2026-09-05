@@ -4,15 +4,12 @@ using CrestApps.OrchardCore.PhoneNumbers;
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>
-/// Pins the one definition of which external destinations the platform is willing to call.
-/// <para>
-/// The question was previously answered by three separate copies of the same code — one in the settings
-/// driver that decides whether a destination may be saved, one in the transfer resolver that decides whether
-/// a live call may be handed over, and one in the dial executor that decides whether a command may run. Three
-/// copies of a safety rule drift, and when they drift the disagreement shows up as a destination that the
-/// settings screen refuses but a workflow can still reach.
-/// </para>
+/// Pins the behavior of the obsolete <see cref="ExternalDestinationPolicy"/> forwarder while it is kept for one
+/// release. The authority is now <c>IDialDestinationPolicy</c> in Telephony, covered by
+/// <c>DefaultDialDestinationPolicyTests</c>; these tests exist so the retained type cannot silently disagree
+/// with it in the meantime.
 /// </summary>
+#pragma warning disable CS0618 // The type under test is deliberately obsolete and still shipped.
 public sealed class ExternalDestinationPolicyTests
 {
     [Theory]
@@ -27,13 +24,21 @@ public sealed class ExternalDestinationPolicyTests
     }
 
     [Theory]
-    [InlineData("911")]
-    [InlineData("112")]
-    [InlineData("999")]
-    [InlineData("+1911")]
     [InlineData("+14255550911")]
     [InlineData("+14255550112")]
     [InlineData("+14255550999")]
+    public void ADestination_IsAllowed_WhenItMerelyEndsInAnEmergencyCode(string address)
+    {
+        // Assert
+        // An emergency code is the whole dialed string. Matching it as a suffix refused every ordinary number
+        // whose last three digits happened to look like one, which is a large slice of real destinations.
+        Assert.True(ExternalDestinationPolicy.IsAllowed(address));
+    }
+
+    [Theory]
+    [InlineData("911")]
+    [InlineData("112")]
+    [InlineData("999")]
     public void ADestination_IsRefused_WhenItReachesAnEmergencyService(string address)
     {
         // Assert
@@ -75,3 +80,4 @@ public sealed class ExternalDestinationPolicyTests
         Assert.False(ExternalDestinationPolicy.IsAllowed(default(PhoneNumber)));
     }
 }
+#pragma warning restore CS0618

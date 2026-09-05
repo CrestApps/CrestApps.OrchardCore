@@ -47,6 +47,16 @@ namespace CrestApps.OrchardCore.Telephony.Core.Models
 }
 namespace CrestApps.OrchardCore.Telephony.Core.Services
 {
+    public sealed class DefaultDialDestinationPolicy : CrestApps.OrchardCore.Telephony.Services.IDialDestinationPolicy
+    {
+        public DefaultDialDestinationPolicy(Microsoft.Extensions.Options.IOptionsSnapshot<CrestApps.OrchardCore.Telephony.TelephonySettings> telephonySettings) { }
+        public CrestApps.OrchardCore.Telephony.Services.DialDestinationDecision Evaluate(string address, CrestApps.OrchardCore.Telephony.Services.DialDestinationContext context) { }
+    }
+    public sealed class DefaultTransferTargetPolicy : CrestApps.OrchardCore.Telephony.Services.ITransferTargetPolicy
+    {
+        public DefaultTransferTargetPolicy(CrestApps.OrchardCore.Telephony.Services.IDialDestinationPolicy destinationPolicy) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Services.TransferTargetDecision> ResolveAsync(string rawTarget, System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ExtensionResolution
     {
         public ExtensionResolution() { }
@@ -132,5 +142,14 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
     {
         public static void Advance(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
         public static bool ShouldDiscard(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Services
+{
+    public sealed class VoiceAgentMediaProviderResolver : CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver
+    {
+        public VoiceAgentMediaProviderResolver(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider> providers) { }
+        public CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider Get(string technicalName) { }
+        public CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider GetDefault() { }
     }
 }

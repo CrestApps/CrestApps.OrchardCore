@@ -45,6 +45,11 @@ public sealed class ContactCenterArchitectureGuardTests
             null,
             "Backplane pub/sub round-trip health probe; it uses the Orchard Core IRedisService connection to publish and receive on a dedicated tenant-prefixed channel, which no higher-level Orchard primitive exposes."),
         new ArchitectureAllowlistEntry(
+            RawRedisRule,
+            "src/Modules/CrestApps.OrchardCore.WebSockets/Services/RedisRendezvousOwnerStore.cs",
+            null,
+            "Records which node holds a WebSocket rendezvous, through the Orchard Core IRedisService connection. It needs an atomic set-if-absent with an expiry so two nodes cannot claim one correlation key, and no higher-level Orchard primitive offers that: the distributed lock is exclusivity without an owner, and this has to be able to name the node that holds the key."),
+        new ArchitectureAllowlistEntry(
             StaticMutableStateRule,
             "src/Abstractions/CrestApps.OrchardCore.ContentTransfer.Abstractions/ContentTransferPermissions.cs",
             "_permissionsByType",

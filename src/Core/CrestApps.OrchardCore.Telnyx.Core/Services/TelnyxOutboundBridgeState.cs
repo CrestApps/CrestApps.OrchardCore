@@ -112,7 +112,16 @@ public sealed class TelnyxOutboundBridgeState
     /// Serializes the state to the base64 form Telnyx expects for a <c>client_state</c> value.
     /// </summary>
     public string ToClientState()
-        => Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(this, _options)));
+        => Convert.ToBase64String(Encoding.UTF8.GetBytes(ToClientStateJson()));
+
+    /// <summary>
+    /// Serializes the state without encoding it, for callers that hand it to something which owns the
+    /// base64 transport encoding itself. Encoding twice produces a value Telnyx echoes back that decodes to
+    /// base64 rather than to JSON, so every correlation silently fails to parse.
+    /// </summary>
+    /// <returns>The state as JSON.</returns>
+    public string ToClientStateJson()
+        => JsonSerializer.Serialize(this, _options);
 
     /// <summary>
     /// Attempts to parse a decoded client-state string into a <see cref="TelnyxOutboundBridgeState"/>.

@@ -113,13 +113,8 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
         return result ?? Failure("provider_returned_no_result", "The Contact Center voice provider did not return a result.");
     }
 
+    // The router fails before a provider has been chosen, so there is no provider name to carry - which is
+    // itself the information: nothing was asked of anybody.
     private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)
-    {
-        return new ContactCenterVoiceProviderResult
-        {
-            Succeeded = false,
-            ErrorCode = errorCode,
-            ErrorMessage = errorMessage,
-        };
-    }
+        => ContactCenterVoiceProviderResult.Failure(providerName: null, errorCode, errorMessage);
 }

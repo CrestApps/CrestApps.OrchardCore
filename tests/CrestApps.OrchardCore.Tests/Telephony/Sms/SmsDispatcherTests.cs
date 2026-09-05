@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Infrastructure;

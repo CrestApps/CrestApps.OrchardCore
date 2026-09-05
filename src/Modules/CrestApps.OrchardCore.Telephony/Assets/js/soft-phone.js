@@ -9,6 +9,30 @@
 (function () {
     'use strict';
 
+    // The parts of the soft phone with no DOM and no provider in them live in Assets/js/soft-phone/*.js and are
+    // concatenated ahead of this file into the same bundle. They attach to a shared namespace rather than
+    // exporting, so one source file runs both in the browser and under the JavaScript unit tests (`npm test`) —
+    // which is the point of the split: this file is far too large to test, and those parts are the ones where a
+    // silent arithmetic or mapping mistake reaches an agent as a wrong number on screen or a call that looks
+    // connected when it is ringing.
+    var softPhoneModules = (typeof globalThis !== 'undefined' ? globalThis : window).CrestAppsSoftPhone || {};
+
+    var normalizeDialNumber = softPhoneModules.normalizeDialNumber;
+    var formatNanpNumber = softPhoneModules.formatNanpNumber;
+    var formatInternationalNumber = softPhoneModules.formatInternationalNumber;
+    var formatPhoneNumber = softPhoneModules.formatPhoneNumber;
+
+    var QUALITY_POOR_MOS = softPhoneModules.QUALITY_POOR_MOS;
+    var QUALITY_POOR_LOSS_PERCENT = softPhoneModules.QUALITY_POOR_LOSS_PERCENT;
+    var estimateMos = softPhoneModules.estimateMos;
+    var parseWebRtcStats = softPhoneModules.parseWebRtcStats;
+
+    var mapTelnyxOutboundState = softPhoneModules.mapTelnyxOutboundState;
+    var isTelnyxTerminalState = softPhoneModules.isTelnyxTerminalState;
+    var iceServersIncludeTurn = softPhoneModules.iceServersIncludeTurn;
+
+    var reconnectDelayMs = softPhoneModules.reconnectDelayMs;
+
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
         Dial: 1,
@@ -441,83 +465,6 @@
         return haystack.indexOf('BYE_SEND_FAILED') !== -1 || haystack.indexOf('HANG UP CLEANLY') !== -1;
     }
 
-    // Maps a Telnyx WebRTC SDK call state (call.state) to the soft-phone outbound state names the
-    // originate() callback expects: 'Ringing', 'Connected', or 'Disconnected'. Returns null for
-    // transient states that should not change the UI.
-    function mapTelnyxOutboundState(state) {
-        switch (state) {
-            case 'new':
-            case 'requesting':
-            case 'trying':
-            case 'recovering':
-            case 'ringing':
-            case 'answering':
-            case 'early':
-                return 'Ringing';
-            case 'active':
-                return 'Connected';
-            case 'held':
-                // A held call is still connected from the dialer's perspective; the hold indicator is driven
-                // separately, so don't report a state change here.
-                return null;
-            case 'hangup':
-            case 'destroy':
-            case 'purge':
-                return 'Disconnected';
-            default:
-                return null;
-        }
-    }
-
-    function isTelnyxTerminalState(state) {
-        return state === 'hangup' || state === 'destroy' || state === 'purge';
-    }
-
-    // Whether an ICE server list contains at least one TURN (relay) server. A STUN-only list does not, and must
-    // not replace the Telnyx SDK's default ICE servers (which include TURN) or clients behind a restrictive NAT
-    // lose the relay they need to receive inbound media.
-    function iceServersIncludeTurn(iceServers) {
-        if (!Array.isArray(iceServers)) {
-            return false;
-        }
-
-        return iceServers.some(function (server) {
-            var urls = server && server.urls;
-            var list = Array.isArray(urls) ? urls : (urls ? [urls] : []);
-
-            return list.some(function (url) {
-                return /^turns?:/i.test(String(url || ''));
-            });
-        });
-    }
-
-    // Estimates a Mean Opinion Score (1.0-4.5) from round-trip time, jitter, and packet loss using the ITU-T
-    // G.107 E-model approximation widely used for WebRTC quality monitoring. Latency and jitter are in
-    // milliseconds, loss in percent. A higher score is better; ~4.0+ is good, below ~3.5 is poor.
-    function estimateMos(rttMs, jitterMs, lossPercent) {
-        var effectiveLatency = (rttMs || 0) + (jitterMs || 0) * 2 + 10;
-        var r = effectiveLatency < 160
-            ? 93.2 - effectiveLatency / 40
-            : 93.2 - (effectiveLatency - 120) / 10;
-
-        r = r - 2.5 * (lossPercent || 0);
-
-        if (r < 0) {
-            return 1;
-        }
-
-        if (r > 100) {
-            return 4.5;
-        }
-
-        return 1 + 0.035 * r + r * (r - 60) * (100 - r) * 0.000007;
-    }
-
-    // Thresholds that classify a getStats sample as a poor connection. Kept in sync with the server-side
-    // TelephonyCallQualityEvaluator so the in-call UX (item 6) and the server logs agree on what "poor" means.
-    var QUALITY_POOR_MOS = 3.5;
-    var QUALITY_POOR_LOSS_PERCENT = 5;
-
     // Maps configured codec names (for example "opus", "G722", "PCMU") to the { mimeType } shape the Telnyx SDK's
     // preferred_codecs call option expects, which it applies with RTCRtpTransceiver.setCodecPreferences. This
     // only reorders the browser's SDP OFFER; the Telnyx gateway's answer still picks the final codec, so a codec
@@ -575,89 +522,6 @@
         });
 
         return ordered.length ? ordered : null;
-    }
-
-    // Extracts the audio inbound-rtp, selected candidate pair, negotiated codec, and candidate types from an
-    // RTCStatsReport. Written defensively because the exact shape and which candidate pair is flagged "selected"
-    // varies across browsers (Chrome nominates a succeeded pair; Firefox marks one `selected`; the transport may
-    // name the pair through selectedCandidatePairId).
-    function parseWebRtcStats(report) {
-        var inbound = null;
-        var remoteInbound = null;
-        var selectedPair = null;
-        var nominatedPair = null;
-        var transportPairId = null;
-        var codecs = {};
-        var localCandidates = {};
-        var remoteCandidates = {};
-        var pairs = {};
-
-        report.forEach(function (stat) {
-            switch (stat.type) {
-                case 'inbound-rtp':
-                    if (stat.kind === 'audio' || stat.mediaType === 'audio') {
-                        inbound = stat;
-                    }
-
-                    break;
-                case 'remote-inbound-rtp':
-                    if (stat.kind === 'audio' || stat.mediaType === 'audio') {
-                        remoteInbound = stat;
-                    }
-
-                    break;
-                case 'candidate-pair':
-                    pairs[stat.id] = stat;
-
-                    if (stat.selected) {
-                        selectedPair = stat;
-                    }
-
-                    if (stat.nominated && stat.state === 'succeeded' &&
-                        (!nominatedPair || (stat.bytesReceived || 0) > (nominatedPair.bytesReceived || 0))) {
-                        nominatedPair = stat;
-                    }
-
-                    break;
-                case 'codec':
-                    codecs[stat.id] = stat;
-
-                    break;
-                case 'local-candidate':
-                    localCandidates[stat.id] = stat;
-
-                    break;
-                case 'remote-candidate':
-                    remoteCandidates[stat.id] = stat;
-
-                    break;
-                case 'transport':
-                    if (stat.selectedCandidatePairId) {
-                        transportPairId = stat.selectedCandidatePairId;
-                    }
-
-                    break;
-                default:
-                    break;
-            }
-        });
-
-        var pair = selectedPair ||
-            (transportPairId && pairs[transportPairId]) ||
-            nominatedPair ||
-            null;
-        var codec = inbound && inbound.codecId && codecs[inbound.codecId] ? codecs[inbound.codecId] : null;
-        var localCandidate = pair && pair.localCandidateId ? localCandidates[pair.localCandidateId] : null;
-        var remoteCandidate = pair && pair.remoteCandidateId ? remoteCandidates[pair.remoteCandidateId] : null;
-
-        return {
-            inbound: inbound,
-            remoteInbound: remoteInbound,
-            pair: pair,
-            codec: codec ? codec.mimeType || '' : '',
-            localCandidateType: localCandidate ? localCandidate.candidateType || '' : '',
-            remoteCandidateType: remoteCandidate ? remoteCandidate.candidateType || '' : ''
-        };
     }
 
     function createTelnyxBrowserMediaAdapter(rootElement, widgetConfig) {
@@ -1364,83 +1228,6 @@
 
     function isFiniteNumber(value) {
         return typeof value === 'number' && isFinite(value);
-    }
-
-    function normalizeDialNumber(value) {
-        var input = String(value || '').trim();
-        var hasInternationalPrefix = input.charAt(0) === '+';
-        var digits = input.replace(/\D/g, '');
-
-        return (hasInternationalPrefix ? '+' : '') + digits;
-    }
-
-    function formatNanpNumber(digits, international) {
-        var national = international ? digits.substring(1) : digits;
-        var formatted = '';
-
-        if (international) {
-            formatted = '+1';
-        }
-
-        if (national.length > 0) {
-            formatted += (international ? ' ' : '') + '(' + national.substring(0, 3);
-        }
-
-        if (national.length >= 3) {
-            formatted += ')';
-        }
-
-        if (national.length > 3) {
-            formatted += ' ' + national.substring(3, 6);
-        }
-
-        if (national.length > 6) {
-            formatted += '-' + national.substring(6, 10);
-        }
-
-        return formatted;
-    }
-
-    function formatInternationalNumber(digits) {
-        if (!digits) {
-            return '+';
-        }
-
-        var countryCodeLength = digits.length > 10 ? Math.min(3, digits.length - 10) : Math.min(2, digits.length);
-        var countryCode = digits.substring(0, countryCodeLength);
-        var national = digits.substring(countryCodeLength);
-        var groups = [];
-
-        while (national.length > 4) {
-            groups.push(national.substring(0, 3));
-            national = national.substring(3);
-        }
-
-        if (national) {
-            groups.push(national);
-        }
-
-        return '+' + countryCode + (groups.length ? ' ' + groups.join(' ') : '');
-    }
-
-    // Formats a number for display only (call history and active-call rows). This is deliberately
-    // independent of intl-tel-input, which only enhances the editable keypad input; the display
-    // formatter must work even where the phone-field library is not loaded.
-    function formatPhoneNumber(value) {
-        var normalized = normalizeDialNumber(value);
-        var international = normalized.charAt(0) === '+';
-        var digits = normalized.replace(/\D/g, '');
-
-        if (!international && digits.length < 7) {
-            return digits;
-        }
-
-        if ((!international && digits.length <= 10) ||
-            (international && digits.charAt(0) === '1' && digits.length <= 11)) {
-            return formatNanpNumber(digits, international);
-        }
-
-        return international ? formatInternationalNumber(digits) : digits;
     }
 
     // A self-contained inbound-call ringtone synthesized with the Web Audio API, so no audio asset needs to be
@@ -5824,17 +5611,6 @@
                     return afterConnected();
                 });
             }
-        }
-
-        // Reconnect backoff (ms) by attempt index: immediate, then 2s, 5s, 10s, 20s, capped at 30s. Shared by
-        // the SignalR automatic-reconnect policy and the manual restart loop so both back off identically and
-        // neither ever gives up.
-        var RECONNECT_DELAYS_MS = [0, 2000, 5000, 10000, 20000, 30000];
-
-        function reconnectDelayMs(attempt) {
-            var index = attempt > 0 ? attempt : 0;
-
-            return RECONNECT_DELAYS_MS[Math.min(index, RECONNECT_DELAYS_MS.length - 1)];
         }
 
         // Degraded-state setters (item 6). render() derives the "Reconnecting..." status from these; toggling

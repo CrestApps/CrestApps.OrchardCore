@@ -35,8 +35,11 @@ public sealed class BusinessHoursStartup : StartupBase
         services
             .AddScoped<IBusinessHoursCalendarStore, BusinessHoursCalendarStore>()
             .AddScoped<IBusinessHoursCalendarManager, BusinessHoursCalendarManager>()
-            .AddScoped<IBusinessHoursService, DefaultBusinessHoursService>()
-            .AddScoped<CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate, BusinessHoursGate>();
+            .AddScoped<IBusinessHoursService, DefaultBusinessHoursService>();
+
+        // This feature owns business-hours calendars, so it replaces the always-open default the base feature
+        // registers for tenants that have none.
+        services.Replace(ServiceDescriptor.Scoped<CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate, BusinessHoursGate>());
 
         // The calendar manager caches configuration through the shared Contact Center cache, and the invalidation
         // handler keeps it fresh. Both this feature and Work Distribution register the cache, so TryAdd keeps a single

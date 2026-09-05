@@ -2,7 +2,7 @@
 sidebar_label: Readiness — architecture and tests
 sidebar_position: 32
 title: Production readiness — architecture, feature split, code quality and tests
-description: Findings and remediation plan for dependency-injection patterns, feature boundaries, duplication, oversized types, memory and scalability, and the unit-test strategy across the Contact Center, Telephony, Telnyx, SMS Workspace and Omnichannel projects.
+description: Findings and remediation plan for dependency-injection patterns, feature boundaries, duplication, oversized types, memory and scalability, and the unit-test strategy across the Contact Center, Telephony, Telnyx, SMS Portal and Omnichannel projects.
 ---
 
 # Production readiness — architecture, feature split, code quality and tests
@@ -24,14 +24,14 @@ Part of the [Production Readiness Plan](production-readiness-plan.md). Workstrea
 
 | Defect | Evidence | Fix |
 | --- | --- | --- |
-| SMS Workspace needs Work Distribution at runtime but does not declare it | `LeastLoadedSmsRoutingStrategy` → `IActivityQueueManager` (registered only by `QueuesStartup`); manifest depends only on Agent Services | Split routed distribution into its own feature that depends on `Queues` (C3) |
-| SMS Workspace references the CRM administration module | `Sms.Workspace.csproj` → `Omnichannel.Managements.csproj` | Move what is used into `Omnichannel.Core` or reusable endpoints; add a reference rule to the architecture tests |
+| SMS Portal needs Work Distribution at runtime but does not declare it | `LeastLoadedSmsRoutingStrategy` → `IActivityQueueManager` (registered only by `QueuesStartup`); manifest depends only on Agent Services | Split routed distribution into its own feature that depends on `Queues` (C3) |
+| SMS Portal references the CRM administration module | `Sms.Portal.csproj` → `Omnichannel.Managements.csproj` | Move what is used into `Omnichannel.Core` or reusable endpoints; add a reference rule to the architecture tests |
 | Automated voice orchestration lives in a provider module | `Telnyx/Services/VoiceOmnichannelProcessor.cs`, `TelnyxAiVoiceConversationHandler.cs`, feature `Telnyx.AiVoice` | New provider-neutral `Omnichannel.Voice` module (D8) |
 | SMS automation depends on Business Hours by string id | `Omnichannel.Sms/Manifest.cs` uses the literal `"CrestApps.OrchardCore.ContactCenter.BusinessHours"` | Reference the constant from an abstractions assembly, or move business-hours abstractions to Omnichannel Core where `IBusinessHoursGate` already lives |
 | Optional cross-feature services resolved by scanning | `QueuedVoiceWorkOfferService` takes `IEnumerable<IAgentWorkStateHealingService>` and `IEnumerable<IDialerProfileManager>` and calls `FirstOrDefault()`; 22 such sites in Contact Center | Null-object defaults with `TryAddScoped` in the owning feature's startup, or a feature-gated decorator (E2) |
 
 **Tests first.** Extend `ContactCenterFeatureDependencyArchitectureTests` with assembly-reference rules for
-`Sms.Workspace`, `Omnichannel.Sms`, and `Telnyx`; extend `FeatureActivationTests` with SMS Workspace and SMS
+`Sms.Portal`, `Omnichannel.Sms`, and `Telnyx`; extend `FeatureActivationTests` with SMS Portal and SMS
 Automation profiles (enable alone, enable with each optional feature, disable and re-enable).
 
 ## E2. Replace service-locator and enumerable-scan optionality (High)
@@ -55,7 +55,7 @@ service provider to cover a null branch, and a missing registration is a runtime
 - Keep `IServiceProvider` only in the documented composition roots: `IContactCenterScopeExecutor`, background tasks
   (`DoWorkAsync(IServiceProvider)` by Orchard contract), and hub scope contexts.
 
-**Tests first.** A new `DependencyInjectionArchitectureTests` (Contact Center, SMS Workspace, Telnyx, Omnichannel):
+**Tests first.** A new `DependencyInjectionArchitectureTests` (Contact Center, SMS Portal, Telnyx, Omnichannel):
 no `IServiceProvider` constructor parameter outside an allow-list; no `.FirstOrDefault()` on an injected
 `IEnumerable<T>` field; every `IEnumerable<T>` injected is a true chain. Existing handler tests updated to the
 null-object defaults.
@@ -139,15 +139,15 @@ The suite is large and mostly meaningful. Findings:
 - **Architecture tests that duplicate each other**: several ownership rules are asserted both in
   `ContactCenterFeatureDependencyArchitectureTests` and `ContactCenterFeatureLifecycleTests`; keep one owner per rule.
 - **Missing coverage (add, test-first, in the order below)**:
-  1. SMS Workspace: controller authorization matrix, `SmsRealTimeNotifier` targeting, inbound concurrency and
+  1. SMS Portal: controller authorization matrix, `SmsRealTimeNotifier` targeting, inbound concurrency and
      idempotency, inbox paging budgets, delivery-receipt matching by provider id, keyword policy.
   2. Handoff: `VoiceAgentHandoffService` (no tests exist), tool-name contract, scoped turn context, SMS handoff
      routed mode and business hours.
   3. Telnyx: everything in D3.
   4. Routing: cross-queue selector, skills proficiency and relaxation, idle-since semantics, options validation,
      queue treatment and callbacks, IVR state machine (property-based), predictive pacing gate.
-  5. Feature activation: SMS Workspace and SMS Automation tenant profiles; SMS Workspace without Work Distribution.
-  6. JavaScript: Vitest for pure soft-phone modules; Playwright specs for the SMS Workspace.
+  5. Feature activation: SMS Portal and SMS Automation tenant profiles; SMS Portal without Work Distribution.
+  6. JavaScript: Vitest for pure soft-phone modules; Playwright specs for the SMS Portal.
 - **CI wiring**: `FeatureActivationTests` and `PlaywrightTests` only run in `release_ci.yml`; run them in
   `pr_ci.yml` (Playwright can be a required job with browser caching). Keep `DistributedTests` release-only but
   add the SMS distributed tests to it.
@@ -172,7 +172,7 @@ Workspace and SMS Automation modules (message bodies must never be logged; only 
 
 ## E11. Documentation debt created by this plan (Low)
 
-Update `sms-workspace.md`, `agents-queues-dialer.md`, `voice-routing.md` (remove fixed limitations), and
+Update `sms-portal.md`, `agents-queues-dialer.md`, `voice-routing.md` (remove fixed limitations), and
 `configuration-deployment.md` (new options) as each item lands; add an "AI escalations" section to
 `report-catalog.md`.
 

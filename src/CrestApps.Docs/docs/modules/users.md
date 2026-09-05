@@ -47,7 +47,7 @@ Parameters:
 
 The picker is backed by the shared user-search endpoint (`Admin/api/crestapps/users/search`, which returns the top 50 enabled matches) and renders through the shared **`ItemSelector`** component, so the **CrestApps Resources** feature must be enabled wherever the picker is used.
 
-For example, the [SMS Workspace](../omnichannel/sms-workspace) uses `UserPicker` to choose the agent an SMS number routes inbound messages to.
+For example, the [SMS Portal](../omnichannel/sms-portal) uses `UserPicker` to choose the agent an SMS number routes inbound messages to.
 
 ## User Display Name
 

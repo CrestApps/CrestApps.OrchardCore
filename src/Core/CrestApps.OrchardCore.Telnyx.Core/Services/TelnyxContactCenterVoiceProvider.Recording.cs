@@ -83,27 +83,20 @@ public sealed partial class TelnyxContactCenterVoiceProvider
         // continues the SAME recording file, so it is attempted first: only when there is no paused recording to
         // resume is a fresh recording started. Trying resume first (rather than start first) guarantees a resume
         // never accidentally starts a second, parallel recording of the same call.
-        using var client = CreateClient();
+        var resumeResult = await PostRecordingActionAsync(callControlId, "record_resume", body: null, cancellationToken, logFailure: false);
 
-        using (var resumeContent = JsonContent.Create(new Dictionary<string, object>(), options: TelnyxJsonSerializerOptions.Default))
-        using (var resumeResponse = await client.PostAsync(
-            $"calls/{Uri.EscapeDataString(callControlId)}/actions/record_resume",
-            resumeContent,
-            cancellationToken))
+        if (resumeResult.Succeeded)
         {
-            if (resumeResponse.IsSuccessStatusCode)
-            {
-                return RecordingSuccess(callControlId);
-            }
+            return resumeResult;
+        }
 
-            // A resume miss is expected on the initial start (there is nothing to resume yet), so it is not an
-            // error; fall through to start a new recording.
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug(
-                    "Telnyx had no paused recording to resume for interaction {InteractionId}; starting a new recording.",
-                    interactionId.SanitizeLogValue());
-            }
+        // A resume miss is expected on the initial start (there is nothing to resume yet), so it is not an
+        // error; fall through to start a new recording.
+        if (_logger.IsEnabled(LogLevel.Debug))
+        {
+            _logger.LogDebug(
+                "Telnyx had no paused recording to resume for interaction {InteractionId}; starting a new recording.",
+                interactionId.SanitizeLogValue());
         }
 
         // The recording carries the interaction as client_state so the call.recording.saved webhook can be
@@ -122,22 +115,23 @@ public sealed partial class TelnyxContactCenterVoiceProvider
         string callControlId,
         string action,
         Dictionary<string, object> body,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool logFailure = true)
     {
-        using var client = CreateClient();
-        using var content = JsonContent.Create(body ?? new Dictionary<string, object>(), options: TelnyxJsonSerializerOptions.Default);
-        using var response = await client.PostAsync(
-            $"calls/{Uri.EscapeDataString(callControlId)}/actions/{action}",
-            content,
-            cancellationToken);
+        var result = await _apiClient.PostCallActionAsync(callControlId, action, body, cancellationToken);
 
-        if (!response.IsSuccessStatusCode)
+        if (!result.Succeeded)
         {
-            _logger.LogError(
-                "Telnyx rejected recording action {Action} with status code {StatusCode}. Response: {Response}",
-                action,
-                response.StatusCode,
-                (await SafeReadContentAsync(response, cancellationToken)).SanitizeLogValue());
+            // A resume that finds nothing to resume is an expected miss on the first start, so the caller says
+            // whether a failure here is worth reporting.
+            if (logFailure)
+            {
+                _logger.LogError(
+                    "Telnyx rejected recording action {Action} with status code {StatusCode}. Response: {Response}",
+                    action,
+                    result.StatusCode,
+                    result.ErrorBody.SanitizeLogValue());
+            }
 
             return Failure("recording_failed", "The Telnyx recording state change was not applied.");
         }

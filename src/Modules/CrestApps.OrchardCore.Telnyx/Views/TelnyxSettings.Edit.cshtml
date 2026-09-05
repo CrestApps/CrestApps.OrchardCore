@@ -110,6 +110,12 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="OrphanedCallHandling">@T["Calls with no local record"]</label>
+                <select class="form-select" asp-for="OrphanedCallHandling" asp-items="@Html.GetEnumSelectList<TelnyxOrphanedCallHandling>()"></select>
+                <span class="hint">@T["What to do when this connection has a call up that the platform has no interaction for - one placed immediately before a restart. Report records it and leaves it connected; End call speaks an apology and hangs up. Reporting is the default because an orphaned call may still be a conversation that is working."]</span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="SipWebSocketUrl">@T["SIP WebSocket URL"]</label>
                 <input type="text" class="form-control" asp-for="SipWebSocketUrl" placeholder="wss://sip.telnyx.com" />
             </div>

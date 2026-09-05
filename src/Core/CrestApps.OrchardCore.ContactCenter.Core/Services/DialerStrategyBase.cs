@@ -30,11 +30,14 @@ public abstract class DialerStrategyBase : IDialerStrategy
     public abstract DialerMode Mode { get; }
 
     /// <summary>
-    /// Gets the maximum number of attempts the strategy may start in a single pacing cycle.
+    /// Gets the maximum number of attempts the strategy may start in a single pacing cycle. It is asynchronous
+    /// because a mode whose pacing depends on measured campaign statistics has to read them, and stashing that
+    /// answer on a field would leak it between cycles and across threads.
     /// </summary>
     /// <param name="profile">The dialer profile being run.</param>
-    /// <returns>The per-cycle attempt limit.</returns>
-    protected abstract int GetMaxAttemptsPerCycle(DialerProfile profile);
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The per-cycle attempt limit; zero to place nothing.</returns>
+    protected abstract Task<int> GetMaxAttemptsPerCycleAsync(DialerProfile profile, CancellationToken cancellationToken);
 
     /// <inheritdoc/>
     public async Task<int> RunCycleAsync(DialerProfile profile, string queueId, CancellationToken cancellationToken = default)
@@ -42,7 +45,15 @@ public abstract class DialerStrategyBase : IDialerStrategy
         ArgumentNullException.ThrowIfNull(profile);
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        var maxAttempts = Math.Max(GetMaxAttemptsPerCycle(profile), 1);
+        var maxAttempts = await GetMaxAttemptsPerCycleAsync(profile, cancellationToken);
+
+        // Zero is a decision, not a default: a paced mode returns it when its own safety policy says nothing may
+        // be dialled, and clamping it up to one would place the call the policy just refused.
+        if (maxAttempts < 1)
+        {
+            return 0;
+        }
+
         var attempted = 0;
         var started = 0;
 

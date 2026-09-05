@@ -1,9 +1,9 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Notifications;
-using CrestApps.OrchardCore.Sms.Workspace.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -62,7 +62,7 @@ public class SmsSendDirectTests
         store.Setup(s => s.UpdateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
 
         var dispatcher = new Mock<ISmsDispatcher>();
-        dispatcher.Setup(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success());
+        dispatcher.Setup(d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>())).ReturnsAsync(SmsDispatchResult.Success("provider-message-1"));
 
         var contactResolver = new Mock<ISmsContactResolver>();
         contactResolver.Setup(r => r.ResolveContactContentItemIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -81,7 +81,9 @@ public class SmsSendDirectTests
             new Mock<IContentManager>().Object,
             contactResolver.Object,
             new Mock<ISmsRealTimeNotifier>().Object,
+            Mock.Of<ISmsConversationAuthorizationService>(),
             session.Object,
+            new NoOpSmsFirstResponseSlaService(),
             clock.Object,
             RedactorProviderFactory.Create(),
             NullLogger<SmsConversationService>.Instance);

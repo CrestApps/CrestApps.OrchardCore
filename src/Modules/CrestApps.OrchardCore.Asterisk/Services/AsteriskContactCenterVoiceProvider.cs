@@ -791,14 +791,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
         return builder.ToString();
     }
 
+    // One shape, on the result type. This stays as a local name so every call site reads the same.
     private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)
-    {
-        return new ContactCenterVoiceProviderResult
-        {
-            Succeeded = false,
-            ErrorCode = errorCode,
-            ErrorMessage = errorMessage,
-            ProviderName = AsteriskConstants.ProviderTechnicalName,
-        };
-    }
+        => ContactCenterVoiceProviderResult.Failure(AsteriskConstants.ProviderTechnicalName, errorCode, errorMessage);
 }

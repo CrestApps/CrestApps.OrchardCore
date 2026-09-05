@@ -40,7 +40,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     private readonly IQueueItemManager _queueItemManager;
     private readonly IActivityQueueService _queueService;
     private readonly IInboundContactLookup _contactLookup;
-    private readonly IEnumerable<IEntryPointResolver> _entryPointResolvers;
+    private readonly EntryPointResolverChain _entryPointResolver;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IVoiceQueueOfferService _offerService;
     private readonly IDistributedLock _distributedLock;
@@ -84,7 +84,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         IQueueItemManager queueItemManager,
         IActivityQueueService queueService,
         IInboundContactLookup contactLookup,
-        IEnumerable<IEntryPointResolver> entryPointResolvers,
+        EntryPointResolverChain entryPointResolver,
         IProviderCommandStateService providerCommandStateService,
         IVoiceQueueOfferService offerService,
         IDistributedLock distributedLock,
@@ -104,7 +104,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         _queueItemManager = queueItemManager;
         _queueService = queueService;
         _contactLookup = contactLookup;
-        _entryPointResolvers = entryPointResolvers;
+        _entryPointResolver = entryPointResolver;
         _providerCommandStateService = providerCommandStateService;
         _offerService = offerService;
         _distributedLock = distributedLock;
@@ -221,10 +221,9 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
 
         var contactItemIds = await ResolveContactsAsync(fromAddress, cancellationToken);
 
-        var entryPointResolver = _entryPointResolvers.FirstOrDefault();
-        var plan = entryPointResolver is null
-            ? null
-            : await entryPointResolver.ResolveAsync(serviceAddress, cancellationToken);
+        // The chain asks every registered resolver rather than only the first, so a feature that adds its own
+        // entry-point source is actually consulted.
+        var plan = await _entryPointResolver.ResolveAsync(serviceAddress, cancellationToken);
         ActivityQueue queue = null;
         string unavailableQueueReasonCode = null;
 

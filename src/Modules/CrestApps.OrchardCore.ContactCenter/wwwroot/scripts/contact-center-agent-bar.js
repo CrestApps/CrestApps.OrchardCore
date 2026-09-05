@@ -23,12 +23,11 @@
     div.textContent = value == null ? '' : String(value);
     return div.innerHTML;
   };
-  var formatDuration = window.telephonyClient && window.telephonyClient.formatDuration || function (seconds) {
-    var total = Math.max(0, Math.floor(seconds || 0));
-    var mins = Math.floor(total / 60);
-    var secs = total % 60;
-    return mins + ':' + (secs < 10 ? '0' : '') + secs;
-  };
+
+  // No local fallback: a second implementation only ever disagrees with this one, and the one here did - it
+  // counted minutes upward past an hour while the shared timer switched to hours, so the same call read
+  // "75:03" on the bar and "1:15:03" on the soft phone.
+  var formatDuration = (window.telephonyClient || {}).formatDuration;
 
   // Present a raw destination in a human-readable form. North-American numbers get the familiar grouping; other
   // formats are left untouched so we never mangle an international number we cannot confidently parse.

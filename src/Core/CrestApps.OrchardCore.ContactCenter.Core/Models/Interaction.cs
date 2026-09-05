@@ -79,6 +79,24 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     public string AgentId { get; set; }
 
     /// <summary>
+    /// Gets or sets what the automated conversation had established by the time it escalated, written when an
+    /// AI leg hands the interaction to a person. An agent who answers without it restarts the conversation the
+    /// caller has already had, which is the outcome the automated leg existed to prevent.
+    /// </summary>
+    public string HandoffSummary { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the automated conversation escalated.
+    /// </summary>
+    public string HandoffReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the automated conversation session behind the escalation, so the full transcript can be
+    /// opened from the interaction.
+    /// </summary>
+    public string HandoffAiSessionId { get; set; }
+
+    /// <summary>
     /// Gets or sets the correlation identifier shared by every event and provider session of this interaction.
     /// </summary>
     public string CorrelationId { get; set; }

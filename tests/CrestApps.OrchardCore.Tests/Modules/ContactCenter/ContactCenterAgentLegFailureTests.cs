@@ -152,7 +152,9 @@ public sealed class ContactCenterAgentLegFailureTests
             .ReturnsAsync(true);
 
         var orchestrator = new TelnyxOutboundBridgeOrchestrator(
-            new Mock<IHttpClientFactory>().Object,
+            // These tests are about the failure classification, not the wire, so the client is given a
+            // handler that refuses everything: any HTTP the orchestrator attempted would be a bug here.
+            CreateRefusingApiClient(),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
             failureService.Object,
@@ -192,7 +194,9 @@ public sealed class ContactCenterAgentLegFailureTests
         var failureService = new Mock<IContactCenterAgentLegFailureService>(MockBehavior.Strict);
 
         var orchestrator = new TelnyxOutboundBridgeOrchestrator(
-            new Mock<IHttpClientFactory>().Object,
+            // These tests are about the failure classification, not the wire, so the client is given a
+            // handler that refuses everything: any HTTP the orchestrator attempted would be a bug here.
+            CreateRefusingApiClient(),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
             failureService.Object,
@@ -319,7 +323,9 @@ public sealed class ContactCenterAgentLegFailureTests
             .ReturnsAsync(true);
 
         var orchestrator = new TelnyxOutboundBridgeOrchestrator(
-            new Mock<IHttpClientFactory>().Object,
+            // These tests are about the failure classification, not the wire, so the client is given a
+            // handler that refuses everything: any HTTP the orchestrator attempted would be a bug here.
+            CreateRefusingApiClient(),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
             failureService.Object,
@@ -365,7 +371,9 @@ public sealed class ContactCenterAgentLegFailureTests
             .ReturnsAsync(true);
 
         var orchestrator = new TelnyxOutboundBridgeOrchestrator(
-            new Mock<IHttpClientFactory>().Object,
+            // These tests are about the failure classification, not the wire, so the client is given a
+            // handler that refuses everything: any HTTP the orchestrator attempted would be a bug here.
+            CreateRefusingApiClient(),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
             failureService.Object,
@@ -404,7 +412,9 @@ public sealed class ContactCenterAgentLegFailureTests
         var failureService = new Mock<IContactCenterAgentLegFailureService>(MockBehavior.Strict);
 
         var orchestrator = new TelnyxOutboundBridgeOrchestrator(
-            new Mock<IHttpClientFactory>().Object,
+            // These tests are about the failure classification, not the wire, so the client is given a
+            // handler that refuses everything: any HTTP the orchestrator attempted would be a bug here.
+            CreateRefusingApiClient(),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
             failureService.Object,
@@ -436,6 +446,19 @@ public sealed class ContactCenterAgentLegFailureTests
                 It.IsAny<HangupCause?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    private static TelnyxApiClient CreateRefusingApiClient()
+        => new(
+            new HttpClient(new RefusingHttpMessageHandler()) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
+            new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
+            new TelnyxApiRetryPolicy(TimeSpan.Zero),
+            NullLogger<TelnyxApiClient>.Instance);
+
+    private sealed class RefusingHttpMessageHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => throw new InvalidOperationException($"These tests expect no provider HTTP, but {request.Method} {request.RequestUri} was attempted.");
     }
 
     private static string DecodeClientState(string clientState)

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -22,6 +23,7 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IDialDestinationPolicy _destinationPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -35,14 +37,17 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterExternalTransferSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
+        IDialDestinationPolicy destinationPolicy,
         IStringLocalizer<ContactCenterExternalTransferSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _destinationPolicy = destinationPolicy;
         S = stringLocalizer;
     }
 
@@ -117,7 +122,7 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
                     $"Destinations[{i}].E164Address",
                     S["Enter an E.164 address for destination {0}.", i + 1]);
             }
-            else if (!ExternalDestinationPolicy.IsAllowed(address))
+            else if (!_destinationPolicy.Evaluate(address, new DialDestinationContext { Operation = DialDestinationOperation.Configure }).IsAllowed)
             {
                 context.Updater.ModelState.AddModelError(
                     Prefix,

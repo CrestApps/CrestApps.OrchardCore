@@ -1,12 +1,31 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
-/// Rejects agents that do not have every skill required by the queue.
+/// Rejects agents who do not meet the queue's required skills at the proficiency it asked for — unless the
+/// contact has waited past the requirement's relaxation window, at which point reaching a generalist beats
+/// waiting indefinitely for a specialist who is not there. A requirement with no window is one the queue meant
+/// absolutely and is never dropped.
+/// <para>
+/// Which requirements were relaxed is recorded on the candidate's reasons, so a supervisor looking at a routing
+/// decision can see why an under-skilled agent got the call rather than having to guess.
+/// </para>
 /// </summary>
 public sealed class RequiredSkillsRoutingStrategy : IActivityRoutingStrategy
 {
+    private readonly IClock _clock;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RequiredSkillsRoutingStrategy"/> class.
+    /// </summary>
+    /// <param name="clock">The clock used to measure how long the contact has waited.</param>
+    public RequiredSkillsRoutingStrategy(IClock clock)
+    {
+        _clock = clock;
+    }
+
     /// <inheritdoc/>
     public int Order => 10;
 
@@ -15,12 +34,11 @@ public sealed class RequiredSkillsRoutingStrategy : IActivityRoutingStrategy
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        // Both sides are read through the same type, so the queue and the agent cannot disagree about what
-        // counts as the same skill. Comparing the stored strings directly is what let an agent whose skill
-        // was written with surrounding whitespace go unmatched without any sign that something was wrong.
-        var requiredSkills = SkillTag.CreateAll(context.Queue.RequiredSkills);
+        var required = SkillMatching.GetRequirements(context.Queue)
+            .Where(requirement => requirement.Required)
+            .ToArray();
 
-        if (requiredSkills.Count == 0)
+        if (required.Length == 0)
         {
             foreach (var candidate in context.Candidates)
             {
@@ -30,22 +48,34 @@ public sealed class RequiredSkillsRoutingStrategy : IActivityRoutingStrategy
             return ValueTask.CompletedTask;
         }
 
+        var waited = context.QueueItem is null
+            ? TimeSpan.Zero
+            : _clock.UtcNow - context.QueueItem.EnqueuedUtc;
+
+        var relaxed = required.Where(requirement => SkillMatching.IsRelaxed(requirement, waited)).ToArray();
+        var enforced = required.Except(relaxed).ToArray();
+
         foreach (var candidate in context.Candidates)
         {
-            var agentSkills = new HashSet<SkillTag>(SkillTag.CreateAll(candidate.Agent.Skills));
-
-            var missingSkills = requiredSkills
-                .Where(skill => !agentSkills.Contains(skill))
+            var missing = enforced
+                .Where(requirement => SkillMatching.GetProficiency(candidate.Agent, requirement.SkillId) < requirement.MinimumProficiency)
+                .Select(requirement => $"{requirement.SkillId} (needs {requirement.MinimumProficiency})")
                 .ToArray();
 
-            if (missingSkills.Length > 0)
+            if (missing.Length > 0)
             {
                 candidate.IsEligible = false;
-                candidate.AddReason($"Missing required skills: {string.Join(", ", missingSkills.Select(skill => skill.Value))}.");
+                candidate.AddReason($"Missing required skills: {string.Join(", ", missing)}.");
+
+                continue;
             }
-            else
+
+            candidate.AddReason("Matched every enforced queue skill.");
+
+            if (relaxed.Length > 0)
             {
-                candidate.AddReason("Matched every required queue skill.");
+                candidate.AddReason(
+                    $"Relaxed after {(int)waited.TotalSeconds}s of waiting: {string.Join(", ", relaxed.Select(requirement => requirement.SkillId))}.");
             }
         }
 

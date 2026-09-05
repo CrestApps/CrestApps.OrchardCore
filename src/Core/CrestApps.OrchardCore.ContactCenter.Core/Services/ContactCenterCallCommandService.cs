@@ -20,7 +20,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly IActivityReservationManager _reservationManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
-    private readonly IDialerProfileManager _dialerProfileManager;
+    private readonly IDialerProfileReader _dialerProfileReader;
     private readonly IDialerAttemptService _dialerAttemptService;
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
@@ -37,7 +37,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// <param name="reservationManager">The reservation manager used to validate offer ownership before state changes.</param>
     /// <param name="interactionManager">The interaction manager used to advance the interaction.</param>
     /// <param name="activityManager">The activity manager used to resolve non-media work offers.</param>
-    /// <param name="dialerProfileManagers">The optional dialer profile managers.</param>
+    /// <param name="dialerProfileReader">The dialer profile reader.</param>
     /// <param name="dialerAttemptServices">The optional dialer attempt services.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to determine the delivery model.</param>
@@ -51,7 +51,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         IActivityReservationManager reservationManager,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
-        IEnumerable<IDialerProfileManager> dialerProfileManagers,
+        IDialerProfileReader dialerProfileReader,
         IEnumerable<IDialerAttemptService> dialerAttemptServices,
         IAgentProfileManager agentManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
@@ -65,7 +65,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _reservationManager = reservationManager;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
-        _dialerProfileManager = dialerProfileManagers.FirstOrDefault();
+        _dialerProfileReader = dialerProfileReader;
         _dialerAttemptService = dialerAttemptServices.FirstOrDefault();
         _agentManager = agentManager;
         _voiceProviderResolver = voiceProviderResolver;
@@ -96,11 +96,10 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
             if (activity?.Source == ActivitySources.PreviewDial &&
-                _dialerProfileManager is not null &&
                 _dialerAttemptService is not null &&
                 !string.IsNullOrWhiteSpace(reservation.DialerProfileId))
             {
-                var profile = await _dialerProfileManager.FindByIdAsync(reservation.DialerProfileId, cancellationToken);
+                var profile = await _dialerProfileReader.FindByIdAsync(reservation.DialerProfileId, cancellationToken);
 
                 if (profile is not null)
                 {

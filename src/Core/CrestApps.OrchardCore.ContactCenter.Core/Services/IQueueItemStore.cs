@@ -86,6 +86,16 @@ public interface IQueueItemStore : ICatalog<QueueItem>
     Task<QueueItem> FindNextWaitingAsync(string queueId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Reads the head waiting item of each of the specified queues in one query. Asking per queue turned a
+    /// cross-queue selection for an agent in five queues into five round trips on every availability change,
+    /// and the soft phone re-runs that scan roughly once a second.
+    /// </summary>
+    /// <param name="queueIds">The queues to read.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The head waiting item of every queue that has one.</returns>
+    Task<IReadOnlyCollection<QueueItem>> GetHeadWaitingByQueueAsync(IEnumerable<string> queueIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the single oldest waiting item in the specified queue using a bounded top-one query, without
     /// loading the whole waiting backlog. This supports longest-wait measurement.
     /// </summary>

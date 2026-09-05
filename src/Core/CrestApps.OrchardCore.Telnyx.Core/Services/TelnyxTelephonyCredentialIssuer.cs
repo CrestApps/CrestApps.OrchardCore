@@ -25,7 +25,7 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
     // (which would surface as a LOGIN_FAILED on that tab).
     private const int MaxLiveCredentialsPerUser = 8;
 
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly TelnyxApiClient _apiClient;
     private readonly ITelnyxAgentCredentialStore _credentialStore;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -36,14 +36,14 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
     /// Initializes a new instance of the <see cref="TelnyxTelephonyCredentialIssuer"/> class.
     /// </summary>
     public TelnyxTelephonyCredentialIssuer(
-        IHttpClientFactory httpClientFactory,
+        TelnyxApiClient apiClient,
         ITelnyxAgentCredentialStore credentialStore,
         IClock clock,
         ILogger<TelnyxTelephonyCredentialIssuer> logger,
         ISoftPhoneHealthMetrics healthMetrics,
         IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
-        _httpClientFactory = httpClientFactory;
+        _apiClient = apiClient;
         _credentialStore = credentialStore;
         _clock = clock;
         _logger = logger;
@@ -66,46 +66,29 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
         var now = _clock.UtcNow;
         var expiresAt = now.AddMinutes(_options.CredentialLifetimeMinutes);
 
-        var body = new Dictionary<string, object>
-        {
-            ["connection_id"] = _options.SipConnectionId,
-            ["name"] = string.IsNullOrWhiteSpace(displayName) ? $"softphone-{userId}" : displayName,
-            ["expires_at"] = expiresAt.ToString("O"),
-        };
-
         try
         {
-            using var client = CreateClient();
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync("telephony_credentials", content, cancellationToken);
+            var response = await _apiClient.CreateCredentialAsync(
+                _options.SipConnectionId,
+                string.IsNullOrWhiteSpace(displayName) ? $"softphone-{userId}" : displayName,
+                expiresAt,
+                cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
+            if (!response.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected a telephony credential request with status code {StatusCode}. Response: {Response}",
                     response.StatusCode,
-                    (await SafeReadContentAsync(response, cancellationToken)).SanitizeLogValue());
+                    response.ErrorBody.SanitizeLogValue());
 
                 _healthMetrics.RecordCredentialFailure();
 
                 return null;
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            if (!document.RootElement.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object)
-            {
-                _logger.LogError("Telnyx returned a telephony credential response without a data object.");
-
-                _healthMetrics.RecordCredentialFailure();
-
-                return null;
-            }
-
-            var credentialId = ReadString(data, "id");
-            var sipUsername = ReadString(data, "sip_username");
-            var sipPassword = ReadString(data, "sip_password");
+            var credentialId = response.CredentialId;
+            var sipUsername = response.SipUsername;
+            var sipPassword = response.SipPassword;
 
             if (string.IsNullOrWhiteSpace(credentialId) ||
                 string.IsNullOrWhiteSpace(sipUsername) ||
@@ -225,36 +208,18 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
             return;
         }
 
-        try
-        {
-            using var client = CreateClient();
-            using var response = await client.DeleteAsync($"telephony_credentials/{Uri.EscapeDataString(credentialId)}", cancellationToken);
+        // The typed client owns the transport concerns this method used to repeat by hand: it treats a
+        // credential the provider has already forgotten as success, retries a transient failure, and returns a
+        // result rather than throwing, so revocation cannot fail because the network hiccuped once.
+        var result = await _apiClient.DeleteCredentialAsync(credentialId, cancellationToken);
 
-            if (!response.IsSuccessStatusCode && response.StatusCode != HttpStatusCode.NotFound)
-            {
-                _logger.LogWarning(
-                    "Telnyx rejected a telephony credential deletion request for credential {CredentialId} with status code {StatusCode}.",
-                    credentialId.SanitizeLogValue(),
-                    response.StatusCode);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        if (!result.Succeeded)
         {
-            throw;
+            _logger.LogWarning(
+                "Telnyx rejected a telephony credential deletion request for credential {CredentialId} with status code {StatusCode}.",
+                credentialId.SanitizeLogValue(),
+                result.StatusCode);
         }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "An error occurred while deleting a Telnyx telephony credential.");
-        }
-    }
-
-    private HttpClient CreateClient()
-    {
-        var client = _httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
-        client.BaseAddress = new Uri(_options.ApiBaseUrl);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-
-        return client;
     }
 
     private static string ReadString(JsonElement element, string propertyName)

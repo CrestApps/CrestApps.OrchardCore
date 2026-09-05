@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Dapper;
 using YesSql;
+using YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -166,6 +167,44 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
             .OrderByDescending(index => index.Priority)
             .ThenBy(index => index.EnqueuedUtc)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<QueueItem>> GetHeadWaitingByQueueAsync(IEnumerable<string> queueIds, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queueIds);
+
+        var ids = queueIds
+            .Where(queueId => !string.IsNullOrWhiteSpace(queueId))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (ids.Length == 0)
+        {
+            return [];
+        }
+
+        // One indexed read over every queue, ordered the way each queue routes, then reduced to the head of each
+        // in memory. YesSql cannot express "first row per group", and the alternative is one query per queue on
+        // a path the soft phone re-runs about once a second.
+        var waiting = await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.QueueId.IsIn(ids) && index.Status == QueueItemStatus.Waiting,
+            collection: ContactCenterStorage.CollectionName)
+            .OrderByDescending(index => index.Priority)
+            .ThenBy(index => index.EnqueuedUtc)
+            .ListAsync(cancellationToken);
+
+        var heads = new Dictionary<string, QueueItem>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var item in waiting)
+        {
+            if (!string.IsNullOrEmpty(item.QueueId))
+            {
+                heads.TryAdd(item.QueueId, item);
+            }
+        }
+
+        return heads.Values.ToArray();
     }
 
     /// <inheritdoc/>

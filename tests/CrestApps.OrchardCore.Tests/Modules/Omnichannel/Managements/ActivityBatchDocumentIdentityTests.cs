@@ -160,7 +160,7 @@ public sealed class ActivityBatchDocumentIdentityTests
                 .Query<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(
                     index => index.ItemId == "batch-reread",
                     collection: OmnichannelConstants.CollectionName)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
             tracked.Status = OmnichannelActivityBatchStatus.Loaded;
 

@@ -1,8 +1,8 @@
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Notifications;
-using CrestApps.OrchardCore.Sms.Workspace.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -27,7 +27,7 @@ public class SmsConversationAssignmentTests
 
         var (service, notifier) = CreateService(conversation);
 
-        var result = await service.ClaimAsync("conv-1", "agent-9", TestContext.Current.CancellationToken);
+        var result = await service.ClaimAsync("conv-1", "agent-9", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Equal("agent-9", conversation.AssignedAgentId);
@@ -50,7 +50,7 @@ public class SmsConversationAssignmentTests
 
         var (service, notifier) = CreateService(conversation);
 
-        var result = await service.ClaimAsync("conv-1", "agent-intruder", TestContext.Current.CancellationToken);
+        var result = await service.ClaimAsync("conv-1", "agent-intruder", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal("agent-owner", conversation.AssignedAgentId);
@@ -69,7 +69,7 @@ public class SmsConversationAssignmentTests
 
         var (service, _) = CreateService(conversation);
 
-        var result = await service.AssignAsync("conv-1", "agent-5", TestContext.Current.CancellationToken);
+        var result = await service.AssignAsync("conv-1", "agent-5", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded);
         Assert.Equal("agent-5", conversation.AssignedAgentId);
@@ -94,7 +94,9 @@ public class SmsConversationAssignmentTests
             new Mock<IContentManager>().Object,
             new Mock<ISmsContactResolver>().Object,
             notifier.Object,
+            Mock.Of<ISmsConversationAuthorizationService>(),
             new Mock<ISession>().Object,
+            new NoOpSmsFirstResponseSlaService(),
             clock.Object,
             RedactorProviderFactory.Create(),
             NullLogger<SmsConversationService>.Instance);

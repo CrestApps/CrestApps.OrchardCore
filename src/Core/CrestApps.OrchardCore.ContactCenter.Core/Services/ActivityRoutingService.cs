@@ -22,13 +22,16 @@ public sealed class ActivityRoutingService : IActivityRoutingService
     public async Task<ActivityRoutingDecision> SelectAgentAsync(
         ActivityQueue queue,
         QueueItem queueItem,
-        IEnumerable<AgentProfile> agents,
+        IEnumerable<AgentAvailability> availability,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(queue);
         ArgumentNullException.ThrowIfNull(queueItem);
 
-        var candidates = agents?.Select(agent => new ActivityRoutingCandidate(agent)).ToList() ?? [];
+        var candidates = availability?
+            .Where(entry => entry?.Agent is not null)
+            .Select(entry => new ActivityRoutingCandidate(entry))
+            .ToList() ?? [];
         var context = new ActivityRoutingContext(queue, queueItem, candidates);
 
         foreach (var strategy in _strategies.OrderBy(strategy => strategy.Order))

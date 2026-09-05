@@ -210,6 +210,22 @@ An empty dimension means **All**. If **From** is later than **To**, the report s
 | --- | --- | --- | --- | --- | --- | --- |
 | 78 | Call leg performance | Gives IT teams provider-leg volume, answer state, status, and duration. Legs are read from the call session the voice topology projector maintains, so the report requires the **Voice** capability and states that requirement when it is absent. | Historical; one leg status per row. | Standard interaction filters; leg status. | Leg status, legs, answered, average duration. | Table; status → interaction/provider detail. |
 
+### AI escalations
+
+An automated conversation that hands over to a person is the moment the automation admits it cannot help, so it is
+the measurement that says whether the automation is earning its place. The data is already recorded: the activity
+carries `AiEscalated` (durable, and set even though the activity leaves the automated lane, so containment still
+counts it), and the interaction carries `HandoffReason`, `HandoffSummary` and `HandoffAiSessionId`.
+
+| # | Report | Purpose and business value | Type and granularity | Filters; grouping; sorting | Columns/KPIs | Visualization and drill-down |
+| --- | --- | --- | --- | --- | --- | --- |
+| 79 | Containment and escalation | States what share of automated conversations were resolved without a person, per channel and per subject. A containment rate quoted without its escalation reasons tells an operator the automation is working without saying where it is not. | Historical; one channel and subject per row. | Date range; channel; subject; campaign. | Automated conversations, escalated, containment rate. | Table with trend; rate → escalated interaction list. |
+| 80 | Escalation reasons | Groups escalations by the reason the model gave, which is where the next automation improvement is found. | Historical; one reason per row. | Date range; channel; queue. | Reason, escalations, share, median automated turns before escalation. | Bar; reason → interaction detail with the stored summary. |
+| 81 | Post-escalation outcome | Answers whether escalating actually helped: what happened to the customer after a person took over. A high containment rate is not a good outcome if the escalations that do happen then go unanswered. | Historical; one disposition per row. | Date range; channel; queue. | Disposition, escalated interactions, average wait after escalation, abandoned after escalation. | Table; disposition → interaction detail. |
+
+Each of the three requires the AI escalation path to be enabled; when it is not, the report states that
+requirement rather than rendering an empty grid, the same way the voice-capability reports do.
+
 ## Data validation and reconciliation
 
 Use the following acceptance dataset whenever report projections or formulas change:

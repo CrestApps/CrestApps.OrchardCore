@@ -33,6 +33,9 @@ public sealed class DialerPacedStartup : StartupBase
         services
             .AddScoped<IDialerStrategy, PowerDialerStrategy>()
             .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
+            // Predictive is no longer blocked: its pacing is gated by the abandonment policy, which fails
+            // closed when the rate cannot be proven.
+            .AddScoped<IDialerStrategy, PredictiveDialerStrategy>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
                     ContactCenterConstants.Feature.DialerPaced,

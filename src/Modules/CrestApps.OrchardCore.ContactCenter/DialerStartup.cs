@@ -60,7 +60,6 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<ICallbackRequestStore, CallbackRequestStore>()
             .AddScoped<ICallbackRequestManager, CallbackRequestManager>()
             .AddScoped<IContactCenterRetentionPolicy, CallbackRequestRetentionPolicy>()
-            .AddScoped<ICallbackService, CallbackService>()
             .AddScoped<IDialerService, DialerService>()
             .AddScoped<IActivityDialerContributor, ContactCenterActivityDialerContributor>()
             .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>()
@@ -69,6 +68,11 @@ public sealed class DialerStartup : StartupBase
                     ContactCenterConstants.Feature.Dialer,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
+        // This feature owns callbacks and dialer profiles, so it replaces the defaults the base feature
+        // registered for tenants that do not have it.
+        services.Replace(ServiceDescriptor.Scoped<ICallbackService, CallbackService>());
+        services.Replace(ServiceDescriptor.Scoped<IDialerProfileReader, DialerProfileManagerReader>());
 
         services
             .AddScoped<ICatalogEntryHandler<DialerProfile>, DialerProfileHandler>()

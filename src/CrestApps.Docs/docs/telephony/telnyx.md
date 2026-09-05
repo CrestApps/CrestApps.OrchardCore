@@ -21,7 +21,7 @@ calls to agents server-side** (`ServerSideAcd`), which is what makes true power 
 | Feature | Feature ID | Purpose |
 | --- | --- | --- |
 | **Telnyx** | `CrestApps.OrchardCore.Telnyx` | Provides the Telnyx telephony provider, the browser WebRTC soft phone, and signed call-event webhooks. Depends on Telephony. When Contact Center Voice is also enabled, the Telnyx contact center voice adapter (outbound contact center calls, bridging live calls to agents via `ServerSideAcd`, and their real-time call events) activates automatically — it is integration glue, not a separately selectable feature. |
-| **Telnyx SMS** | `CrestApps.OrchardCore.Telnyx.Sms` | Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text through the [SMS Workspace](../omnichannel/sms-workspace) or [SMS Automation](../omnichannel/sms). Category **Communication**. Depends on **Telnyx** and `OrchardCore.Sms`, so enabling it also enables the Telnyx voice provider. See [Telnyx SMS](#telnyx-sms). |
+| **Telnyx SMS** | `CrestApps.OrchardCore.Telnyx.Sms` | Adds the Telnyx SMS/MMS provider and its signed inbound and delivery-receipt messaging webhook, so Telnyx numbers can send and receive text through the [SMS Portal](../omnichannel/sms-portal) or [SMS Automation](../omnichannel/sms). Category **Communication**. Depends on **Telnyx** and `OrchardCore.Sms`, so enabling it also enables the Telnyx voice provider. See [Telnyx SMS](#telnyx-sms). |
 | **Telnyx AI Voice Agent** | `CrestApps.OrchardCore.Telnyx.AiVoice` | Adds an automated outbound AI voice agent: the **Phone** omnichannel processor dials a contact over Telnyx, converses using Telnyx text-to-speech and real-time transcription driven by an AI chat profile, and settles the omnichannel activity with a summary and disposition. Category **Contact Center**. Depends on **Telnyx**, the **AI** and **AI Chat** features, and **Omnichannel Management**. See [Telnyx AI Voice Agent](#telnyx-ai-voice-agent). |
 
 ## Dependencies
@@ -284,7 +284,7 @@ public base URL, because Telnyx dials it after the streaming command starts.
 
 The **Telnyx SMS** feature (`CrestApps.OrchardCore.Telnyx.Sms`) adds Telnyx as an Orchard Core **SMS
 provider**, so Telnyx numbers can send and receive text messages through the
-[SMS Workspace](../omnichannel/sms-workspace) (human two-way) and [SMS Automation](../omnichannel/sms)
+[SMS Portal](../omnichannel/sms-portal) (human two-way) and [SMS Automation](../omnichannel/sms)
 (AI-driven). It is categorized under **Communication**, not Telephony. It depends on both **Telnyx** and
 `OrchardCore.Sms`, so enabling Telnyx SMS also enables the Telnyx voice provider on the tenant.
 

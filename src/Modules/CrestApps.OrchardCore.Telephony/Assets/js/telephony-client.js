@@ -21,21 +21,9 @@
         return node.innerHTML;
     }
 
-    function pad(value) {
-        return value < 10 ? '0' + value : String(value);
-    }
-
-    function formatDuration(totalSeconds) {
-        if (!isFinite(totalSeconds) || totalSeconds < 0) {
-            totalSeconds = 0;
-        }
-
-        var seconds = Math.floor(totalSeconds % 60);
-        var minutes = Math.floor((totalSeconds / 60) % 60);
-        var hours = Math.floor(totalSeconds / 3600);
-
-        return (hours > 0 ? hours + ':' + pad(minutes) : minutes) + ':' + pad(seconds);
-    }
+    // The call timer lives in Assets/js/shared/call-timer.js, concatenated ahead of this file, so the one
+    // implementation is unit-tested and every surface that shows a call duration agrees on what it says.
+    var formatDuration = (window.CrestAppsTelephonyShared || {}).formatDuration;
 
     function normalizeCallState(state) {
         if (typeof state === 'number') {

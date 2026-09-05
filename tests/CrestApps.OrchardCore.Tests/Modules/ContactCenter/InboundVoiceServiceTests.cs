@@ -1298,7 +1298,9 @@ public sealed class InboundVoiceServiceTests
                 QueueItemManager.Object,
                 QueueService.Object,
                 ContactLookup.Object,
-                [EntryPointResolver.Object],
+                // The real chain over the test's resolver, so the processor exercises the chaining rather
+                // than a single resolver handed straight to it.
+                new EntryPointResolverChain([EntryPointResolver.Object]),
                 ProviderCommandStateService.Object,
                 offerService,
                 DistributedLock.Object,

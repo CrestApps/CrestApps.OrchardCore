@@ -114,4 +114,11 @@ public sealed class ContactCenterEntryPoint : CatalogItem, INameAwareModel, IMod
     /// Gets or sets the UTC time the entry point was last modified.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional menu callers hear before they are routed. An entry point with no flow, or one
+    /// whose flow has no nodes, routes straight to its configured target exactly as it always did, so nothing
+    /// changes for a tenant that has not built a menu.
+    /// </summary>
+    public IvrFlow IvrFlow { get; set; }
 }

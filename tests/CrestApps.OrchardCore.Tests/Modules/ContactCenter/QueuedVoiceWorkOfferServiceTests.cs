@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Options;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -7,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using YesSql;
 
+using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class QueuedVoiceWorkOfferServiceTests
@@ -200,8 +203,8 @@ public sealed class QueuedVoiceWorkOfferServiceTests
                 DialerProfileId = "prof-power",
             });
 
-        var dialerProfileManager = new Mock<IDialerProfileManager>();
-        dialerProfileManager
+        var dialerProfileReader = new Mock<IDialerProfileReader>();
+        dialerProfileReader
             .Setup(manager => manager.FindByIdAsync("prof-power", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DialerProfile { ItemId = "prof-power", Mode = DialerMode.Power });
 
@@ -214,7 +217,7 @@ public sealed class QueuedVoiceWorkOfferServiceTests
             inboundVoiceService,
             new Mock<ISession>(),
             queueItemStore: queueItemStore,
-            dialerProfileManager: dialerProfileManager);
+            dialerProfileReader: dialerProfileReader);
 
         // Act
         var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
@@ -266,8 +269,8 @@ public sealed class QueuedVoiceWorkOfferServiceTests
                 DialerProfileId = "prof-preview",
             });
 
-        var dialerProfileManager = new Mock<IDialerProfileManager>();
-        dialerProfileManager
+        var dialerProfileReader = new Mock<IDialerProfileReader>();
+        dialerProfileReader
             .Setup(manager => manager.FindByIdAsync("prof-preview", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new DialerProfile { ItemId = "prof-preview", Mode = DialerMode.Preview });
 
@@ -283,7 +286,7 @@ public sealed class QueuedVoiceWorkOfferServiceTests
             inboundVoiceService,
             new Mock<ISession>(),
             queueItemStore: queueItemStore,
-            dialerProfileManager: dialerProfileManager);
+            dialerProfileReader: dialerProfileReader);
 
         // Act
         var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
@@ -303,7 +306,7 @@ public sealed class QueuedVoiceWorkOfferServiceTests
         Mock<IQueueItemManager> queueItemManager = null,
         Mock<IInteractionManager> interactionManager = null,
         Mock<IQueueItemStore> queueItemStore = null,
-        Mock<IDialerProfileManager> dialerProfileManager = null)
+        Mock<IDialerProfileReader> dialerProfileReader = null)
     {
         if (queueItemManager is null)
         {
@@ -315,15 +318,45 @@ public sealed class QueuedVoiceWorkOfferServiceTests
                 .ReturnsAsync([]);
         }
 
+        // The selector reads the head of each queue the agent serves and the queue that owns it. Tests that do
+        // not care which queue is chosen still need both to answer, or the selector correctly finds no work and
+        // the offer never happens.
+        var resolvedQueueItemStore = queueItemStore ?? new Mock<IQueueItemStore>();
+
+        resolvedQueueItemStore
+            .Setup(store => store.GetHeadWaitingByQueueAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<string> queueIds, CancellationToken _) => queueIds
+                .Select(queueId => new QueueItem
+                {
+                    ItemId = $"item-{queueId}",
+                    QueueId = queueId,
+                })
+                .ToArray());
+
+        var selectorQueueManager = new Mock<IActivityQueueManager>();
+        selectorQueueManager
+            .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string queueId, CancellationToken _) => new ActivityQueue { ItemId = queueId });
+
         return new QueuedVoiceWorkOfferService(
             agentManager.Object,
-            [healer.Object],
+            healer.Object,
             inboundVoiceService.Object,
             queueItemManager.Object,
-            (queueItemStore ?? new Mock<IQueueItemStore>()).Object,
+            resolvedQueueItemStore.Object,
             (interactionManager ?? new Mock<IInteractionManager>()).Object,
-            dialerProfileManager is null ? [] : [dialerProfileManager.Object],
+            dialerProfileReader?.Object ?? new NullDialerProfileReader(),
+            // The real selector over the real store, so these tests exercise the cross-queue choice rather
+            // than a stub of it.
+            new AgentWorkSelector(resolvedQueueItemStore.Object, selectorQueueManager.Object, Mock.Of<IClock>()),
+            new FakeDistributedLock(),
+            CoordinationOptions(),
             session.Object,
             Mock.Of<ILogger<QueuedVoiceWorkOfferService>>());
     }
+
+    // The coordination timings are options now, so a test uses the shipped defaults rather than a value it
+    // invents that no deployment would run with.
+    private static OptionsWrapper<ContactCenterCoordinationOptions> CoordinationOptions()
+        => new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions());
 }

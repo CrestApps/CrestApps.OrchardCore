@@ -64,15 +64,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         conversation has clearly ended. When you are unsure, prefer to respond. Always include a short Reason.
         """;
 
-    // One AI response is generated per conversation at a time. Each in-flight response registers its cancellation
-    // source here, keyed by session id; when a newer message arrives it cancels the running one (the conversation
-    // changed, so that response is stale) and registers its own. Static so it is shared across the scoped handler
-    // instances that separate inbound webhooks create.
-    private static readonly ConcurrentDictionary<string, CancellationTokenSource> _activeGenerations = new(StringComparer.Ordinal);
-
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAICompletionService _aICompletionService;
+    private readonly IOmnichannelHandoffTurn _handoffTurn;
+    private readonly IAutomatedConversationGate _conversationGate;
     private readonly IAIClientFactory _aiClientFactory;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAICompletionContextBuilder _completionContextBuilder;
@@ -120,6 +116,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IAIChatSessionManager chatSessionManager,
         IAIChatSessionPromptStore promptStore,
         IAICompletionService aICompletionService,
+        IOmnichannelHandoffTurn handoffTurn,
+        IAutomatedConversationGate conversationGate,
         IAIClientFactory aiClientFactory,
         IAIDeploymentManager deploymentManager,
         IAICompletionContextBuilder completionContextBuilder,
@@ -142,6 +140,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _chatSessionManager = chatSessionManager;
         _promptStore = promptStore;
         _aICompletionService = aICompletionService;
+        _handoffTurn = handoffTurn;
+        _conversationGate = conversationGate;
         _aiClientFactory = aiClientFactory;
         _deploymentManager = deploymentManager;
         _completionContextBuilder = completionContextBuilder;
@@ -323,7 +323,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         // the should-respond check, the AI call and the "typing" pause, so a superseded turn stops promptly and only
         // the newest turn goes on to send. The lock below still serializes the send itself so two responses can never
         // be dispatched at once. (ILocalLock is a real in-process lock; IDistributedLock is a no-op here — no Redis.)
-        using var generation = RegisterGeneration(chatSession.SessionId, cancellationToken);
+        using var generation = _conversationGate.Begin(chatSession.SessionId, cancellationToken);
         var generationToken = generation.Token;
 
         var hangupRequested = false;
@@ -334,7 +334,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
         // Resolve the SMS handoff destination once for this turn. Handoff is only offered to the model, and only
         // honored, when the flow both enables it (with a target queue) and a channel implementation is registered
-        // (the SMS Workspace feature). This prevents the model from promising a human when there is nowhere to route.
+        // (the SMS Portal feature). This prevents the model from promising a human when there is nowhere to route.
         var smsHandoffService = _handoffServices?.FirstOrDefault(service => service.CanHandle(OmnichannelConstants.Channels.Sms));
         var handoffAvailable = smsHandoffService is not null && OmnichannelHandoffHelper.IsHandoffEnabled(flowSettings);
         var handoffRequested = false;
@@ -458,17 +458,17 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         // A cancelled request unwinds the whole turn so the newer message regenerates the single reply
                         // against the full history, rather than this stale request answering a superseded transcript.
                         // The completion auto-invokes the transfer tool when the model decides to escalate; the tool
-                        // records the decision on the ambient turn, which we read back once the completion returns.
-                        using var handoffTurn = OmnichannelHandoffTurnContext.Begin();
+                        // records the decision on the scoped turn, which we reset first and read back afterwards.
+                        _handoffTurn.Reset();
 
                         var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, generationToken);
 
                         bestChoice = completion?.Messages?.FirstOrDefault()?.Text;
-                        handoffRequested = handoffAvailable && handoffTurn.Turn.HandoffRequested;
+                        handoffRequested = handoffAvailable && _handoffTurn.HandoffRequested;
 
                         if (handoffRequested)
                         {
-                            handoffReason = handoffTurn.Turn.Reason;
+                            handoffReason = _handoffTurn.Reason;
                         }
                     }
                     catch (Exception ex) when (generationToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
@@ -668,7 +668,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         // ("Part.Field") and asked to return values, rather than authoring a content item (which produced
                         // shapes the field editors could not read and never persisted).
                         var subjectTextFields = activity.AllowAIToUpdateSubject && !string.IsNullOrWhiteSpace(activity.SubjectContentType)
-                            ? GetSubjectTextFields(await contentDefinitionManager.GetTypeDefinitionAsync(activity.SubjectContentType))
+                            ? OmnichannelSubjectWriter.GetSubjectTextFields(await contentDefinitionManager.GetTypeDefinitionAsync(activity.SubjectContentType))
                             : [];
 
                         var sessionPrompts = await deferredPromptStore.GetPromptsAsync(chatSession.SessionId);
@@ -707,7 +707,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             userPrompt +=
                                 $"""
 
-                            Current contact email: {GetContactEmail(contact) ?? "(none)"}
+                            Current contact email: {OmnichannelSubjectWriter.GetContactEmail(contact) ?? "(none)"}
                             """;
                         }
 
@@ -726,7 +726,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             // Gated, field-aware subject write-back: set only known TextField fields, into their real Text
                             // structure, instead of merging a model-authored content item.
                             if (activity.AllowAIToUpdateSubject && subject is not null &&
-                                ApplySubjectFields(subject, result.Result.SubjectFields, subjectTextFields))
+                                OmnichannelSubjectWriter.ApplySubjectFields(subject, result.Result.SubjectFields, subjectTextFields))
                             {
                                 omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
 
@@ -739,7 +739,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             // Gated contact write-back: upsert only a captured email into the ContactMethods bag (mirroring
                             // how the importer builds it) instead of deep-merging a model-authored content item.
                             if (activity.AllowAIToUpdateContact && contact is not null &&
-                                TryApplyContactEmail(contact, result.Result.ContactEmail))
+                                OmnichannelSubjectWriter.TryApplyContactEmail(contact, result.Result.ContactEmail))
                             {
                                 await contentManager.UpdateAsync(contact);
                             }
@@ -1075,58 +1075,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     // editors could not read and never persisted). Kept private here to avoid coupling the SMS module to Telnyx;
     // consolidating both into a shared Omnichannel helper is a worthwhile future cleanup.
 
-    // Registers this handler as the single active AI generation for a conversation, cancelling any generation still in
-    // flight for the same conversation — the customer's newer inbound message makes the older reply stale. The returned
-    // token is cancelled if a still-newer message arrives, so the whole turn unwinds and only the newest turn sends.
-    // A single node owns each conversation's inbound processing, so an in-memory registry keyed by session is enough.
-    // Whether a reply is being composed right now for this conversation on this node. The owed-reply recovery task
-    // uses this to skip conversations a live inbound is already handling, so it only re-drives ones whose generation
-    // was genuinely lost (for example after a restart, when this in-memory registry starts empty).
-    internal static bool IsGenerating(string sessionId)
-        => !string.IsNullOrEmpty(sessionId) && _activeGenerations.ContainsKey(sessionId);
-
-    private static GenerationRegistration RegisterGeneration(string sessionId, CancellationToken hostToken)
-    {
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(hostToken);
-
-        _activeGenerations.AddOrUpdate(
-            sessionId,
-            cts,
-            (_, existing) =>
-            {
-                // A reply is already being composed for this conversation. Cancel it — the newer inbound message makes
-                // it stale — and take its place. The superseded turn disposes its own source in its finally.
-                existing.Cancel();
-
-                return cts;
-            });
-
-        return new GenerationRegistration(sessionId, cts);
-    }
-
-    // Scopes an active-generation registration: exposes the cancellation token and, on dispose, deregisters this turn
-    // (only if it is still the active one — a newer turn may have replaced it) and disposes the linked source.
-    private sealed class GenerationRegistration : IDisposable
-    {
-        private readonly string _sessionId;
-        private readonly CancellationTokenSource _cts;
-
-        public GenerationRegistration(string sessionId, CancellationTokenSource cts)
-        {
-            _sessionId = sessionId;
-            _cts = cts;
-        }
-
-        public CancellationToken Token => _cts.Token;
-
-        public void Dispose()
-        {
-            // Only remove ourselves if we are still the registered generation; a newer turn may already own the slot.
-            _activeGenerations.TryRemove(new KeyValuePair<string, CancellationTokenSource>(_sessionId, _cts));
-            _cts.Dispose();
-        }
-    }
-
     // Returns the customer (user) messages that trail the transcript after the last assistant reply — i.e. the
     // messages the automated agent has not answered yet. An empty result means the last thing said was the agent's
     // own reply, so nothing is owed and the conversation should not send again on its own. The initial outbound is
@@ -1214,123 +1162,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         pending.Reverse();
 
         return pending;
-    }
-
-    private static string GetContactEmail(ContentItem contact)
-    {
-        if (contact is null ||
-            !contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var bag) || bag.ContentItems is null)
-        {
-            return null;
-        }
-
-        foreach (var method in bag.ContentItems)
-        {
-            if (string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal) &&
-                method.TryGet<EmailInfoPart>(out var emailPart) &&
-                !string.IsNullOrWhiteSpace(emailPart.Email?.Text))
-            {
-                return emailPart.Email.Text.Trim();
-            }
-        }
-
-        return null;
-    }
-
-    private static bool TryApplyContactEmail(ContentItem contact, string email)
-    {
-        if (contact is null || string.IsNullOrWhiteSpace(email))
-        {
-            return false;
-        }
-
-        email = email.Trim();
-
-        // A conservative sanity check so a mis-parsed phrase is never written as an email.
-        if (email.Length < 5 || !email.Contains('@', StringComparison.Ordinal) || email.Contains(' ', StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        // Nothing to do when the same address is already on file.
-        if (string.Equals(GetContactEmail(contact), email, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var bag = contact.GetOrCreate<BagPart>(OmnichannelConstants.NamedParts.ContactMethods);
-        bag.ContentItems ??= [];
-        bag.ContentItems.RemoveAll(method => string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal));
-
-        var emailItem = new ContentItem
-        {
-            ContentType = OmnichannelConstants.ContentTypes.EmailAddress,
-            DisplayText = email,
-        };
-
-        emailItem.Alter<EmailInfoPart>(part => part.Email = new TextField { Text = email });
-        bag.ContentItems.Add(emailItem);
-        contact.Apply(OmnichannelConstants.NamedParts.ContactMethods, bag);
-
-        return true;
-    }
-
-    private static List<(string Part, string Field)> GetSubjectTextFields(ContentTypeDefinition typeDefinition)
-    {
-        var fields = new List<(string, string)>();
-
-        if (typeDefinition is null)
-        {
-            return fields;
-        }
-
-        foreach (var part in typeDefinition.Parts)
-        {
-            foreach (var field in part.PartDefinition.Fields)
-            {
-                if (string.Equals(field.FieldDefinition?.Name, nameof(TextField), StringComparison.Ordinal))
-                {
-                    fields.Add((part.Name, field.Name));
-                }
-            }
-        }
-
-        return fields;
-    }
-
-    private static bool ApplySubjectFields(ContentItem subject, Dictionary<string, string> values, List<(string Part, string Field)> fields)
-    {
-        if (subject is null || values is null || values.Count == 0 || fields.Count == 0)
-        {
-            return false;
-        }
-
-        var changed = false;
-
-        // ContentItem.Content is a dynamic JsonDynamicObject; cast to the underlying JsonObject so type checks and
-        // writes operate on the real node (accessing through the dynamic hands back a wrapper that is never a
-        // JsonObject, which made each field clobber the previous one).
-        var content = (JsonObject)subject.Content;
-
-        foreach (var (part, field) in fields)
-        {
-            if (!(values.TryGetValue($"{part}.{field}", out var value) || values.TryGetValue(field, out value)) ||
-                string.IsNullOrWhiteSpace(value))
-            {
-                continue;
-            }
-
-            if (content[part] is not JsonObject partObject)
-            {
-                partObject = new JsonObject();
-                content[part] = partObject;
-            }
-
-            partObject[field] = new JsonObject { ["Text"] = value.Trim() };
-            changed = true;
-        }
-
-        return changed;
     }
 
     private sealed class ShouldRespondResult

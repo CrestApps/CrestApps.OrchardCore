@@ -66,6 +66,7 @@ public static class TelnyxCallEventParser
                 RecordingId = ReadString(payload, "recording_id"),
                 TranscriptionText = ReadNestedString(payload, "transcription_data", "transcript"),
                 TranscriptionIsFinal = ReadNestedBool(payload, "transcription_data", "is_final"),
+                Digits = ReadString(payload, "digits"),
                 ClientState = ReadClientState(payload),
             };
 

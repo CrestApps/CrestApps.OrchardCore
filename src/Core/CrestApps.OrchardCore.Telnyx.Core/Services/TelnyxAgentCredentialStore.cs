@@ -80,7 +80,7 @@ public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
                 index.TenantName == tenantName &&
                 index.UserId == normalizedUserId &&
                 index.CredentialId == normalizedCredentialId)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (credential is null)
         {

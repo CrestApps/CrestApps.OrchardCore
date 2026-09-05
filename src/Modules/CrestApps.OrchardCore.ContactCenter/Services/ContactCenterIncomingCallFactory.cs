@@ -81,6 +81,23 @@ internal static class ContactCenterIncomingCallFactory
             metadata["queueId"] = interaction.QueueId;
         }
 
+        // Carried so the ringing panel can show what the automated leg already established. An agent who
+        // answers an escalated call without it starts the conversation the caller has already had.
+        if (!string.IsNullOrWhiteSpace(interaction.HandoffSummary))
+        {
+            metadata["handoffSummary"] = interaction.HandoffSummary;
+        }
+
+        if (!string.IsNullOrWhiteSpace(interaction.HandoffReason))
+        {
+            metadata["handoffReason"] = interaction.HandoffReason;
+        }
+
+        if (!string.IsNullOrWhiteSpace(interaction.HandoffAiSessionId))
+        {
+            metadata["handoffAiSessionId"] = interaction.HandoffAiSessionId;
+        }
+
         return metadata;
     }
 }

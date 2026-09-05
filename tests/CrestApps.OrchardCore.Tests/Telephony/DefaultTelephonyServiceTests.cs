@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -16,6 +17,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -36,6 +38,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -53,6 +56,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(null),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -86,6 +90,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -117,6 +122,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -136,6 +142,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -153,6 +160,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(null),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -180,6 +188,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -202,6 +211,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act
@@ -225,6 +235,7 @@ public sealed class DefaultTelephonyServiceTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act

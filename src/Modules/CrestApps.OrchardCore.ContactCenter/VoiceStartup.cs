@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -87,14 +88,10 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IProviderCommandTypeExecutor, RejectProviderCommandTypeExecutor>()
             .AddScoped<IProviderCommandTypeExecutor, SendToVoicemailProviderCommandTypeExecutor>()
             .AddScoped<IProviderCommandProcessor, ProviderCommandProcessor>()
-            .AddScoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>()
             .AddScoped<IProviderCallStateReconciler, ProviderCallStateReconciler>()
             .AddScoped<IProviderVoiceEventService, ProviderVoiceEventService>()
             .AddScoped<IProviderVoiceEventSink, ProviderVoiceEventSink>()
             .AddScoped<INormalizedVoiceEventHandler, ContactCenterVoiceProjection>()
-            .AddScoped<IProviderWebhookInboxStore, ProviderWebhookInboxStore>()
-            .AddScoped<IProviderWebhookInbox, ProviderWebhookInbox>()
-            .AddScoped<IContactCenterRetentionPolicy, ProviderWebhookInboxMessageRetentionPolicy>()
             .AddScoped<IProviderWebhookInboxHandler, ProviderVoiceEventInboxHandler>()
             .AddScoped<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>()
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
@@ -102,6 +99,15 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
             .AddScoped<ICallControlAuthorizationService, CallControlAuthorizationService>()
             .AddScoped<ITransferDestinationResolver, TransferDestinationResolver>()
+            // Attended transfer as the three phases it is, recorded against the call so a supervisor can see a
+            // customer held while their agent talks to somebody else.
+            .AddScoped<IConsultTransferService, ConsultTransferService>()
+            // With Voice enabled, the soft-phone transfer field resolves through the curated destination catalog
+            // rather than accepting whatever an agent types.
+            .Replace(ServiceDescriptor.Scoped<ITransferTargetPolicy, ContactCenterTransferTargetPolicy>())
+            // Voice is the feature that has a provider to reconcile against, so it replaces the do-nothing
+            // default the base feature registers.
+            .Replace(ServiceDescriptor.Scoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>())
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
             .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
             .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
@@ -111,6 +117,10 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
             .AddScoped<IInboundVoiceService>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
+            // Inbound routing publishes events, and the publisher constructs the handler that re-offers declined
+            // work. The lazy wrapper is what lets that handler declare the dependency instead of fetching it from
+            // the container, without the two constructing each other.
+            .AddScoped(sp => new Lazy<IInboundVoiceService>(sp.GetRequiredService<IInboundVoiceService>))
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>()
             .AddScoped<ContactCenterVoiceLifecycleParticipant>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
@@ -118,12 +128,9 @@ public sealed class VoiceStartup : StartupBase
 
         services
             .AddIndexProvider<ProviderCommandIndexProvider>()
-            .AddDataMigration<ProviderCommandIndexMigrations>()
-            .AddIndexProvider<ProviderWebhookInboxMessageIndexProvider>()
-            .AddDataMigration<ProviderWebhookInboxMessageIndexMigrations>();
+            .AddDataMigration<ProviderCommandIndexMigrations>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderCommandRecoveryBackgroundTask>());
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>());
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>());
     }

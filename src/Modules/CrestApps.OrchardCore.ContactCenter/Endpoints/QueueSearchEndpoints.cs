@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
 /// <summary>
 /// A lightweight search endpoint that lists Contact Center queues for the reusable item selector (used, for
-/// example, by the SMS Workspace routing editor to pick a department queue). It returns the enabled queues,
+/// example, by the SMS Portal routing editor to pick a department queue). It returns the enabled queues,
 /// optionally filtered by name, as {value, text} pairs.
 /// </summary>
 internal static class QueueSearchEndpoints

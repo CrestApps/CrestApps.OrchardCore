@@ -31,12 +31,13 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
-    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Abstractions/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Telnyx.Core/CrestApps.OrchardCore.Telnyx.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
-    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Sms.Workspace.Core/CrestApps.OrchardCore.Sms.Workspace.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/CrestApps.OrchardCore.Omnichannel.Voice.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.WebSockets/CrestApps.OrchardCore.WebSockets.csproj" PrivateAssets="none" />
   </ItemGroup>
 
@@ -49,6 +50,7 @@
       assembly also references ContactCenter.Abstractions above.
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Voice/CrestApps.OrchardCore.Omnichannel.Voice.csproj" PrivateAssets="none" />
   </ItemGroup>
 
 </Project>

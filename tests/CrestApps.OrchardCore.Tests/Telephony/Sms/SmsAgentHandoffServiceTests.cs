@@ -1,14 +1,20 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Notifications;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
 
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 
 public class SmsAgentHandoffServiceTests
@@ -185,6 +191,130 @@ public class SmsAgentHandoffServiceTests
         Assert.Null(harness.CreatedConversation);
     }
 
+
+    [Fact]
+    public async Task RequestHandoff_RefusesAQueueThatDoesNotExist()
+    {
+        // Arrange
+        // A misconfigured escalation queue used to produce a conversation owned by an identifier nothing
+        // resolves: it is in no agent's inbox, no supervisor sees it under a department, and the customer is
+        // waiting for a reply from a queue that does not exist.
+        var harness = new Harness(queueExists: false);
+
+        // Act
+        var result = await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = new OmnichannelActivity { ItemId = "act1" },
+            TargetQueueId = "missing-queue",
+            ServiceAddress = "+16502530000",
+            ContactAddress = "+16502530001",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains("queue", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(harness.CreatedConversation);
+    }
+
+    [Fact]
+    public async Task RequestHandoff_OnARoutedQueue_PushAssignsToTheSelectedAgent()
+    {
+        // Arrange
+        // A routed queue exists precisely so a thread lands on one person rather than in a pool nobody owns.
+        // Escalations bypassed that and pooled every handoff, so a routed department silently behaved like a
+        // shared one for exactly the conversations that needed an owner most.
+        var harness = new Harness(distributionMode: SmsNumberRouteDistributionMode.Routed, selectedAgentId: "agent-7");
+
+        // Act
+        var result = await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = new OmnichannelActivity { ItemId = "act1" },
+            TargetQueueId = "queue-1",
+            ServiceAddress = "+16502530000",
+            ContactAddress = "+16502530001",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("agent-7", harness.CreatedConversation.AssignedAgentId);
+        Assert.Equal(SmsConversationAssignmentStatus.Assigned, harness.CreatedConversation.AssignmentStatus);
+        Assert.Equal(SmsConversationOwnerType.Queue, harness.CreatedConversation.OwnerType);
+        Assert.Equal("queue-1", harness.CreatedConversation.OwnerId);
+    }
+
+    [Fact]
+    public async Task RequestHandoff_OnARoutedQueueWithNobodyAvailable_FallsBackToTheSharedPool()
+    {
+        // Arrange
+        // Refusing the handoff because nobody is free would strand the customer in an automated thread that has
+        // already given up on them. The pool is the correct fallback: the thread is visible to the department.
+        var harness = new Harness(distributionMode: SmsNumberRouteDistributionMode.Routed, selectedAgentId: null);
+
+        // Act
+        var result = await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = new OmnichannelActivity { ItemId = "act1" },
+            TargetQueueId = "queue-1",
+            ServiceAddress = "+16502530000",
+            ContactAddress = "+16502530001",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Null(harness.CreatedConversation.AssignedAgentId);
+        Assert.Equal(SmsConversationAssignmentStatus.Unassigned, harness.CreatedConversation.AssignmentStatus);
+        Assert.Equal("queue-1", harness.CreatedConversation.OwnerId);
+    }
+
+    [Fact]
+    public async Task RequestHandoff_OnASharedPoolQueue_NeverConsultsTheRoutingStrategy()
+    {
+        // Arrange
+        // A shared pool is a deliberate choice, not an absence of one, so it must not be quietly turned into a
+        // push assignment by the escalation path.
+        var harness = new Harness(distributionMode: SmsNumberRouteDistributionMode.SharedPool, selectedAgentId: "agent-7");
+
+        // Act
+        await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = new OmnichannelActivity { ItemId = "act1" },
+            TargetQueueId = "queue-1",
+            ServiceAddress = "+16502530000",
+            ContactAddress = "+16502530001",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(harness.CreatedConversation.AssignedAgentId);
+        harness.RoutingStrategy.Verify(
+            strategy => strategy.SelectAgentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RequestHandoff_NotifiesTheAssignedAgent_WhenTheThreadWasPushAssigned()
+    {
+        // Arrange
+        // The notification is how the agent learns the thread exists. Sending it with no assignee, when one was
+        // chosen, lights up the whole department for a conversation only one person can act on.
+        var harness = new Harness(distributionMode: SmsNumberRouteDistributionMode.Routed, selectedAgentId: "agent-7");
+
+        // Act
+        await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = new OmnichannelActivity { ItemId = "act1" },
+            TargetQueueId = "queue-1",
+            ServiceAddress = "+16502530000",
+            ContactAddress = "+16502530001",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.Notifier.Verify(
+            notifier => notifier.NewInboundMessageAsync(
+                It.Is<SmsInboundNotification>(notification => notification.AssignedAgentId == "agent-7" && notification.OwnerQueueId == "queue-1"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private sealed class Harness
     {
         public Mock<ISmsRealTimeNotifier> Notifier { get; } = new();
@@ -195,9 +325,15 @@ public class SmsAgentHandoffServiceTests
 
         public List<OmnichannelMessage> SavedMessages { get; } = [];
 
+        public Mock<ISmsRoutingStrategy> RoutingStrategy { get; } = new();
+
         public SmsAgentHandoffService Service { get; }
 
-        public Harness(SmsConversation existing = null)
+        public Harness(
+            SmsConversation existing = null,
+            bool queueExists = true,
+            SmsNumberRouteDistributionMode distributionMode = SmsNumberRouteDistributionMode.SharedPool,
+            string selectedAgentId = null)
         {
             var conversationStore = new Mock<ISmsConversationStore>();
             conversationStore.Setup(s => s.FindByAddressesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -217,9 +353,43 @@ public class SmsAgentHandoffServiceTests
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
 
+            var queuePolicyReader = new Mock<ISmsQueuePolicyReader>();
+            queuePolicyReader.Setup(reader => reader.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(queueExists ? new SmsQueuePolicy(true, 0, null) : SmsQueuePolicy.NotFound);
+
+            var endpoint = new OmnichannelChannelEndpoint
+            {
+                ItemId = "endpoint-1",
+                Channel = OmnichannelConstants.Channels.Sms,
+                Value = "+16502530000",
+            };
+
+            endpoint.Put(new SmsEndpointRoutingSettings
+            {
+                TargetType = SmsNumberRouteTargetType.Queue,
+                TargetId = "queue-1",
+                DistributionMode = distributionMode,
+            });
+
+            var endpointManager = new Mock<IOmnichannelChannelEndpointManager>();
+            endpointManager
+                .Setup(manager => manager.GetByServiceAddressAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(endpoint);
+
+            RoutingStrategy
+                .Setup(strategy => strategy.SelectAgentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(selectedAgentId);
+
+            var router = new SmsConversationRouter(
+                [new HandoffQueueRouter(RoutingStrategy.Object, clock.Object)],
+                NullLogger<SmsConversationRouter>.Instance);
+
             Service = new SmsAgentHandoffService(
                 conversationStore.Object,
                 Notifier.Object,
+                queuePolicyReader.Object,
+                endpointManager.Object,
+                router,
                 session.Object,
                 clock.Object,
                 NullLogger<SmsAgentHandoffService>.Instance);

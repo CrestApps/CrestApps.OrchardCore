@@ -6,8 +6,11 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 
@@ -651,9 +654,24 @@ public sealed class DialProviderCommandTypeExecutorTests
             clock.Object,
             callSessionManager.Object,
             dialAgentManager.Object,
+            CreateDialDestinationPolicy(),
             NullLogger<DialProviderCommandTypeExecutor>.Instance);
 
         return new TestHarness(command, claim, interaction, activity, validator, router, executor, callSessionManager, callSession);
+    }
+
+    // The real policy, not a permissive stub: an emergency or premium destination must be refused by the dial
+    // executor exactly as it is everywhere else.
+    private static DefaultDialDestinationPolicy CreateDialDestinationPolicy()
+        => new DefaultDialDestinationPolicy(new TelephonySettingsSnapshot());
+
+    private sealed class TelephonySettingsSnapshot : IOptionsSnapshot<TelephonySettings>
+    {
+        private readonly TelephonySettings _settings = new();
+
+        public TelephonySettings Value => _settings;
+
+        public TelephonySettings Get(string name) => _settings;
     }
 
     private sealed record TestHarness(

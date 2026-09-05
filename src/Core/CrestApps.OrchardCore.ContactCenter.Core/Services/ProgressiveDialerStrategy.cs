@@ -31,8 +31,8 @@ public sealed class ProgressiveDialerStrategy : DialerStrategyBase
     public override DialerMode Mode => DialerMode.Progressive;
 
     /// <inheritdoc/>
-    protected override int GetMaxAttemptsPerCycle(DialerProfile profile)
+    protected override Task<int> GetMaxAttemptsPerCycleAsync(DialerProfile profile, CancellationToken cancellationToken)
     {
-        return MaxCallsPerCycle;
+        return Task.FromResult(MaxCallsPerCycle);
     }
 }

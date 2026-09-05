@@ -109,4 +109,12 @@ public sealed class TelnyxSettings
     /// without a second person. When empty, the audio test is unavailable.
     /// </summary>
     public string EchoTestDestination { get; set; }
+
+    /// <summary>
+    /// Gets or sets what to do about a call this connection has up that the platform has no interaction
+    /// for - one placed immediately before a restart, so no local record was ever written. Defaults to
+    /// recording it and leaving it connected, because an orphan may still be a conversation that is
+    /// working, and ending it is the more destructive of the two mistakes.
+    /// </summary>
+    public TelnyxOrphanedCallHandling OrphanedCallHandling { get; set; }
 }

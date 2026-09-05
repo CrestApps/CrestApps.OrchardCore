@@ -35,7 +35,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
             "CrestApps.OrchardCore.AI"})]
     public sealed class AISubjectFlowStartup : OrchardCore.Modules.StartupBase
     {
-        public AISubjectFlowStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.AISubjectFlowStartup> stringLocalizer) { }
+        public AISubjectFlowStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.AISubjectFlowStartup> stringLocalizer, OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]

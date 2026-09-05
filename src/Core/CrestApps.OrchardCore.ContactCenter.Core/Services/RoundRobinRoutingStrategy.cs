@@ -25,7 +25,10 @@ public sealed class RoundRobinRoutingStrategy : IActivityRoutingStrategy
 
         var eligibleCandidates = context.Candidates
             .Where(candidate => candidate.IsEligible)
-            .OrderBy(candidate => candidate.Agent.LastAssignedUtc ?? DateTime.MinValue)
+            // Fairness is about who least recently finished work, not who least recently had an offer pushed at
+            // them: an agent who declined or missed one would otherwise keep their place at the front.
+            .OrderBy(candidate => candidate.Agent.LastWorkCompletedUtc ?? DateTime.MinValue)
+            .ThenBy(candidate => candidate.Agent.LastAssignedUtc ?? DateTime.MinValue)
             .ThenBy(candidate => candidate.Agent.PresenceChangedUtc ?? DateTime.MaxValue)
             .ToArray();
 

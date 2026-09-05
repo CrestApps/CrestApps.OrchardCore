@@ -1,10 +1,10 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routers;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routing;
-using CrestApps.OrchardCore.Sms.Workspace.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using Moq;
 using OrchardCore.Modules;
 
@@ -92,7 +92,7 @@ public class RoutedQueueRouterTests
             Router = new RoutedQueueRouter(Strategy.Object, clock.Object);
         }
 
-        public static SmsInboundRoutingContext Context(
+        public static SmsRoutingContext Context(
             SmsNumberRouteTargetType targetType,
             SmsNumberRouteDistributionMode mode,
             string targetId,
@@ -106,7 +106,7 @@ public class RoutedQueueRouterTests
                 TargetId = targetId,
             });
 
-            return new SmsInboundRoutingContext
+            return new SmsRoutingContext
             {
                 Message = new OmnichannelMessage { Channel = "SMS", CustomerAddress = "+15551112222", ServiceAddress = "+15553334444" },
                 Endpoint = endpoint,

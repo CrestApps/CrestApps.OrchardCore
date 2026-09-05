@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -330,6 +331,7 @@ public sealed class ActivityAssignmentServiceTests
             distributedLock.Object,
             (session ?? new Mock<ISession>()).Object,
             clock.Object,
+            CoordinationOptions(),
             NullLogger<ActivityAssignmentService>.Instance);
     }
 
@@ -347,8 +349,13 @@ public sealed class ActivityAssignmentServiceTests
     {
         return new ActivityRoutingService(
         [
-            new RequiredSkillsRoutingStrategy(),
+            new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
             new LongestIdleRoutingStrategy(),
         ]);
     }
+
+    // The coordination timings are options now, so a test uses the shipped defaults rather than a value it
+    // invents that no deployment would run with.
+    private static OptionsWrapper<ContactCenterCoordinationOptions> CoordinationOptions()
+        => new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions());
 }

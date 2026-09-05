@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.Services;
@@ -67,6 +68,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
         // Re-drive ONLY the automated AI handler. Invoking every IOmnichannelEventHandler would also hand the event to
         // the human SMS-portal inbound processor, which would try to route it as a workspace conversation — a message
         // that belongs to an automated activity is not a portal message.
+        var conversationGate = serviceProvider.GetRequiredService<IAutomatedConversationGate>();
         var handler = serviceProvider.GetServices<IOmnichannelEventHandler>()
             .OfType<SmsOmnichannelEventHandler>()
             .FirstOrDefault();
@@ -115,7 +117,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
 
                 try
                 {
-                    await TryRecoverAsync(activity, chatSessionManager, promptStore, endpointCatalog, handler, owedReplyCutoff, logger, cancellationToken);
+                    await TryRecoverAsync(activity, chatSessionManager, promptStore, endpointCatalog, handler, conversationGate, owedReplyCutoff, logger, cancellationToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -131,6 +133,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
         IAIChatSessionPromptStore promptStore,
         ICatalog<OmnichannelChannelEndpoint> endpointCatalog,
         SmsOmnichannelEventHandler handler,
+        IAutomatedConversationGate conversationGate,
         DateTime owedReplyCutoff,
         ILogger logger,
         CancellationToken cancellationToken)
@@ -142,7 +145,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
 
         // A live inbound is already composing a reply for this conversation on this node; leave it alone. After a
         // restart the registry is empty, so genuinely stranded conversations are not skipped here.
-        if (SmsOmnichannelEventHandler.IsGenerating(activity.AISessionId))
+        if (conversationGate.IsGenerating(activity.AISessionId))
         {
             return;
         }

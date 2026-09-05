@@ -16,7 +16,9 @@ using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
@@ -25,6 +27,7 @@ using OrchardCore.Contents.ViewModels;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 
@@ -104,10 +107,14 @@ public sealed class Startup : StartupBase
 public sealed class AISubjectFlowStartup : StartupBase
 {
     internal readonly IStringLocalizer S;
+    private readonly IShellConfiguration _shellConfiguration;
 
-    public AISubjectFlowStartup(IStringLocalizer<AISubjectFlowStartup> stringLocalizer)
+    public AISubjectFlowStartup(
+        IStringLocalizer<AISubjectFlowStartup> stringLocalizer,
+        IShellConfiguration shellConfiguration)
     {
         S = stringLocalizer;
+        _shellConfiguration = shellConfiguration;
     }
 
     public override void ConfigureServices(IServiceCollection services)
@@ -116,6 +123,18 @@ public sealed class AISubjectFlowStartup : StartupBase
             .AddScoped<IContentTypePartDefinitionDisplayDriver, OmnichannelSubjectAISettingsDisplayDriver>()
             .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
             .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();
+
+        // The automated-activity processing tunables, and their startup validation.
+        services.Configure<OmnichannelAutomationOptions>(_shellConfiguration.GetSection("CrestApps:Omnichannel:Automation"));
+        services.AddSingleton<IValidateOptions<OmnichannelAutomationOptions>, OmnichannelAutomationOptionsValidator>();
+
+        // One reply in flight per conversation. A singleton inside the tenant container, so it is shared by the
+        // scoped handlers separate inbound webhooks create and isolated from every other tenant.
+        services.AddSingleton<IAutomatedConversationGate, InMemoryAutomatedConversationGate>();
+
+        // The turn a completion records its handoff decision on. Scoped, so the tool and the handler that ran
+        // the completion share one instance and two concurrent conversations cannot see each other's decision.
+        services.TryAddScoped<IOmnichannelHandoffTurn, OmnichannelHandoffTurn>();
 
         // The transfer-to-agent tool is enabled per-turn by the automated conversation handlers (not admin-
         // selectable), so it is registered but intentionally not marked Selectable.

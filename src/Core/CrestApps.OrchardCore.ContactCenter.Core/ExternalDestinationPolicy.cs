@@ -13,6 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core;
 /// workflow that dials it directly.
 /// </para>
 /// </summary>
+[Obsolete("Use IDialDestinationPolicy from CrestApps.OrchardCore.Telephony.Services. This type is kept for one release and will be removed.")]
 public static class ExternalDestinationPolicy
 {
     // The bound is on the whole E.164 value, so it admits seven digits after the leading plus sign. It is
@@ -64,9 +65,9 @@ public static class ExternalDestinationPolicy
             return false;
         }
 
-        return digits.EndsWith("911", StringComparison.Ordinal) ||
-            digits.EndsWith("112", StringComparison.Ordinal) ||
-            digits.EndsWith("999", StringComparison.Ordinal);
+        // An emergency code is the whole dialed string. Matching it as a suffix refuses every ordinary number
+        // whose last three digits happen to look like one.
+        return digits is "911" or "112" or "999";
     }
 
     /// <summary>

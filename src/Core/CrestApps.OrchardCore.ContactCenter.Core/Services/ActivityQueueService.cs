@@ -190,8 +190,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     {
         ArgumentNullException.ThrowIfNull(queue);
 
-        if (string.IsNullOrEmpty(queue.OverflowQueueId) ||
-            string.Equals(queue.OverflowQueueId, queue.ItemId, StringComparison.Ordinal))
+        if (!OverflowScheduler.HasAnyTarget(queue))
         {
             return 0;
         }
@@ -213,18 +212,19 @@ public sealed class ActivityQueueService : IActivityQueueService
 
         foreach (var item in waiting)
         {
-            var queueEnteredUtc = item.QueueEnteredUtc == default
-                ? item.EnqueuedUtc
-                : item.QueueEnteredUtc;
-            var overflowDueByWait = queue.OverflowAfterSeconds > 0
-                && (now - queueEnteredUtc).TotalSeconds >= queue.OverflowAfterSeconds;
-
-            if (!closed && !overflowDueByWait)
+            if (item.QueueEnteredUtc == default)
             {
-                continue;
+                item.QueueEnteredUtc = item.EnqueuedUtc;
             }
 
-            if (item.OverflowHistory.Contains(queue.OverflowQueueId, StringComparer.Ordinal))
+            // The scheduler owns which hop is due and refuses one this caller has already been through: passing
+            // somebody in a circle resets their wait at every hop and they never reach anybody. Closed hours
+            // send them on immediately, because nobody here is going to answer.
+            var target = closed
+                ? OverflowScheduler.SelectFirstEligibleTarget(item, queue)
+                : OverflowScheduler.SelectNextTarget(item, queue, now);
+
+            if (string.IsNullOrEmpty(target))
             {
                 continue;
             }
@@ -235,7 +235,7 @@ public sealed class ActivityQueueService : IActivityQueueService
             }
 
             item.OverflowedFromQueueId = queue.ItemId;
-            item.QueueId = queue.OverflowQueueId;
+            item.QueueId = target;
             item.QueueEnteredUtc = now;
             await _queueItemManager.UpdateAsync(item, cancellationToken: cancellationToken);
 

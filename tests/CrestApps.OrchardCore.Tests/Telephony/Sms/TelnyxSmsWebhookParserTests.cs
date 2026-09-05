@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Sms.Workspace.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;

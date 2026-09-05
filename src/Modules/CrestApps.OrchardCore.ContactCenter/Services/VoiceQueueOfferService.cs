@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -111,50 +112,37 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
                 return null;
             }
 
-            var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+            var (outcome, userId) = await ApplyOfferAsync(reservation, cancellationToken);
 
-            if (agent is null || string.IsNullOrEmpty(agent.UserId))
+            switch (outcome)
             {
-                await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+                case OfferOutcome.Offered:
+                    return userId;
 
-                return null;
-            }
+                case OfferOutcome.NoAgent:
+                    return null;
 
-            var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+                case OfferOutcome.NoInteraction:
+                    // A preview dial reserves the agent before the call exists - that is what preview means - so
+                    // its reservation is kept. Every other kind of outbound work with no interaction is a
+                    // reservation holding capacity for a call that will never ring, and is released.
+                    var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
-            if (interaction is null)
-            {
-                var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
-
-                if (activity is not null &&
-                    !string.Equals(activity.Source, ActivitySources.Inbound, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (!string.Equals(activity.Source, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase))
+                    if (activity is null ||
+                        string.Equals(activity.Source, ActivitySources.Inbound, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(activity.Source, ActivitySources.PreviewDial, StringComparison.OrdinalIgnoreCase))
                     {
                         await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
                     }
 
                     return null;
-                }
 
-                await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
-
-                return null;
+                case OfferOutcome.AlreadyEnded:
+                    // A queue has more calls behind this one. Stopping here would leave an available agent idle
+                    // with work waiting, which is the one place the queued path must not behave like the direct
+                    // one.
+                    continue;
             }
-
-            if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
-            {
-                await _offerSynchronizationService.ReconcileEndedOfferAsync(interaction.ItemId, cancellationToken);
-
-                continue;
-            }
-
-            interaction.Reoffer();
-            interaction.AgentId = agent.ItemId;
-            interaction.QueueId = reservation.QueueId;
-            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
-
-            return agent.UserId;
         }
 
         return null;
@@ -197,29 +185,55 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
             return null;
         }
 
+        var (outcome, userId) = await ApplyOfferAsync(reservation, cancellationToken);
+
+        if (outcome == OfferOutcome.NoInteraction)
+        {
+            // There is no next call to try: the caller asked for this agent and this activity.
+            await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
+
+            return null;
+        }
+
+        return outcome == OfferOutcome.Offered ? userId : null;
+    }
+
+    /// <summary>
+    /// The bookkeeping both offer paths share: resolve the reserved agent, find the call, and put it on that
+    /// agent's screen. The two cases they treat differently - a reservation with no interaction, and a call that
+    /// has already ended - are reported rather than decided here, because a queue has more calls to try and a
+    /// direct offer does not.
+    /// </summary>
+    /// <param name="reservation">The reservation to offer.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task<(OfferOutcome Outcome, string UserId)> ApplyOfferAsync(
+        ActivityReservation reservation,
+        CancellationToken cancellationToken)
+    {
         var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
 
         if (agent is null || string.IsNullOrEmpty(agent.UserId))
         {
+            // A reservation held for an agent nobody can ring is capacity taken from the agents who could have
+            // taken the call.
             await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
 
-            return null;
+            return (OfferOutcome.NoAgent, null);
         }
 
         var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
 
         if (interaction is null)
         {
-            await _reservationService.RejectAsync(reservation.ItemId, cancellationToken);
-
-            return null;
+            return (OfferOutcome.NoInteraction, null);
         }
 
         if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
         {
+            // Ringing an agent for a call that is already over wastes their time and puts a dead call on screen.
             await _offerSynchronizationService.ReconcileEndedOfferAsync(interaction.ItemId, cancellationToken);
 
-            return null;
+            return (OfferOutcome.AlreadyEnded, null);
         }
 
         interaction.Reoffer();
@@ -227,6 +241,32 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         interaction.QueueId = reservation.QueueId;
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-        return agent.UserId;
+        return (OfferOutcome.Offered, agent.UserId);
+    }
+
+    /// <summary>
+    /// What happened when a reservation was offered.
+    /// </summary>
+    private enum OfferOutcome
+    {
+        /// <summary>
+        /// The call is on the agent's screen.
+        /// </summary>
+        Offered,
+
+        /// <summary>
+        /// The reserved agent could not be rung, and the reservation was released.
+        /// </summary>
+        NoAgent,
+
+        /// <summary>
+        /// The reservation has no interaction. Whether that releases the reservation is the caller's decision.
+        /// </summary>
+        NoInteraction,
+
+        /// <summary>
+        /// The call had already ended and was reconciled away.
+        /// </summary>
+        AlreadyEnded,
     }
 }

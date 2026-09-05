@@ -151,6 +151,90 @@ public sealed class ActivityQueueServiceTests
     }
 
     [Fact]
+    public async Task OverflowDueAsync_FollowsTheConfiguredChain_NotJustTheFirstHop()
+    {
+        // Arrange
+        // A queue can name several tiers to fall through. Only the legacy single-target field was ever read, so
+        // every tier past the first was configuration the product ignored.
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1", QueueEnteredUtc = _now.AddSeconds(-40) }
+            .RestorePersistedStatus(QueueItemStatus.Waiting);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.GetWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
+
+        var service = CreateService(queueItemManager, new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+        var queue = new ActivityQueue
+        {
+            ItemId = "q1",
+            OverflowTargets =
+            [
+                new QueueOverflowTarget { QueueId = "tier-1", AfterSeconds = 20 },
+                new QueueOverflowTarget { QueueId = "tier-2", AfterSeconds = 35 },
+            ],
+        };
+
+        // Act
+        var moved = await service.OverflowDueAsync(queue, TestContext.Current.CancellationToken);
+
+        // Assert
+        // Furthest hop first: somebody who has already waited past every tier belongs at the last one, not
+        // crawling through each in turn while a sweep ticks.
+        Assert.Equal(1, moved);
+        Assert.Equal("tier-2", item.QueueId);
+    }
+
+    [Fact]
+    public async Task OverflowDueAsync_DoesNotSendACallerSomewhereTheyHaveAlreadyBeen()
+    {
+        // Arrange
+        // A caller passed in a circle waits forever while their wait resets at every hop.
+        var item = new QueueItem
+        {
+            ItemId = "i1",
+            QueueId = "q1",
+            QueueEnteredUtc = _now.AddSeconds(-60),
+            OverflowHistory = ["tier-1"],
+        }.RestorePersistedStatus(QueueItemStatus.Waiting);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.GetWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
+
+        var service = CreateService(queueItemManager, new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+        var queue = new ActivityQueue
+        {
+            ItemId = "q1",
+            OverflowTargets = [new QueueOverflowTarget { QueueId = "tier-1", AfterSeconds = 20 }],
+        };
+
+        // Act
+        var moved = await service.OverflowDueAsync(queue, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, moved);
+        Assert.Equal("q1", item.QueueId);
+    }
+
+    [Fact]
+    public async Task OverflowDueAsync_StillHonoursAQueueConfiguredBeforeChainsExisted()
+    {
+        // Arrange
+        // Dropping the single-target field would strand every caller the queues already in production were
+        // built to hand on.
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1", QueueEnteredUtc = _now.AddSeconds(-60) }
+            .RestorePersistedStatus(QueueItemStatus.Waiting);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.GetWaitingAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync([item]);
+
+        var service = CreateService(queueItemManager, new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+        var queue = new ActivityQueue { ItemId = "q1", OverflowQueueId = "q2", OverflowAfterSeconds = 30 };
+
+        // Act
+        var moved = await service.OverflowDueAsync(queue, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, moved);
+        Assert.Equal("q2", item.QueueId);
+    }
+
+    [Fact]
     public async Task OverflowDueAsync_WhenItemRecentlyEnteredCurrentQueue_DoesNotUseOriginalWaitForNextHop()
     {
         // Arrange

@@ -66,7 +66,8 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-node@v7
       with:
-        node-version: "15"
+        # The JavaScript unit tests run on Vitest, which needs a currently supported Node.
+        node-version: "22"
     - uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
@@ -80,6 +81,10 @@ jobs:
     - name: Unit Tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+    - name: JavaScript unit tests
+      run: |
+        npm ci --ignore-scripts
+        npm test
     - name: Contact Center feature activation tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj

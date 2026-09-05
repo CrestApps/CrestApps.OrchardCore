@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Tools;
 
 /// <summary>
 /// The AI tool an automated omnichannel conversation invokes to hand the customer to a live human agent. It
-/// records the decision on the current <see cref="OmnichannelHandoffTurnContext"/>; the conversation handler
+/// records the decision on the scoped <see cref="IOmnichannelHandoffTurn"/>; the conversation handler
 /// that ran the completion reads that decision and performs the channel-specific handoff (seed the SMS thread,
 /// or seat the caller in a queue). The tool takes no channel or destination arguments — the handler owns that
 /// context — so the model only has to decide "transfer now, for this reason".
@@ -59,7 +59,12 @@ public sealed class TransferToAgentTool : AIFunction
 
         arguments.TryGetFirstString("reason", out var reason);
 
-        var recorded = OmnichannelHandoffTurnContext.RequestHandoff(reason);
+        // The turn is a scoped service the handler resolved for this completion, so recording the decision here
+        // is visible to that handler and to nothing else running concurrently.
+        var turn = arguments.Services?.GetService<IOmnichannelHandoffTurn>();
+        var recorded = turn is not null;
+
+        turn?.RequestHandoff(reason);
 
         if (arguments.Services is not null)
         {

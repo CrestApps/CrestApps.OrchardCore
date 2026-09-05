@@ -5,6 +5,7 @@ using Moq;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
+using Microsoft.Extensions.Options;
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
 /// <summary>
@@ -142,7 +143,13 @@ public sealed class TelnyxExtensionVoicemailTests
 
     private static TelnyxOutboundBridgeOrchestrator CreateOrchestrator(StubHttpMessageHandler handler, string outboundVoiceProfileId = null)
         => new(
-            new StubHttpClientFactory(handler),
+            // The typed client sits over the same stub handler, so these tests still assert on the exact
+            // requests the orchestrator makes.
+            new TelnyxApiClient(
+                new HttpClient(handler) { BaseAddress = new Uri("https://api.telnyx.test/v2/") },
+                new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { ApiBaseUrl = "https://api.telnyx.test/v2/", ApiKey = "KEY" }),
+                new TelnyxApiRetryPolicy(TimeSpan.Zero),
+                NullLogger<TelnyxApiClient>.Instance),
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             new TestOptionsMonitor<TelnyxOptions>(new TelnyxOptions
             {

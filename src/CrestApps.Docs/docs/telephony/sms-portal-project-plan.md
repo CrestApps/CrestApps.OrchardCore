@@ -13,7 +13,7 @@ provider and routing foundations we already own. It complements the automated (A
 [Omnichannel](../omnichannel/index.md) and reuses the [Contact Center](../contact-center/index.md) routing model.
 
 > **Status: implemented — this is a historical design record.** This feature has since been built and shipped
-> as the **[SMS Workspace](../omnichannel/sms-workspace)** module; use that page as the current reference. This
+> as the **[SMS Portal](../omnichannel/sms-portal)** module; use that page as the current reference. This
 > plan is kept for its architectural rationale, reuse boundaries, and known limits, but it does **not** track
 > the final implementation. Notably, the separate **`SmsNumberRoute`** routing entity described below was
 > **not** built: all SMS routing (target, distribution mode, auto-reply) now lives on the **Omnichannel channel

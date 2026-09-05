@@ -1,7 +1,10 @@
+using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Core.Http;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -11,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
+using YesSql;
 using YesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Telnyx.Endpoints;
@@ -92,7 +96,7 @@ internal static class TelnyxSmsWebhookEndpoint
 
         if (messagingEvent.IsInbound)
         {
-            await HandleInboundAsync(messagingEvent, handlers, session, clock, logger, httpContext.RequestAborted);
+            await HandleInboundAsync(httpContext, messagingEvent, handlers, session, clock, logger, httpContext.RequestAborted);
         }
         else
         {
@@ -107,7 +111,7 @@ internal static class TelnyxSmsWebhookEndpoint
                     messagingEvent.ErrorCode);
             }
 
-            // Delivery receipts update manual SMS conversations, whose tracking service ships with the SMS Workspace
+            // Delivery receipts update manual SMS conversations, whose tracking service ships with the SMS Portal
             // feature. Automated-only deployments do not enable it, so resolve it optionally and skip when absent —
             // the inbound path above never needs it, which is why this webhook must not hard-depend on it.
             var conversationService = httpContext.RequestServices.GetService<ISmsConversationService>();
@@ -129,6 +133,7 @@ internal static class TelnyxSmsWebhookEndpoint
     }
 
     private static async Task HandleInboundAsync(
+        HttpContext httpContext,
         TelnyxSmsWebhookEvent messagingEvent,
         IEnumerable<IOmnichannelEventHandler> handlers,
         YesSqlSession session,
@@ -147,6 +152,45 @@ internal static class TelnyxSmsWebhookEndpoint
             ProviderMessageId = messagingEvent.ProviderMessageId,
             MediaReferences = messagingEvent.MediaUrls.ToList(),
         };
+
+        // Commit the delivery to the durable inbox first when it is available, keyed on the provider's own
+        // message id: a Telnyx retry of the same text is then recognised as a duplicate and not stored or
+        // answered twice, and processing that fails part-way is retried from storage rather than lost with this
+        // request. A tenant without the inbox feature falls back to processing inline, as before.
+        var inbox = httpContext.RequestServices.GetService<IProviderWebhookInbox>();
+
+        if (inbox is not null && !string.IsNullOrEmpty(messagingEvent.ProviderMessageId))
+        {
+            var acceptance = await inbox.AcceptAsync(
+                new ProviderWebhookInboxDelivery
+                {
+                    ProviderName = TelnyxConstants.ProviderTechnicalName,
+                    DeliveryId = messagingEvent.ProviderMessageId,
+                    HandlerName = SmsInboundInboxHandler.HandlerTechnicalName,
+                    Payload = JsonSerializer.Serialize(message),
+                },
+                cancellationToken);
+
+            if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Duplicate)
+            {
+                return;
+            }
+
+            if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Accepted)
+            {
+                try
+                {
+                    await inbox.DispatchAsync(acceptance.MessageId, cancellationToken);
+                }
+                catch (ConcurrencyException)
+                {
+                    // Another node claimed the same delivery. The inbox retries it from storage, so this request
+                    // must not report a failure that would make the provider redeliver as well.
+                }
+
+                return;
+            }
+        }
 
         await session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
 

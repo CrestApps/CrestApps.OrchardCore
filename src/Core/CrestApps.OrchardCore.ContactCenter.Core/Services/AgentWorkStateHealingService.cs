@@ -22,7 +22,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly Lazy<IProviderCallStateSynchronizationService> _synchronizationService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -36,7 +36,12 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="activityManager">The activity manager.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
-    /// <param name="serviceProvider">The service provider used to lazily resolve provider synchronization, which breaks the container cycle through <see cref="IAgentPresenceManager"/> and tolerates tenants that have not enabled the Voice feature.</param>
+    /// <param name="synchronizationService">
+    /// The provider call-state synchronization service, resolved lazily. It is a declared dependency, but it
+    /// stays behind <see cref="Lazy{T}"/> because eager construction would close a real container cycle:
+    /// <see cref="IAgentPresenceManager"/> to this service to synchronization to the provider event service and
+    /// back to presence.
+    /// </param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public AgentWorkStateHealingService(
@@ -47,7 +52,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IContactCenterWorkStateService workStateService,
-        IServiceProvider serviceProvider,
+        Lazy<IProviderCallStateSynchronizationService> synchronizationService,
         IClock clock,
         ILogger<AgentWorkStateHealingService> logger)
     {
@@ -58,7 +63,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         _interactionManager = interactionManager;
         _activityManager = activityManager;
         _workStateService = workStateService;
-        _serviceProvider = serviceProvider;
+        _synchronizationService = synchronizationService;
         _clock = clock;
         _logger = logger;
     }
@@ -201,31 +206,15 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         {
             var previousStatus = interaction.Status;
 
-            // Resolved lazily on purpose. Constructor-injecting this service would close a real container
-            // cycle: IAgentPresenceManager -> IAgentWorkStateHealingService -> IProviderCallStateSynchronizationService
-            // -> IProviderVoiceEventService -> IAgentPresenceManager. It is also registered by the Voice feature
-            // while this service is registered by Queues, so a Queues-only tenant legitimately has no
-            // implementation. GetService (not GetRequiredService) keeps that tenant working instead of throwing:
-            // without a voice provider there is no provider truth to reconcile against, so the reconciliation
-            // step is skipped and the provider-backed guards below preserve the interaction rather than
-            // mutating it on stale information.
-            var synchronizationService = _serviceProvider.GetService<IProviderCallStateSynchronizationService>();
+            // Only resolved here, and only through the lazy wrapper, because eager construction closes the
+            // presence-to-healing-to-synchronization-to-presence cycle. On a tenant without the Voice feature
+            // the default implementation returns the interaction untouched, so the provider-backed guards below
+            // preserve it rather than mutating it on state nothing can confirm.
+            interaction = await _synchronizationService.Value.RefreshInteractionAsync(interaction, cancellationToken);
 
-            if (synchronizationService is null)
+            if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
             {
-                _logger.LogWarning(
-                    "Interaction '{InteractionId}' is provider-backed but no {ServiceName} is registered, so provider truth cannot be reconciled. Enable the Voice feature to restore provider-state healing.",
-                    interaction.ItemId.SanitizeLogValue(),
-                    nameof(IProviderCallStateSynchronizationService));
-            }
-            else
-            {
-                interaction = await synchronizationService.RefreshInteractionAsync(interaction, cancellationToken);
-
-                if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
-                {
-                    return interaction.Status == previousStatus ? 0 : 1;
-                }
+                return interaction.Status == previousStatus ? 0 : 1;
             }
         }
 

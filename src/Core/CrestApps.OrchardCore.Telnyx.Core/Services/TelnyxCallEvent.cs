@@ -85,6 +85,12 @@ public sealed class TelnyxCallEvent
     public bool TranscriptionIsFinal { get; set; }
 
     /// <summary>
+    /// Gets or sets the keys the caller pressed, on a <c>call.gather.ended</c> event. Empty when they pressed
+    /// nothing before the menu timed out, which a flow treats as a missed choice rather than as a selection.
+    /// </summary>
+    public string Digits { get; set; }
+
+    /// <summary>
     /// Gets or sets the Telnyx event identifier used for delivery de-duplication.
     /// </summary>
     public string EventId { get; set; }

@@ -26,8 +26,9 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
 {
     private readonly ITelephonyProviderResolver _telephonyResolver;
     private readonly IContactCenterFeatureWorkManager _workManager;
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ITelnyxAgentCredentialStore _credentialStore;
+    private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
+    private readonly TelnyxApiClient _apiClient;
     private readonly IClock _clock;
     private readonly ILogger<TelnyxContactCenterVoiceProvider> _logger;
     private readonly TelnyxOptions _options;
@@ -38,8 +39,9 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
     public TelnyxContactCenterVoiceProvider(
         ITelephonyProviderResolver telephonyResolver,
         IContactCenterFeatureWorkManager workManager,
-        IHttpClientFactory httpClientFactory,
         ITelnyxAgentCredentialStore credentialStore,
+        ITelnyxAgentEndpointResolver agentEndpointResolver,
+        TelnyxApiClient apiClient,
         IClock clock,
         ILogger<TelnyxContactCenterVoiceProvider> logger,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
@@ -47,8 +49,9 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
     {
         _telephonyResolver = telephonyResolver;
         _workManager = workManager;
-        _httpClientFactory = httpClientFactory;
         _credentialStore = credentialStore;
+        _agentEndpointResolver = agentEndpointResolver;
+        _apiClient = apiClient;
         _clock = clock;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
@@ -154,61 +157,49 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
 
         try
         {
-            using var client = CreateClient();
-
             var callerCallControlId = request.ProviderCallId.Trim();
 
             // Answer the inbound caller leg first. Telnyx rejects a bridge whose legs are not yet answered
             // ("call not answered yet", code 90034), so the caller must be connected before the agent leg is
-            // bridged in. A caller leg that is already answered simply returns an error here, which is ignored.
-            using (var answerContent = JsonContent.Create(new Dictionary<string, object>(), options: TelnyxJsonSerializerOptions.Default))
-            using (var answerResponse = await client.PostAsync(
-                $"calls/{Uri.EscapeDataString(callerCallControlId)}/actions/answer",
-                answerContent,
-                cancellationToken))
+            // bridged in. A caller leg that is already answered simply fails here, which is ignored.
+            var answerResult = await _apiClient.AnswerAsync(callerCallControlId, cancellationToken: cancellationToken);
+
+            if (!answerResult.Succeeded)
             {
-                if (!answerResponse.IsSuccessStatusCode)
-                {
-                    _logger.LogWarning(
-                        "Telnyx returned {StatusCode} answering the caller leg before an agent bridge (it may already be answered).",
-                        answerResponse.StatusCode);
-                }
+                _logger.LogWarning(
+                    "Telnyx returned {StatusCode} answering the caller leg before an agent bridge (it may already be answered).",
+                    answerResult.StatusCode);
             }
 
             // Originate the agent leg to the agent's registered browser SIP endpoint. The browser auto-answers
             // the invite; when its call.answered webhook arrives, the outbound-bridge orchestration bridges it
             // to the caller leg carried in client_state. Bridging is deferred to then because Telnyx requires
             // both legs to be answered first.
-            var originateBody = new Dictionary<string, object>
-            {
-                ["connection_id"] = _options.ConnectionId,
-                ["to"] = agentEndpoint,
-                ["client_state"] = new TelnyxOutboundBridgeState
+            var originateResult = await _apiClient.OriginateAsync(
+                new TelnyxOriginateRequest
                 {
-                    Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
-                    PeerCallControlId = callerCallControlId,
-                }.ToClientState(),
-            };
+                    ConnectionId = _options.ConnectionId,
+                    To = agentEndpoint,
+                    From = _options.DefaultOutboundCallerId,
+                    ClientState = new TelnyxOutboundBridgeState
+                    {
+                        Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
+                        PeerCallControlId = callerCallControlId,
+                    }.ToClientStateJson(),
+                },
+                cancellationToken);
 
-            if (!string.IsNullOrWhiteSpace(_options.DefaultOutboundCallerId))
-            {
-                originateBody["from"] = _options.DefaultOutboundCallerId;
-            }
-
-            using var originateContent = JsonContent.Create(originateBody, options: TelnyxJsonSerializerOptions.Default);
-            using var originateResponse = await client.PostAsync("calls", originateContent, cancellationToken);
-
-            if (!originateResponse.IsSuccessStatusCode)
+            if (!originateResult.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected an agent-leg origination with status code {StatusCode}. Response: {Response}",
-                    originateResponse.StatusCode,
-                    (await SafeReadContentAsync(originateResponse, cancellationToken)).SanitizeLogValue());
+                    originateResult.StatusCode,
+                    originateResult.ErrorBody.SanitizeLogValue());
 
                 return Failure("agent_connect_failed", "The Telnyx agent leg could not be originated.");
             }
 
-            var agentCallControlId = await ReadDataStringAsync(originateResponse, "call_control_id", cancellationToken);
+            var agentCallControlId = originateResult.CallControlId;
 
             if (string.IsNullOrWhiteSpace(agentCallControlId))
             {
@@ -272,26 +263,18 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
 
         try
         {
-            using var client = CreateClient();
-            var body = new Dictionary<string, object> { ["to"] = request.Target };
+            var result = await _apiClient.TransferAsync(
+                request.ProviderCallId.Trim(),
+                request.Target,
+                _options.DefaultOutboundCallerId,
+                cancellationToken: cancellationToken);
 
-            if (!string.IsNullOrWhiteSpace(_options.DefaultOutboundCallerId))
-            {
-                body["from"] = _options.DefaultOutboundCallerId;
-            }
-
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync(
-                $"calls/{Uri.EscapeDataString(request.ProviderCallId.Trim())}/actions/transfer",
-                content,
-                cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            if (!result.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected a Contact Center transfer with status code {StatusCode}. Response: {Response}",
-                    response.StatusCode,
-                    (await SafeReadContentAsync(response, cancellationToken)).SanitizeLogValue());
+                    result.StatusCode,
+                    result.ErrorBody.SanitizeLogValue());
 
                 return Failure("transfer_failed", "The Telnyx call could not be transferred.");
             }
@@ -327,73 +310,14 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             return null;
         }
 
-        var live = await _credentialStore.ListLiveByUserAsync(request.AgentUserId.Trim(), _clock.UtcNow, cancellationToken);
-        var credential = live.Count > 0 ? live[0] : null;
-
-        if (credential is null || string.IsNullOrWhiteSpace(credential.SipUsername))
-        {
-            return null;
-        }
-
-        var sipDomain = string.IsNullOrWhiteSpace(_options.SipDomain) ? TelnyxConstants.DefaultSipDomain : _options.SipDomain;
-
-        return $"sip:{credential.SipUsername}@{sipDomain}";
+        // One resolver for every path that dials an agent. Taking the first live credential here took the newest
+        // issued one, which is not necessarily the one the browser is registered on, and dialling the wrong one
+        // came back SIP 486 with the agent's phone sitting idle.
+        return await _agentEndpointResolver.ResolveAsync(request.AgentUserId, cancellationToken);
     }
 
-    private HttpClient CreateClient()
-    {
-        var client = _httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
-        client.BaseAddress = new Uri(_options.ApiBaseUrl);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
 
-        return client;
-    }
-
+    // One shape, on the result type. This stays as a local name so every call site reads the same.
     private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)
-        => new()
-        {
-            Succeeded = false,
-            ErrorCode = errorCode,
-            ErrorMessage = errorMessage,
-            ProviderName = TelnyxConstants.ProviderTechnicalName,
-        };
-
-    private static async Task<string> ReadDataStringAsync(HttpResponseMessage response, string propertyName, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            if (document.RootElement.TryGetProperty("data", out var data) &&
-                data.ValueKind == JsonValueKind.Object &&
-                data.TryGetProperty(propertyName, out var value) &&
-                value.ValueKind == JsonValueKind.String)
-            {
-                return value.GetString();
-            }
-        }
-        catch (JsonException)
-        {
-            // Ignore malformed responses.
-        }
-
-        return null;
-    }
-
-    private static async Task<string> SafeReadContentAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await response.Content.ReadAsStringAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
+        => ContactCenterVoiceProviderResult.Failure(TelnyxConstants.ProviderTechnicalName, errorCode, errorMessage);
 }

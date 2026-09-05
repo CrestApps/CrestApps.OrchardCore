@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
+using Moq;
+using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 /// <summary>
@@ -109,7 +111,7 @@ public sealed class SkillTagTests
         var context = new ActivityRoutingContext(queue, new QueueItem { ItemId = "i1", QueueId = "q1" }, [new ActivityRoutingCandidate(agent)]);
 
         // Act
-        await new RequiredSkillsRoutingStrategy().ApplyAsync(context, TestContext.Current.CancellationToken);
+        await new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()).ApplyAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         var candidate = Assert.Single(context.Candidates);
@@ -135,7 +137,7 @@ public sealed class SkillTagTests
         var context = new ActivityRoutingContext(queue, new QueueItem { ItemId = "i1", QueueId = "q1" }, [new ActivityRoutingCandidate(agent)]);
 
         // Act
-        await new RequiredSkillsRoutingStrategy().ApplyAsync(context, TestContext.Current.CancellationToken);
+        await new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()).ApplyAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         var candidate = Assert.Single(context.Candidates);

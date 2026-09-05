@@ -2,7 +2,7 @@
 sidebar_label: "AI-to-Agent Handoff Project Plan"
 sidebar_position: 6
 title: AI-to-Agent Handoff — Project Plan
-description: Design plan for escalating an automated (AI) SMS or phone conversation to a live human agent — the bot decides to hand off, and the interaction moves from the automated lane into the SMS Workspace inbox (SMS) or the Contact Center inbound queue (phone) with full context.
+description: Design plan for escalating an automated (AI) SMS or phone conversation to a live human agent — the bot decides to hand off, and the interaction moves from the automated lane into the SMS Portal inbox (SMS) or the Contact Center inbound queue (phone) with full context.
 ---
 
 # AI-to-Agent Handoff — Project Plan
@@ -13,14 +13,14 @@ the **same channel and the same thread/call**, with the conversation history and
 across so the customer never repeats themselves.
 
 It complements the automated paths documented under [SMS Automation](sms) and the Telnyx AI voice handler, and
-reuses the human destinations already built: the [SMS Workspace](sms-workspace) inbox for SMS, and the
+reuses the human destinations already built: the [SMS Portal](sms-portal) inbox for SMS, and the
 [Contact Center](../contact-center/index.md) inbound-queue + offer pipeline for phone.
 
 > **Status: implemented (SMS end-to-end; phone pending live media verification).** The shared spine, the SMS
 > handoff, and the phone handoff orchestration are built and unit-tested (`OmnichannelHandoffHelperTests`,
 > `SmsAgentHandoffServiceTests`, `VoiceAgentHandoffServiceTests`). The phone path reuses the Contact Center
 > enqueue-and-offer + connect pipeline; the live Telnyx media bridge from an outbound AI call still needs
-> verification on a real call. The escalation **signal is the `transfer_to_agent` AI tool** the model invokes
+> verification on a real call. The escalation **signal is the `transferToLiveAgent` AI tool** the model invokes
 > (no text marker): a non-selectable `AIFunction` records the decision on an AsyncLocal turn context the handlers
 > read back after the completion, and system-prompt guidance tells the model when to call it. Voice carries the
 > decision across webhooks with a durable `PendingVoiceHandoff` flag on the activity (the `[[HANGUP]]` marker
@@ -43,10 +43,10 @@ the AI and a service that moves the interaction from the automated lane into the
 
 | Channel | Automated origin (exists) | Human destination (exists) | Missing bridge |
 | --- | --- | --- | --- |
-| SMS | `SmsOmnichannelEventHandler` (AI reply loop, `[[HANGUP]]` conclusion) | SMS Workspace: `SmsInboundProcessor` + `ExistingConversationRouter`, `SmsConversation` with Queue/Agent owners | Nothing **creates** the human `SmsConversation` at handoff |
+| SMS | `SmsOmnichannelEventHandler` (AI reply loop, `[[HANGUP]]` conclusion) | SMS Portal: `SmsInboundProcessor` + `ExistingConversationRouter`, `SmsConversation` with Queue/Agent owners | Nothing **creates** the human `SmsConversation` at handoff |
 | Phone | `TelnyxAiVoiceConversationHandler` (webhook state machine, `[[HANGUP]]`) | Contact Center: `InboundVoiceCallProcessor` enqueue + `IVoiceQueueOfferService` offer/bridge | The AI call **hangs up** instead of being enqueued+offered |
 
-The SMS Workspace inbound pipeline was, in fact, written in anticipation of this. Its guard already
+The SMS Portal inbound pipeline was, in fact, written in anticipation of this. Its guard already
 "yields to the automated (AI) path while it owns the number, and takes over after a handoff" — see
 `SmsInboundProcessor` and `ExistingConversationRouter` (which runs at `Order = 200`, before ownership
 resolution, specifically so replies land in the human thread once it exists).
@@ -54,7 +54,7 @@ resolution, specifically so replies land in the human thread once it exists).
 ## Design principles (industry-standard bot → agent escalation)
 
 1. **Deterministic signal, not text-scraping.** The model escalates via a **tool/function call**
-   `transfer_to_agent(reason, summary, skill?)`, not a parsed control token. It is deterministic, carries
+   `transferToLiveAgent(reason, summary, skill?)`, not a parsed control token. It is deterministic, carries
    structured context, and cannot be emitted by accident mid-sentence. A `[[HANDOFF]]` marker is retained as a
    fallback for parity with the existing `[[HANGUP]]` plumbing and for models/turns where the tool is not used.
 2. **Warm handoff.** The agent inherits a summary + captured fields. Reuse the existing conclusion-analysis
@@ -86,11 +86,11 @@ public interface IOmnichannelHandoffService
 }
 ```
 
-- The **AI tool** `transfer_to_agent` is registered for automated omnichannel profiles. Both conversation
+- The **AI tool** `transferToLiveAgent` is registered for automated omnichannel profiles. Both conversation
   handlers already own the AI turn, so they intercept the tool call (or the `[[HANDOFF]]` marker) and invoke
   the service.
 - **Channel-specific implementations** are selected by `activity.Channel`:
-  - `SmsAgentHandoffService` (in the SMS Workspace module — it owns `SmsConversation`).
+  - `SmsAgentHandoffService` (in the SMS Portal module — it owns `SmsConversation`).
   - `VoiceAgentHandoffService` (in Contact Center — it owns queues + offers).
 - The service is resolved optionally; when the relevant feature is not enabled, the bot simply continues (no
   handoff available), exactly like the business-hours gate.
@@ -112,7 +112,7 @@ made on the subject flow / campaign editor and snapshotted onto the activity whe
 
 ## SMS handoff flow
 
-1. The model calls `transfer_to_agent` (or emits `[[HANDOFF]]`). The handler sends **one bridge SMS**:
+1. The model calls `transferToLiveAgent` (or emits `[[HANDOFF]]`). The handler sends **one bridge SMS**:
    *"I'm connecting you with a specialist — they'll reply here shortly."*
 2. **Conclude the automated activity** with terminal reason `handed_off` (a real terminal status). This
    permanently stops the AI from replying: the existing terminal-status guard in `SmsOmnichannelEventHandler`
@@ -123,7 +123,7 @@ made on the subject flow / campaign editor and snapshotted onto the activity whe
    - the prior AI turns **imported** as `OmnichannelMessage` records (so the agent sees the actual chat), and
    - the AI summary + captured fields attached as an **internal note**.
    `UnreadCount` is set and `ISmsRealTimeNotifier.NewInboundMessageAsync` fires so the inbox lights up.
-4. An agent opens the thread in the **SMS Workspace inbox**, sees the full prior chat, and replies on the same
+4. An agent opens the thread in the **SMS Portal inbox**, sees the full prior chat, and replies on the same
    number. `ExistingConversationRouter` keeps every subsequent inbound in that human thread.
 
 **Design decision — transcript bridging.** The AI transcript lives in `AIChatSessionPrompt` (keyed by
@@ -133,7 +133,7 @@ cross-store view. This keeps the Workspace inbox as the single source of truth f
 
 ## Phone handoff flow
 
-1. The model calls `transfer_to_agent` / emits `[[HANDOFF]]`. The handler **speaks a bridge line**:
+1. The model calls `transferToLiveAgent` / emits `[[HANDOFF]]`. The handler **speaks a bridge line**:
    *"Let me connect you with a specialist — one moment."* (reusing the existing speak → `speak.ended`
    sequencing that today precedes a graceful hangup).
 2. On `speak.ended`, instead of hanging up, **seat the live call into the configured inbound queue and offer
@@ -176,7 +176,7 @@ reference for the re-enqueue semantics.
 
 ## Phasing
 
-- **Phase 0 — shared spine. ✅ Done.** `transfer_to_agent` AI tool (no marker — see status note above);
+- **Phase 0 — shared spine. ✅ Done.** `transferToLiveAgent` AI tool (no marker — see status note above);
   `IOmnichannelHandoffService` contract; `handed_off_to_agent` terminal reason; `SubjectFlowSettings` config
   fields + editor (inbound **and** outbound). Two deliberate simplifications: escalations are recorded via the
   **terminal reason** rather than a dedicated `OmnichannelDisposition`, and the handlers **re-derive** the flow
@@ -201,18 +201,18 @@ reference for the re-enqueue semantics.
 
 Everything above builds and is unit-tested at every seam. Two things need a real tenant to confirm end-to-end,
 and neither can be exercised without AI credentials + a Telnyx line: (1) the model actually **invoking** the
-`transfer_to_agent` tool inside the automated `CompleteAsync` path, and (2) the **media bridge** connecting an
+`transferToLiveAgent` tool inside the automated `CompleteAsync` path, and (2) the **media bridge** connecting an
 agent onto the live outbound Telnyx call on accept.
 
 ## Open decisions (recommendations)
 
-1. **Signal mechanism** — AI tool `transfer_to_agent` (primary) + `[[HANDOFF]]` marker (fallback). *Recommended.*
+1. **Signal mechanism** — AI tool `transferToLiveAgent` (primary) + `[[HANDOFF]]` marker (fallback). *Recommended.*
 2. **Phone media path** — reuse inbound enqueue + offer, not provider blind-transfer. *Recommended.*
 3. **SMS history** — import the AI transcript into the human thread + attach a summary note. *Recommended.*
 
 ## Reuse boundaries (do **not** rebuild)
 
-- Human SMS inbox, routing, and notifications: **SMS Workspace** (`SmsInboundProcessor`,
+- Human SMS inbox, routing, and notifications: **SMS Portal** (`SmsInboundProcessor`,
   `ExistingConversationRouter`, `ISmsRealTimeNotifier`, `SmsConversation`).
 - Phone queue seating, offer, reservation, bridge, voicemail: **Contact Center** (`InboundVoiceCallProcessor`,
   `IVoiceQueueOfferService`, `IActivityQueueService`).

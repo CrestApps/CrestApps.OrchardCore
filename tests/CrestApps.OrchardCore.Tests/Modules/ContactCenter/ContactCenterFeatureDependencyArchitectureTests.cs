@@ -47,7 +47,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         // and the contact content part, all registered by the Activities feature), never a Management-only (CRM
         // admin) type. Depending on the full Omnichannel Management feature would force the CRM administration
         // (campaigns, subjects, dispositions, load inventory) into every Contact Center install - and into the
-        // SMS Workspace, which reuses Contact Center. So the base feature composes the headless Activities feature;
+        // SMS Portal, which reuses Contact Center. So the base feature composes the headless Activities feature;
         // a tenant that wants the CRM experience enables Omnichannel Management explicitly.
         Assert.Equal(
             ["CrestApps.OrchardCore.Omnichannel.Activities"],
@@ -78,8 +78,11 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
         // Assert
         Assert.True(features["CrestApps.OrchardCore.ContactCenter.Voice"].EnabledByDependencyOnly);
+        // The durable provider webhook inbox is a dependency of Voice rather than a part of it: inbound SMS needs
+        // the same at-least-once absorption, and an SMS-only tenant cannot enable Voice to get it.
         Assert.Equal(
             [
+                "CrestApps.OrchardCore.ContactCenter.ProviderInbox",
                 "CrestApps.OrchardCore.ContactCenter.Queues",
                 "CrestApps.OrchardCore.ContactCenter.RealTime",
                 "CrestApps.OrchardCore.ContactCenter.Recording.Core",
@@ -679,6 +682,59 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         Assert.DoesNotContain("GetService<IDialerProfileManager>", source, StringComparison.Ordinal);
         Assert.DoesNotContain("GetService<IActivityQueueService>", source, StringComparison.Ordinal);
         Assert.Contains("IActivityDialerContributor", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SmsPortal_DoesNotReferenceTheOmnichannelManagementAdministration()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var project = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/CrestApps.OrchardCore.Omnichannel.Sms.Portal.csproj"));
+        var sourceDirectory = Path.Combine(repositoryRoot, "src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal");
+        var source = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(sourceDirectory, "*.cs", SearchOption.AllDirectories)
+                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                .Select(File.ReadAllText));
+
+        // Assert
+        // The workspace reuses the headless Omnichannel services and the channel-endpoint catalog, never the CRM
+        // administration assembly, so a tenant can run the SMS inbox without the Omnichannel Management screens.
+        Assert.DoesNotContain(
+            "CrestApps.OrchardCore.Omnichannel.Managements.csproj",
+            project,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("using CrestApps.OrchardCore.Omnichannel.Managements", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void SmsPortalRoutedDistribution_IsItsOwnFeatureThatDependsOnWorkDistribution()
+    {
+        // Arrange
+        var repositoryRoot = FindRepositoryRoot();
+        var features = ParseManifestFeatures(repositoryRoot, "src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Manifest.cs")
+            .ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var startupClasses = ParseStartupClassesInDirectory(
+            repositoryRoot,
+            "src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal",
+            "CrestApps.OrchardCore.Omnichannel.Sms.Portal");
+
+        // Act
+        var routed = features["CrestApps.OrchardCore.Omnichannel.Sms.Portal.RoutedDistribution"];
+        var baseFeature = features["CrestApps.OrchardCore.Omnichannel.Sms.Portal"];
+        var routedStartup = startupClasses.Single(startup =>
+            startup.Body.Contains("ISmsInboundRouter, RoutedQueueRouter", StringComparison.Ordinal));
+
+        // Assert
+        // Push distribution is the only part of the workspace that needs Contact Center work distribution, so it
+        // is a feature of its own. The base workspace keeps personal and shared-pool routing, which need only the
+        // agent directory - enabling it without Work Distribution must not break inbound SMS at DI resolution.
+        Assert.Contains("CrestApps.OrchardCore.ContactCenter.Queues", routed.Dependencies);
+        Assert.Contains("CrestApps.OrchardCore.Omnichannel.Sms.Portal", routed.Dependencies);
+        Assert.DoesNotContain("CrestApps.OrchardCore.ContactCenter.Queues", baseFeature.Dependencies);
+        Assert.Equal("CrestApps.OrchardCore.Omnichannel.Sms.Portal.RoutedDistribution", routedStartup.FeatureId);
     }
 
     [Fact]

@@ -544,6 +544,10 @@ public sealed class ContactCenterConfigurationPortabilityTests
     [
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.Mode), JsonValue.Create(nameof(DialerMode.Preview))),
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.CallsPerAgent), JsonValue.Create(PowerDialerStrategy.MaxCallsPerAgent)),
+        // The generic seeder fills every string with a marker value, but the caller id is validated as a real
+        // phone number parsed against the profile's region, so both properties need values the validator accepts.
+        (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.CallerId), JsonValue.Create("+16502530000")),
+        (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.DefaultRegionCode), JsonValue.Create("US")),
     ];
 
     private static readonly (string OwningStep, string PropertyName, string ReferencedStep)[] _references =

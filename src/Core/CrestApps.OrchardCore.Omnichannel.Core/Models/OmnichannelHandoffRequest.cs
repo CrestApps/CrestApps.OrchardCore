@@ -57,6 +57,12 @@ public sealed class OmnichannelHandoffRequest
     /// thread the agent inherits. Optional; when empty only the summary is carried across.
     /// </summary>
     public IReadOnlyList<OmnichannelHandoffMessage> Transcript { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the automated conversation session that produced this escalation, so an
+    /// agent can open the transcript the caller already worked through rather than starting over.
+    /// </summary>
+    public string AiSessionId { get; set; }
 }
 
 /// <summary>

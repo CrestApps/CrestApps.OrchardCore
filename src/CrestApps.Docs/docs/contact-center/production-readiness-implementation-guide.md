@@ -83,12 +83,12 @@ assembly directly: `dotnet tests/CrestApps.OrchardCore.Tests/bin/Debug/net10.0/C
 
 **Files to create**
 
-- `src/Core/CrestApps.OrchardCore.Sms.Workspace.Core/Services/ISmsConversationAuthorizationService.cs`
-- `src/Core/CrestApps.OrchardCore.Sms.Workspace.Core/Services/SmsConversationAuthorizationService.cs`
-- `src/Core/CrestApps.OrchardCore.Sms.Workspace.Core/Models/SmsConversationOperation.cs`
-- `src/Modules/CrestApps.OrchardCore.Sms.Workspace/Handlers/SmsConversationAuthorizationHandler.cs`
+- `src/Core/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core/Services/ISmsConversationAuthorizationService.cs`
+- `src/Core/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core/Services/SmsConversationAuthorizationService.cs`
+- `src/Core/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core/Models/SmsConversationOperation.cs`
+- `src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Handlers/SmsConversationAuthorizationHandler.cs`
 - `tests/CrestApps.OrchardCore.Tests/Telephony/Sms/SmsConversationAuthorizationServiceTests.cs`
-- `tests/CrestApps.OrchardCore.Tests/Telephony/Sms/SmsWorkspaceAdminControllerTests.cs`
+- `tests/CrestApps.OrchardCore.Tests/Telephony/Sms/SmsPortalAdminControllerTests.cs`
 
 **Contracts**
 
@@ -103,7 +103,7 @@ public interface ISmsConversationAuthorizationService
 
 **Rules to implement (in this order, first match wins)**
 
-1. Principal has `SmsWorkspacePermissions.ViewAllConversations` → allow every operation.
+1. Principal has `SmsPortalPermissions.ViewAllConversations` → allow every operation.
 2. Resolve the caller's `AgentProfile` through `IAgentProfileManager.FindByUserIdAsync(userId)` where `userId` is
    `principal.FindFirstValue(ClaimTypes.NameIdentifier)`. No profile → deny.
 3. Personal conversation (`OwnerType == Personal`): owner (`OwnerId == agent.ItemId`) or assignee
@@ -118,14 +118,14 @@ public interface ISmsConversationAuthorizationService
 
 **Wiring**
 
-- Register in `Sms.Workspace/Startup.cs`: `services.AddScoped<ISmsConversationAuthorizationService, SmsConversationAuthorizationService>();`
+- Register in `Sms.Portal/Startup.cs`: `services.AddScoped<ISmsConversationAuthorizationService, SmsConversationAuthorizationService>();`
   and `services.AddScoped<IAuthorizationHandler, SmsConversationAuthorizationHandler>();` where the handler
   succeeds a `PermissionRequirement` for `UseSmsPortal` when the resource is an `SmsConversation` and the service
   allows the operation carried in `context.Resource` (wrap resource as `SmsConversationAuthorizationResource(conversation, operation)`).
   Mirror `Omnichannel.Managements/Handlers/OmnichannelActivityAuthorizationHandler.cs`.
 - In `AdminController`: `Conversation`, `ThreadMessages` → View; `Send` → Send; `Claim` → Claim; `SetStatus` →
   Close (Closed) or Snooze (Snoozed) or View (Open); return `Forbid()` on denial. Replace the inline
-  `UseSmsPortal` check with `_authorizationService.AuthorizeAsync(User, SmsWorkspacePermissions.UseSmsPortal, resource)`.
+  `UseSmsPortal` check with `_authorizationService.AuthorizeAsync(User, SmsPortalPermissions.UseSmsPortal, resource)`.
 - In `SmsConversationService`: `SendAsync`, `ClaimAsync`, `SetStatusAsync`, `AssignAsync` gain a
   `ClaimsPrincipal principal` parameter (add to `SmsSendRequest` as `Principal`) and call the service; delete the
   static `IsAuthorized`.
@@ -139,7 +139,7 @@ public interface ISmsConversationAuthorizationService
   thread denied for View/Send/Close; owner allowed; unassigned personal Claim allowed; queue member Claim allowed on
   Pooled; queue non-member View denied; queue member Send denied when assigned to someone else; entitlement policy
   enforced when `EnforcingAgentEntitlementPolicy` is used.
-- `SmsWorkspaceAdminControllerTests` (pattern: `Modules/Telephony/SoftPhoneControllerTests.cs`): build the
+- `SmsPortalAdminControllerTests` (pattern: `Modules/Telephony/SoftPhoneControllerTests.cs`): build the
   controller with mocked `IAuthorizationService` returning failure for the resource → `ForbidResult` on
   `Conversation`, `ThreadMessages`, `Send`, `Claim`, `SetStatus`; success path returns `ViewResult`/redirect.
 
@@ -147,7 +147,7 @@ public interface ISmsConversationAuthorizationService
 
 ### C2. Real-time delivery notification targeting
 
-**Files**: `src/Modules/CrestApps.OrchardCore.Sms.Workspace/Services/SmsRealTimeNotifier.cs`;
+**Files**: `src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Services/SmsRealTimeNotifier.cs`;
 new `tests/CrestApps.OrchardCore.Tests/Telephony/Sms/SmsRealTimeNotifierTests.cs`;
 new `tests/CrestApps.OrchardCore.Tests/SignalR/HubNotifierArchitectureTests.cs`.
 
@@ -166,22 +166,22 @@ new `tests/CrestApps.OrchardCore.Tests/SignalR/HubNotifierArchitectureTests.cs`.
 **Tests**: mirror `Modules/ContactCenter/ContactCenterRealTimeNotifierTests.cs`: two tenants, mock `IHubClients`,
 assert the delivery notification reaches only the tenant-qualified agent group.
 
-### C3. SMS Workspace feature split and project references
+### C3. SMS Portal feature split and project references
 
 **Steps**
 
-1. In `Sms.Workspace/Manifest.cs` add:
+1. In `Sms.Portal/Manifest.cs` add:
 
 ```csharp
 [assembly: Feature(
-    Id = SmsWorkspaceConstants.Feature.RoutedDistribution,   // "CrestApps.OrchardCore.Sms.Workspace.RoutedDistribution"
-    Name = "SMS Workspace Routed Distribution",
+    Id = SmsPortalConstants.Feature.RoutedDistribution,   // "CrestApps.OrchardCore.Omnichannel.Sms.Portal.RoutedDistribution"
+    Name = "SMS Portal Routed Distribution",
     Description = "Push-assigns new department SMS conversations to the least-loaded available agent using Contact Center work distribution, and re-pools threads nobody picks up.",
     Category = "Communication",
-    Dependencies = [SmsWorkspaceConstants.Feature.Workspace, ContactCenterConstants.Feature.Queues])]
+    Dependencies = [SmsPortalConstants.Feature.Portal, ContactCenterConstants.Feature.Queues])]
 ```
 
-2. Create `Sms.Workspace/RoutedDistributionStartup.cs` decorated with `[Feature(SmsWorkspaceConstants.Feature.RoutedDistribution)]`
+2. Create `Sms.Portal/RoutedDistributionStartup.cs` decorated with `[Feature(SmsPortalConstants.Feature.RoutedDistribution)]`
    and move these registrations from `Startup.cs` into it: `RoutedQueueRouter`, `ISmsRoutingStrategy`,
    `ISmsRoutedReassignmentService`, `SmsRoutedReassignmentBackgroundTask`, `SmsRoutedDistributionOptions`.
 3. `SmsEndpointRoutingDisplayDriver`: show the Routed distribution option only when the feature is enabled
@@ -193,13 +193,13 @@ assert the delivery notification reaches only the tenant-qualified agent group.
    `AgentProfile.QueueIds` and `AllowedQueueIds`, register in `AgentServicesStartup`). The routed feature may keep
    `IActivityQueueManager` because it depends on Queues.
 5. Remove `../CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj`
-   from `Sms.Workspace.csproj`. Build; for each compile error, move the used type into `Omnichannel.Core` if it is
+   from `Sms.Portal.csproj`. Build; for each compile error, move the used type into `Omnichannel.Core` if it is
    a service/model, or replace UI helpers with the Resources `ItemSelector` endpoint pattern.
-6. Add `SmsWorkspace` tenant profiles to `tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/ContactCenterTenantProfile.cs`
-   and a test class `SmsWorkspaceFeatureActivationTests`: enable SMS Workspace alone → post a fake `SmsReceived`
+6. Add `SmsPortal` tenant profiles to `tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/ContactCenterTenantProfile.cs`
+   and a test class `SmsPortalFeatureActivationTests`: enable SMS Portal alone → post a fake `SmsReceived`
    event through `IOmnichannelEventHandler` → a conversation exists; enable RoutedDistribution → Queues feature is
    enabled by dependency.
-7. Add a rule to `ContactCenterFeatureDependencyArchitectureTests`: assembly `CrestApps.OrchardCore.Sms.Workspace`
+7. Add a rule to `ContactCenterFeatureDependencyArchitectureTests`: assembly `CrestApps.OrchardCore.Omnichannel.Sms.Portal`
    does not reference `CrestApps.OrchardCore.Omnichannel.Managements`.
 
 ### B1. Handoff tool name
@@ -251,13 +251,13 @@ resolver that accepts only catalog entry ids, agent ids and queue ids (delegatin
 
 1. Add `ProviderMessageId` to `OmnichannelMessageIndex` (+ provider in `OmnichannelMessageIndexProvider`, + migration
    in `Omnichannel.Managements/Migrations` creating `IDX_OmnichannelMessageIndex_Provider (Channel, ProviderMessageId)`).
-2. Create `SmsInboundInboxHandler : IProviderWebhookInboxHandler` in `Sms.Workspace.Core/Services` with
+2. Create `SmsInboundInboxHandler : IProviderWebhookInboxHandler` in `Sms.Portal.Core/Services` with
    `TechnicalName = "sms-inbound"`, `ReplaySafety = GuardedByDurableStore`, payload = serialized
    `OmnichannelMessage`; it invokes `IEnumerable<IOmnichannelEventHandler>` exactly as the Telnyx SMS endpoint
-   does today. Register it in `Sms.Workspace/Startup.cs` and in `Omnichannel.Sms/Startup.cs` (both consumers).
+   does today. Register it in `Sms.Portal/Startup.cs` and in `Omnichannel.Sms/Startup.cs` (both consumers).
 3. `IProviderWebhookInbox` is registered by Contact Center `VoiceStartup`; move the inbox registration
    (`IProviderWebhookInbox`, `IProviderWebhookInboxStore`, `ProviderWebhookInboxBackgroundTask`, its migration) to a
-   new dependency-only feature `ContactCenterConstants.Feature.ProviderInbox` that Voice, SMS Workspace and SMS
+   new dependency-only feature `ContactCenterConstants.Feature.ProviderInbox` that Voice, SMS Portal and SMS
    Automation depend on.
 4. `TelnyxSmsWebhookEndpoint.HandleInboundAsync` and `TwilioWebhookEndpoint`: build the message, then
    `inbox.AcceptAsync(new ProviderWebhookInboxDelivery { ProviderName, DeliveryId = providerMessageId, HandlerName = "sms-inbound", Payload })`
@@ -265,7 +265,7 @@ resolver that accepts only catalog entry ids, agent ids and queue ids (delegatin
    Twilio endpoint. `Duplicate` acceptance returns 200 without processing.
 5. `SmsInboundProcessor.ProcessAsync`: wrap find-or-create and the roll-up in
    `IDistributedLock.TryAcquireLockAsync($"SmsConversation:{serviceAddress}:{contactAddress}", timeout, expiration)`
-   from new `SmsWorkspaceOptions.ConversationLockTimeout/Expiration`; on lock failure throw so the inbox retries.
+   from new `SmsPortalOptions.ConversationLockTimeout/Expiration`; on lock failure throw so the inbox retries.
 6. Unique SQL index `UQ_SmsConversationIndex_Addresses (ServiceAddress, ContactAddress)` via migration
    `UpdateFrom1Async`; catch the unique violation on create and re-read.
 7. Tests: `SmsInboundProcessorTests` concurrency (two tasks, one conversation) using the shared SQLite pattern in
@@ -286,7 +286,7 @@ Task<int> CountAsync(SmsInboxQuery query, CancellationToken cancellationToken = 
    with `SmsInboxQuery { AgentId, QueueIds, IncludeAll, Filter (All/Mine/Unassigned), Skip, Take }`. Build the
    YesSql predicate once; visibility for non-supervisors is `AssignedAgentId == agentId OR (OwnerType == Personal AND OwnerId == agentId) OR (OwnerType == Queue AND OwnerId IN queueIds)`.
 3. `AdminController.Index` uses `PagerSlim` (see `Omnichannel.Managements/Controllers/ActivitiesController.cs` for
-   the pager pattern) with page size from `SmsWorkspaceOptions.InboxPageSize` (default 50); counts via `CountAsync`.
+   the pager pattern) with page size from `SmsPortalOptions.InboxPageSize` (default 50); counts via `CountAsync`.
 4. `GetMessagesAsync` takes `beforeUtc` and `take`; the thread view gets a "Load earlier" link.
 5. `ApplyDeliveryReceiptAsync` queries `OmnichannelMessageIndex` by `ProviderMessageId` first.
 6. Tests: `SmsInboxQueryPlanBudgetTests` modeled on `Modules/ContactCenter/AgentSessionQueryPlanBudgetTests.cs`;
@@ -299,7 +299,7 @@ Task<int> CountAsync(SmsInboxQuery query, CancellationToken cancellationToken = 
    available.
 2. Create `SmsOutboundMessage` catalog item and `SmsOutboundOutboxBackgroundTask` (every minute; in-request first
    attempt remains so the UI is instant) with attempts, next-attempt backoff (1, 5, 15, 60 minutes), and a
-   per-endpoint token bucket from `SmsWorkspaceOptions.MaxMessagesPerSecondPerEndpoint`.
+   per-endpoint token bucket from `SmsPortalOptions.MaxMessagesPerSecondPerEndpoint`.
 3. `SmsConversationService.SendAsync` and `SendDirectAsync` persist the message as `Queued`, try once inline,
    and hand the failure to the outbox instead of marking `Failed` immediately; terminal failure marks `Failed`
    and notifies the thread.
@@ -444,9 +444,9 @@ Extend `OmnichannelConfigurationCoverageTests`.
 | A8 caller priority | `ContactCenter.Core/Services/IInboundPriorityContributor.cs` chain used by `InboundVoiceCallProcessor.CreateActivityAsync` |  |
 | A9 transfers | extend `ContactCenterTransferService` with `StartConsultAsync`, `CompleteAsync`, `CancelAsync`; soft phone `soft-phone.js` transfer view lists targets from `Admin/api/crestapps/contact-center/transfer-targets` | `TransferSession` |
 | A10 predictive | `PredictiveDialerStrategy` next to `PowerDialerStrategy`; `DialerStrategyResolver` maps it; UI hides the mode until `DialerPaced` feature and abandonment policy configured |  |
-| C7 SMS router | `Sms.Workspace.Core/Services/SmsConversationRouter.cs` wrapping the chain; `SmsConversationRollup.cs` | `ISmsConversationRouter` |
+| C7 SMS router | `Sms.Portal.Core/Services/SmsConversationRouter.cs` wrapping the chain; `SmsConversationRollup.cs` | `ISmsConversationRouter` |
 | C8 SMS availability and SLA | derive availability from `IAgentSessionManager` heartbeat; `SmsConversation.FirstResponseDueUtc`; sweep in the routed feature |  |
-| C9 compliance | `Sms.Workspace.Core/Services/SmsKeywordPolicy.cs`; auto-reply step in the router; quiet-hours check in `SmsConversationService.SendAsync` using `IBusinessHoursGate` with contact time zone (`OmnichannelContactTimeZoneHandler` already resolves it) |  |
+| C9 compliance | `Sms.Portal.Core/Services/SmsKeywordPolicy.cs`; auto-reply step in the router; quiet-hours check in `SmsConversationService.SendAsync` using `IBusinessHoursGate` with contact time zone (`OmnichannelContactTimeZoneHandler` already resolves it) |  |
 | D3 Telnyx tests | `tests/.../Telnyx/*` with `TelnyxApiHandler` double under `tests/.../Doubles` |  |
 | D4 endpoint resolver | `Telnyx.Core/Services/TelnyxAgentEndpointResolver.cs` | `ITelnyxAgentEndpointResolver` |
 

@@ -35,8 +35,9 @@ public sealed partial class TelnyxTelephonyProvider :
     ITelephonySoftPhoneCredentialsProvider,
     ITelephonyCallStateProvider
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly TelnyxApiClient _apiClient;
     private readonly ITelnyxAgentCredentialStore _credentialStore;
+    private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
     private readonly IClock _clock;
     private readonly ILogger _logger;
     private readonly TelnyxOptions _options;
@@ -53,15 +54,17 @@ public sealed partial class TelnyxTelephonyProvider :
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="telnyxOptions">The active Telnyx settings resolved for the tenant shell.</param>
     public TelnyxTelephonyProvider(
-        IHttpClientFactory httpClientFactory,
+        TelnyxApiClient apiClient,
         ITelnyxAgentCredentialStore credentialStore,
+        ITelnyxAgentEndpointResolver agentEndpointResolver,
         IClock clock,
         ILogger<TelnyxTelephonyProvider> logger,
         IStringLocalizer<TelnyxTelephonyProvider> stringLocalizer,
         IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
-        _httpClientFactory = httpClientFactory;
+        _apiClient = apiClient;
         _credentialStore = credentialStore;
+        _agentEndpointResolver = agentEndpointResolver;
         _clock = clock;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
@@ -174,20 +177,27 @@ public sealed partial class TelnyxTelephonyProvider :
 
         try
         {
-            using var client = CreateClient();
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync("calls", content, cancellationToken);
+            var originate = new TelnyxOriginateRequest();
 
-            if (!response.IsSuccessStatusCode)
+            // The body is already in the provider's own shape, so it is carried through rather than unpacked
+            // into named fields and packed again.
+            foreach (var field in body)
             {
-                var payload = await SafeReadContentAsync(response, cancellationToken);
+                originate.AdditionalFields[field.Key] = field.Value;
+            }
+
+            var response = await _apiClient.OriginateAsync(originate, cancellationToken);
+
+            if (!response.Succeeded)
+            {
+                var payload = response.ErrorBody ?? string.Empty;
 
                 _logger.LogError(
                     "Telnyx rejected a dial request with status code {StatusCode}. Response: {Response}",
                     response.StatusCode,
                     payload.SanitizeLogValue());
 
-                if (TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode))
+                if (response.StatusCode is not null && TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode.Value))
                 {
                     return TelephonyResult.Unknown(S["Telnyx did not confirm whether the call was placed."].Value);
                 }
@@ -195,7 +205,7 @@ public sealed partial class TelnyxTelephonyProvider :
                 return TelephonyResult.Failed(S["Telnyx could not place the call."].Value);
             }
 
-            var callControlId = await ReadDataStringAsync(response, "call_control_id", cancellationToken);
+            var callControlId = response.CallControlId;
 
             var call = new TelephonyCall
             {
@@ -293,20 +303,27 @@ public sealed partial class TelnyxTelephonyProvider :
 
         try
         {
-            using var client = CreateClient();
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync("calls", content, cancellationToken);
+            var originate = new TelnyxOriginateRequest();
 
-            if (!response.IsSuccessStatusCode)
+            // The body is already in the provider's own shape, so it is carried through rather than unpacked
+            // into named fields and packed again.
+            foreach (var field in body)
             {
-                var payload = await SafeReadContentAsync(response, cancellationToken);
+                originate.AdditionalFields[field.Key] = field.Value;
+            }
+
+            var response = await _apiClient.OriginateAsync(originate, cancellationToken);
+
+            if (!response.Succeeded)
+            {
+                var payload = response.ErrorBody ?? string.Empty;
 
                 _logger.LogError(
                     "Telnyx rejected an outbound-bridge agent leg with status code {StatusCode}. Response: {Response}",
                     response.StatusCode,
                     payload.SanitizeLogValue());
 
-                if (TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode))
+                if (response.StatusCode is not null && TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode.Value))
                 {
                     return TelephonyResult.Unknown(S["Telnyx did not confirm whether the call was placed."].Value);
                 }
@@ -314,7 +331,7 @@ public sealed partial class TelnyxTelephonyProvider :
                 return TelephonyResult.Failed(S["Telnyx could not place the call."].Value);
             }
 
-            var callControlId = await ReadDataStringAsync(response, "call_control_id", cancellationToken);
+            var callControlId = response.CallControlId;
 
             // The soft phone tracks the agent leg: hanging it up ends the call, and Telnyx tears down the
             // bridged destination leg with it. The dialed number is shown as the destination, not the SIP uri.
@@ -583,52 +600,29 @@ public sealed partial class TelnyxTelephonyProvider :
 
         try
         {
-            using var client = CreateClient();
-
             // Create the conference from the primary call, then join the remaining calls into it.
-            using var createResponse = await client.PostAsync(
-                "conferences",
-                JsonContent.Create(
-                    new Dictionary<string, object>
-                    {
-                        ["name"] = conferenceName,
-                        ["call_control_id"] = primaryCallId,
-                    },
-                    options: TelnyxJsonSerializerOptions.Default),
-                cancellationToken);
+            var createResult = await _apiClient.CreateConferenceAsync(conferenceName, primaryCallId, cancellationToken: cancellationToken);
 
-            if (!createResponse.IsSuccessStatusCode)
+            if (!createResult.Succeeded || string.IsNullOrWhiteSpace(createResult.ConferenceId))
             {
                 _logger.LogError(
                     "Telnyx rejected a conference creation request with status code {StatusCode}. Response: {Response}",
-                    createResponse.StatusCode,
-                    (await SafeReadContentAsync(createResponse, cancellationToken)).SanitizeLogValue());
+                    createResult.StatusCode,
+                    createResult.ErrorBody.SanitizeLogValue());
 
-                return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
-            }
-
-            var conferenceId = await ReadDataStringAsync(createResponse, "id", cancellationToken);
-
-            if (string.IsNullOrWhiteSpace(conferenceId))
-            {
                 return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
             }
 
             foreach (var secondaryCallId in callIds.Skip(1))
             {
-                using var joinResponse = await client.PostAsync(
-                    $"conferences/{Uri.EscapeDataString(conferenceId)}/actions/join",
-                    JsonContent.Create(
-                        new Dictionary<string, object> { ["call_control_id"] = secondaryCallId },
-                        options: TelnyxJsonSerializerOptions.Default),
-                    cancellationToken);
+                var joinResult = await _apiClient.JoinConferenceAsync(createResult.ConferenceId, secondaryCallId, cancellationToken: cancellationToken);
 
-                if (!joinResponse.IsSuccessStatusCode)
+                if (!joinResult.Succeeded)
                 {
                     _logger.LogError(
                         "Telnyx rejected a conference join request with status code {StatusCode}. Response: {Response}",
-                        joinResponse.StatusCode,
-                        (await SafeReadContentAsync(joinResponse, cancellationToken)).SanitizeLogValue());
+                        joinResult.StatusCode,
+                        joinResult.ErrorBody.SanitizeLogValue());
 
                     return TelephonyResult.Failed(S["Telnyx could not merge the calls."].Value);
                 }
@@ -640,7 +634,7 @@ public sealed partial class TelnyxTelephonyProvider :
                 new Dictionary<string, object>
                 {
                     ["isConference"] = true,
-                    ["conferenceId"] = conferenceId,
+                    ["conferenceId"] = createResult.ConferenceId,
                     ["participantCount"] = callIds.Count,
                 }));
         }
@@ -679,8 +673,7 @@ public sealed partial class TelnyxTelephonyProvider :
 
         try
         {
-            using var client = CreateClient();
-            using var response = await client.GetAsync($"calls/{Uri.EscapeDataString(callId)}", cancellationToken);
+            var (response, data) = await _apiClient.GetCallAsync(callId, cancellationToken);
 
             if (response.StatusCode == HttpStatusCode.NotFound)
             {
@@ -691,7 +684,7 @@ public sealed partial class TelnyxTelephonyProvider :
                 };
             }
 
-            if (!response.IsSuccessStatusCode)
+            if (!response.Succeeded)
             {
                 _logger.LogError("Telnyx rejected a call-state lookup for call {CallId} with status code {StatusCode}.", callId.SanitizeLogValue(), response.StatusCode);
 
@@ -702,12 +695,10 @@ public sealed partial class TelnyxTelephonyProvider :
                 };
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            var isAlive = document.RootElement.TryGetProperty("data", out var data) &&
-                data.ValueKind == JsonValueKind.Object &&
-                data.TryGetProperty("is_alive", out var aliveElement) &&
+            var isAlive = data is not null &&
+                data.Value.TryGetProperty("data", out var callData) &&
+                callData.ValueKind == JsonValueKind.Object &&
+                callData.TryGetProperty("is_alive", out var aliveElement) &&
                 aliveElement.ValueKind == JsonValueKind.True;
 
             var call = BuildCall(callId, isAlive ? CallState.Connected : CallState.Disconnected, metadata: null);
@@ -755,23 +746,16 @@ public sealed partial class TelnyxTelephonyProvider :
 
         try
         {
-            using var client = CreateClient();
-            using var content = body is null
-                ? JsonContent.Create(new Dictionary<string, object>(), options: TelnyxJsonSerializerOptions.Default)
-                : JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync(
-                $"calls/{Uri.EscapeDataString(callId)}/actions/{action}",
-                content,
-                cancellationToken);
+            var response = await _apiClient.PostCallActionAsync(callId, action, body, cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
+            if (!response.Succeeded)
             {
                 if (succeedWhenMissing && response.StatusCode == HttpStatusCode.NotFound)
                 {
                     return TelephonyResult.Success(onSuccess?.Invoke());
                 }
 
-                var payload = await SafeReadContentAsync(response, cancellationToken);
+                var payload = response.ErrorBody ?? string.Empty;
 
                 _logger.LogError(
                     "Telnyx rejected the '{Action}' request for call {CallId} with status code {StatusCode}. Response: {Response}",
@@ -823,50 +807,6 @@ public sealed partial class TelnyxTelephonyProvider :
                 : new Dictionary<string, object>(metadata, StringComparer.OrdinalIgnoreCase),
         };
 
-    private HttpClient CreateClient()
-    {
-        var client = _httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
-        client.BaseAddress = new Uri(_options.ApiBaseUrl);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
 
-        return client;
-    }
 
-    private static async Task<string> ReadDataStringAsync(HttpResponseMessage response, string propertyName, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-            if (document.RootElement.TryGetProperty("data", out var data) &&
-                data.ValueKind == JsonValueKind.Object &&
-                data.TryGetProperty(propertyName, out var value))
-            {
-                return value.ValueKind == JsonValueKind.Number ? value.GetRawText() : value.GetString();
-            }
-        }
-        catch (JsonException)
-        {
-            // Ignore malformed responses and fall back to a generated identifier below.
-        }
-
-        return Guid.NewGuid().ToString("N");
-    }
-
-    private static async Task<string> SafeReadContentAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await response.Content.ReadAsStringAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-            return string.Empty;
-        }
-    }
 }

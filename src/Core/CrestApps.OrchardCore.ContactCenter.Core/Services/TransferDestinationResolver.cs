@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
 using OrchardCore.Settings;
 
@@ -17,6 +18,7 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
     private readonly IAgentProfileManager _agentManager;
     private readonly IActivityQueueManager _queueManager;
     private readonly ISiteService _siteService;
+    private readonly IDialDestinationPolicy _destinationPolicy;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TransferDestinationResolver"/> class.
@@ -25,16 +27,19 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
     /// <param name="agentManager">The agent profile manager used to resolve agent destinations.</param>
     /// <param name="queueManager">The queue manager used to resolve queue destinations.</param>
     /// <param name="siteService">The site service used to read the tenant-scoped approved-destination catalog.</param>
+    /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
     public TransferDestinationResolver(
         IAuthorizationService authorizationService,
         IAgentProfileManager agentManager,
         IActivityQueueManager queueManager,
-        ISiteService siteService)
+        ISiteService siteService,
+        IDialDestinationPolicy destinationPolicy)
     {
         _authorizationService = authorizationService;
         _agentManager = agentManager;
         _queueManager = queueManager;
         _siteService = siteService;
+        _destinationPolicy = destinationPolicy;
     }
 
     /// <inheritdoc/>
@@ -109,7 +114,7 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
             return TransferDestinationResolutionResult.Denied();
         }
 
-        if (!ExternalDestinationPolicy.IsAllowed(entry.E164Address))
+        if (!_destinationPolicy.Evaluate(entry.E164Address, new DialDestinationContext { Operation = DialDestinationOperation.Transfer }).IsAllowed)
         {
             return TransferDestinationResolutionResult.Denied();
         }

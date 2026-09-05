@@ -131,4 +131,32 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     /// Gets or sets the UTC time the item was last modified.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many treatment steps this caller has heard, which is what stops the welcome repeating
+    /// every thirty seconds and telling the caller the system has forgotten them.
+    /// </summary>
+    public int TreatmentStepsPlayed { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the caller last heard something, which the announcement cadence is measured from.
+    /// </summary>
+    public DateTime? LastTreatmentUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the callback was offered, so it is offered once rather than every cycle.
+    /// </summary>
+    public DateTime? CallbackOfferedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when this item's next overflow hop becomes due, so a scheduler can seek the items that are
+    /// ready rather than reading every waiting item every minute.
+    /// </summary>
+    public DateTime? OverflowDueUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets when a queued callback was accepted for this caller, which is what stops a repeated key
+    /// press or a redelivered provider event producing two calls back.
+    /// </summary>
+    public DateTime? CallbackAcceptedUtc { get; set; }
 }

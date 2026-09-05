@@ -58,4 +58,23 @@ public sealed class ContactCenterVoiceProviderResult
     /// Gets or sets provider-specific result metadata.
     /// </summary>
     public IDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Creates a failed result, naming the provider that produced it.
+    /// </summary>
+    /// <remarks>
+    /// Every provider had its own private copy of this. A failure result that loses the provider name is one an
+    /// operator cannot attribute to anything, which is precisely the moment they need to.
+    /// </remarks>
+    /// <param name="providerName">The technical name of the provider that failed.</param>
+    /// <param name="errorCode">The provider error code.</param>
+    /// <param name="errorMessage">The provider error message.</param>
+    public static ContactCenterVoiceProviderResult Failure(string providerName, string errorCode, string errorMessage)
+        => new()
+        {
+            Succeeded = false,
+            ErrorCode = errorCode,
+            ErrorMessage = errorMessage,
+            ProviderName = providerName,
+        };
 }

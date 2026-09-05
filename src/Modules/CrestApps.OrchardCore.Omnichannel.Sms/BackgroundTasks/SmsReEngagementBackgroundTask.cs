@@ -93,7 +93,8 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
         // The business-hours gate is only registered when a feature provides calendars (ContactCenter). Without it,
         // there is no way to know a contact's hours, so we do not nudge at all rather than risk an after-hours send.
-        var businessHoursGate = serviceProvider.GetService<IBusinessHoursGate>();
+        var businessHoursGate = serviceProvider.GetRequiredService<IBusinessHoursGate>();
+        var conversationGate = serviceProvider.GetRequiredService<IAutomatedConversationGate>();
 
         var deadline = clock.UtcNow.AddMilliseconds(_leaseMilliseconds * 0.6);
 
@@ -146,6 +147,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                         subjectFlowSettingsService,
                         localLock,
                         businessHoursGate,
+                        conversationGate,
                         logger,
                         cancellationToken);
                 }
@@ -174,6 +176,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         ISubjectFlowSettingsService subjectFlowSettingsService,
         ILocalLock localLock,
         IBusinessHoursGate businessHoursGate,
+        IAutomatedConversationGate conversationGate,
         ILogger logger,
         CancellationToken cancellationToken)
     {
@@ -198,7 +201,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         var step = cadence.Steps[activity.ReEngagementAttempts];
 
         // A live inbound is composing a reply for this conversation right now; the customer is active, so leave it.
-        if (SmsOmnichannelEventHandler.IsGenerating(activity.AISessionId))
+        if (conversationGate.IsGenerating(activity.AISessionId))
         {
             return;
         }
@@ -252,11 +255,23 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             contactTimeZoneId = contact.Get<OmnichannelContactPart>(nameof(OmnichannelContactPart))?.TimeZoneId;
         }
 
-        // Every send here is background-initiated, so it must respect business hours. With no gate registered we cannot
-        // know the hours, so we decline to nudge rather than risk an after-hours message.
-        if (businessHoursGate is null)
+        // Every send here is background-initiated, so it must respect business hours. An activity that names a
+        // calendar nothing can evaluate — the business-hours feature is off, or the calendar was deleted — is
+        // declined rather than nudged, because the alternative is an after-hours message sent on the strength of
+        // a calendar nobody can read.
+        if (!string.IsNullOrWhiteSpace(activity.BusinessHoursCalendarId))
         {
-            return;
+            var calendars = await businessHoursGate.GetCalendarOptionsAsync(cancellationToken);
+
+            if (!calendars.Any(calendar => string.Equals(calendar.Id, activity.BusinessHoursCalendarId, StringComparison.OrdinalIgnoreCase)))
+            {
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug("Skipping SMS re-engagement for Activity {ActivityId}: its business-hours calendar cannot be evaluated.", activity.ItemId.SanitizeLogValue());
+                }
+
+                return;
+            }
         }
 
         if (!await businessHoursGate.IsOpenAsync(activity.BusinessHoursCalendarId, now, contactTimeZoneId, cancellationToken))

@@ -1,15 +1,19 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routers;
-using CrestApps.OrchardCore.Sms.Workspace.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Notifications;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.Locking;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -62,6 +66,26 @@ public class SmsInboundProcessorTests
         Assert.Null(harness.CreatedConversation);
     }
 
+    [Theory]
+    [InlineData(ActivityStatus.Completed)]
+    [InlineData(ActivityStatus.Cancelled)]
+    [InlineData(ActivityStatus.Failed)]
+    [InlineData(ActivityStatus.Purged)]
+    public async Task ProcessAsync_WhenAutomatedActivityIsTerminal_CreatesHumanConversation(ActivityStatus status)
+    {
+        // A finished automated activity - however it finished - must not keep the number locked away from the
+        // human inbox, otherwise one failed AI turn silently drops every later text from that contact.
+        var harness = new Harness(routing: null)
+        {
+            AutomatedActivity = new OmnichannelActivity { Status = status },
+        };
+
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("hello"), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(conversation);
+        Assert.NotNull(harness.CreatedConversation);
+    }
+
     [Fact]
     public async Task Inbound_OptOutKeyword_ClosesConversation()
     {
@@ -98,9 +122,57 @@ public class SmsInboundProcessorTests
         Assert.Null(harness.CreatedConversation);
     }
 
+    [Fact]
+    public async Task ProcessAsync_SerializesTheThread_OnTheAddressPairLock()
+    {
+        // A per-thread lock is what stops two texts arriving in the same second from creating two conversations
+        // for one number pair.
+        var harness = new Harness(routing: null);
+
+        await harness.Processor.ProcessAsync(Harness.InboundMessage("hello"), TestContext.Current.CancellationToken);
+
+        Assert.Contains("SmsConversation:+15553334444:+15551112222", harness.DistributedLock.AcquiredKeys);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WhenTheThreadLockIsNotAcquired_Throws()
+    {
+        // Dropping the message would lose it. Throwing lets the durable provider inbox retry the delivery.
+        var harness = new Harness(routing: null, lockAcquired: false);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => harness.Processor.ProcessAsync(Harness.InboundMessage("hello"), TestContext.Current.CancellationToken));
+
+        Assert.Null(harness.CreatedConversation);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WhenAnotherNodeCreatedTheThreadFirst_ReReadsItInsteadOfCreatingASecond()
+    {
+        // The unique index on the address pair is the last line of defence when two nodes race past the lock.
+        // Losing that race must land the message on the winner's thread, not fail the delivery.
+        var winner = new SmsConversation
+        {
+            ItemId = "conv-winner",
+            ServiceAddress = "+15553334444",
+            ContactAddress = "+15551112222",
+            OwnerType = SmsConversationOwnerType.Personal,
+            AssignmentStatus = SmsConversationAssignmentStatus.Unassigned,
+        };
+
+        var harness = new Harness(routing: null, createConflictsWith: winner);
+
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("hello"), TestContext.Current.CancellationToken);
+
+        Assert.Same(winner, conversation);
+        Assert.Equal(1, winner.UnreadCount);
+    }
+
     private sealed class Harness
     {
         public Mock<ISmsRealTimeNotifier> Notifier { get; } = new();
+
+        public FakeDistributedLock DistributedLock { get; } = new();
 
         public SmsConversation CreatedConversation { get; private set; }
 
@@ -108,7 +180,11 @@ public class SmsInboundProcessorTests
 
         public SmsInboundProcessor Processor { get; }
 
-        public Harness(SmsEndpointRoutingSettings routing, SmsConversation existing = null)
+        public Harness(
+            SmsEndpointRoutingSettings routing,
+            SmsConversation existing = null,
+            bool lockAcquired = true,
+            SmsConversation createConflictsWith = null)
         {
             var endpoint = new OmnichannelChannelEndpoint { ItemId = "endpoint-1", Channel = "SMS", Value = "+15553334444" };
 
@@ -126,11 +202,32 @@ public class SmsInboundProcessorTests
                 .ReturnsAsync(() => AutomatedActivity);
 
             var conversationStore = new Mock<ISmsConversationStore>();
+            var reads = 0;
+
             conversationStore.Setup(s => s.FindByAddressesAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(existing);
-            conversationStore.Setup(s => s.CreateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>()))
-                .Returns(ValueTask.CompletedTask)
-                .Callback<SmsConversation, CancellationToken>((c, _) => CreatedConversation = c);
+                .ReturnsAsync(() =>
+                {
+                    reads++;
+
+                    // The first read misses (the thread does not exist yet); once the conflicting create has been
+                    // observed, the second read finds the row the other node committed.
+                    return createConflictsWith is not null && reads > 1
+                        ? createConflictsWith
+                        : existing;
+                });
+
+            if (createConflictsWith is null)
+            {
+                conversationStore.Setup(s => s.CreateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>()))
+                    .Returns(ValueTask.CompletedTask)
+                    .Callback<SmsConversation, CancellationToken>((c, _) => CreatedConversation = c);
+            }
+            else
+            {
+                conversationStore.Setup(s => s.CreateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>()))
+                    .Returns(() => ValueTask.FromException(new InvalidOperationException("UNIQUE constraint failed: UQ_SmsConversationIndex_Addresses")));
+            }
+
             conversationStore.Setup(s => s.UpdateAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>()))
                 .Returns(ValueTask.CompletedTask);
 
@@ -154,14 +251,23 @@ public class SmsInboundProcessorTests
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
 
+            IDistributedLock distributedLock = lockAcquired
+                ? DistributedLock
+                : new RefusingDistributedLock();
+
             Processor = new SmsInboundProcessor(
                 endpointManager.Object,
                 activityStore.Object,
                 conversationStore.Object,
                 contactResolver.Object,
                 Notifier.Object,
-                routers,
+                new SmsConversationRouter(routers, NullLogger<SmsConversationRouter>.Instance),
+                new NoOpSmsFirstResponseSlaService(),
+                new Mock<ISmsDispatcher>().Object,
+                new OptionsWrapper<SmsKeywordReplySettings>(new SmsKeywordReplySettings()),
                 contentManager.Object,
+                distributedLock,
+                new OptionsWrapper<SmsPortalOptions>(new SmsPortalOptions()),
                 session.Object,
                 clock.Object,
                 RedactorProviderFactory.Create(),
@@ -178,5 +284,18 @@ public class SmsInboundProcessorTests
                 IsInbound = true,
                 CreatedUtc = DateTime.UtcNow,
             };
+    }
+
+    // Never grants the lock, standing in for a node that is already processing this thread.
+    private sealed class RefusingDistributedLock : IDistributedLock
+    {
+        public Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+            => Task.FromResult<ILocker>(null);
+
+        public Task<(ILocker locker, bool locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null)
+            => Task.FromResult<(ILocker, bool)>((null, false));
+
+        public Task<bool> IsLockAcquiredAsync(string key)
+            => Task.FromResult(true);
     }
 }

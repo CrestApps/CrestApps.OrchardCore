@@ -262,6 +262,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
         services.AddSingleton(processor);
         services.AddSingleton(subjectFlowSettingsService);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
+        services.AddOptions<OmnichannelAutomationOptions>();
 
         return services.BuildServiceProvider();
     }

@@ -8,10 +8,15 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 public class TransferToAgentToolTests
 {
     [Fact]
-    public async Task Invoke_RecordsHandoffOnTheCurrentTurn()
+    public async Task Invoke_RecordsHandoffOnTheScopedTurn()
     {
+        // The tool resolves the turn from the completion's own scope, so the handler that opened that scope reads
+        // back exactly the decision this invocation recorded.
         var tool = new TransferToAgentTool();
-        var services = new ServiceCollection().BuildServiceProvider();
+        var turn = new OmnichannelHandoffTurn();
+        var services = new ServiceCollection()
+            .AddSingleton<IOmnichannelHandoffTurn>(turn)
+            .BuildServiceProvider();
 
         var arguments = new AIFunctionArguments(new Dictionary<string, object>
         {
@@ -21,17 +26,35 @@ public class TransferToAgentToolTests
             Services = services,
         };
 
-        using var scope = OmnichannelHandoffTurnContext.Begin();
-
         await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
 
-        Assert.True(scope.Turn.HandoffRequested);
-        Assert.Equal("customer asked for a person", scope.Turn.Reason);
+        Assert.True(turn.HandoffRequested);
+        Assert.Equal("customer asked for a person", turn.Reason);
     }
 
     [Fact]
-    public async Task Invoke_WithNoActiveTurn_DoesNotThrow_AndReportsUnavailable()
+    public async Task Invoke_TellsTheModelTheTransferWasQueued_WhenATurnIsAvailable()
     {
+        var tool = new TransferToAgentTool();
+        var services = new ServiceCollection()
+            .AddSingleton<IOmnichannelHandoffTurn>(new OmnichannelHandoffTurn())
+            .BuildServiceProvider();
+
+        var arguments = new AIFunctionArguments(new Dictionary<string, object>())
+        {
+            Services = services,
+        };
+
+        var result = await tool.InvokeAsync(arguments, TestContext.Current.CancellationToken);
+
+        Assert.Contains("queued", result?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Invoke_WithNoTurnRegistered_DoesNotThrow_AndReportsUnavailable()
+    {
+        // A context with no turn is one where handoff is not wired up. The model is told so rather than the tool
+        // failing the whole completion.
         var tool = new TransferToAgentTool();
         var services = new ServiceCollection().BuildServiceProvider();
 

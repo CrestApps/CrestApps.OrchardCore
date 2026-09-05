@@ -12,12 +12,16 @@ public interface IActivityRoutingService
     /// </summary>
     /// <param name="queue">The queue being routed.</param>
     /// <param name="queueItem">The queued activity.</param>
-    /// <param name="agents">The available agents signed in to the queue.</param>
+    /// <param name="availability">
+    /// The availability snapshots of the agents signed in to the queue. They already carry each agent's active
+    /// interaction count, so a strategy that ranks by load reads it here rather than issuing one query per
+    /// candidate on the hot assignment path.
+    /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The explainable routing decision.</returns>
     Task<ActivityRoutingDecision> SelectAgentAsync(
         ActivityQueue queue,
         QueueItem queueItem,
-        IEnumerable<AgentProfile> agents,
+        IEnumerable<AgentAvailability> availability,
         CancellationToken cancellationToken = default);
 }

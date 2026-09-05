@@ -1,14 +1,15 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -29,7 +30,10 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
     private readonly IVoiceQueueOfferService _offerService;
     private readonly IActivityQueueManager _queueManager;
     private readonly IClock _clock;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IBusinessHoursGate _businessHoursGate;
+    private readonly ICallbackService _callbackService;
+    private readonly IDistributedLock _distributedLock;
+    private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -43,7 +47,10 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         IVoiceQueueOfferService offerService,
         IActivityQueueManager queueManager,
         IClock clock,
-        IServiceProvider serviceProvider,
+        IBusinessHoursGate businessHoursGate,
+        ICallbackService callbackService,
+        IDistributedLock distributedLock,
+        IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<VoiceAgentHandoffService> logger)
     {
         _interactionManager = interactionManager;
@@ -53,7 +60,10 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         _offerService = offerService;
         _queueManager = queueManager;
         _clock = clock;
-        _serviceProvider = serviceProvider;
+        _businessHoursGate = businessHoursGate;
+        _callbackService = callbackService;
+        _distributedLock = distributedLock;
+        _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
     }
 
@@ -66,6 +76,39 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        if (string.IsNullOrWhiteSpace(request.ProviderCallId))
+        {
+            return OmnichannelHandoffResult.Failure("A phone handoff requires the live provider call identifier.");
+        }
+
+        // Provider webhooks are at-least-once, so two deliveries of one escalation can arrive together. Without
+        // this lock each reads the activity before the other has written it, both pass the idempotency guard,
+        // and the caller is seated in the queue twice, or given two callbacks for one after-hours call. It is
+        // the same key the inbound pipeline uses, so an escalation and a redelivered inbound event for the same
+        // call cannot interleave either.
+        var lockKey = $"ContactCenterInboundVoice:{request.ProviderName}:{request.ProviderCallId}";
+
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            lockKey,
+            _coordinationOptions.InboundLockTimeout,
+            _coordinationOptions.InboundLockExpiration);
+
+        if (!locked)
+        {
+            // Another node holds this exact call. Claiming success would report work that has not happened, so
+            // the provider is told the escalation was not taken and will redeliver it.
+            return OmnichannelHandoffResult.Failure("Another node is already handing off this call.");
+        }
+
+        await using (locker)
+        {
+            return await RequestHandoffLockedAsync(request, cancellationToken);
+        }
+    }
+
+    private async Task<OmnichannelHandoffResult> RequestHandoffLockedAsync(OmnichannelHandoffRequest request, CancellationToken cancellationToken)
+    {
+
         if (request.Activity is null)
         {
             return OmnichannelHandoffResult.Failure("A handoff requires an activity.");
@@ -76,11 +119,6 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         if (string.IsNullOrEmpty(queueId))
         {
             return OmnichannelHandoffResult.Failure("A handoff requires a target queue.");
-        }
-
-        if (string.IsNullOrWhiteSpace(request.ProviderCallId))
-        {
-            return OmnichannelHandoffResult.Failure("A phone handoff requires the live provider call identifier.");
         }
 
         // Re-load through the activity manager so we mutate and persist the same instance the routing pipeline
@@ -96,11 +134,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         // the manual (agent) lane; an after-hours handoff concludes it. Either way, once it is no longer a live
         // automated call it has already been handled — this guard is what stops a redelivered speak.ended from
         // enqueuing the call a second time or scheduling a duplicate callback.
-        if (activity.InteractionType == ActivityInteractionType.Manual ||
-            activity.Status is ActivityStatus.Completed
-                or ActivityStatus.Cancelled
-                or ActivityStatus.Failed
-                or ActivityStatus.Purged)
+        if (activity.InteractionType == ActivityInteractionType.Manual || activity.Status.IsTerminal())
         {
             return OmnichannelHandoffResult.Success("The call was already handed off.");
         }
@@ -109,11 +143,10 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         // is staffing. Schedule a callback for when it re-opens and tell the caller, rather than leaving them
         // waiting or hanging up bluntly.
         var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
-        var businessHoursGate = _serviceProvider.GetService<IBusinessHoursGate>();
 
-        if (businessHoursGate is not null && queue is not null && !string.IsNullOrWhiteSpace(queue.BusinessHoursCalendarId))
+        if (queue is not null && !string.IsNullOrWhiteSpace(queue.BusinessHoursCalendarId))
         {
-            var open = await businessHoursGate.IsOpenAsync(queue.BusinessHoursCalendarId, _clock.UtcNow, timeZoneId: null, cancellationToken);
+            var open = await _businessHoursGate.IsOpenAsync(queue.BusinessHoursCalendarId, _clock.UtcNow, timeZoneId: null, cancellationToken);
 
             if (!open)
             {
@@ -131,18 +164,24 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         {
             interaction = await _interactionManager.NewAsync(cancellationToken: cancellationToken);
             interaction.Channel = InteractionChannel.Voice;
-            interaction.Direction = InteractionDirection.Inbound;
+            // An escalated dialer call is still an outbound call. Recording it as inbound credited the dial to
+            // inbound traffic and told the agent the customer had rung in.
+            interaction.Direction = IsOutboundOrigin(activity.Source)
+                ? InteractionDirection.Outbound
+                : InteractionDirection.Inbound;
             interaction.ActivityItemId = activity.ItemId;
             interaction.ProviderName = request.ProviderName;
             interaction.ProviderInteractionId = request.ProviderCallId;
             interaction.CustomerAddress = activity.PreferredDestination;
             interaction.QueueId = queueId;
+            ApplyHandoffContext(interaction, request);
 
             await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
         }
         else
         {
             interaction.QueueId = queueId;
+            ApplyHandoffContext(interaction, request);
 
             if (string.IsNullOrWhiteSpace(interaction.ProviderInteractionId))
             {
@@ -156,7 +195,8 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         // Move the activity from the automated lane into the manual/queued lane so it routes like an inbound call.
         // Mark it escalated (durable) so containment reporting counts it even though it leaves the automated lane.
         activity.Kind = ActivityKind.Call;
-        activity.Source = ActivitySources.Inbound;
+        // Source is left alone. It records how the call came to exist, and escalating it to a person does not
+        // change that; overwriting it made every escalated outbound call report as inbound traffic.
         activity.InteractionType = ActivityInteractionType.Manual;
         activity.Status = ActivityStatus.AwaitingAgentResponse;
         activity.AiEscalated = true;
@@ -186,21 +226,32 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
                 string.IsNullOrEmpty(offeredUserId) ? "waiting for the next available agent" : "offered to an available agent");
         }
 
-        return OmnichannelHandoffResult.Success(
-            string.IsNullOrEmpty(offeredUserId)
-                ? "The caller is waiting in the queue for the next agent."
-                : "The caller was offered to an available agent.",
-            offeredToUserId: offeredUserId);
+        return string.IsNullOrEmpty(offeredUserId)
+            ? OmnichannelHandoffResult.WaitingInQueue("The caller is waiting in the queue for the next agent.")
+            : OmnichannelHandoffResult.Success("The caller was offered to an available agent.", offeredToUserId: offeredUserId);
+    }
+
+    // Only the sources that placed the call are outbound. Anything else, including an activity with no source
+    // recorded, keeps the inbound classification this service has always applied, so the change is confined to
+    // the calls that were actually being mislabelled.
+    private static bool IsOutboundOrigin(string source)
+        => DialerActivitySourceHelper.IsDialerSource(source)
+            || string.Equals(source, ActivitySources.Callback, StringComparison.OrdinalIgnoreCase);
+
+    private static void ApplyHandoffContext(Interaction interaction, OmnichannelHandoffRequest request)
+    {
+        interaction.HandoffSummary = request.Summary;
+        interaction.HandoffReason = request.Reason;
+        interaction.HandoffAiSessionId = request.AiSessionId;
     }
 
     private async Task ScheduleAfterHoursCallbackAsync(OmnichannelActivity activity, string queueId, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
-        var callbackService = _serviceProvider.GetService<ICallbackService>();
 
-        if (callbackService is not null && !string.IsNullOrWhiteSpace(activity.PreferredDestination))
+        if (!string.IsNullOrWhiteSpace(activity.PreferredDestination))
         {
-            await callbackService.ScheduleAsync(new CallbackRequest
+            await _callbackService.ScheduleAsync(new CallbackRequest
             {
                 ItemId = IdGenerator.GenerateId(),
                 Destination = activity.PreferredDestination,

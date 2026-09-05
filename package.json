@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "build": "gulp build",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "rebuild": "gulp rebuild",
     "watch": "gulp watch",
     "postinstall": "node .scripts/install.js",
@@ -43,7 +45,8 @@
     "postcss-rtl": "^2.0.0",
     "rtlcss": "4.3.0",
     "source-map": "^0.8.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@microsoft/signalr": "10.0.0",

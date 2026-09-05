@@ -24,7 +24,10 @@ public sealed class LongestIdleRoutingStrategy : IActivityRoutingStrategy
 
         var eligibleCandidates = context.Candidates
             .Where(candidate => candidate.IsEligible)
-            .OrderBy(candidate => candidate.Agent.PresenceChangedUtc ?? DateTime.MaxValue)
+            // Idle time is measured from when the agent last became idle, not from their last presence change:
+            // finishing a call moves the presence timestamp and would otherwise make the agent who just hung up
+            // look like the longest idle one.
+            .OrderBy(candidate => candidate.Agent.IdleSinceUtc ?? candidate.Agent.PresenceChangedUtc ?? DateTime.MaxValue)
             .ToArray();
 
         for (var index = 0; index < eligibleCandidates.Length; index++)

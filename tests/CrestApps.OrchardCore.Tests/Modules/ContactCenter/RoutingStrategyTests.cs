@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -10,7 +9,28 @@ public sealed class RoutingStrategyTests
     private static readonly DateTime _now = new(2026, 1, 5, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
-    public async Task RoundRobin_SelectsLeastRecentlyAssignedAgent()
+    public async Task RoundRobin_SelectsTheAgentWhoLeastRecentlyFinishedWork()
+    {
+        // Arrange
+        // Fairness is about who last finished something, not who last had an offer pushed at them: an agent who
+        // declined or missed an offer would otherwise hold their place at the front of the rotation.
+        var queue = new ActivityQueue { ItemId = "q1", RoutingStrategy = QueueRoutingStrategy.RoundRobin };
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1" };
+        var justFinished = new AgentProfile { ItemId = "a1", LastWorkCompletedUtc = _now };
+        var finishedLongAgo = new AgentProfile { ItemId = "a2", LastWorkCompletedUtc = _now.AddMinutes(-30) };
+
+        var service = new ActivityRoutingService([new RoundRobinRoutingStrategy()]);
+
+        // Act
+        var decision = await service.SelectAgentAsync(queue, item, [Availability(justFinished), Availability(finishedLongAgo)], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(decision.Succeeded);
+        Assert.Same(finishedLongAgo, decision.Agent);
+    }
+
+    [Fact]
+    public async Task RoundRobin_FallsBackToTheLastAssignment_WhenNobodyHasFinishedWorkYet()
     {
         // Arrange
         var queue = new ActivityQueue { ItemId = "q1", RoutingStrategy = QueueRoutingStrategy.RoundRobin };
@@ -21,7 +41,7 @@ public sealed class RoutingStrategyTests
         var service = new ActivityRoutingService([new RoundRobinRoutingStrategy()]);
 
         // Act
-        var decision = await service.SelectAgentAsync(queue, item, [recentlyAssigned, leastRecentlyAssigned], TestContext.Current.CancellationToken);
+        var decision = await service.SelectAgentAsync(queue, item, [Availability(recentlyAssigned), Availability(leastRecentlyAssigned)], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(decision.Succeeded);
@@ -37,18 +57,49 @@ public sealed class RoutingStrategyTests
         var busyAgent = new AgentProfile { ItemId = "a1" };
         var freeAgent = new AgentProfile { ItemId = "a2" };
 
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager.Setup(m => m.CountActiveByAgentAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(2);
-        interactionManager.Setup(m => m.CountActiveByAgentAsync("a2", It.IsAny<CancellationToken>())).ReturnsAsync(0);
-
-        var service = new ActivityRoutingService([new LeastBusyRoutingStrategy(interactionManager.Object)]);
+        var service = new ActivityRoutingService([new LeastBusyRoutingStrategy()]);
 
         // Act
-        var decision = await service.SelectAgentAsync(queue, item, [busyAgent, freeAgent], TestContext.Current.CancellationToken);
+        var decision = await service.SelectAgentAsync(
+            queue,
+            item,
+            [Availability(busyAgent, activeInteractions: 2), Availability(freeAgent, activeInteractions: 0)],
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(decision.Succeeded);
         Assert.Same(freeAgent, decision.Agent);
+    }
+
+    [Fact]
+    public async Task LongestIdle_MeasuresIdleness_NotTheLastPresenceChange()
+    {
+        // Arrange
+        // The agent who just hung up has the more recent presence change but is not the more idle one; ranking on
+        // presence alone kept handing work back to whoever had most recently finished a call.
+        var queue = new ActivityQueue { ItemId = "q1", RoutingStrategy = QueueRoutingStrategy.LongestIdle };
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1" };
+        var justOffACall = new AgentProfile
+        {
+            ItemId = "a1",
+            PresenceChangedUtc = _now.AddMinutes(-30),
+            IdleSinceUtc = _now,
+        };
+        var genuinelyIdle = new AgentProfile
+        {
+            ItemId = "a2",
+            PresenceChangedUtc = _now,
+            IdleSinceUtc = _now.AddMinutes(-30),
+        };
+
+        var service = new ActivityRoutingService([new LongestIdleRoutingStrategy()]);
+
+        // Act
+        var decision = await service.SelectAgentAsync(queue, item, [Availability(justOffACall), Availability(genuinelyIdle)], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(decision.Succeeded);
+        Assert.Same(genuinelyIdle, decision.Agent);
     }
 
     [Fact]
@@ -63,7 +114,7 @@ public sealed class RoutingStrategyTests
         var service = new ActivityRoutingService([new StickyAgentRoutingStrategy(), new LongestIdleRoutingStrategy()]);
 
         // Act
-        var decision = await service.SelectAgentAsync(queue, item, [longestIdleAgent, stickyAgent], TestContext.Current.CancellationToken);
+        var decision = await service.SelectAgentAsync(queue, item, [Availability(longestIdleAgent), Availability(stickyAgent)], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(decision.Succeeded);
@@ -76,16 +127,19 @@ public sealed class RoutingStrategyTests
         // Arrange
         var queue = new ActivityQueue { ItemId = "q1", RoutingStrategy = QueueRoutingStrategy.RoundRobin };
         var item = new QueueItem { ItemId = "i1", QueueId = "q1" };
-        var longestIdleButRecentlyAssigned = new AgentProfile { ItemId = "a1", PresenceChangedUtc = _now.AddMinutes(-30), LastAssignedUtc = _now };
-        var newerButLeastRecentlyAssigned = new AgentProfile { ItemId = "a2", PresenceChangedUtc = _now, LastAssignedUtc = _now.AddMinutes(-30) };
+        var longestIdleButJustFinished = new AgentProfile { ItemId = "a1", IdleSinceUtc = _now.AddMinutes(-30), LastWorkCompletedUtc = _now };
+        var newerButFinishedLongAgo = new AgentProfile { ItemId = "a2", IdleSinceUtc = _now, LastWorkCompletedUtc = _now.AddMinutes(-30) };
 
         var service = new ActivityRoutingService([new LongestIdleRoutingStrategy(), new RoundRobinRoutingStrategy()]);
 
         // Act
-        var decision = await service.SelectAgentAsync(queue, item, [longestIdleButRecentlyAssigned, newerButLeastRecentlyAssigned], TestContext.Current.CancellationToken);
+        var decision = await service.SelectAgentAsync(queue, item, [Availability(longestIdleButJustFinished), Availability(newerButFinishedLongAgo)], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(decision.Succeeded);
-        Assert.Same(newerButLeastRecentlyAssigned, decision.Agent);
+        Assert.Same(newerButFinishedLongAgo, decision.Agent);
     }
+
+    private static AgentAvailability Availability(AgentProfile agent, int activeInteractions = 0)
+        => new() { Agent = agent, ActiveInteractionCount = activeInteractions };
 }

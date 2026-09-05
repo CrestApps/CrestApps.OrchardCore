@@ -315,6 +315,7 @@ public sealed class ContactCenterHubSecurityTests
                 .AddSingleton(Mock.Of<ISupervisorQueueAuthorizationService>())
                 .AddSingleton(MockUserManager())
                 .AddSingleton(Mock.Of<IDisplayNameProvider>())
+                .AddSingleton<IQueuedVoiceWorkOfferService>(new NoQueuedVoiceWorkOfferService())
                 .AddTransient<ContactCenterHubScopeContext>()
                 .BuildServiceProvider();
 

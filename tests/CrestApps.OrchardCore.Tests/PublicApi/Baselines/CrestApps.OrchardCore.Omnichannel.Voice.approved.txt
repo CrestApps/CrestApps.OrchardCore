@@ -1,0 +1,16 @@
+[assembly: OrchardCore.Modules.Manifest.Feature(Category="Contact Center", Dependencies=new string[] {
+        "CrestApps.OrchardCore.Telephony",
+        "CrestApps.OrchardCore.AI",
+        "CrestApps.OrchardCore.AI.Chat.Core",
+        "CrestApps.OrchardCore.Omnichannel.Managements"}, Description=@"Runs an automated voice conversation driven by an AI chat profile: the call is answered, the assistant speaks and listens through whichever telephony provider is carrying it, the caller can be escalated to a live agent, and the activity is settled with a summary and a disposition. A telephony provider supplies the audio; enable the provider's own automated voice feature alongside this one.", Id="CrestApps.OrchardCore.Omnichannel.Voice", Name="Automated Voice")]
+[assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Contact Center", Description="Runs an automated AI voice conversation over any telephony provider.", Name="Automated Voice", Version="3.0.0", Website="https://crestapps.com")]
+[assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Omnichannel.Voice", "Module")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Omnichannel.Voice
+{
+    public sealed class Startup : OrchardCore.Modules.StartupBase
+    {
+        public Startup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}

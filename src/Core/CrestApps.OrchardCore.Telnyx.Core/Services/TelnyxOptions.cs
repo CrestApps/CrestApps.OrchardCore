@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Telnyx.Models;
+
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
@@ -92,6 +94,13 @@ public sealed class TelnyxOptions
     /// audio test is unavailable.
     /// </summary>
     public string EchoTestDestination { get; set; }
+
+    /// <summary>
+    /// Gets or sets what to do about a call the provider has up that this platform has no record of. Defaults to
+    /// recording it and leaving it connected: an orphan may still be a conversation that is working, and ending
+    /// it is the more destructive of the two mistakes.
+    /// </summary>
+    public TelnyxOrphanedCallHandling OrphanedCallHandling { get; set; }
 
     /// <summary>
     /// Gets a value indicating whether the provider has the minimum configuration required to place and

@@ -128,13 +128,8 @@ public sealed class DialpadContactCenterVoiceProvider :
         };
     }
 
+    // One shape, on the result type. This copy also left the provider name unset, so a Dialpad failure reached
+    // the operator attributed to nobody; the shared factory carries it like the other providers do.
     private static ContactCenterVoiceProviderResult Failure(string errorCode, string errorMessage)
-    {
-        return new ContactCenterVoiceProviderResult
-        {
-            Succeeded = false,
-            ErrorCode = errorCode,
-            ErrorMessage = errorMessage,
-        };
-    }
+        => ContactCenterVoiceProviderResult.Failure(DialpadConstants.ProviderTechnicalName, errorCode, errorMessage);
 }

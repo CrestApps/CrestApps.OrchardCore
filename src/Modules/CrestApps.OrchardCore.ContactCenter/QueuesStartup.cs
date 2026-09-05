@@ -54,7 +54,6 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IQueueItemManager, QueueItemManager>()
             .AddScoped<IActivityReservationStore, ActivityReservationStore>()
             .AddScoped<IActivityReservationManager, ActivityReservationManager>()
-            .AddScoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>()
             .AddScoped<IActivityQueueService, ActivityQueueService>()
             .AddScoped<ActivityReservationService>()
             .AddScoped<IActivityReservationService>(static sp => sp.GetRequiredService<ActivityReservationService>())
@@ -63,6 +62,24 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>()
             .AddScoped<IHandoffQueueOptionsProvider, ContactCenterHandoffQueueOptionsProvider>();
+
+        // This feature owns queues, so work stranded in one is something it can heal; it replaces the do-nothing
+        // default the base feature registers for tenants that have no queues.
+        services.Replace(ServiceDescriptor.Scoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>());
+
+        // Chooses which of an agent's queues to serve next; reservation still runs through AssignNextAsync.
+        services.AddScoped<IAgentWorkSelector, AgentWorkSelector>();
+
+        // In-queue treatment: the policy decides what a waiting caller hears, the provider makes them hear it,
+        // and the default provider plays nothing so a tenant with no voice provider is silent rather than
+        // throwing at somebody who is already on hold.
+        services.AddScoped<IQueuedCallbackService, QueuedCallbackService>();
+        services.TryAddScoped<IQueueTreatmentProvider, NoQueueTreatmentProvider>();
+
+        // The sweep that plays it. It also runs the overflow due-times, because both are timing-sensitive in
+        // the same way and reading the queues twice on two schedules would be the same work done twice.
+        services.AddScoped<IQueueTreatmentService, QueueTreatmentService>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, QueueTreatmentBackgroundTask>());
 
         // Shared Contact Center configuration cache. The Business Hours feature also registers it; TryAdd keeps a
         // single instance whichever feature configures services first.
@@ -98,6 +115,7 @@ public sealed class QueuesStartup : StartupBase
         services
             .AddScoped<IActivityRoutingService, ActivityRoutingService>()
             .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, PreferredSkillsRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, CapacityRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, StickyAgentRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()

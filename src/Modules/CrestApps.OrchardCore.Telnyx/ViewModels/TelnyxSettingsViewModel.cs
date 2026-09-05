@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Telnyx.Models;
 namespace CrestApps.OrchardCore.Telnyx.ViewModels;
 
 /// <summary>
@@ -107,6 +108,11 @@ public class TelnyxSettingsViewModel
     /// Gets or sets the optional echo/loopback destination used by the soft phone's audio test and canary.
     /// </summary>
     public string EchoTestDestination { get; set; }
+
+    /// <summary>
+    /// Gets or sets what to do about a live call this platform has no interaction for.
+    /// </summary>
+    public TelnyxOrphanedCallHandling OrphanedCallHandling { get; set; }
 
     /// <summary>
     /// Gets or sets the optional REST API base address override.

@@ -445,12 +445,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         {
             await EnsureAuthorizedAsync(services, ContactCenterPermissions.SignIntoQueues);
 
-            if (services.QueuedVoiceWorkOfferService is not null)
-            {
-                offered = await services.QueuedVoiceWorkOfferService.OfferForUserAsync(
-                    userId,
-                    HubConnectionWork.MustComplete);
-            }
+            offered = await services.QueuedVoiceWorkOfferService.OfferForUserAsync(
+                userId,
+                HubConnectionWork.MustComplete);
         });
 
         return offered;

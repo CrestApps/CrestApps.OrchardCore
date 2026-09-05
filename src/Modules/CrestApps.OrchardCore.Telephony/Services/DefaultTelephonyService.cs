@@ -13,6 +13,7 @@ public sealed class DefaultTelephonyService : ITelephonyService
     private readonly ITelephonyProviderResolver _resolver;
     private readonly IOutboundCallScreeningService _screeningService;
     private readonly ITelephonyExtensionResolver _extensionResolver;
+    private readonly IDialDestinationPolicy _destinationPolicy;
 
     internal readonly IStringLocalizer S;
 
@@ -22,24 +23,38 @@ public sealed class DefaultTelephonyService : ITelephonyService
     /// <param name="resolver">The provider resolver.</param>
     /// <param name="screeningService">The outbound origination screening gate.</param>
     /// <param name="extensionResolver">The internal extension resolver.</param>
+    /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DefaultTelephonyService(
         ITelephonyProviderResolver resolver,
         IOutboundCallScreeningService screeningService,
         ITelephonyExtensionResolver extensionResolver,
+        IDialDestinationPolicy destinationPolicy,
         IStringLocalizer<DefaultTelephonyService> stringLocalizer)
     {
         _resolver = resolver;
         _screeningService = screeningService;
         _extensionResolver = extensionResolver;
+        _destinationPolicy = destinationPolicy;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
-    /// <inheritdoc/>
     public async Task<TelephonyResult> DialAsync(DialRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+
+        // The destination policy runs first and applies to every origination, including one typed on the soft
+        // phone keypad, so emergency and premium destinations cannot be reached from the platform at all.
+        var decision = _destinationPolicy.Evaluate(request.To, new DialDestinationContext
+        {
+            Operation = DialDestinationOperation.Dial,
+        });
+
+        if (!decision.IsAllowed)
+        {
+            return TelephonyResult.Failed(decision.Reason);
+        }
 
         // Every origination passes the shared compliance gate before it can reach a provider, so a soft-phone
         // dial cannot bypass the do-not-call and calling-window rules that a compliance module contributes.
@@ -101,9 +116,27 @@ public sealed class DefaultTelephonyService : ITelephonyService
     /// <inheritdoc/>
     public Task<TelephonyResult> TransferAsync(TransferRequest request, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(request);
+
+        // A transfer reaches the outside world exactly like a dial does, so it answers to the same policy. The
+        // transfer field on the soft phone therefore cannot be used to reach a refused destination. A target the
+        // policy cannot parse is left alone here, because a transfer target may also be an internal address the
+        // provider resolves; the refused categories are what this guard exists for.
+        var decision = _destinationPolicy.Evaluate(request.To, new DialDestinationContext
+        {
+            Operation = DialDestinationOperation.Transfer,
+        });
+
+        if (decision.Outcome is DialDestinationOutcome.Emergency
+            or DialDestinationOutcome.Premium
+            or DialDestinationOutcome.Blocked)
+        {
+            return Task.FromResult(TelephonyResult.Failed(decision.Reason));
+        }
+
         // Consulting the destination before releasing the call is a different provider capability from simply
         // releasing it, so the two modes are gated separately instead of one contract answering for both.
-        if (request?.Mode == TransferMode.Warm)
+        if (request.Mode == TransferMode.Warm)
         {
             return InvokeAsync<ITelephonyAttendedTransferProvider>(
                 TelephonyCapabilities.AttendedTransfer,
@@ -160,6 +193,20 @@ public sealed class DefaultTelephonyService : ITelephonyService
         if (string.IsNullOrWhiteSpace(request.Extension))
         {
             return TelephonyResult.Failed(S["An extension is required to place an internal call."].Value);
+        }
+
+        // An emergency or premium code typed into the extension field is refused with the reason that explains
+        // why, rather than reported as an unknown extension.
+        var decision = _destinationPolicy.Evaluate(request.Extension, new DialDestinationContext
+        {
+            Operation = DialDestinationOperation.Dial,
+        });
+
+        if (decision.Outcome is DialDestinationOutcome.Emergency
+            or DialDestinationOutcome.Premium
+            or DialDestinationOutcome.Blocked)
+        {
+            return TelephonyResult.Failed(decision.Reason);
         }
 
         // Internal extension calls are not consumer outreach, so they skip outbound compliance screening. The

@@ -56,7 +56,7 @@ internal static class AgentSoftPhoneEndpoints
     internal static async Task<IResult> HandleSyncQueuedVoiceWorkAsync(
         IAuthorizationService authorizationService,
         IAntiforgery antiforgery,
-        IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices,
+        IQueuedVoiceWorkOfferService queuedVoiceWorkOfferService,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
@@ -76,12 +76,7 @@ internal static class AgentSoftPhoneEndpoints
             return TypedResults.Forbid();
         }
 
-        var queuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
-
-        if (queuedVoiceWorkOfferService is not null)
-        {
-            await queuedVoiceWorkOfferService.OfferForUserAsync(userId, httpContext.RequestAborted);
-        }
+        await queuedVoiceWorkOfferService.OfferForUserAsync(userId, httpContext.RequestAborted);
 
         return TypedResults.Ok();
     }

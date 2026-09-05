@@ -386,6 +386,9 @@ Validated settings:
 | `CrestApps:ContactCenter:Coordination` | Lock waits are positive and each lease expiry exceeds its acquisition timeout. |
 | `CrestApps:ContactCenter:Availability` | `HeartbeatTimeout` and `MaximumWrapUpDuration` are both greater than zero. |
 | `CrestApps:ContactCenter:WebhookIngress` | Concurrency, rate, period, delivery-age, and future-skew values are within their supported ranges. |
+| `CrestApps:Omnichannel:Automation` | The lease, batch size, per-invocation ceiling, attempt limit and retry delay are all greater than zero, and one batch cannot exceed the ceiling meant to keep a pass inside its lease. A zero batch would drain nothing while every run reported success. |
+| `CrestApps:Sms:Portal` | Conversation lock timeout and expiry, the inbox page size, the outbox batch size and the per-endpoint send budget are positive, and the lock expiry exceeds its acquisition timeout. |
+| `CrestApps:Sms:Portal:KeywordReplies` | Optional. Overrides the shipped STOP, HELP and START replies. Leaving a value unset keeps the default, because a tenant that configures nothing still owes a contact who texts STOP an answer. |
 | `CrestApps_Telephony:Commands` | The command timeout is between one second and two minutes. |
 | `CrestApps_Telephony:Coordination` | Lock waits and the new-interaction grace period are positive, and the lease expiry exceeds its acquisition timeout. |
 | `CrestApps:Asterisk:Default` | Numeric settings are sane whenever the configuration-backed provider is enabled. |

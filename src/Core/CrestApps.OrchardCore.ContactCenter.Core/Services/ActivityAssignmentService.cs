@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -17,9 +18,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ActivityAssignmentService : IActivityAssignmentService
 {
-    private static readonly TimeSpan _assignmentLockTimeout = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan _assignmentLockExpiration = TimeSpan.FromSeconds(30);
-
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentAvailabilityService _availabilityService;
     private readonly IActivityQueueManager _queueManager;
@@ -30,6 +28,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly IDistributedLock _distributedLock;
     private readonly ISession _session;
     private readonly IClock _clock;
+    private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -57,6 +56,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IDistributedLock distributedLock,
         ISession session,
         IClock clock,
+        IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<ActivityAssignmentService> logger)
     {
         _queueItemManager = queueItemManager;
@@ -69,6 +69,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         _distributedLock = distributedLock;
         _session = session;
         _clock = clock;
+        _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
     }
 
@@ -79,8 +80,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
-            _assignmentLockTimeout,
-            _assignmentLockExpiration);
+            _coordinationOptions.AssignmentLockTimeout,
+            _coordinationOptions.AssignmentLockExpiration);
 
         if (!locked)
         {
@@ -106,8 +107,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
-            _assignmentLockTimeout,
-            _assignmentLockExpiration);
+            _coordinationOptions.AssignmentLockTimeout,
+            _coordinationOptions.AssignmentLockExpiration);
 
         if (!locked)
         {
@@ -148,8 +149,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
-            _assignmentLockTimeout,
-            _assignmentLockExpiration);
+            _coordinationOptions.AssignmentLockTimeout,
+            _coordinationOptions.AssignmentLockExpiration);
 
         if (!locked)
         {
@@ -280,7 +281,6 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         }
 
         var availability = await _availabilityService.GetForQueueAsync(queueId, cancellationToken);
-        var agents = availability.Select(entry => entry.Agent).ToArray();
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -288,10 +288,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
                 "Evaluating Contact Center queue item '{QueueItemId}' for queue '{QueueId}' against {AvailableAgentCount} available agents.",
                 topItem.ItemId.SanitizeLogValue(),
                 queueId.SanitizeLogValue(),
-                agents.Length);
+                availability.Count);
         }
 
-        var decision = await _routingService.SelectAgentAsync(queue, topItem, agents, cancellationToken);
+        var decision = await _routingService.SelectAgentAsync(queue, topItem, availability, cancellationToken);
 
         if (!decision.Succeeded || decision.Agent is null)
         {

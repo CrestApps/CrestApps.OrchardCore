@@ -16,7 +16,7 @@ internal sealed class ContactCenterHubScopeContext
         ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
-        IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices,
+        IQueuedVoiceWorkOfferService queuedVoiceWorkOfferService,
         IEnumerable<IPendingIncomingCallOfferService> pendingIncomingCallOfferServices)
     {
         AuthorizationService = authorizationService;
@@ -25,7 +25,7 @@ internal sealed class ContactCenterHubScopeContext
         SupervisorQueueAuthorizationService = supervisorQueueAuthorizationService;
         UserManager = userManager;
         DisplayNameProvider = displayNameProvider;
-        QueuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
+        QueuedVoiceWorkOfferService = queuedVoiceWorkOfferService;
         PendingIncomingCallOfferService = pendingIncomingCallOfferServices.FirstOrDefault();
     }
 

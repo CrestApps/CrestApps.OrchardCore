@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.WebSockets.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
@@ -38,5 +40,27 @@ public sealed class Startup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         app.UseWebSockets(serviceProvider.GetRequiredService<IOptions<WebSocketOptions>>().Value);
+    }
+}
+
+/// <summary>
+/// Replaces the per-node rendezvous registry with one that records ownership in Redis. A provider callback that
+/// lands on a node which did not start the call is then answered deterministically, and the log names the node
+/// that can serve it, instead of the callback looking identical to an unknown key.
+/// </summary>
+[RequireFeatures("OrchardCore.Redis")]
+public sealed class DistributedRendezvousStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddSingleton<IRendezvousOwnerStore, RedisRendezvousOwnerStore>();
+
+        // Replace rather than TryAdd: the base startup always registers the in-memory registry, and this feature
+        // exists precisely to take over from it. Replace makes that independent of the order the two run in.
+        services.Replace(ServiceDescriptor.Singleton<IWebSocketConnectionRegistry>(serviceProvider =>
+            new DistributedWebSocketConnectionRegistry(
+                serviceProvider.GetRequiredService<IRendezvousOwnerStore>(),
+                WebSocketsNode.Id,
+                serviceProvider.GetRequiredService<ILogger<DistributedWebSocketConnectionRegistry>>())));
     }
 }

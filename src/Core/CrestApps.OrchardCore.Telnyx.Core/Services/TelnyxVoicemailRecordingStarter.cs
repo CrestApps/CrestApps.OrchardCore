@@ -14,16 +14,16 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingStarter
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly TelnyxApiClient _apiClient;
     private readonly TelnyxOptions _options;
     private readonly ILogger<TelnyxVoicemailRecordingStarter> _logger;
 
     public TelnyxVoicemailRecordingStarter(
-        IHttpClientFactory httpClientFactory,
+        TelnyxApiClient apiClient,
         IOptionsMonitor<TelnyxOptions> options,
         ILogger<TelnyxVoicemailRecordingStarter> logger)
     {
-        _httpClientFactory = httpClientFactory;
+        _apiClient = apiClient;
         _options = options.CurrentValue;
         _logger = logger;
     }
@@ -58,24 +58,11 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
 
         try
         {
-            using var client = CreateClient();
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync(
-                $"calls/{Uri.EscapeDataString(callControlId)}/actions/record_start",
-                content,
-                cancellationToken);
+            var response = await _apiClient.PostCallActionAsync(callControlId, "record_start", body, cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
+            if (!response.Succeeded)
             {
-                string payload;
-                try
-                {
-                    payload = await response.Content.ReadAsStringAsync(cancellationToken);
-                }
-                catch
-                {
-                    payload = string.Empty;
-                }
+                var payload = response.ErrorBody ?? string.Empty;
 
                 // A 404 means the leg is already gone (the caller hung up during or right after the greeting), which
                 // is an expected race with nothing to record. Any other rejection is logged with the provider's
@@ -115,12 +102,4 @@ public sealed class TelnyxVoicemailRecordingStarter : ITelnyxVoicemailRecordingS
         }
     }
 
-    private HttpClient CreateClient()
-    {
-        var client = _httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
-        client.BaseAddress = new Uri(_options.ApiBaseUrl);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-
-        return client;
-    }
 }

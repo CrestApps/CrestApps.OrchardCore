@@ -2,6 +2,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -146,7 +147,28 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="request">The transfer request.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Transfer(TransferRequest request)
-        => ExecuteAsync("Transfer", () => DescribeTransferRequest(request), (service, token) => service.TransferAsync(request, token), () => GetCallIds(request));
+        => ExecuteAsync(
+            "Transfer",
+            () => DescribeTransferRequest(request),
+            (service, token) => service.TransferAsync(request, token),
+            () => GetCallIds(request),
+            async (serviceProvider, token) =>
+            {
+                // What an agent types is a target, not yet a destination. The tenant's transfer target policy
+                // decides whether it may be reached and what the provider is actually given, so a deployment that
+                // curates its destinations is not bypassed by typing a number into the field.
+                var targetPolicy = serviceProvider.GetRequiredService<ITransferTargetPolicy>();
+                var decision = await targetPolicy.ResolveAsync(request?.To, Context.User, token);
+
+                if (!decision.IsAllowed)
+                {
+                    return TelephonyResult.Failed(decision.Reason);
+                }
+
+                request.To = decision.ResolvedTarget;
+
+                return null;
+            });
 
     /// <summary>
     /// Merges two active calls into a conference.
@@ -716,7 +738,8 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
         string actionName,
         Func<string> requestFactory,
         Func<ITelephonyService, CancellationToken, Task<TelephonyResult>> operation,
-        Func<IEnumerable<string>> callIdsFactory = null)
+        Func<IEnumerable<string>> callIdsFactory = null,
+        Func<IServiceProvider, CancellationToken, Task<TelephonyResult>> preflight = null)
     {
         TelephonyResult result = null;
         LogHubActionStart(actionName, requestFactory);
@@ -740,6 +763,19 @@ public sealed class TelephonyHub : Hub<ITelephonyClient>
                 result = TelephonyResult.Failed(S["The requested call is not available."].Value);
 
                 return;
+            }
+
+            if (preflight is not null)
+            {
+                var refusal = await preflight(scope.ServiceProvider, CancellationToken.None);
+
+                if (refusal is not null)
+                {
+                    LogHubActionUnauthorized(actionName);
+                    result = refusal;
+
+                    return;
+                }
             }
 
             var service = scope.ServiceProvider.GetRequiredService<ITelephonyService>();

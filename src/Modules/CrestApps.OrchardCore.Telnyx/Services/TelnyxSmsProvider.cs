@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -15,7 +16,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// <see cref="IOptionsMonitor{TOptions}"/> of <see cref="TelnyxSmsOptions"/> (merged appsettings + UI settings),
 /// mirroring OrchardCore's Twilio provider structure. Registered under the technical name "Telnyx".
 /// </summary>
-public sealed class TelnyxSmsProvider : ISmsProvider
+public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IOptionsMonitor<TelnyxSmsOptions> _options;
@@ -43,6 +44,16 @@ public sealed class TelnyxSmsProvider : ISmsProvider
 
     /// <inheritdoc/>
     public async Task<Result> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
+    {
+        var dispatch = await DispatchAsync(message, cancellationToken);
+
+        return dispatch.Succeeded
+            ? Result.Success()
+            : Result.Failed((dispatch.Errors ?? []).Select(error => new ResultError { Message = error }).ToArray());
+    }
+
+    /// <inheritdoc/>
+    public async Task<SmsDispatchResult> DispatchAsync(SmsMessage message, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(message);
 
@@ -108,7 +119,7 @@ public sealed class TelnyxSmsProvider : ISmsProvider
                 _logger.LogInformation("Telnyx accepted an outbound SMS. Provider message id: {ProviderMessageId}", providerMessageId);
             }
 
-            return Result.Success();
+            return SmsDispatchResult.Success(providerMessageId);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
@@ -139,5 +150,5 @@ public sealed class TelnyxSmsProvider : ISmsProvider
     private static string Truncate(string value)
         => string.IsNullOrEmpty(value) || value.Length <= 500 ? value : value[..500];
 
-    private Result Failed(string message) => Result.Failed(S[message]);
+    private SmsDispatchResult Failed(string message) => SmsDispatchResult.Failed(S[message]);
 }

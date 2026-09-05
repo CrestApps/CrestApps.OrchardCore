@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -29,6 +30,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     private readonly ICallSessionManager _callSessionManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterActivityWriter _activityWriter;
+    private readonly IDialDestinationPolicy _destinationPolicy;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -42,6 +44,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     /// <param name="clock">The clock used to stamp UTC timestamps on projections.</param>
     /// <param name="callSessionManager">The call session manager used to persist first-command ownership.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the dialing user.</param>
+    /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
     /// <param name="logger">The logger used to surface why an outbound dial was rejected by the provider.</param>
     public DialProviderCommandTypeExecutor(
         IEnumerable<IProviderCommandDispatchValidator> dispatchValidators,
@@ -51,6 +54,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         IClock clock,
         ICallSessionManager callSessionManager,
         IAgentProfileManager agentManager,
+        IDialDestinationPolicy destinationPolicy,
         ILogger<DialProviderCommandTypeExecutor> logger)
     {
         _dispatchValidators = dispatchValidators;
@@ -59,6 +63,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         _callSessionManager = callSessionManager;
         _agentManager = agentManager;
         _activityWriter = activityWriter;
+        _destinationPolicy = destinationPolicy;
         _clock = clock;
         _logger = logger;
     }
@@ -304,8 +309,8 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         if (string.IsNullOrWhiteSpace(request.InteractionId) ||
             string.IsNullOrWhiteSpace(request.AgentId) ||
             string.IsNullOrWhiteSpace(request.AgentUserId) ||
-            !ExternalDestinationPolicy.IsAllowed(request.Destination) ||
-            (!string.IsNullOrWhiteSpace(request.CallerId) && !ExternalDestinationPolicy.IsAllowed(request.CallerId)))
+            !IsDialable(request.Destination) ||
+            (!string.IsNullOrWhiteSpace(request.CallerId) && !IsDialable(request.CallerId)))
         {
             return false;
         }
@@ -315,6 +320,9 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         return agent is not null &&
             string.Equals(agent.ItemId, request.AgentId, StringComparison.Ordinal);
     }
+
+    private bool IsDialable(string address)
+        => _destinationPolicy.Evaluate(address, new DialDestinationContext { Operation = DialDestinationOperation.Dial }).IsAllowed;
 
     private async Task EnsureOwnedDialSessionAsync(
         ContactCenterDialRequest request,

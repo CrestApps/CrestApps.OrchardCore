@@ -12,6 +12,8 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -357,6 +359,8 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         // Real agent-state pipeline. Entitlements are not enforced in the harness, so agents may sign in to any
         // queue or campaign (the permissive default policy).
         services.AddSingleton<IAgentEntitlementPolicy, PermissiveAgentEntitlementPolicy>();
+        services.AddSingleton<IDialDestinationPolicy>(DialDestinationPolicyFactory.Create());
+        services.AddSingleton<IAgentWorkStateHealingService>(new NoAgentWorkStateHealingService());
         services.AddSingleton<IAgentPresenceManager, AgentPresenceManagerService>();
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
         services.AddSingleton<IProviderVoiceEventService, ProviderVoiceEventService>();

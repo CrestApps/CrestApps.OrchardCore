@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Modules;
@@ -13,6 +14,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
 {
     private readonly INormalizedVoiceEventIngestor _normalizedVoiceEventIngestor;
     private readonly ITelnyxInboundCallRouter _inboundCallRouter;
+    private readonly IInboundVoiceDigitsSink _digitsSink;
     private readonly ITelnyxOutboundBridgeOrchestrator _outboundBridgeOrchestrator;
     private readonly IEnumerable<ITelnyxRecordingSavedHandler> _recordingSavedHandlers;
     private readonly IClock _clock;
@@ -31,12 +33,14 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     public TelnyxWebhookService(
         INormalizedVoiceEventIngestor normalizedVoiceEventIngestor,
         ITelnyxInboundCallRouter inboundCallRouter,
+        IInboundVoiceDigitsSink digitsSink,
         ITelnyxOutboundBridgeOrchestrator outboundBridgeOrchestrator,
         IEnumerable<ITelnyxRecordingSavedHandler> recordingSavedHandlers,
         IClock clock)
     {
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
+        _digitsSink = digitsSink;
         _outboundBridgeOrchestrator = outboundBridgeOrchestrator;
         _recordingSavedHandlers = recordingSavedHandlers;
         _clock = clock;
@@ -105,6 +109,20 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
         if (handled)
         {
             return TelnyxWebhookResult.Updated;
+        }
+
+        // A key press on an entry-point menu. It arrives on its own event type and means something different
+        // from an inbound call: the call is already tracked, and this says where in the menu the caller has got.
+        if (string.Equals(callEvent.EventType?.Trim(), "call.gather.ended", StringComparison.OrdinalIgnoreCase) &&
+            await _digitsSink.HandleDigitsAsync(new InboundVoiceDigitsEvent
+            {
+                ProviderName = TelnyxConstants.ProviderTechnicalName,
+                ProviderCallId = callEvent.CallControlId,
+                Digits = callEvent.Digits,
+                DeliveryId = callEvent.EventId,
+            }, cancellationToken))
+        {
+            return TelnyxWebhookResult.Routed;
         }
 
         if (IsInbound(callEvent.Direction) &&

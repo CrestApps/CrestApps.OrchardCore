@@ -16,6 +16,8 @@ namespace CrestApps.OrchardCore.Telephony.Drivers;
 /// </summary>
 public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<TelephonySettings>
 {
+    private static readonly char[] _shortCodeSeparators = ['\n', '\r', ',', ';'];
+
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IOptionsMonitor<TelephonyProviderOptions> _providerOptions;
@@ -49,6 +51,7 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
         return Initialize<TelephonySettingsViewModel>("TelephonySettings_Edit", model =>
         {
             model.DefaultProvider = settings.DefaultProviderName;
+            model.AllowedShortCodes = string.Join(Environment.NewLine, settings.AllowedShortCodes ?? []);
             model.Providers = _providerOptions.CurrentValue.Providers
                 .Where(entry => entry.Value.IsEnabled)
                 .Select(entry => new SelectListItem(entry.Key, entry.Key))
@@ -76,6 +79,14 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
         // (via ISiteService or IOptionsSnapshot<TelephonySettings>), so changing it does not
         // require releasing the shell.
         settings.DefaultProviderName = model.DefaultProvider;
+
+        // Only digits are meaningful as a short code, so anything else is dropped rather than stored and then
+        // silently never matched.
+        settings.AllowedShortCodes = (model.AllowedShortCodes ?? string.Empty)
+            .Split(_shortCodeSeparators, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(code => code.All(char.IsAsciiDigit))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
         return Edit(site, settings, context);
     }

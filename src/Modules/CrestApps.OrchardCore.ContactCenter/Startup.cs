@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -104,10 +105,11 @@ public sealed class Startup : StartupBase
             .Validate(
                 options => options.InboundLockExpiration > TimeSpan.Zero,
                 "'CrestApps:ContactCenter:Coordination:InboundLockExpiration' must be greater than zero.")
-            .Validate(
-                options => options.InboundLockExpiration > options.InboundLockTimeout,
-                "'CrestApps:ContactCenter:Coordination:InboundLockExpiration' must exceed 'InboundLockTimeout', otherwise the lease expires while a peer is still waiting for it and two nodes route the same call.")
             .ValidateOnStart();
+
+        // Every coordination timing is validated in one place so a value that would never acquire a lock, or
+        // would let a second node take work the first is still doing, fails at startup naming the key.
+        services.AddSingleton<IValidateOptions<ContactCenterCoordinationOptions>, ContactCenterCoordinationOptionsValidator>();
 
         services
             .AddOptions<ContactCenterTopologyOptions>()
@@ -120,6 +122,27 @@ public sealed class Startup : StartupBase
 
         services.AddSingleton<ContactCenterTopologyState>();
         services.AddScoped<IModularTenantEvents, ContactCenterTopologyValidator>();
+
+        // Defaults for the contracts optional features implement. They are registered here, in the feature that
+        // declares them, so every consumer can take the contract as a plain constructor parameter instead of
+        // scanning the container for it; the owning feature replaces its own. TryAdd plus Replace is order-safe,
+        // which a bare AddScoped in both places would not be.
+        services.TryAddScoped<ICallbackService, NoCallbackService>();
+        services.TryAddScoped<IAgentWorkStateHealingService, NoAgentWorkStateHealingService>();
+        services.TryAddScoped<IQueuedVoiceWorkOfferService, NoQueuedVoiceWorkOfferService>();
+        services.TryAddScoped<IDialerProfileReader, NullDialerProfileReader>();
+        services.TryAddScoped<IBusinessHoursGate, AlwaysOpenBusinessHoursGate>();
+
+        // The entry-point chain asks every registered resolver in turn. It lives here rather than in the
+        // inbound feature because the inbound processor is constructed on tenants that have no resolvers at
+        // all, and a chain over nothing is a valid chain that resolves nothing.
+        services.TryAddScoped<EntryPointResolverChain>();
+
+        services.TryAddScoped<IProviderCallStateSynchronizationService, NoProviderCallStateSynchronizationService>();
+
+        // Healing declares its synchronization dependency but resolves it lazily, because presence constructs
+        // healing and synchronization ends up back at presence.
+        services.TryAddScoped(sp => new Lazy<IProviderCallStateSynchronizationService>(sp.GetRequiredService<IProviderCallStateSynchronizationService>));
         services
             .AddOptions<ContactCenterFeatureLifecycleOptions>()
             .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:FeatureLifecycle"))

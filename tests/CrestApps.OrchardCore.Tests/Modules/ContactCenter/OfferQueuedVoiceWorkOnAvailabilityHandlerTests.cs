@@ -98,10 +98,12 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_WhenQueuedVoiceOfferServiceIsMissing_ReturnsWithoutFailure()
+    public async Task HandleAsync_WhenTheVoiceFeatureIsNotEnabled_CompletesWithoutOfferingAnything()
     {
         // Arrange
-        var handler = CreateHandler();
+        // A tenant without Voice resolves the do-nothing default rather than nothing at all, so the handler runs
+        // to completion and simply has no work to offer.
+        var handler = CreateHandler(new NoQueuedVoiceWorkOfferService());
 
         // Act
         await handler.HandleAsync(new InteractionEvent
@@ -111,6 +113,7 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
         }, TestContext.Current.CancellationToken);
 
         // Assert
+        // Reaching here is the assertion: nothing threw, and no offer could have been made.
     }
 
     private static OfferQueuedVoiceWorkOnAvailabilityHandler CreateHandler(
@@ -118,11 +121,7 @@ public sealed class OfferQueuedVoiceWorkOnAvailabilityHandlerTests
     {
         var services = new ServiceCollection();
 
-        if (queuedVoiceWorkOfferService is not null)
-        {
-            services.AddSingleton(queuedVoiceWorkOfferService);
-            services.AddSingleton<IQueuedVoiceWorkOfferService>(queuedVoiceWorkOfferService);
-        }
+        services.AddSingleton(queuedVoiceWorkOfferService ?? new NoQueuedVoiceWorkOfferService());
 
         services.AddTransient<QueuedVoiceWorkOfferScopeContext>();
         var serviceProvider = services.BuildServiceProvider();

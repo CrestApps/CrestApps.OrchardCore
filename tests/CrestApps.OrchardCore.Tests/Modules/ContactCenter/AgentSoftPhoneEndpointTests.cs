@@ -25,7 +25,7 @@ public sealed class AgentSoftPhoneEndpointTests
         var result = await AgentSoftPhoneEndpoints.HandleSyncQueuedVoiceWorkAsync(
             new TestAuthorizationService(true),
             CreateAntiforgery(),
-            [queuedVoiceWorkOfferService.Object],
+            queuedVoiceWorkOfferService.Object,
             httpContext);
 
         Assert.Equal(StatusCodes.Status200OK, Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode);
@@ -42,7 +42,7 @@ public sealed class AgentSoftPhoneEndpointTests
         var result = await AgentSoftPhoneEndpoints.HandleSyncQueuedVoiceWorkAsync(
             new TestAuthorizationService(false),
             CreateAntiforgery(),
-            [queuedVoiceWorkOfferService.Object],
+            queuedVoiceWorkOfferService.Object,
             CreateHttpContext());
 
         Assert.IsType<ForbidHttpResult>(result);

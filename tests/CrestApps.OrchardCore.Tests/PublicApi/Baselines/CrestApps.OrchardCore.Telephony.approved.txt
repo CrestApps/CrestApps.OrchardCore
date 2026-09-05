@@ -339,7 +339,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     }
     public sealed class DefaultTelephonyService : CrestApps.OrchardCore.Telephony.ITelephonyService
     {
-        public DefaultTelephonyService(CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver resolver, CrestApps.OrchardCore.Telephony.IOutboundCallScreeningService screeningService, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionResolver extensionResolver, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyService> stringLocalizer) { }
+        public DefaultTelephonyService(CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver resolver, CrestApps.OrchardCore.Telephony.IOutboundCallScreeningService screeningService, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionResolver extensionResolver, CrestApps.OrchardCore.Telephony.Services.IDialDestinationPolicy destinationPolicy, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyService> stringLocalizer) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AddExtensionToConferenceAsync(CrestApps.OrchardCore.Telephony.Models.ExtensionConferenceRequest request, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AnswerAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialAsync(CrestApps.OrchardCore.Telephony.Models.DialRequest request, System.Threading.CancellationToken cancellationToken = default) { }
@@ -467,6 +467,7 @@ namespace CrestApps.OrchardCore.Telephony.ViewModels
     public class TelephonySettingsViewModel
     {
         public TelephonySettingsViewModel() { }
+        public string AllowedShortCodes { get; set; }
         public string DefaultProvider { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public Microsoft.AspNetCore.Mvc.Rendering.SelectListItem[] Providers { get; set; }

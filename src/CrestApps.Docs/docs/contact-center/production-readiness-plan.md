@@ -1,11 +1,11 @@
 ---
 sidebar_label: Production readiness plan
 sidebar_position: 30
-title: Contact Center and SMS Workspace — Production Readiness Plan
-description: Expert review of the Contact Center, Telephony, Telnyx, SMS Workspace, Omnichannel Management and SMS Automation projects, with a prioritized, test-first remediation and feature plan to reach production quality.
+title: Contact Center and SMS Portal — Production Readiness Plan
+description: Expert review of the Contact Center, Telephony, Telnyx, SMS Portal, Omnichannel Management and SMS Automation projects, with a prioritized, test-first remediation and feature plan to reach production quality.
 ---
 
-# Contact Center and SMS Workspace — Production Readiness Plan
+# Contact Center and SMS Portal — Production Readiness Plan
 
 This is the master plan produced by an in-depth review of the following projects, evaluated as an ASP.NET Core
 and Orchard Core codebase and against what state-of-the-art contact centers (Genesys Cloud, Amazon Connect,
@@ -16,7 +16,7 @@ Twilio Flex, Five9, NICE CXone) ship as table stakes:
 | Contact Center | `CrestApps.OrchardCore.ContactCenter`, `.ContactCenter.Core`, `.ContactCenter.Abstractions` | ~74k lines, 20 startups, 15 background tasks |
 | Telephony | `CrestApps.OrchardCore.Telephony`, `.Telephony.Core`, `.Telephony.Abstractions` | ~13k lines + 6.3k lines of `soft-phone.js` |
 | Telnyx | `CrestApps.OrchardCore.Telnyx`, `.Telnyx.Core` | ~11.5k lines |
-| SMS Workspace | `CrestApps.OrchardCore.Sms.Workspace`, `.Sms.Workspace.Core`, `.Sms.Workspace.Abstractions` | ~6.5k lines |
+| SMS Portal | `CrestApps.OrchardCore.Omnichannel.Sms.Portal`, `.Sms.Portal.Core`, `.Sms.Portal.Abstractions` | ~6.5k lines |
 | Omnichannel | `CrestApps.OrchardCore.Omnichannel.Managements`, `.Omnichannel.Core`, `.Omnichannel`, `.Omnichannel.Sms` | ~32k lines |
 | Tests | `CrestApps.OrchardCore.Tests` (ContactCenter 1,313 tests, Telephony 644, Omnichannel 184, Telnyx 12), DistributedTests (20), FeatureActivationTests (52), PlaywrightTests (30) | builds clean, 0 errors |
 
@@ -25,7 +25,7 @@ The plan is split into one page per workstream so each can be executed and track
 | Workstream | Page | Scope |
 | --- | --- | --- |
 | A + B | [Routing and AI-to-agent handoff](production-readiness-routing.md) | ACD/queueing/skills/overflow/callbacks/IVR, offer pipeline, AI-to-agent escalation for voice and SMS |
-| C | [SMS Workspace and SMS automation](../omnichannel/production-readiness-sms-workspace.md) | Inbox security, inbound idempotency, routed distribution, delivery tracking, compliance, UI |
+| C | [SMS Portal and SMS automation](../omnichannel/production-readiness-sms-portal.md) | Inbox security, inbound idempotency, routed distribution, delivery tracking, compliance, UI |
 | D | [Soft phone and Telnyx](../telephony/production-readiness-soft-phone-telnyx.md) | Dial safety, transfers, credentials, webhook/media paths, AI voice agent, JS architecture |
 | E | [Architecture, feature split, code quality and tests](production-readiness-code-quality.md) | DI patterns, feature boundaries, duplication, god classes, memory, test strategy |
 
@@ -42,7 +42,7 @@ ownership. That work should be preserved, not rewritten.
 
 What is **not** production ready falls into five buckets:
 
-1. **Security and tenancy defects that are cheap to fix and must ship first.** The SMS Workspace has an
+1. **Security and tenancy defects that are cheap to fix and must ship first.** The SMS Portal has an
    insecure-direct-object-reference on every conversation action (any portal user can open, close, or claim any
    thread by id), and its delivery-receipt notifier broadcasts to `Clients.All`, which crosses tenants. The soft
    phone keypad and transfer field still bypass the emergency and premium destination policy (documented, but not
@@ -51,9 +51,9 @@ What is **not** production ready falls into five buckets:
    provider-message-id idempotency, so two simultaneous texts from a new number create two conversations, and a
    provider retry duplicates messages. A failed automated (AI) activity permanently blocks a human thread for that
    number.
-3. **Feature-split violations.** SMS Workspace advertises a dependency only on the Contact Center Agent Services
+3. **Feature-split violations.** SMS Portal advertises a dependency only on the Contact Center Agent Services
    feature, but its routed-distribution strategy resolves `IActivityQueueManager`, which is registered only by
-   the Work Distribution feature, so enabling SMS Workspace without Work Distribution breaks inbound routing at
+   the Work Distribution feature, so enabling SMS Portal without Work Distribution breaks inbound routing at
    DI resolution time. The module also references the full `Omnichannel.Managements` assembly. Automated voice
    orchestration lives inside the Telnyx provider module rather than a provider-neutral automation feature.
 4. **Missing contact-center capabilities that customers expect.** No IVR or DTMF menus, no queued callback, no
@@ -78,7 +78,7 @@ What is **not** production ready falls into five buckets:
 | Inbound voice experience (entry points, IVR, callbacks, overflow) | 2 | No IVR/DTMF, no queued callback, no announcements/EWT, 60-second overflow granularity |
 | Outbound dialer | 3 | Predictive blocked but exposed; compliance evidence (abandon rate, safe-harbor) must be surfaced in UI/reports |
 | AI-to-agent handoff | 3 | Tool-name mismatch, ambient `AsyncLocal` context, voice handoff loses source/direction and carries no agent context, SMS handoff ignores routed mode and business hours |
-| SMS Workspace | 2 | IDOR, cross-tenant broadcast, no inbound idempotency, DI failure without Work Distribution, unpaged inbox, dead auto-reply setting |
+| SMS Portal | 2 | IDOR, cross-tenant broadcast, no inbound idempotency, DI failure without Work Distribution, unpaged inbox, dead auto-reply setting |
 | SMS automation | 3 | Static process-wide generation registry, Failed activities block human threads, Twilio fire-and-forget without dedupe |
 | Soft phone + Telnyx | 3 | Emergency/premium bypass on the phone, transfer bypasses catalog, 12 tests for Telnyx, monolithic JS, in-memory media registry |
 | Supervision and reporting | 3 | No SLA views for SMS, no handoff KPIs on dashboards, no real-time queue EWT |
@@ -106,7 +106,7 @@ the contract, and must not duplicate an architecture rule already enforced elsew
 
 | Phase | Goal | Items (see workstream pages) |
 | --- | --- | --- |
-| P0 — Stop the bleeding (1–2 weeks) | Security and tenancy | C1, C2, C3, D1, D2, E1 (feature-split fix for SMS Workspace), B1 (tool name) |
+| P0 — Stop the bleeding (1–2 weeks) | Security and tenancy | C1, C2, C3, D1, D2, E1 (feature-split fix for SMS Portal), B1 (tool name) |
 | P1 — Correctness under load (2–3 weeks) | Idempotency, concurrency, options | C4, C5, C6, A3, A4, A5, B2, B3, E2, E3 |
 | P2 — Contact-center feature parity (4–6 weeks) | IVR, callbacks, overflow, skills, transfers, SMS SLA | A1, A2, A6, A7, A8, A9, C7, C8, C9, D3, D4 |
 | P3 — Structural cleanup (ongoing, 3–4 weeks) | Feature boundaries, duplication, god classes, JS modules, Telnyx tests | E4–E12, D5, D6, D7 |
@@ -119,7 +119,7 @@ the contract, and must not duplicate an architecture rule already enforced elsew
 3. No `Clients.All`, no `IServiceProvider` injection outside the documented composition roots, no
    `IEnumerable<T>.FirstOrDefault()` optional-dependency pattern (enforced by a new architecture test).
 4. Every feature can be enabled in isolation with only its declared dependencies (enforced by extending
-   `ContactCenterFeatureActivationTests` to SMS Workspace and SMS Automation).
+   `ContactCenterFeatureActivationTests` to SMS Portal and SMS Automation).
 5. The documented limitations in `voice-routing.md` ("Current limitations and important notes") that are marked as
    safety issues (emergency dialing, transfer catalog bypass) are removed because they are fixed.
 6. Public API baselines regenerated and approved for every touched assembly.

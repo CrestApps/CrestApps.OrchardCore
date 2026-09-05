@@ -1888,6 +1888,7 @@ public sealed class ActivityReservationServiceTests
             distributedLock.Object,
             session.Object,
             clock.Object,
+            CoordinationOptions(),
             new Mock<ILogger<ActivityReservationService>>().Object);
     }
 
@@ -1938,4 +1939,9 @@ public sealed class ActivityReservationServiceTests
             value => value.DispatchAsync(commandId, CancellationToken.None),
             Times.Once);
     }
+
+    // The coordination timings are options now, so a test uses the shipped defaults rather than a value it
+    // invents that no deployment would run with.
+    private static OptionsWrapper<ContactCenterCoordinationOptions> CoordinationOptions()
+        => new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions());
 }

@@ -7,11 +7,11 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 
 ## New projects (module layout)
 
-- [x] `src/Abstractions/CrestApps.OrchardCore.Sms.Workspace.Abstractions` — contracts, enums, notifications
-- [x] `src/Core/CrestApps.OrchardCore.Sms.Workspace.Core` — models, stores, indexes, routing, services
-- [x] `src/Modules/CrestApps.OrchardCore.Sms.Workspace` — drivers, controllers, hub, views, admin
+- [x] `src/Abstractions/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Abstractions` — contracts, enums, notifications
+- [x] `src/Core/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core` — models, stores, indexes, routing, services
+- [x] `src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal` — drivers, controllers, hub, views, admin
 - [x] Add all three to `CrestApps.OrchardCore.slnx`
-- [ ] New test project `tests/CrestApps.OrchardCore.Sms.Workspace.Tests` (or reuse existing per convention)
+- [ ] New test project `tests/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Tests` (or reuse existing per convention)
 
 ---
 
@@ -63,7 +63,7 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done & green (builds + t
 - [x] NewInboundMessage, MessageDelivered/Failed wiring (Assigned/Claimed groundwork)
 
 ### Workstream: Permissions / compliance / security
-- [x] `SmsWorkspacePermissions` (copy ContactCenterPermissions): ManageSmsNumberRoutes, UseSmsPortal,
+- [x] `SmsPortalPermissions` (copy ContactCenterPermissions): ManageSmsNumberRoutes, UseSmsPortal,
       SendGroupSms, ViewAllConversations
 - [x] Enforce DoNotSms on every send; honor STOP/opt-out (OmnichannelSmsComplianceHelper) → DoNotSms + auto-close
 - [x] Redact addresses/PII in logs (IRedactorProvider, LogDataClassifications.AddressSet)

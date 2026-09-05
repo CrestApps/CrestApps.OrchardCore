@@ -8,7 +8,8 @@ namespace CrestApps.OrchardCore.Telnyx;
 
 /// <summary>
 /// Registers the Telnyx AI Voice Agent: the Phone omnichannel processor that originates the call, the Telnyx
-/// Call Control voice client, and the conversation handler that drives the speak/listen loop from webhooks.
+/// Call Control dialling client, and the adapter that translates Telnyx webhooks into the events the
+/// provider-neutral automated voice conversation is driven by.
 /// </summary>
 [Feature(TelnyxConstants.Feature.AiVoice)]
 public sealed class AiVoiceStartup : StartupBase

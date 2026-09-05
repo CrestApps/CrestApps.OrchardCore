@@ -95,6 +95,9 @@ public sealed class VoiceOmnichannelProcessor : IOmnichannelProcessor
 
         activity.Status = ActivityStatus.AwaitingCustomerAnswer;
 
-        _logger.LogInformation("Originated automated AI voice call for activity '{ActivityId}' to the destination.", activity.ItemId.SanitizeLogValue());
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation("Originated automated AI voice call for activity '{ActivityId}' to the destination.", activity.ItemId.SanitizeLogValue());
+        }
     }
 }

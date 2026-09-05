@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -191,6 +192,7 @@ public sealed class ManualCallScreenerTests
             resolver.Object,
             screeningService,
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
         // Act

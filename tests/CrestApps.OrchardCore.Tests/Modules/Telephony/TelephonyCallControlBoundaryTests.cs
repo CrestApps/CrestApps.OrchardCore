@@ -1,7 +1,11 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
+using TelephonyTransferRequest = CrestApps.OrchardCore.Telephony.Models.TransferRequest;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Telephony;
 
@@ -40,5 +44,76 @@ public sealed class TelephonyCallControlBoundaryTests
 
         // Assert
         Assert.False(result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData("911")]
+    [InlineData("112")]
+    [InlineData("+19005551234")]
+    public async Task DialAsync_WhenTheKeypadTargetsARefusedDestination_DoesNotReachTheProvider(string destination)
+    {
+        // Arrange
+        // The soft-phone keypad reaches ITelephonyService.DialAsync directly, which is how the emergency and
+        // premium policy used to be bypassed entirely.
+        var provider = new RecordingTelephonyProvider { ResultToReturn = TelephonyResult.Success(new TelephonyCall { CallId = "call-1" }) };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.DialAsync(new DialRequest { To = destination }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Null(provider.LastOperation);
+    }
+
+    [Theory]
+    [InlineData("911")]
+    [InlineData("+19005551234")]
+    public async Task TransferAsync_WhenTheTransferFieldTargetsARefusedDestination_DoesNotReachTheProvider(string destination)
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider { ResultToReturn = TelephonyResult.Success(new TelephonyCall { CallId = "call-1" }) };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.TransferAsync(
+            new TelephonyTransferRequest { CallId = "call-1", To = destination },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Null(provider.LastOperation);
+    }
+
+    [Fact]
+    public async Task DialAsync_WhenTheDestinationMerelyEndsInAnEmergencyCode_ReachesTheProvider()
+    {
+        // Arrange
+        var provider = new RecordingTelephonyProvider { ResultToReturn = TelephonyResult.Success(new TelephonyCall { CallId = "call-1" }) };
+        var service = new DefaultTelephonyService(
+            new StubTelephonyProviderResolver(provider),
+            new DefaultOutboundCallScreeningService([]),
+            new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
+            new PassThroughStringLocalizer<DefaultTelephonyService>());
+
+        // Act
+        var result = await service.DialAsync(
+            new DialRequest { To = "+14255550911" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("Dial", provider.LastOperation);
     }
 }

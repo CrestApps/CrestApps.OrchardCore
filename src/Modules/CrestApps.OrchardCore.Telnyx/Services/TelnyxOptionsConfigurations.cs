@@ -58,6 +58,7 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
             ? TelnyxConstants.DefaultSipDomain
             : settings.SipDomain.Trim();
         options.EchoTestDestination = settings.EchoTestDestination?.Trim();
+        options.OrphanedCallHandling = settings.OrphanedCallHandling;
 
         options.ApiBaseUrl = ResolveApiBaseUrl(settings.ApiBaseUrl);
     }

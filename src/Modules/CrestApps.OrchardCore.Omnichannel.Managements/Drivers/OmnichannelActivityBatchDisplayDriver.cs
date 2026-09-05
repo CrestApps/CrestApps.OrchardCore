@@ -75,7 +75,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         BulkActivityAdminFormOptionsProvider optionsProvider,
         IOptions<ActivityBatchSourceOptions> activityBatchSourceOptions,
         IEnumerable<IAIProfileManager> aiProfileManagers,
-        IEnumerable<IBusinessHoursGate> businessHoursGates,
+        IBusinessHoursGate businessHoursGate,
         IStringLocalizer<OmnichannelActivityBatchDisplayDriver> stringLocalizer)
     {
         _displayNameProvider = displayNameProvider;
@@ -92,7 +92,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         _optionsProvider = optionsProvider;
         _activityBatchSourceOptions = activityBatchSourceOptions.Value;
         _aiProfileManager = aiProfileManagers.FirstOrDefault();
-        _businessHoursGate = businessHoursGates.FirstOrDefault();
+        _businessHoursGate = businessHoursGate;
         S = stringLocalizer;
     }
 
@@ -275,25 +275,26 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 model.BusinessHoursCalendarId = batch.BusinessHoursCalendarId;
 
                 // The business-hours calendar picker is available only when a feature provides calendars (ContactCenter).
-                // When none is registered the gate is null; leave the picker empty and treat conversations as always open.
+                // A tenant without the business-hours feature has no calendars, and neither has one that has the
+                // feature but has defined none. Both cases hide the picker rather than showing one with nothing
+                // in it, and both treat conversations as always open.
+                var calendars = await _businessHoursGate.GetCalendarOptionsAsync();
+
                 var calendarItems = new List<SelectListItem>
                 {
                     new(S["Always open (no restriction)"], ""),
                 };
 
-                if (_businessHoursGate is not null)
+                foreach (var calendar in calendars)
                 {
-                    foreach (var calendar in await _businessHoursGate.GetCalendarOptionsAsync())
+                    calendarItems.Add(new SelectListItem(calendar.Name, calendar.Id)
                     {
-                        calendarItems.Add(new SelectListItem(calendar.Name, calendar.Id)
-                        {
-                            Selected = string.Equals(calendar.Id, batch.BusinessHoursCalendarId, StringComparison.OrdinalIgnoreCase),
-                        });
-                    }
+                        Selected = string.Equals(calendar.Id, batch.BusinessHoursCalendarId, StringComparison.OrdinalIgnoreCase),
+                    });
                 }
 
                 model.BusinessHoursCalendars = calendarItems;
-                model.ShowBusinessHoursCalendar = _businessHoursGate is not null;
+                model.ShowBusinessHoursCalendar = calendars.Count > 0;
             }
 
             model.Channels =

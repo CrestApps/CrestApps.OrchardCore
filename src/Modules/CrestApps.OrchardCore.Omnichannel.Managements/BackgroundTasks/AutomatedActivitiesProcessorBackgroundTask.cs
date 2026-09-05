@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 using YesSql;
@@ -24,10 +25,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 {
     private const int _leaseMilliseconds = 600_000;
-    private const int _batchSize = 100;
-    private const int _maxActivitiesPerInvocation = 1_000;
-    private const int _maxAttempts = 5;
-    private const int _retryDelayMinutes = 5;
+    // The lease is a compile-time attribute argument, so it stays a constant; everything else the pass does is
+    // read from options at run time.
+
 
     /// <summary>
     /// Asynchronously performs the do work operation.
@@ -36,6 +36,12 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
     /// <param name="cancellationToken">The cancellation token.</param>
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
+        var options = serviceProvider.GetRequiredService<IOptions<OmnichannelAutomationOptions>>().Value;
+        var batchSize = options.ProcessorBatchSize;
+        var maxActivitiesPerInvocation = options.MaxActivitiesPerInvocation;
+        var maxAttempts = options.MaxProcessingAttempts;
+        var retryDelayMinutes = options.RetryDelayMinutes;
+
         var processors = serviceProvider.GetService<IEnumerable<IOmnichannelProcessor>>()
             .ToDictionary(x => x.Channel, StringComparer.OrdinalIgnoreCase);
 
@@ -61,7 +67,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         // slow send or expiry cannot overrun it by more than one item.
         var deadline = now.AddMilliseconds(_leaseMilliseconds * 0.6);
 
-        await ExpireNoResponseActivitiesAsync(serviceProvider, session, clock, now, deadline, logger, cancellationToken);
+        await ExpireNoResponseActivitiesAsync(serviceProvider, session, clock, now, deadline, batchSize, maxActivitiesPerInvocation, logger, cancellationToken);
 
         // Commit the expiry pass on its own so its changes are durable regardless of what the processing loop does.
         await session.SaveChangesAsync(cancellationToken);
@@ -69,7 +75,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         long documentId = 0;
         var processedCount = 0;
 
-        while (processedCount < _maxActivitiesPerInvocation && clock.UtcNow < deadline)
+        while (processedCount < maxActivitiesPerInvocation && clock.UtcNow < deadline)
         {
             // Keyset pagination on the monotonically increasing document id. Combining an OFFSET skip with this
             // cursor (as an earlier revision did) advanced the window twice per batch and silently skipped every
@@ -82,7 +88,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                     x.DocumentId > documentId,
                 collection: OmnichannelConstants.CollectionName)
                 .OrderBy(x => x.DocumentId)
-                .Take(_batchSize)
+                .Take(batchSize)
                 .ListAsync(cancellationToken);
 
             if (!activities.Any())
@@ -119,7 +125,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                     // cannot be reset (and cannot corrupt the routing-owned Attempts field or its reports).
                     activity.ProcessingAttempts++;
 
-                    if (activity.ProcessingAttempts >= _maxAttempts)
+                    if (activity.ProcessingAttempts >= maxAttempts)
                     {
                         activity.Status = ActivityStatus.Failed;
 
@@ -130,7 +136,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                     }
                     else
                     {
-                        activity.ScheduledUtc = now.AddMinutes(_retryDelayMinutes * activity.ProcessingAttempts);
+                        activity.ScheduledUtc = now.AddMinutes(retryDelayMinutes * activity.ProcessingAttempts);
                     }
                 }
 
@@ -142,7 +148,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
             // sends are not individually idempotent, so the commit boundary — together with the per-item wall-clock
             // budget above that stops the run before its lease can expire — keeps a still-running node from handing
             // an uncommitted backlog to a peer. If this node is instead killed mid-batch, only the single uncommitted
-            // in-flight batch (at most _batchSize) is re-sent by the node that acquires the lock next, rather than
+            // in-flight batch (at most batchSize) is re-sent by the node that acquires the lock next, rather than
             // the whole backlog.
             await session.SaveChangesAsync(cancellationToken);
         }
@@ -154,6 +160,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         IClock clock,
         DateTime now,
         DateTime deadline,
+        int batchSize,
+        int maxActivitiesPerInvocation,
         ILogger logger,
         CancellationToken cancellationToken)
     {
@@ -179,7 +187,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         long documentId = 0;
         var processedCount = 0;
 
-        while (processedCount < _maxActivitiesPerInvocation && clock.UtcNow < deadline)
+        while (processedCount < maxActivitiesPerInvocation && clock.UtcNow < deadline)
         {
             // Keyset pagination so a large expiry backlog drains over successive batches without an OFFSET skip.
             var expiredActivities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(x =>
@@ -190,7 +198,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                     x.DocumentId > documentId,
                     collection: OmnichannelConstants.CollectionName)
                 .OrderBy(x => x.DocumentId)
-                .Take(_batchSize)
+                .Take(batchSize)
                 .ListAsync(cancellationToken);
 
             if (!expiredActivities.Any())

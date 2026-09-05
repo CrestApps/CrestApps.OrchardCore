@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Doubles;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Asterisk.Services;
@@ -309,6 +310,7 @@ public sealed class TelephonyProviderCapabilityContractTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             new StubTelephonyExtensionResolver(),
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 
     private static Task<TelephonyResult> InvokeAsync(DefaultTelephonyService service, string operation)

@@ -149,18 +149,25 @@ public sealed partial class TelnyxTelephonyProvider
 
         try
         {
-            using var client = CreateClient();
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync("calls", content, cancellationToken);
+            var originate = new TelnyxOriginateRequest();
 
-            if (!response.IsSuccessStatusCode)
+            // The body is already in the provider's own shape, so it is carried through rather than unpacked
+            // into named fields and packed again.
+            foreach (var field in body)
+            {
+                originate.AdditionalFields[field.Key] = field.Value;
+            }
+
+            var response = await _apiClient.OriginateAsync(originate, cancellationToken);
+
+            if (!response.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected a conference-extension leg with status code {StatusCode}. Response: {Response}",
                     response.StatusCode,
-                    (await SafeReadContentAsync(response, cancellationToken)).SanitizeLogValue());
+                    response.ErrorBody.SanitizeLogValue());
 
-                if (TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode))
+                if (response.StatusCode is not null && TelephonyProviderResponse.IsAmbiguousStatusCode(response.StatusCode.Value))
                 {
                     return TelephonyResult.Unknown(S["Telnyx did not confirm whether the extension was added."].Value);
                 }
@@ -168,7 +175,7 @@ public sealed partial class TelnyxTelephonyProvider
                 return TelephonyResult.Failed(S["Telnyx could not add the extension to the conference."].Value);
             }
 
-            var legCallControlId = await ReadDataStringAsync(response, "call_control_id", cancellationToken);
+            var legCallControlId = response.CallControlId;
 
             return TelephonyResult.Success(BuildCall(
                 activeCallId,
@@ -209,17 +216,10 @@ public sealed partial class TelnyxTelephonyProvider
             return null;
         }
 
-        var live = await _credentialStore.ListLiveByUserAsync(userId.Trim(), _clock.UtcNow, cancellationToken);
-        var credential = live.Count > 0 ? live[0] : null;
-
-        if (credential is null || string.IsNullOrWhiteSpace(credential.SipUsername))
-        {
-            return null;
-        }
-
-        var sipDomain = string.IsNullOrWhiteSpace(_options.SipDomain) ? TelnyxConstants.DefaultSipDomain : _options.SipDomain;
-
-        return $"sip:{credential.SipUsername}@{sipDomain}";
+        // One resolver for every path that dials an agent. Taking the first live credential here took the newest
+        // issued one, which is not necessarily the one the browser is registered on, and dialling the wrong one
+        // came back SIP 486 with the agent's phone sitting idle.
+        return await _agentEndpointResolver.ResolveAsync(userId, cancellationToken);
     }
 
     private static string TryGetMetadataValue(IDictionary<string, string> metadata, string key)

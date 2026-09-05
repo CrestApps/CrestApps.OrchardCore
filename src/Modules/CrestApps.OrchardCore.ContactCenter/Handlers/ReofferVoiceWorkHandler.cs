@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
@@ -9,15 +8,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// </summary>
 public sealed class ReofferVoiceWorkHandler : IContactCenterEventHandler
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly Lazy<IInboundVoiceService> _inboundVoiceService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReofferVoiceWorkHandler"/> class.
     /// </summary>
-    /// <param name="serviceProvider">The service provider used to resolve inbound routing lazily without creating an event-publisher cycle.</param>
-    public ReofferVoiceWorkHandler(IServiceProvider serviceProvider)
+    /// <param name="inboundVoiceService">
+    /// The inbound voice service, resolved lazily. It is a declared dependency rather than something fetched from
+    /// the container, but it stays behind <see cref="Lazy{T}"/> because inbound routing publishes events and so
+    /// depends on the publisher that constructs this handler; constructing it eagerly would close that cycle.
+    /// </param>
+    public ReofferVoiceWorkHandler(Lazy<IInboundVoiceService> inboundVoiceService)
     {
-        _serviceProvider = serviceProvider;
+        _inboundVoiceService = inboundVoiceService;
     }
 
     /// <inheritdoc/>
@@ -44,8 +47,6 @@ public sealed class ReofferVoiceWorkHandler : IContactCenterEventHandler
             return;
         }
 
-        await _serviceProvider
-            .GetRequiredService<IInboundVoiceService>()
-            .OfferNextAsync(data.QueueId, cancellationToken);
+        await _inboundVoiceService.Value.OfferNextAsync(data.QueueId, cancellationToken);
     }
 }

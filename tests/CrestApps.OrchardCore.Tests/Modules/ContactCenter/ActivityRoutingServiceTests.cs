@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using Moq;
 
+using OrchardCore.Modules;
+using Moq;
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ActivityRoutingServiceTests
@@ -20,7 +21,7 @@ public sealed class ActivityRoutingServiceTests
         var decision = await service.SelectAgentAsync(
             queue,
             item,
-            [missingSkillAgent, skilledAgent],
+            [Availability(missingSkillAgent), Availability(skilledAgent)],
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -43,7 +44,7 @@ public sealed class ActivityRoutingServiceTests
         var decision = await service.SelectAgentAsync(
             queue,
             item,
-            [newestAgent, longestIdleAgent],
+            [Availability(newestAgent), Availability(longestIdleAgent)],
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -69,15 +70,7 @@ public sealed class ActivityRoutingServiceTests
             PresenceChangedUtc = new DateTime(2026, 1, 2),
         };
 
-        var interactionManager = new Mock<IInteractionManager>();
-        interactionManager
-            .Setup(m => m.CountActiveByAgentAsync("a1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
-        interactionManager
-            .Setup(m => m.CountActiveByAgentAsync("a2", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(0);
-
-        var service = CreateServiceWithCapacity(interactionManager);
+        var service = CreateServiceWithCapacity();
         var queue = new ActivityQueue { ItemId = "q1" };
         var item = new QueueItem { ItemId = "i1", QueueId = "q1" };
 
@@ -85,7 +78,7 @@ public sealed class ActivityRoutingServiceTests
         var decision = await service.SelectAgentAsync(
             queue,
             item,
-            [longestIdleButBusyAgent, freeAgent],
+            [Availability(longestIdleButBusyAgent, activeInteractions: 1), Availability(freeAgent, activeInteractions: 0)],
             TestContext.Current.CancellationToken);
 
         // Assert
@@ -98,18 +91,23 @@ public sealed class ActivityRoutingServiceTests
     {
         return new ActivityRoutingService(
         [
-            new RequiredSkillsRoutingStrategy(),
+            new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
             new LongestIdleRoutingStrategy(),
         ]);
     }
 
-    private static ActivityRoutingService CreateServiceWithCapacity(Mock<IInteractionManager> interactionManager)
+    private static ActivityRoutingService CreateServiceWithCapacity()
     {
         return new ActivityRoutingService(
         [
-            new RequiredSkillsRoutingStrategy(),
-            new CapacityRoutingStrategy(interactionManager.Object),
+            new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
+            new CapacityRoutingStrategy(),
             new LongestIdleRoutingStrategy(),
         ]);
     }
+
+    // Routing now reads the availability snapshot the caller already produced, so a candidate carries its own
+    // load rather than the strategy querying for it per agent.
+    private static AgentAvailability Availability(AgentProfile agent, int activeInteractions = 0)
+        => new() { Agent = agent, ActiveInteractionCount = activeInteractions };
 }

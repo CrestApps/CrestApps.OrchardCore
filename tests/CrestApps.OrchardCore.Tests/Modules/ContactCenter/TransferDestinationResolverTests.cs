@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Doubles;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -173,10 +174,12 @@ public sealed class TransferDestinationResolverTests
     // Emergency number stored in catalog is denied
 
     [Theory]
+    [InlineData("911")]
+    [InlineData("112")]
+    [InlineData("999")]
     [InlineData("+1911")]
     [InlineData("+112")]
     [InlineData("+999")]
-    [InlineData("+15551234911")]
     public async Task ResolveAsync_WhenStoredAddressIsEmergency_Denies(string emergencyAddress)
     {
         // Arrange — entry is enabled and in catalog but its stored address is an emergency number
@@ -356,7 +359,8 @@ public sealed class TransferDestinationResolverTests
             authorizationService,
             Mock.Of<IAgentProfileManager>(),
             Mock.Of<IActivityQueueManager>(),
-            SiteServiceFactory.Create(settings));
+            SiteServiceFactory.Create(settings),
+            DialDestinationPolicyFactory.Create());
     }
 
     private sealed class AllowAuthorizationService : IAuthorizationService

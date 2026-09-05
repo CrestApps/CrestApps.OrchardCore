@@ -26,7 +26,8 @@ internal sealed class OmnichannelMessageIndexProvider : IndexProvider<Omnichanne
                 ServiceAddress = message.ServiceAddress,
                 CreatedUtc = message.CreatedUtc,
                 IsInbound = message.IsInbound,
-                ConversationId = message.ConversationId
+                ConversationId = message.ConversationId,
+                ProviderMessageId = message.ProviderMessageId,
             });
     }
 }

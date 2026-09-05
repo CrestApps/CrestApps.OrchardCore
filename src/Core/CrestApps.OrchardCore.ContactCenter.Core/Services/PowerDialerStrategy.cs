@@ -32,8 +32,8 @@ public sealed class PowerDialerStrategy : DialerStrategyBase
     public override DialerMode Mode => DialerMode.Power;
 
     /// <inheritdoc/>
-    protected override int GetMaxAttemptsPerCycle(DialerProfile profile)
+    protected override Task<int> GetMaxAttemptsPerCycleAsync(DialerProfile profile, CancellationToken cancellationToken)
     {
-        return Math.Clamp(profile.CallsPerAgent, 1, MaxCallsPerAgent);
+        return Task.FromResult(Math.Clamp(profile.CallsPerAgent, 1, MaxCallsPerAgent));
     }
 }

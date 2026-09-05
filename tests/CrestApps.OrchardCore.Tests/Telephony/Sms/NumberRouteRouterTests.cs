@@ -1,9 +1,9 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routers;
-using CrestApps.OrchardCore.Sms.Workspace.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 
@@ -65,7 +65,7 @@ public class NumberRouteRouterTests
         Assert.False(handled);
     }
 
-    private static SmsInboundRoutingContext CreateContext(SmsEndpointRoutingSettings routing, bool isNew)
+    private static SmsRoutingContext CreateContext(SmsEndpointRoutingSettings routing, bool isNew)
     {
         var endpoint = new OmnichannelChannelEndpoint { Channel = "SMS", Value = "+15553334444" };
 
@@ -74,7 +74,7 @@ public class NumberRouteRouterTests
             endpoint.Put(routing);
         }
 
-        return new SmsInboundRoutingContext
+        return new SmsRoutingContext
         {
             Message = new OmnichannelMessage { ServiceAddress = "+15553334444", CustomerAddress = "+15551112222" },
             Endpoint = endpoint,

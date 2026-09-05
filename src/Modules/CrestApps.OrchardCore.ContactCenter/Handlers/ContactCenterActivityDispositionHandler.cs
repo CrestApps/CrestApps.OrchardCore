@@ -29,7 +29,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
     /// <param name="presenceManager">The agent presence manager.</param>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
-    /// <param name="queuedVoiceWorkOfferServices">The optional queued voice work offer services.</param>
+    /// <param name="queuedVoiceWorkOfferService">The queued voice work offer service.</param>
     /// <param name="clock">The clock used to complete wrap-up timing.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterActivityDispositionHandler(
@@ -37,7 +37,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
         IAgentPresenceManager presenceManager,
         IInteractionManager interactionManager,
         IContactCenterWorkStateService workStateService,
-        IEnumerable<IQueuedVoiceWorkOfferService> queuedVoiceWorkOfferServices,
+        IQueuedVoiceWorkOfferService queuedVoiceWorkOfferService,
         IClock clock,
         ILogger<ContactCenterActivityDispositionHandler> logger)
     {
@@ -45,7 +45,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
         _presenceManager = presenceManager;
         _interactionManager = interactionManager;
         _workStateService = workStateService;
-        _queuedVoiceWorkOfferService = queuedVoiceWorkOfferServices.FirstOrDefault();
+        _queuedVoiceWorkOfferService = queuedVoiceWorkOfferService;
         _clock = clock;
         _logger = logger;
     }
@@ -101,8 +101,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
 
         agent = await _presenceManager.CompleteWorkAsync(agent.ItemId, cancellationToken);
 
-        if (agent?.PresenceStatus == AgentPresenceStatus.Available &&
-            _queuedVoiceWorkOfferService is not null)
+        if (agent?.PresenceStatus == AgentPresenceStatus.Available)
         {
             var offered = await _queuedVoiceWorkOfferService.OfferForAgentAsync(agent.ItemId, cancellationToken);
 

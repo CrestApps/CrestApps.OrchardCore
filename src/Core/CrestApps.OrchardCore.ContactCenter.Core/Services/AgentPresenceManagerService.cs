@@ -39,7 +39,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     public AgentPresenceManagerService(
         IAgentProfileManager agentManager,
         IEnumerable<IAgentSessionManager> sessionManagers,
-        IEnumerable<IAgentWorkStateHealingService> agentWorkStateHealingServices,
+        IAgentWorkStateHealingService agentWorkStateHealingService,
         IAgentEntitlementPolicy entitlementPolicy,
         IContactCenterEventPublisher publisher,
         IDistributedLock distributedLock,
@@ -48,7 +48,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     {
         _agentManager = agentManager;
         _sessionManager = sessionManagers.FirstOrDefault();
-        _agentWorkStateHealingService = agentWorkStateHealingServices.FirstOrDefault();
+        _agentWorkStateHealingService = agentWorkStateHealingService;
         _entitlementPolicy = entitlementPolicy;
         _publisher = publisher;
         _distributedLock = distributedLock;
@@ -74,7 +74,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
 
-        if (profile is not null && _agentWorkStateHealingService is not null)
+        if (profile is not null)
         {
             await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
         }
@@ -115,6 +115,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.RequestedPresenceStatus = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
         profile.ActiveReservationId = null;
+        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await SaveAsync(profile, cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
@@ -240,10 +241,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
                 profile.CampaignIds.Count);
         }
 
-        if (_agentWorkStateHealingService is not null)
-        {
-            await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
-        }
+        await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(userId),
@@ -270,6 +268,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.PresenceReason = null;
         profile.RequestedPresenceStatus = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
+        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
         profile.QueueIds = [];
         profile.CampaignIds = [];
 
@@ -304,10 +303,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         // Release any work the absent agent was holding so a reservation cannot outlive the connection that owned
         // it, exactly as an explicit sign-out does. Only the memberships survive.
-        if (_agentWorkStateHealingService is not null)
-        {
-            await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
-        }
+        await _agentWorkStateHealingService.HealForResetAsync(profile.ItemId, cancellationToken);
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(userId),
@@ -345,6 +341,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.PresenceReason = reason;
         profile.RequestedPresenceStatus = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
+        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await SaveAsync(profile, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
@@ -365,7 +362,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             profile.UserId = userId;
             profile.Name = userId;
         }
-        else if (_agentWorkStateHealingService is not null && !CanApplyPresenceNow(profile))
+        else if (!CanApplyPresenceNow(profile))
         {
             // The agent is parked in an on-call presence state (Reserved/Busy/WrapUp or holding a reservation).
             // Reconcile against provider truth before deferring the requested change so a call that no longer
@@ -420,6 +417,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         profile.PresenceReason = reason;
         profile.PresenceChangedUtc = _clock.UtcNow;
+        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await SaveAsync(profile, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
@@ -472,6 +470,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.PresenceStatus = AgentPresenceStatus.WrapUp;
         profile.ActiveReservationId = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
+        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
@@ -522,6 +521,11 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.RequestedPresenceStatus = null;
         profile.ActiveReservationId = null;
         profile.PresenceChangedUtc = _clock.UtcNow;
+
+        // Round-robin fairness turns on who least recently finished work, so the stamp is taken here - at the end
+        // of the work - rather than when an offer was pushed at the agent, which they may never have accepted.
+        profile.LastWorkCompletedUtc = _clock.UtcNow;
+        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);

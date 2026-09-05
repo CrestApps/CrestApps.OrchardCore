@@ -95,9 +95,9 @@ const sidebars = {
                 'omnichannel/management',
                 'omnichannel/cadences',
                 'omnichannel/sms',
-                'omnichannel/sms-workspace',
+                'omnichannel/sms-portal',
                 'omnichannel/ai-agent-handoff-project-plan',
-                'omnichannel/production-readiness-sms-workspace',
+                'omnichannel/production-readiness-sms-portal',
             ],
         },
         {
@@ -136,6 +136,7 @@ const sidebars = {
                 'contact-center/production-readiness-routing',
                 'contact-center/production-readiness-code-quality',
                 'contact-center/production-readiness-implementation-guide',
+                'contact-center/production-readiness-changelog',
             ],
         },
         {

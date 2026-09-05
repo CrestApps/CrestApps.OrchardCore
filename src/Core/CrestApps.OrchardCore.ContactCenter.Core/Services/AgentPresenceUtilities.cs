@@ -23,4 +23,30 @@ internal static class AgentPresenceUtilities
             ? AgentPresenceStatus.Offline
             : AgentPresenceStatus.Available;
     }
+
+    /// <summary>
+    /// Keeps <see cref="AgentProfile.IdleSinceUtc"/> in step with the agent's state: an agent who is Available
+    /// with nothing reserved is idle, and the clock starts the moment they become so; anyone else is not idle and
+    /// the stamp is cleared. Called wherever presence changes, so longest-idle routing measures idleness rather
+    /// than time since the last presence transition of any kind.
+    /// </summary>
+    /// <param name="profile">The profile whose presence has just been set.</param>
+    /// <param name="nowUtc">The current UTC time.</param>
+    public static void ApplyIdleState(AgentProfile profile, DateTime nowUtc)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var isIdle = profile.PresenceStatus == AgentPresenceStatus.Available &&
+            string.IsNullOrEmpty(profile.ActiveReservationId);
+
+        if (!isIdle)
+        {
+            profile.IdleSinceUtc = null;
+
+            return;
+        }
+
+        // Already idle: keep the original instant, or the agent would appear freshly idle on every save.
+        profile.IdleSinceUtc ??= nowUtc;
+    }
 }

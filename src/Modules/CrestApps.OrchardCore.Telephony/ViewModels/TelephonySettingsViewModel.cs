@@ -18,4 +18,10 @@ public class TelephonySettingsViewModel
     /// </summary>
     [BindNever]
     public SelectListItem[] Providers { get; set; }
+
+    /// <summary>
+    /// Gets or sets the short codes this tenant may dial, one per line. Emergency codes are never dialable and
+    /// cannot be opened through this list.
+    /// </summary>
+    public string AllowedShortCodes { get; set; }
 }

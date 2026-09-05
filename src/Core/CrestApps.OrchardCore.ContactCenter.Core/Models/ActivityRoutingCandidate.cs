@@ -17,9 +17,31 @@ public sealed class ActivityRoutingCandidate
     }
 
     /// <summary>
+    /// Initializes a new instance of the <see cref="ActivityRoutingCandidate"/> class from an availability
+    /// snapshot, so a strategy can read the candidate's current load without querying for it again.
+    /// </summary>
+    /// <param name="availability">The availability snapshot the candidate was drawn from.</param>
+    public ActivityRoutingCandidate(AgentAvailability availability)
+    {
+        ArgumentNullException.ThrowIfNull(availability);
+        ArgumentNullException.ThrowIfNull(availability.Agent);
+
+        Agent = availability.Agent;
+        Availability = availability;
+    }
+
+    /// <summary>
     /// Gets the agent profile being considered.
     /// </summary>
     public AgentProfile Agent { get; }
+
+    /// <summary>
+    /// Gets the availability snapshot the candidate was drawn from, carrying the agent's active interaction
+    /// count and remaining capacity. It is the counts the caller already read, so a strategy that needs them
+    /// does not issue a query per candidate. It is <see langword="null"/> only when a caller built the
+    /// candidate from a bare profile.
+    /// </summary>
+    public AgentAvailability Availability { get; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the candidate is eligible for the queued item.

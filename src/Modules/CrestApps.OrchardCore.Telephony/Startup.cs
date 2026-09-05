@@ -91,7 +91,17 @@ public sealed class Startup : StartupBase
         services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
         services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();
         services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
+        services.AddScoped<IVoiceAgentMediaProviderResolver, VoiceAgentMediaProviderResolver>();
         services.AddScoped<IOutboundCallScreeningService, DefaultOutboundCallScreeningService>();
+
+        // The destination safety policy. Contact Center Voice decorates it with the approved-catalog rules; the
+        // default here refuses emergency and premium destinations for every telephony consumer.
+        services.TryAddScoped<IDialDestinationPolicy, DefaultDialDestinationPolicy>();
+
+        // What an agent may transfer to. Contact Center Voice replaces this with a policy that accepts only
+        // curated destinations, so the soft phone transfer field stops accepting a raw number there.
+        services.TryAddScoped<ITransferTargetPolicy, DefaultTransferTargetPolicy>();
+
         services.AddScoped<ITelephonyService, DefaultTelephonyService>();
         services.AddScoped<ITelephonyCommandExecutor, DefaultTelephonyCommandExecutor>();
         services.AddScoped<IIncomingCallDispatcher, DefaultIncomingCallDispatcher>();

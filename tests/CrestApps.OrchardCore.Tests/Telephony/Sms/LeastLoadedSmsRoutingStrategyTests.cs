@@ -1,9 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routing;
-using CrestApps.OrchardCore.Sms.Workspace.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
@@ -115,6 +115,8 @@ public class LeastLoadedSmsRoutingStrategyTests
         private readonly Dictionary<string, ActivityQueue> _queues = new(StringComparer.Ordinal);
         private readonly Mock<IAgentProfileManager> _agentManager = new();
         private readonly Mock<ISmsConversationStore> _conversationStore = new();
+        private readonly Dictionary<string, int> _smsLoads = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> _voiceLoads = new(StringComparer.Ordinal);
         private readonly Mock<ISmsAgentAvailabilityService> _availability = new();
         private readonly Mock<IActivityQueueManager> _queueManager = new();
         private readonly Mock<IInteractionManager> _interactionManager = new();
@@ -131,8 +133,13 @@ public class LeastLoadedSmsRoutingStrategyTests
             _queueManager.Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string queueId, CancellationToken _) => _queues.GetValueOrDefault(queueId) ?? new ActivityQueue { ItemId = queueId });
 
-            _interactionManager.Setup(m => m.CountActiveByAgentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(0);
+            _conversationStore.Setup(s => s.CountOpenAssignedAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((IReadOnlyCollection<string> ids, CancellationToken _) =>
+                    ids.ToDictionary(id => id, id => _smsLoads.GetValueOrDefault(id), StringComparer.Ordinal));
+
+            _interactionManager.Setup(m => m.CountActiveByAgentIdsAsync(It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((IReadOnlyCollection<string> ids, CancellationToken _) =>
+                    ids.ToDictionary(id => id, id => _voiceLoads.GetValueOrDefault(id), StringComparer.Ordinal));
 
             Strategy = new LeastLoadedSmsRoutingStrategy(
                 _agentManager.Object,
@@ -168,19 +175,15 @@ public class LeastLoadedSmsRoutingStrategyTests
             _availability.Setup(a => a.Get(It.Is<AgentProfile>(x => x.ItemId == agentId)))
                 .Returns(new SmsAgentAvailability { Available = available, MaxConcurrent = maxConcurrent });
 
-            var conversations = Enumerable.Range(0, load)
-                .Select(_ => new SmsConversation
-                {
-                    Status = SmsConversationStatus.Open,
-                    AssignmentStatus = SmsConversationAssignmentStatus.Assigned,
-                })
-                .ToArray();
+            // Availability is derived now: the flag plus a live session. The harness models an available
+            // agent as one that is both, which is what the strategy asks about.
+            _availability.Setup(a => a.IsAvailableAsync(It.Is<AgentProfile>(x => x.ItemId == agentId), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(available);
 
-            _conversationStore.Setup(s => s.GetForAgentAsync(agentId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(conversations);
-
-            _interactionManager.Setup(m => m.CountActiveByAgentAsync(agentId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(activeVoice);
+            // Both loads are read once for the whole queue now rather than once per agent, so the harness records
+            // each agent's figures and answers the batched reads from them.
+            _smsLoads[agentId] = load;
+            _voiceLoads[agentId] = activeVoice;
         }
     }
 }

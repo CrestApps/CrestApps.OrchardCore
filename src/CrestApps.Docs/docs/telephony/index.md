@@ -119,8 +119,35 @@ Orchard Core SMS settings:
 
 - The **Soft Phone** tab selects the **default provider** from the list of enabled providers (as its
   first option) and configures where the soft phone widget appears.
+- The **Soft Phone** tab also carries **Allowed short codes**: the short codes this tenant may dial, one per
+  line. A short code is not an international number, so it is refused by default; list a code here to open it
+  (a carrier service number, for example). Only digits are stored. Emergency codes can never be opened this
+  way — see [Dial destination safety](#dial-destination-safety).
 - Each enabled provider contributes **its own tab** (rendered by a display driver in the provider
   module) where you enable the provider and supply its credentials.
+
+## Dial destination safety
+
+Every path that places or transfers a call answers to one policy, `IDialDestinationPolicy`, before a provider is
+reached: the soft-phone keypad, the soft-phone transfer field, the soft-phone extension field, and the Contact
+Center server-side dial and transfer paths. The default implementation refuses:
+
+- **Emergency short codes**, matched as the whole dialed string after an optional trunk prefix is stripped:
+  `911`, `112`, `999`, `000`, `110`, `119`, `100`, `102`, `108`, `113`, `117`, `118`, `122`, `133`, `190`,
+  `191`, `192`, `193`, `194`, `997`, `998`. The **Allowed short codes** list can never open one of these.
+- **Premium-rate numbers** (`1900`, `1976` and `4470` prefixes).
+- Anything that is neither a dialable international number nor an allowed short code.
+
+An ordinary number whose last three digits happen to look like an emergency code (for example
+`+14255550911`) is a normal destination and is dialed.
+
+This is a refusal to originate, not an emergency-calling capability. Provide emergency-calling access to your
+agents and end users by other, independent means.
+
+What an agent may **transfer** to is decided separately by `ITransferTargetPolicy`. Without Contact Center Voice
+the transfer field accepts the destination as typed, once the dial destination policy has cleared it, so provider
+directory addresses keep working. With Contact Center Voice enabled, the field accepts only a curated destination
+— an approved external destination, an agent, or a queue — and a raw phone number is refused.
 
 When you enable the only configured provider, it is automatically selected as the default. When you
 disable the current default provider, the default is cleared and the soft phone is disabled until a

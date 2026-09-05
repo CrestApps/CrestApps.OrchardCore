@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
@@ -44,6 +45,8 @@ public sealed class InboundVoiceStartup : StartupBase
         // A phone number channel endpoint only has an inbound handler when inbound voice is enabled (it maps a
         // dialed number to a subject flow), so the Phone channel is offered in the channel-endpoint create picker
         // only with this feature. When the channel-endpoint administration is also enabled, Phone appears there.
+        services.TryAddScoped<IIvrProvider, NoIvrProvider>();
+
         services.AddChannelEndpointSource(OmnichannelConstants.Channels.Phone, source =>
         {
             source.DisplayName = S["Phone"];
@@ -53,8 +56,12 @@ public sealed class InboundVoiceStartup : StartupBase
         services
             .AddScoped<IContactCenterEntryPointStore, ContactCenterEntryPointStore>()
             .AddScoped<IContactCenterEntryPointManager, ContactCenterEntryPointManager>()
+            // Entry-point phone menus. They belong here because the menu lives on the entry point: the
+            // resolver reads it, and the base feature has no entry points to read.
+            .AddScoped<IIvrExecutionService, IvrExecutionService>()
+            .AddScoped<IEntryPointFlowResolver, EntryPointFlowResolver>()
+            .AddScoped<IInboundVoiceDigitsSink, InboundVoiceDigitsSink>()
             .AddScoped<IEntryPointResolver, EntryPointResolver>()
-            .AddScoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>()
             .AddScoped<IPendingIncomingCallOfferService, PendingIncomingCallOfferService>()
             .AddScoped<QueuedVoiceWorkOfferScopeContext>()
             .AddScoped<IContactCenterEventHandler, OfferQueuedVoiceWorkOnAvailabilityHandler>()
@@ -62,6 +69,16 @@ public sealed class InboundVoiceStartup : StartupBase
             .AddScoped<ICatalogEntryHandler<ContactCenterEntryPoint>, ContactCenterConfigurationCacheInvalidationHandler<ContactCenterEntryPoint>>()
             .AddIndexProvider<ContactCenterEntryPointIndexProvider>()
             .AddDataMigration<ContactCenterEntryPointIndexMigrations>();
+
+        // Caller-based priority: the entry point says what the number is worth, the contributors notice what
+        // this particular caller is worth, and the strongest of the two decides where they land in line.
+        services.AddScoped<IInboundPriorityResolver, InboundPriorityResolver>();
+        services.AddScoped<IInboundPriorityContributor, ReturningCallbackPriorityContributor>();
+        services.AddScoped<IInboundPriorityContributor, RepeatCallerPriorityContributor>();
+
+        // This feature is the one that queues inbound voice work, so it replaces the do-nothing default the base
+        // feature registers for tenants without it.
+        services.Replace(ServiceDescriptor.Scoped<IQueuedVoiceWorkOfferService, QueuedVoiceWorkOfferService>());
 
         // Inbound entry-point administration screens.
         services.AddDisplayDriver<ContactCenterEntryPoint, ContactCenterEntryPointDisplayDriver>();

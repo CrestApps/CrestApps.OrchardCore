@@ -10,6 +10,7 @@
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement.Abstractions" />
     <PackageReference Include="OrchardCore.ContentFields" />
+    <PackageReference Include="OrchardCore.Flows.Core" />
   </ItemGroup>
 
   <ItemGroup>

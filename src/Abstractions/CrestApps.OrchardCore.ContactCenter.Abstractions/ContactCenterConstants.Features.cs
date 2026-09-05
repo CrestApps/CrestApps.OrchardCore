@@ -16,7 +16,7 @@ public static partial class ContactCenterConstants
         /// The identifier of the dependency-only feature that provides just the shared agent-profile directory
         /// services (the profile store, manager, index, and its storage collection). It carries no administration
         /// screens, presence, availability, reason codes, or queue concepts, so a module that only needs to resolve
-        /// an operator's agent profile — such as the SMS Workspace — can depend on it without pulling in the full
+        /// an operator's agent profile — such as the SMS Portal — can depend on it without pulling in the full
         /// Agents and Work Distribution administration. Enabled automatically by the Agents feature and by any
         /// module that reuses agent identity.
         /// </summary>
@@ -49,6 +49,14 @@ public static partial class ContactCenterConstants
         /// The identifier of the paced Power and Progressive dialing feature.
         /// </summary>
         public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
+
+        /// <summary>
+        /// The identifier of the durable provider webhook inbox feature. Provider webhook delivery is
+        /// at-least-once and can arrive while a node is restarting, so every channel that ingests provider
+        /// callbacks - voice and SMS alike - commits the delivery here first and processes it from storage.
+        /// It is enabled by dependency only.
+        /// </summary>
+        public const string ProviderInbox = "CrestApps.OrchardCore.ContactCenter.ProviderInbox";
 
         /// <summary>
         /// The identifier of the inbound voice integration feature.

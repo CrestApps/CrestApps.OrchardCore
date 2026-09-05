@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
@@ -196,5 +197,6 @@ public sealed class ExtensionCallingTests
             new StubTelephonyProviderResolver(provider),
             new DefaultOutboundCallScreeningService([]),
             resolver,
+            DialDestinationPolicyFactory.Create(),
             new PassThroughStringLocalizer<DefaultTelephonyService>());
 }

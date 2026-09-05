@@ -599,12 +599,12 @@ public sealed class AgentWorkStateHealingServiceTests
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
-        var serviceProvider = new Mock<IServiceProvider>();
-        serviceProvider
-            .Setup(provider => provider.GetService(typeof(IProviderCallStateSynchronizationService)))
-            .Returns(registerSynchronizationService
-                ? synchronizationService?.Object ?? Mock.Of<IProviderCallStateSynchronizationService>()
-                : null);
+
+        // Without the Voice feature the default implementation stands in: it returns the interaction untouched,
+        // so nothing is healed on state nothing can confirm.
+        var resolvedSynchronizationService = registerSynchronizationService
+            ? synchronizationService?.Object ?? Mock.Of<IProviderCallStateSynchronizationService>()
+            : new NoProviderCallStateSynchronizationService(NullLogger<NoProviderCallStateSynchronizationService>.Instance);
 
         var resolvedActivityManager = activityManager?.Object ?? Mock.Of<IOmnichannelActivityManager>();
 
@@ -616,7 +616,7 @@ public sealed class AgentWorkStateHealingServiceTests
             interactionManager.Object,
             resolvedActivityManager,
             new FakeContactCenterWorkStateService(resolvedActivityManager),
-            serviceProvider.Object,
+            new Lazy<IProviderCallStateSynchronizationService>(resolvedSynchronizationService),
             clock.Object,
             NullLogger<AgentWorkStateHealingService>.Instance);
     }

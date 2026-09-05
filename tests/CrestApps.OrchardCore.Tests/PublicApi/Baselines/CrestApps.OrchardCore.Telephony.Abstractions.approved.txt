@@ -304,6 +304,7 @@ namespace CrestApps.OrchardCore.Telephony
     public sealed class TelephonySettings
     {
         public TelephonySettings() { }
+        public System.Collections.Generic.IList<string> AllowedShortCodes { get; set; }
         public string DefaultProviderName { get; set; }
     }
 }
@@ -815,5 +816,67 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public static CrestApps.OrchardCore.Telephony.Models.CallState ToTelephonyCallState(CrestApps.OrchardCore.Telephony.Models.VoiceCallState state) { }
         public static CrestApps.OrchardCore.Telephony.Models.VoiceCallState ToTerminalVoiceCallState(CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, CrestApps.OrchardCore.Telephony.Models.VoiceCallState fallback) { }
         public static CrestApps.OrchardCore.Telephony.Models.VoiceCallState ToVoiceCallState(CrestApps.OrchardCore.Telephony.Models.CallState state, bool isOnHold = false, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause = default) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Services
+{
+    public sealed class DialDestinationContext
+    {
+        public DialDestinationContext() { }
+        public CrestApps.OrchardCore.Telephony.Services.DialDestinationOperation Operation { get; set; }
+        public string TrunkPrefix { get; set; }
+    }
+    public sealed class DialDestinationDecision
+    {
+        public bool IsAllowed { get; }
+        public CrestApps.OrchardCore.Telephony.Services.DialDestinationOutcome Outcome { get; }
+        public string Reason { get; }
+        public static CrestApps.OrchardCore.Telephony.Services.DialDestinationDecision Allow() { }
+        public static CrestApps.OrchardCore.Telephony.Services.DialDestinationDecision Refuse(CrestApps.OrchardCore.Telephony.Services.DialDestinationOutcome outcome, string reason) { }
+    }
+    public enum DialDestinationOperation
+    {
+        Dial = 0,
+        Transfer = 1,
+        Configure = 2,
+    }
+    public enum DialDestinationOutcome
+    {
+        Allowed = 0,
+        Emergency = 1,
+        Premium = 2,
+        Malformed = 3,
+        Blocked = 4,
+    }
+    public interface IDialDestinationPolicy
+    {
+        CrestApps.OrchardCore.Telephony.Services.DialDestinationDecision Evaluate(string address, CrestApps.OrchardCore.Telephony.Services.DialDestinationContext context);
+    }
+    public interface ITransferTargetPolicy
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Services.TransferTargetDecision> ResolveAsync(string rawTarget, System.Security.Claims.ClaimsPrincipal user, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IVoiceAgentMediaProvider
+    {
+        string DefaultVoice { get; }
+        string TechnicalName { get; }
+        System.Threading.Tasks.Task<bool> GatherAsync(string providerCallId, string text, string validDigits, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> HangupAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> SpeakAsync(string providerCallId, string text, string voice = null, string language = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> StartTranscriptionAsync(string providerCallId, string language = null, string commandId = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> StopTranscriptionAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IVoiceAgentMediaProviderResolver
+    {
+        CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider Get(string technicalName);
+        CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProvider GetDefault();
+    }
+    public sealed class TransferTargetDecision
+    {
+        public bool IsAllowed { get; }
+        public string Reason { get; }
+        public string ResolvedTarget { get; }
+        public static CrestApps.OrchardCore.Telephony.Services.TransferTargetDecision Allow(string resolvedTarget) { }
+        public static CrestApps.OrchardCore.Telephony.Services.TransferTargetDecision Refuse(string reason) { }
     }
 }

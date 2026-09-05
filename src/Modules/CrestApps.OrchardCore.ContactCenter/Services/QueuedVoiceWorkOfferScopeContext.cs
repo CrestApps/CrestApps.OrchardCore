@@ -6,13 +6,13 @@ internal sealed class QueuedVoiceWorkOfferScopeContext
 {
     private readonly IQueuedVoiceWorkOfferService _offerService;
 
-    public QueuedVoiceWorkOfferScopeContext(IEnumerable<IQueuedVoiceWorkOfferService> offerServices)
+    public QueuedVoiceWorkOfferScopeContext(IQueuedVoiceWorkOfferService offerService)
     {
-        _offerService = offerServices.FirstOrDefault();
+        _offerService = offerService;
     }
 
     public Task OfferForAgentAsync(string agentId, CancellationToken cancellationToken)
     {
-        return _offerService?.OfferForAgentAsync(agentId, cancellationToken) ?? Task.CompletedTask;
+        return _offerService.OfferForAgentAsync(agentId, cancellationToken);
     }
 }

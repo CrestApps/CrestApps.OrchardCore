@@ -94,4 +94,34 @@ public sealed class TelnyxAgentCredentialSelectionTests
         // Assert
         Assert.Equal("credential-b", ordered[0].CredentialId);
     }
+
+    [Fact]
+    public void OrderByDeliveryPreference_KeepsEveryCredential_SoACallerCanFallThrough()
+    {
+        // Arrange
+        // The caller walks the ordering looking for the first usable credential, so dropping the ones that rank
+        // badly would leave it with nothing to fall through to when the best one turns out to be unusable.
+        var credentials = new[]
+        {
+            new TelnyxAgentCredential { CredentialId = "a", IssuedUtc = _now, ExpiresUtc = _now.AddHours(1) },
+            new TelnyxAgentCredential { CredentialId = "b", IssuedUtc = _now.AddSeconds(10), RegisteredUtc = _now.AddSeconds(11), ExpiresUtc = _now.AddHours(1) },
+            new TelnyxAgentCredential { CredentialId = "c", IssuedUtc = _now.AddSeconds(20), ExpiresUtc = _now.AddHours(1) },
+        };
+
+        // Act
+        var ordered = TelnyxAgentCredentialSelection.OrderByDeliveryPreference(credentials);
+
+        // Assert
+        Assert.Equal(3, ordered.Count);
+    }
+
+    [Fact]
+    public void OrderByDeliveryPreference_OfNothing_IsEmptyRatherThanNull()
+    {
+        // Assert
+        // The result is enumerated directly on a path that runs while a customer is holding the line, so a null
+        // here is an exception thrown at somebody waiting to be connected.
+        Assert.Empty(TelnyxAgentCredentialSelection.OrderByDeliveryPreference(null));
+        Assert.Empty(TelnyxAgentCredentialSelection.OrderByDeliveryPreference([]));
+    }
 }

@@ -591,7 +591,7 @@ public sealed class ContactCenterCallCommandServiceTests
 
         public Mock<IOmnichannelActivityManager> ActivityManager { get; } = new();
 
-        public Mock<IDialerProfileManager> DialerProfileManager { get; } = new();
+        public Mock<IDialerProfileReader> DialerProfileReader { get; } = new();
 
         public Mock<IDialerAttemptService> DialerAttemptService { get; } = new();
 
@@ -707,7 +707,7 @@ public sealed class ContactCenterCallCommandServiceTests
                 .Setup(manager => manager.FindByIdAsync("act1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(CreatePreviewDialActivity());
 
-            DialerProfileManager
+            DialerProfileReader
                 .Setup(manager => manager.FindByIdAsync("profile-1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(CreatePreviewDialProfile());
 
@@ -729,7 +729,7 @@ public sealed class ContactCenterCallCommandServiceTests
                 ReservationManager.Object,
                 InteractionManager.Object,
                 ActivityManager.Object,
-                new[] { DialerProfileManager.Object },
+                DialerProfileReader.Object,
                 new[] { DialerAttemptService.Object },
                 AgentManager.Object,
                 VoiceProviderResolver.Object,

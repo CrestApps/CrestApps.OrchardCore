@@ -125,6 +125,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
             public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
             public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";
+            public const string ProviderInbox = "CrestApps.OrchardCore.ContactCenter.ProviderInbox";
             public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
             public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
             public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
@@ -592,6 +593,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public CrestApps.OrchardCore.Telephony.Models.VoiceCallState? ProviderLegState { get; set; }
         public string ProviderName { get; set; }
         public bool Succeeded { get; set; }
+        public static CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult Failure(string providerName, string errorCode, string errorMessage) { }
     }
     public sealed class ContactCenterVoiceRecordingRequest
     {
@@ -837,5 +839,36 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     {
         AgentDeviceNative = 0,
         ServerSideAcd = 1,
+    }
+}
+namespace CrestApps.OrchardCore.ContactCenter.Services
+{
+    public interface IAgentQueueMembershipReader
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetAgentIdsForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetQueueIdsForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> IsMemberAsync(string agentId, string queueId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IInboundVoiceDigitsSink
+    {
+        System.Threading.Tasks.Task<bool> HandleDigitsAsync(CrestApps.OrchardCore.ContactCenter.Services.InboundVoiceDigitsEvent digitsEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IIvrProvider
+    {
+        System.Threading.Tasks.Task<bool> PromptAsync(string providerCallId, string text, string mediaId, string validDigits, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IQueueTreatmentProvider
+    {
+        System.Threading.Tasks.Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task SpeakAsync(string providerCallId, string text, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StartHoldMusicAsync(string providerCallId, string mediaId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class InboundVoiceDigitsEvent
+    {
+        public InboundVoiceDigitsEvent() { }
+        public string DeliveryId { get; set; }
+        public string Digits { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
     }
 }

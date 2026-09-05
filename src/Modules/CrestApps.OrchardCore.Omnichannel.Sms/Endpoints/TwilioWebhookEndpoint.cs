@@ -110,6 +110,13 @@ internal static class TwilioWebhookEndpoint
             Message = omnichannelMessage,
         };
 
+        // Twilio's MessageSid travels with the message, so a redelivery is recognisable downstream: the inbound
+        // processor's per-thread lock and the unique index on the number pair mean a retry appends to the one
+        // thread rather than creating a second. Routing this endpoint through the durable provider webhook inbox
+        // (as the Telnyx SMS webhook does) additionally suppresses reprocessing entirely, but that inbox contract
+        // lives in Contact Center, and this module is deliberately free of a Contact Center reference.
+        omnichannelMessage.ProviderMessageId = messageSid;
+
         // Generating the automated reply — a humanized settle pause, the AI completion and a "typing" delay — takes
         // tens of seconds. Running it inline would hold this webhook open well past Twilio's ~15s delivery timeout, so
         // Twilio would mark the delivery failed and RETRY it; the retries then race the original (and each other) for

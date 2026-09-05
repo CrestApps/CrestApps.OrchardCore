@@ -51,7 +51,7 @@ public sealed class ContactCenterActivityDispositionHandlerTests
             presenceManager.Object,
             interactionManager.Object,
             workStateService,
-            [offerService.Object],
+            offerService.Object,
             Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 
@@ -107,7 +107,7 @@ public sealed class ContactCenterActivityDispositionHandlerTests
             presenceManager.Object,
             interactionManager.Object,
             workStateService,
-            [offerService.Object],
+            offerService.Object,
             Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 
@@ -172,7 +172,7 @@ public sealed class ContactCenterActivityDispositionHandlerTests
             presenceManager.Object,
             interactionManager.Object,
             workStateService,
-            [offerService.Object],
+            offerService.Object,
             Mock.Of<IClock>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 

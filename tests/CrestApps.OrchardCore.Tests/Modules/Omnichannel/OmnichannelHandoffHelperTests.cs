@@ -53,8 +53,9 @@ public class OmnichannelHandoffHelperTests
         var instructions = OmnichannelHandoffHelper.BuildHandoffInstructions(flow);
 
         Assert.NotNull(instructions);
-        // The guidance directs the model to call the transfer tool, not to emit a marker.
-        Assert.Contains("transfer_to_agent", instructions);
+        // The guidance must name the tool that is actually registered, not a plausible-looking alias.
+        Assert.Contains(OmnichannelHandoffHelper.TransferToAgentToolName, instructions);
+        Assert.DoesNotContain("transfer_to_agent", instructions);
         Assert.Contains("asks to speak to a human", instructions);
         Assert.Contains("frustrated", instructions);
         // The qualified-lead trigger was not selected, so its guidance must not appear.

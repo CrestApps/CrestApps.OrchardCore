@@ -16,20 +16,20 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrchestrator
 {
-    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly TelnyxApiClient _apiClient;
     private readonly ILogger<TelnyxOutboundBridgeOrchestrator> _logger;
     private readonly IContactCenterAgentLegFailureService _agentLegFailureService;
     private readonly IEnumerable<ITelnyxAiVoiceEventHandler> _aiVoiceEventHandlers;
     private readonly TelnyxOptions _options;
 
     public TelnyxOutboundBridgeOrchestrator(
-        IHttpClientFactory httpClientFactory,
+        TelnyxApiClient apiClient,
         ILogger<TelnyxOutboundBridgeOrchestrator> logger,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
         IContactCenterAgentLegFailureService agentLegFailureService,
         IEnumerable<ITelnyxAiVoiceEventHandler> aiVoiceEventHandlers)
     {
-        _httpClientFactory = httpClientFactory;
+        _apiClient = apiClient;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
         _agentLegFailureService = agentLegFailureService;
@@ -343,19 +343,14 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
 
         try
         {
-            using var client = CreateClient();
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync(
-                $"calls/{Uri.EscapeDataString(agentLegCallControlId)}/actions/record_start",
-                content,
-                cancellationToken);
+            var result = await _apiClient.PostCallActionAsync(agentLegCallControlId, "record_start", body, cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
+            if (!result.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected starting extension voicemail recording with status code {StatusCode}. Response: {Response}",
-                    response.StatusCode,
-                    (await SafeReadContentAsync(response, cancellationToken)).SanitizeLogValue());
+                    result.StatusCode,
+                    result.ErrorBody.SanitizeLogValue());
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -376,11 +371,9 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
 
         try
         {
-            using var client = CreateClient();
-
             // Ensure the conference exists, formed from the active call. The first extension add creates it; a
             // later add finds the existing one. command_id makes a redelivered create idempotent.
-            var conferenceId = await EnsureConferenceAsync(client, conferenceName, state.PeerCallControlId, cancellationToken);
+            var conferenceId = await EnsureConferenceAsync(conferenceName, state.PeerCallControlId, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(conferenceId))
             {
@@ -389,25 +382,20 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
                 return;
             }
 
-            using var joinContent = JsonContent.Create(
-                new Dictionary<string, object>
-                {
-                    ["call_control_id"] = answeredLegCallControlId,
-                    ["command_id"] = $"ext-conf-join-{answeredLegCallControlId}",
-                },
-                options: TelnyxJsonSerializerOptions.Default);
-            using var joinResponse = await client.PostAsync(
-                $"conferences/{Uri.EscapeDataString(conferenceId)}/actions/join",
-                joinContent,
+            var joinResult = await _apiClient.JoinConferenceAsync(
+                conferenceId,
+                answeredLegCallControlId,
+                endConferenceOnExit: false,
+                commandId: $"ext-conf-join-{answeredLegCallControlId}",
                 cancellationToken);
 
-            if (!joinResponse.IsSuccessStatusCode)
+            if (!joinResult.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected joining an extension participant to conference '{ConferenceName}' with status code {StatusCode}. Response: {Response}",
                     conferenceName.SanitizeLogValue(),
-                    joinResponse.StatusCode,
-                    (await SafeReadContentAsync(joinResponse, cancellationToken)).SanitizeLogValue());
+                    joinResult.StatusCode,
+                    joinResult.ErrorBody.SanitizeLogValue());
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -420,61 +408,29 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         }
     }
 
-    private static async Task<string> EnsureConferenceAsync(HttpClient client, string conferenceName, string activeCallControlId, CancellationToken cancellationToken)
+    /// <summary>
+    /// Returns the conference of that name, creating it when it does not exist yet. The create is attempted
+    /// first because it is the common case; a conflict means a prior extension add already made it, and the
+    /// deterministic name is what lets this find that one rather than making a second.
+    /// </summary>
+    private async Task<string> EnsureConferenceAsync(string conferenceName, string activeCallControlId, CancellationToken cancellationToken)
     {
-        using var createContent = JsonContent.Create(
-            new Dictionary<string, object>
-            {
-                ["name"] = conferenceName,
-                ["call_control_id"] = activeCallControlId,
-                ["command_id"] = $"ext-conf-create-{activeCallControlId}",
-            },
-            options: TelnyxJsonSerializerOptions.Default);
-        using var createResponse = await client.PostAsync("conferences", createContent, cancellationToken);
-
-        if (createResponse.IsSuccessStatusCode)
-        {
-            return await ReadConferenceIdAsync(createResponse, cancellationToken);
-        }
-
-        // The conference already exists (a prior extension add created it); look it up by its deterministic name.
-        using var listResponse = await client.GetAsync(
-            $"conferences?filter[name]={Uri.EscapeDataString(conferenceName)}",
+        var created = await _apiClient.CreateConferenceAsync(
+            conferenceName,
+            activeCallControlId,
+            commandId: $"ext-conf-create-{activeCallControlId}",
             cancellationToken);
 
-        if (!listResponse.IsSuccessStatusCode)
+        if (created.Succeeded && !string.IsNullOrWhiteSpace(created.ConferenceId))
         {
-            return null;
+            return created.ConferenceId;
         }
 
-        await using var stream = await listResponse.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await System.Text.Json.JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+        var existing = await _apiClient.FindConferenceByNameAsync(conferenceName, cancellationToken);
 
-        if (document.RootElement.TryGetProperty("data", out var data) &&
-            data.ValueKind == System.Text.Json.JsonValueKind.Array &&
-            data.GetArrayLength() > 0 &&
-            data[0].TryGetProperty("id", out var idElement))
-        {
-            return idElement.GetString();
-        }
-
-        return null;
+        return existing.Succeeded ? existing.ConferenceId : null;
     }
 
-    private static async Task<string> ReadConferenceIdAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var document = await System.Text.Json.JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-        if (document.RootElement.TryGetProperty("data", out var data) &&
-            data.ValueKind == System.Text.Json.JsonValueKind.Object &&
-            data.TryGetProperty("id", out var idElement))
-        {
-            return idElement.GetString();
-        }
-
-        return null;
-    }
 
     private async Task DialDestinationAsync(string agentLegCallControlId, TelnyxOutboundBridgeState agentState, CancellationToken cancellationToken)
     {
@@ -529,16 +485,23 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
 
         try
         {
-            using var client = CreateClient();
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync("calls", content, cancellationToken);
+            var originate = new TelnyxOriginateRequest();
 
-            if (!response.IsSuccessStatusCode)
+            // The body was already assembled above in the provider's own shape, so it is carried straight
+            // through rather than unpacked into named fields and packed again.
+            foreach (var field in body)
+            {
+                originate.AdditionalFields[field.Key] = field.Value;
+            }
+
+            var result = await _apiClient.OriginateAsync(originate, cancellationToken);
+
+            if (!result.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected the destination leg of an outbound bridge with status code {StatusCode}. Response: {Response}",
-                    response.StatusCode,
-                    (await SafeReadContentAsync(response, cancellationToken)).SanitizeLogValue());
+                    result.StatusCode,
+                    result.ErrorBody.SanitizeLogValue());
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -564,14 +527,12 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
 
         try
         {
-            using var client = CreateClient();
-
             // Form the conference from the destination (callee) leg, then join the caller's (agent) leg with
             // end_conference_on_exit so that when the caller hangs up, Telnyx ends the conference and drops the
             // callee too. (A conference, unlike a raw bridge, otherwise leaves the remaining participant connected
             // when the other hangs up.) The reverse direction -- the callee hanging up first -- is handled by the
             // destination-leg hangup path, which hangs up the caller's leg.
-            var conferenceId = await EnsureConferenceAsync(client, conferenceName, destinationLegCallControlId, cancellationToken);
+            var conferenceId = await EnsureConferenceAsync(conferenceName, destinationLegCallControlId, cancellationToken);
 
             if (string.IsNullOrWhiteSpace(conferenceId))
             {
@@ -582,26 +543,20 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
                 return;
             }
 
-            using var joinContent = JsonContent.Create(
-                new Dictionary<string, object>
-                {
-                    ["call_control_id"] = agentLegCallControlId,
-                    ["end_conference_on_exit"] = true,
-                    ["command_id"] = $"ext-join-{agentLegCallControlId}",
-                },
-                options: TelnyxJsonSerializerOptions.Default);
-            using var joinResponse = await client.PostAsync(
-                $"conferences/{Uri.EscapeDataString(conferenceId)}/actions/join",
-                joinContent,
+            var joinResult = await _apiClient.JoinConferenceAsync(
+                conferenceId,
+                agentLegCallControlId,
+                endConferenceOnExit: true,
+                commandId: $"ext-join-{agentLegCallControlId}",
                 cancellationToken);
 
-            if (!joinResponse.IsSuccessStatusCode)
+            if (!joinResult.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected joining the caller leg to conference '{ConferenceName}' with status code {StatusCode}. Response: {Response}",
                     conferenceName.SanitizeLogValue(),
-                    joinResponse.StatusCode,
-                    (await SafeReadContentAsync(joinResponse, cancellationToken)).SanitizeLogValue());
+                    joinResult.StatusCode,
+                    joinResult.ErrorBody.SanitizeLogValue());
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -623,14 +578,9 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
 
         try
         {
-            using var client = CreateClient();
-            using var response = await client.PostAsync(
-                $"calls/{Uri.EscapeDataString(callControlId)}/actions/hangup",
-                content: null,
-                cancellationToken);
-
-            // A leg that has already ended returns an error; that is expected (for example the caller hung up
-            // first, which ended the conference and this leg), so it is not logged as a failure.
+            // A leg that has already ended fails here; that is expected (for example the caller hung up first,
+            // which ended the conference and this leg), so the result is deliberately not inspected.
+            await _apiClient.HangupAsync(callControlId, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -652,19 +602,14 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
 
         try
         {
-            using var client = CreateClient();
-            using var content = JsonContent.Create(body, options: TelnyxJsonSerializerOptions.Default);
-            using var response = await client.PostAsync(
-                $"calls/{Uri.EscapeDataString(destinationLegCallControlId)}/actions/bridge",
-                content,
-                cancellationToken);
+            var result = await _apiClient.PostCallActionAsync(destinationLegCallControlId, "bridge", body, cancellationToken);
 
-            if (!response.IsSuccessStatusCode)
+            if (!result.Succeeded)
             {
                 _logger.LogError(
                     "Telnyx rejected the bridge of an outbound soft-phone call with status code {StatusCode}. Response: {Response}",
-                    response.StatusCode,
-                    (await SafeReadContentAsync(response, cancellationToken)).SanitizeLogValue());
+                    result.StatusCode,
+                    result.ErrorBody.SanitizeLogValue());
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -674,31 +619,6 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while bridging an outbound Telnyx soft-phone call.");
-        }
-    }
-
-    private HttpClient CreateClient()
-    {
-        var client = _httpClientFactory.CreateClient(TelnyxConstants.ProviderTechnicalName);
-        client.BaseAddress = new Uri(_options.ApiBaseUrl);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _options.ApiKey);
-
-        return client;
-    }
-
-    private static async Task<string> SafeReadContentAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await response.Content.ReadAsStringAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-            return string.Empty;
         }
     }
 }

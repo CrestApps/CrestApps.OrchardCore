@@ -1,12 +1,13 @@
-using CrestApps.OrchardCore.Sms.Workspace.Core.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services;
-using CrestApps.OrchardCore.Sms.Workspace.Core.Services.Routing;
-using CrestApps.OrchardCore.Sms.Workspace.Models;
-using CrestApps.OrchardCore.Sms.Workspace.Notifications;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Modules;
 
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 
 public class SmsRoutedReassignmentServiceTests
@@ -144,9 +145,13 @@ public class SmsRoutedReassignmentServiceTests
             var clock = new Mock<IClock>();
             clock.SetupGet(c => c.UtcNow).Returns(now);
 
+            var router = new SmsConversationRouter(
+                [new ReassignmentRouter(Strategy.Object, clock.Object)],
+                NullLogger<SmsConversationRouter>.Instance);
+
             Service = new SmsRoutedReassignmentService(
                 Store.Object,
-                Strategy.Object,
+                router,
                 Notifier.Object,
                 clock.Object,
                 Microsoft.Extensions.Options.Options.Create(new SmsRoutedDistributionOptions()),

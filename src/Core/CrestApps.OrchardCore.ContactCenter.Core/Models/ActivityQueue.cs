@@ -110,4 +110,51 @@ public sealed class ActivityQueue : CatalogItem, INameAwareModel, IModifiedUtcAw
     /// Gets or sets the UTC time the queue was last modified.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many seconds a contact may wait for a first reply on this queue before the thread is
+    /// treated as breached. Zero means the queue has not opted into a first-response target, and inventing one
+    /// would fill the supervisor view with breaches nobody agreed to.
+    /// </summary>
+    public int FirstResponseTargetSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets what this queue needs from the agent who takes its work: how much of each skill, whether it
+    /// is required or merely preferred, and how long a contact waits before the requirement is dropped. The bare
+    /// <see cref="RequiredSkills"/> tag list is kept and read as a hard requirement at the default proficiency
+    /// for any skill not described here.
+    /// </summary>
+    public IList<QueueSkillRequirement> SkillRequirements { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the ordered overflow chain: where a waiting caller widens to, and after how long. It
+    /// supersedes the single <see cref="OverflowQueueId"/> hop, which is still honoured for queues configured
+    /// before chains existed.
+    /// </summary>
+    public IList<QueueOverflowTarget> OverflowTargets { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how long this queue is willing to make anybody wait. Zero means no limit.
+    /// </summary>
+    public int MaxWaitSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets what happens to a caller who reaches <see cref="MaxWaitSeconds"/>.
+    /// </summary>
+    public QueueMaxWaitAction MaxWaitAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many callers may wait at once. Zero means no limit.
+    /// </summary>
+    public int MaxQueueSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets what happens to a caller who arrives at a full queue.
+    /// </summary>
+    public QueueMaxWaitAction QueueFullAction { get; set; }
+
+    /// <summary>
+    /// Gets or sets what callers hear while they wait.
+    /// </summary>
+    public QueueTreatmentSettings Treatment { get; set; } = new();
 }

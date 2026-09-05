@@ -104,8 +104,8 @@ public sealed class BusinessHoursServiceTests
         var service = CreateService(calendar: null);
 
         // An empty calendar id short-circuits before any lookup: unrestricted (null), which surfaces as "open".
-        Assert.Null(await service.EvaluateAsync(string.Empty, At(Monday, 12, 0), timeZoneId: null));
-        Assert.True(await service.IsOpenAsync(string.Empty, At(Monday, 12, 0), timeZoneId: null));
+        Assert.Null(await service.EvaluateAsync(string.Empty, At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
+        Assert.True(await service.IsOpenAsync(string.Empty, At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -113,8 +113,8 @@ public sealed class BusinessHoursServiceTests
     {
         var service = CreateService(calendar: null);
 
-        Assert.Null(await service.EvaluateAsync("missing", At(Monday, 12, 0), timeZoneId: null));
-        Assert.True(await service.IsOpenAsync("missing", At(Monday, 12, 0), timeZoneId: null));
+        Assert.Null(await service.EvaluateAsync("missing", At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
+        Assert.True(await service.IsOpenAsync("missing", At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -125,8 +125,8 @@ public sealed class BusinessHoursServiceTests
 
         var service = CreateService(calendar);
 
-        Assert.Null(await service.EvaluateAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null));
-        Assert.True(await service.IsOpenAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null));
+        Assert.Null(await service.EvaluateAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
+        Assert.True(await service.IsOpenAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -138,8 +138,8 @@ public sealed class BusinessHoursServiceTests
 
         var service = CreateService(calendar);
 
-        Assert.False(await service.EvaluateAsync("calendar-1", At(Monday, 22, 0), timeZoneId: null));
-        Assert.False(await service.IsOpenAsync("calendar-1", At(Monday, 22, 0), timeZoneId: null));
+        Assert.False(await service.EvaluateAsync("calendar-1", At(Monday, 22, 0), timeZoneId: null, TestContext.Current.CancellationToken));
+        Assert.False(await service.IsOpenAsync("calendar-1", At(Monday, 22, 0), timeZoneId: null, TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -149,8 +149,8 @@ public sealed class BusinessHoursServiceTests
 
         var service = CreateService(calendar);
 
-        Assert.True(await service.EvaluateAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null));
-        Assert.True(await service.IsOpenAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null));
+        Assert.True(await service.EvaluateAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
+        Assert.True(await service.IsOpenAsync("calendar-1", At(Monday, 12, 0), timeZoneId: null, TestContext.Current.CancellationToken));
     }
 
     // --- Helpers ----------------------------------------------------------------------------------------------------

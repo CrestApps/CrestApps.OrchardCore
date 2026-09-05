@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OrchardCore.Locking.Distributed;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -18,7 +20,10 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     private readonly IQueueItemManager _queueItemManager;
     private readonly IQueueItemStore _queueItemStore;
     private readonly IInteractionManager _interactionManager;
-    private readonly IDialerProfileManager _dialerProfileManager;
+    private readonly IDialerProfileReader _dialerProfileReader;
+    private readonly IAgentWorkSelector _workSelector;
+    private readonly IDistributedLock _distributedLock;
+    private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ISession _session;
     private readonly ILogger _logger;
 
@@ -26,36 +31,44 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     /// Initializes a new instance of the <see cref="QueuedVoiceWorkOfferService"/> class.
     /// </summary>
     /// <param name="agentManager">The agent profile manager.</param>
-    /// <param name="agentWorkStateHealingServices">The optional agent state healers.</param>
+    /// <param name="agentWorkStateHealingService">The agent work-state healer.</param>
     /// <param name="inboundVoiceService">The inbound voice service.</param>
     /// <param name="queueItemManager">The queue item manager used to find held direct-to-agent calls.</param>
     /// <param name="queueItemStore">The queue item store used to peek a campaign queue's head item.</param>
     /// <param name="interactionManager">The interaction manager used to resolve a held call's direct target.</param>
-    /// <param name="dialerProfileManagers">
-    /// The optional dialer profile managers, present only when the Outbound Dialer feature is enabled. Used to
-    /// classify a campaign queue's dialing mode so automated (paced) outbound work is left to the pacing engine
-    /// instead of being offered here.
+    /// <param name="dialerProfileReader">
+    /// The dialer profile reader. It is used to classify a campaign queue's dialing mode so automated (paced)
+    /// outbound work is left to the pacing engine instead of being offered here; without the Outbound Dialer
+    /// feature it finds no profile, and the queue is offered normally.
     /// </param>
+    /// <param name="distributedLock">The distributed lock used to debounce repeated sync requests for one agent.</param>
+    /// <param name="coordinationOptions">The coordination options carrying the sync lease.</param>
     /// <param name="session">The YesSql session used to persist availability before querying routing indexes.</param>
     /// <param name="logger">The logger.</param>
     public QueuedVoiceWorkOfferService(
         IAgentProfileManager agentManager,
-        IEnumerable<IAgentWorkStateHealingService> agentWorkStateHealingServices,
+        IAgentWorkStateHealingService agentWorkStateHealingService,
         IInboundVoiceService inboundVoiceService,
         IQueueItemManager queueItemManager,
         IQueueItemStore queueItemStore,
         IInteractionManager interactionManager,
-        IEnumerable<IDialerProfileManager> dialerProfileManagers,
+        IDialerProfileReader dialerProfileReader,
+        IAgentWorkSelector workSelector,
+        IDistributedLock distributedLock,
+        IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ISession session,
         ILogger<QueuedVoiceWorkOfferService> logger)
     {
         _agentManager = agentManager;
-        _agentWorkStateHealingService = agentWorkStateHealingServices.FirstOrDefault();
+        _agentWorkStateHealingService = agentWorkStateHealingService;
         _inboundVoiceService = inboundVoiceService;
         _queueItemManager = queueItemManager;
         _queueItemStore = queueItemStore;
         _interactionManager = interactionManager;
-        _dialerProfileManager = dialerProfileManagers.FirstOrDefault();
+        _dialerProfileReader = dialerProfileReader;
+        _workSelector = workSelector;
+        _distributedLock = distributedLock;
+        _coordinationOptions = coordinationOptions.Value;
         _session = session;
         _logger = logger;
     }
@@ -82,6 +95,33 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
 
     private async Task<int> OfferForProfileAsync(AgentProfile agent, CancellationToken cancellationToken)
     {
+        // The client asks for its queued work on connect, on reconnect, on every presence change and when an
+        // offer completes, and several of those can land together. A short lease per agent collapses that burst
+        // into one scan: a caller that cannot take the lease returns immediately, because another sync for the
+        // same agent is either in flight or has just finished and its answer is still current.
+        if (agent is not null)
+        {
+            var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
+                $"ContactCenterQueuedWorkSync:{agent.ItemId}",
+                TimeSpan.Zero,
+                _coordinationOptions.QueuedWorkSyncLease);
+
+            if (!locked)
+            {
+                return 0;
+            }
+
+            await using (locker)
+            {
+                return await OfferForProfileCoreAsync(agent, cancellationToken);
+            }
+        }
+
+        return await OfferForProfileCoreAsync(agent, cancellationToken);
+    }
+
+    private async Task<int> OfferForProfileCoreAsync(AgentProfile agent, CancellationToken cancellationToken)
+    {
         // Queue membership is not required: a direct-to-agent (personal line) agent may belong to no queue yet
         // still have a call held for them. Only presence gates whether any waiting work can be offered.
         if (agent is null ||
@@ -98,11 +138,8 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             return 0;
         }
 
-        if (_agentWorkStateHealingService is not null)
-        {
-            await _agentWorkStateHealingService.HealForAvailabilityAsync(agent.ItemId, cancellationToken);
-            agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
-        }
+        await _agentWorkStateHealingService.HealForAvailabilityAsync(agent.ItemId, cancellationToken);
+        agent = await _agentManager.FindByIdAsync(agent.ItemId, cancellationToken) ?? agent;
 
         if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId))
         {
@@ -129,10 +166,22 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
 
         var offered = 0;
 
-        foreach (var queueId in agent.QueueIds
-            .Where(queueId => !string.IsNullOrWhiteSpace(queueId))
-            .Distinct(StringComparer.OrdinalIgnoreCase))
+        // The selector picks the queue holding the contact who most deserves to be answered across everything
+        // this agent serves. Walking the agent's stored list in order meant a caller waiting twenty minutes on
+        // the second queue sat behind one who had just arrived on the first.
+        //
+        // The loop re-selects after each offer because an agent may still be available (an offer can be declined
+        // or find nobody), and the next-best queue may have changed. It ends as soon as the agent is reserved,
+        // stops being available, or no queue has eligible work.
+        while (true)
         {
+            var queueId = await _workSelector.SelectNextForAgentAsync(agent, cancellationToken);
+
+            if (string.IsNullOrEmpty(queueId))
+            {
+                break;
+            }
+
             // Outbound campaign work dialed by an automated (paced) mode - Power, Progressive, or Predictive -
             // is placed by the dialer pacing engine, which reserves the agent itself. Offering it here would
             // reserve the head item and immediately reject it (it has no interaction yet and is not a preview
@@ -140,7 +189,9 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             // and starve the pacing engine that actually places the call. Leave those queues to the pacing engine.
             if (await IsAutomatedPacedCampaignQueueAsync(queueId, cancellationToken))
             {
-                continue;
+                // Selecting again would return the same queue forever, so this agent takes nothing from it and
+                // the pass ends rather than spinning.
+                break;
             }
 
             var agentUserId = await _inboundVoiceService.OfferNextAsync(queueId, cancellationToken);
@@ -167,6 +218,13 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             {
                 break;
             }
+
+            // Nothing was offered and the agent is still free, so the queue the selector chose had nothing this
+            // agent could take. Selecting again would choose it again.
+            if (string.IsNullOrWhiteSpace(agentUserId))
+            {
+                break;
+            }
         }
 
         return offered;
@@ -174,12 +232,11 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
 
     // Determines whether a queue is an outbound campaign queue whose head waiting item is dialed by an automated
     // (paced) mode. Only campaign queues can carry automated dialing, so an inbound queue short-circuits without a
-    // lookup. The dialer profile manager is absent when the Outbound Dialer feature is disabled, in which case no
-    // automated pacing exists and the queue is offered normally.
+    // lookup. Without the Outbound Dialer feature the reader finds no profile, so no automated pacing exists and
+    // the queue is offered normally.
     private async Task<bool> IsAutomatedPacedCampaignQueueAsync(string queueId, CancellationToken cancellationToken)
     {
-        if (_dialerProfileManager is null ||
-            !ContactCenterConstants.IsCampaignQueue(queueId))
+        if (!ContactCenterConstants.IsCampaignQueue(queueId))
         {
             return false;
         }
@@ -191,7 +248,7 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             return false;
         }
 
-        var profile = await _dialerProfileManager.FindByIdAsync(headItem.DialerProfileId, cancellationToken);
+        var profile = await _dialerProfileReader.FindByIdAsync(headItem.DialerProfileId, cancellationToken);
 
         return profile is not null && profile.Mode.IsAutomated();
     }

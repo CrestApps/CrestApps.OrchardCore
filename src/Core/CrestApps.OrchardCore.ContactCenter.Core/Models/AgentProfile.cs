@@ -90,9 +90,36 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public DateTime? LastAssignedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the agent last became idle: available with no work in hand. It is set when
+    /// presence becomes Available with no live reservation, and again when work completes while still Available;
+    /// it is cleared when a reservation is accepted.
+    /// </summary>
+    /// <remarks>
+    /// Longest-idle routing used <see cref="PresenceChangedUtc"/>, which moves on every presence transition
+    /// including going Busy and back. An agent who has just finished a call therefore looked like the longest
+    /// idle one, so the same agent kept being chosen while a genuinely idle colleague waited.
+    /// </remarks>
+    public DateTime? IdleSinceUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the agent last finished a piece of work, which is what round-robin fairness is
+    /// really about: the agent who least recently finished something is next, regardless of how long an
+    /// assignment they never accepted sat with them.
+    /// </summary>
+    public DateTime? LastWorkCompletedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the queues the agent is signed in to and can receive work from.
     /// </summary>
     public IList<string> QueueIds { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets how this agent serves each of their queues: which comes first, and how long an item must
+    /// have waited before this agent is offered it. The bare <see cref="QueueIds"/> list is kept as the record
+    /// of what the agent is signed into, and a queue with no membership here is served at priority zero with no
+    /// delay, which is exactly how every agent behaved before this existed.
+    /// </summary>
+    public IList<AgentQueueMembership> QueueMemberships { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the dialer campaigns the agent is signed in to.
@@ -132,4 +159,11 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     /// Gets or sets the UTC time the agent profile was last modified.
     /// </summary>
     public DateTime? ModifiedUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets how well this agent holds each of their skills. The bare <see cref="Skills"/> tag list is
+    /// kept and read as competence at <see cref="AgentSkill.DefaultProficiency"/> for any skill not recorded
+    /// here, so an agent tagged before proficiencies existed still matches the queues they always matched.
+    /// </summary>
+    public IList<AgentSkill> SkillProficiencies { get; set; } = [];
 }

@@ -244,7 +244,7 @@ resolver is silently ignored. Either it is a single service (register one) or a 
 ## Workstream B — AI-to-agent handoff
 
 The shared contract is `IOmnichannelHandoffService` with `VoiceAgentHandoffService` (Contact Center) and
-`SmsAgentHandoffService` (SMS Workspace); the AI signals a handoff through `TransferToAgentTool`, which writes into
+`SmsAgentHandoffService` (SMS Portal); the AI signals a handoff through `TransferToAgentTool`, which writes into
 the static `OmnichannelHandoffTurnContext` (`AsyncLocal`), read by the SMS and voice conversation handlers after the
 completion.
 

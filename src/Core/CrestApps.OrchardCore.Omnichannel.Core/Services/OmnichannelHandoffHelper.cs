@@ -4,8 +4,8 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 /// <summary>
-/// Pure helpers for AI-to-agent handoff: the name of the <c>transfer_to_agent</c> tool the model invokes to
-/// escalate, and the system-prompt guidance that tells the model when to escalate. Kept free of I/O so both the
+/// Pure helpers for AI-to-agent handoff: the name of the tool the model invokes to escalate, and the
+/// system-prompt guidance that tells the model when to escalate. Kept free of I/O so both the
 /// SMS and voice automated conversation handlers share one contract and it is fully unit-testable.
 /// </summary>
 public static class OmnichannelHandoffHelper
@@ -29,7 +29,7 @@ public static class OmnichannelHandoffHelper
 
     /// <summary>
     /// Builds the system-prompt guidance that instructs the model when to escalate to a live agent by calling the
-    /// <c>transfer_to_agent</c> tool, honoring the flow's trigger policy. Returns <see langword="null"/> when
+    /// <see cref="TransferToAgentToolName"/> tool, honoring the flow's trigger policy. Returns <see langword="null"/> when
     /// handoff is not eligible or no trigger is enabled, so the caller can append it unconditionally.
     /// </summary>
     /// <param name="flowSettings">The subject flow settings.</param>
@@ -78,7 +78,7 @@ public static class OmnichannelHandoffHelper
 
         builder.AppendLine();
         builder.AppendLine(
-            "To hand off, call the transfer_to_agent tool with a short reason. After calling it, reply with one warm " +
+            $"To hand off, call the {TransferToAgentToolName} tool with a short reason. After calling it, reply with one warm " +
             "message telling the customer you are connecting them with a specialist who will continue the conversation; " +
             "do not promise a specific time. Only hand off when one of the conditions above is genuinely met.");
 

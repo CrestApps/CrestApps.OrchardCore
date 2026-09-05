@@ -96,7 +96,7 @@
             <input asp-for="EnableAgentHandoff" class="form-check-input" type="checkbox" />
             <label asp-for="EnableAgentHandoff" class="form-check-label">@T["Allow the AI to hand off to a live agent"]</label>
         </div>
-        <span class="hint dashed">@T["When enabled, the AI can escalate the conversation to a human. SMS threads move into the SMS Workspace inbox owned by the queue below; phone calls are placed into the queue and offered to an agent. Applies to inbound and outbound automated conversations for this subject."]</span>
+        <span class="hint dashed">@T["When enabled, the AI can escalate the conversation to a human. SMS threads move into the SMS Portal inbox owned by the queue below; phone calls are placed into the queue and offered to an agent. Applies to inbound and outbound automated conversations for this subject."]</span>
         <div class="mt-3">
             <label asp-for="HandoffQueueId" class="form-label">@T["Handoff queue"]</label>
             @if (Model.HasHandoffQueuePicker)

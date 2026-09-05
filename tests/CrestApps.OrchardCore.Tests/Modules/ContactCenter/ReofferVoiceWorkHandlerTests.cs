@@ -16,10 +16,7 @@ public sealed class ReofferVoiceWorkHandlerTests
     {
         // Arrange
         var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var services = new ServiceCollection()
-            .AddSingleton(inboundVoiceService.Object)
-            .BuildServiceProvider();
-        var handler = new ReofferVoiceWorkHandler(services);
+        var handler = new ReofferVoiceWorkHandler(new Lazy<IInboundVoiceService>(inboundVoiceService.Object));
         var interactionEvent = new InteractionEvent
         {
             EventType = eventType,
@@ -44,10 +41,7 @@ public sealed class ReofferVoiceWorkHandlerTests
     {
         // Arrange
         var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var services = new ServiceCollection()
-            .AddSingleton(inboundVoiceService.Object)
-            .BuildServiceProvider();
-        var handler = new ReofferVoiceWorkHandler(services);
+        var handler = new ReofferVoiceWorkHandler(new Lazy<IInboundVoiceService>(inboundVoiceService.Object));
 
         // Act
         await handler.HandleAsync(

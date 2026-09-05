@@ -18,7 +18,8 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
             .Column<string>("ServiceAddress", column => column.WithLength(255))
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<bool>("IsInbound", column => column.NotNull().WithDefault(false))
-            .Column<string>("ConversationId", column => column.WithLength(26)),
+            .Column<string>("ConversationId", column => column.WithLength(26))
+            .Column<string>("ProviderMessageId", column => column.WithLength(128)),
             collection: OmnichannelConstants.CollectionName
         );
 
@@ -40,13 +41,16 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
                 collection: OmnichannelConstants.CollectionName
         );
 
-        return 2;
+        await CreateProviderMessageIdIndexAsync();
+
+        return 3;
     }
 
     /// <summary>
     /// Adds the <c>ConversationId</c> column and its index so the SMS portal can load a thread's message
     /// bubbles by conversation.
     /// </summary>
+    /// <returns>The migration version number.</returns>
     public async Task<int> UpdateFrom1Async()
     {
         await SchemaBuilder.AlterIndexTableAsync<OmnichannelMessageIndex>(table => table
@@ -63,5 +67,34 @@ internal sealed class OmnichannelMessageIndexMigrations : DataMigration
         );
 
         return 2;
+    }
+
+    /// <summary>
+    /// Adds the <c>ProviderMessageId</c> column and its index, so a delivery receipt matches the message it
+    /// belongs to in one indexed seek instead of scanning a thread's outbound history, and a redelivered
+    /// provider message is recognised as one already stored.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom2Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelMessageIndex>(table => table
+            .AddColumn<string>("ProviderMessageId", column => column.WithLength(128)),
+            collection: OmnichannelConstants.CollectionName
+        );
+
+        await CreateProviderMessageIdIndexAsync();
+
+        return 3;
+    }
+
+    private Task CreateProviderMessageIdIndexAsync()
+    {
+        return SchemaBuilder.AlterIndexTableAsync<OmnichannelMessageIndex>(table => table
+            .CreateIndex("IDX_OmnichannelMessageIndex_Provider",
+                "DocumentId",
+                "Channel",
+                "ProviderMessageId"),
+                collection: OmnichannelConstants.CollectionName
+        );
     }
 }
