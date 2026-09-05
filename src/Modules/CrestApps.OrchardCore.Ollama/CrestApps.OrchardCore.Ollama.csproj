@@ -31,12 +31,23 @@
 
   <ItemGroup>
     <PackageReference Include="CrestApps.Core.AI.Ollama" />
+    <PackageReference Include="OllamaSharp" ExcludeAssets="analyzers" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 
+    <Analyzer Remove="$(NuGetPackageRoot)ollamasharp/**/OllamaSharp.SourceGenerators.dll" />
+  </ItemGroup>
+
+  <Target Name="RemoveOllamaSharpSourceGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'OllamaSharp.SourceGenerators'" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <!--
       Ensure this module directly depends on the required package so that when someone installs it, 
       they won't need to manually include the AI. 
       This guarantees the module functions correctly and resolves the feature dependency.
