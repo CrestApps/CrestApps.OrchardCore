@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
 using OrchardCore.DisplayManagement.Handlers;
@@ -33,6 +34,9 @@ public sealed class ChatInteractionModelParametersDisplayDriver : DisplayDriver<
             model.Parameters = built.Parameters;
             model.CapabilitiesJson = built.CapabilitiesJson;
             model.FeaturesJson = built.FeaturesJson;
+            // The interaction persists via the SignalR settings hub, so expose the inputs as namespaced
+            // setting-inputs the hub collects and ApplyCoreSettingsAsync stores on AIDeploymentParametersMetadata.
+            model.SettingKeyPrefix = ChatInteractionModelParameterSettingKeys.ChatDeployment;
         }).Location("Parameters:3.5#Settings;1");
     }
 

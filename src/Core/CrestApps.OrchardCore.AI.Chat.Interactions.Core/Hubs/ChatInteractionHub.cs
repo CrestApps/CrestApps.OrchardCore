@@ -1,10 +1,13 @@
+using System.Text.Json;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat.Hubs;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.ResponseHandling;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
@@ -195,4 +198,68 @@ public class ChatInteractionHub : ChatInteractionHubBase
         };
     }
 
+    protected override async Task ApplyCoreSettingsAsync(IServiceProvider services, ChatInteraction interaction, JsonElement settings)
+    {
+        await base.ApplyCoreSettingsAsync(services, interaction, settings);
+
+        // The chat interaction saves its editor through this hub (there is no form POST), so the
+        // metadata-driven model parameters are collected as namespaced "setting-input" values and persisted
+        // here: chat parameters onto AIDeploymentParametersMetadata, utility parameters onto
+        // UtilityDeploymentParametersMetadata.
+        var chatValues = ExtractModelParameters(settings, ChatInteractionModelParameterSettingKeys.ChatDeployment);
+        var utilityValues = ExtractModelParameters(settings, ChatInteractionModelParameterSettingKeys.UtilityDeployment);
+
+        interaction.Put(new AIDeploymentParametersMetadata
+        {
+            Values = chatValues,
+        });
+
+        interaction.Put(new UtilityDeploymentParametersMetadata
+        {
+            Values = utilityValues,
+        });
+    }
+
+    private static Dictionary<string, string> ExtractModelParameters(JsonElement settings, string prefix)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        if (settings.ValueKind != JsonValueKind.Object)
+        {
+            return values;
+        }
+
+        var keyPrefix = prefix + ":";
+
+        foreach (var property in settings.EnumerateObject())
+        {
+            if (!property.Name.StartsWith(keyPrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var name = property.Name[keyPrefix.Length..];
+
+            if (string.IsNullOrEmpty(name))
+            {
+                continue;
+            }
+
+            var value = property.Value.ValueKind switch
+            {
+                JsonValueKind.String => property.Value.GetString(),
+                JsonValueKind.Number => property.Value.GetRawText(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                _ => null,
+            };
+
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                values[name] = value.Trim();
+            }
+        }
+
+        return values;
+    }
 }

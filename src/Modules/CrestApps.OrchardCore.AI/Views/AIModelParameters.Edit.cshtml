@@ -20,12 +20,17 @@
             var fieldName = string.IsNullOrEmpty(bindingRoot)
                 ? $"Values[{parameter.Name}]"
                 : $"{bindingRoot}.Values[{parameter.Name}]";
+            // On the chat interaction the settings are collected by the SignalR settings hub, not a form POST,
+            // so tag each input as a namespaced "setting-input" the hub can pick up. Null on POST surfaces.
+            var settingKey = string.IsNullOrEmpty(Model.SettingKeyPrefix) ? null : $"{Model.SettingKeyPrefix}:{parameter.Name}";
+            var selectClass = settingKey is null ? "form-select" : "form-select setting-input";
+            var inputClass = settingKey is null ? "form-control" : "form-control setting-input";
             <div class="mb-3 d-none" data-model-parameter="@parameter.Name" id="@(fieldId)-wrapper">
                 <label class="form-label" for="@fieldId">@parameter.DisplayName</label>
                 @switch (parameter.Kind)
                 {
                     case AIDeploymentParameterKind.Choice:
-                        <select class="form-select" id="@fieldId" name="@fieldName" disabled>
+                        <select class="@selectClass" id="@fieldId" name="@fieldName" data-setting="@settingKey" disabled>
                             <option value="" data-default-option>@T["Use deployment default"]</option>
                             @foreach (var option in parameter.AllowedValues)
                             {
@@ -34,7 +39,7 @@
                         </select>
                         break;
                     case AIDeploymentParameterKind.Boolean:
-                        <select class="form-select" id="@fieldId" name="@fieldName" disabled>
+                        <select class="@selectClass" id="@fieldId" name="@fieldName" data-setting="@settingKey" disabled>
                             <option value="" data-default-option>@T["Use deployment default"]</option>
                             <option value="true" selected="@(string.Equals(parameter.Value, "true", StringComparison.OrdinalIgnoreCase))">@T["Enabled"]</option>
                             <option value="false" selected="@(string.Equals(parameter.Value, "false", StringComparison.OrdinalIgnoreCase))">@T["Disabled"]</option>
@@ -42,12 +47,12 @@
                         break;
                     case AIDeploymentParameterKind.Number:
                     case AIDeploymentParameterKind.Integer:
-                        <input type="number" class="form-control" id="@fieldId" name="@fieldName"
+                        <input type="number" class="@inputClass" id="@fieldId" name="@fieldName" data-setting="@settingKey"
                                value="@parameter.Value" placeholder="@T["Use deployment default"]"
                                step="@(parameter.Kind == AIDeploymentParameterKind.Integer ? "1" : "any")" disabled />
                         break;
                     default:
-                        <input type="text" class="form-control" id="@fieldId" name="@fieldName"
+                        <input type="text" class="@inputClass" id="@fieldId" name="@fieldName" data-setting="@settingKey"
                                value="@parameter.Value" placeholder="@T["Use deployment default"]" disabled />
                         break;
                 }

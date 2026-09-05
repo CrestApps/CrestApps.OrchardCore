@@ -39,6 +39,15 @@ public class ModelParameterEditorViewModel
     public string BindingPrefix { get; set; }
 
     /// <summary>
+    /// Gets or sets an optional key prefix that turns each parameter input into a chat-interaction
+    /// "setting-input" collected by the SignalR settings hub. Each input is tagged
+    /// <c>data-setting="&lt;prefix&gt;:&lt;name&gt;"</c>. Left null on surfaces that persist through a form POST
+    /// (AI profile and profile template), which do not use the settings hub.
+    /// </summary>
+    [BindNever]
+    public string SettingKeyPrefix { get; set; }
+
+    /// <summary>
     /// Gets or sets every registered model parameter along with the value currently selected.
     /// </summary>
     [BindNever]
