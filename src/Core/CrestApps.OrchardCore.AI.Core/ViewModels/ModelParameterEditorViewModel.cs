@@ -31,6 +31,14 @@ public class ModelParameterEditorViewModel
     public string ElementPrefix { get; set; } = "modelParameters";
 
     /// <summary>
+    /// Gets or sets an optional binding sub-prefix inserted before <c>Values</c> in the posted field names so
+    /// two editors can render on the same entity without their values colliding (for example the chat and the
+    /// utility deployment parameter editors). Empty binds directly under the entity prefix.
+    /// </summary>
+    [BindNever]
+    public string BindingPrefix { get; set; }
+
+    /// <summary>
     /// Gets or sets every registered model parameter along with the value currently selected.
     /// </summary>
     [BindNever]

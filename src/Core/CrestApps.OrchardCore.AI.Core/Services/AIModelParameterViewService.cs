@@ -33,12 +33,14 @@ public sealed class AIModelParameterViewService
     public async Task<ModelParameterEditorViewModel> BuildAsync(
         IReadOnlyDictionary<string, string> values,
         string deploymentFieldName = "ChatDeploymentName",
-        string elementPrefix = "modelParameters")
+        string elementPrefix = "modelParameters",
+        string bindingPrefix = null)
     {
         var model = new ModelParameterEditorViewModel
         {
             DeploymentFieldName = deploymentFieldName,
             ElementPrefix = elementPrefix,
+            BindingPrefix = bindingPrefix,
         };
 
         foreach (var descriptor in _capabilityService.GetRegisteredParameters())

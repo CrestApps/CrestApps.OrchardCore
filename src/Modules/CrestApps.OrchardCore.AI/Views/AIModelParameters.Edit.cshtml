@@ -4,13 +4,22 @@
 
 @if (Model is not null && Model.HasParameters)
 {
+    // Build the posted field name as "<entityPrefix>[.<bindingPrefix>].Values[<name>]". The optional
+    // binding sub-prefix keeps two editors on the same entity (chat vs utility parameters) from colliding
+    // on the shared "Values" field.
+    var htmlFieldPrefix = ViewData.TemplateInfo.HtmlFieldPrefix;
+    var bindingRoot = string.Join('.', new[] { htmlFieldPrefix, Model.BindingPrefix }
+        .Where(part => !string.IsNullOrEmpty(part)));
+
     <div class="model-parameters" id="@(Model.ElementPrefix)-container"
          data-deployment-field="@Model.DeploymentFieldName"
          data-capabilities="@Model.CapabilitiesJson">
         @foreach (var parameter in Model.Parameters)
         {
             var fieldId = $"{Model.ElementPrefix}-{parameter.ElementId}";
-            var fieldName = Html.NameFor(m => m.Values[parameter.Name]).ToString();
+            var fieldName = string.IsNullOrEmpty(bindingRoot)
+                ? $"Values[{parameter.Name}]"
+                : $"{bindingRoot}.Values[{parameter.Name}]";
             <div class="mb-3 d-none" data-model-parameter="@parameter.Name" id="@(fieldId)-wrapper">
                 <label class="form-label" for="@fieldId">@parameter.DisplayName</label>
                 @switch (parameter.Kind)

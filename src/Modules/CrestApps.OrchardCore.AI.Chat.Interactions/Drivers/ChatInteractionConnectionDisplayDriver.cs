@@ -43,7 +43,10 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
     {
-        var connectionResult = Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionConnection_Edit", async model =>
+        // The chat and utility deployment selectors are rendered as separate shapes so the metadata-driven
+        // model parameter editors (for example reasoning effort) can be injected immediately after each of
+        // their corresponding model selections.
+        async ValueTask PopulateAsync(EditChatInteractionConnectionViewModel model)
         {
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
             var chatDeployments = (await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat)).ToList();
@@ -61,9 +64,13 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
-        }).Location("Parameters:3#Settings;1");
+        }
 
-        return connectionResult;
+        return Combine(
+            Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionChatConnection_Edit", PopulateAsync)
+                .Location("Parameters:3#Settings;1"),
+            Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionUtilityConnection_Edit", PopulateAsync)
+                .Location("Parameters:3.7#Settings;1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

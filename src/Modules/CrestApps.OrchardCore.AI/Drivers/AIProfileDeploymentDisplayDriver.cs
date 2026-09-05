@@ -35,7 +35,9 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
-        return Initialize<EditProfileDeploymentViewModel>("AIProfileDeployment_Edit", async model =>
+        // Render the chat and utility deployment selectors as separate shapes so the metadata-driven model
+        // parameter editors (for example reasoning effort) can be injected immediately after each selection.
+        async ValueTask PopulateAsync(EditProfileDeploymentViewModel model)
         {
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
             model.ChatDeploymentName = profile.ChatDeploymentName;
@@ -48,7 +50,13 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
                 await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
-        }).Location("Content:1%Deployments;2");
+        }
+
+        return Combine(
+            Initialize<EditProfileDeploymentViewModel>("AIProfileChatDeployment_Edit", PopulateAsync)
+                .Location("Content:1%Deployments;2"),
+            Initialize<EditProfileDeploymentViewModel>("AIProfileUtilityDeployment_Edit", PopulateAsync)
+                .Location("Content:2%Deployments;2"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)
