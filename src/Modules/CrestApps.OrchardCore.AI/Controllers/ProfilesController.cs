@@ -150,32 +150,63 @@ public sealed class ProfilesController : Controller
     /// Displays the editor for creating a new AI profile.
     /// </summary>
     /// <param name="templateId">The optional template identifier to pre-populate the profile.</param>
+    /// <param name="cloneId">The optional identifier of an existing profile to clone into an unsaved draft.</param>
     /// <returns>The create view.</returns>
     [Admin("ai/profile/create", "AIProfilesCreate")]
-    public async Task<ActionResult> Create([FromQuery] string templateId)
+    public async Task<ActionResult> Create([FromQuery] string templateId, [FromQuery] string cloneId)
     {
         if (!await _authorizationService.AuthorizeAsync(User, AIPermissions.ManageAIProfiles))
         {
             return Forbid();
         }
 
-        var profile = await _profileManager.NewAsync();
+        AIProfile profile;
 
-        if (profile == null)
+        if (!string.IsNullOrEmpty(cloneId))
         {
-            await _notifier.ErrorAsync(H["Unable to create a new profile."]);
+            var source = await _profileManager.FindByIdAsync(cloneId);
 
-            return RedirectToAction(nameof(Index));
-        }
-
-        if (!string.IsNullOrEmpty(templateId))
-        {
-            var templateManager = HttpContext.RequestServices.GetService<IAIProfileTemplateManager>();
-            var template = templateManager != null ? await templateManager.FindByIdAsync(templateId) : null;
-
-            if (template != null)
+            if (source == null)
             {
-                AIProfileTemplateApplicator.Apply(profile, template);
+                await _notifier.ErrorAsync(H["The profile to clone could not be found."]);
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Clone every configured value, then reset identity so this reads as a brand-new, unsaved draft.
+            profile = source.Clone();
+            profile.ItemId = null;
+            profile.OwnerId = null;
+            profile.Author = null;
+            profile.CreatedUtc = default;
+            profile.ModifiedUtc = null;
+
+            // Prefix the name and title so the copy is distinguishable from its source.
+            profile.DisplayText = S["Copy of {0}", string.IsNullOrEmpty(source.DisplayText) ? source.Name : source.DisplayText];
+            profile.Name = string.IsNullOrEmpty(source.Name) ? null : $"{source.Name}-copy";
+
+            ViewData["IsClone"] = true;
+        }
+        else
+        {
+            profile = await _profileManager.NewAsync();
+
+            if (profile == null)
+            {
+                await _notifier.ErrorAsync(H["Unable to create a new profile."]);
+
+                return RedirectToAction(nameof(Index));
+            }
+
+            if (!string.IsNullOrEmpty(templateId))
+            {
+                var templateManager = HttpContext.RequestServices.GetService<IAIProfileTemplateManager>();
+                var template = templateManager != null ? await templateManager.FindByIdAsync(templateId) : null;
+
+                if (template != null)
+                {
+                    AIProfileTemplateApplicator.Apply(profile, template);
+                }
             }
         }
 
