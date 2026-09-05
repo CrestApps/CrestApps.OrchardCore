@@ -41,10 +41,12 @@
   </ItemGroup>
 
   <!--
-    Ship the source-generator removal to downstream consumers. Transitive source generators
-    flow into consuming projects regardless of ExcludeAssets, so a buildTransitive target is
-    the only reliable way to keep OllamaSharp's incompatible generator from breaking consumer
-    builds on earlier .NET 10 SDKs. See https://github.com/CrestApps/CrestApps.OrchardCore/issues/640.
+    Ship a buildTransitive target to downstream consumers. Transitive source generators flow
+    into consuming projects regardless of ExcludeAssets, so this is the only reliable way to
+    keep OllamaSharp's generator from breaking consumer builds on earlier .NET 10 SDKs. It
+    suppresses the CS9057 warning (non-breaking) rather than removing the analyzer, so the
+    generator keeps working on SDKs where it is compatible.
+    See https://github.com/CrestApps/CrestApps.OrchardCore/issues/640.
   -->
   <ItemGroup>
     <None Include="buildTransitive\CrestApps.OrchardCore.Ollama.targets" Pack="true" PackagePath="buildTransitive\CrestApps.OrchardCore.Ollama.targets" />
