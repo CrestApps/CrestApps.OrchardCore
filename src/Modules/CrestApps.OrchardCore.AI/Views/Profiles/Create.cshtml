@@ -5,6 +5,14 @@
     <h1>@RenderTitleSegments(T["New '{0}' Profile", Model.DisplayName])</h1>
 </zone>
 
+@if (ViewData["IsClone"] is true)
+{
+    <div class="alert alert-warning" role="alert">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        @T["This is an unsaved draft cloned from an existing profile. Review the technical name and title, then save to create the new profile."]
+    </div>
+}
+
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
     @await DisplayAsync(Model.Editor)
