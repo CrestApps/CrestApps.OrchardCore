@@ -567,6 +567,27 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     // Seats the still-connected caller in the configured queue and offers the call to an agent, reusing the inbound
     // enqueue-and-offer pipeline. On success the call stays up while the queue rings an agent; on failure there is
     // nowhere to route the caller, so the call is ended.
+    /// <summary>
+    /// Clears the durable "a transfer is pending" flag, so the speak.ended raised by whatever we say next does
+    /// not come back around and perform the transfer again.
+    /// </summary>
+    /// <param name="activity">The activity being handed off.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task ClearPendingHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        // Re-read: the handoff moved this row through another service, so the copy held here is already stale.
+        var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
+
+        if (current is not null && current.Properties.Remove(nameof(PendingVoiceHandoff)))
+        {
+            await _activityStore.UpdateAsync(current, cancellationToken);
+        }
+
+        // Also on the in-memory copy the caller is still holding, so a second pass inside this same scope sees
+        // the flag gone rather than re-reading it from a row it has not reloaded.
+        activity.Properties?.Remove(nameof(PendingVoiceHandoff));
+    }
+
     private async Task PerformVoiceHandoffAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
@@ -612,22 +633,23 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             return;
         }
 
+        // The handoff has now happened, so clear the durable flag before anything else is spoken.
+        //
+        // Every branch below says something to the caller, and speaking raises another speak.ended, which comes
+        // straight back into the handler that re-reads this flag. Leaving it set turned one transfer into an
+        // endless loop: a caller heard "Thanks for waiting..." seven times in forty-five seconds, once every few
+        // seconds until they hung up. It used to be cleared only on the after-hours branch, which is why the
+        // ordinary routed transfer — much the commoner path — was the one that repeated.
+        await ClearPendingHandoffAsync(activity, cancellationToken);
+
         // After hours the destination queue is closed, so a callback was scheduled instead of routing the live
-        // call. Tell the caller and end the call gracefully. The closing line is spoken and stored with the hangup
-        // marker; the durable handoff flag is cleared first so the next speak.ended reaches the hangup path
-        // instead of re-entering the handoff.
+        // call. Tell the caller and end the call gracefully. The closing line is spoken and stored with the
+        // hangup marker so the next speak.ended reaches the hangup path.
         if (result.Disposition == HandoffDisposition.CallbackScheduled)
         {
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation("AI voice Activity {ActivityId} could not route live (after hours); a callback was scheduled.", activity.ItemId.SanitizeLogValue());
-            }
-
-            var concluded = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
-
-            if (concluded is not null && concluded.Properties.Remove(nameof(PendingVoiceHandoff)))
-            {
-                await _activityStore.UpdateAsync(concluded, cancellationToken);
             }
 
             const string closing = "Thanks for your patience. Our specialists aren't available right now, so we've scheduled a callback and someone will reach out to you shortly. Goodbye.";

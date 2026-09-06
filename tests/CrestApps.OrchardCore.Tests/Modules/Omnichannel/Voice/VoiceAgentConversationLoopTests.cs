@@ -339,6 +339,34 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task TheTransferIsAnnouncedOnce_NotOnceForEveryLineItSpeaks()
+    {
+        // Arrange
+        // Announcing the transfer raises another speak.ended, which comes straight back into the same handler.
+        // The durable "a transfer is pending" flag used to be cleared only on the after-hours branch, so the
+        // ordinary routed transfer never cleared it and every announcement triggered another one. A live caller
+        // heard "Thanks for waiting..." seven times in forty-five seconds before hanging up.
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.Reply = "Let me put you through.";
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Can I speak to a person?");
+
+        // Act
+        // The first speak.ended performs the transfer and announces it. The announcement itself then ends, which
+        // is the event that used to start the whole thing again.
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
+
+        // Assert
+        harness.HandoffService.Verify(
+            x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task WhenTheHandoffHasNowhereToGo_TheCallEndsRatherThanSittingSilent()
     {
         // Arrange
