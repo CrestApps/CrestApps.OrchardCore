@@ -81,6 +81,11 @@ public sealed class QueuesStartup : StartupBase
         services.AddScoped<IQueueTreatmentService, QueueTreatmentService>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, QueueTreatmentBackgroundTask>());
 
+        // Queue size and maximum-wait limits. Sending a waiting caller to voicemail needs a live call to move,
+        // which only a voice feature has, so the default sink declines and Voice replaces it.
+        services.AddScoped<IQueueLimitService, QueueLimitService>();
+        services.TryAddScoped<IWaitingCallVoicemailSink, NoWaitingCallVoicemailSink>();
+
         // Shared Contact Center configuration cache. The Business Hours feature also registers it; TryAdd keeps a
         // single instance whichever feature configures services first.
         services.TryAddSingleton<IContactCenterConfigurationCache, ContactCenterConfigurationCache>();
@@ -184,6 +189,11 @@ public sealed class ContactCenterQueuesWorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<EnqueueActivityTask, EnqueueActivityTaskDisplayDriver>();
+
+        // Transferring to a human always lands in a queue — even the phone handoff seats the live call in one
+        // before it is offered — so this belongs to the Queues feature rather than to either channel's module.
+        // The per-channel handoff implementations are resolved as a set and may legitimately be empty.
+        services.AddActivity<TransferToAgentTask, TransferToAgentTaskDisplayDriver>();
     }
 }
 

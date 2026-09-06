@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+
+@model TransferToAgentTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ActivityItemId">
+    <label class="ocat-label" asp-for="ActivityItemId">@T["Activity"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ActivityItemId" />
+        <span asp-validation-for="ActivityItemId"></span>
+        <span class="hint">@T["A Liquid expression resolving the CRM activity to transfer, for example <code>{{ Workflow.Input.AggregateId }}</code>. A live call is seated in a queue and offered to an agent; a text conversation becomes a queue-owned thread."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="QueueId">
+    <label class="ocat-label" asp-for="QueueId">@T["Queue"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="QueueId" />
+        <span asp-validation-for="QueueId"></span>
+        <span class="hint">@T["Optional. A Liquid expression resolving the queue to transfer into. Leave empty to use the queue the subject flow already names for handoffs."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label class="ocat-label" asp-for="Reason">@T["Reason"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Reason" />
+        <span asp-validation-for="Reason"></span>
+        <span class="hint">@T["Optional. A short reason for the escalation, shown to the agent who takes it."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Summary">
+    <label class="ocat-label" asp-for="Summary">@T["Summary"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="Summary" rows="3"></textarea>
+        <span asp-validation-for="Summary"></span>
+        <span class="hint">@T["Optional. A summary of the conversation so far, so the agent inherits the context instead of asking the customer to start over."]</span>
+    </div>
+</div>

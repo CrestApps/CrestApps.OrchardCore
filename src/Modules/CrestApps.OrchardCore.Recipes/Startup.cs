@@ -1985,6 +1985,8 @@ public sealed class ContactCenterWorkflowRecipeStartup : StartupBase
             .AddWorkflowActivitySchema<ScheduleCallbackTaskSchema>()
             .AddWorkflowActivitySchema<SetAgentPresenceTaskSchema>()
             .AddWorkflowActivitySchema<StartCallRecordingTaskSchema>()
-            .AddWorkflowActivitySchema<StopCallRecordingTaskSchema>();
+            .AddWorkflowActivitySchema<StartOmnichannelActivityTaskSchema>()
+            .AddWorkflowActivitySchema<StopCallRecordingTaskSchema>()
+            .AddWorkflowActivitySchema<TransferToAgentTaskSchema>();
     }
 }

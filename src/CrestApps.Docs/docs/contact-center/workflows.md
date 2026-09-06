@@ -22,7 +22,7 @@ When a workflow starts, the triggering event is available on the workflow input,
 
 ## Task activities
 
-Each task exposes its identifier fields as Liquid expressions so they can bind to the triggering event, and returns a **Done** or **Failed** outcome (recording tasks add a third, **Indeterminate**, outcome).
+Each task exposes its identifier fields as Liquid expressions so they can bind to the triggering event, and returns a **Done** or **Failed** outcome. Some report more than that: recording tasks add **Indeterminate**, and the two omnichannel tasks report the outcomes described in [Outcomes beyond Done and Failed](#outcomes-beyond-done-and-failed).
 
 | Task | Capability feature | What it does |
 | --- | --- | --- |
@@ -31,6 +31,24 @@ Each task exposes its identifier fields as Liquid expressions so they can bind t
 | **Schedule Callback** | `CrestApps.OrchardCore.ContactCenter.Dialer` | Schedules a customer callback - for example, after an abandoned call - with an optional delay, campaign, queue, and contact. |
 | **Start Call Recording** | `CrestApps.OrchardCore.ContactCenter.Recording` | Starts recording for a resolved interaction. |
 | **Stop Call Recording** | `CrestApps.OrchardCore.ContactCenter.Recording` | Stops recording for a resolved interaction. |
+| **Place Call or Send Message** | `CrestApps.OrchardCore.ContactCenter` | Starts an automated omnichannel activity immediately, instead of waiting for the periodic automated-activities pass to pick it up. The activity's own channel selects the processor, so the same task places the outbound call for a Phone activity and sends the opening message for an SMS activity. |
+| **Hand Off to Live Agent** | `CrestApps.OrchardCore.ContactCenter.Queues` | Moves an **automated** conversation out of the AI lane and into the human lane: a live call is seated in a queue and offered to an agent, and a text conversation becomes a queue-owned thread in the SMS workspace. Optionally names the queue, a reason, and a summary; when no queue is named, the subject flow's configured handoff queue is used. |
+
+### Outcomes beyond Done and Failed
+
+Two of the tasks above report more than a binary result, because the workflow that follows usually needs to say something different in each case:
+
+- **Place Call or Send Message** adds **Already Started**. The task only starts an activity that is still `NotStated` or `Scheduled`, mirroring the due-set filter the periodic pass uses. A workflow that fires twice - or that races that pass - takes this outcome instead of placing a second call to a customer who is already on the line.
+- **Hand Off to Live Agent** replaces *Done* with **Connected**, **Waiting In Queue**, and **Callback Scheduled**, so a caller who was put straight through, one who is holding, and one who was offered a callback after hours can each be handled differently.
+
+### Handing off is not transferring
+
+**Hand Off to Live Agent** is not the live-call transfer excluded below, and does not reopen that decision. The two use different services:
+
+- A **transfer** moves a call an agent is already on, through `IContactCenterTransferService`, and is authorized against that agent's `ClaimsPrincipal`. It remains unavailable to workflows.
+- A **handoff** escalates an *automated* conversation through `IOmnichannelHandoffService`, which takes no principal. It is the same path the AI itself uses when the model invokes its transfer tool, and it ends by placing the work on a queue and letting routing assign it - exactly what the *assign work to a specific agent* exclusion recommends.
+
+The task therefore does nothing for an agent-to-agent transfer, and has no effect on an interaction a human is already handling.
 
 ### Indeterminate recording outcome
 
@@ -40,7 +58,7 @@ Recording is a release-critical mutation. When the provider may have executed th
 
 Two of the actions a workflow might want are intentionally **not** shipped as tasks, because doing so safely is not possible from a background, event-triggered workflow:
 
-- **Transfer a live call.** A transfer is authorized against the initiating agent's `ClaimsPrincipal` for destination role-based access control. A workflow runs without an authenticated agent principal, so a workflow-driven transfer would either be denied or force an unsafe bypass of that authorization. Transfers remain an agent- or supervisor-initiated action.
+- **Transfer a live call.** A transfer is authorized against the initiating agent's `ClaimsPrincipal` for destination role-based access control. A workflow runs without an authenticated agent principal, so a workflow-driven transfer would either be denied or force an unsafe bypass of that authorization. Transfers remain an agent- or supervisor-initiated action. This is distinct from **Hand Off to Live Agent**, which escalates an automated conversation onto a queue and never touches a call a human is already on - see [Handing off is not transferring](#handing-off-is-not-transferring).
 - **Assign work to a specific agent.** Agent-targeted assignment is owned by the routing engine, which honors presence, skills, entitlements, and reservations. There is no agent-targeted assignment service to call, and bypassing routing would break those guarantees. Use **Enqueue Activity** to place work on a queue and let routing assign it.
 
 Both remain available to code that has the necessary call-control context.

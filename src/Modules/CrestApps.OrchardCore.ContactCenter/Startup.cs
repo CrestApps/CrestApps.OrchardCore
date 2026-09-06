@@ -299,6 +299,11 @@ public sealed class ContactCenterWorkflowsStartup : StartupBase
         services.AddScoped<IContactCenterWorkflowEventTypeProvider, ContactCenterWorkflowEventTypeProvider>();
         services.AddActivity<ContactCenterEvent, ContactCenterEventDisplayDriver>();
         services.AddScoped<IContactCenterEventHandler, ContactCenterWorkflowEventHandler>();
+
+        // Reaching a customer needs only the activity and its channel's processor, both of which come with the
+        // Omnichannel Activities feature this one already depends on. Registering it here rather than under the
+        // Dialer keeps an SMS-only tenant from having to enable outbound voice to send a message from a workflow.
+        services.AddActivity<StartOmnichannelActivityTask, StartOmnichannelActivityTaskDisplayDriver>();
     }
 }
 
