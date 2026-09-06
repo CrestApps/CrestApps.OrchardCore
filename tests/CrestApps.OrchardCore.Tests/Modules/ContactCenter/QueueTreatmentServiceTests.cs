@@ -34,6 +34,49 @@ public sealed class QueueTreatmentServiceTests
     }
 
     [Fact]
+    public async Task AQueueThatOnlyPlaysMusic_IsNotSkippedAsHavingNothingConfigured()
+    {
+        // Arrange
+        // This is the bug a caller actually hit. The sweep skips a queue that has asked for nothing, before it
+        // reads anybody waiting in it — and hold music was not counted as asking for something. An operator who
+        // set hold music and nothing else got silence, with the media uploaded, the queue configured and the
+        // provider perfectly able to play it.
+        var harness = new TreatmentHarness();
+        harness.Settings.WelcomeMessage = null;
+        harness.Settings.AnnouncementIntervalSeconds = 0;
+        harness.Settings.CallbackDtmfKey = null;
+        harness.WithWaitingCaller("item-1", waitedSeconds: 1);
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Equal("https://example.test/hold.mp3", harness.Provider.HoldMusic.Single());
+        Assert.Empty(harness.Provider.Spoken);
+    }
+
+    [Fact]
+    public async Task AQueueThatAsksForNothingAtAll_IsStillSkipped()
+    {
+        // Arrange
+        // The skip itself is worth keeping: this runs constantly against every queue, and a queue with no
+        // treatment must not cost a read of everybody waiting in it.
+        var harness = new TreatmentHarness();
+        harness.Settings.WelcomeMessage = null;
+        harness.Settings.HoldMusicMediaId = null;
+        harness.Settings.AnnouncementIntervalSeconds = 0;
+        harness.Settings.CallbackDtmfKey = null;
+        harness.WithWaitingCaller("item-1", waitedSeconds: 1);
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Empty(harness.Provider.HoldMusic);
+        Assert.Empty(harness.Provider.Spoken);
+    }
+
+    [Fact]
     public async Task TheWelcome_IsSaidOnce()
     {
         // Arrange

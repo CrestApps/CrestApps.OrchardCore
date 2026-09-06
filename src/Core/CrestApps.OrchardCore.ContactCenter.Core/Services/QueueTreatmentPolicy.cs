@@ -24,6 +24,14 @@ public static class QueueTreatmentPolicy
             return new QueueTreatmentStep(QueueTreatmentStepKind.Welcome, options.WelcomeMessage.Trim(), null);
         }
 
+        // Music used to start only behind the welcome, so a queue that plays music and says nothing left the
+        // caller in silence for their whole wait — which is indistinguishable from a dropped call. Start it on
+        // its own when there is no greeting to start it behind.
+        if (!string.IsNullOrWhiteSpace(options.HoldMusicMediaId) && item.TreatmentStepsPlayed == 0)
+        {
+            return new QueueTreatmentStep(QueueTreatmentStepKind.HoldMusic, null, null);
+        }
+
         var waitedSeconds = (nowUtc - item.QueueEnteredUtc).TotalSeconds;
 
         // The offer comes before the first announcement, because it is only useful while the caller still has

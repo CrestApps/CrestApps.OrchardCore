@@ -123,17 +123,67 @@ public sealed class QueueTreatmentPolicyTests
         Assert.Equal(QueueTreatmentStepKind.None, step.Kind);
     }
 
+    [Fact]
+    public void AQueueThatOnlyPlaysMusic_StartsIt()
+    {
+        // Arrange
+        // Music used to start only as a side effect of the welcome, so a queue that plays music and says nothing
+        // left the caller in silence for their entire wait — which sounds exactly like a dropped call. This is
+        // the most ordinary hold configuration there is.
+        var settings = Options(welcome: null, holdMusicMediaId: "media-1");
+        var item = Item(_now);
+
+        // Act
+        var step = QueueTreatmentPolicy.GetNextStep(item, settings, _now);
+
+        // Assert
+        Assert.Equal(QueueTreatmentStepKind.HoldMusic, step.Kind);
+    }
+
+    [Fact]
+    public void WhenThereIsAWelcome_TheMusicStartsBehindItRatherThanTwice()
+    {
+        // Arrange
+        // The welcome already starts the music, so a separate music step would restart it a moment later.
+        var settings = Options(welcome: "Thanks for calling.", holdMusicMediaId: "media-1");
+        var item = Item(_now);
+
+        // Act
+        var step = QueueTreatmentPolicy.GetNextStep(item, settings, _now);
+
+        // Assert
+        Assert.Equal(QueueTreatmentStepKind.Welcome, step.Kind);
+    }
+
+    [Fact]
+    public void TheMusicIsStartedOnce_NotOnEverySweep()
+    {
+        // Arrange
+        // The sweep runs constantly; restarting the track every pass would keep the caller at the first bar.
+        var settings = Options(welcome: null, holdMusicMediaId: "media-1");
+        var item = Item(_now);
+        item.TreatmentStepsPlayed = 1;
+
+        // Act
+        var step = QueueTreatmentPolicy.GetNextStep(item, settings, _now.AddSeconds(30));
+
+        // Assert
+        Assert.NotEqual(QueueTreatmentStepKind.HoldMusic, step.Kind);
+    }
+
     private static QueueTreatmentSettings Options(
         string welcome,
         int announcementSeconds = 0,
         string callbackKey = null,
-        int callbackAfterSeconds = 0)
+        int callbackAfterSeconds = 0,
+        string holdMusicMediaId = null)
         => new()
         {
             WelcomeMessage = welcome,
             AnnouncementIntervalSeconds = announcementSeconds,
             CallbackDtmfKey = callbackKey,
             CallbackOfferAfterSeconds = callbackAfterSeconds,
+            HoldMusicMediaId = holdMusicMediaId,
         };
 
     private static QueueItem Item(DateTime enqueuedUtc)

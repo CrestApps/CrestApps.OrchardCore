@@ -1807,6 +1807,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Welcome = 1,
         Announcement = 2,
         CallbackOffer = 3,
+        HoldMusic = 4,
     }
     public sealed class RecordingAccessedEventData
     {

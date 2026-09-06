@@ -24,6 +24,11 @@ public enum QueueTreatmentStepKind
     /// The offer to be called back instead of waiting.
     /// </summary>
     CallbackOffer,
+
+    /// <summary>
+    /// Start the hold music, for a queue that plays music but has no greeting to start it behind.
+    /// </summary>
+    HoldMusic,
 }
 
 /// <summary>

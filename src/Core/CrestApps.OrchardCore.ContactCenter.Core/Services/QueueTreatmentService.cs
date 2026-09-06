@@ -151,6 +151,11 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
 
                 return true;
 
+            case QueueTreatmentStepKind.HoldMusic:
+                await _treatmentProvider.StartHoldMusicAsync(providerCallId, settings.HoldMusicMediaId, cancellationToken);
+
+                return true;
+
             case QueueTreatmentStepKind.CallbackOffer:
                 await _treatmentProvider.OfferChoiceAsync(
                     providerCallId,
@@ -183,8 +188,18 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
         }
     }
 
+    /// <summary>
+    /// Whether this queue has asked for its callers to hear anything at all. A queue that has not is skipped
+    /// before anybody waiting in it is read, because this runs constantly against every queue.
+    /// </summary>
+    /// <remarks>
+    /// Hold music counts. It was missing here, which meant a queue whose only treatment was music — the most
+    /// ordinary configuration there is — was classed as having nothing configured and skipped before its callers
+    /// were ever looked at. The music was set, the provider could play it, and the caller sat in silence.
+    /// </remarks>
     private static bool HasAnything(QueueTreatmentSettings settings)
         => !string.IsNullOrWhiteSpace(settings.WelcomeMessage)
+            || !string.IsNullOrWhiteSpace(settings.HoldMusicMediaId)
             || !string.IsNullOrWhiteSpace(settings.CallbackDtmfKey)
             || (settings.AnnouncementIntervalSeconds > 0 && (settings.AnnouncePosition || settings.AnnounceEstimatedWait));
 
