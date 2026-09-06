@@ -530,6 +530,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.DateTime ServerTimeUtc { get; set; }
         public string UserId { get; set; }
     }
+    public sealed class AgentEntitlements
+    {
+        public AgentEntitlements() { }
+        public System.Collections.Generic.IEnumerable<string> AllowedCampaignIds { get; init; }
+        public System.Collections.Generic.IEnumerable<string> AllowedQueueIds { get; init; }
+        public System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentQueueMembership> QueueMemberships { get; init; }
+        public System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSkill> SkillProficiencies { get; init; }
+    }
     public sealed class AgentEntitlementsChangedEventData
     {
         public AgentEntitlementsChangedEventData() { }
@@ -545,6 +553,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.Collections.Generic.IEnumerable<string> AllowedQueueIds { get; init; }
         public string DisplayName { get; init; }
         public int MaxConcurrentInteractions { get; init; }
+        public System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentQueueMembership> QueueMemberships { get; init; }
+        public System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSkill> SkillProficiencies { get; init; }
         public System.Collections.Generic.IEnumerable<string> Skills { get; init; }
     }
     public sealed class AgentPresenceChangedEventData
@@ -1465,6 +1475,29 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public int Attempts { get; set; }
         public string CurrentNodeId { get; set; }
     }
+    public sealed class IvrFlowValidationError
+    {
+        public IvrFlowValidationError(CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlowValidationErrorKind kind, string nodeId = null, string digit = null, string targetId = null) { }
+        public string Digit { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlowValidationErrorKind Kind { get; }
+        public string NodeId { get; }
+        public string TargetId { get; }
+    }
+    public enum IvrFlowValidationErrorKind
+    {
+        RootNodeMissing = 0,
+        RootNodeNotFound = 1,
+        NodeIdMissing = 2,
+        NodeIdDuplicate = 3,
+        NodePromptMissing = 4,
+        NodeHasNoOptions = 5,
+        OptionDigitInvalid = 6,
+        OptionDigitDuplicate = 7,
+        OptionActionMissing = 8,
+        ActionTargetMissing = 9,
+        SubMenuNotFound = 10,
+        MaxRetriesInvalid = 11,
+    }
     public sealed class IvrNode
     {
         public IvrNode() { }
@@ -1677,6 +1710,21 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public int RatePeriodSeconds { get; set; }
         public int RatePermitLimit { get; set; }
     }
+    public sealed class QueueAdmissionDecision
+    {
+        public bool IsQueued { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.QueueAdmissionOutcome Outcome { get; }
+        public string QueueId { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.QueueAdmissionDecision Admit(string queueId) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.QueueAdmissionDecision Overflow(string overflowQueueId) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.QueueAdmissionDecision SendToVoicemail() { }
+    }
+    public enum QueueAdmissionOutcome
+    {
+        Admitted = 0,
+        Overflowed = 1,
+        Voicemail = 2,
+    }
     public sealed class QueueItem : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
     {
         public QueueItem() { }
@@ -1715,10 +1763,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         None = 0,
         Voicemail = 1,
-        Callback = 2,
-        Overflow = 3,
-        Transfer = 4,
-        HangUpWithMessage = 5,
+        Overflow = 2,
     }
     public sealed class QueueOverflowTarget
     {
@@ -2153,6 +2198,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> EnqueueAsync(string activityItemId, string queueId, CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority? priority, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> EnqueueAsync(string activityItemId, string queueId, CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority? priority, string dialerProfileId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> OverflowDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task OverflowItemAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue fromQueue, string targetQueueId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityQueueStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ActivityQueueIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueStore
     {
@@ -2229,11 +2275,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public static class AgentEntitlementUtilities
     {
+        public static void ApplySkills(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile profile, System.Collections.Generic.IEnumerable<string> skills, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSkill> proficiencies) { }
         public static System.Collections.Generic.IList<string> FilterEntitled(System.Collections.Generic.IEnumerable<string> requestedIds, System.Collections.Generic.IEnumerable<string> allowedIds) { }
         public static System.Collections.Generic.IList<string> GetEntitledQueueIds(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile profile) { }
         public static bool HasCampaignEntitlement(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile profile, string campaignId) { }
         public static bool HasQueueEntitlement(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile profile, string queueId) { }
         public static System.Collections.Generic.IList<string> NormalizeIds(System.Collections.Generic.IEnumerable<string> ids) { }
+        public static System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentQueueMembership> NormalizeQueueMemberships(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentQueueMembership> memberships) { }
+        public static System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSkill> NormalizeSkillProficiencies(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSkill> skills) { }
     }
     public sealed class AgentPresenceManagerService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager
     {
@@ -2245,7 +2294,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> SignInAsync(string userId, System.Collections.Generic.IEnumerable<string> queueIds, System.Collections.Generic.IEnumerable<string> campaignIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> SignOutAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> StartWrapUpAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> UpdateEntitlementsAsync(string agentId, System.Collections.Generic.IEnumerable<string> allowedQueueIds, System.Collections.Generic.IEnumerable<string> allowedCampaignIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> UpdateEntitlementsAsync(string agentId, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentEntitlements entitlements, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> UpdateMembershipsAsync(string userId, System.Collections.Generic.IEnumerable<string> queueIds, System.Collections.Generic.IEnumerable<string> campaignIds, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentProfileManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager
@@ -2319,7 +2368,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class AgentWorkSelector : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkSelector
     {
         public AgentWorkSelector(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemStore queueItemStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, OrchardCore.Modules.IClock clock) { }
-        public System.Threading.Tasks.Task<string> SelectNextForAgentAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<string> SelectNextForAgentAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, System.Collections.Generic.IReadOnlyCollection<string> excludedQueueIds = null, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentWorkStateHealingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService
     {
@@ -2871,6 +2920,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> EnqueueAsync(string activityItemId, string queueId, CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority? priority, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> EnqueueAsync(string activityItemId, string queueId, CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority? priority, string dialerProfileId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> OverflowDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task OverflowItemAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue fromQueue, string targetQueueId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityQueueStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>
     {
@@ -2943,7 +2993,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> SignInAsync(string userId, System.Collections.Generic.IEnumerable<string> queueIds, System.Collections.Generic.IEnumerable<string> campaignIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> SignOutAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> StartWrapUpAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> UpdateEntitlementsAsync(string agentId, System.Collections.Generic.IEnumerable<string> allowedQueueIds, System.Collections.Generic.IEnumerable<string> allowedCampaignIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> UpdateEntitlementsAsync(string agentId, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentEntitlements entitlements, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> UpdateMembershipsAsync(string userId, System.Collections.Generic.IEnumerable<string> queueIds, System.Collections.Generic.IEnumerable<string> campaignIds, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentProfileManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>
@@ -2997,7 +3047,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IAgentWorkSelector
     {
-        System.Threading.Tasks.Task<string> SelectNextForAgentAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<string> SelectNextForAgentAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, System.Collections.Generic.IReadOnlyCollection<string> excludedQueueIds = null, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentWorkStateHealingService
     {
@@ -3310,6 +3360,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IInboundVoiceCallProcessor
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.InboundVoiceRoutingResult> RouteInboundAsync(CrestApps.OrchardCore.ContactCenter.Models.InboundVoiceEvent inboundEvent, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> SendWaitingToVoicemailAsync(string activityItemId, string reasonCode, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> TimeoutDirectHoldAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IInboundVoiceService
@@ -3485,6 +3536,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetWaitingQueueIdsAsync(System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IQueueLimitService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueAdmissionDecision> AdmitAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> EnforceMaxWaitAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IQueueTreatmentService
     {
         System.Threading.Tasks.Task<int> RunDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
@@ -3563,6 +3619,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<string> OfferNextAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> OfferToAgentAsync(string activityItemId, string queueId, string agentId, int? ringTimeoutSeconds = default, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IWaitingCallVoicemailSink
+    {
+        System.Threading.Tasks.Task<bool> SendToVoicemailAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, string reasonCode, System.Threading.CancellationToken cancellationToken = default);
     }
     public sealed class InboundPriorityResolver : CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundPriorityResolver
     {
@@ -3654,6 +3714,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep Advance(CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow flow, CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlowState state, string digits, string deliveryId, string forNodeId = null) { }
         public static CrestApps.OrchardCore.ContactCenter.Core.Models.IvrStep Start(CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow flow, CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlowState state) { }
     }
+    public static class IvrFlowValidator
+    {
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlowValidationError> Validate(CrestApps.OrchardCore.ContactCenter.Core.Models.IvrFlow flow) { }
+    }
     public sealed class LeastBusyRoutingStrategy : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy
     {
         public LeastBusyRoutingStrategy() { }
@@ -3708,6 +3772,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<int> OfferForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> OfferForUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class NoWaitingCallVoicemailSink : CrestApps.OrchardCore.ContactCenter.Core.Services.IWaitingCallVoicemailSink
+    {
+        public NoWaitingCallVoicemailSink() { }
+        public System.Threading.Tasks.Task<bool> SendToVoicemailAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, string reasonCode, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class NullDialerProfileReader : CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader
     {
         public NullDialerProfileReader() { }
@@ -3722,6 +3791,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public static class OverflowScheduler
     {
         public static System.DateTime? GetNextDueUtc(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue) { }
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueOverflowTarget> GetOrderedTargets(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue) { }
         public static bool HasAnyTarget(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue) { }
         public static string SelectFirstEligibleTarget(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue) { }
         public static string SelectNextTarget(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem item, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.DateTime nowUtc) { }
@@ -3945,6 +4015,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetHeadWaitingByQueueAsync(System.Collections.Generic.IEnumerable<string> queueIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetWaitingQueueIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class QueueLimitService : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueLimitService
+    {
+        public QueueLimitService(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService queueService, CrestApps.OrchardCore.ContactCenter.Core.Services.IWaitingCallVoicemailSink voicemailSink, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.QueueLimitService> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueAdmissionDecision> AdmitAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> EnforceMaxWaitAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class QueueTreatmentPolicy
     {

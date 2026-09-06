@@ -8,6 +8,13 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Voice
 {
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.ContactCenter.Voice.Media"})]
+    public sealed class RealtimeVoiceStartup : OrchardCore.Modules.StartupBase
+    {
+        public RealtimeVoiceStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     public sealed class Startup : OrchardCore.Modules.StartupBase
     {
         public Startup() { }

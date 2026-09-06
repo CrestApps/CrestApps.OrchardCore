@@ -579,7 +579,15 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         // [RequireFeatures] on the provider module plus the Contact Center capability it composes, so it
         // activates automatically once the provider and the capability are both enabled.
         Assert.Equal(["CrestApps.OrchardCore.ContactCenter.Voice"], mediaDependencies);
-        Assert.True(contactCenterFeatures["CrestApps.OrchardCore.ContactCenter.Voice.Media"].EnabledByDependencyOnly);
+
+        // Voice Media must stay operator-selectable. Every consumer of it (the Telnyx and Asterisk media adapters,
+        // and the automated-voice realtime path) gates on it with [RequireFeatures] rather than declaring a
+        // dependency on it, precisely so automated voice keeps working in its turn-based form without it. That
+        // leaves the feature with no dependents at all, so marking it dependency-only made it impossible to switch
+        // on by any means and put realtime speech-to-speech permanently out of reach.
+        Assert.False(
+            contactCenterFeatures["CrestApps.OrchardCore.ContactCenter.Voice.Media"].EnabledByDependencyOnly,
+            "Voice Media has no dependents by design, so dependency-only would make it unreachable.");
         Assert.Equal("CrestApps.OrchardCore.ContactCenter.Voice.Media", mediaResolverOwner.FeatureId);
         Assert.False(
             asteriskFeatures.ContainsKey("CrestApps.OrchardCore.Asterisk.ContactCenterVoice"),

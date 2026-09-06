@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 
@@ -65,6 +65,12 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
     /// Gets or sets the optional text-to-speech voice identifier assigned to automated phone activities.
     /// </summary>
     public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether realtime calls carry a quiet background bed — room tone and the
+    /// sound of the agent typing — instead of arriving on a dead-silent line.
+    /// </summary>
+    public bool UseCallAmbience { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the AI may update the contact during automated conversations
@@ -251,6 +257,7 @@ public sealed class OmnichannelActivityBatch : CatalogItem, IDisplayTextAwareMod
             SpeechToTextDeploymentName = SpeechToTextDeploymentName,
             TextToSpeechDeploymentName = TextToSpeechDeploymentName,
             TextToSpeechVoiceId = TextToSpeechVoiceId,
+            UseCallAmbience = UseCallAmbience,
             AllowAIToUpdateContact = AllowAIToUpdateContact,
             AllowAIToUpdateSubject = AllowAIToUpdateSubject,
             ResponseDelayMode = ResponseDelayMode,

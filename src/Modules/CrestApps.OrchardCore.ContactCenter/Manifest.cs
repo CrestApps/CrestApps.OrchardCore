@@ -142,9 +142,12 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = ContactCenterConstants.Feature.VoiceMedia,
     Name = "Contact Center Voice Media",
-    Description = "Adds executable bidirectional media-provider resolution for active voice calls.",
+    Description = "Adds executable bidirectional media-provider resolution for active voice calls. Enable it to give automated calls a live two-way audio path, which is what realtime speech-to-speech needs; without it those calls fall back to the turn-based speak-and-transcribe loop.",
     Category = "Contact Center",
-    EnabledByDependencyOnly = true,
+    // Deliberately NOT EnabledByDependencyOnly. This is a capability an operator opts into: the providers that
+    // use it (Telnyx, Asterisk) and the automated-voice realtime path all gate on it with RequireFeatures rather
+    // than depending on it, precisely so that automated voice keeps working without it. Marked dependency-only it
+    // had no dependents at all, so nothing could ever switch it on and realtime voice was unreachable.
     Dependencies =
     [
         ContactCenterConstants.Feature.Voice,

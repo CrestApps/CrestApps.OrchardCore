@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -260,6 +260,11 @@ public class OmnichannelActivityBatchViewModel
     /// <summary>
     /// Gets or sets how long automated conversations wait before sending each AI reply.
     /// </summary>
+    /// <summary>
+    /// Gets or sets a value indicating whether realtime calls carry a quiet background office bed.
+    /// </summary>
+    public bool UseCallAmbience { get; set; }
+
     public OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
 
     /// <summary>

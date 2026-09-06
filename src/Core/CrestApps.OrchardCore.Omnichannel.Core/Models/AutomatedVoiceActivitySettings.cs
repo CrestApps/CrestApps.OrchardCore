@@ -26,6 +26,12 @@ public sealed class AutomatedVoiceActivitySettings
     public string TextToSpeechVoiceId { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether realtime calls carry a quiet background bed — room tone and the
+    /// sound of the agent typing — instead of arriving on a dead-silent line.
+    /// </summary>
+    public bool UseCallAmbience { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the AI may update the contact during an automated conversation.
     /// </summary>
     public bool AllowAIToUpdateContact { get; set; }

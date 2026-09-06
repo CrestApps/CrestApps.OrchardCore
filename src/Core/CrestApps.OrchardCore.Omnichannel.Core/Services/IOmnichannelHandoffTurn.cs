@@ -24,6 +24,18 @@ public interface IOmnichannelHandoffTurn
     string Reason { get; }
 
     /// <summary>
+    /// Gets a token that is cancelled the moment the model asks to hand the conversation over.
+    /// </summary>
+    /// <remarks>
+    /// A turn-based conversation reads <see cref="HandoffRequested"/> after the completion returns, but a live
+    /// session — a realtime voice call — is still holding the caller when the tool fires, and has no reason to
+    /// look at a flag. This lets it be told to stop: once the caller is being transferred they belong to the
+    /// queue, not to the assistant, and a session that keeps listening leaves them talking to a bot that has
+    /// already promised them a person.
+    /// </remarks>
+    CancellationToken HandoffRequestedToken { get; }
+
+    /// <summary>
     /// Records that the model asked to hand the conversation to a live agent.
     /// </summary>
     /// <param name="reason">The reason the model gave.</param>

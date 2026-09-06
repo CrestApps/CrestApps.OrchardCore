@@ -157,6 +157,11 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string StorageCheckName = "contactcenter-storage";
             public const string TopologyCheckName = "contactcenter-topology";
         }
+        public static class QueueLimits
+        {
+            public const string MaxWaitVoicemailReasonCode = "queue_max_wait_voicemail";
+            public const string QueueFullVoicemailReasonCode = "queue_full_voicemail";
+        }
         public static class RecordingErasureDenyReason
         {
             public const string LegalHold = "legalHold";

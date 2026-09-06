@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.Models;
+using CrestApps.Core.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -66,6 +66,12 @@ public sealed class OmnichannelActivity : CatalogItem
     /// When empty, execution falls back to the subject flow and then the site default.
     /// </summary>
     public string TextToSpeechVoiceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether realtime calls carry a quiet background bed — room tone and the
+    /// sound of the agent typing — instead of arriving on a dead-silent line.
+    /// </summary>
+    public bool UseCallAmbience { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether the AI may update the contact during this automated conversation.

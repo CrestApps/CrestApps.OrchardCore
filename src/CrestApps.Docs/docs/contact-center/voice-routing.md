@@ -447,6 +447,7 @@ That is a refusal to originate, not an emergency-calling capability. Operators *
 - Dialpad webhook subscriptions are currently created and monitored in the Dialpad administration portal; Orchard validates deliveries but does not automatically register or health-check the provider subscription.
 - Attended (warm) transfer runs as three recorded phases — consult, then complete or cancel — through `IConsultTransferService`. Only a **connected** consult may be completed, so a customer is never handed to a phone that never answered, and a repeated command completes once. A provider that cannot hold a customer and ring a third party privately reports that rather than silently doing nothing.
 - Inbound entry-point resolution is a chain: every registered `IEntryPointResolver` is asked in order and the first plan wins, so a feature that adds its own entry-point source is actually consulted.
+- Automated outbound calls run as a live speech-to-speech session when the AI profile's chat mode is **Realtime**, so the assistant answers while the caller is still finishing and hears them if they interrupt. It needs the **Voice Media** feature, which is what carries audio both ways on the caller's leg; without it — or if the session cannot start — the call falls back to the transcribe-complete-synthesize loop rather than to silence. The transcript is written to the same chat session either way, so the summary, the disposition and the subject write-back are identical.
 - Asterisk and other server-side ACD providers can use server-driven answer/bridge flows instead.
 - Reconciliation works from both directions. The interaction pass repairs **known local provider-backed interactions**; a second pass asks the Telnyx connection which calls it actually has up and reports any that this platform has no interaction for — a call placed immediately before a restart, for which no local record was ever written and which no local sweep could therefore reach. Those are reported by default; a deployment that would rather release the caller than leave them on a call nothing can act on can switch **Calls with no local record** to **End call** on the Telnyx settings screen, which speaks an apology before hanging up. The equivalent pass for other providers is not implemented: it depends on the provider offering a way to list the calls currently up on a connection.
 
@@ -504,6 +505,36 @@ Each of these used to read the interaction, mutate the copy it was holding, and 
 Every write to a telephony interaction is now guarded by an optimistic-concurrency check, so a writer holding a version that has already been replaced fails instead of overwriting the winner. Read-modify-write callers do not perform their own read anymore; they hand the store a mutation, and the store opens a dedicated session, reads the current version, applies the mutation, and commits. If another writer commits first, the store re-reads and reapplies the mutation against the version that actually won, up to a bounded number of attempts.
 
 The mutation is also allowed to decline after seeing the fresh version. That is what makes the guards correct rather than merely retried: the real-time dispatcher re-evaluates "is this interaction already terminal?" against the version that won the race, so an event that arrives just behind a hangup declines instead of resurrecting the call.
+
+## Automated calls held as a live speech-to-speech session
+
+When the AI profile driving an automated call names a realtime deployment, and the **Contact Center Voice Media** feature is enabled, the call is held as a live speech-to-speech session instead of the turn-based transcribe-complete-synthesize loop. The caller's audio reaches the model as it arrives and the model's voice goes back as it is produced, so it can answer while they are still finishing and hear them if they interrupt. Everything downstream is unchanged, because both paths write the same transcript.
+
+Four things about that session are decided here rather than by the provider's defaults.
+
+### The line is band-limited in both directions
+
+A call carries roughly 300 Hz to 3.4 kHz at 8 kHz; the model speaks 24 kHz. Converting between them without first removing what the destination cannot represent does not discard that content — it **folds it back** into the voice band as inharmonic tones that track the speech but belong to no human voice. It is loudest on sibilants and hard consonants, and it is heard as a metallic, buzzy edge.
+
+Both directions are therefore filtered to the telephone passband before the rate changes: on the way out so nothing aliases into what the caller hears, and on the way in so the images that straight-line interpolation leaves above the caller's own band are not fed to the model's transcription and turn detection.
+
+An earlier revision skipped this on the reasoning that the aliasing "sits above what the line carries anyway". That is backwards, and it is why a natural-sounding model arrived sounding synthetic.
+
+### Turn detection is tuned for a telephone, not a headset
+
+The provider's defaults assume clean, close-mic audio. On a companded 8 kHz line carrying noise and whatever leaks back from the far end's earpiece, they decide the caller has started and stopped talking when they have done neither — which shows up as the assistant answering phantom turns, transcribing one utterance twice, and restarting its own sentences. The session is told to wait longer for a pause and to require more confidence that a pause is speech. Interruption stays enabled: being talked over is the other half of sounding like a machine.
+
+The detector *type* is deliberately left as the session already has it. Valid values belong to the provider, and naming one here would be a guess that fails closed on a live call.
+
+### A transfer ends the session
+
+The model escalates by invoking a transfer tool, which only *records* the request. The session is closed as soon as that happens, so the caller is released to the queue rather than staying with an assistant that has already promised them a person. Before this, the session ran until somebody hung up and the enqueue happened whenever the call would have ended anyway — measured at 19 and 40 seconds on live calls.
+
+It is a short grace rather than an instant cut, because the model announces the transfer in the same breath as invoking the tool; cutting the audio immediately would clip that line mid-word and drop the caller into silence. The profile prompt should keep that announcement to one short sentence, or the grace will truncate it.
+
+### Optional room ambience
+
+A call can carry a quiet background bed — faint room tone and the sound of an agent typing — chosen per campaign on the activity batch and snapshotted onto each activity. Perfect silence between sentences is a strong tell that nobody is there. The bed is synthesized rather than looped, because a loop has its own tell: on a long call the caller starts to hear the seam. It is off by default, since it is audible on the call and an operator should opt into it rather than discover it.
 
 ## Related guides
 

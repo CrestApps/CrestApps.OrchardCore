@@ -329,6 +329,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string SpeechToTextDeploymentName { get; set; }
         public string TextToSpeechDeploymentName { get; set; }
         public string TextToSpeechVoiceId { get; set; }
+        public bool UseCallAmbience { get; set; }
     }
     public enum BulkActivityAction
     {
@@ -524,6 +525,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string TextToSpeechDeploymentName { get; set; }
         public string TextToSpeechVoiceId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityUrgencyLevel UrgencyLevel { get; set; }
+        public bool UseCallAmbience { get; set; }
         public bool TryResolveContact(OrchardCore.ContentManagement.ContentItem contact, string resolvedById, string resolvedByUsername, System.DateTime resolvedUtc) { }
     }
     public sealed class OmnichannelActivityBatch : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch>, System.ICloneable
@@ -570,6 +572,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string[] TimeZoneIds { get; set; }
         public long? TotalLoaded { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityUrgencyLevel UrgencyLevel { get; set; }
+        public bool UseCallAmbience { get; set; }
         public string[] UserIds { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch Clone() { }
     }
@@ -973,6 +976,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken);
         bool IsGenerating(string sessionId);
+        bool TryClaimInboundMessage(string providerMessageId);
     }
     public interface IAutomatedConversationGeneration : System.IDisposable
     {
@@ -1038,6 +1042,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public interface IOmnichannelHandoffTurn
     {
         bool HandoffRequested { get; }
+        System.Threading.CancellationToken HandoffRequestedToken { get; }
         string Reason { get; }
         void RequestHandoff(string reason);
         void Reset();
@@ -1059,6 +1064,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public InMemoryAutomatedConversationGate() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken) { }
         public bool IsGenerating(string sessionId) { }
+        public bool TryClaimInboundMessage(string providerMessageId) { }
     }
     public sealed class ListOmnichannelActivityFilterContext
     {
@@ -1090,7 +1096,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public static class OmnichannelAutomationHelper
     {
-        public const int MinimumHumanizedReplyDelaySeconds = 3;
+        public const int MinimumHumanizedReplyDelaySeconds = 10;
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityStatus GetInitialActivityStatus(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityInteractionType interactionType, bool hasAssignedUser) { }
         public static bool HasNoResponseTimeout(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.AutomatedVoiceActivitySettings ResolveActivitySettings(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch batch, CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
@@ -1124,6 +1130,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         public OmnichannelHandoffTurn() { }
         public bool HandoffRequested { get; }
+        public System.Threading.CancellationToken HandoffRequestedToken { get; }
         public string Reason { get; }
         public void RequestHandoff(string reason) { }
         public void Reset() { }

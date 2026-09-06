@@ -190,11 +190,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models
 }
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
 {
+    public sealed class DistributedCacheSmsAgentPresenceTracker : CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsAgentPresenceTracker
+    {
+        public DistributedCacheSmsAgentPresenceTracker(Microsoft.Extensions.Caching.Distributed.IDistributedCache cache, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailabilityOptions> availabilityOptions, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
+        public System.Threading.Tasks.Task<bool> IsPresentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task TouchAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public interface ISmsAgentAvailabilityService
     {
         CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsAgentAvailability Get(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent);
         System.Threading.Tasks.Task<bool> IsAvailableAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsAgentAvailability> SetAvailableAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, bool available, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISmsAgentPresenceTracker
+    {
+        System.Threading.Tasks.Task<bool> IsPresentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task TouchAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISmsBroadcastManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsBroadcast>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsBroadcast> { }
     public interface ISmsBroadcastService
@@ -297,7 +308,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
     }
     public sealed class SmsAgentAvailabilityService : CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsAgentAvailabilityService
     {
-        public SmsAgentAvailabilityService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionManager sessionManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailabilityOptions> availabilityOptions, OrchardCore.Modules.IClock clock) { }
+        public SmsAgentAvailabilityService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsAgentPresenceTracker presenceTracker, OrchardCore.Modules.IClock clock) { }
         public CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsAgentAvailability Get(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent) { }
         public System.Threading.Tasks.Task<bool> IsAvailableAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsAgentAvailability> SetAvailableAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, bool available, System.Threading.CancellationToken cancellationToken = default) { }
@@ -498,7 +509,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers
 {
     public sealed class AutoReplyRouter : CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsInboundRouter
     {
-        public AutoReplyRouter(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher dispatcher, OrchardCore.Modules.IClock clock) { }
+        public AutoReplyRouter(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher dispatcher, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock) { }
         public int Order { get; }
         public System.Threading.Tasks.Task<bool> TryRouteAsync(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }

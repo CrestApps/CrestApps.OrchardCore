@@ -65,6 +65,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
     private readonly IVoiceAgentMediaProviderResolver _mediaResolver;
+    private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
@@ -82,6 +83,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IEnumerable<IOmnichannelHandoffService> handoffServices,
         IVoiceAgentMediaProviderResolver mediaResolver,
+        IRealtimeVoiceConversationRunner realtimeRunner,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IClock clock,
@@ -98,6 +100,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _handoffServices = handoffServices;
         _mediaResolver = mediaResolver;
+        _realtimeRunner = realtimeRunner;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
         _clock = clock;
@@ -177,6 +180,54 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             return;
         }
 
+        // The customer answered: advance out of AwaitingCustomerAnswer before anything long-running starts. A
+        // realtime session holds the call for its whole duration, and leaving the activity in the awaiting state
+        // for that long lets the no-response expiry pass fail a call that is being held right now.
+        await MarkInProgressAsync(activity, cancellationToken);
+
+        // A profile configured with a realtime deployment holds the call as a live speech-to-speech session
+        // instead of the transcribe-complete-synthesize loop below. That loop cannot begin a reply until the
+        // caller has stopped talking, the transcript has come back, the model has answered and the answer has
+        // been synthesized; a realtime session answers while they are still finishing, and hears them if they
+        // interrupt. Everything downstream is unchanged, because both write the same transcript.
+        if (!string.IsNullOrWhiteSpace(profile.RealtimeDeploymentName))
+        {
+            // The transfer tool records the model's escalation on this turn rather than performing it, so the
+            // flag has to start clean for the session we are about to hold.
+            _handoffTurn.Reset();
+
+            if (await _realtimeRunner.RunAsync(new RealtimeVoiceConversationContext
+            {
+                Activity = activity,
+                Profile = profile,
+                Session = session,
+                ProviderName = voiceEvent.ProviderName,
+                ProviderCallId = voiceEvent.ProviderCallId,
+
+                // Snapshotted onto the activity when the inventory was loaded, so the campaign that chose the
+                // voice also chose whether the call sounds like someone is sitting in a room.
+                UseCallAmbience = activity.UseCallAmbience,
+
+                // Ends the session as soon as the transfer tool fires, so the handoff below happens while the
+                // caller is still expecting it rather than whenever the call would otherwise have ended.
+                HandoffRequested = _handoffTurn.HandoffRequestedToken,
+            }, cancellationToken))
+            {
+                // A realtime session holds the call for its whole duration, and the model escalates from inside
+                // it by invoking the transfer tool — which only RECORDS the request. The turn-based loop below
+                // reads that flag after every completion, but this branch used to return without ever looking at
+                // it: the caller heard "I'm connecting you to a specialist" and then stayed with the bot, because
+                // nothing enqueued them. Honour it here, on the same enqueue-and-offer path the turn-based loop
+                // uses, so a handoff means the same thing on both.
+                if (_handoffTurn.HandoffRequested)
+                {
+                    await PerformVoiceHandoffAsync(voiceEvent, media, activity, cancellationToken);
+                }
+
+                return;
+            }
+        }
+
         var greeting = await RenderInitialPromptAsync(activity, profile, session, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(greeting))
@@ -186,16 +237,25 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         await StorePromptAsync(session, ChatRole.Assistant, greeting, cancellationToken);
         await SpeakAsync(media, voiceEvent.ProviderCallId, activity, greeting, cancellationToken);
+    }
 
-        // The customer answered: advance out of AwaitingCustomerAnswer into the live in-progress state. This both
-        // records the correct status and takes the activity out of the automated no-response expiry pass window
-        // (which only transitions AwaitingCustomerAnswer rows) so that pass cannot race the hangup conclusion and
-        // flip a live, answered call to Failed mid-conversation.
-        if (activity.Status != ActivityStatus.InProgress)
+    /// <summary>
+    /// Moves an answered call into the live in-progress state.
+    /// </summary>
+    /// <remarks>
+    /// This both records the correct status and takes the activity out of the automated no-response expiry pass
+    /// window — that pass only transitions rows still awaiting an answer — so it cannot race the conclusion and
+    /// flip a live, answered call to Failed while somebody is still on it.
+    /// </remarks>
+    private async Task MarkInProgressAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        if (activity.Status == ActivityStatus.InProgress)
         {
-            activity.Status = ActivityStatus.InProgress;
-            await _activityStore.UpdateAsync(activity, cancellationToken);
+            return;
         }
+
+        activity.Status = ActivityStatus.InProgress;
+        await _activityStore.UpdateAsync(activity, cancellationToken);
     }
 
     private async Task OnSpeakEndedAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, CancellationToken cancellationToken)

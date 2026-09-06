@@ -429,6 +429,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                     automatedSettings.SpeechToTextDeploymentName = null;
                     automatedSettings.TextToSpeechDeploymentName = null;
                     automatedSettings.TextToSpeechVoiceId = null;
+                    automatedSettings.UseCallAmbience = false;
                     automatedSettings.AllowAIToUpdateContact = false;
                     automatedSettings.AllowAIToUpdateSubject = false;
                     automatedSettings.ResponseDelayMode = OmnichannelResponseDelayMode.None;
@@ -446,6 +447,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 activity.SpeechToTextDeploymentName = automatedSettings.SpeechToTextDeploymentName;
                 activity.TextToSpeechDeploymentName = automatedSettings.TextToSpeechDeploymentName;
                 activity.TextToSpeechVoiceId = automatedSettings.TextToSpeechVoiceId;
+                activity.UseCallAmbience = automatedSettings.UseCallAmbience;
                 activity.AllowAIToUpdateContact = automatedSettings.AllowAIToUpdateContact;
                 activity.AllowAIToUpdateSubject = automatedSettings.AllowAIToUpdateSubject;
                 activity.ResponseDelayMode = automatedSettings.ResponseDelayMode;

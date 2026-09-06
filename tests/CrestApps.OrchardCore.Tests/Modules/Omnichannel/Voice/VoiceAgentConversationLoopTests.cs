@@ -43,6 +43,96 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task AProfileWithARealtimeDeployment_HoldsTheCallAsALiveSession()
+    {
+        // Arrange
+        // The turn-based loop cannot start a reply until the caller has stopped, the transcript has come back, the
+        // model has answered and the answer has been synthesized. On a phone call that is seconds of dead air per
+        // turn, which is what makes an automated call sound automated.
+        var harness = new LoopHarness();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Single(harness.Realtime.Sessions);
+        Assert.Empty(harness.Media.Spoken);
+    }
+
+    [Fact]
+    public async Task ARealtimeCall_CarriesTheCampaignsVoiceAndItsOwnTranscript()
+    {
+        // Arrange
+        // Everything downstream — the summary, the disposition, the subject write-back — reads the chat session,
+        // so a realtime call has to be handed the same session the turn-based one would have used.
+        var harness = new LoopHarness();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.Activity.TextToSpeechVoiceId = "chosen-voice";
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        var session = harness.Realtime.Sessions.Single();
+
+        // The same session the activity is now bound to, so the transcript the realtime call writes is the one the
+        // conclusion later reads.
+        Assert.Equal(harness.Activity.AISessionId, session.Session.SessionId);
+        Assert.Equal("chosen-voice", session.Activity.TextToSpeechVoiceId);
+        Assert.Equal("Fake", session.ProviderName);
+    }
+
+    [Fact]
+    public async Task WhenRealtimeCannotRun_TheCallFallsBackToSpeakingAndListening()
+    {
+        // Arrange
+        // A provider with no live-media path, or a session that fails to start, must not leave the person on a
+        // silent call: the turn-based loop still works and is better than nothing.
+        var harness = new LoopHarness();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.Realtime.CanRun = false;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Single(harness.Media.Spoken);
+    }
+
+    [Fact]
+    public async Task AProfileWithNoRealtimeDeployment_IsNotPutThroughARealtimeSession()
+    {
+        // Arrange
+        // Realtime is chosen on the profile. A profile that has not chosen it keeps exactly the behaviour it had.
+        var harness = new LoopHarness();
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Empty(harness.Realtime.Sessions);
+        Assert.Single(harness.Media.Spoken);
+    }
+
+    [Fact]
+    public async Task ARealtimeCall_LeavesTheAwaitingAnswerStateBeforeItStarts()
+    {
+        // Arrange
+        // A realtime session holds the call for its whole duration. Leaving the activity awaiting an answer for
+        // that long lets the no-response expiry pass fail a call that is happening right now.
+        var harness = new LoopHarness();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.Realtime.OnRun = () => Assert.Equal(ActivityStatus.InProgress, harness.Activity.Status);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Single(harness.Realtime.Sessions);
+    }
+
+    [Fact]
     public async Task WhenTheCallIsAnswered_TheActivityStopsLookingUnanswered()
     {
         // Arrange
@@ -185,6 +275,49 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task WhenARealtimeSessionEscalates_TheCallerIsActuallyHandedOff()
+    {
+        // Arrange
+        // The model escalates from inside the live session by invoking the transfer tool, which only RECORDS the
+        // request — performing it is the caller's job. The realtime branch used to return the moment the session
+        // ended without ever reading that flag, so a caller who asked for a person heard "I'm connecting you to a
+        // specialist" and then stayed with the bot, because nothing ever enqueued them.
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Single(harness.Realtime.Sessions);
+        harness.HandoffService.Verify(
+            x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ARealtimeSessionThatNeverEscalates_HandsOffNobody()
+    {
+        // Arrange
+        // The other half of the guard: holding a realtime call must not by itself route the caller to a queue.
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(false);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Single(harness.Realtime.Sessions);
+        harness.HandoffService.Verify(
+            x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task WhenTheModelEscalates_TheHandoffIsRequestedOnce()
     {
         // Arrange
@@ -242,6 +375,32 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     /// <summary>
+    /// A realtime runner that records the session it was asked for instead of opening one.
+    /// </summary>
+    private sealed class RecordingRealtimeRunner : IRealtimeVoiceConversationRunner
+    {
+        public List<RealtimeVoiceConversationContext> Sessions { get; } = [];
+
+        public bool CanRun { get; set; } = true;
+
+        public Action OnRun { get; set; }
+
+        public Task<bool> RunAsync(RealtimeVoiceConversationContext context, CancellationToken cancellationToken = default)
+        {
+            OnRun?.Invoke();
+
+            if (!CanRun)
+            {
+                return Task.FromResult(false);
+            }
+
+            Sessions.Add(context);
+
+            return Task.FromResult(true);
+        }
+    }
+
+    /// <summary>
     /// Wires the loop up to fakes: an in-memory activity, chat session and transcript, a model that returns
     /// whatever <see cref="Reply"/> is set to, and a provider that records rather than dials.
     /// </summary>
@@ -260,7 +419,7 @@ public sealed class VoiceAgentConversationLoopTests
                 Channel = OmnichannelConstants.Channels.Phone,
             };
 
-            var profile = new AIProfile
+            Profile = new AIProfile
             {
                 ItemId = "profile-1",
                 Type = AIProfileType.Chat,
@@ -290,7 +449,7 @@ public sealed class VoiceAgentConversationLoopTests
 
             var profileManager = new Mock<IAIProfileManager>();
             profileManager.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(profile);
+                .ReturnsAsync(() => Profile);
 
             var completionService = new Mock<IAICompletionService>();
             completionService.Setup(x => x.CompleteAsync(
@@ -339,6 +498,7 @@ public sealed class VoiceAgentConversationLoopTests
                 [HandoffService.Object],
                 // Two providers, so the loop has to resolve by name rather than fall back to the only one there is.
                 new VoiceAgentMediaProviderResolver([Media, new FakeVoiceAgentMediaProvider("OtherFake")]),
+                Realtime,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
                 Mock.Of<IClock>(),
@@ -347,7 +507,11 @@ public sealed class VoiceAgentConversationLoopTests
 
         public OmnichannelActivity Activity { get; }
 
+        public AIProfile Profile { get; }
+
         public FakeVoiceAgentMediaProvider Media { get; } = new();
+
+        public RecordingRealtimeRunner Realtime { get; } = new();
 
         public VoiceAgentConversationLoop Loop { get; }
 

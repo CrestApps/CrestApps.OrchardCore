@@ -244,6 +244,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
                 model.AIProfiles = await GetAIProfileOptionsAsync(batch.AIProfileId);
                 model.AllowAIToUpdateContact = batch.AllowAIToUpdateContact;
                 model.AllowAIToUpdateSubject = batch.AllowAIToUpdateSubject;
+                model.UseCallAmbience = batch.UseCallAmbience;
                 model.ResponseDelayMode = batch.ResponseDelayMode;
                 model.ResponseDelaySeconds = batch.ResponseDelaySeconds;
                 model.ResponseDelayJitterSeconds = batch.ResponseDelayJitterSeconds;
@@ -431,6 +432,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
             batch.AIProfileId = model.AIProfileId?.Trim();
             batch.AllowAIToUpdateContact = model.AllowAIToUpdateContact;
             batch.AllowAIToUpdateSubject = model.AllowAIToUpdateSubject;
+            batch.UseCallAmbience = model.UseCallAmbience;
             batch.ResponseDelayMode = model.ResponseDelayMode;
             batch.ResponseDelaySeconds = Math.Max(0, model.ResponseDelaySeconds);
             batch.ResponseDelayJitterSeconds = Math.Max(0, model.ResponseDelayJitterSeconds);
