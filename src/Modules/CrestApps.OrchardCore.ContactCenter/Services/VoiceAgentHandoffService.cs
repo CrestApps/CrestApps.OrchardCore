@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -35,6 +36,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
     private readonly IDistributedLock _distributedLock;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly IQueueTreatmentService _treatmentService;
+    private readonly ISession _session;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -53,6 +55,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         IDistributedLock distributedLock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         IQueueTreatmentService treatmentService,
+        ISession session,
         ILogger<VoiceAgentHandoffService> logger)
     {
         _interactionManager = interactionManager;
@@ -67,6 +70,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         _distributedLock = distributedLock;
         _coordinationOptions = coordinationOptions.Value;
         _treatmentService = treatmentService;
+        _session = session;
         _logger = logger;
     }
 
@@ -275,7 +279,21 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
 
         try
         {
-            await _treatmentService.RunDueAsync(queue, cancellationToken);
+            // The caller was enqueued a moment ago in this same unit of work, and the treatment pass finds who is
+            // waiting by querying the store. Without committing first it looks for a queue item that is still
+            // only pending in this session, finds nobody waiting, and plays nothing — which is silence on the
+            // line and no error anywhere to say why.
+            await _session.SaveChangesAsync(cancellationToken);
+
+            var treated = await _treatmentService.RunDueAsync(queue, cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Queue treatment started for {Treated} caller(s) newly seated in queue '{QueueId}'.",
+                    treated,
+                    queue.ItemId.SanitizeLogValue());
+            }
         }
         catch (Exception ex)
         {

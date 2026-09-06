@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -598,6 +599,7 @@ public class VoiceAgentHandoffServiceTests
                 DistributedLock,
                 new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions()),
                 TreatmentService.Object,
+                new Mock<ISession>().Object,
                 NullLogger<VoiceAgentHandoffService>.Instance);
         }
     }
