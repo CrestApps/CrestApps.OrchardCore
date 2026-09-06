@@ -34,6 +34,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
     private readonly ICallbackService _callbackService;
     private readonly IDistributedLock _distributedLock;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
+    private readonly IQueueTreatmentService _treatmentService;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -51,6 +52,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         ICallbackService callbackService,
         IDistributedLock distributedLock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
+        IQueueTreatmentService treatmentService,
         ILogger<VoiceAgentHandoffService> logger)
     {
         _interactionManager = interactionManager;
@@ -64,6 +66,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         _callbackService = callbackService;
         _distributedLock = distributedLock;
         _coordinationOptions = coordinationOptions.Value;
+        _treatmentService = treatmentService;
         _logger = logger;
     }
 
@@ -217,6 +220,15 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
 
         var offeredUserId = await _offerService.OfferNextAsync(queueId, cancellationToken);
 
+        // Start what the caller hears now, rather than leaving it to the periodic sweep. The sweep runs in bursts
+        // with a gap between them, so a caller seated during that gap heard nothing at all — and a transferred
+        // caller is already live on the line, listening, having just been told a person is coming. Silence there
+        // is indistinguishable from a dropped call, and most of these waits are shorter than one sweep cycle.
+        if (string.IsNullOrEmpty(offeredUserId))
+        {
+            await StartQueueTreatmentAsync(queue, cancellationToken);
+        }
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
@@ -243,6 +255,32 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         interaction.HandoffSummary = request.Summary;
         interaction.HandoffReason = request.Reason;
         interaction.HandoffAiSessionId = request.AiSessionId;
+    }
+
+    /// <summary>
+    /// Plays the queue's opening treatment to the caller who has just been seated in it.
+    /// </summary>
+    /// <remarks>
+    /// A failure here is logged and swallowed: the caller is in the queue either way, and losing the hold music
+    /// must not lose the call.
+    /// </remarks>
+    private async Task StartQueueTreatmentAsync(ActivityQueue queue, CancellationToken cancellationToken)
+    {
+        // The queue row is looked up earlier for the business-hours check and is allowed to be missing there, so
+        // it can be null by the time we get here even though the enqueue succeeded on its id.
+        if (queue is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _treatmentService.RunDueAsync(queue, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not start queue treatment for the caller handed to queue '{QueueId}'.", queue.ItemId.SanitizeLogValue());
+        }
     }
 
     private async Task ScheduleAfterHoursCallbackAsync(OmnichannelActivity activity, string queueId, CancellationToken cancellationToken)

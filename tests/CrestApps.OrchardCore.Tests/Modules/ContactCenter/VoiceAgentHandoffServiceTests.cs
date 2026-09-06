@@ -25,6 +25,73 @@ public class VoiceAgentHandoffServiceTests
     }
 
     [Fact]
+    public async Task ACallerLeftWaiting_HearsTheQueueImmediately_NotOnTheNextSweep()
+    {
+        // Arrange
+        // The treatment sweep runs in bursts with a gap between them, so a caller seated during that gap heard
+        // nothing at all. Live calls landed in it twice: handed off at 15:19:06 and gone by 15:19:37, and again
+        // at 15:41:30 with the next sweep not starting until 15:42:32. A transferred caller is already on the
+        // line, listening, having just been told a person is coming — silence there sounds like a dropped call.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            Channel = "Phone",
+            PreferredDestination = "+15551112222",
+            InteractionType = ActivityInteractionType.Automated,
+            Status = ActivityStatus.InProgress,
+        };
+
+        var harness = new Harness(activity, offeredUserId: null);
+
+        // Act
+        var result = await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = activity,
+            TargetQueueId = "queue-1",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-abc",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HandoffDisposition.WaitingInQueue, result.Disposition);
+        harness.TreatmentService.Verify(
+            x => x.RunDueAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task ACallerAnAgentTookStraightAway_IsNotPlayedHoldMusicOverTheAgent()
+    {
+        // Arrange
+        // Treatment is for people who are waiting. Starting music for a caller who has just been connected would
+        // play it over the agent who answered.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            Channel = "Phone",
+            PreferredDestination = "+15551112222",
+            InteractionType = ActivityInteractionType.Automated,
+            Status = ActivityStatus.InProgress,
+        };
+
+        var harness = new Harness(activity, offeredUserId: "u1");
+
+        // Act
+        await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = activity,
+            TargetQueueId = "queue-1",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-abc",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        harness.TreatmentService.Verify(
+            x => x.RunDueAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task RequestHandoff_CreatesInteraction_SeatsActivity_Enqueues_AndOffers()
     {
         var activity = new OmnichannelActivity
@@ -469,6 +536,8 @@ public class VoiceAgentHandoffServiceTests
 
         public Mock<IVoiceQueueOfferService> OfferService { get; } = new();
 
+        public Mock<IQueueTreatmentService> TreatmentService { get; } = new();
+
         public Interaction CreatedInteraction { get; private set; }
 
         public Mock<ICallbackService> CallbackService { get; } = new();
@@ -528,6 +597,7 @@ public class VoiceAgentHandoffServiceTests
                 CallbackService.Object,
                 DistributedLock,
                 new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions()),
+                TreatmentService.Object,
                 NullLogger<VoiceAgentHandoffService>.Instance);
         }
     }
