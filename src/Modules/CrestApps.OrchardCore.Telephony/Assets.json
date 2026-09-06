@@ -12,6 +12,7 @@
       "Assets/js/soft-phone/quality.js",
       "Assets/js/soft-phone/telnyx-state.js",
       "Assets/js/soft-phone/reconnect.js",
+      "Assets/js/soft-phone/hold-audio.js",
       "Assets/js/soft-phone.js"
     ],
     "output": "wwwroot/scripts/soft-phone.js"

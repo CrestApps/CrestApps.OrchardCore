@@ -33,6 +33,8 @@
 
     var reconnectDelayMs = softPhoneModules.reconnectDelayMs;
 
+    var createHoldAudioController = softPhoneModules.createHoldAudioController;
+
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
         Dial: 1,
@@ -547,6 +549,66 @@
         var preferredCodecs = buildPreferredCodecs(media.codecs);
         var remoteElement = context.remoteAudioElement;
 
+        // Hold audio. Telnyx delivers the caller's audio to this browser, so call.hold() puts the media leg
+        // inactive and the caller hears silence. Instead, keep the call up and swap the microphone track on the
+        // outbound sender for a hold-audio track (a configured URL, else a quiet comfort tone) so the caller
+        // keeps hearing something. The controller is built lazily from the media config; when it or the peer
+        // connection is unavailable, applyHold falls back to the provider's native hold.
+        var holdAudio = typeof createHoldAudioController === 'function'
+            ? createHoldAudioController({ mediaUrl: media.holdMusicUrl || registrationConfig.holdMusicUrl || '' })
+            : null;
+
+        function setRemoteAudioMuted(muted) {
+            if (remoteElement) {
+                try { remoteElement.muted = !!muted; } catch (error) { /* best effort */ }
+            }
+        }
+
+        // Put a live call on or off hold with browser-side hold audio, falling back to native hold when there is
+        // no controller or no reachable peer connection. On hold the agent's remote audio is muted too, so the
+        // parked caller is fully isolated (agent hears the hold silence, caller hears the hold audio).
+        function applyHold(call, hold) {
+            var peerConnection = call && call.peer && call.peer.instance;
+
+            if (!holdAudio || !peerConnection) {
+                return Promise.resolve(hold ? call.hold() : call.unhold()).catch(function () { });
+            }
+
+            if (hold) {
+                var micTrack = context.localStream && typeof context.localStream.getAudioTracks === 'function'
+                    ? context.localStream.getAudioTracks()[0]
+                    : null;
+
+                setRemoteAudioMuted(true);
+
+                return holdAudio.engage(peerConnection, micTrack).catch(function () {
+                    // Media swap failed; keep the caller from hearing the agent by falling back to native hold.
+                    setRemoteAudioMuted(false);
+
+                    return Promise.resolve(call.hold()).catch(function () { });
+                });
+            }
+
+            return holdAudio.release(peerConnection).then(function () {
+                setRemoteAudioMuted(false);
+            }).catch(function () {
+                setRemoteAudioMuted(false);
+
+                return Promise.resolve(call.unhold()).catch(function () { });
+            });
+        }
+
+        // Tear the hold audio down when a call ends. Without this, a call that ended while on hold leaves the
+        // comfort-tone AudioContext running and the agent's remote audio muted, which is one way a soft phone
+        // gets stuck looking held after the call is already gone. Safe to call unconditionally.
+        function endHoldAudio() {
+            if (holdAudio && holdAudio.isEngaged()) {
+                Promise.resolve(holdAudio.release()).catch(function () { });
+            }
+
+            setRemoteAudioMuted(false);
+        }
+
         // Telnyx logs in with the telephony-credential SIP username/password, delivered in the same
         // registration config the SIP.js adapter consumes (authorizationUser + credential.value). The SDK
         // speaks Verto to Telnyx's own WebRTC gateway, so it manages the peer connection, media, and the
@@ -871,6 +933,8 @@
                         } catch (error) { /* best effort */ }
                     },
                     terminate: function () {
+                        endHoldAudio();
+
                         try {
                             return Promise.resolve(call.hangup()).catch(function () { });
                         } catch (error) {
@@ -879,7 +943,7 @@
                     },
                     setHold: function (hold) {
                         try {
-                            return Promise.resolve(hold ? call.hold() : call.unhold()).catch(function () { });
+                            return applyHold(call, hold);
                         } catch (error) {
                             return Promise.resolve();
                         }
@@ -1122,6 +1186,8 @@
 
                     return {
                         terminate: function () {
+                            endHoldAudio();
+
                             try {
                                 return Promise.resolve(call.hangup()).catch(function () { });
                             } catch (error) {
@@ -1130,7 +1196,7 @@
                         },
                         setHold: function (hold) {
                             try {
-                                return Promise.resolve(hold ? call.hold() : call.unhold()).catch(function () { });
+                                return applyHold(call, hold);
                             } catch (error) {
                                 return Promise.resolve();
                             }
@@ -1154,6 +1220,7 @@
                     if (!serverCall || stateName === 'Disconnected' || stateName === 'Failed') {
                         if (currentCall) {
                             stopQualitySampler(true);
+                            endHoldAudio();
 
                             try {
                                 currentCall.hangup();
@@ -1172,7 +1239,7 @@
 
                     if (stateName === 'OnHold') {
                         try {
-                            return Promise.resolve(currentCall.hold()).catch(function () { });
+                            return applyHold(currentCall, true);
                         } catch (error) {
                             return Promise.resolve();
                         }
@@ -1186,7 +1253,7 @@
                                 currentCall.unmuteAudio();
                             }
 
-                            return Promise.resolve(currentCall.unhold()).catch(function () { });
+                            return applyHold(currentCall, false);
                         } catch (error) {
                             return Promise.resolve();
                         }
@@ -1202,6 +1269,7 @@
                     disposed = true;
                     // Flush the end-of-call quality summary if a call was still live at disposal.
                     stopQualitySampler(true);
+                    endHoldAudio();
 
                     if (currentCall) {
                         try {
