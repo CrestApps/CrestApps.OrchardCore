@@ -11,6 +11,7 @@ This section contains release notes and version highlights for **CrestApps.Orcha
 
 | Version | Highlights |
 | --- | --- |
+| [2.1.4](2.1.4) | Completes the fix for the OllamaSharp source generator build error by correcting the buildTransitive targets file that failed to import in 2.1.3 |
 | [2.1.2](2.1.2) | Agent skills are now published with MCP Server sites, and the AI email tool no longer uses the logged-in user as the sender |
 | [2.1.1](2.1.1) | Import and export for AI tool instances with credential-stripping export handlers, and a documentation search (sitemap) tool instance editor fix |
 | [2.1.0](2.1.0) | Stable CrestApps.Core 1.2.0 package line, opt-in MCP Server tool exposure, MCP Server admin settings, and documentation search tool instances |
