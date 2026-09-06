@@ -1,5 +1,7 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -144,6 +146,22 @@ internal static class TwilioWebhookEndpoint
 
             try
             {
+                // Twilio guarantees at-least-once delivery and retries on a slow or failed ack, so the same
+                // MessageSid can arrive more than once. Claim it exactly once here — before the message is stored
+                // or any handler runs — so a redelivery is neither recorded a second time nor answered again. The
+                // gate is the single-active-reply owner for the conversation, which is the right place for this.
+                var conversationGate = scope.ServiceProvider.GetRequiredService<IAutomatedConversationGate>();
+
+                if (!conversationGate.TryClaimInboundMessage(messageSid))
+                {
+                    if (scopedLogger.IsEnabled(LogLevel.Information))
+                    {
+                        scopedLogger.LogInformation("Ignoring a duplicate inbound Twilio SMS delivery for MessageSid {MessageSid}.", messageSid.SanitizeLogValue());
+                    }
+
+                    return;
+                }
+
                 await scopedSession.SaveAsync(omnichannelMessage, collection: OmnichannelConstants.CollectionName);
 
                 await scopedHandlers.InvokeAsync((handler, evt) => handler.HandleAsync(evt), omnichannelEvent, scopedLogger);

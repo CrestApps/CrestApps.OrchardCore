@@ -15,6 +15,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Sms;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
@@ -95,6 +96,57 @@ public class SmsInboundProcessorTests
 
         Assert.NotNull(conversation);
         Assert.Equal(SmsConversationStatus.Closed, conversation.Status);
+    }
+
+    [Theory]
+    [InlineData("Yes")]
+    [InlineData("Yes.")]
+    [InlineData("START")]
+    public async Task Inbound_OptInKeyword_WhenTheContactIsNotOptedOut_SendsNothing(string body)
+    {
+        // "YES" is an opt-in keyword AND the most ordinary answer there is: an automated agent opens by asking a
+        // yes/no question. Answering it must not be read as a resubscribe, because the confirmation would land as a
+        // second, unrelated message on top of the agent's real reply — which is exactly the duplicate a customer
+        // sees as the bot texting twice. With nothing to opt back into, there is nothing to confirm.
+        var harness = new Harness(routing: null, contactContentItemId: "contact-1", contactOptedOut: false);
+
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage(body), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(conversation);
+        Assert.NotEqual(SmsConversationStatus.Closed, conversation.Status);
+        harness.Dispatcher.Verify(
+            d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Inbound_OptInKeyword_WhenTheContactIsOptedOut_ConfirmsTheResubscribe()
+    {
+        // The keyword still has to work for the person it exists for: someone who opted out and is asking to be
+        // reachable again gets the confirmation, and the thread is reopened so their next message keeps its history.
+        var harness = new Harness(routing: null, contactContentItemId: "contact-1", contactOptedOut: true);
+
+        var conversation = await harness.Processor.ProcessAsync(Harness.InboundMessage("YES"), TestContext.Current.CancellationToken);
+
+        Assert.NotNull(conversation);
+        Assert.Equal(SmsConversationStatus.Open, conversation.Status);
+        harness.Dispatcher.Verify(
+            d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Inbound_OptOutKeyword_AlwaysConfirms_EvenWhenTheContactIsNotOptedOut()
+    {
+        // STOP and HELP are unconditional: the carrier rules require an answer however the conversation is going,
+        // so the gate that quiets a redundant opt-in must never quiet these.
+        var harness = new Harness(routing: null, contactContentItemId: "contact-1", contactOptedOut: false);
+
+        await harness.Processor.ProcessAsync(Harness.InboundMessage("STOP"), TestContext.Current.CancellationToken);
+
+        harness.Dispatcher.Verify(
+            d => d.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -180,11 +232,18 @@ public class SmsInboundProcessorTests
 
         public SmsInboundProcessor Processor { get; }
 
+        /// <summary>
+        /// The dispatcher the keyword confirmations go through, so a test can assert one was (or was not) sent.
+        /// </summary>
+        public Mock<ISmsDispatcher> Dispatcher { get; } = new();
+
         public Harness(
             SmsEndpointRoutingSettings routing,
             SmsConversation existing = null,
             bool lockAcquired = true,
-            SmsConversation createConflictsWith = null)
+            SmsConversation createConflictsWith = null,
+            string contactContentItemId = null,
+            bool contactOptedOut = false)
         {
             var endpoint = new OmnichannelChannelEndpoint { ItemId = "endpoint-1", Channel = "SMS", Value = "+15553334444" };
 
@@ -233,7 +292,7 @@ public class SmsInboundProcessorTests
 
             var contactResolver = new Mock<ISmsContactResolver>();
             contactResolver.Setup(r => r.ResolveContactContentItemIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .Returns(() => ValueTask.FromResult<string>(null));
+                .Returns(() => ValueTask.FromResult(contactContentItemId));
 
             var routers = new ISmsInboundRouter[]
             {
@@ -243,6 +302,15 @@ public class SmsInboundProcessorTests
             };
 
             var contentManager = new Mock<IContentManager>();
+
+            if (contactContentItemId is not null)
+            {
+                var contact = new ContentItem { ContentType = "Customer", ContentItemId = contactContentItemId };
+                contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(contactOptedOut, DateTime.UtcNow));
+
+                contentManager.Setup(m => m.GetAsync(contactContentItemId, It.IsAny<VersionOptions>()))
+                    .ReturnsAsync(contact);
+            }
 
             var session = new Mock<ISession>();
             session.Setup(s => s.SaveAsync(It.IsAny<OmnichannelMessage>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -263,7 +331,7 @@ public class SmsInboundProcessorTests
                 Notifier.Object,
                 new SmsConversationRouter(routers, NullLogger<SmsConversationRouter>.Instance),
                 new NoOpSmsFirstResponseSlaService(),
-                new Mock<ISmsDispatcher>().Object,
+                Dispatcher.Object,
                 new OptionsWrapper<SmsKeywordReplySettings>(new SmsKeywordReplySettings()),
                 contentManager.Object,
                 distributedLock,

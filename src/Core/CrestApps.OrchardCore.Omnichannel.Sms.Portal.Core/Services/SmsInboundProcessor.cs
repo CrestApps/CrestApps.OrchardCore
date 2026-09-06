@@ -308,6 +308,18 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
                 break;
 
             case SmsKeyword.Start:
+                // An opt-in keyword only means "make me reachable again" when the contact is actually opted out.
+                // "YES" is one of them and is also the most ordinary answer there is — an automated agent opens
+                // by asking a yes/no question, so the customer's "Yes." would otherwise be read as a resubscribe:
+                // they get a confirmation they never asked for, landing as a second, unrelated message on top of
+                // the agent's real reply. Nothing to reopen means nothing to confirm, so leave the message to the
+                // conversation. STOP and HELP stay unconditional — those the carrier rules require us to answer
+                // however the thread is going.
+                if (!await IsOptedOutAsync(conversation, cancellationToken))
+                {
+                    return;
+                }
+
                 // Reopening is the point: a contact who texts START is asking to be reachable again, and leaving
                 // the thread closed would mean their next message arrives with no history attached.
                 conversation.Status = SmsConversationStatus.Open;
@@ -334,6 +346,22 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
                 Body = reply,
             },
             cancellationToken);
+    }
+
+    /// <summary>
+    /// Determines whether the conversation's contact is currently opted out of SMS, which is what makes an
+    /// opt-in keyword meaningful. A conversation with no contact record has no recorded opt-out to reverse.
+    /// </summary>
+    private async Task<bool> IsOptedOutAsync(SmsConversation conversation, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(conversation.ContactContentItemId))
+        {
+            return false;
+        }
+
+        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+
+        return contact?.As<OmnichannelContactPart>()?.DoNotSms == true;
     }
 
     private async Task SetDoNotSmsAsync(SmsConversation conversation, bool doNotSms, CancellationToken cancellationToken)

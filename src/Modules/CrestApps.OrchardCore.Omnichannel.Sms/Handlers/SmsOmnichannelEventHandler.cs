@@ -560,7 +560,21 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         SessionId = chatSession.SessionId,
                         Role = ChatRole.Assistant,
                         Content = bestChoice,
+                        // Stamp the reply's time. Without this it defaults to DateTime.MinValue, so every assistant
+                        // message sorts ahead of every timestamped customer message when the transcript is ordered
+                        // by time: the owed-reply scan then sees every customer message as still unanswered (the
+                        // count only ever grows) and the model is handed a scrambled history, so it re-asks
+                        // questions the customer already answered and fires repeat replies.
+                        CreatedUtc = _clock.UtcNow,
                     }, cancellationToken);
+
+                    // Commit the reply to the store NOW, while we still hold the conversation lock. Otherwise the
+                    // write lands only when this background scope disposes — after the lock is released — and the
+                    // next inbound turn, which acquires the lock in between, reads a transcript that does not yet
+                    // include this reply, finds the just-answered message still "owed", and sends a second reply.
+                    // That is exactly the growing "N customer message(s) owed" and the back-to-back assistant
+                    // messages seen in a burst. Flushing inside the lock makes the reply visible to the next turn.
+                    await _session.SaveChangesAsync(cancellationToken);
 
                     chatSession.LastActivityUtc = _clock.UtcNow;
                     handledTurn = true;

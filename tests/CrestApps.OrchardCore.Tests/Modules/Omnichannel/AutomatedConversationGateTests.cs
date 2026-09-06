@@ -105,4 +105,54 @@ public sealed class AutomatedConversationGateTests
         Assert.False(gate.IsGenerating(null));
         Assert.False(gate.IsGenerating(string.Empty));
     }
+
+    [Fact]
+    public void TryClaimInboundMessage_AllowsTheFirstDelivery_AndRejectsARedelivery()
+    {
+        // A provider that delivers the same webhook twice (Twilio retries on a slow ack) must not produce a second
+        // reply: the first claim wins, the redelivery of the same MessageSid is recognised as a duplicate.
+        var gate = new InMemoryAutomatedConversationGate();
+
+        Assert.True(gate.TryClaimInboundMessage("SM-duplicate-id"));
+        Assert.False(gate.TryClaimInboundMessage("SM-duplicate-id"));
+    }
+
+    [Fact]
+    public void TryClaimInboundMessage_TreatsDistinctMessagesIndependently()
+    {
+        var gate = new InMemoryAutomatedConversationGate();
+
+        Assert.True(gate.TryClaimInboundMessage("SM-one"));
+        Assert.True(gate.TryClaimInboundMessage("SM-two"));
+    }
+
+    [Fact]
+    public void TryClaimInboundMessage_WithoutAnId_IsAlwaysAllowed()
+    {
+        // A message that carries no provider id cannot be deduplicated; dropping it would lose a real reply, so it
+        // is always let through.
+        var gate = new InMemoryAutomatedConversationGate();
+
+        Assert.True(gate.TryClaimInboundMessage(null));
+        Assert.True(gate.TryClaimInboundMessage(string.Empty));
+        Assert.True(gate.TryClaimInboundMessage(null));
+    }
+
+    [Fact]
+    public void TryClaimInboundMessage_IsConcurrencySafe_OnlyOneClaimWins()
+    {
+        // Two redeliveries can be processed on different threads at the same moment; exactly one must win the claim.
+        var gate = new InMemoryAutomatedConversationGate();
+        var wins = 0;
+
+        Parallel.For(0, 64, _ =>
+        {
+            if (gate.TryClaimInboundMessage("SM-racing-id"))
+            {
+                Interlocked.Increment(ref wins);
+            }
+        });
+
+        Assert.Equal(1, wins);
+    }
 }

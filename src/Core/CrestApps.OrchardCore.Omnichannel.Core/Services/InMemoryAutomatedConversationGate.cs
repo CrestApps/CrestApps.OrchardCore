@@ -12,6 +12,15 @@ public sealed class InMemoryAutomatedConversationGate : IAutomatedConversationGa
 {
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _activeGenerations = new(StringComparer.Ordinal);
 
+    // Provider message ids already claimed for processing, with the time each was claimed so the map can be swept.
+    // A provider redelivery arrives within seconds to minutes of the original, so an in-memory record that is kept
+    // for a while and then evicted is enough to recognise one; nothing here needs to survive a restart.
+    private readonly ConcurrentDictionary<string, DateTimeOffset> _claimedInboundMessages = new(StringComparer.Ordinal);
+
+    private static readonly TimeSpan _inboundClaimRetention = TimeSpan.FromMinutes(30);
+
+    private long _lastSweepTicks;
+
     /// <inheritdoc/>
     public IAutomatedConversationGeneration Begin(string sessionId, CancellationToken hostToken)
     {
@@ -37,6 +46,48 @@ public sealed class InMemoryAutomatedConversationGate : IAutomatedConversationGa
     /// <inheritdoc/>
     public bool IsGenerating(string sessionId)
         => !string.IsNullOrEmpty(sessionId) && _activeGenerations.ContainsKey(sessionId);
+
+    /// <inheritdoc/>
+    public bool TryClaimInboundMessage(string providerMessageId)
+    {
+        // An unidentifiable message cannot be deduplicated; let it through rather than risk dropping a real reply.
+        if (string.IsNullOrEmpty(providerMessageId))
+        {
+            return true;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+
+        SweepExpiredClaims(now);
+
+        // TryAdd is atomic, so exactly one of two concurrent deliveries of the same id wins the claim.
+        return _claimedInboundMessages.TryAdd(providerMessageId, now);
+    }
+
+    private void SweepExpiredClaims(DateTimeOffset now)
+    {
+        // Opportunistic, at most once a minute, so the claim map cannot grow without bound on a long-running node
+        // while never adding a lock to the common claim path.
+        var last = Interlocked.Read(ref _lastSweepTicks);
+
+        if (now.UtcTicks - last < TimeSpan.FromMinutes(1).Ticks)
+        {
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref _lastSweepTicks, now.UtcTicks, last) != last)
+        {
+            return;
+        }
+
+        foreach (var entry in _claimedInboundMessages)
+        {
+            if (now - entry.Value > _inboundClaimRetention)
+            {
+                _claimedInboundMessages.TryRemove(entry.Key, out _);
+            }
+        }
+    }
 
     private void Release(string sessionId, CancellationTokenSource source)
     {

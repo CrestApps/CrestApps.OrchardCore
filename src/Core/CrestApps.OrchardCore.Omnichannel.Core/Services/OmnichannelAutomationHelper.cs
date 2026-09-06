@@ -75,6 +75,11 @@ public static class OmnichannelAutomationHelper
                 batch.TextToSpeechVoiceId,
                 flowSettings?.TextToSpeechVoiceId),
 
+            // How the call presents itself is a per-campaign choice, like the voice: chosen on the batch when the
+            // inventory is loaded and snapshotted onto each activity, so a conversation sounds the same for its
+            // whole life even if the batch is edited afterwards.
+            UseCallAmbience = batch.UseCallAmbience,
+
             // The batch is the source of truth for the AI field-update guards: the subject AI-settings UI is
             // only shown for inbound subjects, so an outbound automated inventory can only configure these when
             // it is loaded. They are chosen on the batch and snapshotted onto each loaded activity.
@@ -124,7 +129,15 @@ public static class OmnichannelAutomationHelper
     /// The minimum pause, in seconds, before an automated conversation replies. Even when no delay is configured
     /// a reply never fires instantly, so the exchange feels like a person and not a bot.
     /// </summary>
-    public const int MinimumHumanizedReplyDelaySeconds = 3;
+    /// <remarks>
+    /// This doubles as the window in which a newer inbound message can still supersede the reply being composed,
+    /// so it has to be long enough to cover how people actually text. At three seconds a customer who sent a
+    /// second thought ten seconds later had already been answered, and got a reply to each line — which reads as
+    /// the bot talking over itself. Ten seconds comfortably spans a follow-up thumb-typed on a phone, so the burst
+    /// collapses into one answer, and it is closer to how quickly a person really replies. A longer pause
+    /// configured on the inventory load or the subject flow still wins: this is only the floor.
+    /// </remarks>
+    public const int MinimumHumanizedReplyDelaySeconds = 10;
 
     /// <summary>
     /// The upper bound, in seconds, on the humanized "reading" pause a reply waits before it is composed. It keeps

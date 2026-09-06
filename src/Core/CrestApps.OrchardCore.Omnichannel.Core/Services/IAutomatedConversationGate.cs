@@ -28,4 +28,18 @@ public interface IAutomatedConversationGate
     /// <param name="sessionId">The AI chat session the conversation is held in.</param>
     /// <returns><see langword="true"/> when a generation is in flight.</returns>
     bool IsGenerating(string sessionId);
+
+    /// <summary>
+    /// Claims an inbound provider message for processing exactly once. A provider (for example Twilio) can deliver
+    /// the same webhook more than once — a redelivery carries the same provider message id — and without this a
+    /// second delivery is stored as a fresh customer turn and answered again, so the customer gets a duplicate
+    /// reply. The first caller to claim an id wins; every later caller with the same id is told it is a duplicate
+    /// and stops before any reply is composed.
+    /// </summary>
+    /// <param name="providerMessageId">
+    /// The provider's unique id for the inbound message (Twilio's <c>MessageSid</c>). An empty value cannot be
+    /// deduplicated and is always allowed through.
+    /// </param>
+    /// <returns><see langword="true"/> when this is the first time the id is seen; <see langword="false"/> for a duplicate.</returns>
+    bool TryClaimInboundMessage(string providerMessageId);
 }

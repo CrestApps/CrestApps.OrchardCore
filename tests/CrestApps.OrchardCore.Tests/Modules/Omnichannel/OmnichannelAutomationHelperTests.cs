@@ -54,38 +54,53 @@ public sealed class OmnichannelAutomationHelperTests
     // --- Humanized reading (settle) delay --------------------------------------------------------------------------
 
     [Fact]
-    public void ResolveHumanizedReadingDelay_WithNoConfiguredDelayAndNoInput_IsTheThreeSecondFloor()
+    public void ResolveHumanizedReadingDelay_WithNoConfiguredDelayAndNoInput_IsTheTenSecondFloor()
     {
+        // The floor is also the window in which a newer inbound text can still supersede the reply being composed,
+        // so it has to span a follow-up thumb-typed on a phone. At three seconds a second thought sent moments
+        // later was already answered, and the customer got a reply to each line.
         var delay = OmnichannelAutomationHelper.ResolveHumanizedReadingDelay(null, 0);
 
         Assert.Equal(TimeSpan.FromSeconds(OmnichannelAutomationHelper.MinimumHumanizedReplyDelaySeconds), delay);
-        Assert.Equal(3, delay.TotalSeconds);
+        Assert.Equal(10, delay.TotalSeconds);
     }
 
     [Fact]
     public void ResolveHumanizedReadingDelay_AddsReadingTimeProportionalToInboundLength()
     {
-        // floor 3s + 100 chars / 20 cps = 5s => 8s.
+        // floor 10s + 100 chars / 20 cps = 5s => 15s.
         var delay = OmnichannelAutomationHelper.ResolveHumanizedReadingDelay(null, 100);
 
-        Assert.Equal(TimeSpan.FromSeconds(8), delay);
+        Assert.Equal(TimeSpan.FromSeconds(15), delay);
     }
 
     [Fact]
     public void ResolveHumanizedReadingDelay_CapsTheReadingContributionForVeryLongInput()
     {
-        // floor 3s + 400/20 = 23s, but reading is capped at floor + 15s => 18s.
+        // floor 10s + 400/20 = 30s, but reading is capped at floor + 15s => 25s.
         var delay = OmnichannelAutomationHelper.ResolveHumanizedReadingDelay(null, 400);
 
-        Assert.Equal(TimeSpan.FromSeconds(18), delay);
+        Assert.Equal(TimeSpan.FromSeconds(25), delay);
     }
 
     [Fact]
     public void ResolveHumanizedReadingDelay_HonorsAConfiguredDelayAsTheFloor()
     {
-        var delay = OmnichannelAutomationHelper.ResolveHumanizedReadingDelay(TimeSpan.FromSeconds(10), 0);
+        // A delay configured on the inventory load or the subject flow wins whenever it is longer than the
+        // built-in floor, so an operator who wants a slower, more deliberate cadence still gets it.
+        var delay = OmnichannelAutomationHelper.ResolveHumanizedReadingDelay(TimeSpan.FromSeconds(30), 0);
 
-        Assert.Equal(TimeSpan.FromSeconds(10), delay);
+        Assert.Equal(TimeSpan.FromSeconds(30), delay);
+    }
+
+    [Fact]
+    public void ResolveHumanizedReadingDelay_IgnoresAConfiguredDelayShorterThanTheFloor()
+    {
+        // A configured delay below the floor must not shorten the supersede window: two seconds would put us back
+        // to answering each line of a burst separately.
+        var delay = OmnichannelAutomationHelper.ResolveHumanizedReadingDelay(TimeSpan.FromSeconds(2), 0);
+
+        Assert.Equal(TimeSpan.FromSeconds(OmnichannelAutomationHelper.MinimumHumanizedReplyDelaySeconds), delay);
     }
 
     // --- Humanized typing delay ------------------------------------------------------------------------------------
