@@ -13,7 +13,15 @@ public interface IAgentWorkSelector
     /// Selects the queue holding the contact this agent should be offered next.
     /// </summary>
     /// <param name="agent">The agent to select work for.</param>
+    /// <param name="excludedQueueIds">
+    /// Queues the caller has already ruled out for this pass (for example a paced campaign queue the dialer
+    /// owns, or a queue whose head item this agent could not take). They are skipped so the selection moves on
+    /// to the next-best queue instead of returning the same answer again.
+    /// </param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The queue identifier, or <see langword="null"/> when no queue has eligible work.</returns>
-    Task<string> SelectNextForAgentAsync(AgentProfile agent, CancellationToken cancellationToken = default);
+    Task<string> SelectNextForAgentAsync(
+        AgentProfile agent,
+        IReadOnlyCollection<string> excludedQueueIds = null,
+        CancellationToken cancellationToken = default);
 }

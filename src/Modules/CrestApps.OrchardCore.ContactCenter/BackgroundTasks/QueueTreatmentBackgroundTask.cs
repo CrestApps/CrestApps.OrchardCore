@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 [BackgroundTask(
     Title = "Contact Center Queue Treatment",
     Schedule = "* * * * *",
-    Description = "Plays queue announcements and callback offers to waiting callers, and overflows callers whose tier is due.",
+    Description = "Plays queue announcements and callback offers to waiting callers, overflows callers whose tier is due, and applies the maximum-wait action to callers who have waited past it.",
     LockTimeout = 5_000,
     LockExpiration = LockExpirationMilliseconds)]
 public sealed class QueueTreatmentBackgroundTask : IBackgroundTask
@@ -57,6 +57,7 @@ public sealed class QueueTreatmentBackgroundTask : IBackgroundTask
         var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
         var treatmentService = serviceProvider.GetRequiredService<IQueueTreatmentService>();
         var queueService = serviceProvider.GetRequiredService<IActivityQueueService>();
+        var limitService = serviceProvider.GetRequiredService<IQueueLimitService>();
         var logger = serviceProvider.GetRequiredService<ILogger<QueueTreatmentBackgroundTask>>();
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -80,6 +81,10 @@ public sealed class QueueTreatmentBackgroundTask : IBackgroundTask
                     {
                         await treatmentService.RunDueAsync(queue, runToken);
                         await queueService.OverflowDueAsync(queue, runToken);
+
+                        // After the overflow tiers, so a caller whose hop and maximum wait fall due together is
+                        // handed on rather than sent to voicemail.
+                        await limitService.EnforceMaxWaitAsync(queue, runToken);
                     }
                     catch (OperationCanceledException) when (runToken.IsCancellationRequested)
                     {

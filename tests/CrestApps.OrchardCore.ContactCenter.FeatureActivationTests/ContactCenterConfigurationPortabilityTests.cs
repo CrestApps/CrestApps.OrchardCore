@@ -548,6 +548,49 @@ public sealed class ContactCenterConfigurationPortabilityTests
         // phone number parsed against the profile's region, so both properties need values the validator accepts.
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.CallerId), JsonValue.Create("+16502530000")),
         (ContactCenterDeploymentSteps.DialerProfile, nameof(DialerProfile.DefaultRegionCode), JsonValue.Create("US")),
+        // An IVR flow is validated as a runnable menu tree (a root that exists, keys that are telephone keys,
+        // sub-menus that exist), which marker strings cannot satisfy; the seed uses the smallest valid tree
+        // that still exercises every property.
+        (ContactCenterDeploymentSteps.EntryPoint, nameof(ContactCenterEntryPoint.IvrFlow), JsonSerializer.SerializeToNode(
+            new IvrFlow
+            {
+                RootNodeId = "main",
+                MaxRetries = 2,
+                FallbackAction = new IvrAction { Kind = IvrActionKind.SubMenu, TargetId = "support" },
+                Nodes =
+                [
+                    new IvrNode
+                    {
+                        NodeId = "main",
+                        Prompt = "ContactCenterEntryPoint-IvrFlow-Nodes-0-Prompt",
+                        PromptMediaId = "ContactCenterEntryPoint-IvrFlow-Nodes-0-PromptMediaId",
+                        Options = [new IvrOption { Digit = "1", Action = new IvrAction { Kind = IvrActionKind.RouteToQueue, TargetId = "ContactCenterEntryPoint-IvrFlow-TargetId" } }],
+                    },
+                    new IvrNode
+                    {
+                        NodeId = "support",
+                        Prompt = "ContactCenterEntryPoint-IvrFlow-Nodes-1-Prompt",
+                        Options = [new IvrOption { Digit = "*", Action = new IvrAction { Kind = IvrActionKind.Voicemail } }],
+                    },
+                ],
+            },
+            JOptions.Default)),
+        // The callback key is validated as a single telephone key, which a marker string is not.
+        (ContactCenterDeploymentSteps.Queue, nameof(ActivityQueue.Treatment), JsonSerializer.SerializeToNode(
+            new QueueTreatmentSettings
+            {
+                WelcomeMessage = "ActivityQueue-Treatment-WelcomeMessage",
+                AnnouncementIntervalSeconds = 7,
+                AnnouncePosition = true,
+                AnnounceEstimatedWait = true,
+                HoldMusicMediaId = "ActivityQueue-Treatment-HoldMusicMediaId",
+                CallbackDtmfKey = "1",
+                CallbackOfferAfterSeconds = 7,
+                MinimumEstimateSeconds = 7,
+                MaximumEstimateSeconds = 70,
+                AverageHandleTimeSeconds = 7,
+            },
+            JOptions.Default)),
     ];
 
     private static readonly (string OwningStep, string PropertyName, string ReferencedStep)[] _references =

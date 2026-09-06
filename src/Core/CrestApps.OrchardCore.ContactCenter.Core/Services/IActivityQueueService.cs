@@ -46,4 +46,14 @@ public interface IActivityQueueService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of items moved to the overflow queue.</returns>
     Task<int> OverflowDueAsync(ActivityQueue queue, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Moves one waiting item from its queue to an overflow queue, recording where it came from so it is never
+    /// passed back, and restarting the clock the new queue's thresholds are measured against.
+    /// </summary>
+    /// <param name="queueItem">The waiting item.</param>
+    /// <param name="fromQueue">The queue the item leaves.</param>
+    /// <param name="targetQueueId">The queue the item moves to.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task OverflowItemAsync(QueueItem queueItem, ActivityQueue fromQueue, string targetQueueId, CancellationToken cancellationToken = default);
 }

@@ -91,6 +91,8 @@ internal sealed class ContactCenterAgentEntitlementStep : NamedRecipeStepHandler
                 AllowedQueueIds = allowedQueueIds,
                 AllowedCampaignIds = allowedCampaignIds,
                 Skills = entry.Skills,
+                SkillProficiencies = entry.SkillProficiencies,
+                QueueMemberships = entry.QueueMemberships,
             };
 
             var existing = await _agentManager.FindByUserIdAsync(userId);
@@ -110,7 +112,8 @@ internal sealed class ContactCenterAgentEntitlementStep : NamedRecipeStepHandler
             agent.MaxConcurrentInteractions = configuration.MaxConcurrentInteractions;
             agent.AllowedQueueIds = AgentEntitlementUtilities.NormalizeIds(allowedQueueIds);
             agent.AllowedCampaignIds = AgentEntitlementUtilities.NormalizeIds(allowedCampaignIds);
-            agent.Skills = AgentEntitlementUtilities.NormalizeIds(entry.Skills);
+            AgentEntitlementUtilities.ApplySkills(agent, entry.Skills, entry.SkillProficiencies);
+            agent.QueueMemberships = AgentEntitlementUtilities.NormalizeQueueMemberships(entry.QueueMemberships);
             agent.CreatedUtc = _clock.UtcNow;
 
             var validationResult = await _agentManager.ValidateAsync(agent);
@@ -147,5 +150,9 @@ internal sealed class ContactCenterAgentEntitlementStep : NamedRecipeStepHandler
         public IList<string> AllowedCampaignIds { get; set; }
 
         public IList<string> Skills { get; set; }
+
+        public IList<AgentSkill> SkillProficiencies { get; set; }
+
+        public IList<AgentQueueMembership> QueueMemberships { get; set; }
     }
 }

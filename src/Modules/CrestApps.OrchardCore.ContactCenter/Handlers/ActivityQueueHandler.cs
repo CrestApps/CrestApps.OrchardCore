@@ -76,5 +76,28 @@ internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQue
         {
             context.Result.Fail(new ValidationResult(S["Select a valid queue group."], [nameof(ActivityQueue.QueueGroupId)]));
         }
+
+        // An overflow action needs somewhere to overflow to. Saving it without a destination would leave a
+        // caller who reaches the limit exactly where they were, which is what the action exists to prevent.
+        var hasOverflowDestination = OverflowScheduler.HasAnyTarget(context.Model);
+
+        if (context.Model.MaxWaitSeconds > 0 && context.Model.MaxWaitAction == QueueMaxWaitAction.Overflow && !hasOverflowDestination)
+        {
+            context.Result.Fail(new ValidationResult(S["The maximum-wait action overflows, but the queue names no overflow queue."], [nameof(ActivityQueue.MaxWaitAction)]));
+        }
+
+        if (context.Model.MaxQueueSize > 0 && context.Model.QueueFullAction == QueueMaxWaitAction.Overflow && !hasOverflowDestination)
+        {
+            context.Result.Fail(new ValidationResult(S["The queue-full action overflows, but the queue names no overflow queue."], [nameof(ActivityQueue.QueueFullAction)]));
+        }
+
+        var callbackKey = context.Model.Treatment?.CallbackDtmfKey;
+
+        if (!string.IsNullOrEmpty(callbackKey) && (callbackKey.Length != 1 || !TelephoneKeys.Contains(callbackKey[0])))
+        {
+            context.Result.Fail(new ValidationResult(S["The callback key must be a single telephone key: 0-9, * or #."], [nameof(ActivityQueue.Treatment)]));
+        }
     }
+
+    private const string TelephoneKeys = "0123456789*#";
 }

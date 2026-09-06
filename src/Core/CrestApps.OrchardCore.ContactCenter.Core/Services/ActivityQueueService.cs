@@ -229,27 +229,37 @@ public sealed class ActivityQueueService : IActivityQueueService
                 continue;
             }
 
-            if (!item.OverflowHistory.Contains(queue.ItemId, StringComparer.Ordinal))
-            {
-                item.OverflowHistory.Add(queue.ItemId);
-            }
-
-            item.OverflowedFromQueueId = queue.ItemId;
-            item.QueueId = target;
-            item.QueueEnteredUtc = now;
-            await _queueItemManager.UpdateAsync(item, cancellationToken: cancellationToken);
-
-            await _publisher.PublishAsync(new InteractionEvent
-            {
-                EventType = ContactCenterConstants.Events.QueueItemOverflowed,
-                AggregateType = nameof(QueueItem),
-                AggregateId = item.ItemId,
-                SourceComponent = ContactCenterConstants.Components.Queues,
-            }, cancellationToken);
+            await OverflowItemAsync(item, queue, target, cancellationToken);
 
             moved++;
         }
 
         return moved;
+    }
+
+    /// <inheritdoc/>
+    public async Task OverflowItemAsync(QueueItem queueItem, ActivityQueue fromQueue, string targetQueueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queueItem);
+        ArgumentNullException.ThrowIfNull(fromQueue);
+        ArgumentException.ThrowIfNullOrEmpty(targetQueueId);
+
+        if (!queueItem.OverflowHistory.Contains(fromQueue.ItemId, StringComparer.Ordinal))
+        {
+            queueItem.OverflowHistory.Add(fromQueue.ItemId);
+        }
+
+        queueItem.OverflowedFromQueueId = fromQueue.ItemId;
+        queueItem.QueueId = targetQueueId;
+        queueItem.QueueEnteredUtc = _clock.UtcNow;
+        await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+
+        await _publisher.PublishAsync(new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.QueueItemOverflowed,
+            AggregateType = nameof(QueueItem),
+            AggregateId = queueItem.ItemId,
+            SourceComponent = ContactCenterConstants.Components.Queues,
+        }, cancellationToken);
     }
 }

@@ -265,7 +265,10 @@ public sealed class AgentPresenceManagerServiceTests
             new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
-        var profile = await service.UpdateEntitlementsAsync("a1", ["q1"], [], TestContext.Current.CancellationToken);
+        var profile = await service.UpdateEntitlementsAsync(
+            "a1",
+            new AgentEntitlements { AllowedQueueIds = ["q1"], AllowedCampaignIds = [] },
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(["q1"], profile.AllowedQueueIds);
@@ -305,7 +308,10 @@ public sealed class AgentPresenceManagerServiceTests
             new Mock<ILogger<AgentPresenceManagerService>>().Object);
 
         // Act
-        var profile = await service.UpdateEntitlementsAsync("missing", ["q1"], [], TestContext.Current.CancellationToken);
+        var profile = await service.UpdateEntitlementsAsync(
+            "missing",
+            new AgentEntitlements { AllowedQueueIds = ["q1"], AllowedCampaignIds = [] },
+            TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(profile);

@@ -186,25 +186,39 @@ public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>,
 
         // One indexed read over every queue, ordered the way each queue routes, then reduced to the head of each
         // in memory. YesSql cannot express "first row per group", and the alternative is one query per queue on
-        // a path the soft phone re-runs about once a second.
-        var waiting = await Session.Query<QueueItem, QueueItemIndex>(
+        // a path every agent sync re-runs. Only index rows are read for the reduction - a busy queue can hold
+        // hundreds of waiting items, and loading every one of their documents to pick one per queue is a cost
+        // that grows with the backlog. The handful of head documents are then loaded by identifier.
+        var rows = await Session.QueryIndex<QueueItemIndex>(
             index => index.QueueId.IsIn(ids) && index.Status == QueueItemStatus.Waiting,
             collection: ContactCenterStorage.CollectionName)
             .OrderByDescending(index => index.Priority)
             .ThenBy(index => index.EnqueuedUtc)
             .ListAsync(cancellationToken);
 
-        var heads = new Dictionary<string, QueueItem>(StringComparer.OrdinalIgnoreCase);
+        var headItemIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var item in waiting)
+        foreach (var row in rows)
         {
-            if (!string.IsNullOrEmpty(item.QueueId))
+            if (!string.IsNullOrEmpty(row.QueueId) && !string.IsNullOrEmpty(row.ItemId))
             {
-                heads.TryAdd(item.QueueId, item);
+                headItemIds.TryAdd(row.QueueId, row.ItemId);
             }
         }
 
-        return heads.Values.ToArray();
+        if (headItemIds.Count == 0)
+        {
+            return [];
+        }
+
+        var itemIds = headItemIds.Values.ToArray();
+
+        var heads = await Session.Query<QueueItem, QueueItemIndex>(
+            index => index.ItemId.IsIn(itemIds),
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return heads.ToArray();
     }
 
     /// <inheritdoc/>

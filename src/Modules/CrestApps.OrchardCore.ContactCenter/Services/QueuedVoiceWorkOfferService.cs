@@ -171,11 +171,16 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         // the second queue sat behind one who had just arrived on the first.
         //
         // The loop re-selects after each offer because an agent may still be available (an offer can be declined
-        // or find nobody), and the next-best queue may have changed. It ends as soon as the agent is reserved,
-        // stops being available, or no queue has eligible work.
-        while (true)
+        // or find nobody), and the next-best queue may have changed. A queue this pass could not serve - a paced
+        // campaign the dialer owns, or one whose head item this agent could not take - is excluded from the next
+        // selection instead of ending the pass, so an inbound queue behind it is still reached. The pass ends as
+        // soon as the agent is reserved, stops being available, or no queue has eligible work left.
+        var excludedQueueIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var maxPasses = Math.Max(1, agent.QueueIds.Count + agent.QueueMemberships.Count) + 1;
+
+        for (var pass = 0; pass < maxPasses; pass++)
         {
-            var queueId = await _workSelector.SelectNextForAgentAsync(agent, cancellationToken);
+            var queueId = await _workSelector.SelectNextForAgentAsync(agent, excludedQueueIds, cancellationToken);
 
             if (string.IsNullOrEmpty(queueId))
             {
@@ -185,13 +190,13 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             // Outbound campaign work dialed by an automated (paced) mode - Power, Progressive, or Predictive -
             // is placed by the dialer pacing engine, which reserves the agent itself. Offering it here would
             // reserve the head item and immediately reject it (it has no interaction yet and is not a preview
-            // offer), and the soft phone re-runs this scan roughly once a second, so the reservation would churn
-            // and starve the pacing engine that actually places the call. Leave those queues to the pacing engine.
+            // offer), so the reservation would churn and starve the pacing engine that actually places the call.
+            // The queue is left to the pacing engine and the selection moves on.
             if (await IsAutomatedPacedCampaignQueueAsync(queueId, cancellationToken))
             {
-                // Selecting again would return the same queue forever, so this agent takes nothing from it and
-                // the pass ends rather than spinning.
-                break;
+                excludedQueueIds.Add(queueId);
+
+                continue;
             }
 
             var agentUserId = await _inboundVoiceService.OfferNextAsync(queueId, cancellationToken);
@@ -220,10 +225,11 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             }
 
             // Nothing was offered and the agent is still free, so the queue the selector chose had nothing this
-            // agent could take. Selecting again would choose it again.
+            // agent could take (a skill or capacity rule, or a race with another node). Selecting again would
+            // choose it again, so it is excluded and the next-best queue gets its turn.
             if (string.IsNullOrWhiteSpace(agentUserId))
             {
-                break;
+                excludedQueueIds.Add(queueId);
             }
         }
 

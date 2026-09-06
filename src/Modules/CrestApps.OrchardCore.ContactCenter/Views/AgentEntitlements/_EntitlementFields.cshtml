@@ -1,14 +1,73 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
 @model AgentEntitlementViewModel
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
+@{
+    var skillsPrefix = Html.NameFor(m => m.SkillProficiencies);
+    var membershipsPrefix = Html.NameFor(m => m.QueueMemberships);
+    var proficiencyLevels = Enumerable.Range(AgentSkill.MinimumProficiency, AgentSkill.MaximumProficiency - AgentSkill.MinimumProficiency + 1).ToArray();
+}
+
 <div class="ocat-wrapper" asp-validation-class-for="AllowedQueueIds">
     <label asp-for="AllowedQueueIds" class="ocat-label">@T["Allowed queues"]</label>
     <div class="ocat-end">
-        <select asp-for="AllowedQueueIds" asp-items="Model.QueueOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" title="@T["Select allowed queue(s)"]"></select>
+        <select asp-for="AllowedQueueIds" asp-items="Model.QueueOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" title="@T["Select allowed queue(s)"]" data-agent-allowed-queues></select>
         <span asp-validation-for="AllowedQueueIds" class="text-danger"></span>
         <span class="hint">@T["The agent can sign in only to these queues. Removing a queue also removes any current live membership in that queue."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Queue preferences"]</label>
+    <div class="ocat-end">
+        <div data-agent-memberships data-prefix="@membershipsPrefix">
+            <table class="table table-sm align-middle mb-2">
+                <thead>
+                    <tr>
+                        <th>@T["Queue"]</th>
+                        <th>@T["Priority"]</th>
+                        <th>@T["Delay (seconds)"]</th>
+                    </tr>
+                </thead>
+                <tbody data-agent-membership-rows>
+                    @foreach (var row in Model.QueueMemberships)
+                    {
+                        <tr data-agent-membership-row data-queue-id="@row.QueueId">
+                            <td>
+                                <input type="hidden" name="@(membershipsPrefix).Index" value="@row.QueueId" />
+                                <input type="hidden" name="@(membershipsPrefix)[@row.QueueId].QueueId" value="@row.QueueId" />
+                                <span data-agent-membership-name>@(row.QueueName ?? row.QueueId)</span>
+                            </td>
+                            <td>
+                                <input type="number" min="0" name="@(membershipsPrefix)[@row.QueueId].Priority" value="@row.Priority" class="form-control form-control-sm" />
+                            </td>
+                            <td>
+                                <input type="number" min="0" name="@(membershipsPrefix)[@row.QueueId].DelaySeconds" value="@row.DelaySeconds" class="form-control form-control-sm" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <template data-agent-membership-template>
+                <tr data-agent-membership-row data-queue-id="__QUEUE_ID__">
+                    <td>
+                        <input type="hidden" name="@(membershipsPrefix).Index" value="__QUEUE_ID__" />
+                        <input type="hidden" name="@(membershipsPrefix)[__QUEUE_ID__].QueueId" value="__QUEUE_ID__" />
+                        <span data-agent-membership-name></span>
+                    </td>
+                    <td>
+                        <input type="number" min="0" name="@(membershipsPrefix)[__QUEUE_ID__].Priority" value="0" class="form-control form-control-sm" />
+                    </td>
+                    <td>
+                        <input type="number" min="0" name="@(membershipsPrefix)[__QUEUE_ID__].DelaySeconds" value="0" class="form-control form-control-sm" />
+                    </td>
+                </tr>
+            </template>
+            <p class="text-muted small mb-0" data-agent-membership-empty hidden>@T["Select allowed queues to set their priority and delay."]</p>
+        </div>
+        <span class="hint">@T["Lower priority numbers are served first: when work waits on several of the agent's queues, a priority-0 queue is answered before a priority-1 queue. The delay is how long a caller waits before this agent is offered work from that queue, which lets an agent back up a queue without taking its calls ahead of its own team."]</span>
     </div>
 </div>
 
@@ -20,3 +79,132 @@
         <span class="hint">@T["The agent can sign in only to these dialer campaigns. Removing a campaign also removes any current live membership in that campaign."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Skills"]</label>
+    <div class="ocat-end">
+        <div data-repeater data-repeater-prefix="@skillsPrefix">
+            <table class="table table-sm align-middle mb-2">
+                <thead>
+                    <tr>
+                        <th>@T["Skill"]</th>
+                        <th>@T["Proficiency"]</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody data-repeater-rows>
+                    @for (var i = 0; i < Model.SkillProficiencies.Count; i++)
+                    {
+                        var row = Model.SkillProficiencies[i];
+                        var key = i.ToString();
+
+                        <tr data-repeater-row>
+                            <td>
+                                <input type="hidden" name="@(skillsPrefix).Index" value="@key" />
+                                <select name="@(skillsPrefix)[@key].SkillId" class="form-select form-select-sm">
+                                    <option value="">@T["Select a skill"]</option>
+                                    @foreach (var option in Model.SkillOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(string.Equals(option.Value, row.SkillId, StringComparison.OrdinalIgnoreCase))">@option.Text</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select name="@(skillsPrefix)[@key].Proficiency" class="form-select form-select-sm">
+                                    @foreach (var level in proficiencyLevels)
+                                    {
+                                        <option value="@level" selected="@(level == row.Proficiency)">@level</option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <template data-repeater-template>
+                <tr data-repeater-row>
+                    <td>
+                        <input type="hidden" name="@(skillsPrefix).Index" value="__KEY__" />
+                        <select name="@(skillsPrefix)[__KEY__].SkillId" class="form-select form-select-sm">
+                            <option value="">@T["Select a skill"]</option>
+                            @foreach (var option in Model.SkillOptions)
+                            {
+                                <option value="@option.Value">@option.Text</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <select name="@(skillsPrefix)[__KEY__].Proficiency" class="form-select form-select-sm">
+                            @foreach (var level in proficiencyLevels)
+                            {
+                                <option value="@level" selected="@(level == AgentSkill.DefaultProficiency)">@level</option>
+                            }
+                        </select>
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </td>
+                </tr>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add skill"]</button>
+        </div>
+        <span class="hint">@T["Proficiency runs from 1 (basic) to 5 (expert). A queue that requires a skill at a minimum proficiency only offers its work to agents at or above it."]</span>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ContactCenterRepeaterScript")
+
+<script at="Foot" depends-on="bootstrap-select">
+    (function () {
+        // The queue-preference rows follow the allowed-queues selection: a row appears for every allowed queue
+        // and disappears when the queue is removed, so an operator never sets a priority for a queue the agent
+        // cannot sign into.
+        var select = document.querySelector('[data-agent-allowed-queues]');
+        var container = document.querySelector('[data-agent-memberships]');
+
+        if (!select || !container) {
+            return;
+        }
+
+        var rows = container.querySelector('[data-agent-membership-rows]');
+        var template = container.querySelector('template[data-agent-membership-template]');
+        var empty = container.querySelector('[data-agent-membership-empty]');
+
+        function sync() {
+            var selected = {};
+
+            Array.prototype.forEach.call(select.selectedOptions, function (option) {
+                selected[option.value] = option.text;
+            });
+
+            Array.prototype.forEach.call(rows.querySelectorAll('[data-agent-membership-row]'), function (row) {
+                if (!selected.hasOwnProperty(row.getAttribute('data-queue-id'))) {
+                    row.remove();
+                }
+            });
+
+            Object.keys(selected).forEach(function (queueId) {
+                if (rows.querySelector('[data-agent-membership-row][data-queue-id="' + queueId + '"]')) {
+                    return;
+                }
+
+                var holder = document.createElement('tbody');
+                holder.innerHTML = template.innerHTML.split('__QUEUE_ID__').join(queueId);
+
+                var row = holder.firstElementChild;
+                row.querySelector('[data-agent-membership-name]').textContent = selected[queueId];
+                rows.appendChild(row);
+            });
+
+            if (empty) {
+                empty.hidden = rows.querySelector('[data-agent-membership-row]') !== null;
+            }
+        }
+
+        select.addEventListener('change', sync);
+        sync();
+    })();
+</script>

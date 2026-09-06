@@ -678,7 +678,9 @@ public sealed class ContactCenterSearchEngineIndependenceTests
             {
                 foreach (var reference in references)
                 {
-                    if (_referencesByAssembly.ContainsKey(reference) || IsFrameworkAssembly(reference))
+                    if (_referencesByAssembly.ContainsKey(reference) ||
+                        IsFrameworkAssembly(reference) ||
+                        IsPlatformSpecificAssembly(reference))
                     {
                         continue;
                     }
@@ -712,6 +714,22 @@ public sealed class ContactCenterSearchEngineIndependenceTests
                 assemblyName.StartsWith("Microsoft.Extensions.", StringComparison.Ordinal) ||
                 assemblyName.StartsWith("Microsoft.JSInterop", StringComparison.Ordinal) ||
                 assemblyName.StartsWith("Microsoft.Net.Http.Headers", StringComparison.Ordinal);
+
+        /// <summary>
+        /// Determines whether an assembly is only ever present on another operating system, and is therefore
+        /// absent from this deployment by design rather than by mistake.
+        /// </summary>
+        /// <remarks>
+        /// A reference like this cannot hide a search dependency the way an unresolved one otherwise might: it
+        /// resolves on the platform it targets and is genuinely not restored on this one, so there is nothing to
+        /// walk into. Listing it explicitly keeps the rest of the rule strict, which is the point of the rule.
+        /// </remarks>
+        /// <param name="assemblyName">The simple assembly name to classify.</param>
+        /// <returns><see langword="true"/> when the assembly only ships for another platform.</returns>
+        private static bool IsPlatformSpecificAssembly(string assemblyName)
+            // Linux syscall interop, pulled in transitively by the multicast DNS package. It is restored only for
+            // Linux runtime identifiers, so it is never beside a Windows build.
+            => assemblyName.Equals("Tmds.LibC", StringComparison.Ordinal);
 
         /// <summary>
         /// Determines whether an assembly is a test harness rather than something the product ships.

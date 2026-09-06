@@ -1,4 +1,6 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using OrchardCore;
@@ -9,6 +11,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
 internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<ContactCenterEntryPoint>
 {
+    private static readonly JsonSerializerOptions _ivrDisplayOptions = new(ContactCenterDeploymentSerializer.Options)
+    {
+        WriteIndented = true,
+    };
+
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
 
     /// <summary>
@@ -57,6 +64,9 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             WelcomeMessage = entryPoint.WelcomeMessage,
             ClosedMessage = entryPoint.ClosedMessage,
             VoicemailGreetingText = entryPoint.VoicemailGreetingText,
+            IvrFlowJson = entryPoint.IvrFlow is null
+                ? null
+                : JsonSerializer.Serialize(entryPoint.IvrFlow, _ivrDisplayOptions),
             Enabled = entryPoint.Enabled,
         };
 
@@ -84,6 +94,9 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
             model.WelcomeMessage = viewModel.WelcomeMessage;
             model.ClosedMessage = viewModel.ClosedMessage;
             model.VoicemailGreetingText = viewModel.VoicemailGreetingText;
+            model.IvrFlowJson = viewModel.IvrFlowJson;
+            model.IvrQueueOptions = viewModel.IvrQueueOptions;
+            model.IvrAgentOptions = viewModel.IvrAgentOptions;
             model.Enabled = viewModel.Enabled;
         }).Location("Content:1");
     }
@@ -134,6 +147,11 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         entryPoint.ClosedMessage = model.ClosedMessage?.Trim();
         entryPoint.VoicemailGreetingText = string.IsNullOrWhiteSpace(model.VoicemailGreetingText) ? null : model.VoicemailGreetingText.Trim();
         entryPoint.Enabled = model.Enabled;
+
+        // The menu tree is edited as JSON. The binder parses it and reports malformed JSON against the field;
+        // whether the parsed flow is runnable is checked by the entry point handler, so a recipe import and
+        // this editor reject the same flows.
+        entryPoint.IvrFlow = model.IvrFlow;
 
         return await EditAsync(entryPoint, context);
     }

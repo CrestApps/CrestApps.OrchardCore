@@ -89,6 +89,19 @@ public static class OverflowScheduler
     }
 
     /// <summary>
+    /// Returns the overflow chain in the order callers walk it: nearest hop first.
+    /// </summary>
+    /// <param name="queue">The queue.</param>
+    public static IReadOnlyList<QueueOverflowTarget> GetOrderedTargets(ActivityQueue queue)
+    {
+        ArgumentNullException.ThrowIfNull(queue);
+
+        return GetTargets(queue)
+            .OrderBy(target => target.AfterSeconds)
+            .ToArray();
+    }
+
+    /// <summary>
     /// Reads the overflow chain, falling back to the single-target fields for queues configured before chains
     /// existed. Dropping those silently would strand every caller those queues were built to hand on.
     /// </summary>

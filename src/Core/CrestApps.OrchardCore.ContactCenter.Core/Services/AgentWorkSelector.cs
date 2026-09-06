@@ -29,11 +29,14 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
     }
 
     /// <inheritdoc/>
-    public async Task<string> SelectNextForAgentAsync(AgentProfile agent, CancellationToken cancellationToken = default)
+    public async Task<string> SelectNextForAgentAsync(
+        AgentProfile agent,
+        IReadOnlyCollection<string> excludedQueueIds = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(agent);
 
-        var memberships = ResolveMemberships(agent);
+        var memberships = ResolveMemberships(agent, excludedQueueIds);
 
         if (memberships.Count == 0)
         {
@@ -49,6 +52,7 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
         }
 
         var now = _clock.UtcNow;
+
         string bestQueueId = null;
         var bestMembershipPriority = int.MaxValue;
         var bestEffectivePriority = int.MinValue;
@@ -68,9 +72,9 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
                 continue;
             }
 
-            var queue = await _queueManager.FindByIdAsync(head.QueueId, cancellationToken);
+            var queue = await ResolveQueueAsync(head.QueueId, cancellationToken);
 
-            if (queue is null)
+            if (queue is null || !queue.Enabled)
             {
                 continue;
             }
@@ -97,6 +101,19 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
         return bestQueueId;
     }
 
+    // An outbound campaign is routed under a virtual queue that is never persisted, so the catalog cannot find
+    // it. Treating that as "queue missing" silently dropped every preview-dial campaign from the selection,
+    // which signed every campaign agent out of their campaign work without anybody being told.
+    private async Task<ActivityQueue> ResolveQueueAsync(string queueId, CancellationToken cancellationToken)
+    {
+        if (ContactCenterConstants.IsCampaignQueue(queueId))
+        {
+            return CampaignRoutingQueue.Create(queueId);
+        }
+
+        return await _queueManager.FindByIdAsync(queueId, cancellationToken);
+    }
+
     private static bool IsBetter(
         int membershipPriority,
         int effectivePriority,
@@ -118,17 +135,19 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
         return enqueuedUtc < bestEnqueuedUtc;
     }
 
-    /// <summary>
-    /// Builds the membership map, falling back to the bare queue list for agents signed in before memberships
-    /// existed. Ignoring that list would sign every existing agent out of every queue on upgrade.
-    /// </summary>
-    private static Dictionary<string, AgentQueueMembership> ResolveMemberships(AgentProfile agent)
+    private static Dictionary<string, AgentQueueMembership> ResolveMemberships(
+        AgentProfile agent,
+        IReadOnlyCollection<string> excludedQueueIds)
     {
+        var excluded = excludedQueueIds is { Count: > 0 }
+            ? new HashSet<string>(excludedQueueIds, StringComparer.OrdinalIgnoreCase)
+            : null;
+
         var memberships = new Dictionary<string, AgentQueueMembership>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var membership in agent.QueueMemberships)
         {
-            if (!string.IsNullOrWhiteSpace(membership?.QueueId))
+            if (!string.IsNullOrWhiteSpace(membership?.QueueId) && excluded?.Contains(membership.QueueId) != true)
             {
                 memberships[membership.QueueId] = membership;
             }
@@ -136,7 +155,9 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
 
         foreach (var queueId in agent.QueueIds)
         {
-            if (!string.IsNullOrWhiteSpace(queueId) && !memberships.ContainsKey(queueId))
+            if (!string.IsNullOrWhiteSpace(queueId) &&
+                !memberships.ContainsKey(queueId) &&
+                excluded?.Contains(queueId) != true)
             {
                 memberships[queueId] = new AgentQueueMembership { QueueId = queueId };
             }

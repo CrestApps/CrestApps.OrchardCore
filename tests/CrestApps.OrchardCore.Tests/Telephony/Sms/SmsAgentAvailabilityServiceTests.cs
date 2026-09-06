@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
-using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Modules;
 
@@ -54,20 +53,19 @@ public class SmsAgentAvailabilityServiceTests
 
             Service = new SmsAgentAvailabilityService(
                 AgentManager.Object,
-                new Mock<IAgentSessionManager>().Object,
-                new OptionsWrapper<AgentAvailabilityOptions>(new AgentAvailabilityOptions()),
+                new Mock<ISmsAgentPresenceTracker>().Object,
                 clock.Object);
         }
     }
 
     [Fact]
-    public async Task IsAvailable_RequiresALiveSession_NotJustTheFlag()
+    public async Task IsAvailable_RequiresAnOpenPortal_NotJustTheFlag()
     {
         // Arrange
         // The flag alone kept an agent who closed the browser "available" for routed SMS until the five-minute
         // pickup sweep re-pooled each thread. Every message pushed at them in that window sat unanswered.
         var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
-        var harness = new AvailabilityHarness(agent, sessionHeartbeatUtc: null);
+        var harness = new AvailabilityHarness(agent, portalOpen: false);
 
         await harness.Service.SetAvailableAsync(agent, available: true, TestContext.Current.CancellationToken);
 
@@ -79,12 +77,12 @@ public class SmsAgentAvailabilityServiceTests
     }
 
     [Fact]
-    public async Task IsAvailable_RequiresTheFlag_NotJustALiveSession()
+    public async Task IsAvailable_RequiresTheFlag_NotJustAnOpenPortal()
     {
         // Arrange
-        // An agent signed in for voice has not thereby volunteered for SMS; the flag is a separate choice.
+        // An agent with the portal open has not thereby volunteered for routed SMS; the flag is a separate choice.
         var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
-        var harness = new AvailabilityHarness(agent, sessionHeartbeatUtc: AvailabilityHarness.Now);
+        var harness = new AvailabilityHarness(agent, portalOpen: true);
 
         await harness.Service.SetAvailableAsync(agent, available: false, TestContext.Current.CancellationToken);
 
@@ -96,11 +94,11 @@ public class SmsAgentAvailabilityServiceTests
     }
 
     [Fact]
-    public async Task IsAvailable_WithTheFlagAndAFreshHeartbeat_IsTrue()
+    public async Task IsAvailable_WithTheFlagAndAnOpenPortal_IsTrue()
     {
         // Arrange
         var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
-        var harness = new AvailabilityHarness(agent, sessionHeartbeatUtc: AvailabilityHarness.Now.AddSeconds(-5));
+        var harness = new AvailabilityHarness(agent, portalOpen: true);
 
         await harness.Service.SetAvailableAsync(agent, available: true, TestContext.Current.CancellationToken);
 
@@ -111,57 +109,30 @@ public class SmsAgentAvailabilityServiceTests
         Assert.True(available);
     }
 
-    [Fact]
-    public async Task IsAvailable_WithAStaleHeartbeat_IsFalse()
-    {
-        // Arrange
-        // The heartbeat timeout is the same one voice presence uses, so an agent is not live for one channel and
-        // gone for the other.
-        var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
-        var harness = new AvailabilityHarness(agent, sessionHeartbeatUtc: AvailabilityHarness.Now.AddMinutes(-10));
-
-        await harness.Service.SetAvailableAsync(agent, available: true, TestContext.Current.CancellationToken);
-
-        // Act
-        var available = await harness.Service.IsAvailableAsync(agent, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.False(available);
-    }
-
     private sealed class AvailabilityHarness
     {
         public static readonly DateTime Now = new(2026, 3, 4, 15, 0, 0, DateTimeKind.Utc);
 
         public SmsAgentAvailabilityService Service { get; }
 
-        public AvailabilityHarness(AgentProfile agent, DateTime? sessionHeartbeatUtc)
+        public AvailabilityHarness(AgentProfile agent, bool portalOpen)
         {
             var agentManager = new Mock<IAgentProfileManager>();
             agentManager
                 .Setup(manager => manager.UpdateAsync(It.IsAny<AgentProfile>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
                 .Returns(ValueTask.CompletedTask);
 
-            var sessionManager = new Mock<IAgentSessionManager>();
-            sessionManager
-                .Setup(manager => manager.FindByUserIdAsync(agent.UserId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(sessionHeartbeatUtc is null
-                    ? null
-                    : new AgentSession
-                    {
-                        ItemId = "s1",
-                        UserId = agent.UserId,
-                        IsOnline = true,
-                        LastHeartbeatUtc = sessionHeartbeatUtc,
-                    });
+            var presenceTracker = new Mock<ISmsAgentPresenceTracker>();
+            presenceTracker
+                .Setup(tracker => tracker.IsPresentAsync(agent.ItemId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(portalOpen);
 
             var clock = new Mock<IClock>();
             clock.SetupGet(value => value.UtcNow).Returns(Now);
 
             Service = new SmsAgentAvailabilityService(
                 agentManager.Object,
-                sessionManager.Object,
-                new OptionsWrapper<AgentAvailabilityOptions>(new AgentAvailabilityOptions()),
+                presenceTracker.Object,
                 clock.Object);
         }
     }

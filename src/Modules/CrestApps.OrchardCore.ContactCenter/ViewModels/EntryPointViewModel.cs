@@ -1,5 +1,8 @@
 using System.ComponentModel.DataAnnotations;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.ModelBinders;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
@@ -112,6 +115,28 @@ public class EntryPointViewModel
     /// Gets or sets the default (fallback) spoken voicemail greeting for calls through this entry point.
     /// </summary>
     public string VoicemailGreetingText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the IVR menu tree as JSON, or empty for an entry point that routes straight to its target.
+    /// </summary>
+    public string IvrFlowJson { get; set; }
+
+    /// <summary>
+    /// Gets or sets the parsed IVR menu tree, bound from the same field as <see cref="IvrFlowJson"/>. Malformed
+    /// JSON is reported against that field by the binder.
+    /// </summary>
+    [ModelBinder(BinderType = typeof(IvrFlowJsonModelBinder), Name = nameof(IvrFlowJson))]
+    public IvrFlow IvrFlow { get; set; }
+
+    /// <summary>
+    /// The queues an IVR action may route to, shown beside the editor so an operator can copy identifiers.
+    /// </summary>
+    public IList<SelectListItem> IvrQueueOptions { get; set; } = [];
+
+    /// <summary>
+    /// The agents an IVR action may route to, shown beside the editor so an operator can copy identifiers.
+    /// </summary>
+    public IList<SelectListItem> IvrAgentOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets a value indicating whether the entry point is enabled.

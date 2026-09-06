@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using Moq;
+using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
 
@@ -131,12 +132,49 @@ public sealed class SmsAutoReplyRouterTests
         Assert.False(claimed);
     }
 
+    [Fact]
+    public async Task Sends_Nothing_ToAContactWhoHasOptedOut()
+    {
+        // Arrange
+        // The agent-facing send path refuses an opted-out contact. An automated acknowledgement that slipped
+        // past it would be the platform texting someone who asked it not to.
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        harness.AddContact("contact-1", doNotSms: true);
+
+        // Act
+        await harness.RouteAsync(new SmsConversation { ItemId = "c1", ServiceAddress = "+16502530000", ContactAddress = "+16502530001", ContactContentItemId = "contact-1" });
+
+        // Assert
+        harness.Dispatcher.Verify(
+            dispatcher => dispatcher.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Sends_TheAutoReply_ToAKnownContactWhoHasNotOptedOut()
+    {
+        // Arrange
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        harness.AddContact("contact-1", doNotSms: false);
+
+        // Act
+        await harness.RouteAsync(new SmsConversation { ItemId = "c1", ServiceAddress = "+16502530000", ContactAddress = "+16502530001", ContactContentItemId = "contact-1" });
+
+        // Assert
+        harness.Dispatcher.Verify(
+            dispatcher => dispatcher.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private sealed class Harness
     {
         private readonly AutoReplyRouter _router;
         private readonly OmnichannelChannelEndpoint _endpoint;
+        private readonly Dictionary<string, ContentItem> _contacts = new(StringComparer.Ordinal);
 
         public Mock<ISmsDispatcher> Dispatcher { get; } = new();
+
+        public Mock<IContentManager> ContentManager { get; } = new();
 
         public Harness(string autoReply)
         {
@@ -158,10 +196,21 @@ public sealed class SmsAutoReplyRouterTests
                 .Setup(dispatcher => dispatcher.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(SmsDispatchResult.Success("provider-1"));
 
+            ContentManager
+                .Setup(manager => manager.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
+                .ReturnsAsync((string contentItemId, VersionOptions _) => _contacts.TryGetValue(contentItemId, out var contact) ? contact : null);
+
             var clock = new Mock<IClock>();
             clock.SetupGet(value => value.UtcNow).Returns(_now);
 
-            _router = new AutoReplyRouter(Dispatcher.Object, clock.Object);
+            _router = new AutoReplyRouter(Dispatcher.Object, ContentManager.Object, clock.Object);
+        }
+
+        public void AddContact(string contentItemId, bool doNotSms)
+        {
+            var contact = new ContentItem { ContentItemId = contentItemId, ContentType = "Customer" };
+            contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(doNotSms, _now));
+            _contacts[contentItemId] = contact;
         }
 
         public Task<bool> RouteAsync(SmsConversation conversation, string body = "hello")

@@ -1,7 +1,14 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
 @model QueueViewModel
 
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+@{
+    var skillRequirementsPrefix = Html.NameFor(m => m.SkillRequirements);
+    var overflowTargetsPrefix = Html.NameFor(m => m.OverflowTargets);
+    var proficiencyLevels = Enumerable.Range(AgentSkill.MinimumProficiency, AgentSkill.MaximumProficiency - AgentSkill.MinimumProficiency + 1).ToArray();
+}
 
 <div class="ocat-wrapper" asp-validation-class-for="Name">
     <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
@@ -85,6 +92,15 @@
     </div>
 </div>
 
+<div class="ocat-limited-wrapper" asp-validation-class-for="FirstResponseTargetSeconds">
+    <label asp-for="FirstResponseTargetSeconds" class="ocat-label">@T["First-response target (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="FirstResponseTargetSeconds" class="form-control" />
+        <span asp-validation-for="FirstResponseTargetSeconds" class="text-danger"></span>
+        <span class="hint">@T["For messaging work: how long a contact may wait for a first reply before the thread is flagged to supervisors. Set to 0 for no target."]</span>
+    </div>
+</div>
+
 <div class="ocat-limited-wrapper" asp-validation-class-for="ReservationTimeoutSeconds">
     <label asp-for="ReservationTimeoutSeconds" class="ocat-label">@T["Reservation timeout (seconds)"]</label>
     <div class="ocat-limited">
@@ -107,14 +123,109 @@
     </div>
 </div>
 
+<h4 class="mt-4">@T["Skills"]</h4>
+
 <div class="ocat-wrapper" asp-validation-class-for="RequiredSkills">
     <label asp-for="RequiredSkills" class="ocat-label">@T["Required skills"]</label>
     <div class="ocat-end">
         <select asp-for="RequiredSkills" asp-items="Model.SkillOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-header="@T["Select skills"]" data-width="100%" data-selected-text-format="count > 2" data-count-selected-text="{0} skills selected" title="@T["No required skills"]"></select>
         <span asp-validation-for="RequiredSkills" class="text-danger"></span>
-        <span class="hint">@T["Agents must have every selected skill to receive work from this queue."]</span>
+        <span class="hint">@T["Agents must have every selected skill, at the default proficiency, to receive work from this queue. Use the requirements below to ask for a specific proficiency, make a skill preferred rather than required, or relax it after a wait."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Skill requirements"]</label>
+    <div class="ocat-end">
+        <div data-repeater data-repeater-prefix="@skillRequirementsPrefix">
+            <table class="table table-sm align-middle mb-2">
+                <thead>
+                    <tr>
+                        <th>@T["Skill"]</th>
+                        <th>@T["Minimum proficiency"]</th>
+                        <th>@T["Required"]</th>
+                        <th>@T["Relax after (seconds)"]</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody data-repeater-rows>
+                    @for (var i = 0; i < Model.SkillRequirements.Count; i++)
+                    {
+                        var row = Model.SkillRequirements[i];
+                        var key = i.ToString();
+
+                        <tr data-repeater-row>
+                            <td>
+                                <input type="hidden" name="@(skillRequirementsPrefix).Index" value="@key" />
+                                <select name="@(skillRequirementsPrefix)[@key].SkillId" class="form-select form-select-sm">
+                                    <option value="">@T["Select a skill"]</option>
+                                    @foreach (var option in Model.SkillOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(string.Equals(option.Value, row.SkillId, StringComparison.OrdinalIgnoreCase))">@option.Text</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <select name="@(skillRequirementsPrefix)[@key].MinimumProficiency" class="form-select form-select-sm">
+                                    @foreach (var level in proficiencyLevels)
+                                    {
+                                        <option value="@level" selected="@(level == row.MinimumProficiency)">@level</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input type="checkbox" name="@(skillRequirementsPrefix)[@key].Required" value="true" class="form-check-input" checked="@row.Required" />
+                                <input type="hidden" name="@(skillRequirementsPrefix)[@key].Required" value="false" />
+                            </td>
+                            <td>
+                                <input type="number" min="0" name="@(skillRequirementsPrefix)[@key].RelaxAfterSeconds" value="@row.RelaxAfterSeconds" class="form-control form-control-sm" />
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <template data-repeater-template>
+                <tr data-repeater-row>
+                    <td>
+                        <input type="hidden" name="@(skillRequirementsPrefix).Index" value="__KEY__" />
+                        <select name="@(skillRequirementsPrefix)[__KEY__].SkillId" class="form-select form-select-sm">
+                            <option value="">@T["Select a skill"]</option>
+                            @foreach (var option in Model.SkillOptions)
+                            {
+                                <option value="@option.Value">@option.Text</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <select name="@(skillRequirementsPrefix)[__KEY__].MinimumProficiency" class="form-select form-select-sm">
+                            @foreach (var level in proficiencyLevels)
+                            {
+                                <option value="@level" selected="@(level == AgentSkill.DefaultProficiency)">@level</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <input type="checkbox" name="@(skillRequirementsPrefix)[__KEY__].Required" value="true" class="form-check-input" checked />
+                        <input type="hidden" name="@(skillRequirementsPrefix)[__KEY__].Required" value="false" />
+                    </td>
+                    <td>
+                        <input type="number" min="0" name="@(skillRequirementsPrefix)[__KEY__].RelaxAfterSeconds" value="0" class="form-control form-control-sm" />
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </td>
+                </tr>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add skill requirement"]</button>
+        </div>
+        <span class="hint">@T["A required skill excludes agents below the minimum proficiency; a preferred skill only ranks them lower. A relax time drops the requirement once a caller has waited that long, so a specialist queue still answers when no specialist is free."]</span>
+    </div>
+</div>
+
+<h4 class="mt-4">@T["Hours and overflow"]</h4>
 
 <div class="ocat-wrapper" asp-validation-class-for="InboundChannelEndpointId">
     <label asp-for="InboundChannelEndpointId" class="ocat-label">@T["Inbound channel endpoint"]</label>
@@ -157,7 +268,7 @@
             <option value="">@T["No overflow"]</option>
         </select>
         <span asp-validation-for="OverflowQueueId" class="text-danger"></span>
-        <span class="hint">@T["Items move to this queue when they wait too long or while the queue is closed and set to overflow."]</span>
+        <span class="hint">@T["A single overflow hop. Items move to this queue when they wait too long or while the queue is closed and set to overflow. Ignored when an overflow chain is configured below."]</span>
     </div>
 </div>
 
@@ -166,7 +277,210 @@
     <div class="ocat-limited">
         <input asp-for="OverflowAfterSeconds" class="form-control" />
         <span asp-validation-for="OverflowAfterSeconds" class="text-danger"></span>
-        <span class="hint">@T["How long an item may wait before it overflows. Set to 0 to disable wait-time overflow."]</span>
+        <span class="hint">@T["How long an item may wait before it overflows to the single overflow queue. Set to 0 to disable wait-time overflow."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Overflow chain"]</label>
+    <div class="ocat-end">
+        <div data-repeater data-repeater-prefix="@overflowTargetsPrefix">
+            <table class="table table-sm align-middle mb-2">
+                <thead>
+                    <tr>
+                        <th>@T["Queue"]</th>
+                        <th>@T["After (seconds)"]</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody data-repeater-rows>
+                    @for (var i = 0; i < Model.OverflowTargets.Count; i++)
+                    {
+                        var row = Model.OverflowTargets[i];
+                        var key = i.ToString();
+
+                        <tr data-repeater-row>
+                            <td>
+                                <input type="hidden" name="@(overflowTargetsPrefix).Index" value="@key" />
+                                <select name="@(overflowTargetsPrefix)[@key].QueueId" class="form-select form-select-sm">
+                                    <option value="">@T["Select a queue"]</option>
+                                    @foreach (var option in Model.OverflowQueueOptions)
+                                    {
+                                        <option value="@option.Value" selected="@(string.Equals(option.Value, row.QueueId, StringComparison.Ordinal))">@option.Text</option>
+                                    }
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" min="0" name="@(overflowTargetsPrefix)[@key].AfterSeconds" value="@row.AfterSeconds" class="form-control form-control-sm" />
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <template data-repeater-template>
+                <tr data-repeater-row>
+                    <td>
+                        <input type="hidden" name="@(overflowTargetsPrefix).Index" value="__KEY__" />
+                        <select name="@(overflowTargetsPrefix)[__KEY__].QueueId" class="form-select form-select-sm">
+                            <option value="">@T["Select a queue"]</option>
+                            @foreach (var option in Model.OverflowQueueOptions)
+                            {
+                                <option value="@option.Value">@option.Text</option>
+                            }
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" min="0" name="@(overflowTargetsPrefix)[__KEY__].AfterSeconds" value="0" class="form-control form-control-sm" />
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-repeater-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    </td>
+                </tr>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add overflow hop"]</button>
+        </div>
+        <span class="hint">@T["Where a waiting caller widens to, and after how long: from specialists to a general pool as they wait. A caller is never sent back to a queue they have already been through. When any hop is set, the chain replaces the single overflow queue above."]</span>
+    </div>
+</div>
+
+<h4 class="mt-4">@T["Limits"]</h4>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxQueueSize">
+    <label asp-for="MaxQueueSize" class="ocat-label">@T["Maximum callers waiting"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxQueueSize" class="form-control" />
+        <span asp-validation-for="MaxQueueSize" class="text-danger"></span>
+        <span class="hint">@T["How many callers may wait at once. A caller who arrives when the queue is full gets the queue-full action. Set to 0 for no limit."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="QueueFullAction">
+    <label asp-for="QueueFullAction" class="ocat-label">@T["Queue-full action"]</label>
+    <div class="ocat-limited">
+        <select asp-for="QueueFullAction" class="form-select">
+            <option value="@QueueMaxWaitAction.None">@T["Admit anyway"]</option>
+            <option value="@QueueMaxWaitAction.Overflow">@T["Overflow to the first queue with room"]</option>
+            <option value="@QueueMaxWaitAction.Voicemail">@T["Send to voicemail"]</option>
+        </select>
+        <span asp-validation-for="QueueFullAction" class="text-danger"></span>
+        <span class="hint">@T["Overflow walks the overflow chain (or the single overflow queue) and admits the caller to the first queue that is enabled and has room; when none has, the caller is admitted here over the limit rather than dropped."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxWaitSeconds">
+    <label asp-for="MaxWaitSeconds" class="ocat-label">@T["Maximum wait (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxWaitSeconds" class="form-control" />
+        <span asp-validation-for="MaxWaitSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long this queue is willing to make anybody wait, measured from when they entered it. Set to 0 for no limit."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxWaitAction">
+    <label asp-for="MaxWaitAction" class="ocat-label">@T["Maximum-wait action"]</label>
+    <div class="ocat-limited">
+        <select asp-for="MaxWaitAction" class="form-select">
+            <option value="@QueueMaxWaitAction.None">@T["Keep waiting"]</option>
+            <option value="@QueueMaxWaitAction.Overflow">@T["Overflow to the next queue"]</option>
+            <option value="@QueueMaxWaitAction.Voicemail">@T["Send to voicemail"]</option>
+        </select>
+        <span asp-validation-for="MaxWaitAction" class="text-danger"></span>
+        <span class="hint">@T["Applied by the queue sweep within about ten seconds of the limit. Overflow takes the first hop the caller has not been through regardless of that hop's own wait; voicemail needs the Voice feature, which moves the live call."]</span>
+    </div>
+</div>
+
+<h4 class="mt-4">@T["What callers hear while they wait"]</h4>
+
+<div class="ocat-wrapper" asp-validation-class-for="Treatment.WelcomeMessage">
+    <label asp-for="Treatment.WelcomeMessage" class="ocat-label">@T["Welcome message"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Treatment.WelcomeMessage" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="Treatment.WelcomeMessage" class="text-danger"></span>
+        <span class="hint">@T["Spoken once when the caller enters the queue."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Treatment.HoldMusicMediaId">
+    <label asp-for="Treatment.HoldMusicMediaId" class="ocat-label">@T["Hold music media"]</label>
+    <div class="ocat-end">
+        <input asp-for="Treatment.HoldMusicMediaId" class="form-control" />
+        <span asp-validation-for="Treatment.HoldMusicMediaId" class="text-danger"></span>
+        <span class="hint">@T["The identifier of a voice media item to loop while the caller waits. Leave empty for the provider's default."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.AnnouncementIntervalSeconds">
+    <label asp-for="Treatment.AnnouncementIntervalSeconds" class="ocat-label">@T["Announcement interval (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Treatment.AnnouncementIntervalSeconds" class="form-control" />
+        <span asp-validation-for="Treatment.AnnouncementIntervalSeconds" class="text-danger"></span>
+        <span class="hint">@T["How often the position and estimated-wait announcements repeat. Set to 0 to announce nothing."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Treatment.AnnouncePosition">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Treatment.AnnouncePosition" class="form-check-input" />
+            <label asp-for="Treatment.AnnouncePosition" class="form-check-label">@T["Announce the caller's place in line"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Treatment.AnnounceEstimatedWait">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Treatment.AnnounceEstimatedWait" class="form-check-input" />
+            <label asp-for="Treatment.AnnounceEstimatedWait" class="form-check-label">@T["Announce the estimated wait"]</label>
+        </div>
+        <span class="hint dashed">@T["The estimate is the caller's position times the average handle time, divided by the agents available, clamped to the bounds below."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.AverageHandleTimeSeconds">
+    <label asp-for="Treatment.AverageHandleTimeSeconds" class="ocat-label">@T["Average handle time (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Treatment.AverageHandleTimeSeconds" class="form-control" />
+        <span asp-validation-for="Treatment.AverageHandleTimeSeconds" class="text-danger"></span>
+        <span class="hint">@T["Used by the estimated-wait announcement. Set to 0 to use the platform default."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.MinimumEstimateSeconds">
+    <label asp-for="Treatment.MinimumEstimateSeconds" class="ocat-label">@T["Minimum announced estimate (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Treatment.MinimumEstimateSeconds" class="form-control" />
+        <span asp-validation-for="Treatment.MinimumEstimateSeconds" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.MaximumEstimateSeconds">
+    <label asp-for="Treatment.MaximumEstimateSeconds" class="ocat-label">@T["Maximum announced estimate (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Treatment.MaximumEstimateSeconds" class="form-control" />
+        <span asp-validation-for="Treatment.MaximumEstimateSeconds" class="text-danger"></span>
+        <span class="hint">@T["An estimate is never announced above this, so a caller is not told to expect an hour."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.CallbackDtmfKey">
+    <label asp-for="Treatment.CallbackDtmfKey" class="ocat-label">@T["Callback key"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Treatment.CallbackDtmfKey" class="form-control" maxlength="1" placeholder="1" />
+        <span asp-validation-for="Treatment.CallbackDtmfKey" class="text-danger"></span>
+        <span class="hint">@T["The key a caller presses to keep their place in line and be called back. Leave empty to offer no callback."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Treatment.CallbackOfferAfterSeconds">
+    <label asp-for="Treatment.CallbackOfferAfterSeconds" class="ocat-label">@T["Offer callback after (seconds)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Treatment.CallbackOfferAfterSeconds" class="form-control" />
+        <span asp-validation-for="Treatment.CallbackOfferAfterSeconds" class="text-danger"></span>
+        <span class="hint">@T["How long a caller waits before the callback is offered."]</span>
     </div>
 </div>
 
@@ -179,3 +493,5 @@
         <span class="hint dashed">@T["Disabled queues do not receive routing assignments."]</span>
     </div>
 </div>
+
+@await Html.PartialAsync("_ContactCenterRepeaterScript")

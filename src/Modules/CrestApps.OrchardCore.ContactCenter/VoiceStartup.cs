@@ -113,6 +113,9 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
             .AddScoped<IDirectHoldTimeoutService, DirectHoldTimeoutService>()
             .AddScoped<IInboundVoiceCallProcessor, InboundVoiceCallProcessor>()
+            // Voice has a live call to move, so it replaces the declining sink the queues feature registers
+            // for a queue's maximum-wait voicemail action.
+            .Replace(ServiceDescriptor.Scoped<IWaitingCallVoicemailSink, InboundVoiceWaitingCallVoicemailSink>())
             .AddScoped<IOmnichannelHandoffService, VoiceAgentHandoffService>()
             .AddScoped<VoiceContactCenterCallRouter>()
             .AddScoped<IVoiceContactCenterCallRouter>(sp => sp.GetRequiredService<VoiceContactCenterCallRouter>())
@@ -121,6 +124,9 @@ public sealed class VoiceStartup : StartupBase
             // work. The lazy wrapper is what lets that handler declare the dependency instead of fetching it from
             // the container, without the two constructing each other.
             .AddScoped(sp => new Lazy<IInboundVoiceService>(sp.GetRequiredService<IInboundVoiceService>))
+            // Admitting a call asks whether the queue is full; a full queue sends the caller to voicemail; that
+            // path is the processor again. Deferring the last hop is what keeps the graph constructible.
+            .AddScoped(sp => new Lazy<IInboundVoiceCallProcessor>(sp.GetRequiredService<IInboundVoiceCallProcessor>))
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>()
             .AddScoped<ContactCenterVoiceLifecycleParticipant>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>

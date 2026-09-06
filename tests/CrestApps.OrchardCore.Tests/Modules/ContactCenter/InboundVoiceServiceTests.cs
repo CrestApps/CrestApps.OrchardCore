@@ -1175,6 +1175,116 @@ public sealed class InboundVoiceServiceTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task HandleInboundAsync_WhenQueueIsFullAndConfiguredForVoicemail_SendsTheCallerToVoicemailInsteadOfQueueing()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupNoContext();
+
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        var interaction = new Interaction { ItemId = "int1" };
+
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+        harness.InteractionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var queue = new ActivityQueue { ItemId = "q1", Enabled = true, MaxQueueSize = 5, QueueFullAction = QueueMaxWaitAction.Voicemail };
+        harness.QueueManager
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([queue]);
+
+        harness.QueueLimitService
+            .Setup(service => service.AdmitAsync(queue, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(QueueAdmissionDecision.SendToVoicemail());
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent { ProviderName = "TestProvider", ProviderCallId = "call-1", FromAddress = "+15551112222", ToAddress = "+15553334444" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Routed);
+        Assert.False(result.Queued);
+        Assert.Equal(ContactCenterConstants.QueueLimits.QueueFullVoicemailReasonCode, result.ReasonCode);
+        Assert.Equal(ActivityStatus.Completed, activity.Status);
+        Assert.Equal(ContactCenterConstants.QueueLimits.QueueFullVoicemailReasonCode, activity.TerminalReasonCode);
+        harness.QueueService.Verify(
+            queueService => queueService.EnqueueAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<InteractionPriority?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.ProviderCommandStateService.Verify(
+            commands => commands.RegisterAsync(
+                It.Is<ProviderCommandRegistration>(registration =>
+                    registration.CommandType == ProviderCommandType.SendToVoicemail &&
+                    registration.ActivityItemId == "act1" &&
+                    registration.RequestPayload.Contains("\"reasonCode\":\"queue_full_voicemail\"")),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleInboundAsync_WhenQueueIsFullAndConfiguredToOverflow_QueuesTheCallerInTheOverflowQueue()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupNoContext();
+
+        var activity = new OmnichannelActivity { ItemId = "act1" };
+        var interaction = new Interaction { ItemId = "int1" };
+
+        harness.ActivityManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(activity);
+        harness.InteractionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var queue = new ActivityQueue { ItemId = "q1", Enabled = true, MaxQueueSize = 5, QueueFullAction = QueueMaxWaitAction.Overflow };
+        harness.QueueManager
+            .Setup(manager => manager.GetEnabledAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync([queue]);
+
+        harness.QueueLimitService
+            .Setup(service => service.AdmitAsync(queue, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(QueueAdmissionDecision.Overflow("q-overflow"));
+
+        harness.QueueService
+            .Setup(queueService => queueService.EnqueueAsync("act1", "q-overflow", It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem { ItemId = "qi1", ActivityItemId = "act1", QueueId = "q-overflow" });
+
+        harness.AssignmentService
+            .Setup(assignment => assignment.AssignNextAsync("q-overflow", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ActivityReservation)null);
+
+        var service = harness.CreateService();
+
+        // Act
+        var result = await service.HandleInboundAsync(
+            new InboundVoiceEvent { ProviderName = "TestProvider", ProviderCallId = "call-1", FromAddress = "+15551112222", ToAddress = "+15553334444" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Queued, result.Reason);
+        Assert.False(result.Routed);
+        Assert.Equal("q-overflow", result.QueueId);
+        Assert.Equal("q-overflow", interaction.QueueId);
+        harness.QueueService.Verify(
+            queueService => queueService.EnqueueAsync("act1", "q-overflow", It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.QueueService.Verify(
+            queueService => queueService.EnqueueAsync("act1", "q1", It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private sealed class Harness
     {
         public Mock<IOmnichannelChannelEndpointManager> ChannelEndpointManager { get; } = new();
@@ -1194,6 +1304,8 @@ public sealed class InboundVoiceServiceTests
         public Mock<IQueueItemManager> QueueItemManager { get; } = new();
 
         public Mock<IActivityQueueService> QueueService { get; } = new();
+
+        public Mock<IQueueLimitService> QueueLimitService { get; } = new();
 
         public Mock<IActivityAssignmentService> AssignmentService { get; } = new();
 
@@ -1231,6 +1343,11 @@ public sealed class InboundVoiceServiceTests
             DistributedLock
                 .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
                 .ReturnsAsync((null, true));
+
+            // Queues admit everybody unless a test says otherwise; a size limit is the exception, not the rule.
+            QueueLimitService
+                .Setup(service => service.AdmitAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((ActivityQueue queue, CancellationToken _) => QueueAdmissionDecision.Admit(queue.ItemId));
 
             // Routing owns assignment state in its own document and reconciles the activity afterwards, so the
             // activity has to be resolvable by identifier for the reconciliation to reach the object the test holds.
@@ -1297,6 +1414,7 @@ public sealed class InboundVoiceServiceTests
                 QueueManager.Object,
                 QueueItemManager.Object,
                 QueueService.Object,
+                QueueLimitService.Object,
                 ContactLookup.Object,
                 // The real chain over the test's resolver, so the processor exercises the chaining rather
                 // than a single resolver handed straight to it.

@@ -1,5 +1,7 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.Deployment;
@@ -65,6 +67,8 @@ internal sealed class ContactCenterAgentEntitlementDeploymentSource : Deployment
                 ["AllowedQueueIds"] = ToJsonArray(entry.AllowedQueueIds),
                 ["AllowedCampaignIds"] = ToJsonArray(entry.AllowedCampaignIds),
                 ["Skills"] = ToJsonArray(entry.Skills),
+                ["SkillProficiencies"] = JsonSerializer.SerializeToNode(entry.SkillProficiencies, ContactCenterDeploymentSerializer.Options),
+                ["QueueMemberships"] = JsonSerializer.SerializeToNode(entry.QueueMemberships, ContactCenterDeploymentSerializer.Options),
             });
         }
 

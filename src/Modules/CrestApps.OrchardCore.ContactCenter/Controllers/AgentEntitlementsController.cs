@@ -150,6 +150,7 @@ public sealed class AgentEntitlementsController : Controller
         if (ModelState.IsValid)
         {
             var userName = await _userManager.GetUserNameAsync(user);
+            var entitlements = ReadEntitlements(model);
             var agent = await _agentManager.NewAsync();
             agent.UserId = userId;
             agent.UserName = userName;
@@ -157,6 +158,8 @@ public sealed class AgentEntitlementsController : Controller
             agent.Name = userId;
             agent.AllowedQueueIds = model.AllowedQueueIds;
             agent.AllowedCampaignIds = model.AllowedCampaignIds;
+            AgentEntitlementUtilities.ApplySkills(agent, skills: null, entitlements.SkillProficiencies);
+            agent.QueueMemberships = AgentEntitlementUtilities.NormalizeQueueMemberships(entitlements.QueueMemberships);
             agent.CreatedUtc = _clock.UtcNow;
 
             await _agentManager.CreateAsync(agent);
@@ -227,10 +230,7 @@ public sealed class AgentEntitlementsController : Controller
 
         if (ModelState.IsValid)
         {
-            await _presenceManager.UpdateEntitlementsAsync(
-                id,
-                model.AllowedQueueIds,
-                model.AllowedCampaignIds);
+            await _presenceManager.UpdateEntitlementsAsync(id, ReadEntitlements(model));
             await _notifier.SuccessAsync(H["Agent entitlements have been updated successfully."]);
 
             return RedirectToAction(nameof(Index));
@@ -243,13 +243,57 @@ public sealed class AgentEntitlementsController : Controller
 
     private async Task<AgentEntitlementViewModel> CreateViewModelAsync(AgentProfile agent)
     {
+        var allowedQueueIds = AgentEntitlementUtilities.NormalizeIds(agent.AllowedQueueIds);
+        var memberships = agent.QueueMemberships
+            .Where(membership => membership is not null && !string.IsNullOrWhiteSpace(membership.QueueId))
+            .ToDictionary(membership => membership.QueueId, StringComparer.OrdinalIgnoreCase);
+
         return new AgentEntitlementViewModel
         {
             Id = agent.ItemId,
             UserName = agent.UserName,
             UserDisplayName = await ResolveDisplayNameAsync(agent),
-            AllowedQueueIds = AgentEntitlementUtilities.NormalizeIds(agent.AllowedQueueIds),
+            AllowedQueueIds = allowedQueueIds,
             AllowedCampaignIds = AgentEntitlementUtilities.NormalizeIds(agent.AllowedCampaignIds),
+            SkillProficiencies = agent.SkillProficiencies
+                .Where(skill => skill is not null)
+                .Select(skill => new AgentSkillViewModel { SkillId = skill.SkillId, Proficiency = skill.Proficiency })
+                .ToList(),
+            // One preference row per allowed queue, so the operator sees every queue the agent may serve, with
+            // the stored priority and delay where one was set.
+            QueueMemberships = allowedQueueIds
+                .Select(queueId => memberships.TryGetValue(queueId, out var membership)
+                    ? new AgentQueueMembershipViewModel { QueueId = queueId, Priority = membership.Priority, DelaySeconds = membership.DelaySeconds }
+                    : new AgentQueueMembershipViewModel { QueueId = queueId })
+                .ToList(),
+        };
+    }
+
+    /// <summary>
+    /// Reads what the form sent into the shape the presence manager applies. Queue preferences are kept only for
+    /// queues the agent is allowed into; a preference for any other queue could never be used.
+    /// </summary>
+    private static AgentEntitlements ReadEntitlements(AgentEntitlementViewModel model)
+    {
+        var allowed = new HashSet<string>(model.AllowedQueueIds, StringComparer.OrdinalIgnoreCase);
+
+        return new AgentEntitlements
+        {
+            AllowedQueueIds = model.AllowedQueueIds,
+            AllowedCampaignIds = model.AllowedCampaignIds,
+            SkillProficiencies = (model.SkillProficiencies ?? [])
+                .Where(skill => skill is not null)
+                .Select(skill => new AgentSkill { SkillId = skill.SkillId, Proficiency = skill.Proficiency })
+                .ToList(),
+            QueueMemberships = (model.QueueMemberships ?? [])
+                .Where(membership => membership is not null && !string.IsNullOrWhiteSpace(membership.QueueId) && allowed.Contains(membership.QueueId.Trim()))
+                .Select(membership => new AgentQueueMembership
+                {
+                    QueueId = membership.QueueId.Trim(),
+                    Priority = membership.Priority,
+                    DelaySeconds = membership.DelaySeconds,
+                })
+                .ToList(),
         };
     }
 

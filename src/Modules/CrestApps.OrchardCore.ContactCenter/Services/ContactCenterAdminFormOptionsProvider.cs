@@ -323,6 +323,8 @@ public sealed class ContactCenterAdminFormOptionsProvider
 
     internal async Task PopulateEntryPointEditorAsync(EntryPointViewModel model)
     {
+        model.IvrQueueOptions = await GetQueueOptionsAsync(selectedQueueId: null);
+        model.IvrAgentOptions = await GetAgentOptionsAsync(selectedAgentId: null);
         model.TargetQueueOptions = await GetQueueOptionsAsync(model.TargetQueueId);
         model.TargetAgentOptions = await GetAgentOptionsAsync(model.TargetAgentId);
         model.OverflowQueueOptions = await GetQueueOptionsAsync(model.OverflowQueueId);
@@ -335,6 +337,19 @@ public sealed class ContactCenterAdminFormOptionsProvider
         model.QueueOptions = await GetQueueOptionsAsync(model.AllowedQueueIds);
         model.AllowedCampaignIds = ContactCenterFormHelpers.NormalizeList(model.AllowedCampaignIds);
         model.CampaignOptions = await GetCampaignOptionsAsync(model.AllowedCampaignIds);
+        model.SkillOptions = await GetSkillOptionsAsync(model.SkillProficiencies.Select(skill => skill?.SkillId));
+
+        // The preference rows name their queue, and after a failed post the names are not in the model.
+        var queueNames = model.QueueOptions.ToDictionary(option => option.Value, option => option.Text, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var membership in model.QueueMemberships)
+        {
+            if (membership is not null && string.IsNullOrEmpty(membership.QueueName) && !string.IsNullOrEmpty(membership.QueueId) &&
+                queueNames.TryGetValue(membership.QueueId, out var queueName))
+            {
+                membership.QueueName = queueName;
+            }
+        }
     }
 
     internal async Task<IList<string>> FilterExistingQueueIdsAsync(IEnumerable<string> queueIds)

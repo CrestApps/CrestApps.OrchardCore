@@ -298,6 +298,138 @@ public sealed class QueuedVoiceWorkOfferServiceTests
             Times.Once);
     }
 
+    [Fact]
+    public async Task OfferForAgentAsync_WhenPacedCampaignQueueHoldsTheOldestWork_StillOffersFromTheInboundQueueBehindIt()
+    {
+        // Arrange: the agent serves a Power-dialed campaign queue and an inbound support queue. The campaign
+        // queue holds the contact who has waited longest, so the selector picks it first. Because the pacing
+        // engine owns that queue, the pass must move on to the support queue rather than end with the agent
+        // idle while an inbound caller waits.
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.Prefix + "camp1";
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.SetupSequence(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Available,
+                QueueIds = [campaignQueueId, "support"],
+            })
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Available,
+                QueueIds = [campaignQueueId, "support"],
+            })
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Reserved,
+                ActiveReservationId = "r1",
+                QueueIds = [campaignQueueId, "support"],
+            });
+
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore
+            .Setup(store => store.FindNextWaitingAsync(campaignQueueId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new QueueItem
+            {
+                ItemId = "qi1",
+                ActivityItemId = "act1",
+                QueueId = campaignQueueId,
+                DialerProfileId = "prof-power",
+            });
+        queueItemStore
+            .Setup(store => store.GetHeadWaitingByQueueAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<string> queueIds, CancellationToken _) => queueIds
+                .Select(queueId => new QueueItem
+                {
+                    ItemId = $"item-{queueId}",
+                    QueueId = queueId,
+                    EnqueuedUtc = queueId == campaignQueueId ? now.AddMinutes(-30) : now.AddMinutes(-1),
+                })
+                .ToArray());
+
+        var dialerProfileReader = new Mock<IDialerProfileReader>();
+        dialerProfileReader
+            .Setup(manager => manager.FindByIdAsync("prof-power", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new DialerProfile { ItemId = "prof-power", Mode = DialerMode.Power });
+
+        var healer = new Mock<IAgentWorkStateHealingService>();
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+        inboundVoiceService
+            .Setup(service => service.OfferNextAsync("support", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("user-1");
+
+        var service = CreateService(
+            agentManager,
+            healer,
+            inboundVoiceService,
+            new Mock<ISession>(),
+            queueItemStore: queueItemStore,
+            dialerProfileReader: dialerProfileReader);
+
+        // Act
+        var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, offered);
+        inboundVoiceService.Verify(voice => voice.OfferNextAsync(campaignQueueId, It.IsAny<CancellationToken>()), Times.Never);
+        inboundVoiceService.Verify(voice => voice.OfferNextAsync("support", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task OfferForAgentAsync_WhenTheChosenQueueHasNothingThisAgentCanTake_TriesTheNextQueue()
+    {
+        // Arrange: the first queue the selector chooses offers nobody (a skill rule, or a race with another
+        // node took the head item). Selecting again would pick the same queue forever, so the pass must
+        // exclude it and give the next queue its turn - bounded, so an agent with no takeable work does not spin.
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(manager => manager.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new AgentProfile
+            {
+                ItemId = "a1",
+                PresenceStatus = AgentPresenceStatus.Available,
+                QueueIds = ["sales", "support"],
+            });
+
+        var now = new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+        var queueItemStore = new Mock<IQueueItemStore>();
+        queueItemStore
+            .Setup(store => store.GetHeadWaitingByQueueAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IEnumerable<string> queueIds, CancellationToken _) => queueIds
+                .Select(queueId => new QueueItem
+                {
+                    ItemId = $"item-{queueId}",
+                    QueueId = queueId,
+                    EnqueuedUtc = queueId == "sales" ? now.AddMinutes(-30) : now.AddMinutes(-1),
+                })
+                .ToArray());
+
+        var healer = new Mock<IAgentWorkStateHealingService>();
+        var inboundVoiceService = new Mock<IInboundVoiceService>();
+        inboundVoiceService
+            .Setup(service => service.OfferNextAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string)null);
+
+        var service = CreateService(
+            agentManager,
+            healer,
+            inboundVoiceService,
+            new Mock<ISession>(),
+            queueItemStore: queueItemStore);
+
+        // Act
+        var offered = await service.OfferForAgentAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, offered);
+        inboundVoiceService.Verify(voice => voice.OfferNextAsync("sales", It.IsAny<CancellationToken>()), Times.Once);
+        inboundVoiceService.Verify(voice => voice.OfferNextAsync("support", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     private static QueuedVoiceWorkOfferService CreateService(
         Mock<IAgentProfileManager> agentManager,
         Mock<IAgentWorkStateHealingService> healer,
@@ -333,10 +465,15 @@ public sealed class QueuedVoiceWorkOfferServiceTests
                 })
                 .ToArray());
 
+        // The catalog behaves like the real one: a virtual campaign queue is never stored, so it is not found.
+        // The selector must resolve those itself, and a test that hid that behind an always-found stub would
+        // have missed the regression that signed every campaign agent out of their campaign work.
         var selectorQueueManager = new Mock<IActivityQueueManager>();
         selectorQueueManager
             .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string queueId, CancellationToken _) => new ActivityQueue { ItemId = queueId });
+            .ReturnsAsync((string queueId, CancellationToken _) => ContactCenterConstants.IsCampaignQueue(queueId)
+                ? null
+                : new ActivityQueue { ItemId = queueId });
 
         return new QueuedVoiceWorkOfferService(
             agentManager.Object,

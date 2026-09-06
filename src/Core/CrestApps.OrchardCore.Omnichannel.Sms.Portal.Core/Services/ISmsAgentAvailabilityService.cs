@@ -27,7 +27,7 @@ public interface ISmsAgentAvailabilityService
 
     /// <summary>
     /// Determines whether the agent can actually be given a routed conversation right now. The stored flag says
-    /// they volunteered; a live session heartbeat says they are still there to answer. Both are required,
+    /// they volunteered; the portal checking in says they are still there to answer. Both are required,
     /// because the flag alone kept an agent who closed the browser available until the pickup sweep re-pooled
     /// each thread, and every message pushed at them in that window sat unanswered.
     /// </summary>

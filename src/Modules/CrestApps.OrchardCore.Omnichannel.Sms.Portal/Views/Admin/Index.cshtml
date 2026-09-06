@@ -240,7 +240,33 @@
                     showToast(title, notification.preview, href);
                 });
 
-                connection.start().catch(function () { /* notifications are best-effort */ });
+                // The connection doubles as presence. While the page is open it checks in on a timer well inside
+                // the heartbeat timeout, so a dropped tab stops counting as an agent who can see new work.
+                var heartbeatTimer = null;
+
+                function heartbeat() {
+                    connection.invoke('Heartbeat').catch(function () { /* the next tick retries */ });
+                }
+
+                function startHeartbeat() {
+                    heartbeat();
+
+                    if (heartbeatTimer === null) {
+                        heartbeatTimer = setInterval(heartbeat, 30000);
+                    }
+                }
+
+                connection.onreconnected(function () { startHeartbeat(); });
+                connection.onclose(function () {
+                    if (heartbeatTimer !== null) {
+                        clearInterval(heartbeatTimer);
+                        heartbeatTimer = null;
+                    }
+                });
+
+                connection.start()
+                    .then(startHeartbeat)
+                    .catch(function () { /* notifications are best-effort */ });
             } catch (e) { /* SignalR unavailable */ }
         }
     })();

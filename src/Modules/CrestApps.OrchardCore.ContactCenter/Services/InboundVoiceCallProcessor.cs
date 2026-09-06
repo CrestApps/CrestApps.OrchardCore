@@ -39,6 +39,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     private readonly IActivityQueueManager _queueManager;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IActivityQueueService _queueService;
+    private readonly IQueueLimitService _queueLimitService;
     private readonly IInboundContactLookup _contactLookup;
     private readonly EntryPointResolverChain _entryPointResolver;
     private readonly IProviderCommandStateService _providerCommandStateService;
@@ -63,6 +64,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     /// <param name="queueManager">The queue manager used to resolve the inbound queue.</param>
     /// <param name="queueItemManager">The queue item manager used to determine the current queue state of an existing call.</param>
     /// <param name="queueService">The queue service used to enqueue the activity.</param>
+    /// <param name="queueLimitService">The queue limit service that decides whether a full queue takes the caller.</param>
     /// <param name="contactLookup">The contact lookup used to resolve the caller.</param>
     /// <param name="entryPointResolvers">The optional entry point resolvers used to route inbound calls by dialed number.</param>
     /// <param name="providerCommandStateService">The service used to persist provider actions before dispatch.</param>
@@ -83,6 +85,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         IActivityQueueManager queueManager,
         IQueueItemManager queueItemManager,
         IActivityQueueService queueService,
+        IQueueLimitService queueLimitService,
         IInboundContactLookup contactLookup,
         EntryPointResolverChain entryPointResolver,
         IProviderCommandStateService providerCommandStateService,
@@ -103,6 +106,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         _queueManager = queueManager;
         _queueItemManager = queueItemManager;
         _queueService = queueService;
+        _queueLimitService = queueLimitService;
         _contactLookup = contactLookup;
         _entryPointResolver = entryPointResolver;
         _providerCommandStateService = providerCommandStateService;
@@ -272,6 +276,20 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             ? ContactCenterConstants.DirectRouting.QueueId
             : queue?.ItemId;
 
+        // A full queue does not take another caller: its size limit decides whether they wait in an overflow
+        // queue instead, or go to voicemail. A personal line and a missing queue have nothing to admit to.
+        QueueAdmissionDecision admission = null;
+
+        if (!isDirect && queue is not null)
+        {
+            admission = await _queueLimitService.AdmitAsync(queue, cancellationToken);
+
+            if (admission.IsQueued)
+            {
+                effectiveQueueId = admission.QueueId;
+            }
+        }
+
         var activity = await CreateActivityAsync(endpoint, flow, fromAddress, contactItemIds, now);
         result.ActivityItemId = activity.ItemId;
 
@@ -333,6 +351,24 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             return result;
         }
 
+        if (admission is { Outcome: QueueAdmissionOutcome.Voicemail })
+        {
+            result.Reason = "The queue is full and configured to send new callers to voicemail.";
+            result.ReasonCode = ContactCenterConstants.QueueLimits.QueueFullVoicemailReasonCode;
+
+            await TerminalizeInboundAsync(
+                activity,
+                interaction,
+                ActivityStatus.Completed,
+                InteractionStatus.Ended,
+                result.ReasonCode,
+                ProviderCommandType.SendToVoicemail,
+                now,
+                cancellationToken);
+
+            return result;
+        }
+
         result.QueueId = effectiveQueueId;
 
         var priority = plan is not null ? plan.Priority : (InteractionPriority?)null;
@@ -370,7 +406,9 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
 
         if (string.IsNullOrEmpty(agentUserId))
         {
-            result.Reason = "The call is waiting in the queue for the next eligible agent.";
+            result.Reason = admission is { Outcome: QueueAdmissionOutcome.Overflowed }
+                ? "The target queue is full; the call is waiting in its overflow queue for the next eligible agent."
+                : "The call is waiting in the queue for the next eligible agent.";
 
             return result;
         }
@@ -399,16 +437,42 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             return false;
         }
 
-        var activity = await _activityManager.FindByIdAsync(activityItemId, cancellationToken);
-        var interaction = await _interactionManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+        return await SendWaitingItemToVoicemailAsync(queueItem, DirectAgentTimeoutVoicemailReasonCode, cancellationToken);
+    }
 
-        if (activity is null || interaction is null)
+    /// <inheritdoc/>
+    public async Task<bool> SendWaitingToVoicemailAsync(string activityItemId, string reasonCode, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(activityItemId);
+        ArgumentException.ThrowIfNullOrEmpty(reasonCode);
+
+        var queueItem = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+
+        // Only a caller still waiting can be moved. Once offered or reserved, the reservation owns the call.
+        if (queueItem is null || queueItem.Status != QueueItemStatus.Waiting)
         {
             return false;
         }
 
-        // Remove the held item from the synthetic direct-routing queue, then send the caller to the agent's
-        // voicemail. When the provider cannot take voicemail the command layer reports the failure.
+        return await SendWaitingItemToVoicemailAsync(queueItem, reasonCode, cancellationToken);
+    }
+
+    /// <summary>
+    /// Removes a waiting item from its queue and sends the caller behind it to voicemail. When the provider
+    /// cannot take voicemail the command layer reports the failure.
+    /// </summary>
+    private async Task<bool> SendWaitingItemToVoicemailAsync(QueueItem queueItem, string reasonCode, CancellationToken cancellationToken)
+    {
+        var activity = await _activityManager.FindByIdAsync(queueItem.ActivityItemId, cancellationToken);
+        var interaction = await _interactionManager.FindByActivityIdAsync(queueItem.ActivityItemId, cancellationToken);
+
+        // Only a live voice leg can be sent to voicemail. A queued SMS or chat thread has no call to move, and
+        // completing its activity would silently drop a conversation somebody is still waiting on.
+        if (activity is null || interaction is null || interaction.Channel != InteractionChannel.Voice)
+        {
+            return false;
+        }
+
         if (queueItem.CanTransitionTo(QueueItemStatus.Removed))
         {
             await _queueService.DequeueAsync(queueItem, QueueItemStatus.Removed, cancellationToken);
@@ -419,7 +483,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             interaction,
             ActivityStatus.Completed,
             InteractionStatus.Ended,
-            DirectAgentTimeoutVoicemailReasonCode,
+            reasonCode,
             ProviderCommandType.SendToVoicemail,
             _clock.UtcNow,
             cancellationToken);

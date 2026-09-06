@@ -2,34 +2,34 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
-using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 
 /// <summary>
-/// Default <see cref="ISmsAgentAvailabilityService"/>. Availability is stored in the agent profile's property
-/// bag (<see cref="SmsAgentAvailability"/>), so it survives independently of voice presence and needs no schema.
+/// Default <see cref="ISmsAgentAvailabilityService"/>. The volunteered flag is stored in the agent profile's
+/// property bag (<see cref="SmsAgentAvailability"/>), so it survives independently of voice presence and needs
+/// no schema; whether the agent is actually there comes from the portal presence tracker.
 /// </summary>
 public sealed class SmsAgentAvailabilityService : ISmsAgentAvailabilityService
 {
     private readonly IAgentProfileManager _agentProfileManager;
-    private readonly IAgentSessionManager _sessionManager;
-    private readonly AgentAvailabilityOptions _availabilityOptions;
+    private readonly ISmsAgentPresenceTracker _presenceTracker;
     private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsAgentAvailabilityService"/> class.
     /// </summary>
+    /// <param name="agentProfileManager">The agent profile manager.</param>
+    /// <param name="presenceTracker">The tracker that knows whose portal is open.</param>
+    /// <param name="clock">The clock.</param>
     public SmsAgentAvailabilityService(
         IAgentProfileManager agentProfileManager,
-        IAgentSessionManager sessionManager,
-        IOptions<AgentAvailabilityOptions> availabilityOptions,
+        ISmsAgentPresenceTracker presenceTracker,
         IClock clock)
     {
         _agentProfileManager = agentProfileManager;
-        _sessionManager = sessionManager;
-        _availabilityOptions = availabilityOptions.Value;
+        _presenceTracker = presenceTracker;
         _clock = clock;
     }
 
@@ -38,19 +38,15 @@ public sealed class SmsAgentAvailabilityService : ISmsAgentAvailabilityService
     {
         ArgumentNullException.ThrowIfNull(agent);
 
-        if (!Get(agent).Available || string.IsNullOrEmpty(agent.UserId))
+        if (!Get(agent).Available)
         {
             return false;
         }
 
-        var session = await _sessionManager.FindByUserIdAsync(agent.UserId, cancellationToken);
-
-        // The same heartbeat timeout voice presence uses, so an agent is not live for one channel and gone for
-        // the other.
-        return session is not null
-            && session.IsOnline
-            && session.LastHeartbeatUtc is not null
-            && session.LastHeartbeatUtc >= _clock.UtcNow - _availabilityOptions.HeartbeatTimeout;
+        // The flag says they volunteered; the portal checking in says they are still there to answer. A voice
+        // sign-in is deliberately not enough: a pushed conversation is only visible in the portal, so an agent
+        // on the soft phone with the inbox closed would be assigned threads they cannot see.
+        return await _presenceTracker.IsPresentAsync(agent.ItemId, cancellationToken);
     }
 
     /// <inheritdoc/>

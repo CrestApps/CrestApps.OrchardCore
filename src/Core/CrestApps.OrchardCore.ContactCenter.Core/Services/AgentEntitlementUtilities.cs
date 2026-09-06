@@ -38,6 +38,91 @@ public static class AgentEntitlementUtilities
     /// <param name="requestedIds">The identifiers being requested, for example from a sign-in form.</param>
     /// <param name="allowedIds">The manager-owned entitlements the caller is allowed to select from.</param>
     /// <returns>The entitled subset of <paramref name="requestedIds"/>.</returns>
+    /// <summary>
+    /// Normalizes a proficiency list: one entry per skill, the name trimmed, and the proficiency clamped to the
+    /// supported range. A blank skill is a row somebody added and never filled in.
+    /// </summary>
+    /// <param name="skills">The proficiencies as entered.</param>
+    /// <returns>The normalized proficiencies.</returns>
+    public static IList<AgentSkill> NormalizeSkillProficiencies(IEnumerable<AgentSkill> skills)
+    {
+        var result = new List<AgentSkill>();
+        var seen = new HashSet<SkillTag>();
+
+        foreach (var skill in skills ?? [])
+        {
+            if (skill is null || !SkillTag.TryCreate(skill.SkillId, out var tag) || !seen.Add(tag))
+            {
+                continue;
+            }
+
+            result.Add(new AgentSkill
+            {
+                SkillId = tag.Value,
+                Proficiency = Math.Clamp(skill.Proficiency, AgentSkill.MinimumProficiency, AgentSkill.MaximumProficiency),
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Normalizes a queue-preference list: one entry per queue, the identifier trimmed, and no negative
+    /// priority or delay.
+    /// </summary>
+    /// <param name="memberships">The preferences as entered.</param>
+    /// <returns>The normalized preferences.</returns>
+    public static IList<AgentQueueMembership> NormalizeQueueMemberships(IEnumerable<AgentQueueMembership> memberships)
+    {
+        var result = new List<AgentQueueMembership>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var membership in memberships ?? [])
+        {
+            var queueId = membership?.QueueId?.Trim();
+
+            if (string.IsNullOrEmpty(queueId) || !seen.Add(queueId))
+            {
+                continue;
+            }
+
+            result.Add(new AgentQueueMembership
+            {
+                QueueId = queueId,
+                Priority = Math.Max(0, membership.Priority),
+                DelaySeconds = Math.Max(0, membership.DelaySeconds),
+            });
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Applies a skill set given as a plain tag list, a proficiency list, or both. The tag list is what every
+    /// reader of "does this agent have the skill" sees, so it always includes every skill with a proficiency;
+    /// a tag without a proficiency is held at the default. A null proficiency list leaves the agent's existing
+    /// proficiencies alone, so a tag-only import does not wipe levels a manager has set.
+    /// </summary>
+    /// <param name="profile">The agent profile.</param>
+    /// <param name="skills">The plain skill tags, or null for none.</param>
+    /// <param name="proficiencies">The proficiencies, or null to leave the existing ones alone.</param>
+    public static void ApplySkills(AgentProfile profile, IEnumerable<string> skills, IEnumerable<AgentSkill> proficiencies)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        if (proficiencies is null)
+        {
+            profile.Skills = NormalizeIds(skills);
+
+            return;
+        }
+
+        var normalizedProficiencies = NormalizeSkillProficiencies(proficiencies);
+
+        profile.SkillProficiencies = normalizedProficiencies;
+        profile.Skills = NormalizeIds((skills ?? []).Concat(normalizedProficiencies.Select(proficiency => proficiency.SkillId)));
+    }
+
     public static IList<string> FilterEntitled(IEnumerable<string> requestedIds, IEnumerable<string> allowedIds)
     {
         var allowed = new HashSet<string>(NormalizeIds(allowedIds), StringComparer.OrdinalIgnoreCase);

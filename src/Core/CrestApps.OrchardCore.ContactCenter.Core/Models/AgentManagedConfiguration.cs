@@ -31,4 +31,17 @@ public sealed class AgentManagedConfiguration
     /// Gets the skills the agent can be routed for.
     /// </summary>
     public IEnumerable<string> Skills { get; init; }
+
+    /// <summary>
+    /// Gets how well the agent holds each skill. A skill listed here is added to <see cref="Skills"/>; a skill in
+    /// <see cref="Skills"/> without an entry here is held at the default proficiency. Null leaves the agent's
+    /// existing proficiencies alone.
+    /// </summary>
+    public IEnumerable<AgentSkill> SkillProficiencies { get; init; }
+
+    /// <summary>
+    /// Gets how the agent serves each queue: priority order and offer delay. Null leaves the agent's existing
+    /// preferences alone.
+    /// </summary>
+    public IEnumerable<AgentQueueMembership> QueueMemberships { get; init; }
 }

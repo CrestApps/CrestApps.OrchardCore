@@ -124,6 +124,10 @@ public sealed class Startup : StartupBase
         // inbox toggle works whether or not push distribution is enabled.
         services.AddScoped<ISmsAgentAvailabilityService, SmsAgentAvailabilityService>();
 
+        // Portal presence lives in the distributed cache: a heartbeat is a fact that expires, and the cache is
+        // shared across nodes wherever the deployment has configured it to be.
+        services.AddSingleton<ISmsAgentPresenceTracker, DistributedCacheSmsAgentPresenceTracker>();
+
         // The inbound processor is both the portal's orchestration service and an Omnichannel event handler, so
         // any provider webhook that raises SmsReceived feeds the human conversation pipeline.
         services.AddScoped<SmsInboundProcessor>();

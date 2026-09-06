@@ -29,4 +29,15 @@ public interface IInboundVoiceCallProcessor
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns><see langword="true"/> when a held call was timed out; otherwise <see langword="false"/>.</returns>
     Task<bool> TimeoutDirectHoldAsync(string activityItemId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a caller who is still waiting in a queue to voicemail: removes the item from its queue and ends
+    /// the inbound call through the provider's voicemail path. Only affects a still-waiting voice call; once
+    /// offered or reserved, the reservation owns the call and this returns <see langword="false"/>.
+    /// </summary>
+    /// <param name="activityItemId">The activity whose waiting call is sent to voicemail.</param>
+    /// <param name="reasonCode">The reason recorded against the activity and interaction.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the caller was sent to voicemail; otherwise <see langword="false"/>.</returns>
+    Task<bool> SendWaitingToVoicemailAsync(string activityItemId, string reasonCode, CancellationToken cancellationToken = default);
 }

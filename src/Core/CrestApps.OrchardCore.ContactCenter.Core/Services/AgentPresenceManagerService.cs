@@ -536,17 +536,23 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     /// <inheritdoc/>
     public Task<AgentProfile> UpdateEntitlementsAsync(
         string agentId,
-        IEnumerable<string> allowedQueueIds,
-        IEnumerable<string> allowedCampaignIds,
+        AgentEntitlements entitlements,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(agentId);
+        ArgumentNullException.ThrowIfNull(entitlements);
 
         return UpdateManagedConfigurationCoreAsync(
             agentId,
-            allowedQueueIds,
-            allowedCampaignIds,
-            applyAdditionalConfiguration: null,
+            entitlements.AllowedQueueIds,
+            entitlements.AllowedCampaignIds,
+            profile =>
+            {
+                // The entitlement screen is the one place skills are edited, so what it sends is the whole
+                // set: the tag list is derived from the proficiencies rather than kept alongside them.
+                AgentEntitlementUtilities.ApplySkills(profile, skills: null, entitlements.SkillProficiencies ?? []);
+                profile.QueueMemberships = AgentEntitlementUtilities.NormalizeQueueMemberships(entitlements.QueueMemberships);
+            },
             cancellationToken);
     }
 
@@ -567,7 +573,12 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             {
                 profile.DisplayName = configuration.DisplayName;
                 profile.MaxConcurrentInteractions = configuration.MaxConcurrentInteractions;
-                profile.Skills = AgentEntitlementUtilities.NormalizeIds(configuration.Skills);
+                AgentEntitlementUtilities.ApplySkills(profile, configuration.Skills, configuration.SkillProficiencies);
+
+                if (configuration.QueueMemberships is not null)
+                {
+                    profile.QueueMemberships = AgentEntitlementUtilities.NormalizeQueueMemberships(configuration.QueueMemberships);
+                }
             },
             cancellationToken);
     }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -27,7 +28,7 @@ public sealed class AgentWorkSelectorTests
         var agent = Agent(("sales", 0, 0), ("support", 0, 0));
 
         // Act
-        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, TestContext.Current.CancellationToken);
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("support", queueId);
@@ -46,7 +47,7 @@ public sealed class AgentWorkSelectorTests
         var agent = Agent(("sales", 0, 0), ("support", 5, 0));
 
         // Act
-        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, TestContext.Current.CancellationToken);
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("sales", queueId);
@@ -64,7 +65,7 @@ public sealed class AgentWorkSelectorTests
         var agent = Agent(("overflow", 0, 60));
 
         // Act
-        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, TestContext.Current.CancellationToken);
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(queueId);
@@ -80,7 +81,7 @@ public sealed class AgentWorkSelectorTests
         var agent = Agent(("overflow", 0, 60));
 
         // Act
-        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, TestContext.Current.CancellationToken);
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("overflow", queueId);
@@ -99,7 +100,7 @@ public sealed class AgentWorkSelectorTests
         var agent = Agent(("aged", 0, 0), ("urgent", 0, 0));
 
         // Act
-        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, TestContext.Current.CancellationToken);
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("aged", queueId);
@@ -116,7 +117,7 @@ public sealed class AgentWorkSelectorTests
         var agent = Agent(("empty", 0, 0), ("busy", 0, 0));
 
         // Act
-        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, TestContext.Current.CancellationToken);
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("busy", queueId);
@@ -132,7 +133,7 @@ public sealed class AgentWorkSelectorTests
         var agent = Agent(("empty", 0, 0));
 
         // Act
-        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, TestContext.Current.CancellationToken);
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(queueId);
@@ -150,10 +151,67 @@ public sealed class AgentWorkSelectorTests
         var agent = new AgentProfile { ItemId = "a1", QueueIds = ["sales"] };
 
         // Act
-        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, TestContext.Current.CancellationToken);
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("sales", queueId);
+    }
+
+    [Fact]
+    public async Task Selects_ACampaignQueue_EvenThoughItIsNeverStoredInTheCatalog()
+    {
+        // Arrange
+        // Outbound campaign work is routed under a virtual per-campaign queue that is never persisted, so the
+        // catalog cannot find it. Treating that as "queue missing" silently dropped every preview-dial campaign
+        // from the selection and signed every campaign agent out of their campaign work.
+        var harness = new Harness();
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.Prefix + "camp1";
+        harness.AddWaiting(campaignQueueId, waitingSince: _now.AddMinutes(-3));
+
+        var agent = new AgentProfile { ItemId = "a1", QueueIds = [campaignQueueId] };
+
+        // Act
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(campaignQueueId, queueId);
+    }
+
+    [Fact]
+    public async Task Skips_AnExcludedQueue_AndSelectsTheNextBestOne()
+    {
+        // Arrange
+        // A paced campaign queue the dialer owns can hold the oldest contact. Excluding it must move the
+        // selection on to the inbound queue behind it, rather than ending the pass with the agent idle.
+        var harness = new Harness();
+        var campaignQueueId = ContactCenterConstants.CampaignQueue.Prefix + "camp1";
+        harness.AddWaiting(campaignQueueId, waitingSince: _now.AddMinutes(-30));
+        harness.AddQueue("support", waitingSince: _now.AddMinutes(-2));
+
+        var agent = new AgentProfile { ItemId = "a1", QueueIds = [campaignQueueId, "support"] };
+
+        // Act
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, [campaignQueueId], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("support", queueId);
+    }
+
+    [Fact]
+    public async Task Skips_ADisabledQueue()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.AddQueue("closed", waitingSince: _now.AddMinutes(-30), enabled: false);
+        harness.AddQueue("open", waitingSince: _now.AddMinutes(-1));
+
+        var agent = new AgentProfile { ItemId = "a1", QueueIds = ["closed", "open"] };
+
+        // Act
+        var queueId = await harness.Selector.SelectNextForAgentAsync(agent, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("open", queueId);
     }
 
     private static AgentProfile Agent(params (string QueueId, int Priority, int DelaySeconds)[] memberships)
@@ -207,25 +265,34 @@ public sealed class AgentWorkSelectorTests
             DateTime? waitingSince,
             InteractionPriority priority = InteractionPriority.Normal,
             int slaThresholdSeconds = 0,
-            bool enableSlaAging = false)
+            bool enableSlaAging = false,
+            bool enabled = true)
         {
             _queues[queueId] = new ActivityQueue
             {
                 ItemId = queueId,
                 EnableSlaAging = enableSlaAging,
                 SlaThresholdSeconds = slaThresholdSeconds,
+                Enabled = enabled,
             };
 
             if (waitingSince is not null)
             {
-                _heads[queueId] = new QueueItem
-                {
-                    ItemId = $"item-{queueId}",
-                    QueueId = queueId,
-                    EnqueuedUtc = waitingSince.Value,
-                    Priority = priority,
-                };
+                AddWaiting(queueId, waitingSince.Value, priority);
             }
+        }
+
+        // A waiting head item for a queue the catalog does not know about, which is what a virtual campaign
+        // queue looks like to the selector.
+        public void AddWaiting(string queueId, DateTime waitingSince, InteractionPriority priority = InteractionPriority.Normal)
+        {
+            _heads[queueId] = new QueueItem
+            {
+                ItemId = $"item-{queueId}",
+                QueueId = queueId,
+                EnqueuedUtc = waitingSince,
+                Priority = priority,
+            };
         }
     }
 }

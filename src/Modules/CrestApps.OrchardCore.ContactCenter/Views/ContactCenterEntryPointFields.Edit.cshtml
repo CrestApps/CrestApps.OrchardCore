@@ -156,6 +156,55 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="IvrFlowJson">
+    <label asp-for="IvrFlowJson" class="ocat-label">@T["IVR menu"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="IvrFlowJson" class="form-control font-monospace" rows="14" spellcheck="false" placeholder='{
+  "RootNodeId": "main",
+  "MaxRetries": 3,
+  "FallbackAction": { "Kind": "RouteToQueue", "TargetId": "QUEUE-ID" },
+  "Nodes": [
+    {
+      "NodeId": "main",
+      "Prompt": "Press 1 for sales or 2 for support.",
+      "Options": [
+        { "Digit": "1", "Action": { "Kind": "RouteToQueue", "TargetId": "QUEUE-ID" } },
+        { "Digit": "2", "Action": { "Kind": "SubMenu", "TargetId": "support" } }
+      ]
+    }
+  ]
+}'></textarea>
+        <span asp-validation-for="IvrFlowJson" class="text-danger"></span>
+        <span class="hint">@T["Leave empty to route callers straight to the target. Each menu has a NodeId, a Prompt (or PromptMediaId), and Options keyed by a single telephone key. Action kinds: RouteToQueue and RouteToAgent (TargetId is the queue or agent identifier below), SubMenu (TargetId is another NodeId), Voicemail, Repeat, and ExternalTransfer (TargetId is an approved destination). After MaxRetries invalid entries the FallbackAction is taken."]</span>
+        @if (Model.IvrQueueOptions.Count > 0 || Model.IvrAgentOptions.Count > 0)
+        {
+            <details class="mt-2">
+                <summary class="small">@T["Identifiers for RouteToQueue and RouteToAgent"]</summary>
+                <div class="row small mt-2">
+                    <div class="col-md-6">
+                        <strong>@T["Queues"]</strong>
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var option in Model.IvrQueueOptions)
+                            {
+                                <li>@option.Text <code>@option.Value</code></li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>@T["Agents"]</strong>
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var option in Model.IvrAgentOptions)
+                            {
+                                <li>@option.Text <code>@option.Value</code></li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </details>
+        }
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="Enabled">
     <div class="ocat-end-offset">
         <div class="form-check">

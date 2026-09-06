@@ -1,6 +1,8 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
+using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
 
@@ -19,14 +21,19 @@ public sealed class AutoReplyRouter : ISmsInboundRouter
     private static readonly TimeSpan _minimumInterval = TimeSpan.FromDays(1);
 
     private readonly ISmsDispatcher _dispatcher;
+    private readonly IContentManager _contentManager;
     private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AutoReplyRouter"/> class.
     /// </summary>
-    public AutoReplyRouter(ISmsDispatcher dispatcher, IClock clock)
+    /// <param name="dispatcher">The dispatcher that sends the reply.</param>
+    /// <param name="contentManager">The content manager, used to read the contact's opt-out state.</param>
+    /// <param name="clock">The clock.</param>
+    public AutoReplyRouter(ISmsDispatcher dispatcher, IContentManager contentManager, IClock clock)
     {
         _dispatcher = dispatcher;
+        _contentManager = contentManager;
         _clock = clock;
     }
 
@@ -67,6 +74,14 @@ public sealed class AutoReplyRouter : ISmsInboundRouter
             return false;
         }
 
+        // A contact who has opted out gets nothing automated, the acknowledgement included. The agent-facing
+        // send path already refuses them; an automated reply that slipped past it would be the platform
+        // texting someone who asked it not to.
+        if (await IsOptedOutAsync(conversation, cancellationToken))
+        {
+            return false;
+        }
+
         await _dispatcher.SendAsync(
             new SmsMessage
             {
@@ -79,5 +94,17 @@ public sealed class AutoReplyRouter : ISmsInboundRouter
         conversation.LastAutoReplyUtc = now;
 
         return false;
+    }
+
+    private async Task<bool> IsOptedOutAsync(SmsConversation conversation, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(conversation.ContactContentItemId))
+        {
+            return false;
+        }
+
+        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+
+        return contact is not null && contact.TryGet<OmnichannelContactPart>(out var part) && part.DoNotSms;
     }
 }
