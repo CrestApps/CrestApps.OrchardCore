@@ -57,10 +57,20 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
     private const int TelephonySilenceDurationMilliseconds = 900;
 
     /// <summary>
-    /// How confident the detector must be that it is hearing speech. Above the provider default, so line noise
-    /// and the far end's own earpiece leaking back do not register as the caller starting to talk.
+    /// How confident the detector must be that it is hearing speech.
     /// </summary>
-    private const float TelephonyVadThreshold = 0.62f;
+    /// <remarks>
+    /// Left at roughly the provider default on purpose. Raising it to 0.62 to suppress phantom turns did suppress
+    /// them, and also clipped the onset of short quiet answers: a caller who replied "yeah" had it reach the model
+    /// as a fragment, which came back transcribed as "That's causing a fever somewhere." The assistant read that
+    /// as a brush-off and politely ended the call on somebody who had just agreed to talk.
+    /// <para>
+    /// A short affirmative is the most common thing a caller says, so mis-hearing it is far worse than the
+    /// phantom turns the higher threshold was buying. Waiting longer for a pause — which is a separate setting —
+    /// is the part that stops the assistant talking over people, and it does not cost anything at the onset.
+    /// </para>
+    /// </remarks>
+    private const float TelephonyVadThreshold = 0.5f;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RealtimeVoiceConversationRunner"/> class.

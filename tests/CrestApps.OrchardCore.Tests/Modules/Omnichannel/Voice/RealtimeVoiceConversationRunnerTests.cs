@@ -166,7 +166,12 @@ public sealed class RealtimeVoiceConversationRunnerTests
 
         Assert.True(applied.AllowInterruption, "Being talked over is the other half of sounding like a machine.");
         Assert.True(applied.SilenceDurationMs >= 800, "A caller must be allowed to pause mid-sentence.");
-        Assert.True(applied.VadThreshold > 0.5f, "Line noise must not register as the caller starting to talk.");
+
+        // Not raised above the default. A higher threshold suppressed phantom turns but clipped the onset of
+        // short quiet answers — a live "yeah" reached the model as a fragment and came back transcribed as an
+        // unrelated sentence, which the assistant read as a brush-off and ended the call on. Mis-hearing the most
+        // common thing a caller says costs more than the phantom turns it bought.
+        Assert.True(applied.VadThreshold <= 0.55f, "A short 'yeah' must not be clipped before the model hears it.");
 
         // The detector type belongs to the provider; naming one here would be a guess that fails closed.
         Assert.Null(applied.TurnDetectionType);
