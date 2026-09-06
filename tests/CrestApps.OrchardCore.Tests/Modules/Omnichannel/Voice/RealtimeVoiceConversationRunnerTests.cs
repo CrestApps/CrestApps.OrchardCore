@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.OrchardCore.ContactCenter;
@@ -272,6 +273,54 @@ public sealed class RealtimeVoiceConversationRunnerTests
         Assert.Equal("realtime-deployment", request.RealtimeDeploymentName);
         Assert.Equal("chosen-voice", request.Voice);
         Assert.Same(harness.Session, request.ChatSession);
+    }
+
+    [Fact]
+    public async Task WhenTheBatchChoseNoVoice_TheProfilesVoiceIsUsed()
+    {
+        // Arrange
+        // A batch only carries a voice when whoever loaded the inventory picked one, which is the exception. The
+        // runner read only the activity, so the voice an operator selected on the profile was thrown away and
+        // every call used the model's default — with the profile still showing the voice they had chosen.
+        var harness = new RealtimeHarness();
+        harness.Activity.TextToSpeechVoiceId = null;
+        harness.Profile.AlterSettings<ChatModeProfileSettings>(s => s.VoiceName = "coral");
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Equal("coral", harness.Orchestrator.Requests.Single().Voice);
+    }
+
+    [Fact]
+    public async Task TheBatchesVoice_StillWinsOverTheProfiles()
+    {
+        // Arrange
+        // A campaign that deliberately picked a different voice must keep it.
+        var harness = new RealtimeHarness();
+        harness.Activity.TextToSpeechVoiceId = "shimmer";
+        harness.Profile.AlterSettings<ChatModeProfileSettings>(s => s.VoiceName = "coral");
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Equal("shimmer", harness.Orchestrator.Requests.Single().Voice);
+    }
+
+    [Fact]
+    public async Task WithNoVoiceChosenAnywhere_TheDeploymentDecides()
+    {
+        // Arrange
+        var harness = new RealtimeHarness();
+        harness.Activity.TextToSpeechVoiceId = null;
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Null(harness.Orchestrator.Requests.Single().Voice);
     }
 
     [Fact]

@@ -202,9 +202,11 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
 
                 // The voice the activity was loaded with, so a realtime call sounds like the campaign it belongs
                 // to rather than like the model's default.
-                Voice = string.IsNullOrWhiteSpace(context.Activity?.TextToSpeechVoiceId)
-                    ? null
-                    : context.Activity.TextToSpeechVoiceId.Trim(),
+                // The campaign's voice when the inventory load chose one, otherwise the voice configured on the
+                // profile itself. Only the activity was read before, and a batch does not set a voice unless
+                // somebody picks one — so the voice an operator selected on the profile was silently ignored and
+                // every realtime call used the model's default, whatever the profile said.
+                Voice = ResolveVoice(context),
 
                 // A caller who talks over the assistant is interrupting a person as far as they are concerned,
                 // and being talked through is the single most common complaint about automated calls.
@@ -221,6 +223,36 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
 
             return null;
         }
+    }
+
+    /// <summary>
+    /// The voice this call should be spoken in: the one the activity was loaded with, falling back to the one
+    /// configured on the profile.
+    /// </summary>
+    /// <remarks>
+    /// The activity only carries a voice when the inventory load explicitly chose one, which is the exception
+    /// rather than the rule. Reading only the activity therefore threw away the profile's own setting, so an
+    /// operator who picked a voice there heard the model's default on every call and had no way to tell why.
+    /// </remarks>
+    /// <param name="context">The call being held.</param>
+    private static string ResolveVoice(RealtimeVoiceConversationContext context)
+    {
+        var activityVoice = context.Activity?.TextToSpeechVoiceId;
+
+        if (!string.IsNullOrWhiteSpace(activityVoice))
+        {
+            return activityVoice.Trim();
+        }
+
+        if (context.Profile is not null &&
+            context.Profile.TryGetSettings<ChatModeProfileSettings>(out var settings) &&
+            !string.IsNullOrWhiteSpace(settings.VoiceName))
+        {
+            return settings.VoiceName.Trim();
+        }
+
+        // Nothing chosen anywhere: let the deployment use whatever it defaults to.
+        return null;
     }
 
     /// <summary>
