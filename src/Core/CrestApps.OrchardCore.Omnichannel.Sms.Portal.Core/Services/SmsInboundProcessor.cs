@@ -361,7 +361,11 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
 
         var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
 
-        return contact?.As<OmnichannelContactPart>()?.DoNotSms == true;
+        // TryGet rather than As: a contact that has never carried the part should read as "not opted out", not
+        // have an empty one created on it during what is only a question.
+        return contact is not null
+            && contact.TryGet<OmnichannelContactPart>(out var contactPart)
+            && contactPart.DoNotSms;
     }
 
     private async Task SetDoNotSmsAsync(SmsConversation conversation, bool doNotSms, CancellationToken cancellationToken)
