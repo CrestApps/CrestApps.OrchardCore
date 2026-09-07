@@ -93,9 +93,16 @@ public sealed partial class VoiceAgentConversationLoop
 
         var sessionPrompts = await promptStore.GetPromptsAsync(activity.AISessionId);
 
-        var transcriptText = string.Join("\n", sessionPrompts
-            .Where(p => !p.IsGeneratedPrompt)
+        var spokenTurns = sessionPrompts
+            .Where(p => !p.IsGeneratedPrompt && !string.IsNullOrWhiteSpace(p.Content))
+            .ToList();
+
+        var transcriptText = string.Join("\n", spokenTurns
             .Select(p => $"{(p.Role == ChatRole.Assistant ? "Agent" : "Customer")}: {p.Content?.Replace(HangupMarker, string.Empty)}"));
+
+        // Whether anybody actually said anything. A call that rang out, was declined, or was answered and hung up
+        // on leaves no turns at all, and there is nothing for the review below to read.
+        var hasConversation = VoiceCallConclusionPolicy.HasConversation(sessionPrompts);
 
         // The AI field-update guards are a snapshot taken when the automated inventory was loaded (the subject
         // AI-settings UI is inbound-only, so an outbound automated inventory configures these on the batch). Only
@@ -179,8 +186,18 @@ public sealed partial class VoiceAgentConversationLoop
             new(ChatRole.User, userPrompt),
         };
 
-        var response = await client.GetResponseAsync<VoiceConclusionResult>(messages, jsonOptions.SerializerOptions);
-        var result = response.Result;
+        // A call with nothing said on it is not analyzed. Asked to review an empty transcript the model does not
+        // answer "nothing happened" — it writes a plausible account of a conversation that never occurred, and
+        // that account is saved to the CRM as fact. One real call that nobody spoke on came back as "the customer
+        // expressed interest in a vehicle but did not specify the type, budget, or timeline", every word of it
+        // invented. An unanswered call must read as unanswered.
+        VoiceConclusionResult result = null;
+
+        if (hasConversation)
+        {
+            var response = await client.GetResponseAsync<VoiceConclusionResult>(messages, jsonOptions.SerializerOptions);
+            result = response.Result;
+        }
 
         // Decide the disposition and summary from the (read-only) analysis before touching the activity.
         var dispositionId = result?.DispositionId;
@@ -192,9 +209,7 @@ public sealed partial class VoiceAgentConversationLoop
 
         var disposition = dispositions.FirstOrDefault(d => d.ItemId == dispositionId);
 
-        var notes = string.IsNullOrWhiteSpace(result?.Summary)
-            ? "Automated AI voice call completed."
-            : result.Summary;
+        var notes = VoiceCallConclusionPolicy.ResolveNotes(hasConversation, result?.Summary);
 
         // Terminal write. Reload the activity fresh (the analysis above ran a slow LLM call, during which the row
         // may have moved on) and apply the conclusion. The answered call was advanced to InProgress, which keeps
