@@ -91,6 +91,135 @@ Administrators get a dedicated **Subscriptions** admin area (registered through 
 
 A **Subscription Summary** widget (`SubscriptionSummaryPart`) is also available for surfacing subscription information on the site.
 
+Alongside the session list there is an **Agreements** screen backed by the durable subscription record described below. From an agreement's detail page an administrator can cancel it (immediately or at the close of the paid period), pause billing, and resume it. Every one of those actions goes through the lifecycle service rather than editing the record, so an administrator acting in the admin cannot race a gateway webhook or the nightly sweep, and each action is written to the agreement's own history.
+
+Subscribers get a matching **My Plans** screen where they can see what they subscribe to and cancel it themselves. Cancelling from there defaults to ending at the close of the period they already paid for, because they bought that time.
+
+## The subscription agreement
+
+A completed checkout used to be the only record that somebody had subscribed. That made every ordinary question expensive: who is subscribed right now, whose payment failed last night, what renews next month, and what should happen when a customer cancels.
+
+Every recurring obligation a checkout settles now also creates a durable **subscription agreement**. A checkout session records how something was bought once; the agreement records what the customer is entitled to from then on, and it outlives the checkout.
+
+An agreement carries who owns it, what it bills and on what cycle, the gateway's own identifier for it, the period the customer has paid through, when the next cycle is due, the lines that make it up, and a full event history. It is created only from payment attempts the checkout actually confirmed, so an unpaid checkout never grants an active subscription, and it is looked up by obligation before being created, so a checkout that completes twice never produces two agreements.
+
+The status is one of `Active`, `Trialing`, `PastDue`, `Canceled`, `Expired`, `Paused`, or `Incomplete`. Whether a subscriber currently has access is a separate question from the status, and the agreement answers it: a cancelled agreement is still current until the paid period runs out, and a past-due one is current through its grace window.
+
+### Transitions
+
+Subscription state is edited from four directions at once: a gateway webhook, a nightly sweep, an administrator, and the customer. Every transition therefore goes through one service, takes a lock on the single agreement it changes, re-reads it inside that lock, and is idempotent.
+
+| Transition | What it does |
+| --- | --- |
+| Record renewal | Advances to the next period and schedules the next bill. Reporting the same cycle twice advances it once, so a webhook and the sweep cannot skip a payment between them. |
+| Mark past due | Starts the dunning window. A second failure inside the same window does not restart the grace clock. |
+| Cancel | Stops future billing. At period end it keeps the paid-through date; immediately it ends access now. |
+| Resume | Returns a paused or past-due agreement to active. |
+| Pause | Suspends billing without ending the agreement. |
+| Expire | Ends the agreement when the grace window elapses or the agreed cycles are all billed. |
+| Sync from provider | Adopts the gateway's period, pending cancellation, and status. It will not revive an agreement cancelled locally, because that would start billing a customer who already left. |
+
+The dunning grace period is a site setting (**Dunning grace days**, 7 by default). A failed renewal is usually an expired card rather than a customer who left, so cutting access off the same night loses subscribers who would have paid, while never cutting it off gives the plan away.
+
+A background sweep runs every thirty minutes. It expires agreements whose grace window has elapsed and closes those that have billed every cycle they were sold for. It never charges anyone: a gateway-backed agreement is billed by the gateway, and an offline one is invoiced by its own provider's renewal path.
+
+## Renewals and cancellation
+
+A subscription does not end when checkout completes; it renews, can fall behind, and can be cancelled. The module tracks that afterlife from the payment gateway's notifications, so the site does not have to infer a subscription's fate from payments quietly stopping.
+
+| Gateway notification | Effect on the recorded subscription |
+| --- | --- |
+| Cycle payment succeeded | The payment is recorded with **its own collection date**, and the subscription's expiration advances by exactly one billing cycle. |
+| Cycle payment failed | The subscription moves to **Past due** and the date it first fell behind is recorded, so a dunning window can be measured from it. |
+| Subscription updated | The status, paid-through date, and pending cancellation are adopted from the gateway. |
+| Subscription deleted | The subscription is marked **Canceled** with the cancellation date. |
+
+Each recorded subscription carries a `SubscriptionLifecycleStatus` (`Active`, `Trialing`, `PastDue`, `Canceled`, `Expired`, `Paused`). Some deliberate rules:
+
+- The expiration advances **from the previous expiration**, not from the moment the webhook was processed, so a renewal handled late never shortens the period the customer paid for.
+- A cancellation scheduled for the end of the period keeps the paid-through date, so access is not revoked early.
+- A status the adapter does not recognize leaves local state untouched rather than guessing, and a late-arriving payment failure never resurrects an already-cancelled subscription.
+- Because payments now carry their own dates, revenue, tax, and product reports attribute a renewal to the month it was collected instead of the month the subscription started.
+
+:::note
+Grace-period enforcement, cancellation, and pausing are handled by the subscription agreement described above. What is still missing is a dunning email sequence and automatic revocation of roles granted at signup when an agreement ends.
+:::
+
+## Member-only access
+
+A subscription that only records money is not much use to a site that wants to sell membership. **Entitlements** are what a subscription grants its owner while it is current.
+
+Attach the **Subscription Entitlements** part to a plan and pick the roles a subscriber holds. The entitlement lives on the plan rather than in a site setting because different tiers grant different things, which a single site-wide list cannot express. What the plan grants is copied onto the subscription when it is created, so editing the plan afterwards does not silently change what an existing subscriber was sold.
+
+Roles already gate content, features, and permissions across Orchard Core, so putting a subscriber in a role makes every one of those gates subscription-aware without any of them knowing subscriptions exist.
+
+The role is added when the subscription becomes current and removed when it stops being current — which is later than when it stops billing. A subscriber who cancels mid-cycle keeps the role through the period they paid for, and one whose renewal failed keeps it through the grace window. Removing it when access genuinely ends matters as much as granting it: a subscriber who stops paying and keeps the role keeps everything they were paying for.
+
+To ask the question from your own code, inject **`ISubscriptionAccessService`**:
+
+| Member | Returns |
+| --- | --- |
+| `HasEntitlementAsync(userId, kind, value)` | Whether the user currently holds that entitlement. Pass no value to match any of the kind. |
+| `GetEntitlementsAsync(userId)` | Everything the user currently holds. |
+| `GetCurrentSubscriptionsAsync(userId)` | The user's subscriptions that are current right now. |
+
+Ask it rather than reading a subscription's status: status and access are not the same thing, and a status check locks out exactly the paying customers you least want to lose.
+
+To grant something other than a role, implement **`ISubscriptionEntitlementApplier`** for your own kind and register it. The subscription decides whether the entitlement is current; your applier decides what that means. An applier that throws is logged and does not roll the transition back — the agreement's state is the fact, and a side effect that failed is something to retry.
+
+## Reacting to what happens
+
+The reactions a site owner wants when a subscription changes — welcoming a new subscriber, warning one whose
+card was declined, asking a leaver why, telling a channel — differ from site to site. Hard-coding any of them
+would be wrong, and a setting for each would never end, so the module raises workflow events instead.
+
+| Workflow event | Raised when |
+| --- | --- |
+| **Subscription Started** | A subscriber's first payment settles and the agreement is created. |
+| **Subscription Renewed** | A cycle is paid, including a recovery from past due. |
+| **Subscription Past Due** | A renewal payment fails and the dunning window starts. |
+| **Subscription Canceled** | The customer, an administrator, or the gateway ends the agreement. |
+| **Subscription Expired** | The grace window elapses, or the agreed cycles are all billed. |
+
+Each event carries the subscription id, title, owner, current and previous status, amount, the date access
+runs through, and the grace end date. Events are correlated by the subscription id, so one workflow can wait
+for a later stage of the same agreement — for example expiry after a past-due warning.
+
+Only a genuine status change raises an event. A sweep or a provider sync that only moves dates raises
+nothing, so a customer is not told their payment failed every time something touches their record.
+
+## Getting started quickly
+
+The **Commerce starter** recipe (under **Configuration → Recipes**) enables the suite, creates a `Member`
+role, defines a **Membership Plan** content type carrying a price and an entitlement, and publishes a `$10`
+monthly plan that grants the `Member` role. It is a starting point to edit rather than a production
+configuration: pick your own currency, price, and roles before selling anything.
+
+## Free trials
+
+A recurring plan can start with a free trial. Set the trial days on the plan and the gateway is told about it, so the gateway holds the schedule and starts billing when the trial ends.
+
+That is deliberate: if the site simply did not charge and promised itself to start billing later, a restart would break the promise. It is also different from delaying the start of the agreement. A trial establishes the agreement now, with a payment method attached, so a trial converts into a paying subscriber without asking them to come back and buy again.
+
+A subscription in a trial is `Trialing`, is treated as current, and grants everything the plan entitles the subscriber to. Its first cycle settles for nothing collected, which is exactly right: nothing was.
+
+## Selling sites
+
+With **Subscriptions - Sites** enabled on the default tenant, a plan can sell a whole Orchard Core site. The customer names their site and its administrator during checkout, and gets a running site once they have paid.
+
+The buying and the building are deliberately separate. Creating a tenant is slow, touches a database, and fails for reasons that have nothing to do with the buyer, so doing it inline in the request that completes the checkout means a slow recipe, a brief outage, or a deployment restart leaves somebody who paid with no site and nothing to retry.
+
+Instead the checkout only records a **provisioning job**, and a sweep builds the site from it:
+
+- Everything the customer can still fix is checked **before** payment. A name that is taken, a domain that belongs to another site, a URL prefix already in use: all are refused by the step editor while they can still change them.
+- The administrator password is data-protected the moment it is captured, never rendered back into the form, and dropped once provisioning reaches a terminal outcome.
+- Each attempt is claimed under a lock, so two nodes cannot build the same site twice, and a job stranded by a process that died is picked up again rather than left in limbo.
+- A failure is recorded on the job with a growing back-off. After enough failures the job is **abandoned** rather than retried forever, because at that point the honest answer is that a person needs to look at it.
+
+Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions → Site provisioning**, including the abandoned ones, and can retry any of them once they have fixed the cause.
+
+A site sold this way carries a `Tenant` entitlement naming it, so the site runs for as long as the subscription is current and is **disabled** when it is not. Disabled, never deleted: a disabled tenant stops serving immediately but keeps every byte of the customer's data, so somebody who pays a late invoice gets their site back exactly as it was.
+
 ## Tenant onboarding
 
 With **Subscriptions - Tenant Onboarding** enabled (on the default tenant), a subscription can provision a brand-new Orchard Core tenant as part of checkout — for example to sell isolated SaaS workspaces. The provisioning is resilient to failures, and two workflow events let you react to the outcome:

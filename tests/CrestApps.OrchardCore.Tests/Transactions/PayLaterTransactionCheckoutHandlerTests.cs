@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Models;
+using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.PayLater.Handlers;
 using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.PayLater.Services;
@@ -209,6 +211,124 @@ public sealed class PayLaterTransactionCheckoutHandlerTests
         Assert.Single(ownerIds);
         Assert.Equal("guest-session-1", ownerIds[0]);
         Assert.All(store.Transactions, t => Assert.Equal(CustomerOwnerKind.Guest, t.OwnerKind));
+    }
+
+    /// <summary>
+    /// A recurring Pay Later commitment has no gateway keeping its schedule, so the cycle it covers has to
+    /// be written onto the ledger. Without it the debt would be invoiced once and never again.
+    /// </summary>
+    [Fact]
+    public async Task CompletedAsync_StampsTheBillingCycleOnARecurringObligation()
+    {
+        // Arrange
+        var store = new FakeTransactionStore();
+        var interval = new BillingDurationKey(DurationType.Month, 1);
+        var obligationId = CheckoutObligations.Recurring(interval);
+
+        var attempt = new PaymentAttempt
+        {
+            SessionId = "session-1",
+            ProviderKey = PayLaterCheckoutPaymentProvider.ProcessorKey,
+            ObligationId = obligationId,
+            State = PaymentAttemptState.Succeeded,
+            ExpectedAmount = 20m,
+            Currency = "USD",
+        };
+
+        var handler = CreateHandler(store, attempt, netTermDays: 30);
+        var context = CreateRecurringCompletedContext("session-1", obligationId, billingCycleLimit: 12);
+
+        // Act
+        await handler.CompletedAsync(context);
+
+        // Assert
+        var transaction = Assert.Single(store.Transactions);
+
+        Assert.NotNull(transaction.Recurrence);
+        Assert.Equal(DurationType.Month, transaction.Recurrence.DurationType);
+        Assert.Equal(1, transaction.Recurrence.BillingDuration);
+        Assert.Equal(1, transaction.Recurrence.CycleNumber);
+        Assert.Equal(12, transaction.Recurrence.CycleLimit);
+        Assert.Equal(_now, transaction.Recurrence.PeriodStartUtc);
+        Assert.Equal(_now.AddMonths(1), transaction.Recurrence.PeriodEndUtc);
+    }
+
+    /// <summary>
+    /// A one-time purchase must not acquire a schedule, or the renewal sweep would invoice the customer
+    /// again for something they bought once.
+    /// </summary>
+    [Fact]
+    public async Task CompletedAsync_LeavesAOneTimeObligationWithoutARecurrence()
+    {
+        // Arrange
+        var store = new FakeTransactionStore();
+        var attempt = new PaymentAttempt
+        {
+            SessionId = "session-1",
+            ProviderKey = PayLaterCheckoutPaymentProvider.ProcessorKey,
+            ObligationId = CheckoutObligations.OneTime,
+            State = PaymentAttemptState.Succeeded,
+            ExpectedAmount = 100m,
+            Currency = "USD",
+        };
+
+        var handler = CreateHandler(store, attempt, netTermDays: 30);
+        var context = CreateRecurringCompletedContext("session-1", CheckoutObligations.OneTime, billingCycleLimit: null);
+
+        // Act
+        await handler.CompletedAsync(context);
+
+        // Assert
+        Assert.Null(Assert.Single(store.Transactions).Recurrence);
+    }
+
+    private static CheckoutFlowCompletedContext CreateRecurringCompletedContext(string sessionId, string obligationId, int? billingCycleLimit)
+    {
+        var session = new CheckoutSession
+        {
+            SessionId = sessionId,
+            OwnerId = "owner-1",
+            ReferenceType = "order",
+            ReferenceId = "ref-1",
+            Currency = "USD",
+            Status = CheckoutSessionStatus.Pending,
+        };
+
+        session.Steps.Add(new CheckoutFlowStep
+        {
+            Key = "plan",
+            Order = 1,
+            BillingItems =
+            [
+                new BillingItem { ItemId = obligationId, Description = "Membership", Amount = 20m },
+            ],
+        });
+
+        session.Put(new CheckoutInvoice
+        {
+            Currency = "USD",
+            FirstRecurringPaymentAmount = 20m,
+            DueNow = 20m,
+            GrandTotal = 20m,
+            LineItems =
+            [
+                new CheckoutLineItem
+                {
+                    ItemId = "membership",
+                    Description = "Membership",
+                    Quantity = 1,
+                    UnitPrice = 20m,
+                    Plan = new RecurringPlan
+                    {
+                        DurationType = DurationType.Month,
+                        BillingDuration = 1,
+                        BillingCycleLimit = billingCycleLimit,
+                    },
+                }
+            ],
+        });
+
+        return new CheckoutFlowCompletedContext(new CheckoutFlow(session));
     }
 
     private static PayLaterTransactionCheckoutHandler CreateHandler(FakeTransactionStore store, int netTermDays, params PaymentAttempt[] attempts)

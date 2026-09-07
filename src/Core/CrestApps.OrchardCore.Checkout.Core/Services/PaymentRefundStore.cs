@@ -1,3 +1,4 @@
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -60,6 +61,44 @@ public sealed class PaymentRefundStore : DocumentCatalog<PaymentRefund, PaymentR
         ArgumentException.ThrowIfNullOrEmpty(sessionId);
 
         return await Session.Query<PaymentRefund, PaymentRefundIndex>(x => x.SessionId == sessionId).ListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<PageResult<PaymentRefund>> PageAsync(int page, int pageSize, PaymentRefundQuery query, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var records = Session.Query<PaymentRefund, PaymentRefundIndex>();
+
+        if (!string.IsNullOrEmpty(query.ProviderKey))
+        {
+            records = records.Where(x => x.ProviderKey == query.ProviderKey);
+        }
+
+        if (query.Status.HasValue)
+        {
+            records = records.Where(x => x.Status == query.Status.Value);
+        }
+
+        if (!string.IsNullOrEmpty(query.SessionId))
+        {
+            records = records.Where(x => x.SessionId == query.SessionId);
+        }
+
+        var count = await records.CountAsync(cancellationToken);
+
+        var entries = await records
+            .OrderByDescending(x => x.UpdatedUtc)
+            .ThenByDescending(x => x.ItemId)
+            .Skip((Math.Max(page, 1) - 1) * pageSize)
+            .Take(pageSize)
+            .ListAsync(cancellationToken);
+
+        return new PageResult<PaymentRefund>
+        {
+            Count = count,
+            Entries = entries.ToArray(),
+        };
     }
 
     /// <inheritdoc/>

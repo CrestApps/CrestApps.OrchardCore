@@ -168,4 +168,10 @@ public sealed class Transaction : CatalogItem
     /// Gets the audit timeline of the transaction.
     /// </summary>
     public IList<TransactionEvent> Events { get; init; } = [];
+
+    /// <summary>
+    /// Gets or sets the billing cycle this transaction covers, when it was created by a recurring
+    /// agreement. It is <see langword="null"/> for a one-time obligation.
+    /// </summary>
+    public TransactionRecurrence Recurrence { get; set; }
 }

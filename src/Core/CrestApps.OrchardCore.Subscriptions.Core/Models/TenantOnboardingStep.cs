@@ -36,9 +36,13 @@ public sealed class TenantOnboardingStep
     public string AdminEmail { get; set; }
 
     /// <summary>
-    /// Gets or sets the administrator password value used during tenant setup.
+    /// Gets or sets the <em>data-protected</em> administrator password used during tenant setup. The value is
+    /// protected by the step editor with <see cref="SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep"/>
+    /// before it is persisted on the session, and it must be unprotected with the same purpose immediately
+    /// before it is handed to the setup service. The name carries the protection state on purpose: passing this
+    /// value to the setup service unchanged provisions a tenant whose administrator can never sign in.
     /// </summary>
-    public string AdminPassword { get; set; }
+    public string ProtectedAdminPassword { get; set; }
 
     /// <summary>
     /// Gets or sets the URL prefix assigned to the tenant.

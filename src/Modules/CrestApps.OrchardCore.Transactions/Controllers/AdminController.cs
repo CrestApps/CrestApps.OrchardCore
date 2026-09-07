@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Transactions.Core;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using CrestApps.OrchardCore.Transactions.ViewModels;
@@ -18,6 +20,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Users.Services;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Transactions.Controllers;
 
@@ -238,16 +241,20 @@ public sealed class AdminController : Controller
             return NotFound();
         }
 
-        if (transaction.OutstandingAmount <= 0m)
+        if (!TransactionStateMachine.CanSendReminder(transaction))
         {
-            await _notifier.WarningAsync(H["This transaction has no outstanding balance, so no reminder was sent."]);
+            await _notifier.WarningAsync(H["This transaction has no outstanding balance to chase, so no reminder was sent."]);
 
             return RedirectToAction(nameof(Detail), new { itemId });
         }
 
         if (await _reminderService.SendReminderAsync(transaction))
         {
-            await _transactionManager.UpdateAsync(transaction);
+            if (!await TrySaveAsync(transaction))
+            {
+                return RedirectToAction(nameof(Detail), new { itemId });
+            }
+
             await _notifier.SuccessAsync(H["A payment reminder was sent to the transaction owner."]);
         }
         else
@@ -284,10 +291,27 @@ public sealed class AdminController : Controller
             return RedirectToAction(nameof(Detail), new { itemId = model.TransactionId });
         }
 
-        var now = _clock.UtcNow;
-        var applied = Math.Min(model.Amount, transaction.OutstandingAmount);
+        if (!TransactionStateMachine.CanRecordPayment(transaction))
+        {
+            await _notifier.WarningAsync(H["This transaction is no longer collectable, so no payment was recorded."]);
 
-        transaction.AmountPaid += applied;
+            return RedirectToAction(nameof(Detail), new { itemId = model.TransactionId });
+        }
+
+        var now = _clock.UtcNow;
+
+        // Round at the currency's own scale so a zero-decimal currency (for example JPY) is never recorded with
+        // fractions it cannot be paid in, and an over-payment never leaves a negative balance.
+        var applied = CurrencyScale.Round(Math.Min(model.Amount, transaction.OutstandingAmount), transaction.Currency);
+
+        if (applied <= 0m)
+        {
+            await _notifier.WarningAsync(H["The payment amount is too small to record against this transaction."]);
+
+            return RedirectToAction(nameof(Detail), new { itemId = model.TransactionId });
+        }
+
+        transaction.AmountPaid = CurrencyScale.Round(transaction.AmountPaid + applied, transaction.Currency);
         transaction.UpdatedUtc = now;
         transaction.SettlementMethod = TransactionsConstants.SettlementMethods.Offline;
 
@@ -299,7 +323,7 @@ public sealed class AdminController : Controller
         {
             CreatedUtc = now,
             Type = TransactionEventType.PaymentRecorded,
-            Message = S["An offline payment of {0} {1} was recorded.{2}", transaction.Currency, applied.ToString("0.00"), noteSuffix].Value,
+            Message = S["An offline payment of {0} {1} was recorded.{2}", transaction.Currency, CurrencyScale.Format(applied, transaction.Currency), noteSuffix].Value,
             ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
             ActorName = await GetCurrentUserNameAsync(),
         });
@@ -320,8 +344,10 @@ public sealed class AdminController : Controller
             transaction.Status = TransactionStatus.PartiallyPaid;
         }
 
-        await _transactionManager.UpdateAsync(transaction);
-        await _notifier.SuccessAsync(H["The payment was recorded."]);
+        if (await TrySaveAsync(transaction))
+        {
+            await _notifier.SuccessAsync(H["The payment was recorded."]);
+        }
 
         return RedirectToAction(nameof(Detail), new { itemId = model.TransactionId });
     }
@@ -345,6 +371,13 @@ public sealed class AdminController : Controller
             return NotFound();
         }
 
+        if (!TransactionStateMachine.CanMarkPaid(transaction))
+        {
+            await _notifier.WarningAsync(H["This transaction is no longer collectable, so it was not marked as paid."]);
+
+            return RedirectToAction(nameof(Detail), new { itemId });
+        }
+
         var now = _clock.UtcNow;
 
         transaction.AmountPaid = transaction.TotalAmount;
@@ -361,8 +394,10 @@ public sealed class AdminController : Controller
             ActorName = await GetCurrentUserNameAsync(),
         });
 
-        await _transactionManager.UpdateAsync(transaction);
-        await _notifier.SuccessAsync(H["The transaction was marked as paid."]);
+        if (await TrySaveAsync(transaction))
+        {
+            await _notifier.SuccessAsync(H["The transaction was marked as paid."]);
+        }
 
         return RedirectToAction(nameof(Detail), new { itemId });
     }
@@ -387,6 +422,13 @@ public sealed class AdminController : Controller
             return NotFound();
         }
 
+        if (!TransactionStateMachine.CanCancel(transaction))
+        {
+            await _notifier.WarningAsync(H["This transaction has already reached a final state and cannot be canceled. Refund it instead if money was collected."]);
+
+            return RedirectToAction(nameof(Detail), new { itemId });
+        }
+
         var now = _clock.UtcNow;
 
         transaction.Status = TransactionStatus.Canceled;
@@ -405,8 +447,10 @@ public sealed class AdminController : Controller
             ActorName = await GetCurrentUserNameAsync(),
         });
 
-        await _transactionManager.UpdateAsync(transaction);
-        await _notifier.SuccessAsync(H["The transaction was canceled."]);
+        if (await TrySaveAsync(transaction))
+        {
+            await _notifier.SuccessAsync(H["The transaction was canceled."]);
+        }
 
         return RedirectToAction(nameof(Detail), new { itemId });
     }
@@ -448,10 +492,32 @@ public sealed class AdminController : Controller
             ActorName = await GetCurrentUserNameAsync(),
         });
 
-        await _transactionManager.UpdateAsync(transaction);
-        await _notifier.SuccessAsync(H["The note was added."]);
+        if (await TrySaveAsync(transaction))
+        {
+            await _notifier.SuccessAsync(H["The note was added."]);
+        }
 
         return RedirectToAction(nameof(Detail), new { itemId });
+    }
+
+    // Persists a management change, turning the optimistic-concurrency failure into a message the operator can
+    // act on. The store checks document versions so two managers working the same transaction cannot silently
+    // overwrite each other; without this the loser of that race saw an unhandled server error instead of being
+    // told to reload and try again.
+    private async Task<bool> TrySaveAsync(Transaction transaction)
+    {
+        try
+        {
+            await _transactionManager.UpdateAsync(transaction);
+
+            return true;
+        }
+        catch (ConcurrencyException)
+        {
+            await _notifier.WarningAsync(H["This transaction was changed by someone else while you were working on it. Reload the page and try again."]);
+
+            return false;
+        }
     }
 
     private static TransactionQuery BuildQuery(TransactionsAdminIndexOptions options)

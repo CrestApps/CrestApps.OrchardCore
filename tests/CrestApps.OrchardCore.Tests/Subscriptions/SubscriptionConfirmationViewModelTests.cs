@@ -64,7 +64,7 @@ public class SubscriptionConfirmationViewModelTests
             TenantTitle = "Contoso",
             AdminUsername = "admin",
             AdminEmail = "admin@contoso.test",
-            AdminPassword = "super-secret-should-not-leak",
+            ProtectedAdminPassword = "super-secret-should-not-leak",
             Domains = ["contoso.test"],
         };
 
@@ -93,7 +93,7 @@ public class SubscriptionConfirmationViewModelTests
         var step = new TenantOnboardingStep
         {
             AdminUsername = "admin",
-            AdminPassword = "leak-me",
+            ProtectedAdminPassword = "leak-me",
             Domains = ["a.test"],
         };
 

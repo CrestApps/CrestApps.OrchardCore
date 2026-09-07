@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.PayLater.Drivers;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.PayLater.Services;
 using CrestApps.OrchardCore.Transactions.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -34,8 +36,12 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<ICheckoutPaymentProvider, PayLaterCheckoutPaymentProvider>();
+        services.AddScoped<PayLaterCheckoutPaymentProvider>();
+        services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<PayLaterCheckoutPaymentProvider>());
+        services.AddScoped<ICheckoutRecurringPaymentProvider>(sp => sp.GetRequiredService<PayLaterCheckoutPaymentProvider>());
+        services.AddSingleton<IBackgroundTask, PayLaterRenewalBackgroundTask>();
         services.AddScoped<ICheckoutHandler, PayLaterTransactionCheckoutHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlowPaymentMethod>, PayLaterCheckoutPaymentMethodDisplayDriver>();
 
         services.AddTransactionSource(PayLaterCheckoutPaymentProvider.ProcessorKey, source =>
         {

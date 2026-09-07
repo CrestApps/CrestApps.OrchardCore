@@ -33,6 +33,7 @@ public sealed class TransactionMigrations : DataMigration
             .Column<decimal>("OutstandingAmount")
             .Column<TransactionStatus>("Status")
             .Column<DateTime>("DueUtc", column => column.Nullable())
+            .Column<DateTime>("NextCycleUtc", column => column.Nullable())
             .Column<DateTime>("CreatedUtc")
             .Column<DateTime>("UpdatedUtc"),
             collection: TransactionsConstants.CollectionName
@@ -68,7 +69,12 @@ public sealed class TransactionMigrations : DataMigration
             collection: TransactionsConstants.CollectionName
         );
 
-        return 3;
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
+            .CreateIndex("IDX_TransactionIndex_NextCycle", "NextCycleUtc"),
+            collection: TransactionsConstants.CollectionName
+        );
+
+        return 4;
     }
 
     /// <summary>
@@ -105,5 +111,26 @@ public sealed class TransactionMigrations : DataMigration
         );
 
         return 3;
+    }
+
+    /// <summary>
+    /// Adds the next-cycle column that lets the renewal sweep find recurring agreements whose period has
+    /// ended, without loading every transaction. Existing rows stay null, which is correct: a transaction
+    /// written before this column existed carries no recurrence.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
+            .AddColumn<DateTime>("NextCycleUtc", column => column.Nullable()),
+            collection: TransactionsConstants.CollectionName
+        );
+
+        await SchemaBuilder.AlterIndexTableAsync<TransactionIndex>(table => table
+            .CreateIndex("IDX_TransactionIndex_NextCycle", "NextCycleUtc"),
+            collection: TransactionsConstants.CollectionName
+        );
+
+        return 4;
     }
 }

@@ -106,6 +106,15 @@ internal sealed class FakeTransactionStore : ITransactionStore
         return Task.FromResult<IReadOnlyList<Transaction>>(results);
     }
 
+    public Task<IReadOnlyList<Transaction>> GetDueForRenewalAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
+    {
+        var results = _transactions.Values
+            .Where(t => t.Recurrence?.GetNextCycleUtc() is DateTime next && next <= asOfUtc)
+            .ToArray();
+
+        return Task.FromResult<IReadOnlyList<Transaction>>(results);
+    }
+
     private static bool Matches(Transaction transaction, TransactionQuery query)
     {
         if (!string.IsNullOrEmpty(query.OwnerId) && !string.Equals(transaction.OwnerId, query.OwnerId, StringComparison.Ordinal))

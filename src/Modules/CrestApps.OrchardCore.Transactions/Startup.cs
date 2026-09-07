@@ -51,6 +51,7 @@ public sealed class CheckoutStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<ICheckoutHandler, TransactionSettlementCheckoutHandler>();
+        services.AddNavigationProvider<PaymentLedgerAdminMenu>();
     }
 }
 

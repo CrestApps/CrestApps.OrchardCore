@@ -1,0 +1,66 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@model IReadOnlyList<TenantProvisioningJob>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["My sites"])</h1></zone>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["<strong>Nothing here!</strong> You have not bought a site yet."]
+    </div>
+
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">@T["Site"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col">@T["Bought"]</th>
+                <th scope="col" class="text-end">@T["Open"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var job in Model)
+            {
+                <tr>
+                    <td>
+                        <strong>@(string.IsNullOrEmpty(job.TenantTitle) ? job.TenantName : job.TenantTitle)</strong>
+                        <div class="text-muted small">@job.TenantName</div>
+                    </td>
+                    <td>
+                        @switch (job.Status)
+                        {
+                            case TenantProvisioningStatus.Succeeded:
+                                <span class="badge bg-success">@T["Ready"]</span>
+                                break;
+                            case TenantProvisioningStatus.Abandoned:
+                                <span class="badge bg-danger">@T["Needs help"]</span>
+                                <div class="text-muted small">@T["We could not finish setting this site up. Please contact support."]</div>
+                                break;
+                            case TenantProvisioningStatus.Failed:
+                                <span class="badge bg-warning text-dark">@T["Retrying"]</span>
+                                break;
+                            default:
+                                <span class="badge bg-secondary">@T["Being created"]</span>
+                                break;
+                        }
+                    </td>
+                    <td>@job.CreatedUtc.ToString("g")</td>
+                    <td class="text-end">
+                        @if (job.Status == TenantProvisioningStatus.Succeeded && !string.IsNullOrEmpty(job.SiteUrl))
+                        {
+                            <a class="btn btn-sm btn-primary" href="@job.SiteUrl">@T["Open"]</a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<p class="text-muted small">
+    @T["A new site usually takes a minute or two to appear. This page refreshes when you reload it."]
+</p>

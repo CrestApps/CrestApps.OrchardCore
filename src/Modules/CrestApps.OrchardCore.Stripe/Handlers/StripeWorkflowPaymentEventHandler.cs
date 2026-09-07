@@ -22,7 +22,7 @@ public sealed class StripeWorkflowPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
-    public override Task PaymentSucceededAsync(PaymentSucceededContext context)
+    public override Task PaymentSucceededAsync(PaymentSucceededContext context, CancellationToken cancellationToken = default)
     {
         if (!IsStripe(context))
         {
@@ -40,7 +40,7 @@ public sealed class StripeWorkflowPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
-    public override Task CustomerSubscriptionCreatedAsync(CustomerSubscriptionCreatedContext context)
+    public override Task CustomerSubscriptionCreatedAsync(CustomerSubscriptionCreatedContext context, CancellationToken cancellationToken = default)
     {
         if (!IsStripe(context))
         {
@@ -58,7 +58,7 @@ public sealed class StripeWorkflowPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
-    public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context)
+    public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context, CancellationToken cancellationToken = default)
     {
         if (!IsStripe(context))
         {
@@ -74,7 +74,7 @@ public sealed class StripeWorkflowPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
-    public override Task PaymentFailedAsync(PaymentFailedContext context)
+    public override Task PaymentFailedAsync(PaymentFailedContext context, CancellationToken cancellationToken = default)
     {
         if (!IsStripe(context))
         {
@@ -92,7 +92,7 @@ public sealed class StripeWorkflowPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
-    public override Task PaymentCanceledAsync(PaymentCanceledContext context)
+    public override Task PaymentCanceledAsync(PaymentCanceledContext context, CancellationToken cancellationToken = default)
     {
         if (!IsStripe(context))
         {
@@ -108,7 +108,7 @@ public sealed class StripeWorkflowPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
-    public override Task PaymentRefundedAsync(PaymentRefundedContext context)
+    public override Task PaymentRefundedAsync(PaymentRefundedContext context, CancellationToken cancellationToken = default)
     {
         if (!IsStripe(context))
         {
@@ -127,7 +127,7 @@ public sealed class StripeWorkflowPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
-    public override Task PaymentDisputeCreatedAsync(PaymentDisputeCreatedContext context)
+    public override Task PaymentDisputeCreatedAsync(PaymentDisputeCreatedContext context, CancellationToken cancellationToken = default)
     {
         if (!IsStripe(context))
         {

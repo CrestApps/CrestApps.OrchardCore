@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Wizard.Core.Indexes;
 using CrestApps.OrchardCore.Wizard.Handlers;
+using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -17,7 +18,13 @@ namespace CrestApps.OrchardCore.Wizard.Core.Services;
 /// </summary>
 public sealed class WizardSessionStore : IWizardSessionStore
 {
+    private static readonly GuestSessionTokenScope _guestTokenScope = new(
+        "wizard_owner",
+        "CrestApps.OrchardCore.Wizard.GuestOwnership.v1",
+        TimeSpan.FromDays(30));
+
     private readonly IHttpContextAccessor _contextAccessor;
+    private readonly GuestSessionTokenManager _guestTokenManager;
     private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
     private readonly IEnumerable<IWizardHandler> _wizardHandlers;
     private readonly ILogger<WizardSessionStore> _logger;
@@ -36,6 +43,7 @@ public sealed class WizardSessionStore : IWizardSessionStore
     public WizardSessionStore(
         IHttpContextAccessor contextAccessor,
         IClientIPAddressAccessor clientIPAddressAccessor,
+        GuestSessionTokenManager guestTokenManager,
         IEnumerable<IWizardHandler> wizardHandlers,
         ILogger<WizardSessionStore> logger,
         IClock clock,
@@ -43,6 +51,7 @@ public sealed class WizardSessionStore : IWizardSessionStore
     {
         _contextAccessor = contextAccessor;
         _clientIPAddressAccessor = clientIPAddressAccessor;
+        _guestTokenManager = guestTokenManager;
         _wizardHandlers = wizardHandlers;
         _logger = logger;
         _clock = clock;
@@ -70,14 +79,16 @@ public sealed class WizardSessionStore : IWizardSessionStore
 
         var wizardSession = await query.Where(x => x.OwnerId == null).FirstOrDefaultAsync(cancellationToken);
 
-        var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
-
-        if (string.IsNullOrWhiteSpace(wizardSession?.IPAddress) ||
-            wizardSession.IPAddress != ipAddress ||
-            string.IsNullOrWhiteSpace(wizardSession?.AgentInfo) ||
-            wizardSession.AgentInfo != _contextAccessor.HttpContext.Request.Headers.UserAgent)
+        if (wizardSession is null)
         {
-            // IMPORTANT: The saved session may belong to another visitor. Do not return it.
+            return null;
+        }
+
+        // IMPORTANT: Only the browser that started this session was given the ownership token, so this is
+        // what keeps one visitor from resuming another's session and reading what is on it. The IP address
+        // and user agent on the session are audit fields and prove nothing.
+        if (!_guestTokenManager.Verify(_guestTokenScope, sessionId, wizardSession.GuestTokenHash))
+        {
             return null;
         }
 
@@ -133,8 +144,10 @@ public sealed class WizardSessionStore : IWizardSessionStore
         }
         else
         {
+            // Recorded for audit only; the token below is what decides who may resume the session.
             wizardSession.IPAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
             wizardSession.AgentInfo = _contextAccessor.HttpContext.Request.Headers.UserAgent;
+            wizardSession.GuestTokenHash = _guestTokenManager.Issue(_guestTokenScope, wizardSession.SessionId);
         }
 
         return wizardSession;

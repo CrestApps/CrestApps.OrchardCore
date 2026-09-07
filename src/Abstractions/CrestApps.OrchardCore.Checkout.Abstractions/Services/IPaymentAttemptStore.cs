@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Checkout.Models;
 
 namespace CrestApps.OrchardCore.Checkout.Services;
@@ -35,4 +36,34 @@ public interface IPaymentAttemptStore : ICatalog<PaymentAttempt>
     /// <param name="olderThanUtc">Only attempts last updated before this UTC time are returned.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<IEnumerable<PaymentAttempt>> GetPendingAsync(DateTime olderThanUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a page of payment attempts for the administration ledger.
+    /// </summary>
+    /// <param name="page">The one-based page number.</param>
+    /// <param name="pageSize">The page size.</param>
+    /// <param name="query">The filter.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<PageResult<PaymentAttempt>> PageAsync(int page, int pageSize, PaymentAttemptQuery query, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// The filter applied when listing payment attempts in the administration ledger.
+/// </summary>
+public sealed class PaymentAttemptQuery
+{
+    /// <summary>
+    /// Gets or sets the provider key to restrict the results to.
+    /// </summary>
+    public string ProviderKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the state to restrict the results to.
+    /// </summary>
+    public PaymentAttemptState? State { get; set; }
+
+    /// <summary>
+    /// Gets or sets the checkout session to restrict the results to.
+    /// </summary>
+    public string SessionId { get; set; }
 }

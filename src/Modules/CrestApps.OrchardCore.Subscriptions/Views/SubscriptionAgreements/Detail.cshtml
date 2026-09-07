@@ -1,0 +1,115 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@model Subscription
+
+<zone Name="Title"><h1>@RenderTitleSegments(Model.Title)</h1></zone>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Status"]</dt>
+            <dd class="col-sm-9"><partial name="_SubscriptionStatusBadge" model="Model.Status" /></dd>
+
+            <dt class="col-sm-3">@T["Billed"]</dt>
+            <dd class="col-sm-9">@Model.Currency @Model.TotalAmount.ToString("0.00") @T["every"] @Model.BillingDuration @Model.DurationType</dd>
+
+            <dt class="col-sm-3">@T["Cycles billed"]</dt>
+            <dd class="col-sm-9">@Model.CyclesBilled @(Model.BillingCycleLimit.HasValue ? T["of {0}", Model.BillingCycleLimit.Value].Value : string.Empty)</dd>
+
+            <dt class="col-sm-3">@T["Current period"]</dt>
+            <dd class="col-sm-9">@Model.CurrentPeriodStartUtc.ToString("d") &ndash; @Model.CurrentPeriodEndUtc.ToString("d")</dd>
+
+            <dt class="col-sm-3">@T["Renews"]</dt>
+            <dd class="col-sm-9">@(Model.NextBillingUtc.HasValue ? Model.NextBillingUtc.Value.ToString("g") : T["Never"].Value)</dd>
+
+            @if (Model.GraceEndsUtc.HasValue)
+            {
+                <dt class="col-sm-3">@T["Grace ends"]</dt>
+                <dd class="col-sm-9">@Model.GraceEndsUtc.Value.ToString("g")</dd>
+            }
+
+            <dt class="col-sm-3">@T["Payment method"]</dt>
+            <dd class="col-sm-9">@Model.ProviderKey <span class="text-muted small">@Model.ProviderSubscriptionId</span></dd>
+
+            <dt class="col-sm-3">@T["Owner"]</dt>
+            <dd class="col-sm-9">@(string.IsNullOrEmpty(Model.GuestContactEmail) ? Model.OwnerId : Model.GuestContactEmail)</dd>
+        </dl>
+    </div>
+</div>
+
+@if (Model.Lines.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["What is billed"]</div>
+        <div class="card-body p-0">
+            <table class="table mb-0 align-middle">
+                <tbody>
+                    @foreach (var line in Model.Lines)
+                    {
+                        <tr>
+                            <td>@line.Description</td>
+                            <td class="text-end">@line.Quantity &times; @Model.Currency @line.UnitPrice.ToString("0.00")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Actions"]</div>
+    <div class="card-body">
+        @if (Model.Status != SubscriptionStatus.Canceled && Model.Status != SubscriptionStatus.Expired)
+        {
+            <form asp-action="Cancel" asp-route-itemId="@Model.ItemId" method="post" class="row gx-2 align-items-center mb-3">
+                <div class="col">
+                    <input type="text" name="reason" class="form-control" placeholder="@T["Reason"]" />
+                </div>
+                <div class="col-auto form-check">
+                    <input class="form-check-input" type="checkbox" name="atPeriodEnd" value="true" id="atPeriodEnd" checked />
+                    <label class="form-check-label" for="atPeriodEnd">@T["Keep access until the paid period ends"]</label>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-danger">@T["Cancel subscription"]</button>
+                </div>
+            </form>
+        }
+
+        @if (Model.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing)
+        {
+            <form asp-action="Pause" asp-route-itemId="@Model.ItemId" method="post" class="row gx-2 align-items-center">
+                <div class="col">
+                    <input type="text" name="reason" class="form-control" placeholder="@T["Reason"]" />
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-secondary">@T["Pause billing"]</button>
+                </div>
+            </form>
+        }
+
+        @if (Model.Status is SubscriptionStatus.Paused or SubscriptionStatus.PastDue)
+        {
+            <form asp-action="Resume" asp-route-itemId="@Model.ItemId" method="post">
+                <button type="submit" class="btn btn-primary">@T["Resume"]</button>
+            </form>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">@T["History"]</div>
+    <div class="card-body p-0">
+        <table class="table mb-0 align-middle">
+            <tbody>
+                @foreach (var subscriptionEvent in Model.Events.OrderByDescending(e => e.CreatedUtc))
+                {
+                    <tr>
+                        <td class="text-nowrap">@subscriptionEvent.CreatedUtc.ToString("g")</td>
+                        <td class="text-nowrap">@subscriptionEvent.Type</td>
+                        <td>@subscriptionEvent.Message</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

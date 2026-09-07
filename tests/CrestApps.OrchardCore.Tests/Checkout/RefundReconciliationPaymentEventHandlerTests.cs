@@ -20,7 +20,7 @@ public sealed class RefundReconciliationPaymentEventHandlerTests
         {
             OriginalTransactionId = string.Empty,
             ProviderRefundReference = "re_1",
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         reconciliation.Verify(
@@ -54,7 +54,7 @@ public sealed class RefundReconciliationPaymentEventHandlerTests
             RefundStatus = "succeeded",
             Reason = "requested_by_customer",
             IdempotencyKey = "idem-1",
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(captured);
@@ -95,7 +95,7 @@ public sealed class RefundReconciliationPaymentEventHandlerTests
         {
             OriginalTransactionId = "pi_1",
             RefundStatus = gatewayStatus,
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(captured);

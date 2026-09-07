@@ -1,3 +1,4 @@
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
@@ -52,6 +53,44 @@ public sealed class PaymentAttemptStore : DocumentCatalog<PaymentAttempt, Paymen
                 (x.State == PaymentAttemptState.Created || x.State == PaymentAttemptState.Pending) &&
                 x.UpdatedUtc < olderThanUtc)
             .ListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<PageResult<PaymentAttempt>> PageAsync(int page, int pageSize, PaymentAttemptQuery query, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        var records = Session.Query<PaymentAttempt, PaymentAttemptIndex>();
+
+        if (!string.IsNullOrEmpty(query.ProviderKey))
+        {
+            records = records.Where(x => x.ProviderKey == query.ProviderKey);
+        }
+
+        if (query.State.HasValue)
+        {
+            records = records.Where(x => x.State == query.State.Value);
+        }
+
+        if (!string.IsNullOrEmpty(query.SessionId))
+        {
+            records = records.Where(x => x.SessionId == query.SessionId);
+        }
+
+        var count = await records.CountAsync(cancellationToken);
+
+        var entries = await records
+            .OrderByDescending(x => x.UpdatedUtc)
+            .ThenByDescending(x => x.ItemId)
+            .Skip((Math.Max(page, 1) - 1) * pageSize)
+            .Take(pageSize)
+            .ListAsync(cancellationToken);
+
+        return new PageResult<PaymentAttempt>
+        {
+            Count = count,
+            Entries = entries.ToArray(),
+        };
     }
 
     /// <inheritdoc/>

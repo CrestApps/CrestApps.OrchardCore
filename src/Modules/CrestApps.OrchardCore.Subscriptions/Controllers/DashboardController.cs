@@ -133,7 +133,10 @@ public class DashboardController : Controller
         var request = new ReceiptRequest
         {
             Reference = payment.TransactionId,
-            IssuedAt = (await _localClock.ConvertToLocalAsync(session.CreatedUtc)).DateTime,
+
+            // A receipt is issued for one payment, so it carries that payment's own collection date. Falling
+            // back to the session date keeps receipts working for payments recorded before the date existed.
+            IssuedAt = (await _localClock.ConvertToLocalAsync(payment.CreatedUtc ?? session.CreatedUtc)).DateTime,
             Currency = payment.Currency,
             LineItems =
             [

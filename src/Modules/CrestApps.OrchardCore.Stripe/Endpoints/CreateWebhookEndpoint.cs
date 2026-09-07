@@ -25,7 +25,10 @@ public static class CreateWebhookEndpoint
     public static readonly string[] SupportedEvents =
     [
         EventTypes.InvoicePaymentSucceeded,
+        EventTypes.InvoicePaymentFailed,
         EventTypes.CustomerSubscriptionCreated,
+        EventTypes.CustomerSubscriptionUpdated,
+        EventTypes.CustomerSubscriptionDeleted,
         EventTypes.PaymentIntentSucceeded,
         EventTypes.PaymentIntentPaymentFailed,
         EventTypes.PaymentIntentCanceled,
@@ -60,10 +63,11 @@ public static class CreateWebhookEndpoint
         IOptions<StripeOptions> stripeOptions,
         YesSql.ISession session,
         IDistributedLock distributedLock,
-        IClock clock)
+        IClock clock,
+        CancellationToken cancellationToken)
     {
         var request = httpContextAccessor.HttpContext.Request;
-        var json = await new StreamReader(request.Body).ReadToEndAsync();
+        var json = await new StreamReader(request.Body).ReadToEndAsync(cancellationToken);
 
         if (!request.Headers.TryGetValue("Stripe-Signature", out var signature) ||
             string.IsNullOrEmpty(signature))
@@ -119,7 +123,7 @@ public static class CreateWebhookEndpoint
         {
             var alreadyProcessed = await session
                 .Query<ProcessedStripeWebhookEvent, ProcessedStripeWebhookEventIndex>(x => x.EventId == stripeEvent.Id)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (alreadyProcessed != null)
             {
@@ -130,20 +134,24 @@ public static class CreateWebhookEndpoint
 
             try
             {
-                await DispatchAsync(stripeEvent, paymentEvents);
+                await DispatchAsync(stripeEvent, paymentEvents, cancellationToken);
 
                 await session.SaveAsync(new ProcessedStripeWebhookEvent
                 {
                     EventId = stripeEvent.Id,
                     EventType = stripeEvent.Type,
                     ProcessedUtc = clock.UtcNow,
-                });
+                }, cancellationToken: CancellationToken.None);
 
                 // Commit the handler writes AND the processed-event marker together while the lock is
                 // still held. If the commit happened only at the end of the request scope (after the
                 // lock is released), a concurrent delivery on another instance could acquire the lock,
                 // still see no marker, and process the same event a second time.
-                await session.SaveChangesAsync();
+                //
+                // The commit deliberately ignores the request token. The handlers have already run by this
+                // point, so abandoning the write because the gateway hung up would discard the record that
+                // they ran and let the retried delivery execute them a second time.
+                await session.SaveChangesAsync(CancellationToken.None);
             }
             catch (Exception ex)
             {
@@ -163,7 +171,7 @@ public static class CreateWebhookEndpoint
 
     // Dispatches the event to every payment handler directly (rather than the swallow-and-log
     // InvokeAsync helper) so that a handler failure surfaces to the caller and triggers a Stripe retry.
-    internal static async Task DispatchAsync(Event stripeEvent, IEnumerable<IPaymentEvent> paymentEvents)
+    internal static async Task DispatchAsync(Event stripeEvent, IEnumerable<IPaymentEvent> paymentEvents, CancellationToken cancellationToken = default)
     {
         switch (stripeEvent.Type)
         {
@@ -216,7 +224,89 @@ public static class CreateWebhookEndpoint
 
                 foreach (var handler in paymentEvents)
                 {
-                    await handler.PaymentSucceededAsync(successContext);
+                    await handler.PaymentSucceededAsync(successContext, cancellationToken);
+                }
+
+                break;
+
+            case EventTypes.InvoicePaymentFailed:
+                if (stripeEvent.Data.Object is not Invoice failedInvoice)
+                {
+                    break;
+                }
+
+                // Only a renewal of an existing subscription is reported here. A failed first payment is not a
+                // subscription at risk: the checkout simply never completes, and the existing payment-failure
+                // path already covers it.
+                var failedSubscriptionDetails = failedInvoice.Parent?.SubscriptionDetails;
+                var failedSubscriptionId = failedSubscriptionDetails?.SubscriptionId ?? failedSubscriptionDetails?.Subscription?.Id;
+
+                if (string.IsNullOrEmpty(failedSubscriptionId))
+                {
+                    break;
+                }
+
+                var subscriptionFailedContext = new SubscriptionPaymentFailedContext()
+                {
+                    SubscriptionId = failedSubscriptionId,
+                    TransactionId = failedInvoice.Id,
+                    Amount = StripeCurrency.FromMinorUnits(failedInvoice.AmountDue, failedInvoice.Currency),
+                    Currency = failedInvoice.Currency,
+                    GatewayMode = failedInvoice.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                    GatewayId = StripeConstants.ProcessorKey,
+                    AttemptCount = (int?)failedInvoice.AttemptCount,
+                    NextAttemptUtc = failedInvoice.NextPaymentAttempt?.ToUniversalTime(),
+                };
+
+                foreach (var data in failedInvoice.Metadata ?? [])
+                {
+                    subscriptionFailedContext.Data[data.Key] = data.Value;
+                }
+
+                foreach (var data in failedSubscriptionDetails?.Metadata ?? [])
+                {
+                    subscriptionFailedContext.Data[data.Key] = data.Value;
+                }
+
+                foreach (var handler in paymentEvents)
+                {
+                    await handler.SubscriptionPaymentFailedAsync(subscriptionFailedContext, cancellationToken);
+                }
+
+                break;
+
+            case EventTypes.CustomerSubscriptionUpdated:
+            case EventTypes.CustomerSubscriptionDeleted:
+                if (stripeEvent.Data.Object is not Subscription changedSubscription)
+                {
+                    break;
+                }
+
+                // A deletion event always means the agreement is gone, whatever status the object still
+                // carries; an update event reports whatever state Stripe moved it to.
+                var status = stripeEvent.Type == EventTypes.CustomerSubscriptionDeleted
+                    ? RemoteSubscriptionStatus.Canceled
+                    : MapSubscriptionStatus(changedSubscription.Status);
+
+                var statusContext = new SubscriptionStatusChangedContext()
+                {
+                    SubscriptionId = changedSubscription.Id,
+                    Status = status,
+                    CurrentPeriodEndUtc = GetCurrentPeriodEnd(changedSubscription)?.ToUniversalTime(),
+                    CanceledUtc = changedSubscription.CanceledAt?.ToUniversalTime(),
+                    CancelAtPeriodEnd = changedSubscription.CancelAtPeriodEnd,
+                    GatewayMode = changedSubscription.Livemode ? GatewayMode.Live : GatewayMode.Testing,
+                    GatewayId = StripeConstants.ProcessorKey,
+                };
+
+                foreach (var data in changedSubscription.Metadata ?? [])
+                {
+                    statusContext.Data[data.Key] = data.Value;
+                }
+
+                foreach (var handler in paymentEvents)
+                {
+                    await handler.SubscriptionStatusChangedAsync(statusContext, cancellationToken);
                 }
 
                 break;
@@ -251,7 +341,7 @@ public static class CreateWebhookEndpoint
 
                 foreach (var handler in paymentEvents)
                 {
-                    await handler.CustomerSubscriptionCreatedAsync(createdContext);
+                    await handler.CustomerSubscriptionCreatedAsync(createdContext, cancellationToken);
                 }
 
                 break;
@@ -278,7 +368,7 @@ public static class CreateWebhookEndpoint
 
                 foreach (var handler in paymentEvents)
                 {
-                    await handler.PaymentIntentSucceededAsync(succeededContext);
+                    await handler.PaymentIntentSucceededAsync(succeededContext, cancellationToken);
                 }
 
                 break;
@@ -307,7 +397,7 @@ public static class CreateWebhookEndpoint
 
                 foreach (var handler in paymentEvents)
                 {
-                    await handler.PaymentFailedAsync(failedContext);
+                    await handler.PaymentFailedAsync(failedContext, cancellationToken);
                 }
 
                 break;
@@ -334,7 +424,7 @@ public static class CreateWebhookEndpoint
 
                 foreach (var handler in paymentEvents)
                 {
-                    await handler.PaymentCanceledAsync(canceledContext);
+                    await handler.PaymentCanceledAsync(canceledContext, cancellationToken);
                 }
 
                 break;
@@ -349,7 +439,7 @@ public static class CreateWebhookEndpoint
                 {
                     foreach (var handler in paymentEvents)
                     {
-                        await handler.PaymentRefundedAsync(refundContext);
+                        await handler.PaymentRefundedAsync(refundContext, cancellationToken);
                     }
                 }
 
@@ -379,7 +469,7 @@ public static class CreateWebhookEndpoint
 
                 foreach (var handler in paymentEvents)
                 {
-                    await handler.PaymentRefundedAsync(updatedRefundContext);
+                    await handler.PaymentRefundedAsync(updatedRefundContext, cancellationToken);
                 }
 
                 break;
@@ -404,7 +494,7 @@ public static class CreateWebhookEndpoint
 
                 foreach (var handler in paymentEvents)
                 {
-                    await handler.PaymentDisputeCreatedAsync(disputeContext);
+                    await handler.PaymentDisputeCreatedAsync(disputeContext, cancellationToken);
                 }
 
                 break;
@@ -412,6 +502,48 @@ public static class CreateWebhookEndpoint
             default:
                 break;
         }
+    }
+
+    // Maps Stripe's subscription status vocabulary onto the provider-neutral one. An unrecognized value maps to
+    // Unknown rather than to a guess, so a consumer leaves its local state untouched instead of acting on a
+    // status this adapter does not understand.
+    private static RemoteSubscriptionStatus MapSubscriptionStatus(string status)
+        => status?.Trim().ToLowerInvariant() switch
+        {
+            "trialing" => RemoteSubscriptionStatus.Trialing,
+            "active" => RemoteSubscriptionStatus.Active,
+            "past_due" => RemoteSubscriptionStatus.PastDue,
+            "unpaid" => RemoteSubscriptionStatus.Unpaid,
+            "canceled" or "cancelled" => RemoteSubscriptionStatus.Canceled,
+            "incomplete" => RemoteSubscriptionStatus.Incomplete,
+            "incomplete_expired" => RemoteSubscriptionStatus.IncompleteExpired,
+            "paused" => RemoteSubscriptionStatus.Paused,
+            _ => RemoteSubscriptionStatus.Unknown,
+        };
+
+    // Reads the end of the current paid period. Newer Stripe API versions moved the period boundaries from the
+    // subscription onto its items, so the subscription-level value is preferred and the items are used as the
+    // fallback. The latest end across items is used, because that is the date every item is paid through.
+    private static DateTime? GetCurrentPeriodEnd(Subscription subscription)
+    {
+        var items = subscription.Items?.Data;
+
+        if (items is null || items.Count == 0)
+        {
+            return null;
+        }
+
+        DateTime? latest = null;
+
+        foreach (var item in items)
+        {
+            if (item.CurrentPeriodEnd > (latest ?? DateTime.MinValue))
+            {
+                latest = item.CurrentPeriodEnd;
+            }
+        }
+
+        return latest;
     }
 
     // Maps a Stripe charge.refunded event into one provider-neutral refund notification per refund on the

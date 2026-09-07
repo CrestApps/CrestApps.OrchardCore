@@ -16,6 +16,12 @@ The **Checkout** feature provides a provider-agnostic checkout and payment frame
 
 It deliberately does **not** implement a storefront. It defines the contracts and the durable, distributed-safe machinery for collecting money; a consuming module (such as Subscriptions) contributes the domain-specific steps and decides what a completed checkout means.
 
+:::warning Current status
+The framework now ships a working public checkout: a customer can walk the steps, choose a payment method, pay, and land on a confirmation. Settling an outstanding [transaction](transactions) online goes through it end to end.
+
+Not yet migrated: [Subscriptions](subscriptions) still runs its own payment pipeline rather than this one, so a subscription signup does not currently settle through the engine. Moving it across is the next planned milestone.
+:::
+
 ## Why a dedicated framework
 
 Handling money is sensitive: payments are settled by outside vendors, so the site must never record a payment as *paid* when the gateway actually failed, and must never lose a real charge because a cache entry expired or a node crashed mid-checkout. The Checkout framework centralizes the patterns that make this safe:
@@ -123,12 +129,36 @@ The framework is built to run on multiple nodes:
 - **`PaymentSessionCache`** relays short-lived signals (such as a webhook result) between the payment endpoints and the provider webhooks using `IDistributedCache`, coordinated by `IDistributedLock`. It is a *notification/optimization* layer only — losing an entry can slow a checkout but can never lose money, because completion always re-verifies against the durable ledger and the provider.
 - **`IPaymentAttemptLimiter`** enforces a fixed-window attempt limit through the distributed cache to mitigate card-testing abuse of the anonymous payment endpoints, consistently across every instance.
 
+### Who owns a guest checkout
+
+A guest has no account, so something else has to prove that the browser resuming a pending checkout is the one that started it. An IP address and a user agent cannot: everyone behind one office router or mobile carrier shares an address, a user agent is neither secret nor unique, and both are supplied by the caller.
+
+A checkout started by a guest is therefore issued a 32-byte random **ownership token**, delivered in a data-protected, HTTP-only cookie. Only its SHA-256 hash is stored on the session, and the comparison is fixed-time, so a leaked database does not hand an attacker the ability to resume live checkouts. The IP address and user agent are still recorded, but only as audit fields. The same token protects wizard and subscription sessions.
+
 ## Currency-correct money
 
 Money is compared and rounded through the provider-neutral **`Money`** and **`CurrencyScale`** helpers in `CrestApps.OrchardCore.Payments.Abstractions`:
 
 - `CurrencyScale.GetDecimalPlaces` knows the ISO-4217 precision of each currency, so a `JPY` amount is never multiplied by 100 (which would overcharge 100×) and a `KWD` amount is settled in thousandths.
 - `Money.AreEqual` / `Money.IsGreaterThan` compare amounts after normalizing to whole minor units, so binary floating-point drift (for example `19.99 + 10.00` not being exactly `29.99`) can never reject a valid payment or treat two different amounts as equal.
+
+## Discounts and coupons
+
+Anything that reduces what a customer pays goes through **`ICheckoutDiscountService`**, and it runs **before** tax. Taxing the full price and then discounting the total charges the customer tax on money they never paid, which is wrong for them and wrong on the return the site owner files.
+
+A provider implementing **`ICheckoutDiscountProvider`** decides only *what* to take off. The checkout decides *how*, so three rules hold no matter how many providers a site installs:
+
+- a total never goes below zero, because a coupon worth more than the basket makes the purchase free rather than a payment the site owes the customer;
+- the one-time amount and the first recurring cycle are reduced separately, so a setup-fee coupon never eats a monthly charge and "first month half price" never halves every month after;
+- what is recorded on the invoice is what was actually taken off, so a receipt cannot show a discount larger than the price it applied to.
+
+The **coupon catalog** ships in the box. Manage codes under **Commerce → Coupons**: percentage or fixed amount, targeting the one-time amount or the first cycle, with an optional validity window, minimum amount, and usage limit. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
+
+A code is consumed when the purchase **completes**, not when it is applied. That is what makes a usage limit mean something: a customer who applies a single-use code and then abandons the checkout does not burn it, so a code that leaks cannot be exhausted by people who never bought anything. Redemption takes a lock on the coupon, so two checkouts finishing at the same instant cannot both take the last one.
+
+:::warning
+A coupon with neither a usage limit nor an end date will keep discounting until somebody notices. The coupon list warns when one exists.
+:::
 
 ## Taxation
 
@@ -139,15 +169,64 @@ The framework never calculates tax itself. It consumes the [Taxation](taxation) 
 
 An **`ICheckoutTaxProfileProvider`** resolves the merchant origin, customer destination, and classification from the flow, so tax is recomputed whenever a tax-relevant detail (such as the customer's address) changes.
 
+## The checkout engine
+
+**`ICheckoutEngine`** is the single entry point for every money-moving step. Controllers, endpoints, webhooks, and background tasks all go through it and never call a payment provider, the attempt ledger, or the reconciliation service directly. Centralizing the orchestration is what makes the guarantees above real rather than conventions each caller has to remember.
+
+| Member | What it does |
+| --- | --- |
+| `StartAsync` | Creates the session, runs the handlers so features contribute their steps and billing items, builds the invoice, and persists it. |
+| `BeginPaymentAsync` | Creates one durable attempt **per obligation**, persists each before contacting the provider, stores the provider's reference the moment it returns, and hands back what the client needs to finish (a client secret, a redirect, or nothing). |
+| `TryCompleteAsync` | Verifies every outstanding obligation against the provider's own API and, only when all are confirmed, runs the completion handlers and marks the session complete. |
+| `CancelAsync` | Releases the remote resources of a checkout the customer abandoned. |
+
+### Completion never blocks a request
+
+`TryCompleteAsync` returns immediately with one of `Completed`, `AlreadyCompleted`, `Pending`, `Blocked`, `Failed`, or `NotFound`. It never waits in a loop for a provider to make up its mind, because that would tie up a web worker per customer and still time out behind a proxy.
+
+Instead the same call is driven from three independent directions, and the session lock plus the status transition make it idempotent no matter which arrives first:
+
+- the customer's browser polls it while the provider settles;
+- a provider webhook triggers it when the gateway confirms;
+- the reconciliation background task calls it for any session with a stale pending attempt.
+
+That last one is the recovery path that matters most: a customer who pays and then closes the browser still gets their purchase fulfilled, because the sweep completes the checkout server-side rather than merely noting that the attempt succeeded.
+
+### Recurring obligations
+
+An invoice with a recurring line does not become a single charge. `BeginPaymentAsync` groups the recurring lines by billing interval, makes one obligation of each, and routes it to the provider's **recurring** capability rather than its one-time one. Sending it down the one-time path would take a single payment and then silently never bill the customer again.
+
+A provider offers that capability by implementing **`ICheckoutRecurringPaymentProvider`** alongside `ICheckoutPaymentProvider`, under the same provider key. Declaring `SupportsRecurringPayments` without shipping the implementation is refused before any money moves, so a wiring mistake cannot turn a subscription into a one-off charge.
+
+A gateway usually cannot create a recurring agreement without a reusable payment method, and only the browser can produce one without the card details reaching this application. So a provider's client script may implement a `prepare` step whose result is handed back to that provider on the server as opaque provider data. The Stripe panel uses it to tokenize the card before the agreement is created, and then confirms the first invoice against that very payment method rather than attaching a second one.
+
+### Compensation
+
+When one obligation fails at the provider, the engine refunds the obligations that already settled — through `ICheckoutRefundService`, never straight to the gateway — so the customer is not left paying for half a purchase, and the gateway's own refund notification correlates to a local record instead of being quarantined for an operator.
+
+## The public checkout
+
+Enabling the feature adds a customer-facing checkout at `/Checkout/{sessionId}/{step}`:
+
+- Steps are rendered by display drivers against `CheckoutFlow`, so a feature contributes a step without touching the page. Derive from **`CheckoutFlowDisplayDriver`** and it renders only while its own step is current.
+- The shared frame (progress stepper, invoice summary, navigation) is a separate driver, so a step never has to re-render its surroundings. Override the `CheckoutFlow` shape template in a theme to restyle the whole checkout.
+- The payment step lists the payment providers **actually registered on the tenant** and filters out any that cannot settle what the invoice owes, so the page can never offer a method the framework cannot execute.
+- Each provider renders its own panel through an `IDisplayDriver<CheckoutFlowPaymentMethod>` grouped by its provider key. Only the selected panel is shown.
+- Two JSON endpoints (`checkout/{sessionId}/payment/begin` and `.../status`) carry the begin-then-poll conversation. Both are rate limited per visitor per checkout, resolve the session through the ownership-checked lookup, and require a same-origin request as defense in depth.
+
+A customer who owes nothing (a free plan, or a balance already covered) completes without being asked for a payment method at all.
+
 ## Extending checkout
 
 To use the framework in your own module:
 
 1. Add a reference to `CrestApps.OrchardCore.Checkout.Core` (services) and `CrestApps.OrchardCore.Checkout.Abstractions` (contracts).
 2. Implement **`ICheckoutHandler`** to contribute your steps and billing items and to react to completion.
-3. Create a session with `ICheckoutSessionStore.NewAsync(referenceType, referenceId, referenceVersionId)` and drive the `CheckoutFlow`.
-4. To add a gateway, implement **`ICheckoutPaymentProvider`** and register it; the framework's reconciliation and ledger handle the safety guarantees for you.
-5. To let a gateway refund a settled payment, also implement **`ICheckoutPaymentRefundProvider`** and issue refunds through **`ICheckoutRefundService`** — never by calling the gateway directly — so the durable refund ledger, tax allocation, and distributed over-refund protection apply.
+3. Start a checkout with `ICheckoutEngine.StartAsync(...)` and redirect the customer to the `CheckoutStep` route. Do not drive payment yourself.
+4. Render your step by deriving from **`CheckoutFlowDisplayDriver`** and registering it as an `IDisplayDriver<CheckoutFlow>`.
+5. To add a gateway, implement **`ICheckoutPaymentProvider`**, register it, and add an `IDisplayDriver<CheckoutFlowPaymentMethod>` for its panel (grouped with `.OnGroup(yourProviderKey)`); the framework's reconciliation and ledger handle the safety guarantees for you.
+6. To let a gateway refund a settled payment, also implement **`ICheckoutPaymentRefundProvider`** and issue refunds through **`ICheckoutRefundService`** — never by calling the gateway directly — so the durable refund ledger, tax allocation, and distributed over-refund protection apply.
+7. To let a gateway bill on a cycle, also implement **`ICheckoutRecurringPaymentProvider`** under the same provider key. Implementations must be idempotent on the attempt's idempotency key, so a retried begin resumes the same agreement instead of creating a second one and billing the customer twice.
 
 ## Related
 

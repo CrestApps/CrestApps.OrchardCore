@@ -41,8 +41,12 @@ Gateways translate their webhooks into a normalized event stream through **`IPay
 | `PaymentCanceledAsync` | A payment is canceled at the gateway. Carries the cancellation reason. |
 | `PaymentRefundedAsync` | A refund is observed at the gateway — including one issued out-of-band from the provider dashboard — so the durable refund ledger can be reconciled. |
 | `PaymentDisputeCreatedAsync` | A dispute or chargeback is opened against a settled payment. |
+| `SubscriptionPaymentFailedAsync` | A **renewal** of an existing subscription fails, so the subscription can be moved to past due and dunning can start. This is deliberately separate from `PaymentFailedAsync`: a one-time payment failing means a purchase did not happen, while a renewal failing puts an already-paid subscription at risk, which is a different decision made by a different consumer. |
+| `SubscriptionStatusChangedAsync` | The gateway reports a new lifecycle state for a hosted subscription, including a cancellation made outside the application. Carries the provider-neutral `RemoteSubscriptionStatus`, the paid-through date, and whether the cancellation takes effect at the end of the period. |
 
-Each context carries normalized values — transaction id, amount, currency, gateway id, and **`GatewayMode`** (`Live` or `Testing`) — so downstream code never touches provider SDK types directly. Because the gateway stays authoritative, a refund or dispute notification is reconciled against durable state; it never fabricates a result the provider did not confirm.
+Each context carries normalized values — transaction id, amount, currency, gateway id, and **`GatewayMode`** (`Live` or `Testing`) — so downstream code never touches provider SDK types directly. Because the gateway stays authoritative, a refund, dispute, or subscription-state notification is reconciled against durable state; it never fabricates a result the provider did not confirm. A gateway status the adapter cannot map arrives as `RemoteSubscriptionStatus.Unknown` so a consumer leaves its state untouched rather than acting on a guess.
+
+Every method takes a `CancellationToken`, which the Stripe webhook endpoint threads from the request through the dispatcher into each handler.
 
 ## The Stripe provider
 
@@ -93,7 +97,11 @@ Stripe delivers events to `POST /stripe/webhook`. Clicking **Connect** provision
 - Handler writes and the processed-event marker are committed together **inside** the lock, so a crash or a concurrent delivery cannot reopen the double-processing window.
 - When a handler throws, pending changes are discarded and the endpoint returns `500` so Stripe retries; a lock contention returns `409`.
 
-The dispatcher maps each supported Stripe event to a provider-neutral `IPaymentEvent` call: `invoice.payment_succeeded`, `customer.subscription.created`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, and `charge.dispute.created`. A `charge.refunded` event raises one `PaymentRefundedAsync` per refund on the charge (falling back to a single aggregate notification from the charge's refunded total), so a refund issued from the Stripe dashboard is reconciled against the durable ledger and never dropped.
+The dispatcher maps each supported Stripe event to a provider-neutral `IPaymentEvent` call: `invoice.payment_succeeded`, `invoice.payment_failed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded`, the per-refund events (`refund.created`, `refund.updated`, `refund.failed`, `charge.refund.updated`), and `charge.dispute.created`. A `charge.refunded` event raises one `PaymentRefundedAsync` per refund on the charge (falling back to a single aggregate notification from the charge's refunded total), so a refund issued from the Stripe dashboard is reconciled against the durable ledger and never dropped.
+
+:::note Reconnect after upgrading
+The set of events an auto-provisioned webhook subscribes to is fixed when the endpoint is created. After upgrading to a version that adds event types — such as the subscription lifecycle events above — click **Connect** again so the endpoint is re-provisioned with the new list. Without it, the new events are never delivered and renewals or cancellations go unrecorded.
+:::
 
 ### Workflow events
 

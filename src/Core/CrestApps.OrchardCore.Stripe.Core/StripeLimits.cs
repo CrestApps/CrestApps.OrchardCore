@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Stripe.Core.Models;
 
-namespace CrestApps.OrchardCore.Subscriptions.Core;
+namespace CrestApps.OrchardCore.Stripe.Core;
 
 /// <summary>
 /// Provides Stripe payment amount limits for supported currencies.

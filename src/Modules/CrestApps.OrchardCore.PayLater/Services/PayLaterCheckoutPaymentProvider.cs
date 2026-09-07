@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.PayLater.Services;
 /// requiring a recorded transaction id. This keeps the same reconciliation guarantees as a real gateway
 /// without ever fabricating a "paid" record that a processor would contradict.
 /// </summary>
-public sealed class PayLaterCheckoutPaymentProvider : ICheckoutPaymentProvider
+public sealed class PayLaterCheckoutPaymentProvider : ICheckoutPaymentProvider, ICheckoutRecurringPaymentProvider
 {
     /// <summary>
     /// The stable processor key that identifies the Pay Later provider.
@@ -107,4 +107,37 @@ public sealed class PayLaterCheckoutPaymentProvider : ICheckoutPaymentProvider
     /// <inheritdoc/>
     public Task<PaymentCancelResult> CancelAsync(CancelPaymentContext context, CancellationToken cancellationToken = default)
         => Task.FromResult(PaymentCancelResult.Success());
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// There is no gateway to establish an agreement with, so the commitment is recorded locally exactly
+    /// like a one-time one. What makes it recur is the schedule the checkout handler writes onto the
+    /// resulting transaction, which the renewal sweep then follows.
+    /// </remarks>
+    public Task<PaymentBeginResult> BeginRecurringAsync(BeginRecurringPaymentContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var reference = string.IsNullOrEmpty(context.Attempt?.ProviderReference)
+            ? IdGenerator.GenerateId()
+            : context.Attempt.ProviderReference;
+
+        return Task.FromResult(PaymentBeginResult.Success(reference));
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// Stopping an offline agreement is a local decision, so this always succeeds. The caller is what marks
+    /// the ledger's recurrence canceled, which is what actually stops the next cycle from being created.
+    /// </remarks>
+    public Task<RecurringCancelResult> CancelRecurringAsync(CancelRecurringPaymentContext context, CancellationToken cancellationToken = default)
+        => Task.FromResult(RecurringCancelResult.Success());
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The amount billed each cycle is read from the ledger when the next cycle is created, so there is
+    /// nothing to change at a gateway.
+    /// </remarks>
+    public Task<RecurringUpdateResult> UpdateRecurringAsync(UpdateRecurringPaymentContext context, CancellationToken cancellationToken = default)
+        => Task.FromResult(RecurringUpdateResult.Success());
 }

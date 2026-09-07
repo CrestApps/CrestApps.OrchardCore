@@ -35,6 +35,20 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
         { "action", nameof(DashboardController.Index) },
     };
 
+    private static readonly RouteValueDictionary _agreementRouteValues = new()
+    {
+        { "area", SubscriptionConstants.Features.Area },
+        { "controller", typeof(SubscriptionAgreementsController).ControllerName() },
+        { "action", nameof(SubscriptionAgreementsController.Index) },
+    };
+
+    private static readonly RouteValueDictionary _mySubscriptionRouteValues = new()
+    {
+        { "area", SubscriptionConstants.Features.Area },
+        { "controller", typeof(MySubscriptionsController).ControllerName() },
+        { "action", nameof(MySubscriptionsController.Index) },
+    };
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
@@ -73,6 +87,16 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
                 )
                 .Add(S["My Subscriptions"], S["My Subscriptions"].PrefixPosition("2"), dashboard => dashboard
                     .Action(_dashboardRouteValues)
+                    .Permission(SubscriptionPermissions.ManageOwnSubscriptions)
+                    .LocalNav()
+                )
+                .Add(S["Agreements"], S["Agreements"].PrefixPosition("3"), agreements => agreements
+                    .Action(_agreementRouteValues)
+                    .Permission(SubscriptionPermissions.ManageSubscriptions)
+                    .LocalNav()
+                )
+                .Add(S["My Plans"], S["My Plans"].PrefixPosition("4"), plans => plans
+                    .Action(_mySubscriptionRouteValues)
                     .Permission(SubscriptionPermissions.ManageOwnSubscriptions)
                     .LocalNav()
                 )

@@ -1,0 +1,20 @@
+@using CrestApps.OrchardCore.Checkout
+@using CrestApps.OrchardCore.Checkout.ViewModels
+
+@model CheckoutViewModel
+
+<h1 class="visually-hidden">@T["Checkout"]</h1>
+
+<form asp-route="@CheckoutConstants.RouteNames.Step"
+      asp-route-sessionId="@Model.SessionId"
+      asp-route-step="@Model.Step"
+      method="post"
+      id="checkout-form">
+
+    <input type="hidden" asp-for="SessionId" />
+    <input type="hidden" asp-for="Step" />
+
+    @* The zone layout lives in the CheckoutFlow shape template so a theme can override the whole checkout
+       frame without replacing this controller view. *@
+    @await DisplayAsync(Model.Content)
+</form>

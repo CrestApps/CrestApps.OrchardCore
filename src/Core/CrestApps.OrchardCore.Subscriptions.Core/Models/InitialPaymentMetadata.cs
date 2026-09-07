@@ -31,4 +31,10 @@ public class InitialPaymentMetadata
     /// Gets or sets the environment mode used by the payment gateway.
     /// </summary>
     public GatewayMode GatewayMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the gateway reported the payment, captured when the provider notification was
+    /// received so the recorded payment keeps its own collection date.
+    /// </summary>
+    public DateTime? CreatedUtc { get; set; }
 }

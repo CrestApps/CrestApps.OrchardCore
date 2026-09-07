@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Wizard.Contents;
 using CrestApps.OrchardCore.Wizard.Core.Indexes;
 using CrestApps.OrchardCore.Wizard.Core.Migrations;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Wizard.Workflows.Drivers;
 using CrestApps.OrchardCore.Wizard.Workflows.Handlers;
 using CrestApps.OrchardCore.Wizard.Workflows.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentTypes.Editors;
@@ -31,6 +33,7 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<IWizardSessionStore, WizardSessionStore>();
         services.AddScoped<IWizardEngine, DefaultWizardEngine>();
         services.AddScoped<IWizardDefinitionProvider, DefaultWizardDefinitionProvider>();

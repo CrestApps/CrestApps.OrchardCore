@@ -121,6 +121,20 @@ public sealed class TransactionStore : DocumentCatalog<Transaction, TransactionI
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Transaction>> GetDueForRenewalAsync(DateTime asOfUtc, CancellationToken cancellationToken = default)
+    {
+        // A canceled agreement and one whose next cycle already exists both map NextCycleUtc to null, so the
+        // column alone decides what is due. A transaction the customer never paid still renews: falling
+        // behind on one invoice does not end the agreement, and the ledger is what shows the growing debt.
+        var records = await Session.Query<Transaction, TransactionIndex>(
+            x => x.NextCycleUtc != null && x.NextCycleUtc <= asOfUtc,
+            collection: CollectionName)
+            .ListAsync(cancellationToken);
+
+        return records.ToArray();
+    }
+
+    /// <inheritdoc/>
     protected override ValueTask SavingAsync(Transaction record)
     {
         var now = _clock.UtcNow;

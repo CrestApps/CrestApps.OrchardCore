@@ -1,0 +1,63 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model MySubscriptionsViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["My subscriptions"])</h1></zone>
+
+@if (Model.Subscriptions.Count == 0)
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["<strong>Nothing here!</strong> You do not have any subscriptions."]
+    </div>
+
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">@T["Subscription"]</th>
+                <th scope="col" class="text-end">@T["Per cycle"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col">@T["Renews"]</th>
+                <th scope="col">@T["Access until"]</th>
+                <th scope="col" class="text-end">@T["Actions"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var subscription in Model.Subscriptions)
+            {
+                <tr>
+                    <td>@(string.IsNullOrEmpty(subscription.Title) ? T["(untitled)"].Value : subscription.Title)</td>
+                    <td class="text-end">@subscription.Currency @subscription.TotalAmount.ToString("0.00")</td>
+                    <td><partial name="_SubscriptionStatusBadge" model="subscription.Status" /></td>
+                    <td>@(subscription.NextBillingUtc.HasValue ? subscription.NextBillingUtc.Value.ToString("d") : T["Does not renew"].Value)</td>
+                    <td>
+                        @if (subscription.IsCurrent(Model.UtcNow))
+                        {
+                            @subscription.CurrentPeriodEndUtc.ToString("d")
+                        }
+                        else
+                        {
+                            <span class="text-muted">@T["Ended"]</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        @if (subscription.Status is SubscriptionStatus.Active or SubscriptionStatus.Trialing or SubscriptionStatus.PastDue)
+                        {
+                            <form asp-action="Cancel" asp-route-itemId="@subscription.ItemId" method="post" class="d-inline">
+                                <input type="hidden" name="immediately" value="false" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Cancel"]</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<p class="text-muted small">
+    @T["Cancelling stops the next payment. You keep access until the end of the period you have already paid for."]
+</p>

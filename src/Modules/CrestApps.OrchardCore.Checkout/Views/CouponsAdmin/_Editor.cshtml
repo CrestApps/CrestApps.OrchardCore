@@ -1,0 +1,90 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label asp-for="Code" class="form-label">@T["Code"]</label>
+        <input asp-for="Code" class="form-control" autocomplete="off" />
+        <span asp-validation-for="Code"></span>
+        <span class="hint">@T["What the customer types. Matched without case sensitivity."]</span>
+    </div>
+    <div class="col-md-8 mb-3">
+        <label asp-for="Description" class="form-label">@T["Description"]</label>
+        <input asp-for="Description" class="form-control" />
+        <span asp-validation-for="Description"></span>
+        <span class="hint">@T["Shown on the customer's invoice."]</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label asp-for="Kind" class="form-label">@T["Discount type"]</label>
+        <select asp-for="Kind" class="form-select">
+            <option value="@((int)CouponKind.Percentage)">@T["Percentage"]</option>
+            <option value="@((int)CouponKind.FixedAmount)">@T["Fixed amount"]</option>
+        </select>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="Percentage" class="form-label">@T["Percentage"]</label>
+        <input asp-for="Percentage" type="number" step="0.01" min="0" max="100" class="form-control" />
+        <span asp-validation-for="Percentage"></span>
+    </div>
+    <div class="col-md-2 mb-3">
+        <label asp-for="Amount" class="form-label">@T["Amount"]</label>
+        <input asp-for="Amount" type="number" step="0.01" min="0" class="form-control" />
+        <span asp-validation-for="Amount"></span>
+    </div>
+    <div class="col-md-2 mb-3">
+        <label asp-for="Currency" class="form-label">@T["Currency"]</label>
+        <input asp-for="Currency" class="form-control" maxlength="3" />
+        <span asp-validation-for="Currency"></span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label asp-for="Target" class="form-label">@T["Applies to"]</label>
+        <select asp-for="Target" class="form-select">
+            <option value="@((int)DiscountTarget.OneTime)">@T["The one-time amount"]</option>
+            <option value="@((int)DiscountTarget.FirstCycle)">@T["The first billing cycle"]</option>
+        </select>
+        <span class="hint">@T["A first-cycle discount applies once. It does not reduce later cycles."]</span>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="MinimumAmount" class="form-label">@T["Minimum amount"]</label>
+        <input asp-for="MinimumAmount" type="number" step="0.01" min="0" class="form-control" />
+        <span asp-validation-for="MinimumAmount"></span>
+        <span class="hint">@T["Optional. The coupon does nothing below this."]</span>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="MaxRedemptions" class="form-label">@T["Usage limit"]</label>
+        <input asp-for="MaxRedemptions" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MaxRedemptions"></span>
+        <span class="hint">@T["Leave blank for unlimited. A code with no limit that leaks keeps discounting."]</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-3">
+        <label asp-for="StartsUtc" class="form-label">@T["Valid from (UTC)"]</label>
+        <input asp-for="StartsUtc" type="datetime-local" class="form-control" />
+        <span asp-validation-for="StartsUtc"></span>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label asp-for="EndsUtc" class="form-label">@T["Valid until (UTC)"]</label>
+        <input asp-for="EndsUtc" type="datetime-local" class="form-control" />
+        <span asp-validation-for="EndsUtc"></span>
+    </div>
+    <div class="col-md-4 mb-3 form-check mt-4">
+        <input asp-for="IsEnabled" class="form-check-input" />
+        <label asp-for="IsEnabled" class="form-check-label">@T["Enabled"]</label>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.ItemId))
+{
+    <p class="text-muted small">@T["Redeemed {0} times.", Model.RedemptionCount]</p>
+}

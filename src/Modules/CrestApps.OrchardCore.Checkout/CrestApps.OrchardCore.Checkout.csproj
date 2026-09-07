@@ -27,6 +27,9 @@
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.Settings" />
+    <PackageReference Include="OrchardCore.RateLimits.Core" />
   </ItemGroup>
 
   <ItemGroup>

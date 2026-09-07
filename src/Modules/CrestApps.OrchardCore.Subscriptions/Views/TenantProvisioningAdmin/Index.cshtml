@@ -1,0 +1,71 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@model IReadOnlyList<TenantProvisioningJob>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Site provisioning"])</h1></zone>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["<strong>Nothing here!</strong> No sites have been bought yet."]
+    </div>
+
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">@T["Site"]</th>
+                <th scope="col">@T["Owner"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col">@T["Attempts"]</th>
+                <th scope="col">@T["Last error"]</th>
+                <th scope="col" class="text-end">@T["Actions"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var job in Model)
+            {
+                <tr>
+                    <td>
+                        <strong>@job.TenantName</strong>
+                        <div class="text-muted small">@job.CreatedUtc.ToString("g")</div>
+                    </td>
+                    <td>@(job.ContactEmail ?? job.OwnerId)</td>
+                    <td>
+                        @switch (job.Status)
+                        {
+                            case TenantProvisioningStatus.Succeeded:
+                                <span class="badge bg-success">@job.Status</span>
+                                break;
+                            case TenantProvisioningStatus.Abandoned:
+                                <span class="badge bg-danger">@job.Status</span>
+                                break;
+                            case TenantProvisioningStatus.Failed:
+                                <span class="badge bg-warning text-dark">@job.Status</span>
+                                break;
+                            default:
+                                <span class="badge bg-secondary">@job.Status</span>
+                                break;
+                        }
+                    </td>
+                    <td>@job.AttemptCount</td>
+                    <td><span class="text-muted small">@job.LastError</span></td>
+                    <td class="text-end">
+                        @if (job.Status != TenantProvisioningStatus.Succeeded)
+                        {
+                            <form asp-action="Retry" asp-route-itemId="@job.ItemId" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-secondary">@T["Retry now"]</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="alert alert-warning" role="alert">
+    @T["A job marked <strong>Abandoned</strong> means a customer paid and did not get their site. Fix the cause, then retry it, or create the site by hand and refund the purchase."]
+</div>

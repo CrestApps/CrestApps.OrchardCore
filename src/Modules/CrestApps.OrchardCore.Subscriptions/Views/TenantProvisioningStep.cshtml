@@ -1,0 +1,79 @@
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model TenantProvisioningStepViewModel
+
+<div class="mb-3">
+    <label asp-for="TenantName" class="form-label">@T["Site name"]</label>
+    <input asp-for="TenantName" class="form-control" autocomplete="off" />
+    <span asp-validation-for="TenantName"></span>
+    <span class="hint">@T["Letters, digits, and underscores. This name identifies your site and cannot be changed later."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="TenantTitle" class="form-label">@T["Site title"]</label>
+    <input asp-for="TenantTitle" class="form-control" />
+    <span asp-validation-for="TenantTitle"></span>
+    <span class="hint">@T["What visitors see. You can change this at any time."]</span>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label asp-for="Prefix" class="form-label">@T["URL prefix"]</label>
+        <input asp-for="Prefix" class="form-control" autocomplete="off" />
+        <span asp-validation-for="Prefix"></span>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label asp-for="Domains" class="form-label">@T["Custom domains"]</label>
+        <input asp-for="Domains" class="form-control" autocomplete="off" placeholder="@T["example.com, www.example.com"]" />
+        <span asp-validation-for="Domains"></span>
+        <span class="hint">@T["Optional, separated by commas."]</span>
+    </div>
+</div>
+
+@if (Model.Recipes.Count > 1)
+{
+    <div class="mb-3">
+        <label asp-for="RecipeName" class="form-label">@T["Site template"]</label>
+        <select asp-for="RecipeName" class="form-select">
+            @foreach (var recipe in Model.Recipes)
+            {
+                <option value="@recipe.Name" selected="@(recipe.Name == Model.RecipeName)">@recipe.DisplayName</option>
+            }
+        </select>
+        <span asp-validation-for="RecipeName"></span>
+    </div>
+}
+
+<hr />
+
+<h5>@T["Site administrator"]</h5>
+<p class="text-muted small">@T["These are the credentials you will sign in to your new site with."]</p>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label asp-for="AdminUsername" class="form-label">@T["User name"]</label>
+        <input asp-for="AdminUsername" class="form-control" autocomplete="off" />
+        <span asp-validation-for="AdminUsername"></span>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label asp-for="AdminEmail" class="form-label">@T["Email"]</label>
+        <input asp-for="AdminEmail" type="email" class="form-control" autocomplete="off" />
+        <span asp-validation-for="AdminEmail"></span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label asp-for="AdminPassword" class="form-label">@T["Password"]</label>
+        <input asp-for="AdminPassword" type="password" class="form-control" autocomplete="new-password" />
+        <span asp-validation-for="AdminPassword"></span>
+        @if (Model.HasPassword)
+        {
+            <span class="hint">@T["Leave blank to keep the password you already entered."]</span>
+        }
+    </div>
+    <div class="col-md-6 mb-3">
+        <label asp-for="ConfirmPassword" class="form-label">@T["Confirm password"]</label>
+        <input asp-for="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" />
+        <span asp-validation-for="ConfirmPassword"></span>
+    </div>
+</div>

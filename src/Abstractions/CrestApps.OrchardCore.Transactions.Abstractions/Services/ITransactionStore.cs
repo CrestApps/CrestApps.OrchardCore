@@ -37,4 +37,12 @@ public interface ITransactionStore : ICatalog<Transaction>
     /// <param name="asOfUtc">The upper bound for the due date.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<IReadOnlyList<Transaction>> GetOutstandingDueAsync(DateTime asOfUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns the recurring transactions whose billing period has ended and whose next cycle has not been
+    /// created yet.
+    /// </summary>
+    /// <param name="asOfUtc">The UTC time to evaluate the schedule against.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<IReadOnlyList<Transaction>> GetDueForRenewalAsync(DateTime asOfUtc, CancellationToken cancellationToken = default);
 }

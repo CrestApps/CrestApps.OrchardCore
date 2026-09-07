@@ -1,7 +1,10 @@
+using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
@@ -27,6 +30,8 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
     private readonly IClock _clock;
     private readonly ISetupService _setupService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ISubscriptionSessionStore _subscriptionSessionStore;
     private readonly ILogger<TenantOnboardingSubscriptionHandler> _logger;
     private readonly DocumentJsonSerializerOptions _documentJsonSerializerOptions;
 
@@ -41,6 +46,8 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
     /// <param name="clock">The clock used to set setup time zone information.</param>
     /// <param name="setupService">The setup service used to read recipes and initialize the new tenant.</param>
     /// <param name="serviceProvider">The service provider used to resolve optional workflow services.</param>
+    /// <param name="dataProtectionProvider">The provider used to unprotect the captured administrator password.</param>
+    /// <param name="subscriptionSessionStore">The store used to strip the protected password once provisioning ends.</param>
     /// <param name="logger">The logger used to record tenant provisioning results.</param>
     /// <param name="documentJsonSerializerOptions">The JSON serializer options used for persisted onboarding step data.</param>
     /// <param name="stringLocalizer">The localizer used for subscription flow step text.</param>
@@ -51,6 +58,8 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         IClock clock,
         ISetupService setupService,
         IServiceProvider serviceProvider,
+        IDataProtectionProvider dataProtectionProvider,
+        ISubscriptionSessionStore subscriptionSessionStore,
         ILogger<TenantOnboardingSubscriptionHandler> logger,
         IOptions<DocumentJsonSerializerOptions> documentJsonSerializerOptions,
         IStringLocalizer<PaymentSubscriptionHandler> stringLocalizer)
@@ -61,6 +70,8 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
         _clock = clock;
         _setupService = setupService;
         _serviceProvider = serviceProvider;
+        _dataProtectionProvider = dataProtectionProvider;
+        _subscriptionSessionStore = subscriptionSessionStore;
         _logger = logger;
         _documentJsonSerializerOptions = documentJsonSerializerOptions.Value;
         S = stringLocalizer;
@@ -174,6 +185,11 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
 
         try
         {
+            // The step editor persisted the administrator password data-protected, so it must be unprotected
+            // here with the same purpose. Handing the protected value to the setup service would provision a
+            // tenant whose administrator can never sign in, which is unrecoverable without a password reset.
+            var adminPassword = UnprotectAdminPassword(info);
+
             var recipes = await _setupService.GetSetupRecipesAsync();
             using var shellSettings = await CreateTenantAsync(info);
             tenantName = shellSettings.Name;
@@ -189,7 +205,7 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
                     { SetupConstants.SiteName, shellSettings.Name },
                     { SetupConstants.AdminUsername, info.AdminUsername },
                     { SetupConstants.AdminEmail, info.AdminEmail },
-                    { SetupConstants.AdminPassword, info.AdminPassword},
+                    { SetupConstants.AdminPassword, adminPassword },
                     { SetupConstants.SiteTimeZone, _clock.GetSystemTimeZone() },
                     { SetupConstants.DatabaseProvider, shellSettings["DatabaseProvider"] },
                     { SetupConstants.DatabaseConnectionString, shellSettings["ConnectionString"] },
@@ -237,6 +253,66 @@ public sealed class TenantOnboardingSubscriptionHandler : SubscriptionHandlerBas
             }
 
             await TriggerTenantSetupEventAsync(workflowManager, SubscribedTenantSetupSucceededEvent.EventName, tenantName, errors: null);
+        }
+
+        // The administrator password is only needed while the tenant is provisioned. Once provisioning has
+        // reached a terminal outcome the protected secret is removed from the durable session so it is not
+        // retained for the life of the subscription record.
+        await ClearProtectedPasswordAsync(context.Flow.Session.SessionId);
+    }
+
+    // Unprotects the administrator password captured by the onboarding step editor. A failure here (for
+    // example a rotated data-protection key ring) must abort provisioning rather than fall back to a blank or
+    // protected password, because either would create a tenant nobody can administer.
+    private string UnprotectAdminPassword(TenantOnboardingStep info)
+    {
+        if (string.IsNullOrEmpty(info?.ProtectedAdminPassword))
+        {
+            throw new InvalidOperationException("The tenant onboarding step did not capture an administrator password.");
+        }
+
+        var protector = _dataProtectionProvider.CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep);
+
+        try
+        {
+            return protector.Unprotect(info.ProtectedAdminPassword);
+        }
+        catch (CryptographicException exception)
+        {
+            throw new InvalidOperationException("The captured tenant administrator password could not be unprotected. The tenant was not provisioned.", exception);
+        }
+    }
+
+    // Reloads the authoritative session and strips the protected password from the saved onboarding step. The
+    // session is reloaded rather than mutated in place because the session projected into this context may be
+    // a per-request copy whose changes are not persisted.
+    private async Task ClearProtectedPasswordAsync(string sessionId)
+    {
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            return;
+        }
+
+        try
+        {
+            var session = await _subscriptionSessionStore.GetAsync(sessionId);
+
+            if (session is null ||
+                !session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.TenantOnboarding, out var node) ||
+                node is not JsonObject savedStep ||
+                savedStep[nameof(TenantOnboardingStep.ProtectedAdminPassword)] is null)
+            {
+                return;
+            }
+
+            savedStep.Remove(nameof(TenantOnboardingStep.ProtectedAdminPassword));
+
+            await _subscriptionSessionStore.SaveAsync(session);
+        }
+        catch (Exception exception)
+        {
+            // Retaining the secret is undesirable but never a reason to fail a completed, paid subscription.
+            _logger.LogError(exception, "Failed to remove the protected tenant administrator password from subscription session '{SessionId}'.", sessionId);
         }
     }
 

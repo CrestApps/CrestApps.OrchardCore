@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.Transactions.Core;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -204,22 +205,31 @@ public sealed class TransactionController : Controller
             return RedirectToAction(nameof(Detail), new { itemId });
         }
 
-        var checkoutSessionStore = HttpContext.RequestServices.GetService<ICheckoutSessionStore>();
+        // The Checkout feature is optional, so the engine is resolved rather than injected: a tenant that has
+        // not enabled it still gets a working statement, just without the online payment option.
+        var engine = HttpContext.RequestServices.GetService<ICheckoutEngine>();
 
-        if (checkoutSessionStore is null)
+        if (engine is null)
         {
-            await _notifier.WarningAsync(H["Online settlement is not available. Enable a checkout provider to pay online, or contact the site administrator."]);
+            await _notifier.WarningAsync(H["Online settlement is not available. Enable the Checkout feature and a payment provider to pay online, or contact the site administrator."]);
 
             return RedirectToAction(nameof(Detail), new { itemId });
         }
 
-        var session = await checkoutSessionStore.NewAsync(TransactionsConstants.ReferenceTypes.Transaction, transaction.ItemId);
+        var session = await engine.StartAsync(new StartCheckoutRequest
+        {
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = transaction.ItemId,
+        });
 
-        await checkoutSessionStore.SaveAsync(session);
-
-        await _notifier.InformationAsync(H["A settlement checkout was started. Complete the payment with a configured online payment provider to settle this transaction."]);
-
-        return RedirectToAction(nameof(Detail), new { itemId });
+        // Send the customer straight into the checkout rather than back to the statement. The settlement
+        // handler has already contributed the outstanding balance as this checkout's billing item, so the
+        // payment step is ready for them.
+        return RedirectToRoute(CheckoutConstants.RouteNames.Step, new
+        {
+            sessionId = session.SessionId,
+            step = session.CurrentStep,
+        });
     }
 
     private async Task<Transaction> GetOwnedTransactionAsync(string itemId)

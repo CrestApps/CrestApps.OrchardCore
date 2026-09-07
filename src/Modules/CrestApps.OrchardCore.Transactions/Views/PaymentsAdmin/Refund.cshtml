@@ -1,0 +1,50 @@
+@model RefundRequestViewModel
+
+@{
+    var attempt = Model.Attempt;
+    var settled = attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount;
+}
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Refund payment"])</h1></zone>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Method"]</dt>
+            <dd class="col-sm-9">@attempt.ProviderKey</dd>
+
+            <dt class="col-sm-3">@T["Payment"]</dt>
+            <dd class="col-sm-9"><span class="text-muted small">@attempt.TransactionId</span></dd>
+
+            <dt class="col-sm-3">@T["Collected"]</dt>
+            <dd class="col-sm-9">@attempt.Currency @settled.ToString("0.00")</dd>
+
+            <dt class="col-sm-3">@T["Already refunded"]</dt>
+            <dd class="col-sm-9">@attempt.Currency @Model.AlreadyRefunded.ToString("0.00")</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Refund" asp-route-itemId="@attempt.ItemId" method="post">
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <div class="mb-3">
+        <label asp-for="Amount" class="form-label">@T["Amount to refund"]</label>
+        <div class="input-group">
+            <span class="input-group-text">@attempt.Currency</span>
+            <input asp-for="Amount" type="number" step="0.01" min="0" class="form-control" />
+        </div>
+        <span class="hint">@T["The tax already collected is refunded in proportion, using the tax that applied when the payment was taken."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Reason" class="form-label">@T["Reason"]</label>
+        <input asp-for="Reason" class="form-control" />
+        <span class="hint">@T["Recorded on the refund so anyone reading the ledger later knows why the money went back."]</span>
+    </div>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">@T["Refund"]</button>
+        <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

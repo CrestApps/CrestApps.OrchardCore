@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Checkout
+
+@model ShapeViewModel<CheckoutFlowPaymentMethod>
+
+<div class="d-flex align-items-start gap-3">
+    <i class="fa-solid fa-file-invoice-dollar fa-lg text-body-secondary mt-1" aria-hidden="true"></i>
+    <div>
+        <p class="mb-1">@T["Your order will be confirmed now and the balance recorded as outstanding."]</p>
+        <p class="mb-0 text-body-secondary small">
+            @T["You will be able to pay it from your account, and we will send you a reminder before it is due."]
+        </p>
+    </div>
+</div>

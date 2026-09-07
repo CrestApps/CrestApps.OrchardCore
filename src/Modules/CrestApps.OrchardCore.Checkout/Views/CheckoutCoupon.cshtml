@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponViewModel
+
+<div class="card mb-3">
+    <div class="card-body">
+        <label asp-for="Code" class="form-label">@T["Promotion code"]</label>
+        <input asp-for="Code" class="form-control" autocomplete="off" placeholder="@T["Enter a code"]" />
+        <span asp-validation-for="Code"></span>
+
+        @if (Model.AppliedAmount > 0)
+        {
+            <div class="text-success small mt-2">
+                @T["{0} {1} off applied.", Model.Currency, Model.AppliedAmount.ToString("0.00")]
+            </div>
+        }
+        else
+        {
+            <span class="hint">@T["Optional. Leave blank if you do not have one."]</span>
+        }
+    </div>
+</div>

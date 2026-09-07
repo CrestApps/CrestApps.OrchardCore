@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Add coupon"])</h1></zone>
+
+<form asp-action="Create" method="post">
+    <partial name="_Editor" model="Model" />
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">@T["Create"]</button>
+        <a class="btn btn-secondary" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

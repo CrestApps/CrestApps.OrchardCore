@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -14,6 +15,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Json;
 using OrchardCore.Modules;
+using OrchardCore.Abstractions.Setup;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Setup.Services;
 using OrchardCore.Workflows.Services;
@@ -214,7 +216,102 @@ public class TenantOnboardingSubscriptionHandlerTests
         return manager.Object;
     }
 
-    private static TenantOnboardingSubscriptionHandler CreateHandler(ISetupService setupService, IWorkflowManager workflowManager, IShellSettingsManager shellSettingsManager = null)
+    /// <summary>
+    /// The administrator password is captured by the step editor already data-protected, so provisioning has to
+    /// unprotect it. Passing the protected value straight through creates a tenant whose administrator can never
+    /// sign in, which is invisible until someone tries. This asserts the raw password reaches the setup service.
+    /// </summary>
+    [Fact]
+    public async Task CompletedAsync_UnprotectsTheAdminPasswordBeforeSetup()
+    {
+        SetupContext captured = null;
+
+        var setupService = new Mock<ISetupService>();
+        setupService.Setup(s => s.GetSetupRecipesAsync())
+            .ReturnsAsync([new RecipeDescriptor { Name = "Blog" }]);
+        setupService.Setup(s => s.SetupAsync(It.IsAny<SetupContext>()))
+            .Callback<SetupContext>(context => captured = context)
+            .ReturnsAsync(string.Empty);
+
+        var sessionStore = new Mock<ISubscriptionSessionStore>();
+        var handler = CreateHandler(setupService.Object, CreateWorkflowManager().Object, CreateShellSettingsManager(), sessionStore.Object);
+
+        await handler.CompletedAsync(CreateCompletedContext("acme"));
+
+        Assert.NotNull(captured);
+        Assert.Equal(RawAdminPassword, captured.Properties[SetupConstants.AdminPassword]);
+    }
+
+    /// <summary>
+    /// The protected password is only needed while the tenant is provisioned, so it must not be left on the
+    /// durable session for the life of the subscription.
+    /// </summary>
+    [Fact]
+    public async Task CompletedAsync_RemovesTheProtectedPasswordFromTheSession()
+    {
+        var setupService = new Mock<ISetupService>();
+        setupService.Setup(s => s.GetSetupRecipesAsync())
+            .ReturnsAsync([new RecipeDescriptor { Name = "Blog" }]);
+        setupService.Setup(s => s.SetupAsync(It.IsAny<SetupContext>()))
+            .ReturnsAsync(string.Empty);
+
+        var context = CreateCompletedContext("acme");
+        var storedSession = (SubscriptionSession)context.Flow.Session;
+
+        var sessionStore = new Mock<ISubscriptionSessionStore>();
+        sessionStore.Setup(s => s.GetAsync(storedSession.SessionId)).ReturnsAsync(storedSession);
+
+        var handler = CreateHandler(setupService.Object, CreateWorkflowManager().Object, CreateShellSettingsManager(), sessionStore.Object);
+
+        await handler.CompletedAsync(context);
+
+        var savedStep = storedSession.SavedSteps[SubscriptionConstants.StepKey.TenantOnboarding].AsObject();
+
+        Assert.False(savedStep.ContainsKey(nameof(TenantOnboardingStep.ProtectedAdminPassword)));
+        sessionStore.Verify(s => s.SaveAsync(storedSession), Times.Once);
+    }
+
+    /// <summary>
+    /// A password that cannot be unprotected (for example after the data-protection key ring was rotated) must
+    /// abort provisioning and be reported, never fall through and create an unusable tenant.
+    /// </summary>
+    [Fact]
+    public async Task CompletedAsync_WhenPasswordCannotBeUnprotected_ReportsFailureAndDoesNotSetUp()
+    {
+        var setupService = new Mock<ISetupService>();
+        setupService.Setup(s => s.GetSetupRecipesAsync())
+            .ReturnsAsync([new RecipeDescriptor { Name = "Blog" }]);
+
+        var workflowManager = CreateWorkflowManager();
+        var handler = CreateHandler(setupService.Object, workflowManager.Object, sessionStore: new Mock<ISubscriptionSessionStore>().Object);
+
+        // Protected by a different key ring than the one the handler unprotects with.
+        var context = CreateCompletedContext("acme", new EphemeralDataProtectionProvider());
+
+        await handler.CompletedAsync(context);
+
+        setupService.Verify(s => s.SetupAsync(It.IsAny<SetupContext>()), Times.Never);
+        workflowManager.Verify(
+            m => m.TriggerEventAsync(
+                SubscribedTenantFailedSetupEvent.EventName,
+                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<string>(),
+                It.IsAny<bool>(),
+                It.IsAny<bool>()),
+            Times.Once);
+    }
+
+    private const string RawAdminPassword = "Password1!";
+
+    // One provider instance is shared by the handler and by the context builder so a value protected for a test
+    // can actually be unprotected by the handler, exactly as the same tenant's key ring would in production.
+    private static readonly IDataProtectionProvider _dataProtectionProvider = new EphemeralDataProtectionProvider();
+
+    private static TenantOnboardingSubscriptionHandler CreateHandler(
+        ISetupService setupService,
+        IWorkflowManager workflowManager,
+        IShellSettingsManager shellSettingsManager = null,
+        ISubscriptionSessionStore sessionStore = null)
     {
         var shellHost = new Mock<IShellHost>();
         shellHost
@@ -235,14 +332,21 @@ public class TenantOnboardingSubscriptionHandlerTests
             clock.Object,
             setupService,
             serviceProvider.Object,
+            _dataProtectionProvider,
+            sessionStore ?? new Mock<ISubscriptionSessionStore>().Object,
             NullLogger<TenantOnboardingSubscriptionHandler>.Instance,
             Options.Create(new DocumentJsonSerializerOptions()),
             new PassThroughStringLocalizer<PaymentSubscriptionHandler>());
     }
 
-    private static SubscriptionFlowCompletedContext CreateCompletedContext(string tenantName)
+    private static SubscriptionFlowCompletedContext CreateCompletedContext(string tenantName, IDataProtectionProvider protectionProvider = null)
     {
         var options = new DocumentJsonSerializerOptions().SerializerOptions;
+
+        // Protect the password exactly as the step editor does, so the test exercises the real round trip
+        // instead of seeding a raw value the handler would never actually receive.
+        var protector = (protectionProvider ?? _dataProtectionProvider)
+            .CreateProtector(SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep);
 
         var step = new TenantOnboardingStep
         {
@@ -250,7 +354,7 @@ public class TenantOnboardingSubscriptionHandlerTests
             TenantTitle = "Acme",
             AdminUsername = "admin",
             AdminEmail = "admin@acme.test",
-            AdminPassword = "Password1!",
+            ProtectedAdminPassword = protector.Protect(RawAdminPassword),
             RecipeName = "Blog",
         };
 

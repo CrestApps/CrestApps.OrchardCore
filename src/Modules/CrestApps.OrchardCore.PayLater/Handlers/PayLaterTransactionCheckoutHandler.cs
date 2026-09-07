@@ -89,6 +89,10 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
         var settings = await _siteService.GetSettingsAsync<PayLaterSettings>();
         var now = _clock.UtcNow;
 
+        // The invoice is what says which obligations recur and on what cycle. Without it a recurring Pay
+        // Later commitment would be recorded as a single debt and never bill again.
+        session.TryGet<CheckoutInvoice>(out var invoice);
+
         DateTime? dueUtc = settings.NetTermDays > 0
             ? now.AddDays(settings.NetTermDays)
             : null;
@@ -156,6 +160,7 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
             transaction.CreatedUtc = now;
             transaction.UpdatedUtc = now;
             transaction.DueUtc = dueUtc;
+            transaction.Recurrence = BuildRecurrence(invoice, attempt.ObligationId, now);
             transaction.Events.Add(new TransactionEvent
             {
                 CreatedUtc = now,
@@ -170,6 +175,46 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
                 _logger.LogDebug("Created an outstanding Pay Later transaction '{TransactionId}' for obligation '{ObligationId}' of checkout session '{SessionId}'.", transaction.ItemId, attempt.ObligationId, session.SessionId);
             }
         }
+    }
+
+    // Records the cycle this debt covers, so the renewal sweep knows when the next one starts and a reminder
+    // can say which period is owed. A one-time obligation gets no recurrence at all.
+    private static TransactionRecurrence BuildRecurrence(CheckoutInvoice invoice, string obligationId, DateTime now)
+    {
+        if (invoice is null || string.IsNullOrEmpty(obligationId))
+        {
+            return null;
+        }
+
+        foreach (var group in invoice.GetRecurringGroups())
+        {
+            if (!string.Equals(CheckoutObligations.Recurring(group.Key), obligationId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var recurrence = new TransactionRecurrence
+            {
+                BillingDuration = group.Key.Duration <= 0 ? 1 : group.Key.Duration,
+                DurationType = group.Key.Type,
+                PeriodStartUtc = now,
+                CycleNumber = 1,
+
+                // The lowest cap among the lines in the group wins: billing past any line's limit would
+                // charge for something the customer did not agree to.
+                CycleLimit = group.Value
+                    .Select(lineItem => lineItem.Plan?.BillingCycleLimit)
+                    .Where(limit => limit > 0)
+                    .DefaultIfEmpty(null)
+                    .Min(),
+            };
+
+            recurrence.PeriodEndUtc = recurrence.Advance(now);
+
+            return recurrence;
+        }
+
+        return null;
     }
 
     private string ResolveTitle(CheckoutSession session, PaymentAttempt attempt)

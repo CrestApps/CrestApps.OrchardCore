@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.Checkout
+
+@model ShapeViewModel<CheckoutFlow>
+
+@{
+    var previousStep = Model.Value.GetPreviousStep();
+    var isPaymentStep = Model.Value.CurrentStepEquals(CheckoutConstants.PaymentStepKey);
+}
+
+<div class="d-flex justify-content-between align-items-center mt-4">
+    <div>
+        @if (previousStep is not null)
+        {
+            <a class="btn btn-link"
+               asp-route="@CheckoutConstants.RouteNames.Step"
+               asp-route-sessionId="@Model.Value.Session.SessionId"
+               asp-route-step="@previousStep.Key">
+                @T["Back"]
+            </a>
+        }
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg" id="checkout-submit">
+        <span class="checkout-submit-label">@(isPaymentStep ? T["Pay now"] : T["Continue"])</span>
+        <span class="checkout-submit-busy d-none">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            @T["Processing…"]
+        </span>
+    </button>
+</div>

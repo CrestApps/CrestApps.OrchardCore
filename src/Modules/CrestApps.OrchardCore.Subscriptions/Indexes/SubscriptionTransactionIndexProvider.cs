@@ -37,7 +37,11 @@ public sealed class SubscriptionTransactionIndexProvider : IndexProvider<Subscri
                     TaxAmount = payment.TaxAmount,
                     Status = payment.Status,
                     SessionId = session.SessionId,
-                    CreatedUtc = session.CreatedUtc,
+
+                    // Index each payment on its own collection date so a renewal is reported in the month it
+                    // was collected. Payments recorded before the date was captured fall back to the session
+                    // date, which is the value they were previously indexed with.
+                    CreatedUtc = payment.CreatedUtc ?? session.CreatedUtc,
                     OwnerId = session.OwnerId,
                     ContentItemId = session.ContentItemId,
                     ContentItemVersionId = session.ContentItemVersionId,

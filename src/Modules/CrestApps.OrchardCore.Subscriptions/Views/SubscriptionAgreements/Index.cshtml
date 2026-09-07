@@ -1,0 +1,75 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model SubscriptionAgreementsIndexViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Subscriptions"])</h1></zone>
+
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input asp-for="Options.Search" class="form-control" placeholder="@T["Search by title"]" type="search" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" class="form-select"></select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+                        <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@T["Filter"]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Subscriptions.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Subscription"]</th>
+                    <th scope="col">@T["Method"]</th>
+                    <th scope="col" class="text-end">@T["Per cycle"]</th>
+                    <th scope="col">@T["Status"]</th>
+                    <th scope="col">@T["Renews"]</th>
+                    <th scope="col">@T["Paid through"]</th>
+                    <th scope="col" class="text-end">@T["Actions"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var subscription in Model.Subscriptions)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Detail" asp-route-itemId="@subscription.ItemId">@(string.IsNullOrEmpty(subscription.Title) ? T["(untitled)"].Value : subscription.Title)</a>
+                        </td>
+                        <td>@subscription.ProviderKey</td>
+                        <td class="text-end">@subscription.Currency @subscription.TotalAmount.ToString("0.00")</td>
+                        <td><partial name="_SubscriptionStatusBadge" model="subscription.Status" /></td>
+                        <td>@(subscription.NextBillingUtc.HasValue ? subscription.NextBillingUtc.Value.ToString("d") : T["Never"].Value)</td>
+                        <td>@subscription.CurrentPeriodEndUtc.ToString("d")</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-secondary" asp-action="Detail" asp-route-itemId="@subscription.ItemId">@T["Manage"]</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["<strong>Nothing here!</strong> There are no subscriptions that match the current filter."]
+    </div>
+}
+
+@await DisplayAsync(Model.Pager)

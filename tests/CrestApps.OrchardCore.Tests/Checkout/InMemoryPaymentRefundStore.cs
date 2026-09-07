@@ -68,4 +68,32 @@ internal sealed class InMemoryPaymentRefundStore : IPaymentRefundStore
 
     public Task<IEnumerable<PaymentRefund>> GetBySessionAsync(string sessionId, CancellationToken cancellationToken = default)
         => Task.FromResult(_refunds.Values.Where(r => r.SessionId == sessionId));
+
+    public Task<PageResult<PaymentRefund>> PageAsync(int page, int pageSize, PaymentRefundQuery query, CancellationToken cancellationToken = default)
+    {
+        var matches = _refunds.Values.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(query?.ProviderKey))
+        {
+            matches = matches.Where(r => r.ProviderKey == query.ProviderKey);
+        }
+
+        if (query?.Status is not null)
+        {
+            matches = matches.Where(r => r.Status == query.Status.Value);
+        }
+
+        if (!string.IsNullOrEmpty(query?.SessionId))
+        {
+            matches = matches.Where(r => r.SessionId == query.SessionId);
+        }
+
+        var all = matches.OrderByDescending(r => r.UpdatedUtc).ToArray();
+
+        return Task.FromResult(new PageResult<PaymentRefund>
+        {
+            Count = all.Length,
+            Entries = all.Skip((Math.Max(page, 1) - 1) * pageSize).Take(pageSize).ToArray(),
+        });
+    }
 }

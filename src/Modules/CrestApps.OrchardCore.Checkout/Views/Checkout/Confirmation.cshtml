@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Checkout.ViewModels
+
+@model CheckoutViewModel
+
+<div class="text-center my-5">
+    <div class="display-6 text-success mb-3">
+        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+    </div>
+    <h1 class="h3">@T["Thank you — your purchase is complete."]</h1>
+    <p class="text-body-secondary">@T["A confirmation of this purchase is shown below."]</p>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        @await DisplayAsync(Model.Content)
+    </div>
+</div>

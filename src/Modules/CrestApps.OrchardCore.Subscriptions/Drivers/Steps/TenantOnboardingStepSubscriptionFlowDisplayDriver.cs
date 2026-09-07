@@ -24,9 +24,11 @@ namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : SubscriptionFlowDisplayDriver
 {
     /// <summary>
-    /// Defines the data protection purpose used to protect saved tenant administrator passwords.
+    /// Defines the data protection purpose used to protect saved tenant administrator passwords. It is shared
+    /// with the provisioning handler that unprotects the value, so it is declared once in
+    /// <see cref="SubscriptionConstants.ProtectorPurposes"/>.
     /// </summary>
-    public const string ProtectorPurpose = "TenantOnboardingStep";
+    public const string ProtectorPurpose = SubscriptionConstants.ProtectorPurposes.TenantOnboardingStep;
 
     /// <summary>
     /// Defines the regular expression pattern used to validate tenant keys.
@@ -189,7 +191,7 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
     private void ValidateAndProtectPassword(IUpdateModel updater, TenantOnboardingStepViewModel model, TenantOnboardingStep stepInfo)
     {
         var validatePassword =
-            string.IsNullOrEmpty(stepInfo.AdminPassword) ||
+            string.IsNullOrEmpty(stepInfo.ProtectedAdminPassword) ||
             !string.IsNullOrEmpty(model.AdminPassword) ||
             !string.IsNullOrEmpty(model.AdminPasswordConfirmation);
 
@@ -221,7 +223,7 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
         if (hasValidPassword)
         {
             var protector = _dataProtectionProvider.CreateProtector(ProtectorPurpose);
-            stepInfo.AdminPassword = protector.Protect(model.AdminPassword);
+            stepInfo.ProtectedAdminPassword = protector.Protect(model.AdminPassword);
         }
     }
 
@@ -245,7 +247,7 @@ public sealed partial class TenantOnboardingStepSubscriptionFlowDisplayDriver : 
         model.TenantTitle = stepInfo.TenantTitle;
         model.AdminUsername = stepInfo.AdminUsername;
         model.AdminEmail = stepInfo.AdminEmail;
-        model.HasSavedPassword = !string.IsNullOrEmpty(stepInfo.AdminPassword);
+        model.HasSavedPassword = !string.IsNullOrEmpty(stepInfo.ProtectedAdminPassword);
         model.DomainName = stepInfo.Domains?.Length > 0 ? string.Join(',', stepInfo.Domains) : null;
     }
 

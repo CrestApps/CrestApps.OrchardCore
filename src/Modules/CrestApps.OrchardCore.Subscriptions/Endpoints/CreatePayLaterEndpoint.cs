@@ -147,6 +147,7 @@ public static class CreatePayLaterEndpoint
             Currency = invoice.Currency,
             GatewayMode = gatewayMode,
             GatewayId = SubscriptionConstants.PayLaterProcessorKey,
+            CreatedUtc = now,
         });
 
         var metadata = new SubscriptionPaymentsMetadata()
@@ -176,6 +177,7 @@ public static class CreatePayLaterEndpoint
                 GatewayMode = gatewayMode,
                 GatewayId = SubscriptionConstants.PayLaterProcessorKey,
                 Status = PaymentStatus.Succeeded,
+                CreatedUtc = now,
             };
 
             subscriptionPaymentMetadata.Subscriptions.Add(new SubscriptionInfo

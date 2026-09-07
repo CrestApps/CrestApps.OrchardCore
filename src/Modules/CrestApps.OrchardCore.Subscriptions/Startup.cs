@@ -1,3 +1,10 @@
+using CrestApps.OrchardCore.Subscriptions.Navigation;
+using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Checkout;
+using OrchardCore.BackgroundTasks;
+using CrestApps.OrchardCore.Subscriptions.Tasks;
+using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Reports;
@@ -91,6 +98,7 @@ public sealed class Startup : StartupBase
         services.TryAddScoped<ISubscriptionTaxProfileProvider, DefaultSubscriptionTaxProfileProvider>();
         services.TryAddScoped<ISubscriptionTaxService, NullSubscriptionTaxService>();
 
+        services.TryAddScoped<GuestSessionTokenManager>();
         services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
         services.AddScoped<WizardSessionStore>();
         services.AddScoped<SubscriptionWizardFlowFactory>();
@@ -125,6 +133,22 @@ public sealed class Startup : StartupBase
 
         services.AddIndexProvider<SubscriptionTransactionIndexProvider>()
             .AddDataMigration<SubscriptionTransactionIndexMigrations>();
+
+        // The durable subscription agreement. It is what survives the checkout that created it, so every
+        // later question about who is subscribed is answered from here rather than from a session.
+        services.AddDataMigration<SubscriptionRecordMigrations>()
+            .AddIndexProvider<SubscriptionRecordIndexProvider>();
+
+        services.AddScoped<ISubscriptionStore, SubscriptionStore>();
+        services.AddScoped<ISubscriptionManager, SubscriptionManager>();
+        services.AddScoped<ISubscriptionLifecycleService, DefaultSubscriptionLifecycleService>();
+        services.AddScoped<ISubscriptionAccessService, DefaultSubscriptionAccessService>();
+        services.AddScoped<ISubscriptionLifecycleHandler, EntitlementSubscriptionLifecycleHandler>();
+        services.AddSingleton<IBackgroundTask, SubscriptionLifecycleBackgroundTask>();
+
+        // The gateway is authoritative for a recurring agreement, so its notifications are what keep the
+        // local record honest about renewals, failures, and cancellations made outside this application.
+        services.AddScoped<IPaymentEvent, SubscriptionRecordPaymentEventHandler>();
 
         services.AddTransient<IConfigureOptions<ResourceManagementOptions>, SubscriptionResourceManagementOptionsConfiguration>();
 
@@ -165,6 +189,15 @@ public sealed class RolesStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
+
+        // Roles already gate content, features, and permissions across Orchard Core, so granting one for as
+        // long as a subscription is current is what makes member-only access enforceable without any of
+        // those gates knowing subscriptions exist.
+        services.AddScoped<ISubscriptionEntitlementApplier, RoleSubscriptionEntitlementApplier>();
+
+        services.AddDataMigration<SubscriptionEntitlementPartMigrations>()
+            .AddContentPart<SubscriptionEntitlementPart>()
+            .UseDisplayDriver<SubscriptionEntitlementPartDisplayDriver>();
     }
 }
 
@@ -351,5 +384,86 @@ public sealed class ReportsStartup : StartupBase
             .AddScoped<IReport, NewSubscriptionsTrendReport>()
             .AddScoped<IReport, TaxCollectedReport>()
             .AddScoped<IReport, ProductPerformanceReport>();
+    }
+}
+
+/// <summary>
+/// Registers the bridge that turns a completed generic checkout into a durable subscription agreement.
+/// </summary>
+/// <remarks>
+/// It is gated on the Checkout feature because that is what raises the completion this handler reacts to.
+/// Registering it unconditionally would add a handler that can never run.
+/// </remarks>
+[RequireFeatures(CheckoutConstants.Features.Area)]
+public sealed class CheckoutStartup : StartupBase
+{
+    /// <summary>
+    /// Configures the checkout-driven subscription services.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();
+    }
+}
+
+/// <summary>
+/// Registers the workflow events raised as a subscription moves through its life.
+/// </summary>
+/// <remarks>
+/// Welcoming a new subscriber, warning one whose card was declined, and asking a leaver why are reactions
+/// that differ from site to site. Raising a workflow event lets the site owner build the one they want
+/// instead of picking from settings that could never cover every case.
+/// </remarks>
+[RequireFeatures("OrchardCore.Workflows")]
+public sealed class SubscriptionWorkflowsStartup : StartupBase
+{
+    /// <summary>
+    /// Configures the subscription lifecycle workflow events.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddActivity<SubscriptionStartedEvent, SubscriptionStartedEventDisplayDriver>();
+        services.AddActivity<SubscriptionRenewedEvent, SubscriptionRenewedEventDisplayDriver>();
+        services.AddActivity<SubscriptionPastDueEvent, SubscriptionPastDueEventDisplayDriver>();
+        services.AddActivity<SubscriptionCanceledEvent, SubscriptionCanceledEventDisplayDriver>();
+        services.AddActivity<SubscriptionExpiredEvent, SubscriptionExpiredEventDisplayDriver>();
+
+        services.AddScoped<ISubscriptionLifecycleHandler, WorkflowSubscriptionLifecycleHandler>();
+    }
+}
+
+/// <summary>
+/// Registers selling Orchard Core sites through the public checkout.
+/// </summary>
+/// <remarks>
+/// It is a separate feature from the legacy tenant onboarding because it works the other way round: the
+/// checkout only records that a site was bought, and a durable job builds it. That split is what keeps a
+/// slow recipe, a brief outage, or a deployment restart from leaving a paying customer with nothing.
+/// </remarks>
+[RequireFeatures(SubscriptionConstants.Features.Tenants)]
+public sealed class TenantProvisioningStartup : StartupBase
+{
+    /// <summary>
+    /// Configures the site-selling services.
+    /// </summary>
+    /// <param name="services">The service collection to configure.</param>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddDataMigration<TenantProvisioningJobMigrations>()
+            .AddIndexProvider<TenantProvisioningJobIndexProvider>();
+
+        services.AddScoped<ITenantProvisioningJobStore, TenantProvisioningJobStore>();
+        services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+        services.AddScoped<ICheckoutHandler, TenantProvisioningCheckoutHandler>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, TenantProvisioningStepDisplayDriver>();
+
+        // A site that keeps serving after the customer stops paying costs the owner money indefinitely, so
+        // the site's state follows the subscription's.
+        services.AddScoped<ISubscriptionEntitlementApplier, TenantSubscriptionEntitlementApplier>();
+
+        services.AddSingleton<IBackgroundTask, TenantProvisioningBackgroundTask>();
+        services.AddNavigationProvider<TenantProvisioningAdminMenu>();
     }
 }

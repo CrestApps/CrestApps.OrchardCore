@@ -23,10 +23,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Abstractions\CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Core\CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Addresses.Abstractions\CrestApps.OrchardCore.Addresses.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Checkout.Abstractions\CrestApps.OrchardCore.Checkout.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions\CrestApps.OrchardCore.Subscriptions.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Taxation.Abstractions\CrestApps.OrchardCore.Taxation.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Users.Abstractions\CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Payments.Core\CrestApps.OrchardCore.Payments.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Products.Core\CrestApps.OrchardCore.Products.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Stripe.Core\CrestApps.OrchardCore.Stripe.Core.csproj" />

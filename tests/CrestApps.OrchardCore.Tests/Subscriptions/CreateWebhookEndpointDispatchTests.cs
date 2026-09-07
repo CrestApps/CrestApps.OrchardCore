@@ -28,7 +28,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         Assert.NotNull(handler.PaymentIntentContext);
         Assert.Equal("pi_1", handler.PaymentIntentContext.TransactionId);
@@ -60,7 +60,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         // JPY is a zero-decimal currency; 2000 minor units == 2000 JPY, not 20.
         Assert.Equal(2000, handler.PaymentIntentContext.Amount);
@@ -90,7 +90,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         Assert.NotNull(handler.PaymentSucceededContext);
         Assert.Equal(PaymentReason.SubscriptionCycle, handler.PaymentSucceededContext.Reason);
@@ -129,7 +129,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         Assert.Equal(2, handler.RefundContexts.Count);
 
@@ -173,7 +173,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         var refund = Assert.Single(handler.RefundContexts);
         Assert.Equal("pi_2", refund.OriginalTransactionId);
@@ -209,7 +209,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         Assert.NotNull(handler.FailedContext);
         Assert.Equal("pi_fail", handler.FailedContext.TransactionId);
@@ -240,7 +240,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         Assert.NotNull(handler.CanceledContext);
         Assert.Equal("pi_cancel", handler.CanceledContext.TransactionId);
@@ -271,7 +271,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         Assert.NotNull(handler.DisputeContext);
         Assert.Equal("pi_3", handler.DisputeContext.OriginalTransactionId);
@@ -303,7 +303,7 @@ public class CreateWebhookEndpointDispatchTests
         };
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => CreateWebhookEndpoint.DispatchAsync(stripeEvent, [throwing]));
+            () => CreateWebhookEndpoint.DispatchAsync(stripeEvent, [throwing], TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -321,7 +321,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         Assert.Null(handler.PaymentIntentContext);
         Assert.Null(handler.PaymentSucceededContext);
@@ -353,7 +353,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         var refund = Assert.Single(handler.RefundContexts);
         Assert.Equal("re_async", refund.ProviderRefundReference);
@@ -387,7 +387,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         var refund = Assert.Single(handler.RefundContexts);
         Assert.Equal("re_failed", refund.ProviderRefundReference);
@@ -420,7 +420,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         var refund = Assert.Single(handler.RefundContexts);
         Assert.Equal("re_created", refund.ProviderRefundReference);
@@ -453,7 +453,7 @@ public class CreateWebhookEndpointDispatchTests
             },
         };
 
-        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler]);
+        await CreateWebhookEndpoint.DispatchAsync(stripeEvent, [handler], TestContext.Current.CancellationToken);
 
         var refund = Assert.Single(handler.RefundContexts);
         Assert.Equal("ch_legacy", refund.OriginalTransactionId);
@@ -476,42 +476,42 @@ public class CreateWebhookEndpointDispatchTests
 
         public List<PaymentRefundedContext> RefundContexts { get; } = [];
 
-        public override Task PaymentSucceededAsync(PaymentSucceededContext context)
+        public override Task PaymentSucceededAsync(PaymentSucceededContext context, CancellationToken cancellationToken = default)
         {
             PaymentSucceededContext = context;
 
             return Task.CompletedTask;
         }
 
-        public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context)
+        public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context, CancellationToken cancellationToken = default)
         {
             PaymentIntentContext = context;
 
             return Task.CompletedTask;
         }
 
-        public override Task PaymentFailedAsync(PaymentFailedContext context)
+        public override Task PaymentFailedAsync(PaymentFailedContext context, CancellationToken cancellationToken = default)
         {
             FailedContext = context;
 
             return Task.CompletedTask;
         }
 
-        public override Task PaymentCanceledAsync(PaymentCanceledContext context)
+        public override Task PaymentCanceledAsync(PaymentCanceledContext context, CancellationToken cancellationToken = default)
         {
             CanceledContext = context;
 
             return Task.CompletedTask;
         }
 
-        public override Task PaymentRefundedAsync(PaymentRefundedContext context)
+        public override Task PaymentRefundedAsync(PaymentRefundedContext context, CancellationToken cancellationToken = default)
         {
             RefundContexts.Add(context);
 
             return Task.CompletedTask;
         }
 
-        public override Task PaymentDisputeCreatedAsync(PaymentDisputeCreatedContext context)
+        public override Task PaymentDisputeCreatedAsync(PaymentDisputeCreatedContext context, CancellationToken cancellationToken = default)
         {
             DisputeContext = context;
 
@@ -521,7 +521,7 @@ public class CreateWebhookEndpointDispatchTests
 
     private sealed class ThrowingPaymentEvent : PaymentEventBase
     {
-        public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context)
+        public override Task PaymentIntentSucceededAsync(PaymentIntentSucceededContext context, CancellationToken cancellationToken = default)
             => throw new InvalidOperationException("boom");
     }
 }

@@ -55,7 +55,7 @@ An outstanding transaction can be settled two ways:
 - **Online** — the customer chooses *Pay* on an outstanding transaction. The module starts a [Checkout](checkout) session that references the transaction (`ReferenceType` = `Transaction`), contributes the outstanding balance as a one-time billing item, and settles the transaction when the checkout completes at a real gateway. Settlement is applied against the amount the payment provider **actually confirmed** (read from the durable payment-attempt ledger), never the amount the checkout requested, and the attempt currency must match the transaction currency — a mismatch is rejected rather than converted. A confirmed amount that covers the full balance marks the transaction **Paid**; a smaller confirmed amount marks it **Partially paid** and leaves the remainder outstanding. Settlement is **idempotent** (re-completing the same checkout never double-applies a payment) and records the settling `PaymentAttemptId` so a payment can always be reconciled against the gateway. Concurrent writes are guarded by optimistic concurrency, so two nodes settling the same transaction can never silently overwrite each other. This reuses the exact durable ledger and reconciliation the Checkout framework already provides, so a settlement is never recorded as paid unless the gateway confirms it.
 - **Offline** — a manager records a payment or marks the transaction paid from the admin console (for example after receiving a bank transfer or cash). The settlement is recorded with an *offline* method and an audit event.
 
-Online settlement is only available when the **[Checkout](checkout)** feature is enabled; the customer *Pay* action degrades gracefully (with a message) when it is not.
+Choosing *Pay* starts a checkout through `ICheckoutEngine` and takes the customer straight into it, with the outstanding balance already contributed as the checkout's billing item. Online settlement is only available when the **[Checkout](checkout)** feature is enabled; the *Pay* action degrades gracefully (with a message) when it is not.
 
 ### Reminders
 
@@ -124,6 +124,16 @@ Reminder settings appear only when the **Transaction Reminders** feature (`Crest
 
 The background task runs the sweep on a schedule and sends a reminder only when a transaction is due for one under this cadence, up to the maximum.
 
+## Payments and refunds
+
+With [Checkout](checkout) enabled, **Commerce → Payments** lists every payment the suite has attempted, filtered by state and payment method, showing what was expected, what actually settled, and the gateway's own transaction reference. It answers "did this customer actually pay?" without reading the database.
+
+It is also the only place a refund starts. The form shows what was collected and what has already been given back, refuses an amount above what is still refundable, and issues the refund through the refund service so the durable ledger, the original payment's tax allocation, and the over-refund protection all apply. Counting an in-flight refund against the remaining amount is deliberate: ignoring one would let an operator start a second refund for money already on its way back.
+
+**Commerce → Refunds** lists what came of them. A refund against a payment method that has no executable refund operation is recorded as **needing manual settlement** rather than silently dropped, and this screen is where an operator records the reference once they have moved the money by hand. Only a refund in that state can be closed this way; marking a failed gateway refund as done would tell the ledger the customer was paid when they were not.
+
+Both screens require the **Manage payments and refunds** permission.
+
 ## Permissions
 
 | Permission | Grants |
@@ -131,6 +141,7 @@ The background task runs the sweep on a schedule and sends a reminder only when 
 | **Manage transactions** | View and manage every tenant transaction: send reminders, record payments, mark paid, cancel, and add notes from the administration report. |
 | **Manage transaction settings** | Configure the transaction reminder settings. |
 | **View own transactions** | View and pay your own transactions. |
+| **Manage payments and refunds** | View the payment and refund ledgers and issue a refund. It is deliberately separate from managing transactions, because giving money back is the one action in the suite that cannot be undone and should not come free with the ability to read the outstanding report. |
 
 ## Enabling the feature
 

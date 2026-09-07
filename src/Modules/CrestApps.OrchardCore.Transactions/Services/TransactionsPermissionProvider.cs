@@ -13,6 +13,7 @@ internal sealed class TransactionsPermissionProvider : IPermissionProvider
     [
         TransactionsPermissions.ManageTransactions,
         TransactionsPermissions.ManageTransactionSettings,
+        TransactionsPermissions.ManageRefunds,
         TransactionsPermissions.ViewOwnTransactions,
     ];
 

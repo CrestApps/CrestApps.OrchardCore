@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Stripe.Core
+@using CrestApps.OrchardCore.Stripe.ViewModels
+
+@model StripeCheckoutPaymentMethodViewModel
+
+@if (string.IsNullOrEmpty(Model.PublishableKey))
+{
+    @* Without a publishable key Stripe.js cannot mount, so the customer would see an empty box and a button
+       that silently fails. Say what is wrong instead. *@
+    <div class="alert alert-warning mb-0" role="alert">
+        @T["Card payment is not fully configured. Add the Stripe publishable key under Settings → Stripe."]
+    </div>
+
+    return;
+}
+
+@if (!Model.IsLive)
+{
+    <div class="alert alert-warning py-2" role="alert">
+        @T["Stripe is in test mode. No real payment will be taken."]
+    </div>
+}
+
+<div class="mb-3">
+    <label for="stripe-checkout-name" class="form-label">@T["Name on card"]</label>
+    <input id="stripe-checkout-name" type="text" class="form-control" autocomplete="cc-name" placeholder="@T["Name as it appears on the card"]" />
+</div>
+
+<div class="mb-2">
+    <label for="stripe-checkout-card" class="form-label">@T["Card details"]</label>
+    <div id="stripe-checkout-card" class="form-control" style="min-height: 2.75rem; padding-top: 0.75rem;"></div>
+</div>
+
+<div id="stripe-checkout-card-errors" class="text-danger small d-none" role="alert"></div>
+
+<script asp-name="stripe-checkout-payment" at="Foot" depends-on="checkout-payment"></script>
+<script at="Foot" depends-on="stripe-checkout-payment">
+    stripeCheckoutPayment.initialize({
+        processorKey: '@StripeConstants.ProcessorKey',
+        publishableKey: '@Model.PublishableKey',
+        cardElementSelector: '#stripe-checkout-card',
+        errorSelector: '#stripe-checkout-card-errors',
+        nameElement: '#stripe-checkout-name',
+        hasRecurringItems: @Model.HasRecurringItems.ToString().ToLowerInvariant()
+    });
+</script>

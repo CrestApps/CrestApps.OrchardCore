@@ -19,6 +19,13 @@ public static class TransactionsPermissions
     public static readonly Permission ManageTransactionSettings = new("ManageTransactionSettings", "Manage transaction settings");
 
     /// <summary>
+    /// The permission required to view the payment and refund ledgers and to issue a refund. It is separate
+    /// from managing transactions because giving money back is the one action in the suite that cannot be
+    /// undone, and it should not come free with the ability to read the outstanding report.
+    /// </summary>
+    public static readonly Permission ManageRefunds = new("ManageRefunds", "Manage payments and refunds");
+
+    /// <summary>
     /// The permission required for an authenticated user to view and pay their own transactions.
     /// </summary>
     public static readonly Permission ViewOwnTransactions = new("ViewOwnTransactions", "View own transactions");

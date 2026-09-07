@@ -27,4 +27,15 @@ public sealed class RecurringPlan
     /// An optional number of days to delay the start of the recurring billing.
     /// </summary>
     public int? StartDayDelay { get; set; }
+
+    /// <summary>
+    /// An optional free trial, in days, before the first cycle is billed.
+    /// </summary>
+    /// <remarks>
+    /// It is deliberately separate from <see cref="StartDayDelay"/>. A delayed start postpones the agreement
+    /// itself; a trial establishes the agreement now, with a payment method attached, and simply does not
+    /// charge until the trial ends. That difference is what lets a trial convert into a paying subscriber
+    /// without asking them to come back and buy again.
+    /// </remarks>
+    public int? TrialDays { get; set; }
 }

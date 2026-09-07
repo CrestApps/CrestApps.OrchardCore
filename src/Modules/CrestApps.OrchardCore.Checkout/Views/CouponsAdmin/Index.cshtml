@@ -1,0 +1,86 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@model IReadOnlyList<Coupon>
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Coupons"])</h1></zone>
+
+<div class="mb-3">
+    <a class="btn btn-primary" asp-action="Create">@T["Add coupon"]</a>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["<strong>Nothing here!</strong> No coupons have been created."]
+    </div>
+
+    return;
+}
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th scope="col">@T["Code"]</th>
+                <th scope="col">@T["Discount"]</th>
+                <th scope="col">@T["Applies to"]</th>
+                <th scope="col">@T["Used"]</th>
+                <th scope="col">@T["Valid until"]</th>
+                <th scope="col">@T["Status"]</th>
+                <th scope="col" class="text-end">@T["Actions"]</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var coupon in Model)
+            {
+                <tr>
+                    <td>
+                        <a asp-action="Edit" asp-route-itemId="@coupon.ItemId"><strong>@coupon.Code</strong></a>
+                        <div class="text-muted small">@coupon.Description</div>
+                    </td>
+                    <td>
+                        @if (coupon.Kind == CouponKind.Percentage)
+                        {
+                            @($"{coupon.Percentage:0.##}%")
+                        }
+                        else
+                        {
+                            @($"{coupon.Currency} {coupon.Amount:0.00}")
+                        }
+                    </td>
+                    <td>@(coupon.Target == DiscountTarget.FirstCycle ? T["First cycle"] : T["One-time amount"])</td>
+                    <td>
+                        @coupon.RedemptionCount@(coupon.MaxRedemptions.HasValue ? $" / {coupon.MaxRedemptions}" : string.Empty)
+                    </td>
+                    <td>@(coupon.EndsUtc.HasValue ? coupon.EndsUtc.Value.ToString("d") : T["No end date"].Value)</td>
+                    <td>
+                        @if (!coupon.IsEnabled)
+                        {
+                            <span class="badge bg-secondary">@T["Disabled"]</span>
+                        }
+                        else if (coupon.IsRedeemable(DateTime.UtcNow))
+                        {
+                            <span class="badge bg-success">@T["Active"]</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning text-dark">@T["Not available"]</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-secondary" asp-action="Edit" asp-route-itemId="@coupon.ItemId">@T["Edit"]</a>
+                        <form asp-action="Delete" asp-route-itemId="@coupon.ItemId" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-danger" data-title="@T["Delete"]" data-message="@T["Are you sure you want to delete this coupon?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Delete"]</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.Any(coupon => coupon.IsEnabled && !coupon.MaxRedemptions.HasValue && !coupon.EndsUtc.HasValue))
+{
+    <div class="alert alert-warning" role="alert">
+        @T["One or more coupons have neither a usage limit nor an end date. A code that leaks will keep discounting until somebody notices."]
+    </div>
+}

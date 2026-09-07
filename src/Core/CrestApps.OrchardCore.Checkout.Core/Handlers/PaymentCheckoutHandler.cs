@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
 
@@ -19,33 +18,32 @@ namespace CrestApps.OrchardCore.Checkout.Core.Handlers;
 /// </summary>
 public sealed class PaymentCheckoutHandler : CheckoutHandlerBase
 {
-    /// <summary>
-    /// The maximum number of times completion re-verifies outstanding obligations before giving up, so a
-    /// provider that is still finalizing a charge is given a bounded window to reach a terminal state.
-    /// </summary>
-    private const int MaxCompletionAttempts = 60;
-
     private readonly ISiteService _siteService;
+    private readonly ICheckoutDiscountService _discountService;
     private readonly ICheckoutTaxService _taxService;
-    private readonly ICheckoutReconciliationService _reconciliationService;
     private readonly PaymentSessionCache _paymentSessionCache;
-    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PaymentCheckoutHandler"/> class.
+    /// </summary>
+    /// <param name="siteService">The site service used to read the checkout settings.</param>
+    /// <param name="discountService">The seam through which discounts are applied, before tax.</param>
+    /// <param name="taxService">The seam through which taxation is applied to the invoice.</param>
+    /// <param name="paymentSessionCache">The cache of short-lived payment signals cleared on completion.</param>
+    /// <param name="stringLocalizer">The string localizer used for the payment step title.</param>
     public PaymentCheckoutHandler(
         ISiteService siteService,
+        ICheckoutDiscountService discountService,
         ICheckoutTaxService taxService,
-        ICheckoutReconciliationService reconciliationService,
         PaymentSessionCache paymentSessionCache,
-        ILogger<PaymentCheckoutHandler> logger,
         IStringLocalizer<PaymentCheckoutHandler> stringLocalizer)
     {
         _siteService = siteService;
+        _discountService = discountService;
         _taxService = taxService;
-        _reconciliationService = reconciliationService;
         _paymentSessionCache = paymentSessionCache;
-        _logger = logger;
         S = stringLocalizer;
     }
 
@@ -137,6 +135,11 @@ public sealed class PaymentCheckoutHandler : CheckoutHandlerBase
 
         invoice.DueNow = Money.Round(invoice.DueNow, currency);
 
+        // Discounts land before tax, always. Taxing the full price and then discounting the total charges the
+        // customer tax on money they never paid, which is wrong for them and wrong on the return the site
+        // owner files.
+        await _discountService.ApplyDiscountsAsync(invoice, context.Flow);
+
         // Taxation is authoritative. When the Taxation feature is disabled this is a no-op that sets the
         // grand total to the amount due now; otherwise it determines the tax, records the tax lines, folds
         // exclusive tax into the up-front charge, and captures an immutable snapshot on the invoice.
@@ -176,55 +179,25 @@ public sealed class PaymentCheckoutHandler : CheckoutHandlerBase
     }
 
     /// <inheritdoc/>
-    public override async Task CompletingAsync(CheckoutFlowCompletingContext context)
+    public override Task CompletingAsync(CheckoutFlowCompletingContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (!context.Flow.Session.TryGet<CheckoutInvoice>(out var invoice))
+        // Settlement is the engine's responsibility: it verifies every obligation against the provider's own
+        // API before any handler runs, so by the time this executes the money is already confirmed. This
+        // handler only asserts the invariant it owns — that a paid checkout has the invoice it was paid
+        // against — which is what receipts, tax records, and reporting are later built from.
+        if (!context.Flow.Session.TryGet<CheckoutInvoice>(out _))
         {
             throw new CheckoutPaymentException("Unable to find a checkout invoice for the session.");
         }
 
-        if (context.Flow.Session is not CheckoutSession session)
+        if (context.Flow.Session is not CheckoutSession)
         {
             throw new CheckoutPaymentException("The checkout session cannot be reconciled.");
         }
 
-        var expectedObligations = CheckoutObligations.GetExpectedObligationIds(invoice);
-
-        // Reconcile against the providers' authoritative APIs. A provider may still be finalizing a charge,
-        // so outstanding obligations are re-verified for a bounded window. A charge the provider reports as
-        // failed aborts immediately; a cached notification alone never settles anything.
-        var attemptCount = 0;
-
-        while (true)
-        {
-            var result = await _reconciliationService.ReconcileAsync(session, expectedObligations);
-
-            if (result.IsFullySettled)
-            {
-                return;
-            }
-
-            if (result.FailedObligationIds.Count > 0)
-            {
-                throw new CheckoutPaymentException(
-                    $"The checkout could not be completed because {result.FailedObligationIds.Count} payment obligation(s) failed at the provider.");
-            }
-
-            if (attemptCount++ >= MaxCompletionAttempts)
-            {
-                throw new CheckoutPaymentException(
-                    $"The checkout could not be completed because {result.OutstandingObligationIds.Count} payment obligation(s) were not confirmed by the provider in time.");
-            }
-
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug("Waiting 1 second before re-verifying {Outstanding} outstanding checkout obligation(s), attempt {AttemptCount}.", result.OutstandingObligationIds.Count, attemptCount);
-            }
-
-            await Task.Delay(1_000);
-        }
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc/>

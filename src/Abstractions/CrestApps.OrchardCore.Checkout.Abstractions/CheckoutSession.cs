@@ -76,12 +76,21 @@ public sealed class CheckoutSession : Entity, ICheckoutFlowSession
     public string CurrentStep { get; set; }
 
     /// <summary>
-    /// The client IP address captured for anonymous sessions, used to guard session ownership.
+    /// The client IP address captured for anonymous sessions. It is recorded for audit only and must never
+    /// be used to decide who may resume a session: everyone behind one router shares it.
     /// </summary>
     public string IPAddress { get; set; }
 
     /// <summary>
-    /// The user agent captured for anonymous sessions, used to guard session ownership.
+    /// The user agent captured for anonymous sessions. It is recorded for audit only and must never be used
+    /// to decide who may resume a session: it is neither secret nor unique.
     /// </summary>
     public string AgentInfo { get; set; }
+
+    /// <summary>
+    /// The SHA-256 hash of the ownership token issued to the guest who started this session. Only that
+    /// browser holds the token, so it is what actually proves ownership. Only the hash is stored, so a
+    /// leaked database does not hand an attacker the ability to resume live checkouts.
+    /// </summary>
+    public string GuestTokenHash { get; set; }
 }

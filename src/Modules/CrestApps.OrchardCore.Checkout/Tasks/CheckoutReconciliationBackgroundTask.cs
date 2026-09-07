@@ -43,8 +43,7 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var attemptStore = serviceProvider.GetRequiredService<IPaymentAttemptStore>();
-        var sessionStore = serviceProvider.GetRequiredService<ICheckoutSessionStore>();
-        var reconciliationService = serviceProvider.GetRequiredService<ICheckoutReconciliationService>();
+        var engine = serviceProvider.GetRequiredService<ICheckoutEngine>();
         var logger = serviceProvider.GetRequiredService<ILogger<CheckoutReconciliationBackgroundTask>>();
 
         var olderThanUtc = _clock.UtcNow - _minimumAge;
@@ -62,19 +61,19 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
                 break;
             }
 
-            var session = await sessionStore.GetAsync(sessionId, cancellationToken);
-
-            if (session == null)
-            {
-                continue;
-            }
-
             try
             {
-                // The reconciliation service derives the obligations from the durable attempts on the
-                // session, so an empty expected set is sufficient here.
-                await reconciliationService.ReconcileAsync(session, [], cancellationToken);
-                await sessionStore.SaveAsync(session, cancellationToken);
+                // Completing rather than merely reconciling is what makes this a recovery path instead of a
+                // bookkeeping job. A customer who paid and then closed the browser has a settled charge and an
+                // unfulfilled purchase; verifying the attempt without running completion would leave it that
+                // way forever. The engine is idempotent, so a session the customer finished in the meantime is
+                // reported as already completed and nothing runs twice.
+                var result = await engine.TryCompleteAsync(sessionId, cancellationToken);
+
+                if (result.Status == CheckoutCompletionStatus.Completed && logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Checkout session '{SessionId}' was completed by the reconciliation sweep after the customer left the payment flow.", sessionId);
+                }
             }
             catch (Exception exception)
             {

@@ -26,7 +26,13 @@ Pay Later records an offline commitment instead of moving money through a proces
 
 This makes Pay Later suitable for manual/deferred billing, invoicing, purchase orders, or trials that are confirmed without an immediate card charge.
 
+On the checkout payment step Pay Later contributes its own panel explaining what the customer is agreeing to. It collects nothing, but it is still a display driver rather than a special case in the checkout page, which is what keeps that page provider-agnostic.
+
 ## Tracking outstanding balances
+
+:::note Applies to checkout purchases
+Balance tracking runs on the [Checkout](checkout) framework's completion pipeline, so it applies to any purchase made through the public checkout — including settling an existing balance. A **Pay Later subscription bought through the legacy [Subscriptions](subscriptions) signup flow does not yet create a transaction**, because that flow still records commitments through its own pipeline. A subscription bought through the public checkout does.
+:::
 
 Because Pay Later never moves money at a gateway, every succeeded Pay Later payment leaves a balance the customer still owes. Pay Later records that balance in the provider-agnostic [Transactions](transactions) ledger when the checkout completes, so an outstanding Pay Later commitment is a first-class, trackable obligation:
 
@@ -35,6 +41,14 @@ Because Pay Later never moves money at a gateway, every succeeded Pay Later paym
 - The [Transactions](transactions) reminder pipeline chases unpaid Pay Later balances automatically on the configured cadence, through the notification channel each user prefers.
 
 Recording is **idempotent per obligation**, so a checkout that completes more than once never duplicates the debt, and settlement checkouts (paying an existing transaction) never create a new balance.
+
+### Recurring commitments
+
+Pay Later can back a subscription as well as a one-off purchase. There is no gateway keeping the schedule, so the ledger carries it: a recurring commitment records the billing cycle it covers, when that period ends, which cycle number it is, and how many cycles the customer agreed to.
+
+A sweep runs every thirty minutes and invoices the next period once the current one has ended, copying the amount and the tax forward rather than re-rating the agreement with today's rules. Without it a recurring Pay Later commitment would be invoiced exactly once and then quietly stop, leaving the customer with what they subscribed to and the site owner with nothing to chase.
+
+Each cycle is created exactly once. The sweep takes a lock on the one commitment it advances, marks the cycle it came from as spawned before committing, and gives the new period its own obligation id, so a retry, a second node, or a restart cannot invoice the same period twice. A cancelled agreement, and one that has billed every cycle it was sold for, stop producing new periods.
 
 ### Configuring the payment term
 

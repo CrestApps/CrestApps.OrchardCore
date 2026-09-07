@@ -1,0 +1,94 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@model RefundsAdminIndexViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Refunds"])</h1></zone>
+
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col-auto">
+                    <select asp-for="Options.Status" asp-items="Model.Options.Statuses" class="form-select"></select>
+                </div>
+                <div class="col-auto">
+                    <select asp-for="Options.ProviderKey" asp-items="Model.Options.Providers" class="form-select"></select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+                        <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@T["Filter"]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Refunds.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Updated"]</th>
+                    <th scope="col">@T["Method"]</th>
+                    <th scope="col" class="text-end">@T["Refunded"]</th>
+                    <th scope="col" class="text-end">@T["Tax"]</th>
+                    <th scope="col">@T["Status"]</th>
+                    <th scope="col">@T["Reason"]</th>
+                    <th scope="col" class="text-end">@T["Actions"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var refund in Model.Refunds)
+                {
+                    <tr>
+                        <td>@refund.UpdatedUtc.ToString("g")</td>
+                        <td>@refund.ProviderKey</td>
+                        <td class="text-end">@refund.Currency @refund.RefundGrossAmount.ToString("0.00")</td>
+                        <td class="text-end">@refund.Currency @refund.RefundTaxAmount.ToString("0.00")</td>
+                        <td>
+                            @switch (refund.Status)
+                            {
+                                case RefundStatus.Succeeded:
+                                    <span class="badge bg-success">@refund.Status</span>
+                                    break;
+                                case RefundStatus.Failed:
+                                case RefundStatus.Canceled:
+                                    <span class="badge bg-danger">@refund.Status</span>
+                                    break;
+                                case RefundStatus.PendingManualReview:
+                                    <span class="badge bg-warning text-dark">@T["Needs manual settlement"]</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-secondary">@refund.Status</span>
+                                    break;
+                            }
+                        </td>
+                        <td>
+                            <span class="text-muted small">@(refund.FailureReason ?? refund.Reason)</span>
+                        </td>
+                        <td class="text-end">
+                            @if (refund.Status == RefundStatus.PendingManualReview)
+                            {
+                                <form asp-action="Resolve" asp-route-itemId="@refund.ItemId" method="post" class="d-inline-flex gap-1">
+                                    <input type="text" name="reference" class="form-control form-control-sm" placeholder="@T["Reference"]" />
+                                    <button type="submit" class="btn btn-sm btn-secondary text-nowrap">@T["Mark settled"]</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["<strong>Nothing here!</strong> There are no refunds that match the current filter."]
+    </div>
+}
+
+@await DisplayAsync(Model.Pager)

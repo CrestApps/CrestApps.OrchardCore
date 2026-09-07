@@ -8,6 +8,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 using YesSql.Services;
 
@@ -27,6 +28,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
     private readonly ISiteService _siteService;
     private readonly ISubscriptionTaxService _subscriptionTaxService;
     private readonly IProductSnapshotResolver _snapshotResolver;
+    private readonly IClock _clock;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -38,6 +40,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
     /// <param name="siteService">The site service used to read subscription settings.</param>
     /// <param name="subscriptionTaxService">The service that applies tax to the subscription invoice.</param>
     /// <param name="snapshotResolver">The resolver that projects the subscription product into a sellable snapshot to read its product-owned currency.</param>
+    /// <param name="clock">The clock used to stamp recorded payments that carry no gateway date.</param>
     /// <param name="logger">The logger used to record delayed payment confirmation attempts.</param>
     /// <param name="stringLocalizer">The localizer used for subscription flow step text.</param>
     public PaymentSubscriptionHandler(
@@ -45,6 +48,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         ISiteService siteService,
         ISubscriptionTaxService subscriptionTaxService,
         IProductSnapshotResolver snapshotResolver,
+        IClock clock,
         ILogger<PaymentSubscriptionHandler> logger,
         IStringLocalizer<PaymentSubscriptionHandler> stringLocalizer)
     {
@@ -52,6 +56,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
         _siteService = siteService;
         _subscriptionTaxService = subscriptionTaxService;
         _snapshotResolver = snapshotResolver;
+        _clock = clock;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -302,6 +307,10 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                         GatewayId = initialPaymentInfo.GatewayId,
                         GatewayMode = initialPaymentInfo.GatewayMode,
 
+                        // Keep the date the gateway actually collected the payment rather than the moment the
+                        // flow happened to complete, so reports and receipts show the collection date.
+                        CreatedUtc = initialPaymentInfo.CreatedUtc ?? _clock.UtcNow,
+
                         // Persist the checkout tax determination with the transaction so it can be
                         // audited and reproduced without recalculating with current rules.
                         TaxAmount = invoice.TaxAmount,
@@ -336,6 +345,7 @@ public sealed class PaymentSubscriptionHandler : SubscriptionHandlerBase
                             GatewayId = payment.GatewayId,
                             GatewayMode = payment.GatewayMode,
                             Status = PaymentStatus.Succeeded,
+                            CreatedUtc = payment.CreatedUtc ?? _clock.UtcNow,
                         });
                     }
                 }

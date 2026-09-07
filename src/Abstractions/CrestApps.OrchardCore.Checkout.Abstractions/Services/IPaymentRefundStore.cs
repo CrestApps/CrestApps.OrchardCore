@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Checkout.Models;
 
 namespace CrestApps.OrchardCore.Checkout.Services;
@@ -41,4 +42,34 @@ public interface IPaymentRefundStore : ICatalog<PaymentRefund>
     /// <param name="sessionId">The checkout session id.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task<IEnumerable<PaymentRefund>> GetBySessionAsync(string sessionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Returns a page of refunds for the administration ledger.
+    /// </summary>
+    /// <param name="page">The one-based page number.</param>
+    /// <param name="pageSize">The page size.</param>
+    /// <param name="query">The filter.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<PageResult<PaymentRefund>> PageAsync(int page, int pageSize, PaymentRefundQuery query, CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// The filter applied when listing refunds in the administration ledger.
+/// </summary>
+public sealed class PaymentRefundQuery
+{
+    /// <summary>
+    /// Gets or sets the provider key to restrict the results to.
+    /// </summary>
+    public string ProviderKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status to restrict the results to.
+    /// </summary>
+    public RefundStatus? Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the checkout session to restrict the results to.
+    /// </summary>
+    public string SessionId { get; set; }
 }

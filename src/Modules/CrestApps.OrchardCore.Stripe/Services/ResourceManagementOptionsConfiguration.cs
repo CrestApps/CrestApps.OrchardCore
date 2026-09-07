@@ -24,6 +24,12 @@ public sealed class ResourceManagementOptionsConfiguration : IConfigureOptions<R
             .SetUrl("~/CrestApps.OrchardCore.Stripe/Scripts/stripe-subscription-payment-processing.min.js", "~/CrestApps.OrchardCore.Stripe/Scripts/stripe-subscription-payment-processing.js")
             .SetDependencies("stripe")
             .SetVersion("1.0.0");
+
+        _manifest
+            .DefineScript("stripe-checkout-payment")
+            .SetUrl("~/CrestApps.OrchardCore.Stripe/Scripts/stripe-checkout-payment.min.js", "~/CrestApps.OrchardCore.Stripe/Scripts/stripe-checkout-payment.js")
+            .SetDependencies("stripe")
+            .SetVersion("1.0.0");
     }
 
     /// <summary>

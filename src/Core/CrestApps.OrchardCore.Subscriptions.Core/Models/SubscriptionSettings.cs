@@ -22,4 +22,15 @@ public sealed class SubscriptionSettings
     /// Gets or sets a value indicating whether subscribers may complete checkout as guests.
     /// </summary>
     public bool AllowGuestSignup { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many days a subscriber keeps access after a renewal payment fails.
+    /// </summary>
+    /// <remarks>
+    /// A failed renewal is usually an expired card, not a customer who left. Cutting access off the same
+    /// night loses subscribers who would have paid; never cutting it off gives the plan away. The grace
+    /// window is where that judgment is made, so it is a setting rather than a constant.
+    /// </remarks>
+    [DefaultValue(7)]
+    public int DunningGraceDays { get; set; } = 7;
 }

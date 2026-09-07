@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
@@ -195,6 +196,7 @@ public class CreatePayLaterEndpointTests
             siteService.Object,
             new NullSubscriptionTaxService(),
             PaymentTestHelpers.CreateProductSnapshotResolver(),
+            new TestClock(DateTime.UtcNow),
             NullLogger<PaymentSubscriptionHandler>.Instance,
             Mock.Of<IStringLocalizer<PaymentSubscriptionHandler>>());
     }

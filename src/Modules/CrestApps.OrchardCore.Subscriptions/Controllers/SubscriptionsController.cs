@@ -313,6 +313,7 @@ public sealed class SubscriptionsController : Controller
                     GatewayId = StripeConstants.ProcessorKey,
                     GatewayMode = gatewayMode,
                     Status = PaymentStatus.Succeeded,
+                    CreatedUtc = now,
                 },
             },
         });

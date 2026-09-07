@@ -14,6 +14,14 @@ public class PaymentInfo
     public PaymentStatus Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the payment was recorded. Every payment carries its own date so a renewal is
+    /// reported, indexed, and receipted on the date it was collected rather than on the date the subscription
+    /// was created. A <see langword="null"/> value identifies a payment recorded before this field existed;
+    /// consumers fall back to the owning session's creation date for those.
+    /// </summary>
+    public DateTime? CreatedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets the payment amount.
     /// </summary>
     public decimal Amount { get; set; }

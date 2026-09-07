@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
@@ -17,8 +18,14 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// </summary>
 public sealed class CheckoutSessionStore : ICheckoutSessionStore
 {
+    private static readonly GuestSessionTokenScope _guestTokenScope = new(
+        CheckoutConstants.GuestTokenCookieName,
+        CheckoutConstants.GuestTokenProtectorPurpose,
+        TimeSpan.FromDays(30));
+
     private readonly IHttpContextAccessor _contextAccessor;
     private readonly IClientIPAddressAccessor _clientIPAddressAccessor;
+    private readonly GuestSessionTokenManager _guestTokenManager;
     private readonly IEnumerable<ICheckoutHandler> _checkoutHandlers;
     private readonly ILogger<CheckoutSessionStore> _logger;
     private readonly IClock _clock;
@@ -27,6 +34,7 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     public CheckoutSessionStore(
         IHttpContextAccessor contextAccessor,
         IClientIPAddressAccessor clientIPAddressAccessor,
+        GuestSessionTokenManager guestTokenManager,
         IEnumerable<ICheckoutHandler> checkoutHandlers,
         ILogger<CheckoutSessionStore> logger,
         IClock clock,
@@ -34,6 +42,7 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     {
         _contextAccessor = contextAccessor;
         _clientIPAddressAccessor = clientIPAddressAccessor;
+        _guestTokenManager = guestTokenManager;
         _checkoutHandlers = checkoutHandlers;
         _logger = logger;
         _clock = clock;
@@ -61,14 +70,16 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
 
         var checkoutSession = await query.Where(x => x.OwnerId == null).FirstOrDefaultAsync(cancellationToken);
 
-        var ipAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
-
-        if (string.IsNullOrWhiteSpace(checkoutSession?.IPAddress) ||
-            checkoutSession.IPAddress != ipAddress ||
-            string.IsNullOrWhiteSpace(checkoutSession?.AgentInfo) ||
-            checkoutSession.AgentInfo != _contextAccessor.HttpContext.Request.Headers.UserAgent)
+        if (checkoutSession is null)
         {
-            // IMPORTANT: The saved session may belong to another visitor. Do not return it.
+            return null;
+        }
+
+        // IMPORTANT: Only the browser that started this checkout was given the ownership token, so this is
+        // what keeps one visitor from resuming another's session and reading their contact details and
+        // amounts. The IP address and user agent on the session are audit fields and prove nothing.
+        if (!_guestTokenManager.Verify(_guestTokenScope, sessionId, checkoutSession.GuestTokenHash))
+        {
             return null;
         }
 
@@ -140,8 +151,10 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
         }
         else
         {
+            // Recorded for audit only; the token below is what decides who may resume the session.
             checkoutSession.IPAddress = (await _clientIPAddressAccessor.GetIPAddressAsync()).ToString();
             checkoutSession.AgentInfo = _contextAccessor.HttpContext.Request.Headers.UserAgent;
+            checkoutSession.GuestTokenHash = _guestTokenManager.Issue(_guestTokenScope, checkoutSession.SessionId);
         }
 
         return checkoutSession;

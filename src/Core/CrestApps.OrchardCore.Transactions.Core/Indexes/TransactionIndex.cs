@@ -81,6 +81,13 @@ public sealed class TransactionIndex : CatalogItemIndex
     public DateTime? DueUtc { get; set; }
 
     /// <summary>
+    /// The UTC time the next billing cycle of a recurring transaction becomes due, or <see langword="null"/>
+    /// when the transaction does not recur or the agreement has ended. Mapped as a real column so the
+    /// renewal sweep can find the handful of due agreements without reading the whole ledger.
+    /// </summary>
+    public DateTime? NextCycleUtc { get; set; }
+
+    /// <summary>
     /// The UTC time the transaction was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }

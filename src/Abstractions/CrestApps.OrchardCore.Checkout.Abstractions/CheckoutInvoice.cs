@@ -76,6 +76,18 @@ public sealed class CheckoutInvoice
     public CheckoutLineItem[] LineItems { get; set; }
 
     /// <summary>
+    /// The reductions applied before tax, recorded so the customer, the receipt, and a report all see the
+    /// same numbers the payment was taken for.
+    /// </summary>
+    public IList<Models.DiscountLine> Discounts { get; set; } = [];
+
+    /// <summary>
+    /// The total taken off before tax.
+    /// </summary>
+    public decimal DiscountTotal
+        => Discounts is null ? 0m : Discounts.Sum(discount => discount.Amount);
+
+    /// <summary>
     /// Groups the recurring line items by their billing interval so each interval becomes a single
     /// recurring obligation with a unified expiration date.
     /// </summary>

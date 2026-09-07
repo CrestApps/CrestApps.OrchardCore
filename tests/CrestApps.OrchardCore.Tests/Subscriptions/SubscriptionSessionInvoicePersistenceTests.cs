@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using System.Text.Json;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Payments.Models;
@@ -103,6 +104,7 @@ public class SubscriptionSessionInvoicePersistenceTests
             siteService.Object,
             new NullSubscriptionTaxService(),
             PaymentTestHelpers.CreateProductSnapshotResolver(),
+            new TestClock(DateTime.UtcNow),
             NullLogger<PaymentSubscriptionHandler>.Instance,
             Mock.Of<IStringLocalizer<PaymentSubscriptionHandler>>());
     }

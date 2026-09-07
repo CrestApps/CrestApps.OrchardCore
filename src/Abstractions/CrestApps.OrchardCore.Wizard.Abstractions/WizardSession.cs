@@ -72,12 +72,21 @@ public sealed class WizardSession : Entity, IWizardFlowSession
     public string CurrentStep { get; set; }
 
     /// <summary>
-    /// Gets or sets the client IP address captured for anonymous sessions, used to guard session ownership.
+    /// Gets or sets the client IP address captured for anonymous sessions. It is recorded for audit only
+    /// and must never be used to decide who may resume a session: everyone behind one router shares it.
     /// </summary>
     public string IPAddress { get; set; }
 
     /// <summary>
-    /// Gets or sets the user agent captured for anonymous sessions, used to guard session ownership.
+    /// Gets or sets the user agent captured for anonymous sessions. It is recorded for audit only and must
+    /// never be used to decide who may resume a session: it is neither secret nor unique.
     /// </summary>
     public string AgentInfo { get; set; }
+
+    /// <summary>
+    /// Gets or sets the SHA-256 hash of the ownership token issued to the guest who started this session.
+    /// Only that browser holds the token, so it is what actually proves ownership. Only the hash is stored,
+    /// so a leaked database does not hand an attacker the ability to resume live sessions.
+    /// </summary>
+    public string GuestTokenHash { get; set; }
 }

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
@@ -20,7 +21,7 @@ public sealed class PaymentCheckoutHandlerTests
     public async Task ActivatedAsync_BuildsInvoiceFromBillingItems_SeparatingOneTimeAndRecurring()
     {
         // Arrange
-        var handler = CreateHandler(new StubReconciliationService());
+        var handler = CreateHandler();
 
         var session = new CheckoutSession { SessionId = "session-1", Status = CheckoutSessionStatus.Pending };
         session.Steps.Add(new CheckoutFlowStep
@@ -51,54 +52,30 @@ public sealed class PaymentCheckoutHandlerTests
         Assert.Equal(40m, invoice.GrandTotal);
     }
 
+    /// <summary>
+    /// Settlement belongs to the engine, which confirms every obligation against the provider before any
+    /// handler runs. What this handler still owns is the invariant that a completed checkout carries the
+    /// invoice it was paid against, because receipts, tax records, and reporting are all built from it.
+    /// </summary>
     [Fact]
-    public async Task CompletingAsync_ReturnsQuietly_WhenAllObligationsSettle()
+    public async Task CompletingAsync_ReturnsQuietly_WhenTheSessionCarriesItsInvoice()
     {
-        // Arrange
-        var reconciliation = new StubReconciliationService
-        {
-            Result = new CheckoutReconciliationResult { IsFullySettled = true },
-        };
-        var handler = CreateHandler(reconciliation);
+        var handler = CreateHandler();
+        var flow = new CheckoutFlow(BuildSessionWithInvoice(30m));
 
-        var session = BuildSessionWithInvoice(30m);
-        var flow = new CheckoutFlow(session);
+        var exception = await Record.ExceptionAsync(() => handler.CompletingAsync(new CheckoutFlowCompletingContext(flow)));
 
-        // Act & Assert: no exception means completion succeeded.
-        await handler.CompletingAsync(new CheckoutFlowCompletingContext(flow));
-
-        Assert.Equal(1, reconciliation.CallCount);
-    }
-
-    [Fact]
-    public async Task CompletingAsync_Throws_WhenAnObligationFailsAtProvider()
-    {
-        // Arrange: a failed obligation must abort immediately so the checkout never reports a paid record
-        // that the provider contradicts.
-        var result = new CheckoutReconciliationResult { IsFullySettled = false };
-        result.FailedObligationIds.Add(CheckoutObligations.OneTime);
-
-        var reconciliation = new StubReconciliationService { Result = result };
-        var handler = CreateHandler(reconciliation);
-
-        var session = BuildSessionWithInvoice(30m);
-        var flow = new CheckoutFlow(session);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<CheckoutPaymentException>(
-            () => handler.CompletingAsync(new CheckoutFlowCompletingContext(flow)));
+        Assert.Null(exception);
     }
 
     [Fact]
     public async Task CompletingAsync_Throws_WhenNoInvoiceExists()
     {
-        // Arrange
-        var handler = CreateHandler(new StubReconciliationService());
+        var handler = CreateHandler();
 
         var session = new CheckoutSession { SessionId = "session-1", Status = CheckoutSessionStatus.Pending };
         var flow = new CheckoutFlow(session);
 
-        // Act & Assert
         await Assert.ThrowsAsync<CheckoutPaymentException>(
             () => handler.CompletingAsync(new CheckoutFlowCompletingContext(flow)));
     }
@@ -117,7 +94,7 @@ public sealed class PaymentCheckoutHandlerTests
         return session;
     }
 
-    private static PaymentCheckoutHandler CreateHandler(ICheckoutReconciliationService reconciliationService)
+    private static PaymentCheckoutHandler CreateHandler()
     {
         var siteService = new Mock<ISiteService>();
         var site = new Mock<ISite>();
@@ -126,34 +103,19 @@ public sealed class PaymentCheckoutHandlerTests
 
         return new PaymentCheckoutHandler(
             siteService.Object,
+            new DefaultCheckoutDiscountService([], NullLogger<DefaultCheckoutDiscountService>.Instance),
             new NoTaxCheckoutTaxService(),
-            reconciliationService,
             CheckoutTestHelpers.CreatePaymentSessionCache(),
-            NullLogger<PaymentCheckoutHandler>.Instance,
             Mock.Of<IStringLocalizer<PaymentCheckoutHandler>>());
     }
 
-    private sealed class StubReconciliationService : ICheckoutReconciliationService
-    {
-        public CheckoutReconciliationResult Result { get; set; } = new() { IsFullySettled = true };
-
-        public int CallCount { get; private set; }
-
-        public Task<CheckoutReconciliationResult> ReconcileAsync(
-            CheckoutSession session,
-            IEnumerable<string> expectedObligationIds,
-            CancellationToken cancellationToken = default)
-        {
-            CallCount++;
-
-            return Task.FromResult(Result);
-        }
-    }
-
+    // A stand-in for the disabled Taxation feature: it leaves the invoice untaxed and sets the grand total to
+    // the amount due now, which is exactly what the shipped no-op implementation does.
     private sealed class NoTaxCheckoutTaxService : ICheckoutTaxService
     {
         public Task ApplyTaxAsync(CheckoutInvoice invoice, CheckoutFlow flow, CancellationToken cancellationToken = default)
         {
+            invoice.TaxAmount = 0m;
             invoice.GrandTotal = invoice.DueNow;
 
             return Task.CompletedTask;

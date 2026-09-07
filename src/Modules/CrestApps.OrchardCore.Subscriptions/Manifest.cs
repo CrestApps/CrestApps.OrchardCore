@@ -58,3 +58,17 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.Tenants",
     ]
 )]
+
+[assembly: Feature(
+    Name = "Subscriptions - Sites",
+    Id = SubscriptionConstants.Features.Tenants,
+    Description = "Sells Orchard Core sites through the public checkout, creating each one from a durable job that survives a restart and retries on failure.",
+    Category = "Subscriptions",
+    DefaultTenantOnly = true,
+    Dependencies =
+    [
+        SubscriptionConstants.Features.Area,
+        // Tenants brings the setup services that create a site.
+        "OrchardCore.Tenants",
+    ]
+)]

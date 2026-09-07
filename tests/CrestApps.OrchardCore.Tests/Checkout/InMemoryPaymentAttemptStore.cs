@@ -79,4 +79,32 @@ internal sealed class InMemoryPaymentAttemptStore : IPaymentAttemptStore
         => Task.FromResult(_attempts.Values.Where(a =>
             (a.State == PaymentAttemptState.Created || a.State == PaymentAttemptState.Pending) &&
             a.UpdatedUtc < olderThanUtc));
+
+    public Task<PageResult<PaymentAttempt>> PageAsync(int page, int pageSize, PaymentAttemptQuery query, CancellationToken cancellationToken = default)
+    {
+        var matches = _attempts.Values.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(query?.ProviderKey))
+        {
+            matches = matches.Where(a => a.ProviderKey == query.ProviderKey);
+        }
+
+        if (query?.State is not null)
+        {
+            matches = matches.Where(a => a.State == query.State.Value);
+        }
+
+        if (!string.IsNullOrEmpty(query?.SessionId))
+        {
+            matches = matches.Where(a => a.SessionId == query.SessionId);
+        }
+
+        var all = matches.OrderByDescending(a => a.UpdatedUtc).ToArray();
+
+        return Task.FromResult(new PageResult<PaymentAttempt>
+        {
+            Count = all.Length,
+            Entries = all.Skip((Math.Max(page, 1) - 1) * pageSize).Take(pageSize).ToArray(),
+        });
+    }
 }

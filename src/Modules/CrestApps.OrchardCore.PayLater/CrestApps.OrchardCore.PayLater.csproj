@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Navigation.Core" />
     <PackageReference Include="OrchardCore.Settings" />

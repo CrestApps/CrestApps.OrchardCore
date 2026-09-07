@@ -1,0 +1,91 @@
+@using CrestApps.OrchardCore.Checkout.Models
+@model PaymentsAdminIndexViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["Payments"])</h1></zone>
+
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-1">
+                <div class="col-auto">
+                    <select asp-for="Options.State" asp-items="Model.Options.States" class="form-select"></select>
+                </div>
+                <div class="col-auto">
+                    <select asp-for="Options.ProviderKey" asp-items="Model.Options.Providers" class="form-select"></select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" name="submit.Filter" class="btn btn-primary text-nowrap">
+                        <i class="fa-solid fa-filter me-1" aria-hidden="true"></i>@T["Filter"]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Attempts.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Updated"]</th>
+                    <th scope="col">@T["Method"]</th>
+                    <th scope="col">@T["Obligation"]</th>
+                    <th scope="col" class="text-end">@T["Amount"]</th>
+                    <th scope="col" class="text-end">@T["Tax"]</th>
+                    <th scope="col">@T["State"]</th>
+                    <th scope="col">@T["Transaction"]</th>
+                    <th scope="col" class="text-end">@T["Actions"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var attempt in Model.Attempts)
+                {
+                    var settled = attempt.State == PaymentAttemptState.Succeeded;
+                    var amount = settled ? attempt.ConfirmedAmount : attempt.ExpectedAmount;
+                    var tax = settled ? attempt.ConfirmedTaxAmount : attempt.ExpectedTaxAmount;
+
+                    <tr>
+                        <td>@attempt.UpdatedUtc.ToString("g")</td>
+                        <td>@attempt.ProviderKey</td>
+                        <td><span class="text-muted small">@attempt.ObligationId</span></td>
+                        <td class="text-end">@attempt.Currency @amount.ToString("0.00")</td>
+                        <td class="text-end">@attempt.Currency @tax.ToString("0.00")</td>
+                        <td>
+                            @if (settled)
+                            {
+                                <span class="badge bg-success">@attempt.State</span>
+                            }
+                            else if (attempt.State == PaymentAttemptState.Failed)
+                            {
+                                <span class="badge bg-danger">@attempt.State</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">@attempt.State</span>
+                            }
+                        </td>
+                        <td><span class="text-muted small">@(attempt.TransactionId ?? attempt.ProviderReference)</span></td>
+                        <td class="text-end">
+                            @if (Model.CanRefund && settled && !string.IsNullOrEmpty(attempt.TransactionId))
+                            {
+                                <a class="btn btn-sm btn-secondary" asp-action="Refund" asp-route-itemId="@attempt.ItemId">@T["Refund"]</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="alert alert-info text-center" role="alert">
+        @T["<strong>Nothing here!</strong> There are no payments that match the current filter."]
+    </div>
+}
+
+@await DisplayAsync(Model.Pager)

@@ -38,6 +38,7 @@ public sealed class TransactionIndexProvider : IndexProvider<Transaction>
                 OutstandingAmount = CurrencyScale.Round(Math.Max(0m, transaction.TotalAmount - transaction.AmountPaid), transaction.Currency),
                 Status = transaction.Status,
                 DueUtc = transaction.DueUtc,
+                NextCycleUtc = transaction.Recurrence?.GetNextCycleUtc(),
                 CreatedUtc = transaction.CreatedUtc,
                 UpdatedUtc = transaction.UpdatedUtc,
             });

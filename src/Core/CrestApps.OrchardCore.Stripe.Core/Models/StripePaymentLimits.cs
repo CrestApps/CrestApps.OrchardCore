@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
+namespace CrestApps.OrchardCore.Stripe.Core.Models;
 
 /// <summary>
 /// Defines Stripe payment amount limits for a currency in major currency units.

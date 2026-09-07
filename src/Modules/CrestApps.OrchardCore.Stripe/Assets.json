@@ -4,5 +4,11 @@
       "Assets/js/stripe-subscription-payment-processing.js"
     ],
     "output": "wwwroot/Scripts/stripe-subscription-payment-processing.js"
+  },
+  {
+    "inputs": [
+      "Assets/js/stripe-checkout-payment.js"
+    ],
+    "output": "wwwroot/Scripts/stripe-checkout-payment.js"
   }
 ]

@@ -24,7 +24,7 @@ public sealed class RefundReconciliationPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
-    public override Task PaymentRefundedAsync(PaymentRefundedContext context)
+    public override Task PaymentRefundedAsync(PaymentRefundedContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -45,7 +45,7 @@ public sealed class RefundReconciliationPaymentEventHandler : PaymentEventBase
             IdempotencyKey = context.IdempotencyKey,
             Metadata = BuildMetadata(context.Data),
             GatewayMode = context.GatewayMode,
-        });
+        }, cancellationToken);
     }
 
     private static Dictionary<string, string> BuildMetadata(Dictionary<string, object> data)
