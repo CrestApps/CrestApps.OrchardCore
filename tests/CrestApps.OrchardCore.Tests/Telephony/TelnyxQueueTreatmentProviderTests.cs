@@ -1,6 +1,9 @@
 using System.Net;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using Moq;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -106,7 +109,46 @@ public sealed class TelnyxQueueTreatmentProviderTests
         Assert.Empty(handler.Requests);
     }
 
-    private static TelnyxQueueTreatmentProvider CreateProvider(HttpMessageHandler handler)
+    [Fact]
+    public async Task HoldMusic_FromTheCatalog_IsPlayedByItsProviderName()
+    {
+        // Arrange
+        // The queue stores the catalog identifier, which means nothing to Telnyx — the clip lives in Telnyx's own
+        // storage under the name it was given when uploaded. Passing the catalog id straight through was refused,
+        // and a refused playback is silence, so the queue looked correctly configured and the caller heard
+        // nothing at all.
+        var handler = new RecordingHttpMessageHandler().RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+        var provider = CreateProvider(handler, new Dictionary<string, VoiceMediaItem>(StringComparer.Ordinal)
+        {
+            ["media-1"] = new VoiceMediaItem { ItemId = "media-1", MediaReference = "cc-voice-media-abc123" },
+        });
+
+        // Act
+        await provider.StartHoldMusicAsync("ctrl-1", "media-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var request = Assert.Single(handler.Requests);
+        Assert.Contains("cc-voice-media-abc123", request.Body, StringComparison.Ordinal);
+        Assert.Contains("media_name", request.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task HoldMusic_ReferringToAClipThatIsNotInTheCatalog_PlaysNothing()
+    {
+        // Arrange
+        // Better to leave the caller in silence than to send the provider a name it will reject; the warning is
+        // what tells an operator their queue points at a clip that no longer exists.
+        var handler = new RecordingHttpMessageHandler().RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+        var provider = CreateProvider(handler, []);
+
+        // Act
+        await provider.StartHoldMusicAsync("ctrl-1", "media-gone", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(handler.Requests);
+    }
+
+    private static TelnyxQueueTreatmentProvider CreateProvider(HttpMessageHandler handler, Dictionary<string, VoiceMediaItem> catalog = null)
     {
         var httpClient = new HttpClient(handler)
         {
@@ -123,6 +165,11 @@ public sealed class TelnyxQueueTreatmentProviderTests
             new TelnyxApiRetryPolicy(TimeSpan.Zero),
             NullLogger<TelnyxApiClient>.Instance);
 
-        return new TelnyxQueueTreatmentProvider(apiClient, NullLogger<TelnyxQueueTreatmentProvider>.Instance);
+        var voiceMedia = new Mock<IVoiceMediaItemManager>();
+        voiceMedia.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns((string id, CancellationToken _) => ValueTask.FromResult(
+                catalog is not null && catalog.TryGetValue(id, out var item) ? item : null));
+
+        return new TelnyxQueueTreatmentProvider(apiClient, voiceMedia.Object, NullLogger<TelnyxQueueTreatmentProvider>.Instance);
     }
 }

@@ -15,6 +15,47 @@ namespace CrestApps.OrchardCore.Tests.Telephony;
 public sealed class TelnyxApiClientTests
 {
     [Fact]
+    public async Task Playback_OfAClipStoredOnTheProvider_IsSentByName_NotAsAUrl()
+    {
+        // Arrange
+        // Telnyx takes either a URL it can fetch or the name of a clip it already holds, and refuses the request
+        // if the wrong field is used. A clip uploaded through the voice media catalog lives in Telnyx's own
+        // storage and has no URL at all, so sending its name as audio_url was refused — and a refused playback is
+        // simply silence on the line, which is why a correctly configured queue played nothing.
+        var handler = new RecordingHttpMessageHandler().RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+        var client = CreateClient(handler);
+
+        // Act
+        await client.PlaybackAsync("ctrl-1", "cc-voice-media-173364804a6f479f", loop: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal("/v2/calls/ctrl-1/actions/playback_start", request.Path);
+        Assert.Contains("media_name", request.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("audio_url", request.Body, StringComparison.Ordinal);
+
+        // Hold music that plays once leaves the rest of the wait in silence.
+        Assert.Contains("infinity", request.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Playback_OfExternallyHostedAudio_IsStillSentAsAUrl()
+    {
+        // Arrange
+        // A queue may point straight at hosted audio rather than going through the catalog.
+        var handler = new RecordingHttpMessageHandler().RespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+        var client = CreateClient(handler);
+
+        // Act
+        await client.PlaybackAsync("ctrl-1", "https://example.test/hold.mp3", loop: true, TestContext.Current.CancellationToken);
+
+        // Assert
+        var request = Assert.Single(handler.Requests);
+        Assert.Contains("audio_url", request.Body, StringComparison.Ordinal);
+        Assert.DoesNotContain("media_name", request.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Answer_PostsToTheCallActionPath_WithTheBearer()
     {
         // Arrange

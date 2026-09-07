@@ -201,16 +201,28 @@ public sealed class TelnyxApiClient
     /// Starts playing audio to the caller, such as hold music.
     /// </summary>
     /// <param name="callControlId">The leg to play on.</param>
-    /// <param name="audioUrl">The audio to play.</param>
+    /// <param name="audio">The audio to play: a URL, or the name of a clip already stored on Telnyx.</param>
     /// <param name="loop">Whether to loop until stopped.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <remarks>
+    /// Telnyx takes either an <c>audio_url</c> it can fetch or a <c>media_name</c> it already holds, and it
+    /// rejects the request outright if the wrong one is used. Clips uploaded through the voice media catalog live
+    /// in Telnyx's own storage and have no URL at all, so sending their name as a URL fails — silently, from the
+    /// caller's point of view, because a refused playback simply produces no sound.
+    /// </remarks>
     public Task<TelnyxApiResult> PlaybackAsync(
         string callControlId,
-        string audioUrl,
+        string audio,
         bool loop = false,
         CancellationToken cancellationToken = default)
     {
-        var body = new Dictionary<string, object>(StringComparer.Ordinal) { ["audio_url"] = audioUrl };
+        var isUrl = Uri.TryCreate(audio, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+        var body = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            [isUrl ? "audio_url" : "media_name"] = audio,
+        };
 
         if (loop)
         {
