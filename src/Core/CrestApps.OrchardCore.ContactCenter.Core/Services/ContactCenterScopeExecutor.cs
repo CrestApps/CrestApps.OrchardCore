@@ -38,6 +38,22 @@ public sealed class ContactCenterScopeExecutor : IContactCenterScopeExecutor
     }
 
     /// <inheritdoc/>
+    public async Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        if (ShellScope.Current is null)
+        {
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            await operation(scope.ServiceProvider);
+
+            return;
+        }
+
+        await ShellScope.UsingChildScopeAsync(scope => operation(scope.ServiceProvider));
+    }
+
+    /// <inheritdoc/>
     public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
         where TContext : notnull
     {

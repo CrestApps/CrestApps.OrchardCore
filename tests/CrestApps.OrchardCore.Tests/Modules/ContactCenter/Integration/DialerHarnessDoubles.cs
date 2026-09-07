@@ -145,6 +145,9 @@ internal sealed class HarnessScopeExecutor : IContactCenterScopeExecutor
         where TContext : notnull
         => operation(_provider.GetRequiredService<TContext>());
 
+    public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+        => operation(_provider);
+
     public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
         where TContext : notnull
     {

@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Nodes;
+using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -578,6 +578,9 @@ public sealed class AgentSessionServiceTests
             where TContext : notnull
             => operation((TContext)_context);
 
+        public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+            => throw new NotSupportedException("This test does not use the service-provider scope overload.");
+
         public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
             where TContext : notnull
             => false;
@@ -601,6 +604,9 @@ public sealed class AgentSessionServiceTests
 
         public Task ExecuteAsync<TContext>(Func<TContext, Task> operation)
             where TContext : notnull
+            => throw _exception;
+
+        public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
             => throw _exception;
 
         public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
@@ -644,6 +650,9 @@ public sealed class AgentSessionServiceTests
 
             return operation((TContext)_context);
         }
+
+        public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+            => throw new NotSupportedException("This test does not use the service-provider scope overload.");
 
         public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
             where TContext : notnull

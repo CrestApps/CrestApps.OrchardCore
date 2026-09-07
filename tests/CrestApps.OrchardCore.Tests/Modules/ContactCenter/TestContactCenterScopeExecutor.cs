@@ -22,6 +22,11 @@ internal sealed class TestContactCenterScopeExecutor : IContactCenterScopeExecut
         return operation(_serviceProvider.GetRequiredService<TContext>());
     }
 
+    public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+    {
+        return operation(_serviceProvider);
+    }
+
     public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
         where TContext : notnull
     {

@@ -2677,6 +2677,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class ContactCenterScopeExecutor : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor
     {
         public ContactCenterScopeExecutor(System.IServiceProvider serviceProvider) { }
+        public System.Threading.Tasks.Task ExecuteAsync(System.Func<System.IServiceProvider, System.Threading.Tasks.Task> operation) { }
         public System.Threading.Tasks.Task ExecuteAsync<TContext>(System.Func<TContext, System.Threading.Tasks.Task> operation)
             where TContext :  notnull { }
         public bool ScheduleAfterCommit(System.Func<System.Threading.Tasks.Task> operation) { }
@@ -3246,6 +3247,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IContactCenterScopeExecutor
     {
+        System.Threading.Tasks.Task ExecuteAsync(System.Func<System.IServiceProvider, System.Threading.Tasks.Task> operation);
         System.Threading.Tasks.Task ExecuteAsync<TContext>(System.Func<TContext, System.Threading.Tasks.Task> operation)
             where TContext :  notnull;
         bool ScheduleAfterCommit(System.Func<System.Threading.Tasks.Task> operation);
