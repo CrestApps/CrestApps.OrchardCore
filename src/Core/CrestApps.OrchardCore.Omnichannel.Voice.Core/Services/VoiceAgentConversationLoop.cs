@@ -370,8 +370,17 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     {
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
-        if (activity is null || activity.Status.IsTerminal())
+        // This fires when the model's own leg ends, which is also what a handoff looks like from here: the model
+        // disconnects the moment the caller is passed to a live agent.
+        if (!VoiceCallConclusionPolicy.ShouldConclude(activity))
         {
+            if (activity is not null && activity.AiEscalated && _logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "AI voice activity '{ActivityId}' was handed to a live agent, so its outcome is left to that agent rather than concluded here.",
+                    activity.ItemId.SanitizeLogValue());
+            }
+
             return;
         }
 

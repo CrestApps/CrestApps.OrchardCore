@@ -621,6 +621,10 @@
         }
 
         var currentCall = null;
+        // Whether the current call was placed by this browser rather than bridged to it by the platform. A
+        // browser-originated call has no platform interaction behind it, so platform call state that mentions no
+        // call says nothing about it and must not end it.
+        var currentCallIsBrowserOriginated = false;
         // The active outbound call's state callback, set by originate() and cleared when that call ends.
         var outboundNotify = null;
         // An inbound leg that is ringing but has not been answered yet (a direct extension call). It is surfaced
@@ -1182,6 +1186,7 @@
                     }
 
                     currentCall = call;
+                    currentCallIsBrowserOriginated = true;
                     outboundNotify = notify;
 
                     return {
@@ -1217,6 +1222,16 @@
                 handleCallState: function (serverCall) {
                     var stateName = normalizeState(serverCall && serverCall.state);
 
+                    // A call the browser placed itself has no platform interaction behind it, so the platform
+                    // reporting no active call is silence, not an instruction to hang up. Manual dials were being
+                    // dropped the moment the customer answered: the answer refreshed the active-call list, the
+                    // list came back empty because nothing server-side had ever recorded the call, and this ran
+                    // with no call at all and tore down the live session. Only an explicit terminal state from
+                    // the platform ends a browser-originated call.
+                    if (!serverCall && currentCallIsBrowserOriginated) {
+                        return Promise.resolve();
+                    }
+
                     if (!serverCall || stateName === 'Disconnected' || stateName === 'Failed') {
                         if (currentCall) {
                             stopQualitySampler(true);
@@ -1227,6 +1242,7 @@
                             } catch (error) { /* best effort */ }
 
                             currentCall = null;
+                            currentCallIsBrowserOriginated = false;
                             outboundNotify = null;
                         }
 
@@ -1277,6 +1293,7 @@
                         } catch (error) { /* best effort */ }
 
                         currentCall = null;
+                        currentCallIsBrowserOriginated = false;
                         outboundNotify = null;
                     }
 

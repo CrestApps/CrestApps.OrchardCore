@@ -112,5 +112,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public const string NoConversationNote = "The automated call produced no conversation: nothing was said by either side.";
         public static bool HasConversation(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
         public static string ResolveNotes(bool hasConversation, string modelSummary) { }
+        public static bool ShouldConclude(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
     }
 }

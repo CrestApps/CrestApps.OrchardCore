@@ -224,6 +224,32 @@
     renderMembershipList(root, snapshot, queueSelect, campaignSelect);
     showMembershipError(root, null, null);
   }
+
+  /// Closes the dropdown the given control sits in, if it sits in one.
+  function closeContainingDropdown(element) {
+    if (!element || typeof element.closest !== 'function') {
+      return;
+    }
+    var menu = element.closest('.dropdown-menu');
+    if (!menu) {
+      return;
+    }
+    var toggle = menu.parentElement ? menu.parentElement.querySelector('[data-bs-toggle="dropdown"]') : null;
+
+    // Prefer Bootstrap's own API so its state stays consistent; fall back to the classes it toggles when it
+    // is not on the page (this project has no jQuery, so there is no third option).
+    if (toggle && window.bootstrap && window.bootstrap.Dropdown) {
+      try {
+        window.bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+        return;
+      } catch (error) {/* fall through to the class fallback */}
+    }
+    menu.classList.remove('show');
+    if (toggle) {
+      toggle.classList.remove('show');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  }
   function bindPresenceForms(root, api, client) {
     if (!client || document.__contactCenterPresenceBound) {
       return;
@@ -238,6 +264,9 @@
           return;
         }
         event.preventDefault();
+        // Preventing the submit also prevents the navigation that would otherwise have dismissed the
+        // menu, so it has to be closed here or it stays open over the state the agent just chose.
+        closeContainingDropdown(event.submitter);
         setPresenceBusy(true);
         invokeHub(client, 'SetPresence', Number(status), reason).then(function (snapshot) {
           updatePresenceUi(snapshot);

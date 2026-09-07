@@ -2,6 +2,7 @@ using System.Data.Common;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -145,6 +146,8 @@ public sealed class ActivityQueueServiceConcurrencyTests
             Mock.Of<IContactCenterEventPublisher>(),
             Mock.Of<ISession>(),
             countingExecutor,
+            Mock.Of<IQueueTreatmentProvider>(),
+            Mock.Of<IInteractionManager>(),
             CreateClock());
     }
 
@@ -171,6 +174,8 @@ public sealed class ActivityQueueServiceConcurrencyTests
             Mock.Of<IContactCenterEventPublisher>(),
             session,
             new NoRetryScopeExecutor(),
+            Mock.Of<IQueueTreatmentProvider>(),
+            Mock.Of<IInteractionManager>(),
             CreateClock());
     }
 
@@ -229,6 +234,10 @@ public sealed class ActivityQueueServiceConcurrencyTests
             throw new TestDbException();
         }
 
+        public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+            => throw new NotSupportedException("This test does not use the service-provider scope overload.");
+
+
         public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
             where TContext : notnull
         {
@@ -261,6 +270,10 @@ public sealed class ActivityQueueServiceConcurrencyTests
             return _inner.ExecuteAsync(operation);
         }
 
+        public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+            => throw new NotSupportedException("This test does not use the service-provider scope overload.");
+
+
         public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
             where TContext : notnull
         {
@@ -288,6 +301,9 @@ public sealed class ActivityQueueServiceConcurrencyTests
         {
             return operation((TRequestedContext)(object)_context);
         }
+
+        public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+            => throw new NotSupportedException("This test does not use the service-provider scope overload.");
 
         public bool ScheduleAfterCommit<TRequestedContext>(Func<TRequestedContext, Task> operation)
             where TRequestedContext : notnull

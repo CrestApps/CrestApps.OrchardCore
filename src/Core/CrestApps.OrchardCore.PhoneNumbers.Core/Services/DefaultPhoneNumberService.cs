@@ -41,6 +41,39 @@ public sealed class DefaultPhoneNumberService : IPhoneNumberService
     }
 
     /// <inheritdoc/>
+    public string FormatForDisplay(string phoneNumber, string regionCode = null)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+        {
+            return phoneNumber;
+        }
+
+        try
+        {
+            var parsed = _phoneUtil.Parse(phoneNumber, regionCode?.ToUpperInvariant());
+
+            if (!_phoneUtil.IsValidNumber(parsed))
+            {
+                return phoneNumber;
+            }
+
+            // National inside its own country, international when the number belongs somewhere else, so a foreign
+            // number still carries the country code that makes it dialable.
+            var numberRegion = _phoneUtil.GetRegionCodeForNumber(parsed);
+            var format = regionCode is not null &&
+                string.Equals(numberRegion, regionCode, StringComparison.OrdinalIgnoreCase)
+                    ? PhoneNumberFormat.NATIONAL
+                    : PhoneNumberFormat.INTERNATIONAL;
+
+            return _phoneUtil.Format(parsed, format);
+        }
+        catch (NumberParseException)
+        {
+            return phoneNumber;
+        }
+    }
+
+    /// <inheritdoc/>
     public bool IsValidNumber(string phoneNumber, string regionCode)
     {
         if (string.IsNullOrWhiteSpace(phoneNumber))

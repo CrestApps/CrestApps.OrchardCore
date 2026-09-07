@@ -218,7 +218,6 @@ public sealed class TelnyxWebhookInboxDurabilityTests
         var site = new Mock<ISite>();
         site.SetupGet(x => x.Properties).Returns(properties);
         site.Setup(x => x.GetOrCreate<TelnyxSettings>()).Returns(settings);
-        site.Setup(x => x.As<TelnyxSettings>()).Returns(settings);
 
         return site.Object;
     }

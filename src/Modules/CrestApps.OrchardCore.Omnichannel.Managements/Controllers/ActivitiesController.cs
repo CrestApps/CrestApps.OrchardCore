@@ -745,6 +745,13 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
+        // Asking for a disposition on an activity that is already finished only sets the agent up to lose their
+        // work, because the submit cannot be accepted.
+        if (IsAlreadyFinished(activity))
+        {
+            return await AlreadyFinishedAsync(returnUrl);
+        }
+
         var subject = activity.Subject;
 
         if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
@@ -787,8 +794,7 @@ public sealed class ActivitiesController : Controller
     {
         var activity = await _omnichannelActivityManager.FindByIdAsync(id);
 
-        if (activity is null ||
-            activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged)
+        if (activity is null)
         {
             return NotFound();
         }
@@ -796,6 +802,14 @@ public sealed class ActivitiesController : Controller
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.CompleteActivity, activity))
         {
             return Forbid();
+        }
+
+        // An activity that is already finished cannot be completed again, but "already done" is not "never
+        // existed": answering 404 gave the agent an error page and threw away the disposition, the notes and the
+        // scheduled actions they had just filled in, with nothing saying why.
+        if (IsAlreadyFinished(activity))
+        {
+            return await AlreadyFinishedAsync(returnUrl);
         }
 
         var subject = activity.Subject;
@@ -871,6 +885,31 @@ public sealed class ActivitiesController : Controller
         return !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
             ? returnUrl
             : null;
+    }
+
+    /// <summary>
+    /// Whether the activity has already reached an end state, so there is no outcome left to record.
+    /// </summary>
+    private static bool IsAlreadyFinished(OmnichannelActivity activity)
+        => activity.Status is ActivityStatus.Completed or ActivityStatus.Cancelled or ActivityStatus.Purged;
+
+    /// <summary>
+    /// Sends the agent back where they came from, told why the activity would not take their disposition.
+    /// </summary>
+    /// <remarks>
+    /// This happens in ordinary use rather than only through a stale link: an automated call that hands off to a
+    /// live agent concludes its own activity, so an agent who wraps up afterwards is dispositioning something the
+    /// automation has already closed.
+    /// </remarks>
+    private async Task<IActionResult> AlreadyFinishedAsync(string returnUrl)
+    {
+        await _notifier.WarningAsync(H["This activity was already completed, so your disposition was not recorded."]);
+
+        var safeReturnUrl = GetSafeReturnUrl(returnUrl);
+
+        return string.IsNullOrEmpty(safeReturnUrl)
+            ? RedirectToAction(nameof(Activities))
+            : Redirect(safeReturnUrl);
     }
 
     /// <summary>

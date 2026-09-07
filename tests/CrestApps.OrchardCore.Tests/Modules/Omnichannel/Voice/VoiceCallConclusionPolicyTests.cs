@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using Microsoft.Extensions.AI;
 
@@ -15,6 +16,62 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
 /// </remarks>
 public sealed class VoiceCallConclusionPolicyTests
 {
+    [Fact]
+    public void ACallHandedToALiveAgent_IsTheAgentsToConclude()
+    {
+        // Arrange
+        // The model's leg ends the instant the caller is passed on, which looks like a hangup from the loop. On a
+        // live call, concluding there closed and dispositioned the activity ninety seconds before the agent hung
+        // up, and the agent's own wrap-up was then refused because the work was already finished.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            Status = ActivityStatus.InProgress,
+            AiEscalated = true,
+        };
+
+        // Act & Assert
+        Assert.False(VoiceCallConclusionPolicy.ShouldConclude(activity));
+    }
+
+    [Fact]
+    public void ACallTheModelHandledAlone_IsStillItsToConclude()
+    {
+        // Arrange
+        // The contained case is the whole point of the automation, and must keep writing its own outcome.
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            Status = ActivityStatus.InProgress,
+            AiEscalated = false,
+        };
+
+        // Act & Assert
+        Assert.True(VoiceCallConclusionPolicy.ShouldConclude(activity));
+    }
+
+    [Fact]
+    public void AnActivityAlreadyFinished_IsNotConcludedTwice()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            Status = ActivityStatus.Completed,
+        };
+
+        // Act & Assert
+        Assert.False(VoiceCallConclusionPolicy.ShouldConclude(activity));
+    }
+
+    [Fact]
+    public void AnActivityThatCouldNotBeRead_IsNotConcluded()
+    {
+        // Assert
+        // Closing a call whose activity could not be loaded would write an outcome against nothing.
+        Assert.False(VoiceCallConclusionPolicy.ShouldConclude(null));
+    }
+
     [Fact]
     public void ACallNobodySpokeOn_IsRecordedAsHavingNoConversation()
     {

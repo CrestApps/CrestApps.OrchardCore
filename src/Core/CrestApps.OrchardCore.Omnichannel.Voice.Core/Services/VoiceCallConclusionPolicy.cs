@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -23,6 +24,22 @@ public static class VoiceCallConclusionPolicy
     /// The note written for a call that did have a conversation but which the review did not summarize.
     /// </summary>
     public const string CompletedWithoutSummaryNote = "Automated AI voice call completed.";
+
+    /// <summary>
+    /// Whether this call's outcome is the automation's to write.
+    /// </summary>
+    /// <remarks>
+    /// The model's leg ending is not the same as the call ending. When the caller has been handed to a live
+    /// agent the model disconnects immediately, and concluding on that would close and disposition the activity
+    /// while the agent is still talking — the outcome on record would be the model's guess rather than what the
+    /// agent did, and the agent's own wrap-up would then be refused because the work was already finished. An
+    /// escalated call belongs to the agent who took it; if nobody ever picks it up, the recovery sweeps close it.
+    /// </remarks>
+    /// <param name="activity">The activity behind the call.</param>
+    public static bool ShouldConclude(OmnichannelActivity activity)
+        => activity is not null &&
+            !activity.AiEscalated &&
+            !activity.Status.IsTerminal();
 
     /// <summary>
     /// Whether anybody actually said anything on the call.

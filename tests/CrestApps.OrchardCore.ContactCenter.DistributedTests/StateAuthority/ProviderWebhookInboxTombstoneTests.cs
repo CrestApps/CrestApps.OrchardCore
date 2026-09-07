@@ -125,6 +125,10 @@ public sealed class ProviderWebhookInboxTombstoneTests
             return operation((TContext)Context);
         }
 
+        public Task ExecuteAsync(Func<IServiceProvider, Task> operation)
+            => throw new NotSupportedException("This test does not use the service-provider scope overload.");
+
+
         public bool ScheduleAfterCommit<TContext>(Func<TContext, Task> operation)
             where TContext : notnull
         {
