@@ -1,32 +1,12 @@
-@using CrestApps.OrchardCore.Omnichannel.Core
 @using CrestApps.OrchardCore.Omnichannel.Core.Models
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
-@using CrestApps.OrchardCore.PhoneNumbers
-@using OrchardCore.ContentManagement
-@using OrchardCore.ContentManagement.Models
-@using OrchardCore.Flows.Models
-
-@inject IPhoneNumberService PhoneNumberService
 
 @model CompleteOmnichannelActivityContainer
 
 @{
     var subject = Model.Subject;
     var activity = Model.Activity;
-    var contact = Model.ContactContentItem;
-
-    // The contact is read here rather than rendered through its own Detail shape. That shape is built for a
-    // profile page: every contact method arrives as its own headed block, at heading scale, with the number
-    // unformatted. Sitting directly above the disposition form it read as a different page, so the few fields an
-    // agent actually needs mid-wrap-up are laid out with the same label/value rhythm as the form below.
-    List<ContentItem> contactMethods = null;
-
-    if (contact is not null &&
-        contact.TryGet<BagPart>(OmnichannelConstants.NamedParts.ContactMethods, out var contactMethodsBag) &&
-        contactMethodsBag.ContentItems is not null)
-    {
-        contactMethods = contactMethodsBag.ContentItems;
-    }
+    var contact = Model.Contact;
 }
 
 @if (contact is not null)
@@ -36,57 +16,7 @@
             @T["Contact information"]
         </div>
         <div class="card-body">
-            @if (!string.IsNullOrWhiteSpace(contact.DisplayText))
-            {
-                <div class="ocat-wrapper">
-                    <label class="ocat-label">@T["Name"]</label>
-                    <div class="ocat-end">
-                        @contact.DisplayText
-                    </div>
-                </div>
-            }
-
-            @if (contactMethods is not null)
-            {
-                foreach (var method in contactMethods)
-                {
-                    if (string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.PhoneNumber, StringComparison.Ordinal) &&
-                        method.TryGet<PhoneNumberInfoPart>(out var phonePart))
-                    {
-                        var number = phonePart.Number?.PhoneNumber;
-
-                        if (string.IsNullOrWhiteSpace(number))
-                        {
-                            continue;
-                        }
-
-                        var label = phonePart.Type?.Text;
-                        var extension = phonePart.Extension?.Text;
-
-                        <div class="ocat-wrapper">
-                            <label class="ocat-label">@(string.IsNullOrWhiteSpace(label) ? T["Phone"] : (object)label)</label>
-                            <div class="ocat-end">
-                                <span data-phone-dial data-phone-number="@number">@PhoneNumberService.FormatForDisplay(number)</span>
-                                @if (!string.IsNullOrWhiteSpace(extension))
-                                {
-                                    <span class="text-muted">@T["ext. {0}", extension]</span>
-                                }
-                            </div>
-                        </div>
-                    }
-                    else if (string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal) &&
-                        method.TryGet<EmailInfoPart>(out var emailPart) &&
-                        !string.IsNullOrWhiteSpace(emailPart.Email?.Text))
-                    {
-                        <div class="ocat-wrapper">
-                            <label class="ocat-label">@T["Email"]</label>
-                            <div class="ocat-end">
-                                <a href="mailto:@emailPart.Email.Text">@emailPart.Email.Text</a>
-                            </div>
-                        </div>
-                    }
-                }
-            }
+            @await DisplayAsync(contact)
         </div>
     </div>
 }
