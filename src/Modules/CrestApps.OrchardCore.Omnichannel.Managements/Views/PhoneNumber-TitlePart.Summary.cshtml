@@ -1,0 +1,41 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.PhoneNumbers
+@using OrchardCore.ContentManagement
+
+@inject IPhoneNumberService PhoneNumberService
+
+@{
+    // The number is rendered again as a field just below this, so the title is the item's name rather than a
+    // heading for the page: same weight as the surrounding text, and carrying the dial and SMS placeholder so it
+    // is actionable where the agent's eye lands first.
+    var contentItem = (ContentItem)Model.ContentItem;
+    string number = null;
+    string label = null;
+
+    if (contentItem is not null && contentItem.TryGet<PhoneNumberInfoPart>(out var phonePart))
+    {
+        number = phonePart.Number?.PhoneNumber;
+        label = phonePart.Type?.Text;
+    }
+}
+
+@* The same label/value row the phone field below uses, so the two line up and read at one weight. *@
+@if (!string.IsNullOrWhiteSpace(number))
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@(string.IsNullOrWhiteSpace(label) ? T["Phone"].Value : label)</span>
+        <div class="ocat-end d-flex align-items-center gap-2">
+            <a href="tel:@number">@PhoneNumberService.FormatForDisplay(number)</a>
+            @* Both scripts are registered by the phone field's own shape and then enhance every placeholder on
+               the page, so this gets its buttons wherever the field is rendered too -- which is everywhere the
+               number is shown in full. Where it is not, the placeholder stays empty rather than breaking. *@
+            <span class="phone-field-dial" data-phone-dial data-phone-number="@number"></span>
+        </div>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(Model.Title))
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@Model.Title</span>
+    </div>
+}
