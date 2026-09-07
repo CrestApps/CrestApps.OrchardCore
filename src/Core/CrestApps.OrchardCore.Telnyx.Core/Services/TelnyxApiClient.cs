@@ -233,6 +233,24 @@ public sealed class TelnyxApiClient
     }
 
     /// <summary>
+    /// Stops whatever is currently playing on the leg.
+    /// </summary>
+    /// <remarks>
+    /// Hold music is started with an infinite loop, so it plays until this is called. Leaving it running meant a
+    /// caller heard it over the agent who answered, and over the voicemail greeting that followed them out of the
+    /// queue.
+    /// </remarks>
+    /// <param name="callControlId">The leg to stop playback on.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    public Task<TelnyxApiResult> StopPlaybackAsync(string callControlId, CancellationToken cancellationToken = default)
+        => PostActionAsync(
+            callControlId,
+            "playback_stop",
+            new Dictionary<string, object>(StringComparer.Ordinal) { ["stop"] = "all" },
+            retryable: false,
+            cancellationToken);
+
+    /// <summary>
     /// Speaks a prompt and collects a key press.
     /// </summary>
     /// <param name="callControlId">The leg to prompt on.</param>

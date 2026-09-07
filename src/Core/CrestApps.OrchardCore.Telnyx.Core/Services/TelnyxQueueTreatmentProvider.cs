@@ -73,6 +73,19 @@ public sealed class TelnyxQueueTreatmentProvider : IQueueTreatmentProvider
     }
 
     /// <inheritdoc/>
+    public async Task StopHoldMusicAsync(string providerCallId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(providerCallId))
+        {
+            return;
+        }
+
+        var result = await _apiClient.StopPlaybackAsync(providerCallId, cancellationToken);
+
+        Report(result.Succeeded, "playback_stop", providerCallId);
+    }
+
+    /// <inheritdoc/>
     public async Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(text) || string.IsNullOrWhiteSpace(acceptKey))

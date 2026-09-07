@@ -867,6 +867,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services
         System.Threading.Tasks.Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task SpeakAsync(string providerCallId, string text, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StartHoldMusicAsync(string providerCallId, string mediaId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StopHoldMusicAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
     }
     public sealed class InboundVoiceDigitsEvent
     {

@@ -337,6 +337,15 @@ public sealed class QueueTreatmentServiceTests
 
         public List<string> Offers { get; } = [];
 
+        public List<string> StoppedHoldMusic { get; } = [];
+
+        public Task StopHoldMusicAsync(string providerCallId, CancellationToken cancellationToken = default)
+        {
+            StoppedHoldMusic.Add(providerCallId);
+
+            return Task.CompletedTask;
+        }
+
         public void ThrowOnCall(string providerCallId)
             => _failingCallId = providerCallId;
 

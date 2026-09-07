@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Moq;
@@ -13,7 +14,89 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ActivityQueueServiceTests
 {
+    private static Mock<IQueueTreatmentProvider> TreatmentProvider { get; set; }
+
+    private static Mock<IInteractionManager> InteractionManagerForDequeue { get; set; }
+
     private static readonly DateTime _now = new(2026, 1, 5, 12, 0, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public async Task LeavingTheQueue_StopsTheHoldMusic()
+    {
+        // Arrange
+        // Hold music is started on an infinite loop and nothing ever stopped it. Whoever the caller went to next
+        // was talking underneath it — an agent who answered, the voicemail greeting, the next queue in the
+        // overflow chain — and a caller whose call was torn down heard it play on into a finished call. Observed
+        // live: a caller sent to voicemail at sixty seconds was still hearing music minutes later.
+        var queueItemManager = new Mock<IQueueItemManager>();
+        var service = CreateService(queueItemManager, new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+
+        var item = new QueueItem
+        {
+            ItemId = "qi-1",
+            QueueId = "q1",
+            ActivityItemId = "act-1",
+        };
+
+        // Act
+        await service.DequeueAsync(item, QueueItemStatus.Removed, TestContext.Current.CancellationToken);
+
+        // Assert
+        TreatmentProvider.Verify(x => x.StopHoldMusicAsync("ctrl-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ACallerWhoWasNotWaiting_DoesNotHaveAnythingStopped()
+    {
+        // Arrange
+        // Only a waiting caller can have hold music playing. Issuing a stop for a reserved or assigned item would
+        // cut across whatever the agent's leg is doing.
+        var queueItemManager = new Mock<IQueueItemManager>();
+        var service = CreateService(queueItemManager, new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+
+        var item = new QueueItem
+        {
+            ItemId = "qi-1",
+            QueueId = "q1",
+            ActivityItemId = "act-1",
+        };
+
+        item.TransitionTo(QueueItemStatus.Reserved);
+        item.TransitionTo(QueueItemStatus.Assigned);
+
+        // Act
+        await service.DequeueAsync(item, QueueItemStatus.Completed, TestContext.Current.CancellationToken);
+
+        // Assert
+        TreatmentProvider.Verify(x => x.StopHoldMusicAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AProviderThatRefusesTheStop_DoesNotStrandTheCallerInTheQueue()
+    {
+        // Arrange
+        // The caller has already left; failing the dequeue over the music would put them back in a queue nobody
+        // is going to answer.
+        var queueItemManager = new Mock<IQueueItemManager>();
+        var service = CreateService(queueItemManager, new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+
+        TreatmentProvider
+            .Setup(x => x.StopHoldMusicAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("The leg has already gone."));
+
+        var item = new QueueItem
+        {
+            ItemId = "qi-1",
+            QueueId = "q1",
+            ActivityItemId = "act-1",
+        };
+
+        // Act
+        await service.DequeueAsync(item, QueueItemStatus.Removed, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(QueueItemStatus.Removed, item.Status);
+    }
 
     [Fact]
     public async Task EnqueueAsync_CapturesAssignedUserAsStickyHint()
@@ -343,6 +426,12 @@ public sealed class ActivityQueueServiceTests
         publisher ??= new Mock<IContactCenterEventPublisher>();
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
 
+        TreatmentProvider = new Mock<IQueueTreatmentProvider>();
+        InteractionManagerForDequeue = new Mock<IInteractionManager>();
+        InteractionManagerForDequeue
+            .Setup(x => x.FindByActivityIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "interaction-1", ProviderInteractionId = "ctrl-1" });
+
         return new ActivityQueueService(
             queueItemManager.Object,
             queueManager.Object,
@@ -352,6 +441,8 @@ public sealed class ActivityQueueServiceTests
             publisher.Object,
             session.Object,
             scopeExecutor.Object,
+            TreatmentProvider.Object,
+            InteractionManagerForDequeue.Object,
             clock.Object);
     }
 }

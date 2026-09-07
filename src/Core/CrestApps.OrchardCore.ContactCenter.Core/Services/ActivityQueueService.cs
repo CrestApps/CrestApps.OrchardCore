@@ -1,6 +1,7 @@
 using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.Modules;
@@ -23,6 +24,8 @@ public sealed class ActivityQueueService : IActivityQueueService
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ISession _session;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly IQueueTreatmentProvider _treatmentProvider;
+    private readonly IInteractionManager _interactionManager;
     private readonly IClock _clock;
 
     /// <summary>
@@ -46,6 +49,8 @@ public sealed class ActivityQueueService : IActivityQueueService
         IContactCenterEventPublisher publisher,
         ISession session,
         IContactCenterScopeExecutor scopeExecutor,
+        IQueueTreatmentProvider treatmentProvider,
+        IInteractionManager interactionManager,
         IClock clock)
     {
         _queueItemManager = queueItemManager;
@@ -56,6 +61,8 @@ public sealed class ActivityQueueService : IActivityQueueService
         _publisher = publisher;
         _session = session;
         _scopeExecutor = scopeExecutor;
+        _treatmentProvider = treatmentProvider;
+        _interactionManager = interactionManager;
         _clock = clock;
     }
 
@@ -172,9 +179,20 @@ public sealed class ActivityQueueService : IActivityQueueService
     {
         ArgumentNullException.ThrowIfNull(queueItem);
 
+        // Stop the hold music before the caller stops being a waiting caller. It is started on an infinite loop,
+        // and nothing else ever stopped it: whoever they went to next — an agent who answered, a voicemail
+        // greeting, the next queue in the overflow chain — was talking underneath it. A caller whose leg was torn
+        // down heard it play on into a call the system had already finished with.
+        var wasWaiting = queueItem.Status == QueueItemStatus.Waiting;
+
         queueItem.TransitionTo(status);
         queueItem.DequeuedUtc = _clock.UtcNow;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+
+        if (wasWaiting)
+        {
+            await StopHoldMusicAsync(queueItem, cancellationToken);
+        }
 
         await _publisher.PublishAsync(new InteractionEvent
         {
@@ -183,6 +201,42 @@ public sealed class ActivityQueueService : IActivityQueueService
             AggregateId = queueItem.ItemId,
             SourceComponent = ContactCenterConstants.Components.Queues,
         }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Silences the hold music on the leg of a caller who has just left the queue.
+    /// </summary>
+    /// <remarks>
+    /// Best effort on purpose. The caller has already been dequeued and whatever comes next is more important
+    /// than the music: a provider that refuses the stop, or a leg that has already gone, must not fail the
+    /// dequeue and strand the caller in the queue they have just left.
+    /// </remarks>
+    private async Task StopHoldMusicAsync(QueueItem queueItem, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(queueItem.ActivityItemId))
+        {
+            return;
+        }
+
+        try
+        {
+            var interaction = await _interactionManager.FindByActivityIdAsync(queueItem.ActivityItemId, cancellationToken);
+
+            if (interaction is null || string.IsNullOrEmpty(interaction.ProviderInteractionId))
+            {
+                return;
+            }
+
+            await _treatmentProvider.StopHoldMusicAsync(interaction.ProviderInteractionId, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // Deliberately swallowed: see the remarks above.
+        }
     }
 
     /// <inheritdoc/>

@@ -23,6 +23,17 @@ public interface IQueueTreatmentProvider
     Task StartHoldMusicAsync(string providerCallId, string mediaId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Stops whatever is playing on the waiting caller's leg.
+    /// </summary>
+    /// <remarks>
+    /// Hold music loops until something stops it, and nothing did — so a caller who left the queue kept hearing
+    /// it over whatever came next, and a caller whose call was torn down heard it play on into an empty leg.
+    /// </remarks>
+    /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task StopHoldMusicAsync(string providerCallId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Offers the caller a choice and collects a single key press.
     /// </summary>
     /// <param name="providerCallId">The provider's identifier for the caller's leg.</param>

@@ -18,6 +18,10 @@ public sealed class NoQueueTreatmentProvider : IQueueTreatmentProvider
         => Task.CompletedTask;
 
     /// <inheritdoc/>
+    public Task StopHoldMusicAsync(string providerCallId, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
+
+    /// <inheritdoc/>
     public Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, CancellationToken cancellationToken = default)
         => Task.CompletedTask;
 }
