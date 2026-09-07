@@ -1,3 +1,4 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
@@ -333,12 +334,71 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             return await CompensateAsync(compensating, cancellationToken);
         }
 
+        // A command the provider accepted, whose outcome it will not afterwards confirm, is trusted when all it
+        // does is take a call down.
+        //
+        // Pausing is right for a command that builds something — a dial or a transfer parked here can be looked
+        // at before anybody is connected twice. It is wrong for a teardown: the leg is being ended either way, so
+        // a wrongly-trusted teardown costs an already-finished call nothing, while a wrongly-paused one strands a
+        // live caller. That is what happened here — a caller sent to voicemail at sixty seconds was left listening
+        // to hold music because Telnyx offers no reconciliation and the command parked instead of completing.
+        if (IsTeardown(command.CommandType) && command.SentUtc is not null)
+        {
+            var trusted = await _stateService.StageConfirmFromReconciliationAsync(
+                commandId,
+                claim,
+                command.ProviderReference,
+                cancellationToken);
+
+            var teardownExecutor = ResolveExecutor(command);
+
+            if (teardownExecutor is not null)
+            {
+                await teardownExecutor.ProjectSuccessAsync(
+                    trusted,
+                    new ContactCenterVoiceProviderResult
+                    {
+                        Succeeded = true,
+                        ProviderCallId = trusted.ProviderReference,
+                        ProviderName = command.ProviderName,
+                    },
+                    cancellationToken);
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Provider command '{CommandId}' ({CommandType}) was accepted by '{Provider}', which cannot confirm it afterwards. It ends a call, so it is treated as done rather than left pending.",
+                    command.CommandId.SanitizeLogValue(),
+                    command.CommandType,
+                    command.ProviderName.SanitizeLogValue());
+            }
+
+            return trusted;
+        }
+
         return await _stateService.PauseAsync(
             commandId,
             claim,
             result?.Message ?? inconclusiveReason,
             cancellationToken);
     }
+
+    /// <summary>
+    /// Whether the command's only effect is to end a call.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately a short, explicit list rather than anything inferred. Everything else — dialing, answering,
+    /// transferring, holding — either creates a leg or moves a live one, and getting those wrong on an unverified
+    /// assumption is exactly what the pause exists to prevent.
+    /// </remarks>
+    /// <param name="commandType">The command type.</param>
+    private static bool IsTeardown(ProviderCommandType commandType)
+        => commandType is ProviderCommandType.Hangup
+            or ProviderCommandType.Reject
+            or ProviderCommandType.SendToVoicemail;
 
     private async Task<ProviderCommand> DispatchPendingAsync(
         ProviderCommand command,

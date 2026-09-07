@@ -385,6 +385,78 @@ public sealed class ProviderCommandProcessorTests
     }
 
     [Fact]
+    public async Task ATeardownTheProviderCannotConfirm_IsTreatedAsDoneRatherThanLeftPending()
+    {
+        // Arrange
+        // Telnyx accepts a command and offers no way to ask afterwards whether it took effect, so reconciliation
+        // parked it. That is right for a command that builds something, and wrong for one that ends a call: the
+        // leg is going away either way. A live caller sent to voicemail at sixty seconds was left listening to
+        // hold music because the command parked instead of completing.
+        var harness = CreateHarness(
+            ProviderCommandStatus.OutcomeUnknown,
+            commandType: ProviderCommandType.SendToVoicemail,
+            sentUtc: _now);
+
+        // Act
+        var command = await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotEqual(ProviderCommandStatus.Paused, command.Status);
+    }
+
+    [Theory]
+    [InlineData(ProviderCommandType.Hangup)]
+    [InlineData(ProviderCommandType.Reject)]
+    [InlineData(ProviderCommandType.SendToVoicemail)]
+    public async Task EveryCommandThatOnlyEndsACall_IsTrustedWhenItCannotBeConfirmed(ProviderCommandType commandType)
+    {
+        // Arrange
+        var harness = CreateHarness(ProviderCommandStatus.OutcomeUnknown, commandType: commandType, sentUtc: _now);
+
+        // Act
+        var command = await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotEqual(ProviderCommandStatus.Paused, command.Status);
+    }
+
+    [Theory]
+    [InlineData(ProviderCommandType.Dial)]
+    [InlineData(ProviderCommandType.Transfer)]
+    [InlineData(ProviderCommandType.Answer)]
+    public async Task ACommandThatCreatesOrMovesALeg_IsStillParkedWhenItCannotBeConfirmed(ProviderCommandType commandType)
+    {
+        // Arrange
+        // The pause exists for exactly these: assuming an unverified dial or transfer succeeded is how a customer
+        // gets called twice, or moved somewhere nobody knows about.
+        var harness = CreateHarness(ProviderCommandStatus.OutcomeUnknown, commandType: commandType, sentUtc: _now);
+
+        // Act
+        var command = await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderCommandStatus.Paused, command.Status);
+    }
+
+    [Fact]
+    public async Task ATeardownTheProviderNeverAccepted_IsStillParked()
+    {
+        // Arrange
+        // Trust is extended to a command the provider took, not to one that never reached it. Without a send
+        // there is nothing to have succeeded.
+        var harness = CreateHarness(
+            ProviderCommandStatus.OutcomeUnknown,
+            commandType: ProviderCommandType.SendToVoicemail,
+            sentUtc: null);
+
+        // Act
+        var command = await harness.Processor.DispatchAsync("command-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(ProviderCommandStatus.Paused, command.Status);
+    }
+
+    [Fact]
     public async Task DispatchAsync_WhenReconciliationIsUnsupported_PausesCommand()
     {
         // Arrange
@@ -769,14 +841,17 @@ public sealed class ProviderCommandProcessorTests
         bool supportsReconciliation = false,
         bool canDispatch = true,
         IList<IProviderCommandTypeExecutor> executorsOverride = null,
-        ITelephonyCommandExecutor commandExecutor = null)
+        ITelephonyCommandExecutor commandExecutor = null,
+        ProviderCommandType commandType = ProviderCommandType.Dial,
+        DateTime? sentUtc = null)
     {
         var command = new ProviderCommand
         {
             CommandId = "command-1",
-            CommandType = ProviderCommandType.Dial,
+            CommandType = commandType,
             ProviderName = "provider",
             Status = status,
+            SentUtc = sentUtc,
             RequestPayload = """{"ActivityId":"activity-1","InteractionId":"interaction-1","Destination":"+15551112222"}""",
             ActivityItemId = "activity-1",
             InteractionId = "interaction-1",
