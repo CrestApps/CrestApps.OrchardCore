@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Core.Http;
@@ -14,7 +15,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Telnyx.Endpoints;
 
@@ -192,27 +192,50 @@ internal static class TelnyxWebhookEndpoint
                     });
                 }
 
-                var acceptance = await inbox.AcceptAsync(new ProviderWebhookInboxDelivery
+                ProviderWebhookInboxAcceptanceResult acceptance;
+
+                try
                 {
-                    ProviderName = TelnyxConstants.ProviderTechnicalName,
-                    DeliveryId = TelnyxWebhookDelivery.GetDeliveryId(callEvent),
-                    HandlerName = TelnyxWebhookInboxHandler.HandlerTechnicalName,
-                    Payload = System.Text.Json.JsonSerializer.Serialize(callEvent, TelnyxJsonSerializerOptions.Default),
-                }, CancellationToken.None);
+                    acceptance = await inbox.AcceptAsync(new ProviderWebhookInboxDelivery
+                    {
+                        ProviderName = TelnyxConstants.ProviderTechnicalName,
+                        DeliveryId = TelnyxWebhookDelivery.GetDeliveryId(callEvent),
+                        HandlerName = TelnyxWebhookInboxHandler.HandlerTechnicalName,
+                        Payload = System.Text.Json.JsonSerializer.Serialize(callEvent, TelnyxJsonSerializerOptions.Default),
+                    }, CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    // Nothing was stored, so the delivery genuinely has to come again. Answering with a retryable
+                    // status says so in the provider's own language; letting the exception escape would answer 500
+                    // and, on a burst that is already contending for the store, add an error page to the load.
+                    logger.LogWarning(ex, "Could not durably accept a Telnyx webhook delivery. Asking the provider to redeliver it.");
+                    healthMetrics?.RecordWebhookProcessed(false);
+
+                    return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
+                }
 
                 if (acceptance.Status == ProviderWebhookInboxAcceptanceStatus.Busy)
                 {
                     return TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
                 }
 
+                // Past this point the delivery is durable and the background inbox owns finishing it, so the
+                // provider must be told it landed no matter how the immediate attempt goes. Dispatching inline is
+                // only a latency optimization: it saves waiting for the next sweep on a quiet system, and it is
+                // exactly what must be given up on a busy one. Failing the request instead would ask the provider
+                // to redeliver something already stored, and a provider that redelivers under contention makes
+                // the contention worse -- which is how one call's teardown burst turned into a cascade of 503s.
                 try
                 {
                     await inbox.DispatchAsync(acceptance.MessageId, CancellationToken.None);
                 }
-                catch (ConcurrencyException)
+                catch (Exception ex)
                 {
-                    // A concurrent worker won ownership during immediate dispatch. The delivery is already
-                    // durably accepted, so the background inbox completes it in a fresh scope.
+                    logger.LogWarning(
+                        ex,
+                        "Could not process Telnyx webhook delivery '{MessageId}' while receiving it. It stays queued for the inbox worker.",
+                        acceptance.MessageId.SanitizeLogValue());
                 }
 
                 healthMetrics?.RecordWebhookProcessed(true);
