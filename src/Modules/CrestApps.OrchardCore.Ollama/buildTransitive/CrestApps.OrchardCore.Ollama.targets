@@ -1,0 +1,21 @@
+<Project>
+
+  <!--
+    OllamaSharp ships a Roslyn source generator (OllamaSharp.SourceGenerators) that can be built
+    against a newer C# compiler than the consuming SDK provides. On an earlier .NET 10 SDK the
+    compiler then reports CS9057 and skips the generator. CS9057 is a warning by default, so
+    builds that treat warnings as errors fail on it.
+
+    Transitive analyzers and source generators reach consuming projects even when intermediate
+    dependencies exclude analyzer assets (see NuGet/Home issue 13813), and this package brings
+    OllamaSharp into the graph. Suppressing CS9057 keeps the change non breaking: on an older SDK
+    the generator could not load anyway, and on a newer SDK no CS9057 is emitted so the
+    suppression does nothing and OllamaSharp tool generation keeps working.
+
+    See https://github.com/CrestApps/CrestApps.OrchardCore/issues/640
+  -->
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);CS9057</NoWarn>
+  </PropertyGroup>
+
+</Project>

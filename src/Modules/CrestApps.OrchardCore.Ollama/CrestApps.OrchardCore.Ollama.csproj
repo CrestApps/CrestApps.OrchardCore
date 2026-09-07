@@ -31,12 +31,35 @@
 
   <ItemGroup>
     <PackageReference Include="CrestApps.Core.AI.Ollama" />
+    <PackageReference Include="OllamaSharp" ExcludeAssets="analyzers" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.AI.Core/CrestApps.OrchardCore.AI.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 
+    <Analyzer Remove="$(NuGetPackageRoot)ollamasharp/**/OllamaSharp.SourceGenerators.dll" />
+  </ItemGroup>
+
+  <!--
+    Ship a buildTransitive target to downstream consumers. Transitive source generators flow
+    into consuming projects regardless of ExcludeAssets, so this is the only reliable way to
+    keep OllamaSharp's generator from breaking consumer builds on earlier .NET 10 SDKs. It
+    suppresses the CS9057 warning (non-breaking) rather than removing the analyzer, so the
+    generator keeps working on SDKs where it is compatible.
+    See https://github.com/CrestApps/CrestApps.OrchardCore/issues/640.
+  -->
+  <ItemGroup>
+    <None Include="buildTransitive\CrestApps.OrchardCore.Ollama.targets" Pack="true" PackagePath="buildTransitive\CrestApps.OrchardCore.Ollama.targets" />
+  </ItemGroup>
+
+  <Target Name="RemoveOllamaSharpSourceGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'OllamaSharp.SourceGenerators'" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <!--
       Ensure this module directly depends on the required package so that when someone installs it, 
       they won't need to manually include the AI. 
       This guarantees the module functions correctly and resolves the feature dependency.

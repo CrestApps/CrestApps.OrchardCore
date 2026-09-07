@@ -1,4 +1,10 @@
 <Project>
+  <Target Name="RemoveIncompatibleOllamaSharpSourceGenerator" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.Filename)' == 'OllamaSharp.SourceGenerators'" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="SetComputedPackageTags" BeforeTargets="GenerateNuspec">
     <ItemGroup>
       <_ComputedPackageTag Include="CrestApps" />
