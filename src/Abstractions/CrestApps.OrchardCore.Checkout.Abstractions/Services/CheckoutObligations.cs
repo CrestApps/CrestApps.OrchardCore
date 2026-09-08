@@ -34,6 +34,29 @@ public static class CheckoutObligations
     /// amount when it is greater than zero, plus one obligation for every distinct recurring interval.
     /// </summary>
     /// <param name="invoice">The checkout invoice.</param>
+    /// <summary>
+    /// Gets the number of days before the first cycle of a recurring group is billed.
+    /// </summary>
+    /// <param name="lineItems">The line items that share one billing interval.</param>
+    /// <returns>The longest deferral among the lines, or zero when the first cycle is billed now.</returns>
+    /// <remarks>
+    /// A free trial and a delayed start are the same thing to the money: nothing is collected now, a
+    /// payment method is attached, and the gateway starts billing on a later date. The longest one wins,
+    /// because billing a customer before the trial promised on any line has run out is what produces a
+    /// chargeback.
+    /// </remarks>
+    public static int GetDeferralDays(IEnumerable<CheckoutLineItem> lineItems)
+    {
+        var days = 0;
+
+        foreach (var lineItem in lineItems ?? [])
+        {
+            days = Math.Max(days, Math.Max(lineItem.Plan?.TrialDays ?? 0, lineItem.Plan?.StartDayDelay ?? 0));
+        }
+
+        return days;
+    }
+
     public static IReadOnlyList<string> GetExpectedObligationIds(CheckoutInvoice invoice)
     {
         ArgumentNullException.ThrowIfNull(invoice);

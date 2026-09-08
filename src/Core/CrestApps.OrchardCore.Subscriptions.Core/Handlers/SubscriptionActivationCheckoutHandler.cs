@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Customers.Models;
 using OrchardCore.ContentManagement;
 using CrestApps.OrchardCore.Subscriptions.Models;
@@ -157,8 +158,12 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
         subscription.ProviderSubscriptionId = attempt.ProviderReference;
         subscription.GatewayMode = attempt.GatewayMode;
         subscription.Currency = attempt.Currency ?? session.Currency;
-        subscription.Amount = attempt.ConfirmedAmount;
-        subscription.TaxAmount = attempt.ConfirmedTaxAmount;
+
+        // What recurs is the plan's cycle amount, read from the lines. The attempt only says what was taken
+        // for the first cycle, and that is smaller whenever a first-cycle coupon applied and zero during a
+        // trial; an agreement that copied it would renew at the discount forever, or at nothing.
+        subscription.Amount = Money.Round(lineItems.Sum(lineItem => lineItem.GetLineTotal(subscription.Currency)), subscription.Currency);
+        subscription.TaxAmount = 0m;
         subscription.BillingDuration = interval.Duration <= 0 ? 1 : interval.Duration;
         subscription.DurationType = interval.Type;
 
@@ -170,14 +175,31 @@ public sealed class SubscriptionActivationCheckoutHandler : CheckoutHandlerBase
             .DefaultIfEmpty(null)
             .Min();
 
-        subscription.Status = SubscriptionStatus.Active;
-        subscription.CyclesBilled = 1;
-        subscription.CurrentPeriodStartUtc = now;
-        subscription.CurrentPeriodEndUtc = subscription.Advance(now);
+        var deferralDays = CheckoutObligations.GetDeferralDays(lineItems);
 
-        subscription.NextBillingUtc = subscription.BillingCycleLimit == 1
-            ? null
-            : subscription.CurrentPeriodEndUtc;
+        if (deferralDays > 0)
+        {
+            // Nothing was billed yet. The agreement exists, with a payment method attached, and the first
+            // real cycle starts when the deferral ends; counting the trial as a billed cycle would eat one
+            // of the cycles the customer was sold.
+            subscription.Status = SubscriptionStatus.Trialing;
+            subscription.CyclesBilled = 0;
+            subscription.CurrentPeriodStartUtc = now;
+            subscription.CurrentPeriodEndUtc = now.AddDays(deferralDays);
+            subscription.TrialEndsUtc = subscription.CurrentPeriodEndUtc;
+            subscription.NextBillingUtc = subscription.CurrentPeriodEndUtc;
+        }
+        else
+        {
+            subscription.Status = SubscriptionStatus.Active;
+            subscription.CyclesBilled = 1;
+            subscription.CurrentPeriodStartUtc = now;
+            subscription.CurrentPeriodEndUtc = subscription.Advance(now);
+
+            subscription.NextBillingUtc = subscription.BillingCycleLimit == 1
+                ? null
+                : subscription.CurrentPeriodEndUtc;
+        }
 
         subscription.CreatedUtc = now;
         subscription.UpdatedUtc = now;

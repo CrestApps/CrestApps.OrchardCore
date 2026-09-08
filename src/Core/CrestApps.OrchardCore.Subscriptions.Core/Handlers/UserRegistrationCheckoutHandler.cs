@@ -87,7 +87,7 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
             Description = S["Manage your subscription by creating an account."],
             Order = 2,
             CollectData = true,
-            Conceal = IsAuthenticated(),
+            Conceal = HasOwner(context.Session),
         });
 
         return Task.CompletedTask;
@@ -96,13 +96,15 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
     /// <inheritdoc/>
     public override Task InitializingAsync(CheckoutFlowInitializingContext context)
     {
-        // A visitor can sign in on another tab midway through a checkout, so the step's visibility is
-        // decided every time the session is loaded rather than once when it was created.
+        // Whether the step applies is a fact about the checkout, not about the request that loaded it. A
+        // provider webhook and the reconciliation sweep both complete checkouts with no signed-in user at
+        // all; deciding from the request would make them see a registration step the signed-in buyer never
+        // had, and refuse to complete a purchase that was already paid for.
         foreach (var step in context.Flow.Session.Steps)
         {
             if (string.Equals(step.Key, SubscriptionConstants.StepKey.UserRegistration, StringComparison.Ordinal))
             {
-                step.Conceal = IsAuthenticated();
+                step.Conceal = HasOwner(context.Flow.Session);
             }
         }
 
@@ -112,12 +114,14 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
     /// <inheritdoc/>
     public override async Task CompletingAsync(CheckoutFlowCompletingContext context)
     {
-        if (IsAuthenticated())
+        var session = context.Flow.Session;
+
+        // A checkout that already has an owner needs no account: the buyer was signed in when it began, or
+        // an earlier attempt at completing it already created one.
+        if (HasOwner(session))
         {
             return;
         }
-
-        var session = context.Flow.Session;
 
         if (!session.SavedSteps.TryGetPropertyValue(SubscriptionConstants.StepKey.UserRegistration, out var node))
         {
@@ -150,7 +154,9 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
             throw new InvalidOperationException("Unable to create a user account for the subscriber.");
         }
 
-        _httpContextAccessor.HttpContext.Features.Set(new CustomerCreatedDuringSubscriptionFlow
+        // Only a request can sign the new account in afterwards. A completion driven by the sweep or a
+        // webhook has no request, and the account is simply there for the customer next time they visit.
+        _httpContextAccessor.HttpContext?.Features.Set(new CustomerCreatedDuringSubscriptionFlow
         {
             User = step.User,
             Password = password,
@@ -210,6 +216,6 @@ public sealed class UserRegistrationCheckoutHandler : CheckoutHandlerBase
             .Unprotect(protectedPassword);
     }
 
-    private bool IsAuthenticated()
-        => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
+    private static bool HasOwner(ICheckoutFlowSession session)
+        => !string.IsNullOrEmpty(session?.OwnerId);
 }

@@ -151,6 +151,16 @@ Money is compared and rounded through the provider-neutral **`Money`** and **`Cu
 - `CurrencyScale.GetDecimalPlaces` knows the ISO-4217 precision of each currency, so a `JPY` amount is never multiplied by 100 (which would overcharge 100×) and a `KWD` amount is settled in thousandths.
 - `Money.AreEqual` / `Money.IsGreaterThan` compare amounts after normalizing to whole minor units, so binary floating-point drift (for example `19.99 + 10.00` not being exactly `29.99`) can never reject a valid payment or treat two different amounts as equal.
 
+## What happens when fulfillment fails
+
+Every obligation is confirmed with its provider *before* anything is fulfilled, and that confirmation is committed on its own. Only then do the completing handlers run — creating the agreement, recording the debt, queuing the site build — inside one transaction with the status change to `Completed`.
+
+If a completing handler throws, that transaction is discarded whole, so a half-fulfilled purchase is never committed. The checkout is deliberately **not** marked failed and the customer is **not** refunded: they paid, the confirmation is durable, and a fulfillment hiccup is better fixed by trying again than by returning the money. The reconciliation sweep finds the checkout by its `PaymentPending` status and retries completion; the error is logged each time so an operator sees a purchase that keeps failing.
+
+## Abandoned checkouts
+
+A checkout nobody finishes still holds whatever the provider set aside for it. After **Session lifetime** (Checkout settings, default 24 hours) the sweep calls `ICheckoutEngine.ExpireAsync`, which cancels the pending attempts at the provider and marks the checkout `Expired`. A checkout that has already collected money is never expired — it is an unfulfilled purchase, which the sweep finishes instead.
+
 ## Discounts and coupons
 
 
@@ -165,6 +175,8 @@ A provider implementing **`ICheckoutDiscountProvider`** decides only *what* to t
 The **coupon catalog** ships in the box. Manage codes under **Commerce → Coupons**: percentage or fixed amount, targeting the one-time amount or the first cycle, with an optional validity window, minimum amount, and usage limit. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
 
 Entering a code and pressing **Apply** saves it and rebuilds the invoice immediately, so the customer sees what the code actually took off *before* they agree to pay. A discount a customer cannot see until after the charge is a discount they cannot check.
+
+A first-cycle coupon reduces only what is due for the first cycle. The recurring price the gateway is told, and the amount later cycles are invoiced for, is always the plan's full cycle amount; at Stripe the reduction is expressed as a single-use coupon on the agreement.
 
 A code is consumed when the purchase **completes**, not when it is applied. That is what makes a usage limit mean something: a customer who applies a single-use code and then abandons the checkout does not burn it, so a code that leaks cannot be exhausted by people who never bought anything. Redemption takes a lock on the coupon, so two checkouts finishing at the same instant cannot both take the last one.
 

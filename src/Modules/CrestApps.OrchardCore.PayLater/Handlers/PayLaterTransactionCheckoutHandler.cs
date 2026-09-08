@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Customers.Models;
 using CrestApps.OrchardCore.PayLater.Models;
 using CrestApps.OrchardCore.PayLater.Services;
@@ -152,15 +153,25 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
             transaction.CheckoutSessionId = session.SessionId;
             transaction.ObligationId = attempt.ObligationId;
             transaction.Currency = attempt.Currency ?? session.Currency;
-            transaction.Amount = attempt.ExpectedAmount;
-            transaction.TaxAmount = attempt.ExpectedTaxAmount;
-            transaction.TotalAmount = attempt.ExpectedAmount + attempt.ExpectedTaxAmount;
+
+            var recurrence = BuildRecurrence(invoice, attempt.ObligationId, now);
+
+            // A trial or a delayed start owes nothing until it ends, so the first debt is the first real
+            // cycle: it covers the period that begins when the deferral ends, for the full cycle amount, and
+            // falls due then. Recording a zero debt now and the real one never would give the plan away.
+            var deferred = recurrence is not null && recurrence.PeriodStartUtc > now;
+
+            transaction.Amount = deferred ? recurrence.CycleAmount : attempt.ExpectedAmount;
+            transaction.TaxAmount = deferred ? recurrence.CycleTaxAmount : attempt.ExpectedTaxAmount;
+            transaction.TotalAmount = transaction.Amount + transaction.TaxAmount;
             transaction.AmountPaid = 0m;
             transaction.Status = TransactionStatus.Outstanding;
             transaction.CreatedUtc = now;
             transaction.UpdatedUtc = now;
-            transaction.DueUtc = dueUtc;
-            transaction.Recurrence = BuildRecurrence(invoice, attempt.ObligationId, now);
+            transaction.DueUtc = deferred
+                ? (settings.NetTermDays > 0 ? recurrence.PeriodStartUtc.AddDays(settings.NetTermDays) : recurrence.PeriodStartUtc)
+                : dueUtc;
+            transaction.Recurrence = recurrence;
             transaction.Events.Add(new TransactionEvent
             {
                 CreatedUtc = now,
@@ -193,12 +204,16 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
                 continue;
             }
 
+            var periodStart = now.AddDays(CheckoutObligations.GetDeferralDays(group.Value));
+
             var recurrence = new TransactionRecurrence
             {
                 BillingDuration = group.Key.Duration <= 0 ? 1 : group.Key.Duration,
                 DurationType = group.Key.Type,
-                PeriodStartUtc = now,
+                PeriodStartUtc = periodStart,
                 CycleNumber = 1,
+                CycleAmount = Money.Round(group.Value.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency)), invoice.Currency),
+                CycleTaxAmount = 0m,
 
                 // The lowest cap among the lines in the group wins: billing past any line's limit would
                 // charge for something the customer did not agree to.
@@ -209,7 +224,7 @@ public sealed class PayLaterTransactionCheckoutHandler : CheckoutHandlerBase
                     .Min(),
             };
 
-            recurrence.PeriodEndUtc = recurrence.Advance(now);
+            recurrence.PeriodEndUtc = recurrence.Advance(periodStart);
 
             return recurrence;
         }

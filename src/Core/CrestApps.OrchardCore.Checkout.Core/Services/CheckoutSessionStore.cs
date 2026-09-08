@@ -157,6 +157,20 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     }
 
     /// <inheritdoc/>
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<CheckoutSession>> GetStaleAsync(CheckoutSessionStatus status, DateTime modifiedBeforeUtc, int take, CancellationToken cancellationToken = default)
+    {
+        var sessions = await _session.Query<CheckoutSession, CheckoutSessionIndex>(x => x.Status == status && x.ModifiedUtc < modifiedBeforeUtc)
+            .OrderBy(x => x.ModifiedUtc)
+            .Take(Math.Max(1, take))
+            .ListAsync(cancellationToken);
+
+        // These are read by a background sweep, which has no request to initialize the steps for, so the
+        // handlers are not run here. The engine loads each one again, through the initializing path, before
+        // it acts on it.
+        return [.. sessions];
+    }
+
     public Task SaveAsync(CheckoutSession session, CancellationToken cancellationToken = default)
         => _session.SaveAsync(session, cancellationToken: cancellationToken);
 

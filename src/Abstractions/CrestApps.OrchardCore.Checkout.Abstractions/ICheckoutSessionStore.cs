@@ -53,5 +53,20 @@ public interface ICheckoutSessionStore
     /// </summary>
     /// <param name="session">The session to save.</param>
     /// <param name="cancellationToken">A token used to cancel the operation.</param>
+    /// <summary>
+    /// Gets checkouts in one status that have not changed since a given moment, oldest first.
+    /// </summary>
+    /// <param name="status">The status to look for.</param>
+    /// <param name="modifiedBeforeUtc">Only checkouts last modified before this moment are returned.</param>
+    /// <param name="take">The maximum number to return.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The stale checkouts.</returns>
+    /// <remarks>
+    /// This is how the sweep finds a checkout that is stuck: one waiting on a provider that never answered,
+    /// one whose fulfillment failed after its payment was confirmed, or one a customer simply walked away
+    /// from. None of those is reachable through a payment attempt alone.
+    /// </remarks>
+    Task<IReadOnlyList<CheckoutSession>> GetStaleAsync(CheckoutSessionStatus status, DateTime modifiedBeforeUtc, int take, CancellationToken cancellationToken = default);
+
     Task SaveAsync(CheckoutSession session, CancellationToken cancellationToken = default);
 }

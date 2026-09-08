@@ -200,9 +200,15 @@ public static class CreateWebhookEndpoint
                 // Stripe.net moved subscription details for an invoice under Invoice.Parent in newer API versions.
                 var subscriptionDetails = invoice.Parent?.SubscriptionDetails;
 
+                // The period comes from the subscription line when there is one: on a cycle invoice that is
+                // the period being billed, whereas the invoice's own period can straddle a proration.
+                var linePeriod = invoice.Lines?.Data?.FirstOrDefault(line => line.Period is not null)?.Period;
+
                 successContext.Subscription = new SubscriptionPaymentInfo()
                 {
                     SubscriptionId = subscriptionDetails?.SubscriptionId ?? subscriptionDetails?.Subscription?.Id,
+                    PeriodStartUtc = linePeriod?.Start ?? invoice.PeriodStart,
+                    PeriodEndUtc = linePeriod?.End ?? invoice.PeriodEnd,
                 };
 
                 if (subscriptionDetails != null)

@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Checkout.Core.Services;
+using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -42,12 +44,13 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
     {
         var subscriptionManager = serviceProvider.GetRequiredService<ISubscriptionManager>();
         var lifecycleService = serviceProvider.GetRequiredService<ISubscriptionLifecycleService>();
+        var providerResolver = serviceProvider.GetRequiredService<ICheckoutPaymentProviderResolver>();
         var clock = serviceProvider.GetRequiredService<IClock>();
 
         var now = clock.UtcNow;
 
         await ExpireLapsedAsync(subscriptionManager, lifecycleService, now, cancellationToken);
-        await CloseCompletedAsync(subscriptionManager, lifecycleService, now, cancellationToken);
+        await RenewDueAsync(subscriptionManager, lifecycleService, providerResolver, now, cancellationToken);
     }
 
     // A past-due agreement whose grace window ran out is over. Leaving it past due would give away the plan.
@@ -81,11 +84,11 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
         }
     }
 
-    // An agreement that has billed every cycle the customer agreed to is finished, even though its period
-    // has not run out yet. Closing it stops it from appearing as an open commitment forever.
-    private async Task CloseCompletedAsync(
+    // Walks every agreement whose next billing date has passed and does what its provider cannot.
+    private async Task RenewDueAsync(
         ISubscriptionManager subscriptionManager,
         ISubscriptionLifecycleService lifecycleService,
+        ICheckoutPaymentProviderResolver providerResolver,
         DateTime now,
         CancellationToken cancellationToken)
     {
@@ -100,24 +103,44 @@ public sealed class SubscriptionLifecycleBackgroundTask : IBackgroundTask
 
             var reachedLimit = subscription.BillingCycleLimit.HasValue && subscription.CyclesBilled >= subscription.BillingCycleLimit.Value;
 
-            if (!reachedLimit && !subscription.CancelAtPeriodEnd)
-            {
-                // The gateway or the provider's own renewal path bills this one. Nothing to do here.
-                continue;
-            }
-
             try
             {
-                await lifecycleService.ExpireAsync(
+                if (reachedLimit || subscription.CancelAtPeriodEnd)
+                {
+                    // An agreement that has billed every cycle the customer agreed to is finished, even
+                    // though its period has not run out yet. Closing it stops it from appearing as an open
+                    // commitment forever.
+                    await lifecycleService.ExpireAsync(
+                        subscription.ItemId,
+                        reachedLimit
+                            ? "The subscription reached the number of billing cycles it was sold for."
+                            : "The subscription was set to end at the close of the paid period.",
+                        cancellationToken);
+
+                    continue;
+                }
+
+                var provider = providerResolver.GetProvider(subscription.ProviderKey);
+
+                if (provider is not null && CheckoutPaymentMethodSelector.IsGateway(provider))
+                {
+                    // A gateway owns this schedule and reports each cycle through its webhook. Advancing it
+                    // here would claim a payment the gateway has not confirmed.
+                    continue;
+                }
+
+                // Nobody else will move an offline agreement: the provider records the next cycle's debt, and
+                // this is what records that the cycle began. Without it the agreement would sit at its first
+                // period forever while the customer kept being invoiced.
+                await lifecycleService.RecordRenewalAsync(
                     subscription.ItemId,
-                    reachedLimit
-                        ? "The subscription reached the number of billing cycles it was sold for."
-                        : "The subscription was set to end at the close of the paid period.",
+                    subscription.NextBillingUtc ?? subscription.CurrentPeriodEndUtc,
+                    new SubscriptionRenewalContext { AmountPaid = null },
                     cancellationToken);
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "Failed to close completed subscription '{SubscriptionId}'.", subscription.ItemId);
+                _logger.LogError(exception, "Failed to advance due subscription '{SubscriptionId}'.", subscription.ItemId);
             }
         }
     }

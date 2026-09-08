@@ -88,8 +88,11 @@ public sealed class CheckoutInvoiceBuilder
                     invoice.InitialPaymentAmount += lineItem.GetLineTotal(currency);
                     invoice.DueNow += lineItem.GetLineTotal(currency);
                 }
-                else if (billingItem.Plan.StartDayDelay is null or 0)
+                else if (CheckoutObligations.GetDeferralDays([lineItem]) == 0)
                 {
+                    // A trial or a delayed start collects nothing now: the agreement is established with a
+                    // payment method attached and the gateway bills on the later date. Counting it as due now
+                    // would show the customer a charge nobody is about to take.
                     invoice.FirstRecurringPaymentAmount ??= 0;
                     invoice.FirstRecurringPaymentAmount += lineItem.GetLineTotal(currency);
                     invoice.DueNow += lineItem.GetLineTotal(currency);

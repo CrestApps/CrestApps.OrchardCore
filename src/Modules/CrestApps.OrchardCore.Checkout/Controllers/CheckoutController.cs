@@ -72,9 +72,9 @@ public sealed class CheckoutController : Controller
     [RateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)]
     public async Task<IActionResult> Display(string sessionId, string step)
     {
-        // The store only returns a pending session that belongs to this caller, which is what stops one
+        // The store only returns a live session that belongs to this caller, which is what stops one
         // visitor resuming another's checkout.
-        var session = await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Pending);
+        var session = await GetLiveSessionAsync(sessionId);
 
         if (session is null)
         {
@@ -110,7 +110,7 @@ public sealed class CheckoutController : Controller
     [RateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)]
     public async Task<IActionResult> DisplayPost(CheckoutViewModel model)
     {
-        var session = await _sessionStore.GetAsync(model?.SessionId, CheckoutSessionStatus.Pending);
+        var session = await GetLiveSessionAsync(model?.SessionId);
 
         if (session is null)
         {
@@ -196,6 +196,21 @@ public sealed class CheckoutController : Controller
             SessionId = session.SessionId,
             Content = content,
         });
+    }
+
+    // A checkout is still the customer's to look at while it is waiting on its provider. Serving only
+    // "pending" sessions would send somebody whose payment is still processing to a page that does not
+    // exist, right after they were told to wait.
+    private async Task<CheckoutSession> GetLiveSessionAsync(string sessionId)
+    {
+        if (string.IsNullOrEmpty(sessionId))
+        {
+            return null;
+        }
+
+        return await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Pending)
+            ?? await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.AwaitingProvider)
+            ?? await _sessionStore.GetAsync(sessionId, CheckoutSessionStatus.PaymentPending);
     }
 
     // Turns an engine outcome into the right place to send the customer. Each outcome gets its own

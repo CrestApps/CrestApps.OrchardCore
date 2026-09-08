@@ -11,6 +11,16 @@ namespace CrestApps.OrchardCore.Checkout;
 public sealed class CheckoutSession : Entity, ICheckoutFlowSession
 {
     /// <summary>
+    /// The YesSql document identity.
+    /// </summary>
+    /// <remarks>
+    /// It matters more than it looks. YesSql recognises a document it has already stored by this property;
+    /// without one, saving a session again after a commit inserts a second document rather than updating the
+    /// first, and the checkout then exists twice — once pending and once completed.
+    /// </remarks>
+    public long Id { get; set; }
+
+    /// <summary>
     /// The unique identifier of the checkout session.
     /// </summary>
     public string SessionId { get; set; }

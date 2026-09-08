@@ -69,4 +69,12 @@ public interface ICheckoutEngine
     /// <param name="reason">The reason recorded for audit.</param>
     /// <param name="cancellationToken">A token used to cancel the operation.</param>
     Task<CheckoutCompletionResult> CancelAsync(string sessionId, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Closes a checkout the customer abandoned, releasing whatever the provider was holding for it.
+    /// </summary>
+    /// <param name="sessionId">The checkout session id.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The outcome. A checkout that already collected money is reported as pending and left for the reconciliation sweep to fulfill; it is never expired.</returns>
+    Task<CheckoutCompletionResult> ExpireAsync(string sessionId, CancellationToken cancellationToken = default);
 }

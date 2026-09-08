@@ -134,8 +134,9 @@ public sealed class TenantProvisioningCheckoutHandler : CheckoutHandlerBase
 
         if (!recipes.Any())
         {
-            // Nothing the customer can do about this. Failing the checkout refunds them rather than taking
-            // money for a site the installation cannot build.
+            // Nothing the customer can do about this. Throwing here stops the checkout from being marked
+            // complete; the payment stays confirmed and the sweep retries, so an operator who installs a
+            // recipe fixes every affected purchase at once rather than refunding them.
             throw new InvalidOperationException("No setup recipes are available, so the purchased site cannot be created.");
         }
     }

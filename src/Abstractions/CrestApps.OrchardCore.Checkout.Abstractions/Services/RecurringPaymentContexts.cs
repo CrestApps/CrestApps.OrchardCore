@@ -53,6 +53,23 @@ public sealed class BeginRecurringPaymentContext
     public int? TrialDays { get; set; }
 
     /// <summary>
+    /// The amount billed every cycle, before any discount. This is what the recurring price at the gateway
+    /// must be.
+    /// </summary>
+    /// <remarks>
+    /// It is carried separately from the attempt's expected amount on purpose. The attempt records what is
+    /// due <em>now</em>, which a first-cycle discount or a trial reduces; a gateway that priced the agreement
+    /// from it would bill the discounted amount, or nothing, on every later cycle.
+    /// </remarks>
+    public decimal CycleAmount { get; set; }
+
+    /// <summary>
+    /// The amount due for the first cycle after discounts, and zero while the agreement is deferred by a
+    /// trial or a delayed start.
+    /// </summary>
+    public decimal FirstCycleAmount { get; set; }
+
+    /// <summary>
     /// Gets or sets the absolute URL a hosted provider returns the customer to after a successful payment.
     /// </summary>
     public string ReturnUrl { get; set; }

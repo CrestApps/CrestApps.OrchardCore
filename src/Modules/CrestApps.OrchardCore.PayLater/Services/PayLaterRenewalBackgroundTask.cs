@@ -176,9 +176,11 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
         // The next period bills what the agreement agreed to, which is the same amount as the cycle it
         // follows. Tax is carried forward rather than recomputed: re-rating a settled agreement with
         // today's rules would silently change what the customer signed up for.
-        next.Amount = source.Amount;
-        next.TaxAmount = source.TaxAmount;
-        next.TotalAmount = source.TotalAmount;
+        // Priced from the agreement's cycle amount rather than the previous debt: the first cycle may have
+        // carried a one-off discount, and copying it forward would grant that discount on every cycle.
+        next.Amount = recurrence.CycleAmount > 0m ? recurrence.CycleAmount : source.Amount;
+        next.TaxAmount = recurrence.CycleAmount > 0m ? recurrence.CycleTaxAmount : source.TaxAmount;
+        next.TotalAmount = next.Amount + next.TaxAmount;
         next.AmountPaid = 0m;
         next.Status = TransactionStatus.Outstanding;
         next.CreatedUtc = now;
@@ -193,6 +195,8 @@ public sealed class PayLaterRenewalBackgroundTask : IBackgroundTask
             PeriodEndUtc = recurrence.Advance(periodStart),
             CycleNumber = recurrence.CycleNumber + 1,
             CycleLimit = recurrence.CycleLimit,
+            CycleAmount = recurrence.CycleAmount,
+            CycleTaxAmount = recurrence.CycleTaxAmount,
         };
 
         next.Events.Add(new TransactionEvent

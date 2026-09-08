@@ -113,6 +113,12 @@ A background sweep runs every thirty minutes. It expires agreements whose grace 
 
 ## Renewals and cancellation
 
+Who moves an agreement forward depends on who bills it:
+
+- **A gateway** (Stripe) owns the schedule. Each cycle it bills arrives as a payment notification for a subscription cycle, and that notification records the renewal against the period the gateway named. The notification is delivered at least once and the renewal is idempotent, so a duplicate never advances twice.
+- **An offline provider** (Pay Later) has no gateway to report anything. The lifecycle sweep advances any agreement whose provider has no gateway once its next billing date passes, and the Pay Later sweep records the debt for the new cycle. The two are independent: the debt exists whether or not the customer has paid the previous one, which is what lets an unpaid balance be chased.
+
+
 A subscription does not end when checkout completes; it renews, can fall behind, and can be cancelled. The module tracks that afterlife from the payment gateway's notifications, so the site does not have to infer a subscription's fate from payments quietly stopping.
 
 | Gateway notification | Effect on the recorded subscription |
@@ -189,7 +195,9 @@ A recurring plan can start with a free trial. Set **Free Trial Days** on the pla
 
 That is deliberate: if the site simply did not charge and promised itself to start billing later, a restart would break the promise. It is also different from delaying the start of the agreement. A trial establishes the agreement now, with a payment method attached, so a trial converts into a paying subscriber without asking them to come back and buy again.
 
-A subscription in a trial is `Trialing`, is treated as current, and grants everything the plan entitles the subscriber to. Its first cycle settles for nothing collected, which is exactly right: nothing was.
+A subscription in a trial is `Trialing`, is treated as current, and grants everything the plan entitles the subscriber to. Nothing is collected at checkout and no cycle counts as billed, so a plan sold as "three cycles with a two-week trial" still bills three cycles. The first real cycle is due the moment the trial ends: a gateway bills it and reports the payment; an offline agreement is advanced by the lifecycle sweep and the first debt is recorded for that date.
+
+A delayed start (`SubscriptionDayDelay`) is handled the same way. To the money they are the same thing: a payment method is attached now and billing begins later.
 
 ## Selling sites
 

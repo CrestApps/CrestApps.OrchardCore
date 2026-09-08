@@ -12,6 +12,12 @@ public sealed class CheckoutReconciliationResult
     public bool IsFullySettled { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether any payment attempt exists for the checkout at all. A checkout
+    /// with none was never begun, which is a different situation from one waiting on a provider.
+    /// </summary>
+    public bool HasAttempts { get; set; }
+
+    /// <summary>
     /// The obligation ids that are confirmed settled.
     /// </summary>
     public IList<string> SettledObligationIds { get; } = [];

@@ -47,6 +47,41 @@ public sealed class SubscriptionRecordPaymentEventHandler : PaymentEventBase
     }
 
     /// <inheritdoc/>
+    /// <inheritdoc/>
+    public override async Task PaymentSucceededAsync(PaymentSucceededContext context, CancellationToken cancellationToken = default)
+    {
+        // Only a renewal advances the agreement. The first payment is what the checkout created it from, and
+        // a mid-cycle update is a change of price rather than a new period.
+        if (context?.Reason != PaymentReason.SubscriptionCycle)
+        {
+            return;
+        }
+
+        var subscription = await ResolveAsync(context.Subscription?.SubscriptionId, cancellationToken);
+
+        if (subscription is null)
+        {
+            return;
+        }
+
+        // The gateway names the period it billed. Falling back to the agreement's own next billing date
+        // keeps a notification that omitted it from being ignored, at the cost of trusting the local schedule.
+        var periodStart = context.Subscription?.PeriodStartUtc
+            ?? subscription.NextBillingUtc
+            ?? subscription.CurrentPeriodEndUtc;
+
+        await _lifecycleService.RecordRenewalAsync(
+            subscription.ItemId,
+            periodStart,
+            new SubscriptionRenewalContext
+            {
+                TransactionId = context.TransactionId,
+                AmountPaid = context.AmountPaid,
+                PeriodEndUtc = context.Subscription?.PeriodEndUtc,
+            },
+            cancellationToken);
+    }
+
     public override async Task SubscriptionPaymentFailedAsync(SubscriptionPaymentFailedContext context, CancellationToken cancellationToken = default)
     {
         var subscription = await ResolveAsync(context?.SubscriptionId, cancellationToken);

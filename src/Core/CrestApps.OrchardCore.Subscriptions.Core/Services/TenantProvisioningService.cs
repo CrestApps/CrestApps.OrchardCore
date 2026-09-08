@@ -11,6 +11,7 @@ using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Setup.Services;
 using OrchardCore.Workflows.Services;
+using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Services;
 
@@ -45,6 +46,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IDistributedLock _distributedLock;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ISession _session;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -68,6 +70,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         IDataProtectionProvider dataProtectionProvider,
         IDistributedLock distributedLock,
         IServiceProvider serviceProvider,
+        ISession session,
         IClock clock,
         ILogger<TenantProvisioningService> logger)
     {
@@ -78,6 +81,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         _dataProtectionProvider = dataProtectionProvider;
         _distributedLock = distributedLock;
         _serviceProvider = serviceProvider;
+        _session = session;
         _clock = clock;
         _logger = logger;
     }
@@ -114,6 +118,11 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         job.NextAttemptUtc = _clock.UtcNow.Add(GetBackOff(job.AttemptCount));
 
         await _jobStore.UpdateAsync(job, cancellationToken);
+
+        // Committed now rather than at the end of the scope. Setting up a tenant takes long enough that the
+        // process can die in the middle of it, and a claim that only existed in memory would leave the job
+        // looking never-attempted, to be picked up again and again by every node.
+        await _session.SaveChangesAsync(cancellationToken);
 
         string failure;
 

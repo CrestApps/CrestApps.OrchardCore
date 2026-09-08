@@ -56,8 +56,10 @@ public sealed class StripeRecurringPaymentProviderTests
         Assert.Null(lineItem.PriceId);
         Assert.NotNull(lineItem.Price);
 
-        // The gross the checkout computed, tax folded in, is what the agreement bills each cycle.
+        // The plan's cycle amount is what the agreement bills each cycle, never what happened to be due for
+        // the first one.
         Assert.Equal(22m, lineItem.Price.UnitAmount);
+        Assert.Null(captured.FirstCycleDiscount);
         Assert.Equal("USD", lineItem.Price.Currency);
         Assert.Equal("month", lineItem.Price.Interval);
         Assert.Equal(1, lineItem.Price.IntervalCount);
@@ -293,6 +295,8 @@ public sealed class StripeRecurringPaymentProviderTests
             },
             Invoice = new CheckoutInvoice { Currency = "USD" },
             Interval = new BillingDurationKey(DurationType.Month, 1),
+            CycleAmount = 22m,
+            FirstCycleAmount = 22m,
             LineItems =
             [
                 new CheckoutLineItem

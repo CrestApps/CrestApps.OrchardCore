@@ -42,7 +42,7 @@ remain deliberately undone: the ledger relocation and the pricing rework (5.1 to
 | 2.8 Subscription workflow events | Done |
 | 2.9 Reports rebased on the ledger | Done, verified in the browser |
 | 3.x Tenant provisioning as a checkout consumer | Done; feature enables and migrates cleanly, provisioning itself not exercised |
-| 4.x Provider, engine-concurrency and refund tests | Done. SQLite store tests and gated end-to-end scenarios not started. |
+| 4.x Provider, engine-concurrency and refund tests | Done, plus a SQLite-backed store test for the session identity. Gated end-to-end scenarios not started; an HTTP-driven purchase was run by hand instead. |
 | 5.1–5.4 `ProductPricePart`, resolver, plan chooser, Stripe price sync removal | Partly obsolete — the sync service is deleted; the rest is **not done**, see below |
 | 5.5 Trials | Done — the plan editor now has a **Free Trial Days** field, which it previously lacked |
 | 5.6 Coupons | Done, verified in the browser end to end |
@@ -58,6 +58,17 @@ depends on it, and it can still be done as its own pass.
 rewrite the plan chooser, touching the content schema of every existing site. The goal they serve — selling
 any product at any price point — is already met by the Stripe adapter's inline pricing, so what is left is a
 nicer editing experience rather than a missing capability.
+
+### Independent review
+
+After the browser run, the implementation was reviewed against the plan as a reader rather than as its
+author. That found nine defects the browser could not: a free trial that could never complete, a
+first-cycle coupon that was display-only (and would have recurred forever at Stripe), a cycle limit that
+Stripe ignored for inline prices, gateway renewals that never reached the local agreement, offline
+agreements that were never renewed at all, webhook completion blocked for every signed-in buyer, a
+fulfillment failure that lost its own status write and was never retried, session expiry that was never
+built, and a handful of commit-ordering and ownership gaps. Each is fixed and each has a regression test;
+the 3.0.0 changelog lists them under *Fixes from an independent review*.
 
 ### Verification
 

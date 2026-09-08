@@ -48,8 +48,10 @@ public sealed class SubscriptionActivationCheckoutHandlerTests
         Assert.Equal(CustomerOwnerKind.Authenticated, subscription.OwnerKind);
         Assert.Equal("Stripe", subscription.ProviderKey);
         Assert.Equal("sub_stripe_1", subscription.ProviderSubscriptionId);
+        // The cycle amount is read from the lines, not from the first attempt: an attempt reflects a
+        // first-cycle discount or a trial, and an agreement that copied it would renew at that forever.
         Assert.Equal(20m, subscription.Amount);
-        Assert.Equal(2m, subscription.TaxAmount);
+        Assert.Equal(0m, subscription.TaxAmount);
         Assert.Equal(DurationType.Month, subscription.DurationType);
         Assert.Equal(1, subscription.BillingDuration);
         Assert.Equal(1, subscription.CyclesBilled);

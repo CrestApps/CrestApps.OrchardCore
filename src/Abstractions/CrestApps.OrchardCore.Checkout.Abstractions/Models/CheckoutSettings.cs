@@ -17,4 +17,10 @@ public sealed class CheckoutSettings
     /// </summary>
     [DefaultValue("USD")]
     public string Currency { get; set; } = "USD";
+
+    /// <summary>
+    /// Gets or sets how long an unpaid checkout is kept before it expires and whatever the provider was
+    /// holding for it is released. Defaults to one day.
+    /// </summary>
+    public int SessionLifetimeHours { get; set; } = 24;
 }

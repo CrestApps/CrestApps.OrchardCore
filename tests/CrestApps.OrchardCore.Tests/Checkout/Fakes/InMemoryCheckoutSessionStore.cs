@@ -71,6 +71,13 @@ internal sealed class InMemoryCheckoutSessionStore : ICheckoutSessionStore
         return session;
     }
 
+    public Task<IReadOnlyList<CheckoutSession>> GetStaleAsync(CheckoutSessionStatus status, DateTime modifiedBeforeUtc, int take, CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<CheckoutSession>>(_sessions.Values
+            .Where(session => session.Status == status && session.ModifiedUtc < modifiedBeforeUtc)
+            .OrderBy(session => session.ModifiedUtc)
+            .Take(take)
+            .ToArray());
+
     public Task SaveAsync(CheckoutSession session, CancellationToken cancellationToken = default)
     {
         SaveCount++;

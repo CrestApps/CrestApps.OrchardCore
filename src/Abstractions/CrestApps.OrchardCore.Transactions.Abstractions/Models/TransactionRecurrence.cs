@@ -43,6 +43,18 @@ public sealed class TransactionRecurrence
     public int? CycleLimit { get; set; }
 
     /// <summary>
+    /// Gets or sets the amount every cycle after the first is billed, before tax. The first cycle's own
+    /// transaction may carry less when a first-cycle discount or a deferral applied, and the next cycle must
+    /// not inherit that.
+    /// </summary>
+    public decimal CycleAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the tax billed with every cycle after the first.
+    /// </summary>
+    public decimal CycleTaxAmount { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the agreement has been stopped, so no further cycle is
     /// created even though the schedule would allow one.
     /// </summary>

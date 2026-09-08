@@ -116,6 +116,7 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
         }
 
         result.IsFullySettled = result.OutstandingObligationIds.Count == 0 && result.FailedObligationIds.Count == 0;
+        result.HasAttempts = attempts.Count > 0;
 
         return result;
     }

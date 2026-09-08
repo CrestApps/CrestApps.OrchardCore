@@ -60,10 +60,44 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
             };
         }
 
+        var usesInlinePrices = model.LineItems.Any(x => string.IsNullOrEmpty(x.PriceId));
+
+        if (model.BillingCycles is > 0 && usesInlinePrices)
+        {
+            // A schedule needs catalog prices, which an inline price is not, so a cycle limit on an inline
+            // agreement is expressed as the date the last cycle ends. Leaving it off would bill the customer
+            // for as long as they forgot to cancel, on a plan that was sold as a fixed number of cycles.
+            var inlinePrice = model.LineItems.First(x => x.Price is not null).Price;
+            var billingStart = model.DeferralDays is > 0 ? now.AddDays(model.DeferralDays.Value) : now;
+
+            subscriptionOptions.CancelAt = AdvanceCycles(billingStart, inlinePrice, model.BillingCycles.Value);
+        }
+
+        if (model.FirstCycleDiscount is > 0m)
+        {
+            // Stripe has no "charge less this once" on a subscription, but it has single-use coupons. One is
+            // minted for this agreement so the recurring price stays what the plan says and only the first
+            // invoice is reduced by what the checkout took off.
+            var couponService = new CouponService(_stripeClient);
+            var currency = model.LineItems.Select(x => x.Price?.Currency).FirstOrDefault(c => !string.IsNullOrEmpty(c));
+
+            var coupon = await couponService.CreateAsync(new CouponCreateOptions
+            {
+                AmountOff = StripeCurrency.ToMinorUnits(model.FirstCycleDiscount.Value, currency),
+                Currency = currency,
+                Duration = "once",
+                MaxRedemptions = 1,
+                Name = "First cycle discount",
+                Metadata = model.Metadata,
+            }, model.ToRequestOptions("_coupon"));
+
+            subscriptionOptions.Discounts = [new SubscriptionDiscountOptions { Coupon = coupon.Id }];
+        }
+
         var subscriptionService = new SubscriptionService(_stripeClient);
         var subscription = await subscriptionService.CreateAsync(subscriptionOptions, model.ToRequestOptions());
 
-        if (model.BillingCycles.HasValue && model.BillingCycles.Value > 0 && model.LineItems.All(x => !string.IsNullOrEmpty(x.PriceId)))
+        if (model.BillingCycles.HasValue && model.BillingCycles.Value > 0 && !usesInlinePrices)
         {
             var phases = model.LineItems
                 .Select(x => new SubscriptionSchedulePhaseItemOptions
@@ -196,6 +230,20 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
             model.ToRequestOptions());
 
         return ToDetails(updated);
+    }
+
+    // The moment the last of a fixed number of cycles ends, counted from when billing starts.
+    private static DateTime AdvanceCycles(DateTime from, SubscriptionInlinePrice price, int cycles)
+    {
+        var count = Math.Max(1, price.IntervalCount) * Math.Max(1, cycles);
+
+        return price.Interval switch
+        {
+            "day" => from.AddDays(count),
+            "week" => from.AddDays(count * 7),
+            "year" => from.AddYears(count),
+            _ => from.AddMonths(count),
+        };
     }
 
     private async Task<List<SubscriptionItemOptions>> BuildItemsAsync(IList<CreateSubscriptionLineItem> lineItems)

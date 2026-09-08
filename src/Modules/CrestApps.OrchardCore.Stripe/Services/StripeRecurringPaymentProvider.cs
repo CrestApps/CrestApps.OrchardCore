@@ -87,9 +87,11 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
 
             customerId ??= await CreateCustomerAsync(context, paymentMethodId);
 
-            // Stripe charges the agreement as a single gross amount per cycle, exactly like the one-time
-            // path: the checkout already folded the tax it determined into the attempt.
-            var grossAmount = attempt.ExpectedAmount + attempt.ExpectedTaxAmount;
+            // The recurring price is the plan's cycle amount, never what is due now. What is due now is smaller
+            // whenever a first-cycle coupon applied, and zero during a trial; a price taken from it would bill
+            // the discount forever, or nothing at all.
+            var grossAmount = context.CycleAmount;
+            var firstCycleDiscount = context.TrialDays is > 0 ? 0m : Math.Max(0m, context.CycleAmount - context.FirstCycleAmount);
 
             var response = await _subscriptionService.CreateAsync(new CreateSubscriptionRequest
             {
@@ -108,6 +110,8 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
                 // of this application.
                 TrialDuration = context.TrialDays,
                 TrialDurationType = DurationType.Day,
+                DeferralDays = context.TrialDays,
+                FirstCycleDiscount = firstCycleDiscount > 0m ? firstCycleDiscount : null,
                 LineItems =
                 [
                     new CreateSubscriptionLineItem

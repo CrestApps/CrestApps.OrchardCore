@@ -185,6 +185,10 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 {
                     // The provider refused. Leave the attempts that were already created in place: they are
                     // durable records of real remote resources and the reconciliation sweep resolves them.
+                    // They are committed here, inside the lock, so a retry that starts the instant this
+                    // request returns sees them and resumes instead of creating a second set.
+                    await _session.SaveChangesAsync(cancellationToken);
+
                     return PaymentBeginOutcome.Failure("The payment could not be started. Please try again or choose another payment method.");
                 }
 
@@ -273,6 +277,21 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
             if (!reconciliation.IsFullySettled)
             {
+                var pending = new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Pending };
+
+                foreach (var obligationId in reconciliation.OutstandingObligationIds)
+                {
+                    pending.OutstandingObligationIds.Add(obligationId);
+                }
+
+                // A checkout that was submitted without a payment ever being begun has nothing to wait for:
+                // it is still the customer's to act on, so it stays where it is instead of moving to a state
+                // that only a provider can move it out of.
+                if (!reconciliation.HasAttempts)
+                {
+                    return pending;
+                }
+
                 // The provider has not given an authoritative answer yet. Record that we are waiting and let
                 // the caller poll; blocking a request here would tie up a worker per customer and still time
                 // out behind a proxy long before a slow provider finished.
@@ -282,15 +301,21 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 await _sessionStore.SaveAsync(session, cancellationToken);
                 await _session.SaveChangesAsync(cancellationToken);
 
-                var pending = new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Pending };
-
-                foreach (var obligationId in reconciliation.OutstandingObligationIds)
-                {
-                    pending.OutstandingObligationIds.Add(obligationId);
-                }
-
                 return pending;
             }
+
+            // Every obligation is confirmed. That fact is committed before anything is fulfilled, so a
+            // fulfillment that fails cannot discard the provider's confirmations along with its own writes;
+            // the sweep then retries the fulfillment against attempts it can trust.
+            if (session.Status != CheckoutSessionStatus.PaymentPending)
+            {
+                session.Status = CheckoutSessionStatus.PaymentPending;
+                session.ModifiedUtc = _clock.UtcNow;
+
+                await _sessionStore.SaveAsync(session, cancellationToken);
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
 
             return await CompleteAsync(session, flow, cancellationToken);
         }
@@ -332,6 +357,58 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             await CancelAttemptsAsync(session, reason, cancellationToken);
 
             session.Status = CheckoutSessionStatus.Canceled;
+            session.ModifiedUtc = _clock.UtcNow;
+
+            await _sessionStore.SaveAsync(session, cancellationToken);
+            await _session.SaveChangesAsync(cancellationToken);
+
+            return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<CheckoutCompletionResult> ExpireAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(sessionId);
+
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+
+        if (!locked)
+        {
+            return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Pending };
+        }
+
+        await using (locker)
+        {
+            var session = await _sessionStore.GetAsync(sessionId, cancellationToken);
+
+            if (session is null)
+            {
+                return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.NotFound };
+            }
+
+            if (session.Status == CheckoutSessionStatus.Completed)
+            {
+                return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.AlreadyCompleted };
+            }
+
+            if (IsTerminal(session.Status))
+            {
+                return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Canceled };
+            }
+
+            // Money that was actually taken is never expired away. A checkout with a confirmed attempt is
+            // an unfulfilled purchase, which is the sweep's job to finish, not this method's job to close.
+            var attempts = await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken);
+
+            if (attempts.Any(attempt => attempt.State == PaymentAttemptState.Succeeded))
+            {
+                return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Pending };
+            }
+
+            await CancelAttemptsAsync(session, "The checkout expired before it was completed.", cancellationToken);
+
+            session.Status = CheckoutSessionStatus.Expired;
             session.ModifiedUtc = _clock.UtcNow;
 
             await _sessionStore.SaveAsync(session, cancellationToken);
@@ -450,6 +527,9 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         }
 
         invoice.GetRecurringGroups().TryGetValue(interval, out var lineItems);
+        lineItems ??= [];
+
+        var deferralDays = CheckoutObligations.GetDeferralDays(lineItems);
 
         return await recurringProvider.BeginRecurringAsync(
             new BeginRecurringPaymentContext
@@ -458,15 +538,16 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                 Attempt = attempt,
                 Invoice = invoice,
                 Interval = interval,
-                LineItems = lineItems ?? [],
+                LineItems = lineItems,
 
-                // The longest trial among the lines in a group wins. Billing a customer before the trial
-                // they were promised on any line has run out is the mistake that produces a chargeback.
-                TrialDays = (lineItems ?? [])
-                    .Select(lineItem => lineItem.Plan?.TrialDays)
-                    .Where(days => days > 0)
-                    .DefaultIfEmpty(null)
-                    .Max(),
+                // A trial and a delayed start both mean the gateway starts billing later. The longest one
+                // wins: billing before the trial promised on any line has run out produces a chargeback.
+                TrialDays = deferralDays > 0 ? deferralDays : null,
+
+                // The gateway prices the agreement from the full cycle amount, never from what is due now.
+                // Pricing it from the attempt would bill a first-cycle discount, or a trial's zero, forever.
+                CycleAmount = Money.Round(lineItems.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency)), invoice.Currency),
+                FirstCycleAmount = attempt.ExpectedAmount,
                 ProviderData = options.ProviderData,
                 ReturnUrl = options.ReturnUrl,
                 CancelUrl = options.CancelUrl,
@@ -533,19 +614,61 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             return (Money.Round(gross - tax, invoice.Currency), tax);
         }
 
+        var firstCycleAmounts = GetFirstCycleAmounts(invoice);
+
+        return firstCycleAmounts.TryGetValue(obligationId, out var amount)
+            ? (amount, 0m)
+            : (0m, 0m);
+    }
+
+    // Allocates what is actually due for the first cycle across the recurring obligations. The invoice's
+    // first recurring amount already has any first-cycle discount taken off, so it is shared out in
+    // proportion to each group's full cycle amount, with the last group absorbing the rounding. A group
+    // that is deferred by a trial or a delayed start is due nothing now, and so expects nothing now: the
+    // attempt is what the provider's confirmation is checked against, and a trial that verifies as zero
+    // collected must not be refused for falling short of a charge that was never due.
+    private static Dictionary<string, decimal> GetFirstCycleAmounts(CheckoutInvoice invoice)
+    {
+        var amounts = new Dictionary<string, decimal>(StringComparer.Ordinal);
+        var billable = new List<(string ObligationId, decimal CycleAmount)>();
+
         foreach (var group in invoice.GetRecurringGroups())
         {
-            if (!string.Equals(CheckoutObligations.Recurring(group.Key), obligationId, StringComparison.Ordinal))
+            var obligationId = CheckoutObligations.Recurring(group.Key);
+
+            if (CheckoutObligations.GetDeferralDays(group.Value) > 0)
             {
+                amounts[obligationId] = 0m;
+
                 continue;
             }
 
-            var total = group.Value.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency));
-
-            return (Money.Round(total, invoice.Currency), 0m);
+            billable.Add((obligationId, Money.Round(group.Value.Sum(lineItem => lineItem.GetLineTotal(invoice.Currency)), invoice.Currency)));
         }
 
-        return (0m, 0m);
+        if (billable.Count == 0)
+        {
+            return amounts;
+        }
+
+        var fullTotal = billable.Sum(entry => entry.CycleAmount);
+        var dueTotal = Money.Round(invoice.FirstRecurringPaymentAmount ?? fullTotal, invoice.Currency);
+        var allocated = 0m;
+
+        for (var i = 0; i < billable.Count; i++)
+        {
+            var (obligationId, cycleAmount) = billable[i];
+
+            var share = i == billable.Count - 1 || fullTotal <= 0m
+                ? Money.Round(dueTotal - allocated, invoice.Currency)
+                : Money.Round(dueTotal * (cycleAmount / fullTotal), invoice.Currency);
+
+            share = Math.Max(0m, Math.Min(share, cycleAmount));
+            allocated += share;
+            amounts[obligationId] = share;
+        }
+
+        return amounts;
     }
 
     // Refuses a provider that cannot express what the invoice needs, before any money moves. Discovering this
@@ -602,11 +725,24 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "A completing handler failed for checkout '{SessionId}'.", session.SessionId);
+            _logger.LogError(exception, "A completing handler failed for checkout '{SessionId}'. The payment is confirmed; the fulfillment is retried by the reconciliation sweep.", session.SessionId);
 
+            // Discarding the transaction throws away every write a completing handler made, which is the
+            // point: a half-fulfilled purchase must not be committed. Nothing written to this session after
+            // the cancel would persist either, so the checkout is deliberately left as the sweep last saw
+            // it, with its confirmed attempts intact, rather than marked failed on a write that would be
+            // lost. The customer has paid; refunding them for a fulfillment hiccup would be worse than
+            // fulfilling a little later.
             await _session.CancelAsync();
 
-            return await FailAsync(session, flow, "The purchase could not be completed.", cancellationToken);
+            // The in-memory session was mutated by handlers that have now been rolled back.
+            session.Status = CheckoutSessionStatus.PaymentPending;
+
+            return new CheckoutCompletionResult
+            {
+                Status = CheckoutCompletionStatus.Pending,
+                ErrorMessage = "The purchase could not be completed. It will be retried shortly.",
+            };
         }
 
         // Completed handlers run after the transition is durable. A failure here (for example a notification

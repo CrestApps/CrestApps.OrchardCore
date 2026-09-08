@@ -116,6 +116,7 @@ public static class PaymentEndpoints
         string sessionId,
         HttpContext httpContext,
         ICheckoutEngine engine,
+        ICheckoutSessionStore sessionStore,
         IPaymentAttemptLimiter limiter,
         CancellationToken cancellationToken)
     {
@@ -134,6 +135,18 @@ public static class PaymentEndpoints
         if (!await limiter.AcquireAsync("checkout-status", BuildDiscriminator(httpContext, sessionId)))
         {
             return Error("Too many status checks. Please wait a moment and try again.", StatusCodes.Status429TooManyRequests);
+        }
+
+        // The store only returns a live checkout that belongs to this caller. Completing is idempotent, but
+        // the answer names what the checkout is still waiting on, and that is not anybody else's to read.
+        var owned = await sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Pending, cancellationToken)
+            ?? await sessionStore.GetAsync(sessionId, CheckoutSessionStatus.AwaitingProvider, cancellationToken)
+            ?? await sessionStore.GetAsync(sessionId, CheckoutSessionStatus.PaymentPending, cancellationToken)
+            ?? await sessionStore.GetAsync(sessionId, CheckoutSessionStatus.Completed, cancellationToken);
+
+        if (owned is null)
+        {
+            return TypedResults.NotFound();
         }
 
         var result = await engine.TryCompleteAsync(sessionId, cancellationToken);

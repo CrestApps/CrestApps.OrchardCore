@@ -41,4 +41,16 @@ public class CreateSubscriptionRequest : StripeWriteRequest
     /// Gets or sets the unit used to calculate the subscription trial end date.
     /// </summary>
     public DurationType TrialDurationType { get; set; }
+
+    /// <summary>
+    /// Gets or sets an amount taken off the first cycle only, in the subscription's currency. It is applied
+    /// at Stripe as a single-use coupon so the agreement itself keeps its full recurring price.
+    /// </summary>
+    public decimal? FirstCycleDiscount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of days before the first cycle is billed, used to place the end of a
+    /// cycle-limited agreement after the deferral rather than before it.
+    /// </summary>
+    public int? DeferralDays { get; set; }
 }
