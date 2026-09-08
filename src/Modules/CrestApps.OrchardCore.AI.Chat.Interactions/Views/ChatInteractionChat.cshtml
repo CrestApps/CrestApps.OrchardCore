@@ -1,8 +1,9 @@
-@using System.Text.Json
+﻿@using System.Text.Json
 @using CrestApps.Core.AI.Capabilities
 @using CrestApps.Core.AI.Chat.Realtime
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Core
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Settings
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
@@ -69,8 +70,9 @@
     var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
     var realtimeBtnHtmlId = $"{baseId}_RealtimeBtn";
-    var realtimeVoiceGroupHtmlId = $"{baseId}_RealtimeVoiceGroup";
-    var realtimeVoiceSelectHtmlId = $"{baseId}_RealtimeVoice";
+    // Rendered by the settings panel rather than this shape, so the ids are shared constants.
+    var realtimeVoiceGroupHtmlId = ChatInteractionsConstants.ElementIds.RealtimeVoiceGroup;
+    var realtimeVoiceSelectHtmlId = ChatInteractionsConstants.ElementIds.RealtimeVoiceSelect;
     var realtimeVoicesUrl = Url.Action("Voices", "Realtime", new { area = "CrestApps.OrchardCore.AI.Chat" });
 }
 
@@ -88,14 +90,8 @@
     </div>
 
     <div class="flex-shrink-0">
-        @* Realtime voice picker. Hidden until the client detects a realtime-capable deployment. Populated
-           from the selected realtime model via the voices endpoint. *@
-        <div class="mb-2 d-none" id="@realtimeVoiceGroupHtmlId">
-            <label class="form-label small mb-1" for="@realtimeVoiceSelectHtmlId">@T["Voice"]</label>
-            <select class="form-select form-select-sm" id="@realtimeVoiceSelectHtmlId">
-                <option value="">@T["Default voice"]</option>
-            </select>
-        </div>
+        @* The realtime voice picker lives in the settings panel, beside the chat deployment it applies to.
+           See ChatInteractionRealtimeVoice.Edit.cshtml. *@
         <div class="ai-chat-prompt-container bg-body text-body rounded border w-100">
             <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
