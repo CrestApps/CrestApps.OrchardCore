@@ -12,7 +12,7 @@ description: A provider-agnostic checkout and payment framework for Orchard Core
 | **Core** | `CrestApps.OrchardCore.Checkout.Core` |
 | **Category** | Commerce |
 
-The **Checkout** feature provides a provider-agnostic checkout and payment framework. It is the reusable foundation that any purchase flow builds on — recurring [Subscriptions](subscriptions) as well as one-time goods purchases — so the wizard, the invoice, taxation, and the money-handling safety guarantees are written once and shared.
+The **Checkout** feature provides a provider-agnostic checkout and payment framework. It is the reusable foundation that any purchase flow builds on — recurring [Subscriptions](subscriptions) as well as one-time goods purchases — so the steps, the invoice, taxation, and the money-handling safety guarantees are written once and shared.
 
 It deliberately does **not** implement a storefront. It defines the contracts and the durable, distributed-safe machinery for collecting money; a consuming module (such as Subscriptions) contributes the domain-specific steps and decides what a completed checkout means.
 
@@ -51,11 +51,20 @@ The order owns the reverse link by storing its checkout session id, and `IChecko
 
 ### Checkout flow and steps
 
-A **`CheckoutFlow`** provides step navigation (first/next/previous/current) over the session's ordered **`CheckoutFlowStep`** list. Features contribute steps and their **billing items** while a session is being activated by implementing **`ICheckoutHandler`** (or deriving from `CheckoutHandlerBase`). The handler lifecycle mirrors the wizard: `Activating` → `Activated` → `Initializing`/`Initialized` → `Loading`/`Loaded` → `Completing` → `Completed`, with `Failed` on error.
+A **`CheckoutFlow`** provides step navigation (first/next/previous/current) over the session's ordered **`CheckoutFlowStep`** list. Features contribute steps and their **billing items** while a session is being activated by implementing **`ICheckoutHandler`** (or deriving from `CheckoutHandlerBase`). The handler lifecycle is `Activating` → `Activated` when the checkout is created, then `Initializing` → `Initialized` → `Loading` → `Loaded` every time it is loaded again, and finally `Completing` → `Completed`, with `Failed` on error.
+
+The load hooks matter because some of what a step carries is true only for one visitor at one moment and so cannot be persisted: whether the account step applies depends on whether *this* request is signed in, and a visitor can sign in on another tab midway through. Deciding that once, when the session was created, would show a signed-in customer a registration step they must not fill in.
 
 ### Checkout invoice
 
 A single **`CheckoutInvoice`** is built for the whole checkout so the customer is charged exactly once regardless of how many steps contributed billing items. It records the one-time amount due now, the first recurring amount charged now, the recurring subtotals grouped by billing interval, and the tax determined for the amount due now (with an immutable `TaxSnapshot`).
+
+Two rules about how it is built are worth stating plainly, because getting either wrong produces an invoice that looks fine and charges the wrong amount:
+
+- **Every step is billed, including the ones that are never drawn.** A step is concealed because there is nothing to ask the customer, not because there is nothing to charge — the plan a subscriber already chose is exactly such a step. Building the invoice only from visible steps drops those charges and completes the checkout for nothing.
+- **The currency comes from what is being bought**, falling back to the site setting only when the checkout names none. An invoice built in the site's currency from line items priced in another charges a number belonging to a different currency.
+
+The invoice is **rebuilt** rather than patched whenever something that changes the price changes, such as applying or removing a coupon. A total assembled by adjusting a previous total drifts away from the line items the customer is reading.
 
 ### Payment providers
 
@@ -133,7 +142,7 @@ The framework is built to run on multiple nodes:
 
 A guest has no account, so something else has to prove that the browser resuming a pending checkout is the one that started it. An IP address and a user agent cannot: everyone behind one office router or mobile carrier shares an address, a user agent is neither secret nor unique, and both are supplied by the caller.
 
-A checkout started by a guest is therefore issued a 32-byte random **ownership token**, delivered in a data-protected, HTTP-only cookie. Only its SHA-256 hash is stored on the session, and the comparison is fixed-time, so a leaked database does not hand an attacker the ability to resume live checkouts. The IP address and user agent are still recorded, but only as audit fields. The same token protects wizard and subscription sessions.
+A checkout started by a guest is therefore issued a 32-byte random **ownership token**, delivered in a data-protected, HTTP-only cookie. Only its SHA-256 hash is stored on the session, and the comparison is fixed-time, so a leaked database does not hand an attacker the ability to resume live checkouts. The IP address and user agent are still recorded, but only as audit fields. The same token protects every checkout, including one that a guest later signs in to finish.
 
 ## Currency-correct money
 
@@ -144,6 +153,7 @@ Money is compared and rounded through the provider-neutral **`Money`** and **`Cu
 
 ## Discounts and coupons
 
+
 Anything that reduces what a customer pays goes through **`ICheckoutDiscountService`**, and it runs **before** tax. Taxing the full price and then discounting the total charges the customer tax on money they never paid, which is wrong for them and wrong on the return the site owner files.
 
 A provider implementing **`ICheckoutDiscountProvider`** decides only *what* to take off. The checkout decides *how*, so three rules hold no matter how many providers a site installs:
@@ -153,6 +163,8 @@ A provider implementing **`ICheckoutDiscountProvider`** decides only *what* to t
 - what is recorded on the invoice is what was actually taken off, so a receipt cannot show a discount larger than the price it applied to.
 
 The **coupon catalog** ships in the box. Manage codes under **Commerce → Coupons**: percentage or fixed amount, targeting the one-time amount or the first cycle, with an optional validity window, minimum amount, and usage limit. A fixed-amount coupon only applies to an invoice in its own currency, because ten dollars off is not ten euros off.
+
+Entering a code and pressing **Apply** saves it and rebuilds the invoice immediately, so the customer sees what the code actually took off *before* they agree to pay. A discount a customer cannot see until after the charge is a discount they cannot check.
 
 A code is consumed when the purchase **completes**, not when it is applied. That is what makes a usage limit mean something: a customer who applies a single-use code and then abandons the checkout does not burn it, so a code that leaks cannot be exhausted by people who never bought anything. Redemption takes a lock on the coupon, so two checkouts finishing at the same instant cannot both take the last one.
 

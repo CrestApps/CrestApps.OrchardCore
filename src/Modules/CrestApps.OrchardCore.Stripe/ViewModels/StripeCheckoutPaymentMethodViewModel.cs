@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Stripe.ViewModels;
 /// <summary>
 /// The data the Stripe panel needs to mount its card element on the generic checkout payment step.
 /// </summary>
-public sealed class StripeCheckoutPaymentMethodViewModel
+public class StripeCheckoutPaymentMethodViewModel
 {
     /// <summary>
     /// Gets or sets the checkout session the payment belongs to.

@@ -138,6 +138,21 @@ public sealed class CheckoutController : Controller
 
         session.ModifiedUtc = _clock.UtcNow;
 
+        // Some buttons on a step submit the form to change the step rather than to leave it: applying a
+        // promotion code is one. Those save and re-render, because completing the checkout here would take
+        // the customer's money the moment they asked to see a discount.
+        if (string.Equals(Request.Form[CheckoutConstants.FormActions.FieldName], CheckoutConstants.FormActions.ApplyCoupon, StringComparison.Ordinal))
+        {
+            await _sessionStore.SaveAsync(session);
+
+            return View(nameof(Display), new CheckoutViewModel
+            {
+                SessionId = session.SessionId,
+                Step = flow.GetCurrentStep()?.Key,
+                Content = await _displayManager.BuildEditorAsync(flow, _updateModelAccessor.ModelUpdater, isNew: false),
+            });
+        }
+
         var nextStep = flow.GetNextStep();
 
         if (nextStep is not null)

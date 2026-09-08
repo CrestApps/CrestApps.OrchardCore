@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.Subscriptions.Models;
 using OrchardCore.Security;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
@@ -35,7 +36,7 @@ public sealed class SubscriptionsPermissionsHandler : AuthorizationHandler<Permi
             // This handler is not revoking any pre-existing grants.
             return;
         }
-        var subscription = context.Resource as SubscriptionSession;
+        var subscription = context.Resource as Subscription;
 
         if (context.Resource == null ||
             requirement.Permission != SubscriptionPermissions.ManageSubscriptions)
@@ -55,7 +56,7 @@ public sealed class SubscriptionsPermissionsHandler : AuthorizationHandler<Permi
         }
     }
 
-    private static bool IsOwner(ClaimsPrincipal user, SubscriptionSession subscription)
+    private static bool IsOwner(ClaimsPrincipal user, Subscription subscription)
     {
         if (user == null || subscription == null)
         {

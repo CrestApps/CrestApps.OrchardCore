@@ -2,7 +2,7 @@ using System.Reflection;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
-using CrestApps.OrchardCore.Subscriptions.Core.Models;
+using CrestApps.OrchardCore.Subscriptions.Models;
 
 namespace CrestApps.OrchardCore.Tests.Checkout;
 
@@ -20,7 +20,9 @@ public sealed class MoneyTypeContractTests
         typeof(BillingItem),
         typeof(CheckoutLineItem),
         typeof(CheckoutInvoice),
-        typeof(InvoiceLineItem),
+        typeof(Subscription),
+        typeof(SubscriptionLine),
+        typeof(PaymentRefund),
     };
 
     [Theory]

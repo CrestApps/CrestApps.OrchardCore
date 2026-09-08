@@ -1,10 +1,23 @@
+@using CrestApps.OrchardCore.Checkout
 @using CrestApps.OrchardCore.Checkout.ViewModels
 @model CouponViewModel
 
 <div class="card mb-3">
     <div class="card-body">
         <label asp-for="Code" class="form-label">@T["Promotion code"]</label>
-        <input asp-for="Code" class="form-control" autocomplete="off" placeholder="@T["Enter a code"]" />
+
+        @* Applying a code is its own submit. The pay button hands the form to the payment script, which
+           never posts it, so a code typed here would otherwise be dropped and the customer charged full
+           price with no error shown. *@
+        <div class="input-group">
+            <input asp-for="Code" class="form-control" autocomplete="off" placeholder="@T["Enter a code"]" />
+            <button type="submit"
+                    class="btn btn-outline-secondary"
+                    name="@CheckoutConstants.FormActions.FieldName"
+                    value="@CheckoutConstants.FormActions.ApplyCoupon"
+                    formnovalidate>@T["Apply"]</button>
+        </div>
+
         <span asp-validation-for="Code"></span>
 
         @if (Model.AppliedAmount > 0)

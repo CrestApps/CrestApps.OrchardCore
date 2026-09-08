@@ -7,7 +7,7 @@ Receipts, Wizard, Addresses, and Reports projects they depend on, their tests, a
 
 ---
 
-## Implementation status (updated 2026-09-07, after the first build pass)
+## Implementation status (updated 2026-09-07, after the suite was run end to end)
 
 **Phase 0 — complete.** All seven tasks landed: the tenant administrator password is unprotected before
 setup (and wiped afterwards), payments carry their own collection dates, renewals advance the
@@ -16,74 +16,71 @@ provider-neutral events, compensation refunds are written to the durable refund 
 management screens share a state machine and handle concurrency, and the docs no longer describe
 unreachable paths.
 
-**Status: everything in this plan is implemented except three items that were deliberately left alone —
-the ledger relocation, retiring the legacy subscription signup flow, and the pricing rework (5.1 to 5.4).
-The reasons are below the table.**
+**Status: the plan is implemented and the suite has now been run.** The legacy signup flow is gone, buying a
+plan goes through the checkout, and the whole path was exercised in a browser against a real site. Two items
+remain deliberately undone: the ledger relocation and the pricing rework (5.1 to 5.4). Reasons below.
 
 | Task | Status |
 | --- | --- |
-| 1.2 `ICheckoutEngine` | Done, 17 tests |
+| 1.2 `ICheckoutEngine` | Done |
 | 1.3 Async completion (sweep completes, no request-blocking poll) | Done |
-| 1.4 Recurring provider contract, engine routing, provider data | Done, 2 routing tests |
-| 1.5 Stripe recurring adapter (inline pricing, subscription verify/cancel/update) | Done, 17 tests |
-| 1.6 Pay Later recurring adapter + renewal sweep | Done, 6 tests |
-| 1.7 Public checkout UI | Done |
-| 1.8 Guest ownership token (checkout, wizard, subscription sessions) | Done, 6 tests |
-| 1.9 Transactions online settlement reaches the checkout | Done |
-| 1.10 Admin payments/refunds screens + `ManageRefunds` | Done, 7 controller tests |
+| 1.4 Recurring provider contract, engine routing, provider data | Done |
+| 1.5 Stripe recurring adapter (inline pricing, subscription verify/cancel/update) | Done, not exercised against a live gateway |
+| 1.6 Pay Later recurring adapter + renewal sweep | Done, verified in the browser |
+| 1.7 Public checkout UI | Done, verified in the browser |
+| 1.8 Guest ownership token | Done |
+| 1.9 Transactions online settlement reaches the checkout | Done, verified in the browser |
+| 1.10 Admin payments/refunds screens + `ManageRefunds` | Done, verified in the browser |
 | 1.1 Ledger relocation to Transactions | **Not done** — deliberately deferred |
-| 2.1 Durable `Subscription` + index, store, manager, migrations | Done |
-| 2.2 Subscription created from a completed checkout | Done, 5 tests. The legacy signup flow is **not** retired. |
-| 2.3 `ISubscriptionLifecycleService` (locked, idempotent transitions) | Done, 12 tests |
+| 2.1 Durable `Subscription` + index, store, manager, migrations | Done, verified in the browser |
+| 2.2 Subscription created from a completed checkout, **legacy flow retired** | Done |
+| 2.3 `ISubscriptionLifecycleService` (locked, idempotent transitions) | Done |
 | 2.4 Provider to lifecycle bridge (`IPaymentEvent`) | Done |
 | 2.5 Pay Later renewals | Done |
-| 2.6 Customer portal (**My Plans**, self-service cancel) | Done |
-| 2.7 Admin actions (**Agreements**: cancel, pause, resume) | Done |
-| 2.8 Subscription workflow events | Done, 8 tests |
-| 2.9 Reports rebased on the ledger | **Not done** — the existing reports still read the session index and still work |
-| 3.x Tenant provisioning as a checkout consumer | Done — durable job, sweep with back-off, pre-payment validation, customer and operator screens, tenant entitlement. 8 tests |
-| 4.x Provider, engine-concurrency and refund tests | Done for the recurring providers, the engine, and the money screens. SQLite store tests and gated end-to-end scenarios not started. |
-| 5.1–5.4 `ProductPricePart`, resolver, plan chooser, Stripe price sync removal | **Not done** — see below |
-| 5.5 Trials | Done |
-| 5.6 Coupons | Done, 17 tests, with an admin catalog and a `ManageCoupons` permission |
-| 6.x Entitlements and member access | Done, 9 tests |
-| 7.x Module READMEs, starter recipe, tests README, docs | Done |
+| 2.6 Customer portal (**My Plans**, self-service cancel) | Done, verified in the browser |
+| 2.7 Admin actions (**Agreements**: cancel, pause, resume) | Done, verified in the browser |
+| 2.8 Subscription workflow events | Done |
+| 2.9 Reports rebased on the ledger | Done, verified in the browser |
+| 3.x Tenant provisioning as a checkout consumer | Done; feature enables and migrates cleanly, provisioning itself not exercised |
+| 4.x Provider, engine-concurrency and refund tests | Done. SQLite store tests and gated end-to-end scenarios not started. |
+| 5.1–5.4 `ProductPricePart`, resolver, plan chooser, Stripe price sync removal | Partly obsolete — the sync service is deleted; the rest is **not done**, see below |
+| 5.5 Trials | Done — the plan editor now has a **Free Trial Days** field, which it previously lacked |
+| 5.6 Coupons | Done, verified in the browser end to end |
+| 6.x Entitlements and member access | Done, verified in the browser (buying a plan granted the role) |
+| 7.x Module READMEs, starter recipe, tests README, docs | Done; the starter recipe was executed |
 
-### Why three items were left alone
+### Why two items were left alone
 
-**1.1 Ledger relocation.** It is a large mechanical namespace move with no user-visible effect. The plan
-sequenced it first; it was deferred because the engine is what turned a dead framework into a working
-checkout, and nothing built since depends on the relocation. It can still be done as its own pass.
+**1.1 Ledger relocation.** A large mechanical namespace move with no user-visible effect. Nothing built since
+depends on it, and it can still be done as its own pass.
 
-**Retiring the legacy signup flow (the rest of 2.2, and the §9.5 deletion list).** Phase 2 was implemented
-**additively**: the durable agreement lives alongside the legacy session-based signup flow rather than
-replacing it, so the working subscription path was never broken. A subscription bought through the public
-checkout produces an agreement, entitlements, and a durable site; one bought through the legacy signup flow
-does not. Deleting that flow is a migration, not a cleanup, and it is the right next piece of work.
-
-**5.1 to 5.4, the pricing rework.** These replace `ProductPart.Price` with a repeatable `ProductPricePart`,
-rewrite the plan chooser, and delete the Stripe price synchronization. They touch the working plan editor
-and the content schema of every existing site. The goal they exist to serve — selling any product at any
-price point — is already met by the Stripe adapter's inline pricing, so the remaining value is a nicer
-editing experience rather than a missing capability. Doing it deserves its own change with its own
-migration story.
+**5.1 to 5.4, the pricing rework.** These replace `ProductPart.Price` with a repeatable `ProductPricePart` and
+rewrite the plan chooser, touching the content schema of every existing site. The goal they serve — selling
+any product at any price point — is already met by the Stripe adapter's inline pricing, so what is left is a
+nicer editing experience rather than a missing capability.
 
 ### Verification
 
-The solution builds clean in Release with `-warnaserror`; **2,410 tests pass**, up from 2,281 at the start of
-this work; the docs site builds; the front-end assets build with no unrelated drift.
+Release build with `-warnaserror` is clean, **2,298 tests pass**, and the docs site builds.
 
-Not verified: anything at runtime. There is no web host in this worktree, so dependency-injection wiring,
-shape resolution, the begin-then-poll round trip, every new migration, the starter recipe, tenant
-provisioning against a real setup service, and every live gateway call remain unproven. That is the single
-largest remaining risk in this work and no amount of unit testing removes it.
+More importantly, the suite was **run**. A site was set up from scratch, the Commerce starter recipe was
+executed, and the following were exercised in a browser: creating a plan, the public plan list, starting a
+checkout, the invoice with a one-time fee and a recurring charge, the payment method list and provider panel,
+paying with Pay Later, the confirmation, the durable agreement in both the admin and customer screens, the
+transaction and payment ledgers, creating and applying a coupon and seeing the usage count increment,
+the six reports, buying anonymously with an account created and signed in mid-checkout, and a plan's role
+entitlement reaching the buyer.
 
-Two defects were found by writing tests and fixed:
+Running it found eight defects that the 2,275 passing unit tests could not, because in every case the page
+returned `200` and quietly did the wrong thing. They are listed in the 3.0.0 changelog under *Fixes found by
+running the checkout*; the worst was that a subscription checkout totalled `0.00` and completed for nothing,
+because the plan's charges sit on a step that is never drawn and the invoice was built only from visible
+steps. Each now has a regression test, two of which read the source tree so the failure fails a build rather
+than a customer's purchase.
 
-- A trial subscription, which collects nothing, settled its obligation for a negative net amount because the
-  expected tax was subtracted from a zero gross.
-- Entitlements were only applied on a later transition, so a role a plan granted would not have reached the
-  subscriber until something else happened to their agreement, possibly a month later.
+**Still unproven:** every live Stripe call, tenant provisioning against a real setup service (the feature
+enables and migrates cleanly, but no site was provisioned), the renewal and lapse sweeps over real time, and
+refunding a real payment.
 
 This document has two halves:
 

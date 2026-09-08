@@ -2,9 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Receipts.Core;
-using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
-using CrestApps.OrchardCore.Wizard;
 using OrchardCore.Modules.Manifest;
 
 [assembly: Module(
@@ -17,7 +15,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Name = "Subscriptions",
     Id = SubscriptionConstants.Features.Area,
-    Description = "Provides a way to process and manage subscriptions.",
+    Description = "Sells recurring plans through the checkout and keeps a durable agreement for every subscriber.",
     Category = "Subscriptions",
     Dependencies =
     [
@@ -25,37 +23,12 @@ using OrchardCore.Modules.Manifest;
         "OrchardCore.ContentTypes",
         "OrchardCore.Title",
         "CrestApps.OrchardCore.Users",
-        WizardConstants.Features.Area,
         ProductConstants.Feature.ModuleId,
+
+        // Subscriptions never collects money itself. Checkout is a hard dependency because it owns the
+        // only path that takes a payment and the only ledger that records one.
         CheckoutConstants.Features.Area,
         ReceiptsConstants.Feature.Area,
-    ]
-)]
-
-[assembly: Feature(
-    Name = "Subscriptions - reCaptcha",
-    Id = SubscriptionConstants.Features.ReCaptcha,
-    Description = "Provides reCaptcha to the subscription process.",
-    Category = "Subscriptions",
-    Dependencies =
-    [
-        SubscriptionConstants.Features.Area,
-        "OrchardCore.ReCaptcha",
-    ]
-)]
-
-[assembly: Feature(
-    Name = "Subscriptions - Tenant Onboarding",
-    Id = SubscriptionConstants.Features.TenantOnboarding,
-    Description = "Provides a way to onboard new tenants using subscriptions.",
-    Category = "Subscriptions",
-    DefaultTenantOnly = true,
-    Dependencies =
-    [
-        SubscriptionConstants.Features.Area,
-        StripeConstants.Feature.ModuleId,
-        // Tenants adds setup services.
-        "OrchardCore.Tenants",
     ]
 )]
 
@@ -68,6 +41,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         SubscriptionConstants.Features.Area,
+
         // Tenants brings the setup services that create a site.
         "OrchardCore.Tenants",
     ]

@@ -101,10 +101,13 @@ public sealed class PaymentCheckoutHandlerTests
         site.Setup(s => s.GetOrCreate<CheckoutSettings>()).Returns(new CheckoutSettings { Currency = Currency });
         siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
 
-        return new PaymentCheckoutHandler(
+        var invoiceBuilder = new CheckoutInvoiceBuilder(
             siteService.Object,
             new DefaultCheckoutDiscountService([], NullLogger<DefaultCheckoutDiscountService>.Instance),
-            new NoTaxCheckoutTaxService(),
+            new NoTaxCheckoutTaxService());
+
+        return new PaymentCheckoutHandler(
+            invoiceBuilder,
             CheckoutTestHelpers.CreatePaymentSessionCache(),
             Mock.Of<IStringLocalizer<PaymentCheckoutHandler>>());
     }

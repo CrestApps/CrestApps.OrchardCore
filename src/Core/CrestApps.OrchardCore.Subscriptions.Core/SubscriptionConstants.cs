@@ -44,15 +44,7 @@ public static class SubscriptionConstants
     /// </summary>
     public const string SubscriptionSummaryWidgetType = "SubscriptionSummaryWidget";
 
-    /// <summary>
-    /// The wizard type used when the subscription signup flow is hosted by the shared wizard module.
-    /// </summary>
-    public const string WizardType = "Subscription";
 
-    /// <summary>
-    /// The payment processor key used for pay-later subscription flows.
-    /// </summary>
-    public const string PayLaterProcessorKey = "PayLater";
 
     /// <summary>
     /// The prefix used to identify initial-fee payment entries.
@@ -65,50 +57,9 @@ public static class SubscriptionConstants
     public static class RouteName
     {
         /// <summary>
-        /// The route name for creating a Stripe subscription.
+        /// The route that starts a checkout for a published subscription plan.
         /// </summary>
-        public const string CreateSubscriptionEndpoint = "Subscriptions_StripeCreateSubscription";
-
-        /// <summary>
-        /// The route name for creating a Stripe checkout session.
-        /// </summary>
-        public const string CreateCheckoutSessionEndpoint = "Subscriptions_StripeCreateCheckoutSession";
-
-        /// <summary>
-        /// The route name for creating a Stripe payment intent.
-        /// </summary>
-        public const string CreatePaymentIntentEndpoint = "Subscriptions_StripeCreatePaymentIntent";
-
-        /// <summary>
-        /// The route name for creating a Stripe setup intent.
-        /// </summary>
-        public const string CreateSetupIntentEndpoint = "Subscriptions_StripeCreateSetupIntent";
-
-        /// <summary>
-        /// The route name for confirming a pay-later subscription.
-        /// </summary>
-        public const string CreatePayLaterEndpoint = "Subscriptions_CreatePayLater";
-    }
-
-    /// <summary>
-    /// Rate-limit group names attached to the sensitive, anonymous-facing subscription routes. They are
-    /// consumed by the optional Orchard Core <c>OrchardCore.RateLimits</c> module: when that feature is
-    /// enabled and an administrator creates a policy targeting one of these groups, the matching routes
-    /// are throttled automatically. Attaching the metadata is inert until such a policy exists, so it is
-    /// always safe to declare regardless of whether the Rate Limits feature is enabled.
-    /// </summary>
-    public static class RateLimitGroups
-    {
-        /// <summary>
-        /// The public subscription signup/checkout requests (the signup form and each flow step).
-        /// </summary>
-        public const string Checkout = "subscription-checkout";
-
-        /// <summary>
-        /// The anonymous payment endpoints that talk to the payment provider (intents, checkout
-        /// sessions, and the pay-later confirmation).
-        /// </summary>
-        public const string Payment = "subscription-payment";
+        public const string Signup = "SubscriptionSignup";
     }
 
     /// <summary>
@@ -121,15 +72,7 @@ public static class SubscriptionConstants
         /// </summary>
         public const string Area = "CrestApps.OrchardCore.Subscriptions";
 
-        /// <summary>
-        /// The feature identifier for subscription reCAPTCHA integration.
-        /// </summary>
-        public const string ReCaptcha = "CrestApps.OrchardCore.Subscriptions.ReCaptcha";
 
-        /// <summary>
-        /// The feature identifier for subscription tenant onboarding.
-        /// </summary>
-        public const string TenantOnboarding = "CrestApps.OrchardCore.Subscriptions.TenantOnboarding";
 
         /// <summary>
         /// The feature identifier for selling Orchard Core tenants through the public checkout.
@@ -147,32 +90,12 @@ public static class SubscriptionConstants
         /// </summary>
         public const string UserRegistration = "UserRegistration";
 
-        /// <summary>
-        /// The step key for tenant onboarding.
-        /// </summary>
-        public const string TenantOnboarding = "TenantOnboarding";
 
         /// <summary>
         /// The checkout step key used to capture the details of a site bought through the public checkout.
         /// </summary>
         public const string TenantProvisioning = "TenantProvisioning";
 
-        /// <summary>
-        /// The step key for payment.
-        /// </summary>
-        public const string Payment = "Payment";
-    }
-
-    /// <summary>
-    /// Defines well-known keys stored in the shared step data bag.
-    /// </summary>
-    public static class StepDataKey
-    {
-        /// <summary>
-        /// The step data key used to preserve the subscription billing items when a subscription flow is
-        /// projected onto the shared wizard session model.
-        /// </summary>
-        public const string BillingItems = "BillingItems";
     }
 
     /// <summary>
@@ -187,5 +110,10 @@ public static class SubscriptionConstants
         /// step and consumed by the tenant provisioning handler.
         /// </summary>
         public const string TenantOnboardingStep = "TenantOnboardingStep";
+
+        /// <summary>
+        /// The data-protection purpose used for the password captured on the account step.
+        /// </summary>
+        public const string UserRegistrationStep = "UserRegistrationStep";
     }
 }

@@ -39,6 +39,17 @@ public sealed class SubscriptionPart : ContentPart
     public int? SubscriptionDayDelay { get; set; }
 
     /// <summary>
+    /// Gets or sets an optional free trial, in days, before the first cycle is billed.
+    /// </summary>
+    /// <remarks>
+    /// A trial is not the same as <see cref="SubscriptionDayDelay"/>. A delayed start postpones the
+    /// agreement itself; a trial establishes it now, with a payment method attached, and simply does not
+    /// charge until the trial ends. That is what lets a trial convert into a paying subscriber without
+    /// asking them to come back and buy again.
+    /// </remarks>
+    public int? TrialDays { get; set; }
+
+    /// <summary>
     /// Gets or sets the sort position for displaying the subscription.
     /// </summary>
     public int? Sort { get; set; }

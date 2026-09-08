@@ -1,65 +1,53 @@
-using CrestApps.OrchardCore.Subscriptions.Navigation;
-using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout;
-using OrchardCore.BackgroundTasks;
-using CrestApps.OrchardCore.Subscriptions.Tasks;
-using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
-using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Payments;
-using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Reports;
-using CrestApps.OrchardCore.Stripe.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
+using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
-using CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
-using CrestApps.OrchardCore.Subscriptions.Endpoints;
-using CrestApps.OrchardCore.Subscriptions.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Subscriptions.Navigation;
 using CrestApps.OrchardCore.Subscriptions.Reports;
 using CrestApps.OrchardCore.Subscriptions.Services;
+using CrestApps.OrchardCore.Subscriptions.Tasks;
 using CrestApps.OrchardCore.Subscriptions.Workflows.Drivers;
-using CrestApps.OrchardCore.Taxation;
-using CrestApps.OrchardCore.Wizard;
-using CrestApps.OrchardCore.Wizard.Core.Services;
-using CrestApps.OrchardCore.Wizard.Handlers;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Routing;
+using CrestApps.OrchardCore.Subscriptions.Handlers;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
+using OrchardCore.ContentTypes.Events;
+using OrchardCore.Navigation;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
-using OrchardCore.ContentManagement.Handlers;
 using OrchardCore.ContentTypes.Editors;
-using OrchardCore.ContentTypes.Events;
 using OrchardCore.Data;
+using OrchardCore.Data.Documents;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
-using OrchardCore.Navigation;
-using OrchardCore.ResourceManagement;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Workflows.Helpers;
-using YesSql.Filters.Query;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
 /// <summary>
-/// Registers the core subscription services, content parts, indexes, permissions, filters, and admin UI components.
+/// Registers the subscription domain: the plans that can be sold, the durable agreements that result, and
+/// the lifecycle that keeps them honest.
 /// </summary>
+/// <remarks>
+/// Subscriptions deliberately owns no checkout of its own. Buying a plan runs through the Checkout feature
+/// like every other purchase, so there is exactly one path that moves money and exactly one ledger that
+/// records it.
+/// </remarks>
 public sealed class Startup : StartupBase
 {
-    /// <summary>
-    /// Configures the service registrations required by the base subscriptions feature.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDataMigration<SubscriptionPartMigrations>()
@@ -77,50 +65,8 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<SubscriptionsContentItemIndexMigrations>()
             .AddScopedIndexProvider<SubscriptionsContentItemIndexProvider>();
 
-        services.AddDataMigration<SubscriptionSessionIndexMigrations>()
-            .AddIndexProvider<SubscriptionSessionIndexProvider>();
-
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, DefaultSubscriptionFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, ContentStepSubscriptionFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, PaymentStepSubscriptionFlowDisplayDriver>();
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, UserRegistrationSubscriptionFlowDisplayDriver>();
-
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, SubscriptionPartSettingsDisplayDriver>();
         services.AddScoped<IContentDefinitionHandler, SubscriptionContentTypeDefinitionHandler>();
-
-        services.AddScoped<ISubscriptionHandler, UserRegistrationSubscriptionHandler>();
-        services.AddScoped<ISubscriptionHandler, PaymentSubscriptionHandler>();
-        services.AddScoped<ISubscriptionHandler, ContentSubscriptionHandler>();
-
-        // Taxation is optional. The no-op tax service keeps subscriptions working when the Taxation
-        // feature is disabled; the taxation-aware implementation is registered by the TaxationStartup
-        // below only when the Taxation feature is enabled.
-        services.TryAddScoped<ISubscriptionTaxProfileProvider, DefaultSubscriptionTaxProfileProvider>();
-        services.TryAddScoped<ISubscriptionTaxService, NullSubscriptionTaxService>();
-
-        services.TryAddScoped<GuestSessionTokenManager>();
-        services.AddScoped<ISubscriptionSessionStore, SubscriptionSessionStore>();
-        services.AddScoped<WizardSessionStore>();
-        services.AddScoped<SubscriptionWizardFlowFactory>();
-        services.AddScoped<IWizardSessionStore, SubscriptionWizardSessionStore>();
-        services.AddScoped<IWizardHandler, SubscriptionWizardHandler>();
-        services.AddScoped<IDisplayDriver<WizardFlow>, SubscriptionWizardFlowDisplayDriver>();
-
-        services.AddScoped<SubscriptionPaymentSession>();
-
-        // Compute the default payment method once every payment provider has registered its methods.
-        // This lives in the base feature so a default is always resolved regardless of which single
-        // provider (Stripe, Pay Later, ...) happens to be enabled.
-        services.AddTransient<IPostConfigureOptions<PaymentMethodOptions>, DefaultPaymentMethodConfigurations>();
-
-        services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
-        services.Configure<SubscriptionPaymentSessionOptions>(options =>
-        {
-            options.MaxLiveSession = TimeSpan.FromDays(1);
-            options.Purposes.Add(SubscriptionPaymentSessionExtensions.InitialPaymentPurpose);
-            options.Purposes.Add(SubscriptionPaymentSessionExtensions.SubscriptionPaymentInfoPurpose);
-            options.Purposes.Add(SubscriptionPaymentSessionExtensions.UserRegistrationPurpose);
-        });
 
         services.AddScoped<IAuthorizationHandler, SubscriptionsPermissionsHandler>();
 
@@ -128,11 +74,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<IPermissionProvider, SubscriptionPermissionsProvider>();
         services.AddNavigationProvider<SubscriptionsAdminMenu>();
 
-        services.AddDataMigration<SubscriptionIndexMigrations>()
-            .AddIndexProvider<SubscriptionIndexProvider>();
-
-        services.AddIndexProvider<SubscriptionTransactionIndexProvider>()
-            .AddDataMigration<SubscriptionTransactionIndexMigrations>();
+        // The agreement lives in its own YesSql collection, which has to be declared here. Declaring only
+        // the index leaves the collection's document table uncreated, and every read or write against it
+        // then fails at runtime with "no such table" even though the migration ran clean.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(SubscriptionConstants.SubscriptionCollectionName));
 
         // The durable subscription agreement. It is what survives the checkout that created it, so every
         // later question about who is subscribed is answered from here rather than from a session.
@@ -150,29 +95,7 @@ public sealed class Startup : StartupBase
         // local record honest about renewals, failures, and cancellations made outside this application.
         services.AddScoped<IPaymentEvent, SubscriptionRecordPaymentEventHandler>();
 
-        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, SubscriptionResourceManagementOptionsConfiguration>();
-
-        services.AddScoped<IDisplayDriver<SubscriberDashboard>, SubscriberDashboardDisplayDriver>();
-
-        services.AddScoped<IDisplayDriver<ListSubscriptionOptions>, ListSubscriptionOptionsDisplayDriver>();
-        services.AddScoped<IDisplayDriver<SubscriptionSession>, SubscriptionSessionDisplayDriver>();
-
-        services.AddScoped<ISubscriptionsAdminListQueryService, DefaultSubscriptionsAdminListQueryService>();
-
-        services.AddTransient<ISubscriptionAdminListFilterProvider, DefaultSubscriptionAdminListFilterProvider>();
-        services.AddSingleton<ISubscriptionAdminListFilterParser>(sp =>
-        {
-            var filterProviders = sp.GetServices<ISubscriptionAdminListFilterProvider>();
-            var builder = new QueryEngineBuilder<SubscriptionSession>();
-            foreach (var provider in filterProviders)
-            {
-                provider.Build(builder);
-            }
-
-            var parser = builder.Build();
-
-            return new DefaultSubscriptionsAdminListFilterParser(parser);
-        });
+        services.AddScoped<IDisplayDriver<SubscriptionRegisterUserForm>, SubscriptionRegisterUserFormDisplayDriver>();
     }
 }
 
@@ -182,10 +105,7 @@ public sealed class Startup : StartupBase
 [RequireFeatures("OrchardCore.Roles")]
 public sealed class RolesStartup : StartupBase
 {
-    /// <summary>
-    /// Configures role-dependent subscription services.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddSiteDisplayDriver<SubscriptionRoleSettingsDisplayDriver>();
@@ -202,166 +122,40 @@ public sealed class RolesStartup : StartupBase
 }
 
 /// <summary>
-/// Wires the Stripe payment integration into the subscription checkout. It activates automatically
-/// whenever both the Subscriptions and Stripe features are enabled, so there is no separate integration
-/// feature to switch on.
+/// Registers everything that turns a checkout into a subscription: the plan being sold, the optional steps
+/// a plan collects, and the durable agreement a completed checkout produces.
 /// </summary>
-[RequireFeatures(SubscriptionConstants.Features.Area, StripeConstants.Feature.ModuleId)]
+/// <remarks>
+/// It is gated on the Checkout feature because that is what raises the events these handlers react to.
+/// Registering them unconditionally would add handlers that could never run, and would offer a signup link
+/// that leads nowhere.
+/// </remarks>
+[RequireFeatures(CheckoutConstants.Features.Area)]
+public sealed class CheckoutStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddScoped<ICheckoutHandler, SubscriptionPlanCheckoutHandler>();
+        services.AddScoped<ICheckoutHandler, UserRegistrationCheckoutHandler>();
+        services.AddScoped<ICheckoutHandler, ContentCheckoutHandler>();
+        services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();
+
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, UserRegistrationCheckoutFlowDisplayDriver>();
+        services.AddScoped<IDisplayDriver<CheckoutFlow>, ContentStepCheckoutFlowDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the Stripe currency setting used when a plan does not carry its own currency.
+/// </summary>
+[RequireFeatures(SubscriptionConstants.Features.Area, "CrestApps.OrchardCore.Stripe")]
 public sealed class StripeStartup : StartupBase
 {
-    /// <summary>
-    /// Configures the Stripe services used by subscription checkout.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, StripePaymentSubscriptionFlowDisplayDriver>();
-        services.AddScoped<StripePriceSyncService>();
-        services.AddScoped<IPaymentEvent, SubscriptionPaymentHandler>();
-        services.AddScoped<IContentHandler, SubscriptionsContentHandler>();
-        services.AddScoped<ISubscriptionHandler, StripeSubscriptionHandler>();
         services.AddSiteDisplayDriver<CurrencySubscriptionSettingsDisplayDriver>();
-        services.Configure<PaymentMethodOptions>(options =>
-        {
-            options.PaymentMethods[StripeConstants.ProcessorKey] = new PaymentMethod
-            {
-                Title = "Stripe",
-                HasProcessor = true,
-            };
-        });
-    }
-
-    /// <summary>
-    /// Adds the Stripe subscription checkout endpoints to the route builder.
-    /// </summary>
-    /// <param name="app">The application builder for the current tenant pipeline.</param>
-    /// <param name="routes">The endpoint route builder to configure.</param>
-    /// <param name="serviceProvider">The tenant service provider.</param>
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes.AddCreateStripeSubscriptionEndpoint()
-            .AddCreatePaymentIntentEndpoint()
-            .AddStripeCreateSetupIntentEndpoint()
-            .AddCreateCheckoutSessionEndpoint();
-    }
-}
-
-/// <summary>
-/// Wires the offline Pay Later option into the subscription checkout. It activates when the standalone
-/// Pay Later module is enabled alongside Subscriptions, so Pay Later is owned by one module and reused
-/// across checkout scenarios.
-/// </summary>
-[RequireFeatures("CrestApps.OrchardCore.PayLater")]
-public sealed class PayLaterStartup : StartupBase
-{
-    /// <summary>
-    /// Configures the Pay Later payment method for subscription checkout.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<IDisplayDriver<SubscriptionFlowPaymentMethod>, PayLaterPaymentSubscriptionFlowDisplayDriver>();
-        services.Configure<PaymentMethodOptions>(options =>
-        {
-            options.PaymentMethods[SubscriptionConstants.PayLaterProcessorKey] = new PaymentMethod
-            {
-                Title = "Pay Later",
-                HasProcessor = false,
-            };
-        });
-    }
-
-    /// <summary>
-    /// Adds the Pay Later subscription checkout endpoint to the route builder.
-    /// </summary>
-    /// <param name="app">The application builder for the current tenant pipeline.</param>
-    /// <param name="routes">The endpoint route builder to configure.</param>
-    /// <param name="serviceProvider">The tenant service provider.</param>
-    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
-    {
-        routes.AddCreatePayLaterEndpoint();
-    }
-}
-
-/// <summary>
-/// Registers subscription services that create and monitor tenant onboarding flows.
-/// </summary>
-[Feature(SubscriptionConstants.Features.TenantOnboarding)]
-public sealed class TenantOnboardingStartup : StartupBase
-{
-    /// <summary>
-    /// Configures services for tenant onboarding subscription steps and workflow events.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddContentPart<TenantOnboardingPart>()
-            .UseDisplayDriver<TenantOnboardingPartDisplayDriver>();
-
-        services.AddDataMigration<TenantOnboardingMigrations>();
-        services.AddScoped<ISubscriptionHandler, TenantOnboardingSubscriptionHandler>();
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, TenantOnboardingStepSubscriptionFlowDisplayDriver>();
-        services.AddSiteDisplayDriver<SubscriptionOnboardingSettingsDisplayDriver>();
-
-        services.AddActivity<SubscribedTenantSetupSucceededEvent, SubscribedTenantSetupSucceededEventDisplayDriver>();
-        services.AddActivity<SubscribedTenantFailedSetupEvent, SubscribedTenantFailedSetupEventDisplayDriver>();
-    }
-}
-
-/// <summary>
-/// Registers feature profile selection for tenant onboarding subscriptions.
-/// </summary>
-[Feature(SubscriptionConstants.Features.TenantOnboarding)]
-[RequireFeatures("OrchardCore.Tenants.FeatureProfiles")]
-public sealed class FeatureProfileTenantOnboardingStartup : StartupBase
-{
-    /// <summary>
-    /// Configures feature profile display drivers and indexing for tenant onboarding.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddContentPart<TenantOnboardingPart>()
-            .UseDisplayDriver<FeatureProfilesTenantOnboardingPartDisplayDriver>();
-
-        services.AddScoped<IDisplayDriver<SubscriptionFlow>, FeatureProfileTenantOnboardingStepSubscriptionFlowDisplayDriver>();
-        services.AddIndexProvider<SubscriptionTenantIndexProvider>()
-            .AddDataMigration<SubscriptionTenantIndexMigrations>();
-    }
-}
-
-/// <summary>
-/// Registers the reCAPTCHA step for subscription flows.
-/// </summary>
-[Feature(SubscriptionConstants.Features.ReCaptcha)]
-public sealed class ReCaptchaStartup : StartupBase
-{
-    /// <summary>
-    /// Configures the reCAPTCHA subscription flow display driver.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddDisplayDriver<SubscriptionFlow, ReCaptchaSubscriptionFlowDisplayDriver>();
-    }
-}
-
-/// <summary>
-/// Replaces the default subscription tax service when the taxation feature is available.
-/// </summary>
-[RequireFeatures(TaxationConstants.Feature.Taxation)]
-public sealed class TaxationStartup : StartupBase
-{
-    /// <summary>
-    /// Configures the taxation-aware subscription tax service.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        // Replace the no-op tax service with the taxation-aware implementation. This runs only when the
-        // Taxation feature is enabled, keeping the runtime dependency on taxation optional.
-        services.RemoveAll<ISubscriptionTaxService>();
-        services.AddScoped<ISubscriptionTaxService, SubscriptionTaxService>();
     }
 }
 
@@ -371,10 +165,7 @@ public sealed class TaxationStartup : StartupBase
 [RequireFeatures(ReportsConstants.Feature)]
 public sealed class ReportsStartup : StartupBase
 {
-    /// <summary>
-    /// Configures the report providers used by the subscriptions module.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services
@@ -384,26 +175,6 @@ public sealed class ReportsStartup : StartupBase
             .AddScoped<IReport, NewSubscriptionsTrendReport>()
             .AddScoped<IReport, TaxCollectedReport>()
             .AddScoped<IReport, ProductPerformanceReport>();
-    }
-}
-
-/// <summary>
-/// Registers the bridge that turns a completed generic checkout into a durable subscription agreement.
-/// </summary>
-/// <remarks>
-/// It is gated on the Checkout feature because that is what raises the completion this handler reacts to.
-/// Registering it unconditionally would add a handler that can never run.
-/// </remarks>
-[RequireFeatures(CheckoutConstants.Features.Area)]
-public sealed class CheckoutStartup : StartupBase
-{
-    /// <summary>
-    /// Configures the checkout-driven subscription services.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
-    public override void ConfigureServices(IServiceCollection services)
-    {
-        services.AddScoped<ICheckoutHandler, SubscriptionActivationCheckoutHandler>();
     }
 }
 
@@ -418,10 +189,7 @@ public sealed class CheckoutStartup : StartupBase
 [RequireFeatures("OrchardCore.Workflows")]
 public sealed class SubscriptionWorkflowsStartup : StartupBase
 {
-    /// <summary>
-    /// Configures the subscription lifecycle workflow events.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<SubscriptionStartedEvent, SubscriptionStartedEventDisplayDriver>();
@@ -435,22 +203,26 @@ public sealed class SubscriptionWorkflowsStartup : StartupBase
 }
 
 /// <summary>
-/// Registers selling Orchard Core sites through the public checkout.
+/// Registers selling Orchard Core sites through the checkout.
 /// </summary>
 /// <remarks>
-/// It is a separate feature from the legacy tenant onboarding because it works the other way round: the
-/// checkout only records that a site was bought, and a durable job builds it. That split is what keeps a
+/// The checkout only records that a site was bought; a durable job builds it. That split is what keeps a
 /// slow recipe, a brief outage, or a deployment restart from leaving a paying customer with nothing.
 /// </remarks>
-[RequireFeatures(SubscriptionConstants.Features.Tenants)]
+[Feature(SubscriptionConstants.Features.Tenants)]
 public sealed class TenantProvisioningStartup : StartupBase
 {
-    /// <summary>
-    /// Configures the site-selling services.
-    /// </summary>
-    /// <param name="services">The service collection to configure.</param>
+    /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContentPart<TenantOnboardingPart>()
+            .UseDisplayDriver<TenantOnboardingPartDisplayDriver>();
+
+        services.AddDataMigration<TenantOnboardingMigrations>();
+        services.AddSiteDisplayDriver<SubscriptionOnboardingSettingsDisplayDriver>();
+
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(SubscriptionConstants.TenantProvisioningCollectionName));
+
         services.AddDataMigration<TenantProvisioningJobMigrations>()
             .AddIndexProvider<TenantProvisioningJobIndexProvider>();
 
@@ -465,5 +237,23 @@ public sealed class TenantProvisioningStartup : StartupBase
 
         services.AddSingleton<IBackgroundTask, TenantProvisioningBackgroundTask>();
         services.AddNavigationProvider<TenantProvisioningAdminMenu>();
+
+        services.AddActivity<SubscribedTenantSetupSucceededEvent, SubscribedTenantSetupSucceededEventDisplayDriver>();
+        services.AddActivity<SubscribedTenantFailedSetupEvent, SubscribedTenantFailedSetupEventDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers feature profile selection for the sites a subscription provisions.
+/// </summary>
+[Feature(SubscriptionConstants.Features.Tenants)]
+[RequireFeatures("OrchardCore.Tenants.FeatureProfiles")]
+public sealed class FeatureProfileTenantProvisioningStartup : StartupBase
+{
+    /// <inheritdoc/>
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddContentPart<TenantOnboardingPart>()
+            .UseDisplayDriver<FeatureProfilesTenantOnboardingPartDisplayDriver>();
     }
 }

@@ -50,9 +50,13 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     }
 
     /// <inheritdoc/>
-    public Task<CheckoutSession> GetAsync(string sessionId, CancellationToken cancellationToken = default)
-        => _session.Query<CheckoutSession, CheckoutSessionIndex>(x => x.SessionId == sessionId)
+    public async Task<CheckoutSession> GetAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        var checkoutSession = await _session.Query<CheckoutSession, CheckoutSessionIndex>(x => x.SessionId == sessionId)
             .FirstOrDefaultAsync(cancellationToken);
+
+        return await InitializeAsync(checkoutSession);
+    }
 
     /// <inheritdoc/>
     public async Task<CheckoutSession> GetAsync(string sessionId, CheckoutSessionStatus status, CancellationToken cancellationToken = default)
@@ -65,7 +69,7 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
         {
             var ownerId = CurrentUserId();
 
-            return await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync(cancellationToken);
+            return await InitializeAsync(await query.Where(x => x.OwnerId == ownerId).FirstOrDefaultAsync(cancellationToken));
         }
 
         var checkoutSession = await query.Where(x => x.OwnerId == null).FirstOrDefaultAsync(cancellationToken);
@@ -82,6 +86,32 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
         {
             return null;
         }
+
+        return await InitializeAsync(checkoutSession);
+    }
+
+    // Gives every handler a chance to re-decide what this session looks like for the request that just
+    // loaded it. Some of what a step carries cannot be persisted because it is true only for one visitor at
+    // one moment: whether an account step applies depends on whether this request is signed in, and a
+    // visitor can sign in on another tab midway through. Deciding that once, when the session was created,
+    // would show a signed-in customer a registration step they must not fill in.
+    private async Task<CheckoutSession> InitializeAsync(CheckoutSession checkoutSession)
+    {
+        if (checkoutSession is null)
+        {
+            return null;
+        }
+
+        var flow = new CheckoutFlow(checkoutSession);
+
+        await _checkoutHandlers.InvokeAsync((handler, context) => handler.InitializingAsync(context), new CheckoutFlowInitializingContext(flow), _logger);
+        await _checkoutHandlers.InvokeAsync((handler, context) => handler.InitializedAsync(context), new CheckoutFlowInitializedContext(flow), _logger);
+
+        // Loading runs after initializing so the guards see the steps as this request will actually render
+        // them. This is what stops a customer landing on payment with an earlier step still unfilled, which
+        // would take a charge for a checkout that can never be fulfilled.
+        await _checkoutHandlers.InvokeAsync((handler, context) => handler.LoadingAsync(context), new CheckoutFlowLoadingContext(flow), _logger);
+        await _checkoutHandlers.InvokeAsync((handler, context) => handler.LoadedAsync(context), new CheckoutFlowLoadedContext(flow), _logger);
 
         return checkoutSession;
     }

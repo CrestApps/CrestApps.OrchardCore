@@ -130,6 +130,13 @@ var checkoutPayment = function () {
     return false;
   }
   async function pay(event) {
+    // A submit that names an action is asking the server to change the step, not to take a payment.
+    // Applying a promotion code is one of those: swallowing it here would drop the code silently and
+    // charge the customer full price.
+    var submitter = event.submitter;
+    if (submitter && submitter.name === 'checkout-action') {
+      return;
+    }
     event.preventDefault();
     var providerKey = selectedProviderKey();
     if (!providerKey) {

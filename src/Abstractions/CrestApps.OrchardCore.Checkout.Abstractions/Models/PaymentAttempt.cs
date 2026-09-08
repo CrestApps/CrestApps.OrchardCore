@@ -24,6 +24,22 @@ public sealed class PaymentAttempt : CatalogItem
     public string SessionId { get; set; }
 
     /// <summary>
+    /// The reference type of the checkout this attempt belongs to, copied from the session when the attempt
+    /// is created.
+    /// </summary>
+    /// <remarks>
+    /// It is denormalized onto the attempt deliberately. The ledger is what reporting and reconciliation
+    /// read, and a session can be pruned long before the money it took stops mattering, so an attempt that
+    /// could only name its purchase by joining to a session would eventually be unable to name it at all.
+    /// </remarks>
+    public string ReferenceType { get; set; }
+
+    /// <summary>
+    /// The reference id of the checkout this attempt belongs to.
+    /// </summary>
+    public string ReferenceId { get; set; }
+
+    /// <summary>
     /// The key of the payment provider handling the attempt (for example the Stripe processor key).
     /// </summary>
     public string ProviderKey { get; set; }

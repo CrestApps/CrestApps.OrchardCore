@@ -7,10 +7,6 @@ namespace CrestApps.OrchardCore.Subscriptions.Core.Models;
 /// </summary>
 public sealed class SubscriptionSettings
 {
-    /// <summary>
-    /// Gets or sets the key of the default payment method used by subscription checkout.
-    /// </summary>
-    public string DefaultPaymentMethod { get; set; }
 
     /// <summary>
     /// Gets or sets the ISO currency code used for subscription invoices and payments.

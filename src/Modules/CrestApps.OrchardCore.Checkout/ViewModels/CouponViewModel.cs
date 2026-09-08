@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Checkout.ViewModels;
 /// <summary>
 /// The coupon box on the payment step.
 /// </summary>
-public sealed class CouponViewModel
+public class CouponViewModel
 {
     /// <summary>
     /// Gets or sets the code the customer entered.

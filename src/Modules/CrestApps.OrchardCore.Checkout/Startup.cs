@@ -51,6 +51,10 @@ public sealed class Startup : StartupBase
 
         // The coupon catalog is the discount provider shipped in the box. It is registered here rather than
         // in its own feature because the discount seam is worth nothing without at least one thing using it.
+        // Coupons live in their own YesSql collection, so the collection must be declared for its document
+        // table to exist. Without it the coupon catalog throws on the first read.
+        services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CheckoutConstants.CouponCollectionName));
+
         services.AddDataMigration<CouponMigrations>()
             .AddIndexProvider<CouponIndexProvider>();
 
@@ -66,6 +70,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<IPaymentEvent, RefundReconciliationPaymentEventHandler>();
         services.AddScoped<IPaymentAttemptLimiter, PaymentAttemptLimiter>();
         services.AddScoped<PaymentSessionCache>();
+        services.AddScoped<CheckoutInvoiceBuilder>();
         services.AddScoped<ICheckoutHandler, PaymentCheckoutHandler>();
         services.AddSingleton<IBackgroundTask, CheckoutReconciliationBackgroundTask>();
 

@@ -21,20 +21,6 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
         { "groupId", SubscriptionSettingsDisplayDriver.GroupId },
     };
 
-    private static readonly RouteValueDictionary _subscriptionRouteValues = new()
-    {
-        { "area", SubscriptionConstants.Features.Area },
-        { "controller", typeof(AdminController).ControllerName() },
-        { "action", nameof(AdminController.Index) },
-    };
-
-    private static readonly RouteValueDictionary _dashboardRouteValues = new()
-    {
-        { "area", SubscriptionConstants.Features.Area },
-        { "controller", typeof(DashboardController).ControllerName() },
-        { "action", nameof(DashboardController.Index) },
-    };
-
     private static readonly RouteValueDictionary _agreementRouteValues = new()
     {
         { "area", SubscriptionConstants.Features.Area },
@@ -80,22 +66,12 @@ public sealed class SubscriptionsAdminMenu : AdminNavigationProvider
             .Add(S["Subscriptions"], S["Subscriptions"].PrefixPosition(), subscriptions => subscriptions
                 .AddClass("subscriptions")
                 .Id("subscriptions")
-                .Add(S["Manage"], S["Manage"].PrefixPosition("1"), manage => manage
-                    .Action(_subscriptionRouteValues)
-                    .Permission(SubscriptionPermissions.ManageSubscriptions)
-                    .LocalNav()
-                )
-                .Add(S["My Subscriptions"], S["My Subscriptions"].PrefixPosition("2"), dashboard => dashboard
-                    .Action(_dashboardRouteValues)
-                    .Permission(SubscriptionPermissions.ManageOwnSubscriptions)
-                    .LocalNav()
-                )
-                .Add(S["Agreements"], S["Agreements"].PrefixPosition("3"), agreements => agreements
+                .Add(S["Agreements"], S["Agreements"].PrefixPosition("1"), agreements => agreements
                     .Action(_agreementRouteValues)
                     .Permission(SubscriptionPermissions.ManageSubscriptions)
                     .LocalNav()
                 )
-                .Add(S["My Plans"], S["My Plans"].PrefixPosition("4"), plans => plans
+                .Add(S["My Plans"], S["My Plans"].PrefixPosition("2"), plans => plans
                     .Action(_mySubscriptionRouteValues)
                     .Permission(SubscriptionPermissions.ManageOwnSubscriptions)
                     .LocalNav()

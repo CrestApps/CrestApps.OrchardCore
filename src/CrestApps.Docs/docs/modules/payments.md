@@ -17,16 +17,17 @@ The **Payments** framework defines the provider-agnostic contracts that let any 
 
 ### Payment methods and options
 
-Every gateway advertises itself as a **`PaymentMethod`** registered into the shared **`PaymentMethodOptions`**:
+Every gateway advertises itself by registering an **`ICheckoutPaymentProvider`**. There is no separate list of
+methods to configure: the payment step is built from the providers actually registered on the tenant, so the
+page can never offer a method the framework cannot execute — the failure mode that leaves a customer
+submitting a checkout that waits forever for a payment nothing can collect.
 
 | Member | Description |
 | --- | --- |
-| `PaymentMethodOptions.PaymentMethods` | The dictionary of available methods, keyed by a stable *processor key* (for example `Stripe`, `PayLater`). |
-| `PaymentMethodOptions.DefaultPaymentMethod` | The method selected by default at checkout. |
 | `PaymentMethod.Title` | The label shown to the customer. |
 | `PaymentMethod.HasProcessor` | `true` when the method actually charges a card through a gateway; `false` for manual/deferred methods (for example *Pay Later*). |
 
-The default method is resolved by an `IPostConfigureOptions<PaymentMethodOptions>` that honors the site owner's configured default and otherwise prefers a method that has a real processor.
+The default method is the one the site owner picked in the checkout settings, falling back to a provider that has a real gateway behind it.
 
 ### Payment events
 
@@ -166,7 +167,7 @@ For load-balanced or multi-instance hosting, enable the **Redis** features (`Orc
 
 ## Stripe as a generic checkout provider
 
-Beyond the subscription-specific endpoints, Stripe also registers a **generic `ICheckoutPaymentProvider`** when the [Checkout](checkout) feature is enabled (through a `[RequireFeatures]` startup, so there is no separate integration feature to switch on). This lets *any* checkout — recurring subscriptions today, a one-time storefront tomorrow — collect a card payment through a Stripe PaymentIntent without taking a dependency on the subscription flow.
+Beyond the subscription-specific endpoints, Stripe also registers a **generic `ICheckoutPaymentProvider`** when the [Checkout](checkout) feature is enabled (through a `[RequireFeatures]` startup, so there is no separate integration feature to switch on). This lets *any* checkout — recurring subscriptions today, a one-time storefront tomorrow — collect a card payment through a Stripe PaymentIntent without taking a dependency on subscriptions.
 
 - **`BeginAsync`** creates an *unconfirmed* PaymentIntent for the attempt's gross amount (base plus the tax the checkout determined) and returns its client secret, so the browser confirms it through Strong Customer Authentication with embedded Stripe Elements.
 - **`VerifyAsync`** retrieves the PaymentIntent from Stripe's authoritative API and reports the net/tax split the durable ledger validates, so an obligation is never marked paid on a cached webhook.
@@ -180,24 +181,17 @@ The same provider implements **`ICheckoutPaymentRefundProvider`**, so a settled 
 
 The checkout is extensible from both configuration and code. To surface a new gateway (for example PayPal) as a checkout option:
 
-1. **Advertise the method.** Register a `PaymentMethod` in `PaymentMethodOptions` under a unique processor key:
+1. **Advertise the method.** Register an `ICheckoutPaymentProvider` under a unique provider key, declaring what it can settle through its `PaymentProviderCapabilities`:
 
    ```csharp
-   services.Configure<PaymentMethodOptions>(options =>
-   {
-       options.PaymentMethods["PayPal"] = new PaymentMethod
-       {
-           Title = "PayPal",
-           HasProcessor = true,
-       };
-   });
+   services.AddScoped<ICheckoutPaymentProvider, MyGatewayCheckoutPaymentProvider>();
    ```
 
 2. **Render its checkout UI.** Provide an `IDisplayDriver<SubscriptionFlowPaymentMethod>` (Subscriptions) or the equivalent display driver for your flow, so the method renders its own fields/redirect on the payment step when selected.
 
 3. **Handle the money.** Add your endpoints/redirect to create the charge, and implement `IPaymentEvent` (or `PaymentEventBase`) to translate the provider's webhook into the normalized events the rest of the system already understands.
 
-Because consumers depend only on `PaymentMethodOptions` and `IPaymentEvent`, no changes to the Subscriptions or Products modules are required to add a provider.
+Because consumers depend only on `ICheckoutPaymentProvider` and `IPaymentEvent`, no changes to the Subscriptions or Products modules are required to add a provider.
 
 ## Taxes
 

@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Subscriptions.Models;
+
 namespace CrestApps.OrchardCore.Subscriptions.Reports;
 
 /// <summary>
@@ -89,6 +92,11 @@ public sealed class DashboardSummary
     public int ExpiringSubscriptions { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of agreements whose last payment failed and that are inside their grace period.
+    /// </summary>
+    public int PastDueSubscriptions { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of distinct subscribers.
     /// </summary>
     public int TotalSubscribers { get; set; }
@@ -105,9 +113,14 @@ public sealed class ExpiringSubscriptionRow
     public string OwnerId { get; set; }
 
     /// <summary>
-    /// Gets or sets the subscription content type.
+    /// Gets or sets the title of the plan the subscriber agreed to.
     /// </summary>
-    public string ContentType { get; set; }
+    public string Title { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status the agreement is in.
+    /// </summary>
+    public SubscriptionStatus Status { get; set; }
 
     /// <summary>
     /// Gets or sets the date the subscription started, in UTC.
@@ -131,9 +144,14 @@ public sealed class ExpiringSubscriptionRow
 public sealed class ProductPerformanceRow
 {
     /// <summary>
-    /// Gets or sets the product content type.
+    /// Gets or sets the identifier of the plan the payments were taken for.
     /// </summary>
-    public string ContentType { get; set; }
+    public string ReferenceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the plan's display title, falling back to its identifier when the plan no longer resolves.
+    /// </summary>
+    public string Title { get; set; }
 
     /// <summary>
     /// Gets or sets the number of succeeded transactions for the product.
@@ -149,4 +167,24 @@ public sealed class ProductPerformanceRow
     /// Gets or sets the tax collected for the product.
     /// </summary>
     public decimal Tax { get; set; }
+}
+
+/// <summary>
+/// Represents the confirmed payments taken in one currency.
+/// </summary>
+/// <remarks>
+/// Revenue is reported per currency because adding amounts in different currencies produces a number that
+/// means nothing.
+/// </remarks>
+public sealed class CurrencyRevenueGroup
+{
+    /// <summary>
+    /// Gets or sets the ISO currency code, upper-cased.
+    /// </summary>
+    public string Currency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the confirmed payments taken in this currency.
+    /// </summary>
+    public IReadOnlyList<PaymentAttemptIndex> Payments { get; set; } = [];
 }

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Checkout.Core;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Checkout.ViewModels;
 using Microsoft.Extensions.Localization;
@@ -23,6 +24,7 @@ namespace CrestApps.OrchardCore.Checkout.Drivers;
 public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
 {
     private readonly ICouponStore _couponStore;
+    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
@@ -35,10 +37,12 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
     /// <param name="stringLocalizer">The string localizer.</param>
     public CouponCheckoutFlowDisplayDriver(
         ICouponStore couponStore,
+        CheckoutInvoiceBuilder invoiceBuilder,
         IClock clock,
         IStringLocalizer<CouponCheckoutFlowDisplayDriver> stringLocalizer)
     {
         _couponStore = couponStore;
+        _invoiceBuilder = invoiceBuilder;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -76,7 +80,10 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
         if (string.IsNullOrEmpty(code))
         {
             // Clearing the box removes the coupon, which is how a customer takes one off.
-            flow.Session.Properties.Remove(nameof(CheckoutCoupon));
+            if (flow.Session.Properties?.Remove(nameof(CheckoutCoupon)) == true)
+            {
+                await _invoiceBuilder.BuildAsync(flow);
+            }
 
             return await EditStepAsync(flow, context);
         }
@@ -94,6 +101,11 @@ public sealed class CouponCheckoutFlowDisplayDriver : CheckoutFlowDisplayDriver
         else
         {
             flow.Session.Put(new CheckoutCoupon { Code = coupon.Code });
+
+            // The invoice is rebuilt here rather than at completion, so the customer sees what the code
+            // actually took off before they agree to pay. A discount the customer cannot see until after
+            // the charge is a discount they cannot check.
+            await _invoiceBuilder.BuildAsync(flow);
         }
 
         return await EditStepAsync(flow, context);

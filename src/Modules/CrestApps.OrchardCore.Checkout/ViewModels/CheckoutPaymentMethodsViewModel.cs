@@ -4,7 +4,7 @@ namespace CrestApps.OrchardCore.Checkout.ViewModels;
 /// The payment methods offered on the payment step, built from the payment providers actually registered on
 /// the tenant so the list can never advertise a method that cannot be executed.
 /// </summary>
-public sealed class CheckoutPaymentMethodsViewModel
+public class CheckoutPaymentMethodsViewModel
 {
     /// <summary>
     /// Gets or sets the flow being paid.

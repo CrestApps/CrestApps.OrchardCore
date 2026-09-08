@@ -10,9 +10,11 @@ description: Sell recurring subscriptions and onboard tenants in Orchard Core, w
 | **Feature Name** | Subscriptions |
 | **Feature ID** | `CrestApps.OrchardCore.Subscriptions` |
 | **Category** | Subscriptions |
-| **Dependencies** | `OrchardCore.Contents`, `OrchardCore.ContentTypes`, `OrchardCore.Title`, `CrestApps.OrchardCore.Products`, `CrestApps.OrchardCore.Checkout`, `CrestApps.OrchardCore.Wizard` |
+| **Dependencies** | `OrchardCore.Contents`, `OrchardCore.ContentTypes`, `OrchardCore.Title`, `CrestApps.OrchardCore.Users`, `CrestApps.OrchardCore.Products`, `CrestApps.OrchardCore.Checkout`, `CrestApps.OrchardCore.Receipts` |
 
-The **Subscriptions** module lets you sell recurring plans built on ordinary Orchard Core content items. It adds a **`SubscriptionPart`** that turns a content type into a billable plan, a multi-step checkout flow hosted by the shared [Wizard](wizard) feature, a subscriber dashboard, and an admin console for managing subscriptions — all on top of the provider-agnostic [Payments](payments) framework so you can charge through Stripe today and add other gateways later.
+The **Subscriptions** module lets you sell recurring plans built on ordinary Orchard Core content items. It adds a **`SubscriptionPart`** that turns a content type into a billable plan, a durable **subscription agreement** that outlives the purchase, and the lifecycle that keeps that agreement honest as payments succeed, fail, and stop.
+
+Subscriptions owns no checkout of its own. Buying a plan runs through the [Checkout](checkout) framework exactly like any other purchase, so there is one path that takes money and one ledger that records it. That is what makes a subscription's revenue reconcilable against the payments the site actually collected.
 
 ## Features
 
@@ -20,9 +22,8 @@ The module ships several composable features:
 
 | Feature | Feature ID | Description |
 | --- | --- | --- |
-| Subscriptions | `CrestApps.OrchardCore.Subscriptions` | Core subscription plans, checkout flow, subscriber dashboard, and admin management. Depends on the [Checkout](checkout) and [Wizard](wizard) frameworks. |
-| Subscriptions - reCaptcha | `CrestApps.OrchardCore.Subscriptions.ReCaptcha` | Adds Google reCaptcha protection to the subscription process. |
-| Subscriptions - Tenant Onboarding | `CrestApps.OrchardCore.Subscriptions.TenantOnboarding` | Provisions a new Orchard Core tenant as part of a subscription (default tenant only). |
+| Subscriptions | `CrestApps.OrchardCore.Subscriptions` | Subscription plans, the durable agreement, its lifecycle, entitlements, and the admin and customer screens. Depends on the [Checkout](checkout) framework. |
+| Subscriptions - Sites | `CrestApps.OrchardCore.Subscriptions.Tenants` | Sells whole Orchard Core sites, provisioning each from a durable job (default tenant only). |
 
 Payment options are contributed by other modules rather than by dedicated Subscriptions sub-features:
 
@@ -41,59 +42,46 @@ Attach **`SubscriptionPart`** to any content type (it depends on [Products](prod
 | `DurationType` | The unit for the cycle — `Year`, `Month`, `Week`, or `Day` (for example `1` + `Month` = monthly). |
 | `BillingCycleLimit` | Optional cap on how many cycles are billed before payments stop. |
 | `SubscriptionDayDelay` | Optional number of days to delay the start of the subscription. |
+| `TrialDays` | Optional free trial, in days, before the first cycle is billed. Not the same as a delayed start — see [Free trials](#free-trials). |
 | `Sort` | Sort order used when listing subscription options. |
 
 Each content item of that type becomes a purchasable plan, editable and securable like any other Orchard Core content.
 
-## The checkout flow
+## Buying a plan
 
-Subscribing runs through an extensible, server-driven **subscription flow** composed of ordered steps. The built-in steps are:
+A plan is bought through the shared [Checkout](checkout), started from the **Sign up** link on any published plan (`Subscription/Signup/{contentItemId}`). The checkout resolves the plan, records what is being bought, and hands the customer to the ordinary checkout experience.
 
-1. **Content** — collects any content the plan requires.
-2. **User Registration** — registers or signs in the subscriber when the plan requires an account.
-3. **Tenant Onboarding** — provisions a dedicated tenant (only with the *Tenant Onboarding* feature).
-4. **Payment** — selects a payment method and collects payment.
+The plan itself contributes the charges: the recurring price and, when configured, a one-time setup fee. Those sit on a step that is never drawn — the customer already chose the plan, so there is nothing to ask them — but the charges are still billed. Other handlers contribute the steps that do ask for something:
 
-Each step is still authored as a display driver against the `SubscriptionFlow`, and the server still persists subscription-specific state in `SubscriptionSession` through `ISubscriptionSessionStore`. The public host, navigation, completion locking, and resume behavior now come from the shared `CrestApps.OrchardCore.Wizard` feature, so subscriptions reuses the common wizard controller and engine instead of duplicating that infrastructure. Amounts are always derived from the server-side invoice, never from client-submitted values.
+| Step | Contributed when |
+| --- | --- |
+| Content | The plan's `SubscriptionPartSettings.ContentTypes` names content the subscriber must fill in. |
+| Registration | The visitor is not signed in. It is hidden again the moment they are, including when they sign in on another tab midway through. |
+| Site details | The **Subscriptions - Sites** feature is enabled and the plan provisions a site. |
+| Payment | Always, and always last. |
 
-The invoice currency comes from the subscribed product itself: the flow resolves the product through `IProductSnapshotResolver` and bills in the product-owned currency. A product that declares no currency at all (neither its own nor its content type's default) is not sellable, so the flow fails closed rather than billing it in a guessed currency; the site subscription currency applies only when the flow content item is not a product. Prices are never converted between currencies — when Stripe price synchronization is asked for a currency that differs from the product's own currency, that price is skipped and a warning is logged rather than silently relabeled.
+The price comes from the plan through `IProductSnapshotResolver`, so a future pricing engine changes what is charged without changing the checkout. The invoice is built in the plan's own currency rather than a site-wide default, because an invoice built in one currency from prices set in another charges a number that belongs to a different currency. Amounts always come from the server-side invoice, never from anything the browser submitted.
 
-The site-level subscription currency picker and the product editors now read from the shared **Commerce → Currencies** catalog, so editors select friendly managed values such as **US Dollar (USD)** instead of typing currency codes free-form.
+### Buying without an account
 
-### Payment methods at checkout
+When the visitor is not signed in, the account step collects their details and the account is created **before** any money moves, then signed in once the purchase completes. If the checkout fails, that account is deleted again — after verifying the password matches, so only the account this checkout created is ever removed. Creating it after payment would leave a paying customer with no account whenever account creation failed; leaving it behind on a failure would let a visitor accumulate accounts by abandoning checkouts.
 
-The **Payment** step renders the payment methods advertised in `PaymentMethodOptions`. Enabling the **Stripe** module adds the *Stripe* method (with a real processor), and enabling the **Pay Later** module adds a *Pay Later* method (no processor). The site owner picks the default under the subscription settings; developers add more options (for example PayPal) by registering a payment method and a checkout display driver — see [Adding another payment provider](payments#adding-another-payment-provider).
+Turn on **Allow Guest Signup** in the subscription settings to let somebody buy without creating an account at all.
 
-The checkout UI presents those methods as selection cards and keeps the processor-specific input inside a dedicated panel, which makes the difference between online payment and offline pay-later flows clearer at checkout.
+## Receipts
 
-### Stripe checkout modes
-
-When the **Stripe** module is enabled alongside Subscriptions, Stripe contributes two ways to collect payment, selectable from the Stripe settings page under **Checkout Mode** (see [The Stripe provider](payments#the-stripe-provider)):
-
-- **Payment Elements (on-site)** — collects card data on your own site. Supports products that mix multiple billing intervals and up-front one-time fees.
-- **Hosted Checkout (redirect)** — redirects the customer to a Stripe-hosted [Checkout Session](https://docs.stripe.com/payments/checkout), minimizing your PCI scope.
-
-Hosted Checkout redirects the browser to Stripe and, on return, the `Subscription/CheckoutReturn` action retrieves the session from Stripe, confirms it is complete and paid, records the Stripe subscription against the local session, and finalizes the flow through the **same completion pipeline** used by Payment Elements. Because a single Checkout Session maps to a single Stripe subscription, Hosted Checkout only supports products that have a **single billing interval** and **no separate up-front one-time fee**. A product that does not meet these constraints automatically falls back to the Payment Elements experience, so switching modes never changes how a completed subscription is recorded.
-
-## Subscriber dashboard
-
-Subscribers get a self-service **dashboard** (`SubscriberDashboard`) where they can review their subscriptions and related information. Recorded payments are indexed (`SubscriptionTransactionIndex`) so a subscriber's transaction history is available for display. Each payment in the **Payments** list offers a **Print** action that opens a printable receipt, rendered through the reusable [Receipts](receipts) module — showing the configured issuer branding, billed-to details, service plan, tax breakdown, total, and transaction reference. A receipt is only served to the subscriber that owns the transaction.
-
-The **Payments** and **Subscriptions** lists are each paged and sorted latest-first — payments by their payment date and subscriptions by their start date. Both lists carry their own independent pager (the payments pager uses the `invoicesPage` query key and the subscriptions pager uses `subscriptionsPage`), so paging one list never disturbs the other. The page size follows the site-wide pager option.
+Each confirmed payment offers a printable receipt through the reusable [Receipts](receipts) module, showing the configured issuer branding, billed-to details, plan, tax breakdown, total, and transaction reference. A receipt is only ever served to the customer who owns the payment.
 
 ## Admin management
 
-Administrators get a dedicated **Subscriptions** admin area (registered through `SubscriptionsAdminMenu`) to:
+Administrators get a **Subscriptions** admin area with two screens:
 
-- Browse and filter subscription sessions through an extensible, queryable admin list (`ISubscriptionsAdminListQueryService` + `ISubscriptionAdminListFilterProvider`).
-- Manage service plans and, when Stripe is enabled, synchronize plan prices with Stripe.
-- Control access through the module's permission provider.
+- **Agreements** — every durable subscription agreement, filterable by status. From an agreement's detail page an administrator can cancel it (immediately or at the close of the paid period), pause billing, and resume it. Every one of those actions goes through the lifecycle service rather than editing the record, so an administrator cannot race a gateway webhook or the nightly sweep, and each action is written to the agreement's own history.
+- **My Plans** — the matching customer screen, where a subscriber sees what they subscribe to and cancels it themselves. Cancelling there defaults to ending at the close of the period they already paid for, because they bought that time.
 
-A **Subscription Summary** widget (`SubscriptionSummaryPart`) is also available for surfacing subscription information on the site.
+Payments, refunds, and outstanding balances live in the [Transactions](transactions) module rather than here, because they are not specific to subscriptions.
 
-Alongside the session list there is an **Agreements** screen backed by the durable subscription record described below. From an agreement's detail page an administrator can cancel it (immediately or at the close of the paid period), pause billing, and resume it. Every one of those actions goes through the lifecycle service rather than editing the record, so an administrator acting in the admin cannot race a gateway webhook or the nightly sweep, and each action is written to the agreement's own history.
-
-Subscribers get a matching **My Plans** screen where they can see what they subscribe to and cancel it themselves. Cancelling from there defaults to ending at the close of the period they already paid for, because they bought that time.
+A **Subscription Summary** widget (`SubscriptionSummaryPart`) surfaces headline numbers on a page. Every figure it shows is read from the durable agreement and the payment ledger, never from checkout sessions, so an abandoned checkout is never counted as a subscriber or as revenue.
 
 ## The subscription agreement
 
@@ -197,7 +185,7 @@ configuration: pick your own currency, price, and roles before selling anything.
 
 ## Free trials
 
-A recurring plan can start with a free trial. Set the trial days on the plan and the gateway is told about it, so the gateway holds the schedule and starts billing when the trial ends.
+A recurring plan can start with a free trial. Set **Free Trial Days** on the plan and the gateway is told about it, so the gateway holds the schedule and starts billing when the trial ends.
 
 That is deliberate: if the site simply did not charge and promised itself to start billing later, a restart would break the promise. It is also different from delaying the start of the agreement. A trial establishes the agreement now, with a payment method attached, so a trial converts into a paying subscriber without asking them to come back and buy again.
 
@@ -220,17 +208,6 @@ Customers watch progress under **My Sites**. Administrators see every job under 
 
 A site sold this way carries a `Tenant` entitlement naming it, so the site runs for as long as the subscription is current and is **disabled** when it is not. Disabled, never deleted: a disabled tenant stops serving immediately but keeps every byte of the customer's data, so somebody who pays a late invoice gets their site back exactly as it was.
 
-## Tenant onboarding
-
-With **Subscriptions - Tenant Onboarding** enabled (on the default tenant), a subscription can provision a brand-new Orchard Core tenant as part of checkout — for example to sell isolated SaaS workspaces. The provisioning is resilient to failures, and two workflow events let you react to the outcome:
-
-| Workflow event | Raised when |
-| --- | --- |
-| `SubscribedTenantSetupSucceededEvent` | A subscribed tenant is provisioned successfully. |
-| `SubscribedTenantFailedSetupEvent` | Provisioning a subscribed tenant fails. |
-
-Use these events in Orchard Core workflows to send notifications, seed data, or trigger compensating actions.
-
 ## Payment safety and multi-instance operation
 
 Subscriptions inherits the hardening built into the [Payments](payments#payment-resiliency) framework:
@@ -250,10 +227,10 @@ Beyond the always-on throttle above, the sensitive front-end routes advertise **
 
 | Group name | Routes it covers |
 | --- | --- |
-| `subscription-checkout` | The signup form submission and every checkout flow step. |
-| `subscription-payment` | The anonymous payment endpoints (payment/setup intents, checkout session, subscription creation, and pay-later confirmation). |
+| `checkout` | Starting a subscription and every checkout step. |
+| `checkout-payment` | The payment endpoints that begin a payment and report its status. |
 
-To enable it, turn on the **Rate Limiting** feature, then under **Configuration → Rate Limiting** create a policy targeting the `subscription-checkout` and/or `subscription-payment` group. Requests exceeding the configured limit receive an HTTP `429`.
+Both groups are owned by the [Checkout](checkout) module, because that is where a subscription purchase actually runs. To enable it, turn on the **Rate Limiting** feature, then under **Configuration → Rate Limiting** create a policy targeting either group. Requests exceeding the configured limit receive an HTTP `429`.
 
 ## Taxation
 
@@ -272,12 +249,16 @@ When the [Reports](reports) feature is enabled, the Subscriptions module contrib
 
 | Report | Shows |
 | --- | --- |
-| Subscription revenue | Total revenue, transaction count, average value, tax collected, and revenue by month. |
-| Subscriptions dashboard | Active subscriptions, new in period, expiring within 30 days, and total subscribers. |
-| Expiring subscriptions | Subscriptions expiring within the horizon, ordered by expiry. |
-| New subscriptions trend | New subscriptions per month over the period. |
+| Subscription revenue | Revenue, payment count, average payment, and tax collected, split by currency and bucketed by month. |
+| Subscriptions dashboard | Active, new in period, expiring within 30 days, past due, and total distinct subscribers. |
+| Expiring subscriptions | Agreements whose paid period ends within the horizon, soonest first. |
+| New subscriptions trend | New agreements per month over the period. |
 | Tax collected | Tax collected in the period, with a monthly breakdown. |
-| Product performance | Revenue and tax grouped by product. |
+| Product performance | Revenue and tax grouped by the plan that was bought. |
+
+Every money figure is read from the **payment ledger** and every subscriber figure from the **durable agreement**. A checkout session records what somebody was asked to pay; the ledger records what a provider confirmed was taken. Reporting the first as revenue would overstate income by every abandoned and failed checkout, which is the difference between a report an owner can file a return from and one they cannot.
+
+Revenue is reported **per currency** and never summed across them, because a single total mixing currencies is a number that means nothing — and silently adding them hides that the site took money in a currency the owner did not expect.
 
 ## Recipes and schema
 
@@ -287,7 +268,7 @@ When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is 
 
 - **`SubscriptionPart`** — its billing payload (`InitialAmount`, `BillingDuration`, `DurationType`, `BillingCycleLimit`, `SubscriptionDayDelay`, `Sort`, and the initial-amount description) and the `SubscriptionPartSettings.ContentTypes` option.
 - **`SubscriptionSummaryPart`** — the dashboard-widget marker part.
-- **`TenantOnboardingPart`** — its `RecipeName` and `FeatureProfile` payload, contributed only when the **Tenant Onboarding** feature is also enabled.
+- **`TenantOnboardingPart`** — its `RecipeName` and `FeatureProfile` payload, contributed only when the **Subscriptions - Sites** feature is also enabled.
 
 ## Installation
 
@@ -295,7 +276,7 @@ When the **`CrestApps.OrchardCore.Recipes`** feature is enabled, JSON Schema is 
 dotnet add package CrestApps.OrchardCore.Subscriptions
 ```
 
-Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Subscriptions** (which brings in the [Checkout](checkout) framework) and the payment module you want — the **Stripe** module and/or the **[Pay Later](pay-later)** module. Configure Stripe under **Settings → Stripe**.
+Then, in the **Orchard Core Admin Dashboard** under **Tools → Features**, enable **Subscriptions** (which brings in the [Checkout](checkout) framework) and at least one payment module — the **Stripe** module and/or the **[Pay Later](pay-later)** module. Configure Stripe under **Settings → Stripe**.
 
 ## Related modules
 

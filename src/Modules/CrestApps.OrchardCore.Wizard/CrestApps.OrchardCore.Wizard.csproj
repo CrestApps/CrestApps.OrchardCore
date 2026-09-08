@@ -31,6 +31,11 @@
     <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.Flows.Core" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
+
+    <!-- Brings in the script and style tag helpers. Without it the @addTagHelper directive in
+         _ViewImports.cshtml resolves to nothing and every <script asp-name> renders as literal markup, so
+         the page loads with its behaviour silently missing. -->
+    <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
   </ItemGroup>
 

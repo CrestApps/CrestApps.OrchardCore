@@ -39,6 +39,15 @@
     </div>
 </div>
 
+<div class="ocat-wrapper" asp-validation-class-for="TrialDays">
+    <label asp-for="TrialDays" class="ocat-label">@T["Free Trial Days"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" step="1" asp-for="TrialDays" class="form-control" />
+        <span class="hint">@T["Give the subscriber this many days free before the first cycle is billed. The payment method is still collected up front, so the trial converts without asking them to buy again. Leave it empty for no trial."]</span>
+        <span asp-validation-for="TrialDays"></span>
+    </div>
+</div>
+
 <div class="ocat-wrapper" asp-validation-class-for="SubscriptionDayDelay">
     <label asp-for="SubscriptionDayDelay" class="ocat-label">@T["Subscription Day Delay"]</label>
     <div class="ocat-end">

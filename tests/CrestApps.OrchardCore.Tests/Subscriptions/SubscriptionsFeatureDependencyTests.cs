@@ -4,7 +4,6 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Drivers;
-using CrestApps.OrchardCore.Wizard;
 using OrchardCore.Modules.Manifest;
 using Xunit;
 
@@ -51,12 +50,21 @@ public class SubscriptionsFeatureDependencyTests
     }
 
     [Fact]
-    public void SubscriptionsFeature_DependsOnWizard()
+    public void SubscriptionsModule_DoesNotDeclareRemovedFlowSubFeatures()
     {
-        var featureAttribute = GetSubscriptionsAreaFeature();
+        // The session-based signup flow was removed in favour of buying a plan through the Checkout
+        // feature. Its two sub-features went with it: reCaptcha guarded a step that no longer exists, and
+        // tenant onboarding was replaced by "Subscriptions - Sites", which provisions from a durable job
+        // instead of inline during the request that took the money. Guard against either id coming back,
+        // because reintroducing one would mean a second, unledgered way to subscribe.
+        var featureIds = typeof(SubscriptionPartDisplayDriver).Assembly
+            .GetCustomAttributes<FeatureAttribute>()
+            .Select(attribute => attribute.Id)
+            .ToArray();
 
-        Assert.NotNull(featureAttribute);
-        Assert.Contains(WizardConstants.Features.Area, featureAttribute.Dependencies);
+        Assert.DoesNotContain("CrestApps.OrchardCore.Subscriptions.ReCaptcha", featureIds);
+        Assert.DoesNotContain("CrestApps.OrchardCore.Subscriptions.TenantOnboarding", featureIds);
+        Assert.Contains(SubscriptionConstants.Features.Tenants, featureIds);
     }
 
     [Fact]

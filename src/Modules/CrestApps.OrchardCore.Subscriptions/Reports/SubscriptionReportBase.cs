@@ -1,7 +1,10 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Core;
+using YesSql;
+using ISession = YesSql.ISession;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Security.Permissions;
@@ -70,6 +73,19 @@ public abstract class SubscriptionReportBase : IReport
     /// <param name="value">The amount to format.</param>
     /// <param name="currency">The currency code.</param>
     /// <returns>The formatted amount (for example <c>USD 1,234.50</c>).</returns>
+    /// <summary>
+    /// Reads the confirmed and pending payments that were taken for a subscription plan.
+    /// </summary>
+    /// <param name="session">The YesSql session.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Every payment attempt belonging to a subscription checkout.</returns>
+    /// <remarks>
+    /// The ledger is filtered by reference type rather than joined to sessions, because a session can be
+    /// pruned long before the money it took stops mattering to a report.
+    /// </remarks>
+    protected static async Task<IEnumerable<PaymentAttemptIndex>> GetSubscriptionPaymentsAsync(ISession session, CancellationToken cancellationToken)
+        => await session.QueryIndex<PaymentAttemptIndex>(index => index.ReferenceType == SubscriptionCheckout.ReferenceType).ListAsync(cancellationToken);
+
     protected static string FormatCurrency(decimal value, string currency)
     {
         var amount = value.ToString("N2", CultureInfo.InvariantCulture);

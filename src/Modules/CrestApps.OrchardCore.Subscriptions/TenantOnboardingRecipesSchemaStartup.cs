@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.Subscriptions;
 /// Registers the tenant onboarding recipe schema contributor when both the tenant onboarding
 /// and recipes features are enabled.
 /// </summary>
-[Feature(SubscriptionConstants.Features.TenantOnboarding)]
+[Feature(SubscriptionConstants.Features.Tenants)]
 [RequireFeatures("CrestApps.OrchardCore.Recipes")]
 public sealed class TenantOnboardingRecipesSchemaStartup : StartupBase
 {

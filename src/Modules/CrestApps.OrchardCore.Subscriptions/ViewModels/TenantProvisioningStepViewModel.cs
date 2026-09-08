@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 /// <summary>
 /// The form a customer fills in to describe the site they are buying.
 /// </summary>
-public sealed class TenantProvisioningStepViewModel
+public class TenantProvisioningStepViewModel
 {
     /// <summary>
     /// Gets or sets the Orchard Core tenant name.

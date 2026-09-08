@@ -3,7 +3,7 @@ namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 /// <summary>
 /// The editor for what a subscription plan grants.
 /// </summary>
-public sealed class SubscriptionEntitlementPartViewModel
+public class SubscriptionEntitlementPartViewModel
 {
     /// <summary>
     /// Gets or sets the roles available on the tenant, each marked as granted by this plan or not.

@@ -1,7 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
-using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Settings;
 using YesSql;
@@ -45,27 +45,35 @@ public sealed class SubscriptionRevenueReport : SubscriptionReportBase
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();
-        var transactions = await _session.QueryIndex<SubscriptionTransactionIndex>().ListAsync(cancellationToken);
-        var succeeded = SubscriptionReportAggregator.GetSucceededTransactions(transactions, range.FromUtc, range.ToUtc);
-        var summary = SubscriptionReportAggregator.SummarizeRevenue(succeeded);
-        var monthly = SubscriptionReportAggregator.BucketRevenueByMonth(succeeded);
-        var currency = await GetCurrencyAsync();
+        var payments = await GetSubscriptionPaymentsAsync(_session, cancellationToken);
+        var succeeded = SubscriptionReportAggregator.GetSucceededPayments(payments, range.FromUtc, range.ToUtc);
 
         var document = new ReportDocument
         {
             Title = DisplayName.Value,
         };
 
-        document.Add(ReportSection.ForMetrics(S["Summary"].Value,
-        [
-            new ReportMetric(S["Total revenue"].Value, FormatCurrency(summary.TotalRevenue, currency)),
-            new ReportMetric(S["Transactions"].Value, ReportFormat.Number(summary.TransactionCount)),
-            new ReportMetric(S["Average transaction value"].Value, FormatCurrency(summary.AverageTransactionValue, currency)),
-            new ReportMetric(S["Tax collected"].Value, FormatCurrency(summary.TotalTax, currency)),
-        ]));
-
-        if (monthly.Count > 0)
+        // One section per currency. Summing across currencies would produce a total that means nothing, and
+        // would hide from the owner that they took money in a currency they did not expect.
+        foreach (var group in SubscriptionReportAggregator.GroupByCurrency(succeeded))
         {
+            var currency = group.Currency;
+            var summary = SubscriptionReportAggregator.SummarizeRevenue(group.Payments);
+            var monthly = SubscriptionReportAggregator.BucketRevenueByMonth(group.Payments);
+
+            document.Add(ReportSection.ForMetrics(S["Summary ({0})", currency].Value,
+            [
+                new ReportMetric(S["Total revenue"].Value, FormatCurrency(summary.TotalRevenue, currency)),
+                new ReportMetric(S["Payments"].Value, ReportFormat.Number(summary.TransactionCount)),
+                new ReportMetric(S["Average payment"].Value, FormatCurrency(summary.AverageTransactionValue, currency)),
+                new ReportMetric(S["Tax collected"].Value, FormatCurrency(summary.TotalTax, currency)),
+            ]));
+
+            if (monthly.Count == 0)
+            {
+                continue;
+            }
+
             var chart = new ReportChart
             {
                 Type = ReportChartType.Bar,
@@ -76,12 +84,12 @@ public sealed class SubscriptionRevenueReport : SubscriptionReportBase
                 ],
             };
 
-            document.Add(ReportSection.ForChart(S["Monthly revenue"].Value, chart, 12));
+            document.Add(ReportSection.ForChart(S["Monthly revenue ({0})", currency].Value, chart, 12));
 
             var columns = new[]
             {
                 new ReportColumn(S["Month"].Value),
-                new ReportColumn(S["Transactions"].Value, ReportColumnAlign.End),
+                new ReportColumn(S["Payments"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Revenue"].Value, ReportColumnAlign.End),
                 new ReportColumn(S["Tax"].Value, ReportColumnAlign.End),
             };
@@ -107,7 +115,7 @@ public sealed class SubscriptionRevenueReport : SubscriptionReportBase
                 FormatCurrency(summary.TotalTax, currency),
             ], emphasize: true));
 
-            document.Add(ReportSection.ForTable(S["Revenue by month"].Value, columns, rows));
+            document.Add(ReportSection.ForTable(S["Revenue by month ({0})", currency].Value, columns, rows));
         }
 
         return document;

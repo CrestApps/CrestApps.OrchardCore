@@ -501,6 +501,8 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
         {
             ItemId = IdGenerator.GenerateId(),
             SessionId = session.SessionId,
+            ReferenceType = session.ReferenceType,
+            ReferenceId = session.ReferenceId,
             ProviderKey = providerKey,
             ObligationId = obligationId,
             ExpectedAmount = amount,

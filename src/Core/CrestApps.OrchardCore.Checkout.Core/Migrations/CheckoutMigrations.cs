@@ -45,6 +45,12 @@ public sealed class CheckoutMigrations : DataMigration
             .Column<string>("ProviderReference")
             .Column<PaymentAttemptState>("State")
             .Column<DateTime>("UpdatedUtc")
+            .Column<DateTime>("CreatedUtc")
+            .Column<string>("Currency", column => column.WithLength(8))
+            .Column<decimal>("ConfirmedAmount")
+            .Column<decimal>("ConfirmedTaxAmount")
+            .Column<string>("ReferenceType")
+            .Column<string>("ReferenceId", column => column.WithLength(26))
         );
 
         await SchemaBuilder.AlterIndexTableAsync<PaymentAttemptIndex>(table => table
@@ -57,6 +63,11 @@ public sealed class CheckoutMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<PaymentAttemptIndex>(table => table
             .CreateIndex("IDX_PaymentAttemptIndex_Idempotency", "IdempotencyKey")
+        );
+
+        // Reporting ranges over when money was taken and groups it by what it was taken for.
+        await SchemaBuilder.AlterIndexTableAsync<PaymentAttemptIndex>(table => table
+            .CreateIndex("IDX_PaymentAttemptIndex_Reporting", "ReferenceType", "State", "CreatedUtc")
         );
 
         await SchemaBuilder.CreateMapIndexTableAsync<PaymentRefundIndex>(table => table
@@ -86,6 +97,30 @@ public sealed class CheckoutMigrations : DataMigration
             .CreateIndex("IDX_PaymentRefundIndex_Idempotency", "IdempotencyKey")
         );
 
-        return 1;
+        return 2;
+    }
+
+    /// <summary>
+    /// Adds the columns that let a report be built from the payment ledger rather than from a checkout
+    /// session, and the index that makes ranging over them cheap.
+    /// </summary>
+    /// <returns>The schema version this migration upgrades to.</returns>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<PaymentAttemptIndex>(table =>
+        {
+            table.AddColumn<DateTime>("CreatedUtc");
+            table.AddColumn<string>("Currency", column => column.WithLength(8));
+            table.AddColumn<decimal>("ConfirmedAmount");
+            table.AddColumn<decimal>("ConfirmedTaxAmount");
+            table.AddColumn<string>("ReferenceType");
+            table.AddColumn<string>("ReferenceId", column => column.WithLength(26));
+        });
+
+        await SchemaBuilder.AlterIndexTableAsync<PaymentAttemptIndex>(table => table
+            .CreateIndex("IDX_PaymentAttemptIndex_Reporting", "ReferenceType", "State", "CreatedUtc")
+        );
+
+        return 2;
     }
 }

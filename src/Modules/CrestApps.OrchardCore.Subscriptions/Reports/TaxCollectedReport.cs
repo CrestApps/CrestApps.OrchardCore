@@ -1,7 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
-using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Settings;
 using YesSql;
@@ -45,11 +45,16 @@ public sealed class TaxCollectedReport : SubscriptionReportBase
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();
-        var transactions = await _session.QueryIndex<SubscriptionTransactionIndex>().ListAsync(cancellationToken);
-        var succeeded = SubscriptionReportAggregator.GetSucceededTransactions(transactions, range.FromUtc, range.ToUtc);
-        var summary = SubscriptionReportAggregator.SummarizeRevenue(succeeded);
-        var monthly = SubscriptionReportAggregator.BucketRevenueByMonth(succeeded);
-        var currency = await GetCurrencyAsync();
+        var payments = await GetSubscriptionPaymentsAsync(_session, cancellationToken);
+        var succeeded = SubscriptionReportAggregator.GetSucceededPayments(payments, range.FromUtc, range.ToUtc);
+
+        // Tax is filed per currency, so the report is built for the currency that produced the most revenue
+        // rather than a site-wide setting that may not be the currency anything was taken in.
+        var groups = SubscriptionReportAggregator.GroupByCurrency(succeeded);
+        var primary = groups.Count == 0 ? null : groups[0];
+        var currency = primary?.Currency ?? await GetCurrencyAsync();
+        var summary = SubscriptionReportAggregator.SummarizeRevenue(primary?.Payments ?? []);
+        var monthly = SubscriptionReportAggregator.BucketRevenueByMonth(primary?.Payments ?? []);
 
         var document = new ReportDocument
         {

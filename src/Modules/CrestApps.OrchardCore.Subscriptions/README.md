@@ -18,11 +18,13 @@ agreement** that outlives the checkout that created it, and one service that own
 
 ## Features
 
-- **Subscriptions** (`CrestApps.OrchardCore.Subscriptions`) — plans, the signup flow, subscription
-  agreements, the lifecycle service, the customer portal, and the admin screens.
-- **Subscriptions - Tenant Onboarding** (`...TenantOnboarding`) — provisions a new Orchard Core tenant as
-  part of a subscription, for selling isolated workspaces.
-- **Subscriptions - ReCaptcha** (`...ReCaptcha`) — protects the public signup form.
+- **Subscriptions** (`CrestApps.OrchardCore.Subscriptions`) — plans, subscription agreements, the lifecycle
+  service, entitlements, the customer portal, and the admin screens.
+- **Subscriptions - Sites** (`...Tenants`) — sells whole Orchard Core sites, provisioning each from a durable
+  job that survives a restart and retries on failure.
+
+This module owns no checkout of its own. Buying a plan runs through the **Checkout** module like any other
+purchase, so there is one path that takes money and one ledger that records it.
 
 ## The subscription agreement
 

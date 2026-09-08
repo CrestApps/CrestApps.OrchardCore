@@ -1,4 +1,8 @@
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.ViewModels;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -40,17 +44,23 @@ public sealed class SubscriptionSummaryPartDisplayDriver : ContentPartDisplayDri
     {
         return Initialize<SubscriptionSummaryViewModel>(GetDisplayShapeType(context), async model =>
         {
-            var now = _clock.UtcNow;
+            // Every figure is read from the durable agreement and the payment ledger. A checkout session
+            // records what somebody was asked to pay, so counting sessions as subscriptions and their totals
+            // as revenue would report every abandoned checkout as a paying customer.
+            model.TotalSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>().CountAsync();
+            model.PendingSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(index => index.Status == SubscriptionStatus.Incomplete).CountAsync();
+            model.CompletedSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(index => index.Status != SubscriptionStatus.Incomplete).CountAsync();
 
-            model.TotalSubscriptions = await _session.QueryIndex<SubscriptionSessionIndex>().CountAsync();
-            model.PendingSubscriptions = await _session.QueryIndex<SubscriptionSessionIndex>(x => x.Status == SubscriptionSessionStatus.Pending).CountAsync();
-            model.CompletedSubscriptions = await _session.QueryIndex<SubscriptionSessionIndex>(x => x.Status == SubscriptionSessionStatus.Completed).CountAsync();
+            model.ActiveSubscriptions = await _session.QueryIndex<SubscriptionRecordIndex>(index =>
+                index.Status == SubscriptionStatus.Active ||
+                index.Status == SubscriptionStatus.Trialing ||
+                index.Status == SubscriptionStatus.PastDue).CountAsync();
 
-            // A subscription is considered active when it has no expiration or the expiration is still in the future.
-            model.ActiveSubscriptions = await _session.QueryIndex<SubscriptionIndex>(x => x.ExpiresAt == null || x.ExpiresAt > now).CountAsync();
+            var confirmed = await _session.QueryIndex<PaymentAttemptIndex>(index =>
+                index.ReferenceType == SubscriptionCheckout.ReferenceType &&
+                index.State == PaymentAttemptState.Succeeded).ListAsync();
 
-            var succeededTransactions = await _session.QueryIndex<SubscriptionTransactionIndex>(x => x.Status == PaymentStatus.Succeeded).ListAsync();
-            model.TotalRevenue = succeededTransactions.Sum(x => x.Amount);
+            model.TotalRevenue = confirmed.Sum(attempt => attempt.ConfirmedAmount);
         }).Location("Detail", "Content");
     }
 }

@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
-using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Settings;
 using YesSql;
@@ -46,10 +46,13 @@ public sealed class ProductPerformanceReport : SubscriptionReportBase
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var range = context.Filter.GetDateRange();
-        var transactions = await _session.QueryIndex<SubscriptionTransactionIndex>().ListAsync(cancellationToken);
-        var succeeded = SubscriptionReportAggregator.GetSucceededTransactions(transactions, range.FromUtc, range.ToUtc);
-        var products = SubscriptionReportAggregator.GroupByProduct(succeeded);
-        var currency = await GetCurrencyAsync();
+        var payments = await GetSubscriptionPaymentsAsync(_session, cancellationToken);
+        var succeeded = SubscriptionReportAggregator.GetSucceededPayments(payments, range.FromUtc, range.ToUtc);
+
+        var groups = SubscriptionReportAggregator.GroupByCurrency(succeeded);
+        var primary = groups.Count == 0 ? null : groups[0];
+        var currency = primary?.Currency ?? await GetCurrencyAsync();
+        var products = SubscriptionReportAggregator.GroupByProduct(primary?.Payments ?? []);
 
         var document = new ReportDocument
         {
@@ -63,7 +66,7 @@ public sealed class ProductPerformanceReport : SubscriptionReportBase
             document.Add(ReportSection.ForBars(S["Top products by revenue"].Value, products
                 .Take(TopProductCount)
                 .Select(product => new ReportBar(
-                    ProductLabel(product.ContentType),
+                    ProductLabel(product.Title),
                     FormatCurrency(product.GrossRevenue, currency),
                     maxRevenue > 0 ? (double)(product.GrossRevenue / maxRevenue) : 0))));
 
@@ -81,7 +84,7 @@ public sealed class ProductPerformanceReport : SubscriptionReportBase
             {
                 rows.Add(new ReportRow(
                 [
-                    ProductLabel(product.ContentType),
+                    ProductLabel(product.Title),
                     ReportFormat.Number(product.TransactionCount),
                     FormatCurrency(product.GrossRevenue, currency),
                     FormatCurrency(product.Tax, currency),

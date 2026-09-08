@@ -40,6 +40,26 @@ public static class CheckoutConstants
     /// <summary>
     /// The named routes of the public checkout experience.
     /// </summary>
+    /// <summary>
+    /// The named actions a checkout form can post, other than paying.
+    /// </summary>
+    /// <remarks>
+    /// The payment script takes over the form's submit event, so anything else the page needs to submit has
+    /// to identify itself. Without a name the server cannot tell "apply this code" from "take my money".
+    /// </remarks>
+    public static class FormActions
+    {
+        /// <summary>
+        /// The name of the submit button that carries the action.
+        /// </summary>
+        public const string FieldName = "checkout-action";
+
+        /// <summary>
+        /// Saves the entered promotion code and re-renders the step with the recalculated invoice.
+        /// </summary>
+        public const string ApplyCoupon = "apply-coupon";
+    }
+
     public static class RouteNames
     {
         /// <summary>

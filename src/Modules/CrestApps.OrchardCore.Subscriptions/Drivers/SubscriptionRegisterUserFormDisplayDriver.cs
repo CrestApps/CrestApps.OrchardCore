@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Subscriptions.Drivers.Steps;
+
 using CrestApps.OrchardCore.Subscriptions.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
@@ -52,7 +52,7 @@ public sealed class SubscriptionRegisterUserFormDisplayDriver : DisplayDriver<Su
             vm.Email = model.Email;
             vm.HasSavedPassword = model.HasSavedPassword;
         }).Location("Content")
-        .OnGroup(UserRegistrationSubscriptionFlowDisplayDriver.UserRegistrationFormGroupId);
+        .OnGroup(UserRegistrationCheckoutFlowDisplayDriver.UserRegistrationFormGroupId);
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ public sealed class SubscriptionRegisterUserFormDisplayDriver : DisplayDriver<Su
     /// <returns>The updated editor display result, or <see langword="null"/> when the active group is not the registration step.</returns>
     public override async Task<IDisplayResult> UpdateAsync(SubscriptionRegisterUserForm form, UpdateEditorContext context)
     {
-        if (!string.Equals(context.GroupId, UserRegistrationSubscriptionFlowDisplayDriver.UserRegistrationFormGroupId, StringComparison.Ordinal))
+        if (!string.Equals(context.GroupId, UserRegistrationCheckoutFlowDisplayDriver.UserRegistrationFormGroupId, StringComparison.Ordinal))
         {
             return null;
         }

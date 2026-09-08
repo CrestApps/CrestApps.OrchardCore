@@ -72,6 +72,7 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             model.DurationType = part.DurationType;
             model.BillingCycleLimit = part.BillingCycleLimit;
             model.SubscriptionDayDelay = part.SubscriptionDayDelay;
+            model.TrialDays = part.TrialDays;
             model.DurationTypes =
             [
                 new SelectListItem(S["Year"], nameof(DurationType.Year)),
@@ -119,12 +120,18 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.SubscriptionDayDelay), S["Subscription Day Delay cannot be negative."]);
         }
 
+        if (model.TrialDays.HasValue && model.TrialDays.Value < 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TrialDays), S["Trial Days cannot be negative."]);
+        }
+
         part.InitialAmountDescription = model.InitialAmountDescription;
         part.InitialAmount = model.InitialAmount;
         part.BillingDuration = model.BillingDuration;
         part.DurationType = model.DurationType;
         part.BillingCycleLimit = model.BillingCycleLimit;
         part.SubscriptionDayDelay = model.SubscriptionDayDelay;
+        part.TrialDays = model.TrialDays;
 
         return Edit(part, context);
     }

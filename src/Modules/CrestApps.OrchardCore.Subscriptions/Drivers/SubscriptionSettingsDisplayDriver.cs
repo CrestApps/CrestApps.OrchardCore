@@ -30,7 +30,6 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShellReleaseManager _shellReleaseManager;
-    private readonly PaymentMethodOptions _paymentMethodOptions;
     private readonly IProductCurrencyProvider _currencyProvider;
 
     internal IStringLocalizer S;
@@ -40,13 +39,11 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor used to read the current user.</param>
     /// <param name="authorizationService">The authorization service used to check access to subscription settings.</param>
-    /// <param name="paymentMethodOptions">The configured payment methods available to subscriptions.</param>
     /// <param name="shellReleaseManager">The shell release manager used to restart the tenant after settings changes.</param>
     /// <param name="stringLocalizer">The localizer used for validation messages.</param>
     public SubscriptionSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IOptions<PaymentMethodOptions> paymentMethodOptions,
         IProductCurrencyProvider currencyProvider,
         IShellReleaseManager shellReleaseManager,
         IStringLocalizer<SubscriptionSettingsDisplayDriver> stringLocalizer)
@@ -54,7 +51,6 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _shellReleaseManager = shellReleaseManager;
-        _paymentMethodOptions = paymentMethodOptions.Value;
         _currencyProvider = currencyProvider;
         S = stringLocalizer;
     }
@@ -83,13 +79,9 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
 
         return Initialize<SubscriptionSettingsViewModel>("SubscriptionSettings_Edit", async model =>
         {
-            model.DefaultPaymentMethod = settings.DefaultPaymentMethod;
             model.AllowGuestSignup = settings.AllowGuestSignup;
             model.Currency = settings.Currency;
             model.Currencies = await BuildCurrencyOptionsAsync(model.Currency);
-            model.PaymentMethods = _paymentMethodOptions.PaymentMethods
-            .Select(m => new SelectListItem(m.Value.Title, m.Key))
-            .OrderBy(m => m.Text, StringComparer.OrdinalIgnoreCase);
         }).Location("Content:5")
         .OnGroup(SettingsGroupId);
     }
@@ -128,18 +120,6 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
             settings.Currency = normalizedCurrency;
         }
 
-        var providedPaymentMethod = !string.IsNullOrEmpty(model.DefaultPaymentMethod);
-
-        if (_paymentMethodOptions.PaymentMethods.Count > 1 && !providedPaymentMethod)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Default Payment Method is required."]);
-        }
-        else if (providedPaymentMethod && !_paymentMethodOptions.PaymentMethods.ContainsKey(model.DefaultPaymentMethod))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PaymentMethods), S["Invalid Default Payment Method."]);
-        }
-
-        settings.DefaultPaymentMethod = model.DefaultPaymentMethod;
         settings.AllowGuestSignup = model.AllowGuestSignup;
 
         _shellReleaseManager.RequestRelease();

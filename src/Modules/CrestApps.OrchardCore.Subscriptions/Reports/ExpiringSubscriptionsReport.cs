@@ -52,7 +52,7 @@ public sealed class ExpiringSubscriptionsReport : SubscriptionReportBase
     public override async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
         var nowUtc = _clock.UtcNow;
-        var subscriptions = await _session.QueryIndex<SubscriptionIndex>().ListAsync(cancellationToken);
+        var subscriptions = await _session.QueryIndex<SubscriptionRecordIndex>().ListAsync(cancellationToken);
         var expiring = SubscriptionReportAggregator.GetExpiringSubscriptions(subscriptions, nowUtc, HorizonDays);
 
         var document = new ReportDocument
@@ -72,7 +72,7 @@ public sealed class ExpiringSubscriptionsReport : SubscriptionReportBase
         var rows = expiring.Select(item => new ReportRow(
         [
             item.OwnerId ?? string.Empty,
-            item.ContentType ?? string.Empty,
+            item.Title ?? string.Empty,
             item.StartedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             item.ExpiresAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ReportFormat.Number(item.DaysRemaining),

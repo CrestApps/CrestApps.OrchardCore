@@ -52,7 +52,7 @@ public sealed class SubscriptionsDashboardReport : SubscriptionReportBase
     {
         var range = context.Filter.GetDateRange();
         var nowUtc = _clock.UtcNow;
-        var subscriptions = await _session.QueryIndex<SubscriptionIndex>().ListAsync(cancellationToken);
+        var subscriptions = await _session.QueryIndex<SubscriptionRecordIndex>().ListAsync(cancellationToken);
         var summary = SubscriptionReportAggregator.SummarizeDashboard(
             subscriptions,
             nowUtc,

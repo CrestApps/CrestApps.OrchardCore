@@ -4,18 +4,6 @@
 
 <h6>@T["Subscription Settings"]</h6>
 
-@if (Model.PaymentMethods.Any())
-{
-    <div class="ocat-wrapper" asp-validation-class-for="DefaultPaymentMethod">
-        <label asp-for="DefaultPaymentMethod" class="ocat-label">@T["Default Payment Method"]</label>
-        <div class="ocat-end">
-            <select asp-for="DefaultPaymentMethod" asp-items="Model.PaymentMethods" class="form-select">
-                <option value="">@T["Select a method"]</option>
-            </select>
-        </div>
-    </div>
-}
-
 <div class="ocat-wrapper" asp-validation-class-for="AllowGuestSignup">
     <div class="ocat-end-offset">
         <div class="form-check">

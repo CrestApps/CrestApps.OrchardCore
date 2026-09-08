@@ -22,6 +22,12 @@ public sealed class PaymentAttemptIndexProvider : IndexProvider<PaymentAttempt>
                 ProviderReference = attempt.ProviderReference,
                 State = attempt.State,
                 UpdatedUtc = attempt.UpdatedUtc,
+                CreatedUtc = attempt.CreatedUtc,
+                Currency = attempt.Currency,
+                ConfirmedAmount = attempt.ConfirmedAmount,
+                ConfirmedTaxAmount = attempt.ConfirmedTaxAmount,
+                ReferenceType = attempt.ReferenceType,
+                ReferenceId = attempt.ReferenceId,
             });
     }
 }

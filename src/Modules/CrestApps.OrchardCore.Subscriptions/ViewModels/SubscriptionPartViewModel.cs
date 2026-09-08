@@ -40,6 +40,11 @@ public class SubscriptionPartViewModel
     public int? SubscriptionDayDelay { get; set; }
 
     /// <summary>
+    /// Gets or sets the free trial length, in days, before the first cycle is billed.
+    /// </summary>
+    public int? TrialDays { get; set; }
+
+    /// <summary>
     /// Gets or sets the available billing duration units.
     /// </summary>
     [BindNever]

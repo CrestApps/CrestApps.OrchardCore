@@ -18,9 +18,7 @@ namespace CrestApps.OrchardCore.Checkout.Core.Handlers;
 /// </summary>
 public sealed class PaymentCheckoutHandler : CheckoutHandlerBase
 {
-    private readonly ISiteService _siteService;
-    private readonly ICheckoutDiscountService _discountService;
-    private readonly ICheckoutTaxService _taxService;
+    private readonly CheckoutInvoiceBuilder _invoiceBuilder;
     private readonly PaymentSessionCache _paymentSessionCache;
 
     internal readonly IStringLocalizer S;
@@ -28,21 +26,15 @@ public sealed class PaymentCheckoutHandler : CheckoutHandlerBase
     /// <summary>
     /// Initializes a new instance of the <see cref="PaymentCheckoutHandler"/> class.
     /// </summary>
-    /// <param name="siteService">The site service used to read the checkout settings.</param>
-    /// <param name="discountService">The seam through which discounts are applied, before tax.</param>
-    /// <param name="taxService">The seam through which taxation is applied to the invoice.</param>
+    /// <param name="invoiceBuilder">The builder that assembles the invoice from the contributed billing items.</param>
     /// <param name="paymentSessionCache">The cache of short-lived payment signals cleared on completion.</param>
     /// <param name="stringLocalizer">The string localizer used for the payment step title.</param>
     public PaymentCheckoutHandler(
-        ISiteService siteService,
-        ICheckoutDiscountService discountService,
-        ICheckoutTaxService taxService,
+        CheckoutInvoiceBuilder invoiceBuilder,
         PaymentSessionCache paymentSessionCache,
         IStringLocalizer<PaymentCheckoutHandler> stringLocalizer)
     {
-        _siteService = siteService;
-        _discountService = discountService;
-        _taxService = taxService;
+        _invoiceBuilder = invoiceBuilder;
         _paymentSessionCache = paymentSessionCache;
         S = stringLocalizer;
     }
@@ -66,86 +58,11 @@ public sealed class PaymentCheckoutHandler : CheckoutHandlerBase
     }
 
     /// <inheritdoc/>
-    public override async Task ActivatedAsync(CheckoutFlowActivatedContext context)
+    public override Task ActivatedAsync(CheckoutFlowActivatedContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var settings = await _siteService.GetSettingsAsync<CheckoutSettings>();
-        var currency = settings.Currency;
-
-        var invoice = new CheckoutInvoice
-        {
-            Currency = currency,
-        };
-
-        var lineItems = new List<CheckoutLineItem>();
-
-        foreach (var step in context.Flow.GetSortedSteps())
-        {
-            if (step.BillingItems == null)
-            {
-                continue;
-            }
-
-            foreach (var billingItem in step.BillingItems)
-            {
-                var lineItem = new CheckoutLineItem
-                {
-                    ItemId = billingItem.ItemId,
-                    Description = billingItem.Description,
-                    Quantity = 1,
-                    UnitPrice = billingItem.Amount,
-                    Plan = billingItem.Plan,
-                };
-
-                if (billingItem.Plan == null)
-                {
-                    invoice.InitialPaymentAmount ??= 0;
-                    invoice.InitialPaymentAmount += lineItem.GetLineTotal(currency);
-                    invoice.DueNow += lineItem.GetLineTotal(currency);
-                }
-                else if (billingItem.Plan.StartDayDelay is null or 0)
-                {
-                    invoice.FirstRecurringPaymentAmount ??= 0;
-                    invoice.FirstRecurringPaymentAmount += lineItem.GetLineTotal(currency);
-                    invoice.DueNow += lineItem.GetLineTotal(currency);
-                }
-
-                lineItems.Add(lineItem);
-            }
-        }
-
-        invoice.LineItems = lineItems.ToArray();
-        invoice.Subtotals = lineItems.Where(x => x.Plan != null)
-            .GroupBy(x => new BillingDurationKey(x.Plan.DurationType, x.Plan.BillingDuration))
-            .ToDictionary(x => x.Key, x => x.Sum(y => y.UnitPrice * y.Quantity));
-
-        // Round every amount at the invoice currency's own precision so the expected amounts match what the
-        // gateway actually settles. Rounding a zero-decimal currency (for example JPY) to two decimals would
-        // otherwise cause a valid payment to be rejected during verification.
-        if (invoice.InitialPaymentAmount.HasValue)
-        {
-            invoice.InitialPaymentAmount = Money.Round(invoice.InitialPaymentAmount.Value, currency);
-        }
-
-        if (invoice.FirstRecurringPaymentAmount.HasValue)
-        {
-            invoice.FirstRecurringPaymentAmount = Money.Round(invoice.FirstRecurringPaymentAmount.Value, currency);
-        }
-
-        invoice.DueNow = Money.Round(invoice.DueNow, currency);
-
-        // Discounts land before tax, always. Taxing the full price and then discounting the total charges the
-        // customer tax on money they never paid, which is wrong for them and wrong on the return the site
-        // owner files.
-        await _discountService.ApplyDiscountsAsync(invoice, context.Flow);
-
-        // Taxation is authoritative. When the Taxation feature is disabled this is a no-op that sets the
-        // grand total to the amount due now; otherwise it determines the tax, records the tax lines, folds
-        // exclusive tax into the up-front charge, and captures an immutable snapshot on the invoice.
-        await _taxService.ApplyTaxAsync(invoice, context.Flow);
-
-        context.Flow.Session.Put(invoice);
+        return _invoiceBuilder.BuildAsync(context.Flow);
     }
 
     /// <inheritdoc/>
