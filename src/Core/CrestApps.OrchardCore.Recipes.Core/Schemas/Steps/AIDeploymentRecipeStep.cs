@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using Json.Schema;
 using Microsoft.Extensions.Options;
@@ -111,6 +111,23 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Required("name", "Deployments")
             .AdditionalProperties(true)
             .Build();
+    }
+
+    /// <summary>
+    /// Builds the schema for the <c>CascadedRealtimeMetadata</c> property, which names the three deployments
+    /// a cascaded realtime deployment chains together to answer speech with speech.
+    /// </summary>
+    private static JsonSchemaBuilder BuildCascadedRealtimeSchema()
+    {
+        return new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("SpeechToTextDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Technical name of the deployment that transcribes the user's speech. Must expose a realtime client.")),
+                ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Technical name of the chat deployment that generates the reply.")),
+                ("TextToSpeechDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Technical name of the deployment that speaks the reply.")))
+            .Required("SpeechToTextDeploymentName", "ChatDeploymentName", "TextToSpeechDeploymentName")
+            .AdditionalProperties(false)
+            .Description("Set on a deployment created under the CascadedRealtime client to chain a speech-to-text, a chat, and a text-to-speech deployment into one realtime deployment.");
     }
 
     /// <summary>

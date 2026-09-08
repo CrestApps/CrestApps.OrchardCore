@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
@@ -40,6 +40,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
@@ -98,6 +99,7 @@ public sealed class Startup : StartupBase
             .AddPermissionProvider<AIDeploymentPermissionProvider>()
             .AddDisplayDriver<AIDeployment, AIDeploymentDisplayDriver>()
             .AddDisplayDriver<AIDeployment, AIDeploymentModelCapabilitiesDisplayDriver>()
+            .AddDisplayDriver<AIDeployment, AIDeploymentCascadedRealtimeDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileDeploymentDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileModelParametersDisplayDriver>()
             .AddDisplayDriver<AIProfile, AIProfileUtilityModelParametersDisplayDriver>()
@@ -152,6 +154,36 @@ public sealed class Startup : StartupBase
 /// <summary>
 /// Registers services and configuration for the Indexing feature.
 /// </summary>
+/// <summary>
+/// Registers the deployment provider for cascaded realtime deployments: deployments that answer speech with
+/// speech by chaining a speech-to-text, a chat, and a text-to-speech deployment rather than talking to a
+/// provider of their own.
+/// </summary>
+public sealed class CascadedRealtimeStartup : StartupBase
+{
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CascadedRealtimeStartup"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public CascadedRealtimeStartup(IStringLocalizer<CascadedRealtimeStartup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // The deployment carries no connection of its own; it only names the deployments to chain.
+        services.AddCoreAIDeploymentProvider(AIConstants.CascadedRealtimeClientName, options =>
+        {
+            options.DisplayName = S["Cascaded Realtime"];
+            options.Description = S["Answers speech with speech by chaining a speech-to-text, a chat, and a text-to-speech deployment."];
+            options.UseContainedConnection = true;
+        });
+    }
+}
+
 [RequireFeatures("OrchardCore.Indexing")]
 public sealed class IndexingStartup : StartupBase
 {

@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
@@ -185,6 +185,9 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             model.ConnectionName = model.Connections[0].Value;
         }
     }
+
+    private static bool IsCascadedRealtime(AIDeployment deployment)
+        => string.Equals(deployment.ClientName, AIConstants.CascadedRealtimeClientName, StringComparison.OrdinalIgnoreCase);
 
     private bool HasContainedConnection(string providerName)
         => _aiOptions.Deployments.TryGetValue(providerName, out var entry) && entry.UseContainedConnection;

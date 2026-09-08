@@ -1,0 +1,38 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+@model EditDeploymentCascadedRealtimeViewModel
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h6 class="card-title mb-0"><i class="fa-solid fa-diagram-project"></i> @T["Cascaded realtime"]</h6>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small">
+            @T["This deployment answers speech with speech by chaining three deployments: one transcribes what the user says, one generates the reply, and one speaks it. The three may come from different providers. Tools, data sources, and the profile's instructions are applied to the chat deployment, so a voice profile keeps everything a text profile has."]
+        </p>
+
+        <div class="mb-3">
+            <label asp-for="SpeechToTextDeploymentName" class="form-label">@T["Speech-to-text deployment"]</label>
+            <select asp-for="SpeechToTextDeploymentName" asp-items="Model.SpeechToTextDeployments" class="form-select"></select>
+            <span asp-validation-for="SpeechToTextDeploymentName"></span>
+            <span class="hint">@T["Hears the user. Only deployments whose model declares the realtime capability can transcribe continuously."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="ChatDeploymentName" class="form-label">@T["Chat deployment"]</label>
+            <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select"></select>
+            <span asp-validation-for="ChatDeploymentName"></span>
+            <span class="hint">@T["Generates the reply, with the profile's tools, data sources, and instructions applied."]</span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="TextToSpeechDeploymentName" class="form-label">@T["Text-to-speech deployment"]</label>
+            <select asp-for="TextToSpeechDeploymentName" asp-items="Model.TextToSpeechDeployments" class="form-select"></select>
+            <span asp-validation-for="TextToSpeechDeploymentName"></span>
+            <span class="hint">@T["Speaks the reply. The voice picker on a profile lists this deployment's voices."]</span>
+        </div>
+
+        <div class="alert alert-info mb-0" role="alert">
+            @T["A reply passes through three services, so expect more delay before the assistant starts speaking than with a provider's own speech-to-speech model."]
+        </div>
+    </div>
+</div>
