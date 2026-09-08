@@ -750,10 +750,10 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                                 await store.UpdateAsync(omnichannelActivity);
                             }
 
-                            // Gated contact write-back: upsert only a captured email into the ContactMethods bag (mirroring
-                            // how the importer builds it) instead of deep-merging a model-authored content item.
+                            // Gated contact write-back: upsert only a captured email into the ContactMethods bag
+                            // instead of deep-merging a model-authored content item.
                             if (activity.AllowAIToUpdateContact && contact is not null &&
-                                OmnichannelSubjectWriter.TryApplyContactEmail(contact, result.Result.ContactEmail))
+                                await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contentManager, contact, result.Result.ContactEmail))
                             {
                                 await contentManager.UpdateAsync(contact);
                             }

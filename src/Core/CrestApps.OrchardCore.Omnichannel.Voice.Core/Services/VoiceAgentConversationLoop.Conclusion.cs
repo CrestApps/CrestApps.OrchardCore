@@ -259,9 +259,9 @@ public sealed partial class VoiceAgentConversationLoop
         // Gated contact write-back: the contact is a separate content item, so it is updated after the conclusion
         // is durably committed above — a failing contact save cannot then roll back the disposition. Rather than
         // deep-merging a model-authored content item (which appends duplicate contact-method items and cannot
-        // build a correctly structured EmailAddress), we upsert only a captured email into the ContactMethods bag,
-        // mirroring how the contact importer constructs those items.
-        if (allowUpdateContact && contact is not null && OmnichannelSubjectWriter.TryApplyContactEmail(contact, result?.ContactEmail))
+        // build a correctly structured EmailAddress), we upsert only a captured email into the ContactMethods bag.
+        if (allowUpdateContact && contact is not null &&
+            await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contentManager, contact, result?.ContactEmail))
         {
             await contentManager.UpdateAsync(contact);
 

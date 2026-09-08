@@ -1152,7 +1152,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
                 "Part",
                 "Field"})]
         public static System.Collections.Generic.List<System.ValueTuple<string, string>> GetSubjectTextFields(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition typeDefinition) { }
-        public static bool TryApplyContactEmail(OrchardCore.ContentManagement.ContentItem contact, string email) { }
+        public static System.Threading.Tasks.Task<bool> TryApplyContactEmailAsync(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.ContentManagement.ContentItem contact, string email) { }
     }
     public sealed class SubjectFlowSettingsService : CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService
     {

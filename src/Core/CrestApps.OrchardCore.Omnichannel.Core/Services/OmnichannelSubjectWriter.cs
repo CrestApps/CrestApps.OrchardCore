@@ -52,13 +52,22 @@ public static class OmnichannelSubjectWriter
     /// email item, replacing any existing one. Returns whether the contact changed.
     /// </summary>
     /// <remarks>
-    /// The item is built the way the contact importer builds it, so indexing and exports read it the same way,
-    /// and it replaces rather than appends — a raw content-item merge added a duplicate every time.
+    /// The item is created through the content manager rather than constructed directly, so it is built the way
+    /// every other content item is: its type's parts and defaults are applied and it is given an identifier. An
+    /// item with no identifier is not merely incomplete -- OrchardCore keys a bag's items by content item id when
+    /// it applies an edit, so one such item stops the entire bag from saving, and the failure is silent. A
+    /// contact's phone numbers simply reverted on publish.
+    /// <para>
+    /// It replaces rather than appends, because a raw content-item merge added a duplicate every time.
+    /// </para>
     /// </remarks>
+    /// <param name="contentManager">The content manager used to create the email item.</param>
     /// <param name="contact">The contact content item.</param>
     /// <param name="email">The address the person gave.</param>
-    public static bool TryApplyContactEmail(ContentItem contact, string email)
+    public static async Task<bool> TryApplyContactEmailAsync(IContentManager contentManager, ContentItem contact, string email)
     {
+        ArgumentNullException.ThrowIfNull(contentManager);
+
         if (contact is null || string.IsNullOrWhiteSpace(email))
         {
             return false;
@@ -82,13 +91,10 @@ public static class OmnichannelSubjectWriter
         bag.ContentItems ??= [];
         bag.ContentItems.RemoveAll(method => string.Equals(method.ContentType, OmnichannelConstants.ContentTypes.EmailAddress, StringComparison.Ordinal));
 
-        var emailItem = new ContentItem
-        {
-            ContentType = OmnichannelConstants.ContentTypes.EmailAddress,
-            DisplayText = email,
-        };
-
+        var emailItem = await contentManager.NewAsync(OmnichannelConstants.ContentTypes.EmailAddress);
+        emailItem.DisplayText = email;
         emailItem.Alter<EmailInfoPart>(part => part.Email = new TextField { Text = email });
+
         bag.ContentItems.Add(emailItem);
         contact.Apply(OmnichannelConstants.NamedParts.ContactMethods, bag);
 
