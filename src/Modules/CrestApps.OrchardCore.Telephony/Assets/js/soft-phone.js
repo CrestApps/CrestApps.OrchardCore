@@ -767,7 +767,11 @@
                 packetsLost: sample.packetsLost,
                 lossPercent: sample.lossPercent,
                 jitterMs: sample.jitterMs,
-                rttMs: sample.rttMs,
+                // The server's contract calls this RoundTripTimeMs. Sending it as "rttMs" bound to nothing, so
+                // every sample arrived with a round-trip time of zero while the MOS beside it had been computed
+                // from the real one -- a call logged as "Poor" with 0ms round trip and no packet loss, which
+                // reads as a scoring bug and hides the actual half-second latency behind it.
+                roundTripTimeMs: sample.rttMs,
                 bytesReceived: sample.bytesReceived,
                 mos: sample.mos,
                 poor: sample.poor,
