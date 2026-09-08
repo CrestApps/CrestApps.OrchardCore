@@ -17,7 +17,8 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
+      <PackageReference Include="OrchardCore.ResourceManagement" />
+</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Module.Targets" />

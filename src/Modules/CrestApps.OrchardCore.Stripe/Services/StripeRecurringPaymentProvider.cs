@@ -129,6 +129,11 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
                             Interval = interval,
                             IntervalCount = context.Interval.Duration <= 0 ? 1 : context.Interval.Duration,
                             ProductName = BuildProductName(context.LineItems),
+
+                            // Naming the offer lets Stripe hold one price for it rather than a new one per
+                            // customer. The amount is part of the key, so raising the price creates a new
+                            // Stripe price instead of silently repricing everyone already subscribed to it.
+                            LookupKey = BuildLookupKey(context, grossAmount, interval),
                         },
                     }
                 ],
@@ -297,6 +302,26 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
             .ToArray();
 
         return descriptions.Length == 0 ? "Subscription" : string.Join(", ", descriptions);
+    }
+
+    // Only a group whose lines all come from the same fixed catalog price has a reusable offer. A custom
+    // amount, or a group assembled from several lines, is priced inline.
+    private static string BuildLookupKey(BeginRecurringPaymentContext context, decimal amount, string interval)
+    {
+        var priceIds = (context.LineItems ?? [])
+            .Select(lineItem => lineItem.PriceId)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (priceIds.Length != 1 || string.IsNullOrEmpty(priceIds[0]))
+        {
+            return null;
+        }
+
+        var minor = StripeCurrency.ToMinorUnits(amount, context.Attempt.Currency);
+        var count = context.Interval.Duration <= 0 ? 1 : context.Interval.Duration;
+
+        return $"price_{priceIds[0]}_{context.Attempt.Currency?.ToLowerInvariant()}_{minor}_{interval}{count}";
     }
 
     private static string GetProviderValue(IReadOnlyDictionary<string, string> providerData, string key)

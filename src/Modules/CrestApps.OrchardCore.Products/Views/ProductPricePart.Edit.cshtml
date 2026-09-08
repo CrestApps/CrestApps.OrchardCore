@@ -1,0 +1,200 @@
+@using CrestApps.OrchardCore.Products.Core.Models
+@using CrestApps.OrchardCore.Products.ViewModels
+
+@model ProductPricePartViewModel
+
+<fieldset class="mb-3">
+    <legend class="h6">@T["Prices"]</legend>
+    <span class="hint d-block mb-2">@T["The ways this product can be bought. A buyer picks one at checkout. A price with a billing interval makes the product subscribable."]</span>
+
+    <div id="product-prices">
+        @for (var i = 0; i < Model.Prices.Count; i++)
+        {
+            var price = Model.Prices[i];
+
+            <div class="card mb-2 product-price-row">
+                <div class="card-body">
+                    <input type="hidden" asp-for="Prices[i].PriceId" />
+
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label asp-for="Prices[i].Name" class="form-label">@T["Name"]</label>
+                            <input asp-for="Prices[i].Name" class="form-control" placeholder="@T["Monthly"]" />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Prices[i].Amount" class="form-label">@T["Amount"]</label>
+                            <div class="input-group">
+                                <input type="number" min="0" step="0.01" asp-for="Prices[i].Amount" class="form-control" />
+                                <select asp-for="Prices[i].Currency" asp-items="Model.Currencies" class="form-select">
+                                    <option value="">@T["Default"]</option>
+                                </select>
+                            </div>
+                            <span asp-validation-for="Prices[i].Amount"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Prices[i].Kind" class="form-label">@T["Charged"]</label>
+                            <select asp-for="Prices[i].Kind" asp-items="Model.Kinds" class="form-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1 @(price.Kind == PriceKind.Recurring ? string.Empty : "d-none")" data-recurring-fields>
+                        <div class="col-md-3">
+                            <label asp-for="Prices[i].BillingDuration" class="form-label">@T["Every"]</label>
+                            <input type="number" min="1" asp-for="Prices[i].BillingDuration" class="form-control" />
+                            <span asp-validation-for="Prices[i].BillingDuration"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="Prices[i].Interval" class="form-label">@T["Interval"]</label>
+                            <select asp-for="Prices[i].Interval" asp-items="Model.Intervals" class="form-select">
+                                <option value="">@T["Choose…"]</option>
+                            </select>
+                            <span asp-validation-for="Prices[i].Interval"></span>
+                        </div>
+                        <div class="col-md-2">
+                            <label asp-for="Prices[i].BillingCycleLimit" class="form-label">@T["Cycles"]</label>
+                            <input type="number" min="1" asp-for="Prices[i].BillingCycleLimit" class="form-control" placeholder="@T["∞"]" />
+                        </div>
+                        <div class="col-md-2">
+                            <label asp-for="Prices[i].TrialDays" class="form-label">@T["Trial days"]</label>
+                            <input type="number" min="0" asp-for="Prices[i].TrialDays" class="form-control" />
+                            <span asp-validation-for="Prices[i].TrialDays"></span>
+                        </div>
+                        <div class="col-md-2">
+                            <label asp-for="Prices[i].StartDayDelay" class="form-label">@T["Start after"]</label>
+                            <input type="number" min="0" asp-for="Prices[i].StartDayDelay" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-3">
+                            <label asp-for="Prices[i].SetupFee" class="form-label">@T["Setup fee"]</label>
+                            <input type="number" min="0" step="0.01" asp-for="Prices[i].SetupFee" class="form-control" />
+                        </div>
+                        <div class="col-md-5">
+                            <label asp-for="Prices[i].SetupFeeDescription" class="form-label">@T["Setup fee shown as"]</label>
+                            <input asp-for="Prices[i].SetupFeeDescription" class="form-control" />
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end gap-3">
+                            <div class="form-check">
+                                <input type="checkbox" asp-for="Prices[i].IsDefault" class="form-check-input" />
+                                <label asp-for="Prices[i].IsDefault" class="form-check-label">@T["Default"]</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" asp-for="Prices[i].IsActive" class="form-check-input" />
+                                <label asp-for="Prices[i].IsActive" class="form-check-label">@T["Offered"]</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input type="checkbox" asp-for="Prices[i].AllowCustomAmount" class="form-check-input" />
+                                <label asp-for="Prices[i].AllowCustomAmount" class="form-check-label">@T["Buyer names the amount"]</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label asp-for="Prices[i].MinimumAmount" class="form-label">@T["Minimum"]</label>
+                            <input type="number" min="0" step="0.01" asp-for="Prices[i].MinimumAmount" class="form-control" />
+                            <span asp-validation-for="Prices[i].MinimumAmount"></span>
+                        </div>
+                        <div class="col-md-2">
+                            <label asp-for="Prices[i].MaximumAmount" class="form-label">@T["Maximum"]</label>
+                            <input type="number" min="0" step="0.01" asp-for="Prices[i].MaximumAmount" class="form-control" />
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input type="checkbox" asp-for="Prices[i].AllowQuantity" class="form-check-input" />
+                                <label asp-for="Prices[i].AllowQuantity" class="form-check-label">@T["Buyer picks a quantity"]</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label asp-for="Prices[i].MaximumQuantity" class="form-label">@T["Max quantity"]</label>
+                            <input type="number" min="1" asp-for="Prices[i].MaximumQuantity" class="form-control" />
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-4">
+                            <label asp-for="Prices[i].EffectiveFromUtc" class="form-label">@T["Offered from"]</label>
+                            <input type="datetime-local" asp-for="Prices[i].EffectiveFromUtc" class="form-control" />
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Prices[i].EffectiveToUtc" class="form-label">@T["Offered until"]</label>
+                            <input type="datetime-local" asp-for="Prices[i].EffectiveToUtc" class="form-control" />
+                            <span asp-validation-for="Prices[i].EffectiveToUtc"></span>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check">
+                                <input type="checkbox" asp-for="Prices[i].Remove" class="form-check-input" />
+                                <label asp-for="Prices[i].Remove" class="form-check-label text-danger">@T["Remove this price"]</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <button type="button" class="btn btn-secondary btn-sm" id="product-price-add">@T["Add a price"]</button>
+</fieldset>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        const container = document.getElementById('product-prices');
+
+        // The recurring fields only mean anything for a recurring price, so they follow the selector
+        // rather than sitting there inviting values that are then thrown away on save.
+        function bindKind(row) {
+            const kind = row.querySelector('select[name$=".Kind"]');
+            const fields = row.querySelector('[data-recurring-fields]');
+
+            if (!kind || !fields) {
+                return;
+            }
+
+            kind.addEventListener('change', () => {
+                fields.classList.toggle('d-none', kind.value !== 'Recurring');
+            });
+        }
+
+        container.querySelectorAll('.product-price-row').forEach(bindKind);
+
+        document.getElementById('product-price-add').addEventListener('click', () => {
+            const rows = container.querySelectorAll('.product-price-row');
+
+            if (rows.length === 0) {
+                // Nothing to clone from, so the editor has to be saved once with a price before more can
+                // be added in the browser.
+                window.location.reload();
+                return;
+            }
+
+            const clone = rows[rows.length - 1].cloneNode(true);
+            const next = rows.length;
+
+            clone.querySelectorAll('input, select').forEach(field => {
+                ['name', 'id'].forEach(attribute => {
+                    const value = field.getAttribute(attribute);
+
+                    if (value) {
+                        field.setAttribute(attribute, value.replace(/[\[_](\d+)[\]_]/, match => match.replace(/\d+/, next)));
+                    }
+                });
+
+                if (field.type === 'checkbox') {
+                    field.checked = false;
+                } else if (field.name && field.name.endsWith('.PriceId')) {
+                    // A blank id is what tells the server this is a new price rather than an edit of the
+                    // one it was cloned from.
+                    field.value = '';
+                } else if (field.tagName === 'INPUT') {
+                    field.value = '';
+                }
+            });
+
+            container.appendChild(clone);
+            bindKind(clone);
+        });
+    });
+</script>

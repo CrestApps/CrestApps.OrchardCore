@@ -8,6 +8,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
@@ -17,14 +18,20 @@ namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 /// </summary>
 public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<SubscriptionPart>
 {
+    private readonly IClock _clock;
+
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionPartDisplayDriver"/> class.
     /// </summary>
+    /// <param name="clock">The clock used to decide which prices are still on offer.</param>
     /// <param name="stringLocalizer">The localizer used for editor labels and validation messages.</param>
-    public SubscriptionPartDisplayDriver(IStringLocalizer<SubscriptionPartDisplayDriver> stringLocalizer)
+    public SubscriptionPartDisplayDriver(
+        IClock clock,
+        IStringLocalizer<SubscriptionPartDisplayDriver> stringLocalizer)
     {
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -40,8 +47,12 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             Initialize<DisplaySubscriptionViewModel>(GetDisplayShapeType(context), model =>
             {
                 var price = part.ContentItem.GetOrCreate<ProductPart>();
+                var offered = GetOfferedPrices(part);
+                var headline = offered.FirstOrDefault(candidate => candidate.IsDefault) ?? offered.FirstOrDefault();
 
-                model.Price = price?.Price ?? 0;
+                // The card shows what a visitor would pay if they clicked through without choosing, so a
+                // plan that lists prices is summarized by its default rather than by the product part.
+                model.Price = headline?.Amount ?? price?.Price ?? 0;
                 model.DurationType = part.DurationType;
                 model.BillingDuration = part.BillingDuration;
                 model.SubscriptionDayDelay = part.SubscriptionDayDelay;
@@ -51,9 +62,29 @@ public sealed class SubscriptionPartDisplayDriver : ContentPartDisplayDriver<Sub
             }).Location("Summary", "Content")
             .Location("Detail", "Content"),
 
-            View("SubscriptionSignup", part)
+            Initialize<SubscriptionSignupViewModel>("SubscriptionSignup", model =>
+            {
+                var offered = GetOfferedPrices(part);
+
+                model.ContentItemId = part.ContentItem.ContentItemId;
+                model.Prices = offered;
+                model.DefaultPrice = offered.FirstOrDefault(candidate => candidate.IsDefault) ?? offered.FirstOrDefault();
+            })
             .Location("Summary", "Footer")
         );
+    }
+
+    // Only prices that can be bought right now, so a withdrawn or not-yet-started price is never offered.
+    private List<ProductPrice> GetOfferedPrices(SubscriptionPart part)
+    {
+        if (!part.ContentItem.TryGet<ProductPricePart>(out var pricing) || pricing.Prices is null)
+        {
+            return [];
+        }
+
+        var now = _clock.UtcNow;
+
+        return [.. pricing.Prices.Where(price => price.IsAvailable(now))];
     }
 
     /// <summary>

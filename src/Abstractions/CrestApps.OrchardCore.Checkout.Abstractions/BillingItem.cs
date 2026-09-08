@@ -25,4 +25,14 @@ public sealed class BillingItem
     /// The recurring plan for this item, or <see langword="null"/> for a one-time charge.
     /// </summary>
     public RecurringPlan Plan { get; set; }
+
+    /// <summary>
+    /// Gets or sets the catalog price this amount came from, when it came from one at a fixed amount.
+    /// </summary>
+    /// <remarks>
+    /// A gateway reuses its own price object for the same offer instead of minting one per purchase, and
+    /// this is what identifies the offer. It is deliberately left empty for an amount the buyer named,
+    /// because there is no reusable offer to point at.
+    /// </remarks>
+    public string PriceId { get; set; }
 }

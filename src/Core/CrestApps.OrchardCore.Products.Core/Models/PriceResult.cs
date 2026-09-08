@@ -15,10 +15,12 @@ public sealed class PriceResult
     /// <param name="unitPrice">The effective unit price, in major currency units.</param>
     /// <param name="currency">The ISO-4217 currency code the price is expressed in. Must not be null or whitespace.</param>
     /// <param name="quantity">The quantity the price was resolved for. Values below one are treated as one.</param>
+    /// <param name="price">The product price the amount came from, when the product offers a choice.</param>
     public PriceResult(
         decimal unitPrice,
         string currency,
-        int quantity)
+        int quantity,
+        ProductPrice price = null)
     {
         if (string.IsNullOrWhiteSpace(currency))
         {
@@ -28,6 +30,7 @@ public sealed class PriceResult
         UnitPrice = unitPrice;
         Currency = currency;
         Quantity = quantity < 1 ? 1 : quantity;
+        Price = price;
     }
 
     /// <summary>
@@ -50,4 +53,24 @@ public sealed class PriceResult
     /// Gets the subtotal for the resolved quantity, before tax.
     /// </summary>
     public decimal Subtotal => UnitPrice * Quantity;
+
+    /// <summary>
+    /// Gets the product price this amount came from, or <see langword="null"/> when the product is sold at
+    /// the single price on its product part.
+    /// </summary>
+    /// <remarks>
+    /// The caller needs this, not just the number: whether the amount recurs, how often, for how many
+    /// cycles, and what setup fee comes with it are all decided by the price the buyer chose.
+    /// </remarks>
+    public ProductPrice Price { get; }
+
+    /// <summary>
+    /// Gets the identifier of the chosen price, when there was one.
+    /// </summary>
+    public string PriceId => Price?.PriceId;
+
+    /// <summary>
+    /// Gets a value indicating whether this amount repeats.
+    /// </summary>
+    public bool IsRecurring => Price?.Kind == PriceKind.Recurring;
 }

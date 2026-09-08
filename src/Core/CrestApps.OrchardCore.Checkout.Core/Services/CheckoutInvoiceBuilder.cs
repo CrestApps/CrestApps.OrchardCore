@@ -80,6 +80,7 @@ public sealed class CheckoutInvoiceBuilder
                     Quantity = 1,
                     UnitPrice = billingItem.Amount,
                     Plan = billingItem.Plan,
+                    PriceId = billingItem.PriceId,
                 };
 
                 if (billingItem.Plan == null)

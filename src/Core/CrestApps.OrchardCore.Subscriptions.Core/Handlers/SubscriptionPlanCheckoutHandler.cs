@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
+using CrestApps.OrchardCore.Payments.Models;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Core.Models;
@@ -29,7 +30,7 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
     public const string StepKey = "SubscriptionPlan";
 
     private readonly IContentManager _contentManager;
-    private readonly IProductSnapshotResolver _snapshotResolver;
+    private readonly IPriceResolver _priceResolver;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -38,17 +39,17 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
     /// Initializes a new instance of the <see cref="SubscriptionPlanCheckoutHandler"/> class.
     /// </summary>
     /// <param name="contentManager">The content manager used to load the plan being bought.</param>
-    /// <param name="snapshotResolver">The resolver that projects the plan into a sellable snapshot.</param>
+    /// <param name="priceResolver">The pricing seam that decides what the plan costs.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SubscriptionPlanCheckoutHandler(
         IContentManager contentManager,
-        IProductSnapshotResolver snapshotResolver,
+        IPriceResolver priceResolver,
         ILogger<SubscriptionPlanCheckoutHandler> logger,
         IStringLocalizer<SubscriptionPlanCheckoutHandler> stringLocalizer)
     {
         _contentManager = contentManager;
-        _snapshotResolver = snapshotResolver;
+        _priceResolver = priceResolver;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -82,18 +83,39 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
 
         var contentItem = await _contentManager.GetAsync(session.ReferenceId);
 
-        if (contentItem is null || !contentItem.TryGet<SubscriptionPart>(out var plan))
+        if (contentItem is null)
         {
-            _logger.LogWarning("Checkout session '{SessionId}' references subscription plan '{ContentItemId}', which no longer resolves to a subscription.", session.SessionId, session.ReferenceId);
+            _logger.LogWarning("Checkout session '{SessionId}' references subscription plan '{ContentItemId}', which no longer resolves to a content item.", session.SessionId, session.ReferenceId);
 
             return;
         }
 
-        var snapshot = await _snapshotResolver.ResolveAsync(new ProductSnapshotContext(contentItem));
+        contentItem.TryGet<SubscriptionPart>(out var plan);
 
-        if (snapshot is null)
+        global::OrchardCore.Entities.EntityExtensions.TryGet<CheckoutPriceSelection>(session, out var selection);
+
+        var price = await _priceResolver.ResolveAsync(new ProductSnapshotContext(contentItem)
+        {
+            PriceId = selection?.PriceId,
+            Quantity = selection?.Quantity ?? 1,
+            CustomAmount = selection?.CustomAmount,
+        });
+
+        if (price is null)
         {
             _logger.LogWarning("Subscription plan '{ContentItemId}' has no resolvable price, so it cannot be bought.", session.ReferenceId);
+
+            return;
+        }
+
+        // What recurs comes from the price the buyer chose when the product lists its prices, and from the
+        // plan part when it does not. Those are the same thing expressed two ways, and a product that has
+        // been given prices is the authority on its own terms.
+        var recurrence = BuildRecurringPlan(price, plan);
+
+        if (recurrence is null)
+        {
+            _logger.LogWarning("Subscription plan '{ContentItemId}' resolves to a price that does not recur, so it cannot be sold as a subscription.", session.ReferenceId);
 
             return;
         }
@@ -104,7 +126,7 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
 
         if (string.IsNullOrEmpty(session.Currency))
         {
-            session.Currency = snapshot.Currency;
+            session.Currency = price.Currency;
         }
 
         var billingItems = new List<BillingItem>
@@ -112,28 +134,31 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
             new()
             {
                 ItemId = contentItem.ContentItemVersionId,
-                Description = contentItem.DisplayText,
-                Amount = snapshot.UnitPrice,
-                Plan = new RecurringPlan
-                {
-                    BillingDuration = plan.BillingDuration,
-                    DurationType = plan.DurationType,
-                    BillingCycleLimit = plan.BillingCycleLimit,
-                    StartDayDelay = plan.SubscriptionDayDelay,
-                    TrialDays = plan.TrialDays,
-                },
+                Description = BuildDescription(contentItem, price),
+
+                // The subtotal, not the unit price: a price the buyer may take several of bills for all of
+                // them, every cycle.
+                Amount = price.Subtotal,
+                Plan = recurrence,
+
+                // Only a fixed price names a reusable offer. An amount the buyer chose has none, so the
+                // gateway is given the amount inline instead of a price to look up.
+                PriceId = price.Price is { AllowCustomAmount: false } ? price.Price.PriceId : null,
             },
         };
 
-        if (plan.InitialAmount > 0)
+        var setupFee = price.Price?.SetupFee ?? plan?.InitialAmount;
+        var setupFeeDescription = price.Price is not null ? price.Price.SetupFeeDescription : plan?.InitialAmountDescription;
+
+        if (setupFee > 0m)
         {
             billingItems.Add(new BillingItem
             {
                 ItemId = contentItem.ContentItemVersionId + SubscriptionConstants.InitialFeeIdPrefix,
-                Description = string.IsNullOrEmpty(plan.InitialAmountDescription)
+                Description = string.IsNullOrEmpty(setupFeeDescription)
                     ? S["Setup fee"].Value
-                    : plan.InitialAmountDescription,
-                Amount = plan.InitialAmount.Value,
+                    : setupFeeDescription,
+                Amount = setupFee.Value,
             });
         }
 
@@ -150,5 +175,62 @@ public sealed class SubscriptionPlanCheckoutHandler : CheckoutHandlerBase
             Conceal = true,
             BillingItems = [.. billingItems],
         });
+    }
+
+    private static RecurringPlan BuildRecurringPlan(PriceResult price, SubscriptionPart plan)
+    {
+        if (price.Price is not null)
+        {
+            if (price.Price.Kind != PriceKind.Recurring)
+            {
+                return null;
+            }
+
+            return new RecurringPlan
+            {
+                BillingDuration = price.Price.BillingDuration ?? 1,
+                DurationType = MapInterval(price.Price.Interval),
+                BillingCycleLimit = price.Price.BillingCycleLimit,
+                StartDayDelay = price.Price.StartDayDelay,
+                TrialDays = price.Price.TrialDays,
+            };
+        }
+
+        if (plan is null)
+        {
+            return null;
+        }
+
+        return new RecurringPlan
+        {
+            BillingDuration = plan.BillingDuration,
+            DurationType = plan.DurationType,
+            BillingCycleLimit = plan.BillingCycleLimit,
+            StartDayDelay = plan.SubscriptionDayDelay,
+            TrialDays = plan.TrialDays,
+        };
+    }
+
+    // The catalog keeps its own interval vocabulary so it stays independent of any purchasing pipeline;
+    // this is the one place the two meet.
+    private static DurationType MapInterval(BillingInterval? interval)
+        => interval switch
+        {
+            BillingInterval.Day => DurationType.Day,
+            BillingInterval.Week => DurationType.Week,
+            BillingInterval.Year => DurationType.Year,
+            _ => DurationType.Month,
+        };
+
+    // The plan's own title unless the buyer chose between named prices, in which case the name they picked
+    // is what they expect to see on the invoice.
+    private static string BuildDescription(ContentItem contentItem, PriceResult price)
+    {
+        var name = price.Price?.Name;
+        var description = string.IsNullOrWhiteSpace(name)
+            ? contentItem.DisplayText
+            : contentItem.DisplayText + " - " + name;
+
+        return price.Quantity > 1 ? description + " x " + price.Quantity : description;
     }
 }

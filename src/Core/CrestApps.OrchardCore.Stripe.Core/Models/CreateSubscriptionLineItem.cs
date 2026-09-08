@@ -64,6 +64,17 @@ public class SubscriptionInlinePrice
     public string ProductId { get; set; }
 
     /// <summary>
+    /// Gets or sets the stable key identifying this offer at Stripe.
+    /// </summary>
+    /// <remarks>
+    /// When it is set the price is created once and reused for every later subscription to the same offer,
+    /// which keeps the Stripe account to one price per offer instead of one per customer and lets Stripe's
+    /// own reporting group by it. It is left empty for an amount the buyer named, which has no reusable
+    /// offer behind it.
+    /// </remarks>
+    public string LookupKey { get; set; }
+
+    /// <summary>
     /// Gets or sets the product name used when no <see cref="ProductId"/> is supplied. It is what the
     /// customer sees on their Stripe invoice, so it should describe what they bought.
     /// </summary>

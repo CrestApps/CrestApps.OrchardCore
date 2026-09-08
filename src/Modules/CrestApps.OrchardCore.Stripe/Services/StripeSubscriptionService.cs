@@ -292,8 +292,19 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
             }
             else
             {
-                options.PriceData = await BuildPriceDataAsync(lineItem.Price
-                    ?? throw new InvalidOperationException("A subscription line item needs either a Stripe price id or an inline price."));
+                var price = lineItem.Price
+                    ?? throw new InvalidOperationException("A subscription line item needs either a Stripe price id or an inline price.");
+
+                // A named offer is created once and reused; an amount the buyer chose is sent inline,
+                // because there is nothing to reuse and a price object per customer is only clutter.
+                if (string.IsNullOrEmpty(price.LookupKey))
+                {
+                    options.PriceData = await BuildPriceDataAsync(price);
+                }
+                else
+                {
+                    options.Price = await EnsurePriceAsync(price);
+                }
             }
 
             items.Add(options);
@@ -318,6 +329,62 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
                 IntervalCount = price.IntervalCount <= 0 ? 1 : price.IntervalCount,
             },
         };
+
+    // Finds the Stripe price for this offer, creating it the first time the offer is sold. The lookup key
+    // is the offer's identity, so a concurrent first sale that loses the race still ends up on the same
+    // price rather than on a duplicate.
+    private async Task<string> EnsurePriceAsync(SubscriptionInlinePrice price)
+    {
+        var priceService = new PriceService(_stripeClient);
+
+        var existing = await priceService.ListAsync(new PriceListOptions
+        {
+            LookupKeys = [price.LookupKey],
+            Limit = 1,
+        });
+
+        if (existing?.Data?.Count > 0)
+        {
+            return existing.Data[0].Id;
+        }
+
+        try
+        {
+            var created = await priceService.CreateAsync(new PriceCreateOptions
+            {
+                Currency = price.Currency,
+                UnitAmount = StripeCurrency.ToMinorUnits(price.UnitAmount, price.Currency),
+                Product = string.IsNullOrEmpty(price.ProductId)
+                    ? await EnsureProductAsync(price.ProductName)
+                    : price.ProductId,
+                Recurring = new PriceRecurringOptions
+                {
+                    Interval = price.Interval,
+                    IntervalCount = price.IntervalCount <= 0 ? 1 : price.IntervalCount,
+                },
+                LookupKey = price.LookupKey,
+            });
+
+            return created.Id;
+        }
+        catch (StripeException)
+        {
+            // Another sale of the same offer created it between the lookup and the create. Reading it back
+            // is right: both sales belong on the one price.
+            var raced = await priceService.ListAsync(new PriceListOptions
+            {
+                LookupKeys = [price.LookupKey],
+                Limit = 1,
+            });
+
+            if (raced?.Data?.Count > 0)
+            {
+                return raced.Data[0].Id;
+            }
+
+            throw;
+        }
+    }
 
     // Stripe requires an inline price to name a product, and it has no create-if-missing call. Deriving the
     // product id from the name makes the create idempotent: the same offer maps to one Stripe product no

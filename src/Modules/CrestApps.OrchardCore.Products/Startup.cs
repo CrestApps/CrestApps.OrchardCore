@@ -36,6 +36,9 @@ public sealed class Startup : StartupBase
         services.AddContentPart<ProductPart>()
             .UseDisplayDriver<ProductPartDisplayDriver>();
 
+        services.AddContentPart<ProductPricePart>()
+            .UseDisplayDriver<ProductPricePartDisplayDriver>();
+
         services.AddScoped<IContentTypePartDefinitionDisplayDriver, ProductPartSettingsDisplayDriver>();
         services.AddScoped<IProductCurrencyProvider, CurrencyCatalogService>();
         services.AddDisplayDriver<CurrencyEntry, CurrencyEntryDisplayDriver>();

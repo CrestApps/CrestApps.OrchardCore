@@ -20,6 +20,25 @@ public sealed class ProductPartMigrations : DataMigration
             .WithDescription("Provides the key properties for any product.")
         );
 
-        return 1;
+        await CreatePricePartAsync();
+
+        return 2;
     }
+
+    /// <summary>
+    /// Adds the part that lets one product be offered at several prices.
+    /// </summary>
+    public async Task<int> UpdateFrom1Async()
+    {
+        await CreatePricePartAsync();
+
+        return 2;
+    }
+
+    private Task CreatePricePartAsync()
+        => _contentDefinitionManager.AlterPartDefinitionAsync("ProductPricePart", part => part
+            .Attachable()
+            .WithDisplayName("Product prices")
+            .WithDescription("Offers a product at more than one price, one-time or recurring.")
+        );
 }

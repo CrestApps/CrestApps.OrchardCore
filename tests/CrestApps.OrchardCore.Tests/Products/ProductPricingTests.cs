@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
 using CrestApps.OrchardCore.Products.Services;
+using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -147,7 +148,7 @@ public sealed class ProductPricingTests
         => new(CreateContentDefinitionManager(defaultCurrency));
 
     private static DefaultPriceResolver CreatePriceResolver(string defaultCurrency)
-        => new(CreateSnapshotResolver(defaultCurrency), NullLogger<DefaultPriceResolver>.Instance);
+        => new(CreateSnapshotResolver(defaultCurrency), new TestClock(new DateTime(2024, 8, 1, 0, 0, 0, DateTimeKind.Utc)), NullLogger<DefaultPriceResolver>.Instance);
 
     private static IContentDefinitionManager CreateContentDefinitionManager(string defaultCurrency)
     {

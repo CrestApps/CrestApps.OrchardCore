@@ -43,7 +43,7 @@ public sealed class SubscriptionsController : Controller
     /// <returns>A redirect into the checkout, or a not found result when the plan cannot be bought.</returns>
     [HttpGet("Subscription/Signup/{contentItemId}", Name = SubscriptionConstants.RouteName.Signup)]
     [RateLimitGroup(CheckoutConstants.RateLimitGroups.Checkout)]
-    public async Task<IActionResult> Signup(string contentItemId)
+    public async Task<IActionResult> Signup(string contentItemId, string priceId = null, int quantity = 1, decimal? customAmount = null)
     {
         if (string.IsNullOrEmpty(contentItemId))
         {
@@ -64,6 +64,15 @@ public sealed class SubscriptionsController : Controller
             ReferenceType = SubscriptionCheckout.ReferenceType,
             ReferenceId = plan.ContentItemId,
             ReferenceVersionId = plan.ContentItemVersionId,
+
+            // Carried, not trusted: the resolver refuses a price that is not on offer, an amount outside
+            // what the price allows, and a quantity the price does not permit.
+            PriceSelection = new CheckoutPriceSelection
+            {
+                PriceId = priceId,
+                Quantity = quantity,
+                CustomAmount = customAmount,
+            },
         });
 
         return RedirectToRoute(CheckoutConstants.RouteNames.Step, new

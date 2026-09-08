@@ -33,6 +33,11 @@ public sealed class CheckoutLineItem
     public RecurringPlan Plan { get; set; }
 
     /// <summary>
+    /// Gets or sets the catalog price this line came from, when it came from one at a fixed amount.
+    /// </summary>
+    public string PriceId { get; set; }
+
+    /// <summary>
     /// Returns the line total rounded to the precision of the supplied currency. Rounding at the currency's
     /// own scale keeps zero-decimal (for example JPY) and three-decimal (for example KWD) currencies exact.
     /// </summary>

@@ -28,4 +28,9 @@ public sealed class StartCheckoutRequest
     /// balance.
     /// </summary>
     public CheckoutContactInfo Contact { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the buyer chose, when the product is offered on more than one set of terms.
+    /// </summary>
+    public CheckoutPriceSelection PriceSelection { get; set; }
 }

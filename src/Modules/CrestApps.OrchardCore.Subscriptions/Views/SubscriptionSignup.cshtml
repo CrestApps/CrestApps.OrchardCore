@@ -1,5 +1,92 @@
-@using CrestApps.OrchardCore.Subscriptions.Core.Models
+@using CrestApps.OrchardCore.Products.Core.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
 
-@model ShapeViewModel<SubscriptionPart>
+@model SubscriptionSignupViewModel
 
-<a asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.Value.ContentItem.ContentItemId" class="btn btn-primary">@T["Sign up"]</a>
+@if (!Model.RequiresChoice)
+{
+    <a asp-route="SubscriptionSignup"
+       asp-route-contentItemId="@Model.ContentItemId"
+       asp-route-priceId="@Model.DefaultPrice?.PriceId"
+       class="btn btn-primary">@T["Sign up"]</a>
+
+    return;
+}
+
+@{
+    var selected = Model.DefaultPrice;
+    var formId = "signup-" + Model.ContentItemId;
+}
+
+<form method="get" asp-route="SubscriptionSignup" asp-route-contentItemId="@Model.ContentItemId" class="w-100" id="@formId">
+    @if (Model.Prices.Count > 1)
+    {
+        <div class="mb-2">
+            <label class="form-label small text-body-secondary" for="@(formId)-price">@T["Choose your plan"]</label>
+            <select name="priceId" id="@(formId)-price" class="form-select form-select-sm" data-signup-price>
+                @foreach (var price in Model.Prices)
+                {
+                    <option value="@price.PriceId"
+                            selected="@(price.PriceId == selected?.PriceId)"
+                            data-custom="@price.AllowCustomAmount.ToString().ToLowerInvariant()"
+                            data-quantity="@price.AllowQuantity.ToString().ToLowerInvariant()">
+                        @(string.IsNullOrWhiteSpace(price.Name) ? price.Amount.ToString("C") : price.Name + " — " + price.Amount.ToString("C"))
+                    </option>
+                }
+            </select>
+        </div>
+    }
+    else if (selected is not null)
+    {
+        <input type="hidden" name="priceId" value="@selected.PriceId" />
+    }
+
+    <div class="mb-2 @(selected?.AllowCustomAmount == true ? string.Empty : "d-none")" data-signup-custom>
+        <label class="form-label small text-body-secondary" for="@(formId)-amount">@T["Amount"]</label>
+        <input type="number"
+               step="0.01"
+               min="@(selected?.MinimumAmount?.ToString() ?? "0")"
+               max="@(selected?.MaximumAmount?.ToString() ?? string.Empty)"
+               name="customAmount"
+               id="@(formId)-amount"
+               value="@(selected?.Amount)"
+               class="form-control form-control-sm" />
+    </div>
+
+    <div class="mb-2 @(selected?.AllowQuantity == true ? string.Empty : "d-none")" data-signup-quantity>
+        <label class="form-label small text-body-secondary" for="@(formId)-quantity">@T["Quantity"]</label>
+        <input type="number"
+               min="1"
+               max="@(selected?.MaximumQuantity?.ToString() ?? string.Empty)"
+               name="quantity"
+               id="@(formId)-quantity"
+               value="1"
+               class="form-control form-control-sm" />
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">@T["Sign up"]</button>
+</form>
+
+<script at="Foot">
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('form[id^="signup-"]').forEach(form => {
+            const select = form.querySelector('[data-signup-price]');
+
+            if (!select) {
+                return;
+            }
+
+            // The amount and quantity inputs only apply to some prices, so they follow the selection.
+            // Leaving a stale amount visible would let somebody submit a figure the chosen price refuses,
+            // which the resolver rejects — correctly, but only after they thought they had bought it.
+            select.addEventListener('change', () => {
+                const option = select.options[select.selectedIndex];
+                const custom = form.querySelector('[data-signup-custom]');
+                const quantity = form.querySelector('[data-signup-quantity]');
+
+                custom?.classList.toggle('d-none', option.dataset.custom !== 'true');
+                quantity?.classList.toggle('d-none', option.dataset.quantity !== 'true');
+            });
+        });
+    });
+</script>

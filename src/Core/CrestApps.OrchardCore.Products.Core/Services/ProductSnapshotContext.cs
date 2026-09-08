@@ -44,4 +44,22 @@ public sealed class ProductSnapshotContext
     /// the default resolver.
     /// </summary>
     public string VariantId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the price the buyer chose, when the product offers more than one.
+    /// </summary>
+    /// <remarks>
+    /// A product with several prices is ambiguous without this. When it is not supplied the product's
+    /// default price is used, which is what a link straight to "buy" relies on.
+    /// </remarks>
+    public string PriceId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the amount the buyer named, for a price that lets them name one.
+    /// </summary>
+    /// <remarks>
+    /// It is a request, not an instruction: the resolver refuses it when the price does not allow a custom
+    /// amount or the amount falls outside the bounds the price sets.
+    /// </remarks>
+    public decimal? CustomAmount { get; set; }
 }

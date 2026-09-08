@@ -103,6 +103,14 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
 
         // A guest has no account to resolve contact details from later, so the contact captured up front is
         // the only way a completed guest purchase can be receipted or chased.
+        if (request.PriceSelection is not null)
+        {
+            // Recorded on the session, not re-read per request: the terms the buyer picked have to survive
+            // them leaving the page, and have to be there when a provider notification finishes the
+            // purchase without a browser involved at all.
+            session.Put(request.PriceSelection);
+        }
+
         if (request.Contact is not null && !string.IsNullOrEmpty(request.Contact.Email))
         {
             session.Put(request.Contact);
