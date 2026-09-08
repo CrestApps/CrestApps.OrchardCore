@@ -139,8 +139,20 @@ It found two defects that made the feature unusable, plus a logging gap; they ar
 changelog under *Fixes found by selling a site*. The first is the flat one: nothing gave the new tenant a
 database, so **every** purchased site failed setup with "DatabaseProvider setting is required".
 
-**Still unproven:** the offline (Pay Later) renewal and lapse sweeps over real elapsed time, which have no
-gateway clock to advance and remain covered only by unit tests.
+### The offline renewal sweep
+
+The Pay Later renewal was then run on the installation as well. No clock was faked and none needed to be:
+the sweeps already take `IClock`, so what they need is an agreement whose next billing date has passed —
+which is the state a month of elapsed time produces. Seeding that state and letting the real sweeps run
+showed both halves working: the lifecycle sweep advanced the agreement (a second cycle billed, the period
+moved on, a *Renewed* event recorded), and the Pay Later sweep invoiced the next cycle as its own
+transaction and noted it on the previous one. The first cycle was still unpaid at the time, and renewing
+anyway is correct — falling behind on one invoice does not end the agreement, and the ledger is what shows
+the growing debt.
+
+**Still unproven:** nothing material in the commerce suite. What remains untested is time-dependent
+behaviour further out than a single cycle — dunning escalation across several missed cycles, and a lapse
+that runs the full grace window.
 
 This document has two halves:
 
