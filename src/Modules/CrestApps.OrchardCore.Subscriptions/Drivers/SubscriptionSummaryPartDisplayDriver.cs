@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Indexes;
@@ -10,6 +10,7 @@ using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 

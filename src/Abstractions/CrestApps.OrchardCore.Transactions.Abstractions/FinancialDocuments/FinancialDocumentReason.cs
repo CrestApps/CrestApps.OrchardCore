@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Commerce.FinancialDocuments;
+namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
 /// The money event that asks an <see cref="IFinancialDocumentPolicy"/> which financial documents to issue.

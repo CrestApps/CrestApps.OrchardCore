@@ -1,10 +1,11 @@
 using CrestApps.OrchardCore.Checkout;
-using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Core.Migrations;
 using CrestApps.OrchardCore.Tests.Utilities;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 
 namespace CrestApps.OrchardCore.Tests.Checkout;
 

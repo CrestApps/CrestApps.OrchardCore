@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Payments;
 using Moq;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Tests.Checkout;
 

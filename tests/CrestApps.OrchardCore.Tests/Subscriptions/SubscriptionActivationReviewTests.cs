@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
 

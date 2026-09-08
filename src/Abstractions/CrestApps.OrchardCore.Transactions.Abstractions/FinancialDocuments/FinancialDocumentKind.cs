@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Commerce.FinancialDocuments;
+namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
 /// The kinds of financial document a money event can produce. The shipped default issues only a

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Commerce.FinancialDocuments;
+namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
 /// The input to an <see cref="IFinancialDocumentNumberGenerator"/>. It names the document kind being numbered

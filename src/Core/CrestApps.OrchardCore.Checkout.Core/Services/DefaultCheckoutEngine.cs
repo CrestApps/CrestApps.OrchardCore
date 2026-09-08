@@ -8,6 +8,8 @@ using OrchardCore.Entities;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using ISession = YesSql.ISession;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Services;
 

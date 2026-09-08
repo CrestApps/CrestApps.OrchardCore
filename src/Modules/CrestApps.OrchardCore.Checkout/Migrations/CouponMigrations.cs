@@ -1,6 +1,7 @@
-using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 
 namespace CrestApps.OrchardCore.Checkout.Migrations;
 

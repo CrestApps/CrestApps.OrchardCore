@@ -1,5 +1,5 @@
 using System.Threading.Tasks;
-using CrestApps.OrchardCore.Commerce.FinancialDocuments;
+using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Commerce.Services;
 using Xunit;
 

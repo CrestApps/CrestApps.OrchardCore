@@ -1,7 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
-using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Subscriptions.Core;
 using YesSql;
 using ISession = YesSql.ISession;

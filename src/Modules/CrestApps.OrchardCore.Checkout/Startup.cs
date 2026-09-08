@@ -5,9 +5,10 @@ using CrestApps.OrchardCore.Checkout.Migrations;
 using CrestApps.OrchardCore.Core.Services;
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Handlers;
-using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Core.Migrations;
 using CrestApps.OrchardCore.Checkout.Core.Services;
+using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Drivers;
 using CrestApps.OrchardCore.Checkout.Endpoints;
@@ -25,6 +26,8 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.ResourceManagement;
+using CrestApps.OrchardCore.Transactions.Services;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 
 namespace CrestApps.OrchardCore.Checkout;
 

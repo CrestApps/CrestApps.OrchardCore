@@ -1,7 +1,7 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
-using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Settings;
 using YesSql;

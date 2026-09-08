@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Commerce.FinancialDocuments;
+namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
 /// The input to an <see cref="IFinancialDocumentPolicy"/>. It is a context object rather than bare

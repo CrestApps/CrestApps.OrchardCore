@@ -1,7 +1,7 @@
 using CrestApps.Core.Data.YesSql.Indexes;
-using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Transactions.Models;
 
-namespace CrestApps.OrchardCore.Checkout.Core.Indexes;
+namespace CrestApps.OrchardCore.Transactions.Core.Indexes;
 
 /// <summary>
 /// The queryable projection of a <see cref="PaymentAttempt"/>, the durable payment ledger.

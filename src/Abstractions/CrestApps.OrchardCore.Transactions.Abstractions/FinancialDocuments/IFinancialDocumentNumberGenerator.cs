@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CrestApps.OrchardCore.Commerce.FinancialDocuments;
+namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
 /// Generates tenant-scoped financial-document numbers. It is defined as an interface with no shipped default

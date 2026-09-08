@@ -11,6 +11,7 @@ using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using Stripe;
 using YesSql;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Stripe.Endpoints;
 

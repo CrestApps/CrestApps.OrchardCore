@@ -1,5 +1,6 @@
 using System.Threading;
 using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Checkout.Services;
 

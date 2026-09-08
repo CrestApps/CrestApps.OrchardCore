@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Commerce.FinancialDocuments;
+namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
 /// An issued financial-document number. It pairs a tenant-scoped monotonic <see cref="Sequence"/> (for

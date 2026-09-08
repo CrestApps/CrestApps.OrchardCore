@@ -10,6 +10,8 @@ using CrestApps.OrchardCore.Subscriptions.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
 
 namespace CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 

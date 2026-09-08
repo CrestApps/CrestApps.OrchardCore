@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Checkout.Core.Indexes;
+using CrestApps.OrchardCore.Transactions.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Core.Services;
 using Microsoft.AspNetCore.Http;
@@ -8,6 +8,7 @@ using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
 using ISession = YesSql.ISession;
+using CrestApps.OrchardCore.Checkout.Core.Indexes;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Services;
 

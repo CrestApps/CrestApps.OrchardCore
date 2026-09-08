@@ -15,6 +15,7 @@ using Moq;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using Xunit;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Tests.Transactions;
 

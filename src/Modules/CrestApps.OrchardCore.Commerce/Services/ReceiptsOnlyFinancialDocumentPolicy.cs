@@ -1,6 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
-using CrestApps.OrchardCore.Commerce.FinancialDocuments;
+using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 namespace CrestApps.OrchardCore.Commerce.Services;
 

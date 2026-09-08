@@ -1,7 +1,7 @@
-using CrestApps.OrchardCore.Checkout.Models;
 using YesSql.Indexes;
+using CrestApps.OrchardCore.Transactions.Models;
 
-namespace CrestApps.OrchardCore.Checkout.Core.Indexes;
+namespace CrestApps.OrchardCore.Transactions.Core.Indexes;
 
 /// <summary>
 /// Maps <see cref="PaymentRefund"/> documents to <see cref="PaymentRefundIndex"/> rows.

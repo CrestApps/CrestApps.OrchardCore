@@ -46,6 +46,43 @@ public sealed class ProjectReferenceRulesTests
         "CrestApps.OrchardCore.Commerce",
     ];
 
+    /// <summary>
+    /// The payment ledger lives in Transactions and Checkout writes to it, so the reference points one
+    /// way only. A Transactions project that reached back into Checkout would make the ledger unusable
+    /// without the checkout that happens to fill it today.
+    /// </summary>
+    [Fact]
+    public void TransactionsProjects_NeverReferenceCheckout()
+    {
+        var offenders = new List<string>();
+        var sourceRoot = Path.Combine(FindRepositoryRoot(), "src");
+
+        foreach (var project in Directory.EnumerateFiles(sourceRoot, "*.csproj", SearchOption.AllDirectories))
+        {
+            var name = Path.GetFileNameWithoutExtension(project);
+
+            if (!name.StartsWith("CrestApps.OrchardCore.Transactions", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            // The Transactions *module* may consume the checkout's contracts to settle a transaction
+            // online; what it must never take is the checkout's implementation.
+            foreach (var reference in ReadProjectReferenceNames(project))
+            {
+                if (reference.StartsWith("CrestApps.OrchardCore.Checkout", StringComparison.Ordinal) &&
+                    !string.Equals(reference, "CrestApps.OrchardCore.Checkout.Abstractions", StringComparison.Ordinal))
+                {
+                    offenders.Add($"{name} -> {reference}");
+                }
+            }
+        }
+
+        Assert.True(offenders.Count == 0,
+            "Transactions owns the payment ledger and must not depend on the checkout that writes to it. Offending references: " +
+            string.Join(", ", offenders) + ".");
+    }
+
     [Fact]
     public void AbstractionProjects_OnlyReferenceOtherAbstractions()
     {

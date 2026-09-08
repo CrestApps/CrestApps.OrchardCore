@@ -1,8 +1,8 @@
 using CrestApps.Core.Services;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Checkout.Models;
+using CrestApps.OrchardCore.Transactions.Models;
 
-namespace CrestApps.OrchardCore.Checkout.Services;
+namespace CrestApps.OrchardCore.Transactions.Services;
 
 /// <summary>
 /// The durable store for <see cref="PaymentRefund"/> records. Every refund is written here before the

@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Checkout.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Entities;
 using Xunit;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
 
 namespace CrestApps.OrchardCore.Tests.Checkout;
 

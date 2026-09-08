@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Transactions.ViewModels;
 

@@ -12,6 +12,7 @@ using OrchardCore.Entities;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using ISession = YesSql.ISession;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Tests.Checkout;
 

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Checkout.Models;
+namespace CrestApps.OrchardCore.Transactions.Models;
 
 /// <summary>
 /// The lifecycle state of a durable <see cref="PaymentRefund"/>. Like a <see cref="PaymentAttempt"/>, a

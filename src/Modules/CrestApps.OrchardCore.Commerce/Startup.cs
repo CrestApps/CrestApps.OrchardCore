@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Commerce.Navigation;
-using CrestApps.OrchardCore.Commerce.FinancialDocuments;
+using CrestApps.OrchardCore.Transactions.FinancialDocuments;
 using CrestApps.OrchardCore.Commerce.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;

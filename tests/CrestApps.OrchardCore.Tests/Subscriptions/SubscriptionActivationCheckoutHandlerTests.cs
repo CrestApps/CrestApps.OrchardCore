@@ -15,6 +15,7 @@ using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using Xunit;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
 

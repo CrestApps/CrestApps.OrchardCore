@@ -14,7 +14,9 @@ public sealed class CommerceModuleBoundaryTests
 {
     private static readonly Assembly _commerceAssembly = typeof(CrestApps.OrchardCore.Commerce.Startup).Assembly;
 
-    private static readonly Assembly _commerceAbstractionsAssembly = typeof(CrestApps.OrchardCore.Commerce.FinancialDocuments.IFinancialDocumentPolicy).Assembly;
+    // The financial-document contracts moved to Transactions when Commerce.Abstractions was retired: a
+    // receipt or invoice number belongs with the ledger that issues it, not with the orchestration shell.
+    private static readonly Assembly _transactionsAbstractionsAssembly = typeof(CrestApps.OrchardCore.Transactions.FinancialDocuments.IFinancialDocumentPolicy).Assembly;
 
     // Domain web/core and provider assemblies Commerce must never take a dependency on, because doing so
     // would let the orchestration shell reach into or own another domain's data or provider integration.
@@ -123,10 +125,14 @@ public sealed class CommerceModuleBoundaryTests
             $"[{string.Join(", ", indexProviders)}]; offending indexes: [{string.Join(", ", indexes)}].");
     }
 
+    /// <summary>
+    /// The ledger contracts stay provider-neutral, and in particular never reference the checkout that
+    /// writes to them: the ledger is the thing depended on, not the thing depending.
+    /// </summary>
     [Fact]
-    public void CommerceAbstractions_ReferencesNoDomainPersistenceOrProviders()
+    public void TransactionsAbstractions_ReferencesNoDomainPersistenceOrProviders()
     {
-        var referenced = _commerceAbstractionsAssembly
+        var referenced = _transactionsAbstractionsAssembly
             .GetReferencedAssemblies()
             .Select(reference => reference.Name)
             .Where(name => name is not null)
@@ -139,7 +145,7 @@ public sealed class CommerceModuleBoundaryTests
 
             Assert.True(
                 offending is null,
-                $"Commerce.Abstractions must contain only provider-neutral contracts and must not reference '{forbidden}', but references '{offending}'.");
+                $"Transactions.Abstractions must contain only provider-neutral contracts and must not reference '{forbidden}', but references '{offending}'.");
         }
 
         foreach (var forbidden in _forbiddenReferencePrefixes)
@@ -150,7 +156,7 @@ public sealed class CommerceModuleBoundaryTests
 
             Assert.True(
                 offending is null,
-                $"Commerce.Abstractions must not reference persistence infrastructure '{forbidden}', but references '{offending}'.");
+                $"Transactions.Abstractions must not reference persistence infrastructure '{forbidden}', but references '{offending}'.");
         }
     }
 

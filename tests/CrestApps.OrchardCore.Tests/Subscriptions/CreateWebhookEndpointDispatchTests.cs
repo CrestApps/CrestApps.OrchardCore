@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Stripe.Endpoints;
 using Stripe;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Tests.Subscriptions;
 

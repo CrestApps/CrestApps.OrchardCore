@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace CrestApps.OrchardCore.Commerce.FinancialDocuments;
+namespace CrestApps.OrchardCore.Transactions.FinancialDocuments;
 
 /// <summary>
 /// The immutable decision an <see cref="IFinancialDocumentPolicy"/> returns for a money event: which

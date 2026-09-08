@@ -2,7 +2,7 @@ using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Taxation.Models;
 
-namespace CrestApps.OrchardCore.Checkout.Models;
+namespace CrestApps.OrchardCore.Transactions.Models;
 
 /// <summary>
 /// A durable, per-obligation record of a single interaction with a payment provider. It is persisted in
