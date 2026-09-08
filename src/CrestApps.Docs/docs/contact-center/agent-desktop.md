@@ -224,6 +224,8 @@ When the conversation ends, click **Complete activity** in the active panel. Thi
 
 Completing routes through the shared disposition path, which applies the disposition, marks the activity completed, and runs the subject flow's follow-up actions - the same path used everywhere in the CRM, so inbound, outbound, and manual work all behave consistently. If the subject flow **requires** a disposition, completion is blocked until you pick one and the completion page shows why.
 
+An activity that is already finished cannot be completed a second time, and the completion page says so instead of opening a form it will not accept. This is ordinary traffic rather than a stale link: an automated call that hands off to a live agent, or a caller who reaches voicemail on the queue's maximum wait, can close its own activity while the agent still has the wrap-up open. The agent is returned where they came from with an explanation, and the outcome already on record is kept rather than overwritten.
+
 The workflow preview renders subject- and action-derived titles with DOM text nodes rather than HTML injection. Stored CRM text is displayed literally and cannot create markup or execute script in the agent's browser.
 
 Completion links opened from Contact Center include a local return location. After dialer work is completed or cancelled, the agent returns to **My workspace**; manual activity completion keeps the default **Activities** destination. Return locations are accepted only when they are local application URLs.
