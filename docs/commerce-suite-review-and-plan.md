@@ -72,7 +72,7 @@ the 3.0.0 changelog lists them under *Fixes from an independent review*.
 
 ### Verification
 
-Release build with `-warnaserror` is clean, **2,298 tests pass**, and the docs site builds.
+Release build with `-warnaserror` is clean, **2,335 tests pass**, and the docs site builds.
 
 More importantly, the suite was **run**. A site was set up from scratch, the Commerce starter recipe was
 executed, and the following were exercised in a browser: creating a plan, the public plan list, starting a
@@ -89,9 +89,35 @@ because the plan's charges sit on a step that is never drawn and the invoice was
 steps. Each now has a regression test, two of which read the source tree so the failure fails a build rather
 than a customer's purchase.
 
-**Still unproven:** every live Stripe call, tenant provisioning against a real setup service (the feature
-enables and migrates cleanly, but no site was provisioned), the renewal and lapse sweeps over real time, and
-refunding a real payment.
+### Run against Stripe
+
+The suite was then run against a real Stripe test account, with the CLI forwarding live webhooks and
+**Stripe test clocks** advancing time through real billing cycles. What that proved, with real money moving
+in test mode:
+
+- A $10/month plan bought with a real card: agreement `Active`, one document per session, role granted.
+- A 7-day trial: `$0.00` due, Stripe `trialing`, and after the clock passed the trial Stripe billed the full
+  first cycle and the agreement converted to `Active` with one cycle billed.
+- A 3-cycle plan: Stripe carried the `cancel_at`, billed exactly three cycles across three clock advances,
+  then cancelled itself; the agreement closed with it.
+- A first-cycle coupon: `$5.00` collected on the first invoice, `$10.00` on the second — the discount did not
+  recur, and the Stripe price stayed at the plan's amount.
+- A renewal recorded from `invoice.payment_succeeded`, against the period the invoice line named rather than
+  the invoice's own period.
+- A failed renewal (a card that always declines): agreement `PastDue` with a grace window and no cycle
+  billed.
+- A refund issued from the admin and confirmed at Stripe, recorded locally against the payment.
+- Cancelling at period end, cancelling immediately, and suspending and resuming — each verified at Stripe.
+
+It found four more defects, all of a kind only a real gateway can show; they are listed in the 3.0.0
+changelog under *Fixes found by running the integration against Stripe*. The worst was that **a plan with a
+setup fee could not be paid by card at all**, because the one-time payment intent named no customer while
+the agreement had attached the buyer's card to one — a browser-only failure, since a headless test that
+mints a second payment method never reproduces it.
+
+**Still unproven:** tenant provisioning against a real setup service (the feature enables and migrates
+cleanly, but no site was provisioned), and the offline (Pay Later) renewal and lapse sweeps over real
+elapsed time, which have no gateway clock to advance and remain covered only by unit tests.
 
 This document has two halves:
 

@@ -26,7 +26,8 @@ public interface ISubscriptionLifecycleHandler
 /// </summary>
 /// <param name="subscription">The subscription as it now stands.</param>
 /// <param name="previousStatus">The status it held before the transition.</param>
-public sealed class SubscriptionLifecycleContext(Subscription subscription, SubscriptionStatus previousStatus)
+/// <param name="source">What asked for the transition, when the caller named it.</param>
+public sealed class SubscriptionLifecycleContext(Subscription subscription, SubscriptionStatus previousStatus, string source = null)
 {
     /// <summary>
     /// Gets the subscription as it now stands.
@@ -37,6 +38,15 @@ public sealed class SubscriptionLifecycleContext(Subscription subscription, Subs
     /// Gets the status the subscription held before the transition.
     /// </summary>
     public SubscriptionStatus PreviousStatus { get; } = previousStatus;
+
+    /// <summary>
+    /// Gets what asked for the transition, when the caller named it.
+    /// </summary>
+    /// <remarks>
+    /// A handler that pushes a change out to the payment gateway needs this to tell a change the site made
+    /// from one the gateway itself reported, so that reporting a cancellation does not send it straight back.
+    /// </remarks>
+    public string Source { get; } = source;
 
     /// <summary>
     /// Gets a value indicating whether the transition changed the status, as opposed to only changing dates

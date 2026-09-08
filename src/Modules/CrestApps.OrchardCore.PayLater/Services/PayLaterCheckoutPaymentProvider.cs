@@ -135,6 +135,14 @@ public sealed class PayLaterCheckoutPaymentProvider : ICheckoutPaymentProvider, 
 
     /// <inheritdoc/>
     /// <remarks>
+    /// Nothing collects on an offline agreement until the ledger says the next cycle is due, so suspending
+    /// collection is entirely a local decision and always succeeds.
+    /// </remarks>
+    public Task<RecurringPauseResult> PauseRecurringAsync(PauseRecurringPaymentContext context, CancellationToken cancellationToken = default)
+        => Task.FromResult(RecurringPauseResult.Success());
+
+    /// <inheritdoc/>
+    /// <remarks>
     /// The amount billed each cycle is read from the ledger when the next cycle is created, so there is
     /// nothing to change at a gateway.
     /// </remarks>

@@ -321,7 +321,7 @@ public sealed class StripeRecurringPaymentProviderTests
 
         return new StripeRecurringPaymentProvider(
             subscriptionService,
-            customerService.Object,
+            new StripeCheckoutCustomerResolver(customerService.Object),
             NullLogger<StripeRecurringPaymentProvider>.Instance);
     }
 }

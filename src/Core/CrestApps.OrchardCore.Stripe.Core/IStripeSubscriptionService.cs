@@ -34,4 +34,11 @@ public interface IStripeSubscriptionService
     /// <param name="model">The change request.</param>
     /// <returns>The subscription's state after the change.</returns>
     Task<SubscriptionDetails> UpdateAsync(UpdateSubscriptionRequest model);
+
+    /// <summary>
+    /// Suspends or resumes collection on a Stripe subscription without ending it.
+    /// </summary>
+    /// <param name="model">The pause request.</param>
+    /// <returns>The subscription as Stripe now holds it.</returns>
+    Task<SubscriptionDetails> PauseAsync(PauseSubscriptionRequest model);
 }

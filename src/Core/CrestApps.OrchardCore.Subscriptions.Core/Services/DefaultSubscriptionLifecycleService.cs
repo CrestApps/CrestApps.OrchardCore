@@ -177,7 +177,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
             });
 
             return SubscriptionTransition.Changed;
-        }, cancellationToken);
+        }, cancellationToken, source);
 
     /// <inheritdoc/>
     public Task<Subscription> ResumeAsync(string subscriptionId, CancellationToken cancellationToken = default)
@@ -294,10 +294,18 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
             if (context.Status.HasValue && context.Status.Value != subscription.Status)
             {
-                // The provider is what actually bills, so its status wins. The one exception is a local
-                // cancellation that has not reached the provider yet: reviving it here would start billing
-                // a customer who already left.
-                if (subscription.Status != SubscriptionStatus.Canceled || context.Status.Value is SubscriptionStatus.Canceled or SubscriptionStatus.Expired)
+                // The provider is what actually bills, so its status wins — except where this site has made
+                // a decision the provider has no way to express.
+                //
+                // A cancellation that has not reached the provider yet is one: reviving it here would start
+                // billing a customer who already left. A suspension is the other, and it is easier to miss,
+                // because a gateway that suspends collection still reports the agreement as active. Letting
+                // that answer win would quietly resume a suspension the operator asked for, the moment any
+                // unrelated change arrived.
+                var localDecision = subscription.Status is SubscriptionStatus.Canceled or SubscriptionStatus.Paused;
+                var providerEnded = context.Status.Value is SubscriptionStatus.Canceled or SubscriptionStatus.Expired;
+
+                if (!localDecision || providerEnded)
                 {
                     subscription.Status = context.Status.Value;
                     changed = true;
@@ -318,13 +326,13 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
             });
 
             return SubscriptionTransition.Changed;
-        }, cancellationToken);
+        }, cancellationToken, context.Source);
     }
 
-    private Task<Subscription> MutateAsync(string subscriptionId, Func<Subscription, SubscriptionTransition> mutate, CancellationToken cancellationToken)
-        => MutateAsync(subscriptionId, subscription => Task.FromResult(mutate(subscription)), cancellationToken);
+    private Task<Subscription> MutateAsync(string subscriptionId, Func<Subscription, SubscriptionTransition> mutate, CancellationToken cancellationToken, string source = null)
+        => MutateAsync(subscriptionId, subscription => Task.FromResult(mutate(subscription)), cancellationToken, source);
 
-    private async Task<Subscription> MutateAsync(string subscriptionId, Func<Subscription, Task<SubscriptionTransition>> mutate, CancellationToken cancellationToken)
+    private async Task<Subscription> MutateAsync(string subscriptionId, Func<Subscription, Task<SubscriptionTransition>> mutate, CancellationToken cancellationToken, string source = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(subscriptionId);
 
@@ -360,7 +368,7 @@ public sealed class DefaultSubscriptionLifecycleService : ISubscriptionLifecycle
 
         await _handlers.InvokeAsync(
             (handler, context) => handler.ChangedAsync(context),
-            new SubscriptionLifecycleContext(subscription, before),
+            new SubscriptionLifecycleContext(subscription, before, source),
             _logger);
 
         return subscription;

@@ -224,6 +224,18 @@ A provider offers that capability by implementing **`ICheckoutRecurringPaymentPr
 
 A gateway usually cannot create a recurring agreement without a reusable payment method, and only the browser can produce one without the card details reaching this application. So a provider's client script may implement a `prepare` step whose result is handed back to that provider on the server as opaque provider data. The Stripe panel uses it to tokenize the card before the agreement is created, and then confirms the first invoice against that very payment method rather than attaching a second one.
 
+That opaque provider data reaches the **one-time** obligation as well, which matters as soon as a checkout
+has both — a plan sold with a setup fee is exactly that shape. The browser tokenizes one card for the whole
+checkout and confirms every obligation with it, so the two obligations must be billed to one customer at the
+gateway: Stripe attaches the payment method to the customer the agreement is created against, and then
+refuses to confirm a payment intent that names a different customer, or none. The Stripe provider therefore
+resolves one customer per checkout, keyed by the checkout rather than by the attempt, so whichever
+obligation is begun first creates it and the other reuses it — and a retry in a fresh scope finds the same
+one instead of leaving a duplicate behind.
+
+A checkout with nothing recurring in it tokenizes no reusable card and creates no customer, exactly as
+before.
+
 ### Compensation
 
 When one obligation fails at the provider, the engine refunds the obligations that already settled — through `ICheckoutRefundService`, never straight to the gateway — so the customer is not left paying for half a purchase, and the gateway's own refund notification correlates to a local record instead of being quarantined for an operator.

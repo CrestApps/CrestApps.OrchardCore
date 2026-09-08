@@ -214,6 +214,7 @@ public sealed class StripeSubscriptionVerificationTests
             Mock.Of<IStripePaymentIntentService>(),
             subscriptionService,
             Mock.Of<IStripeRefundService>(),
+            new StripeCheckoutCustomerResolver(Mock.Of<IStripeCustomerService>()),
             new InMemoryPaymentRefundStore(),
             new TestClock(DateTime.UtcNow),
             NullLogger<StripeCheckoutPaymentProvider>.Instance,

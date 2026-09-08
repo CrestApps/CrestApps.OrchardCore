@@ -110,6 +110,8 @@ public sealed class CheckoutStartup : StartupBase
     /// <param name="services">The service collection to configure.</param>
     public override void ConfigureServices(IServiceCollection services)
     {
+        // Scoped so the one-time and recurring obligations of one begin resolve the same Stripe customer.
+        services.AddScoped<IStripeCheckoutCustomerResolver, StripeCheckoutCustomerResolver>();
         services.AddScoped<StripeCheckoutPaymentProvider>();
         services.AddScoped<ICheckoutPaymentProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());
         services.AddScoped<ICheckoutPaymentRefundProvider>(sp => sp.GetRequiredService<StripeCheckoutPaymentProvider>());

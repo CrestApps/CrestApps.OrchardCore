@@ -35,22 +35,22 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
     public const string CustomerDataKey = "customerId";
 
     private readonly IStripeSubscriptionService _subscriptionService;
-    private readonly IStripeCustomerService _customerService;
+    private readonly IStripeCheckoutCustomerResolver _customerResolver;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StripeRecurringPaymentProvider"/> class.
     /// </summary>
     /// <param name="subscriptionService">The Stripe subscription service.</param>
-    /// <param name="customerService">The Stripe customer service.</param>
+    /// <param name="customerResolver">The resolver for the customer this checkout belongs to.</param>
     /// <param name="logger">The logger.</param>
     public StripeRecurringPaymentProvider(
         IStripeSubscriptionService subscriptionService,
-        IStripeCustomerService customerService,
+        IStripeCheckoutCustomerResolver customerResolver,
         ILogger<StripeRecurringPaymentProvider> logger)
     {
         _subscriptionService = subscriptionService;
-        _customerService = customerService;
+        _customerResolver = customerResolver;
         _logger = logger;
     }
 
@@ -83,9 +83,14 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
 
         try
         {
-            var customerId = GetProviderValue(context.ProviderData, CustomerDataKey);
-
-            customerId ??= await CreateCustomerAsync(context, paymentMethodId);
+            // Shared with the one-time obligation of the same checkout: Stripe refuses to confirm a payment
+            // intent with a payment method that belongs to a different customer, so a setup fee and the plan
+            // it sets up have to be billed to one.
+            var customerId = await _customerResolver.ResolveAsync(
+                context.Session,
+                attempt.SessionId,
+                paymentMethodId,
+                GetProviderValue(context.ProviderData, CustomerDataKey));
 
             // The recurring price is the plan's cycle amount, never what is due now. What is due now is smaller
             // whenever a first-cycle coupon applied, and zero during a trial; a price taken from it would bill
@@ -176,6 +181,31 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
     }
 
     /// <inheritdoc/>
+    public async Task<RecurringPauseResult> PauseRecurringAsync(PauseRecurringPaymentContext context, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentException.ThrowIfNullOrEmpty(context.ProviderSubscriptionId);
+
+        try
+        {
+            await _subscriptionService.PauseAsync(new PauseSubscriptionRequest
+            {
+                SubscriptionId = context.ProviderSubscriptionId,
+                Paused = context.Paused,
+                Reason = context.Reason,
+            });
+
+            return RecurringPauseResult.Success();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to {Action} collection on Stripe subscription '{SubscriptionId}'.", context.Paused ? "suspend" : "resume", context.ProviderSubscriptionId);
+
+            return RecurringPauseResult.Failure(exception.Message);
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<RecurringUpdateResult> UpdateRecurringAsync(UpdateRecurringPaymentContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -215,30 +245,6 @@ public sealed class StripeRecurringPaymentProvider : ICheckoutRecurringPaymentPr
 
             return RecurringUpdateResult.Failure(exception.Message);
         }
-    }
-
-    private async Task<string> CreateCustomerAsync(BeginRecurringPaymentContext context, string paymentMethodId)
-    {
-        CheckoutContactInfo contact = null;
-
-        context.Session?.TryGet(out contact);
-
-        var customer = await _customerService.CreateAsync(new CreateCustomerRequest
-        {
-            Name = contact?.DisplayName,
-            Email = contact?.Email,
-            PaymentMethodId = paymentMethodId,
-
-            // The customer is created inside the same retryable begin, so it carries its own derived key.
-            // Without one, a retry would leave a duplicate customer behind for every attempt.
-            IdempotencyKey = context.Attempt.IdempotencyKey + "_customer",
-            Metadata = new Dictionary<string, string>
-            {
-                ["checkout_session_id"] = context.Attempt.SessionId,
-            },
-        });
-
-        return customer.CustomerId;
     }
 
     // Stripe expects the interval as its own vocabulary, and it has no concept of an interval outside these

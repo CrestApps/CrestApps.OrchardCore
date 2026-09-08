@@ -47,6 +47,19 @@ public interface ICheckoutRecurringPaymentProvider
     Task<RecurringCancelResult> CancelRecurringAsync(CancelRecurringPaymentContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Suspends collection on an established agreement without ending it, and resumes it again.
+    /// </summary>
+    /// <remarks>
+    /// Pausing only in this application would tell the operator that billing is suspended while the gateway
+    /// keeps charging the customer every cycle. A provider that has no notion of pausing should cancel
+    /// nothing and report failure, so the caller can say so rather than imply a suspension that never
+    /// happened.
+    /// </remarks>
+    /// <param name="context">The pause context.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task<RecurringPauseResult> PauseRecurringAsync(PauseRecurringPaymentContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Changes what an established agreement bills, for example when a customer moves to another plan or
     /// changes quantity.
     /// </summary>

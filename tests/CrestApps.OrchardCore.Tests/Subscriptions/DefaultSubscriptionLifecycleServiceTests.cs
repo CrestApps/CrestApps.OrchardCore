@@ -179,6 +179,77 @@ public sealed class DefaultSubscriptionLifecycleServiceTests
         Assert.Equal(SubscriptionStatus.Canceled, subscription.Status);
     }
 
+    /// <summary>
+    /// A gateway that suspends collection still reports the agreement as active, so an unrelated change
+    /// arriving afterwards must not be read as "the provider resumed it".
+    /// </summary>
+    /// <remarks>
+    /// Live testing found this the hard way: suspending an agreement produced a provider notification, the
+    /// notification synchronized the status back to active, and billing quietly resumed while the admin said
+    /// it had been suspended.
+    /// </remarks>
+    [Fact]
+    public async Task SyncFromProviderAsync_DoesNotResumeAPausedSubscription()
+    {
+        // Arrange
+        var (service, _) = CreateService(CreateSubscription());
+
+        await service.PauseAsync("sub-1", "Suspended by an administrator.", TestContext.Current.CancellationToken);
+
+        // Act
+        var subscription = await service.SyncFromProviderAsync("sub-1", new SubscriptionProviderSyncContext
+        {
+            Status = SubscriptionStatus.Active,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(SubscriptionStatus.Paused, subscription.Status);
+    }
+
+    /// <summary>
+    /// A provider that really did end the agreement still wins over a local suspension: there is nothing
+    /// left to resume.
+    /// </summary>
+    [Fact]
+    public async Task SyncFromProviderAsync_LetsTheProviderEndAPausedSubscription()
+    {
+        // Arrange
+        var (service, _) = CreateService(CreateSubscription());
+
+        await service.PauseAsync("sub-1", "Suspended by an administrator.", TestContext.Current.CancellationToken);
+
+        // Act
+        var subscription = await service.SyncFromProviderAsync("sub-1", new SubscriptionProviderSyncContext
+        {
+            Status = SubscriptionStatus.Canceled,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(SubscriptionStatus.Canceled, subscription.Status);
+    }
+
+    /// <summary>
+    /// A synchronization names the gateway it came from, which is what stops a handler from sending the
+    /// change straight back and undoing what the gateway just reported.
+    /// </summary>
+    [Fact]
+    public async Task SyncFromProviderAsync_TellsHandlersWhichGatewayReportedIt()
+    {
+        // Arrange
+        var recorder = new RecordingLifecycleHandler();
+        var (service, _) = CreateService(CreateSubscription(), recorder);
+
+        // Act
+        await service.SyncFromProviderAsync("sub-1", new SubscriptionProviderSyncContext
+        {
+            Status = SubscriptionStatus.PastDue,
+            Source = "Stripe",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Stripe", Assert.Single(recorder.Contexts).Source);
+    }
+
     [Fact]
     public async Task SyncFromProviderAsync_AppliesThePeriodTheProviderReports()
     {
@@ -261,7 +332,9 @@ public sealed class DefaultSubscriptionLifecycleServiceTests
             UpdatedUtc = _now.AddDays(-10),
         };
 
-    private static (DefaultSubscriptionLifecycleService Service, InMemorySubscriptionStore Store) CreateService(Subscription seed)
+    private static (DefaultSubscriptionLifecycleService Service, InMemorySubscriptionStore Store) CreateService(
+        Subscription seed,
+        ISubscriptionLifecycleHandler handler = null)
     {
         var store = new InMemorySubscriptionStore(seed);
 
@@ -275,9 +348,21 @@ public sealed class DefaultSubscriptionLifecycleServiceTests
             new LocalLock(NullLogger<LocalLock>.Instance),
             SiteServiceFactory.Create(new SubscriptionSettings { DunningGraceDays = 7 }),
             new TestClock(_now),
-            [],
+            handler is null ? [] : [handler],
             NullLogger<DefaultSubscriptionLifecycleService>.Instance);
 
         return (service, store);
+    }
+
+    private sealed class RecordingLifecycleHandler : SubscriptionLifecycleHandlerBase
+    {
+        public List<SubscriptionLifecycleContext> Contexts { get; } = [];
+
+        public override Task ChangedAsync(SubscriptionLifecycleContext context)
+        {
+            Contexts.Add(context);
+
+            return Task.CompletedTask;
+        }
     }
 }

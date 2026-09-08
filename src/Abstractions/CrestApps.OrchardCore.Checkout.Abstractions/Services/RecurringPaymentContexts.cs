@@ -104,6 +104,28 @@ public sealed class CancelRecurringPaymentContext
 }
 
 /// <summary>
+/// The input for <see cref="ICheckoutRecurringPaymentProvider.PauseRecurringAsync"/>.
+/// </summary>
+public sealed class PauseRecurringPaymentContext
+{
+    /// <summary>
+    /// Gets or sets the provider's reference for the agreement to suspend or resume.
+    /// </summary>
+    public string ProviderSubscriptionId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether collection should be suspended. When <see langword="false"/>
+    /// the agreement is returned to normal collection.
+    /// </summary>
+    public bool Paused { get; set; }
+
+    /// <summary>
+    /// Gets or sets the reason recorded for audit.
+    /// </summary>
+    public string Reason { get; set; }
+}
+
+/// <summary>
 /// The input for <see cref="ICheckoutRecurringPaymentProvider.UpdateRecurringAsync"/>.
 /// </summary>
 public sealed class UpdateRecurringPaymentContext
@@ -204,6 +226,35 @@ public sealed class RecurringCancelResult
     /// </summary>
     /// <param name="errorMessage">The error message.</param>
     public static RecurringCancelResult Failure(string errorMessage)
+        => new() { Succeeded = false, ErrorMessage = errorMessage };
+}
+
+/// <summary>
+/// The result of suspending or resuming collection on a recurring agreement.
+/// </summary>
+public sealed class RecurringPauseResult
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether the provider confirmed the change.
+    /// </summary>
+    public bool Succeeded { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error message when the provider could not suspend or resume collection.
+    /// </summary>
+    public string ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Creates a confirmed result.
+    /// </summary>
+    public static RecurringPauseResult Success()
+        => new() { Succeeded = true };
+
+    /// <summary>
+    /// Creates a failed result.
+    /// </summary>
+    /// <param name="errorMessage">The error message.</param>
+    public static RecurringPauseResult Failure(string errorMessage)
         => new() { Succeeded = false, ErrorMessage = errorMessage };
 }
 

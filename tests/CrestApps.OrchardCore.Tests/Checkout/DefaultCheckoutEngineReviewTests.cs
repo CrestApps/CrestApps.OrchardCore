@@ -321,6 +321,9 @@ public sealed class DefaultCheckoutEngineReviewTests
         public Task<RecurringCancelResult> CancelRecurringAsync(CancelRecurringPaymentContext context, CancellationToken cancellationToken = default)
             => Task.FromResult(RecurringCancelResult.Success());
 
+        public Task<RecurringPauseResult> PauseRecurringAsync(PauseRecurringPaymentContext context, CancellationToken cancellationToken = default)
+            => Task.FromResult(RecurringPauseResult.Success());
+
         public Task<RecurringUpdateResult> UpdateRecurringAsync(UpdateRecurringPaymentContext context, CancellationToken cancellationToken = default)
             => Task.FromResult(RecurringUpdateResult.Success());
     }

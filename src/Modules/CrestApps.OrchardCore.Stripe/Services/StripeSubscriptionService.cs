@@ -232,6 +232,34 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
         return ToDetails(updated);
     }
 
+    /// <inheritdoc/>
+    public async Task<SubscriptionDetails> PauseAsync(PauseSubscriptionRequest model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+        ArgumentException.ThrowIfNullOrEmpty(model.SubscriptionId);
+
+        var subscriptionService = new SubscriptionService(_stripeClient);
+
+        // Stripe suspends collection with pause_collection and resumes by clearing it. 'void' is the right
+        // behavior for a suspension the operator asked for: the cycles that pass while paused are not
+        // invoiced at all, so resuming does not hand the customer a bill for time they did not have.
+        var options = new SubscriptionUpdateOptions();
+
+        if (model.Paused)
+        {
+            options.PauseCollection = new SubscriptionPauseCollectionOptions { Behavior = "void" };
+        }
+        else
+        {
+            options.PauseCollection = null;
+            options.AddExtraParam("pause_collection", string.Empty);
+        }
+
+        var updated = await subscriptionService.UpdateAsync(model.SubscriptionId, options, model.ToRequestOptions());
+
+        return ToDetails(updated);
+    }
+
     // The moment the last of a fixed number of cycles ends, counted from when billing starts.
     private static DateTime AdvanceCycles(DateTime from, SubscriptionInlinePrice price, int cycles)
     {

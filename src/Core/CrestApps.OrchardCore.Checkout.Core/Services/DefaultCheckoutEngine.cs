@@ -470,6 +470,11 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
                         Session = session,
                         Attempt = attempt,
                         Invoice = invoice,
+
+                        // The same client data the recurring path gets. A checkout that carries both a
+                        // one-time and a recurring obligation confirms both with the one payment method the
+                        // browser tokenized, and the provider can only honor that if it can see it.
+                        ProviderData = options.ProviderData,
                         ReturnUrl = options.ReturnUrl,
                         CancelUrl = options.CancelUrl,
                     },

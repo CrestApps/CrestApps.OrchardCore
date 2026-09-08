@@ -89,6 +89,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISubscriptionLifecycleService, DefaultSubscriptionLifecycleService>();
         services.AddScoped<ISubscriptionAccessService, DefaultSubscriptionAccessService>();
         services.AddScoped<ISubscriptionLifecycleHandler, EntitlementSubscriptionLifecycleHandler>();
+
+        // A cancellation that never reaches the gateway keeps billing the customer, so this is registered
+        // wherever agreements are, not only where a gateway happens to be configured.
+        services.AddScoped<ISubscriptionLifecycleHandler, GatewayBillingSubscriptionLifecycleHandler>();
         services.AddSingleton<IBackgroundTask, SubscriptionLifecycleBackgroundTask>();
 
         // The gateway is authoritative for a recurring agreement, so its notifications are what keep the

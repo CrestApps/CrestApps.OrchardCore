@@ -119,13 +119,28 @@ Who moves an agreement forward depends on who bills it:
 - **An offline provider** (Pay Later) has no gateway to report anything. The lifecycle sweep advances any agreement whose provider has no gateway once its next billing date passes, and the Pay Later sweep records the debt for the new cycle. The two are independent: the debt exists whether or not the customer has paid the previous one, which is what lets an unpaid balance be chased.
 
 
+Cancelling, suspending, and resuming all reach the gateway. That is worth stating plainly, because the
+opposite failure is silent and expensive: an agreement marked cancelled here while the gateway keeps
+charging the customer's card every cycle. Cancelling at period end asks the gateway to stop after the period
+the customer has already paid for; cancelling immediately stops it now. Suspending an agreement suspends
+collection at the gateway too, and resuming puts it back on the schedule.
+
+The traffic only ever goes one way per change. A cancellation the gateway itself reported carries the
+gateway as its source and is not sent back, so a subscription the gateway ended is not asked to end again.
+
+:::note
+A gateway that suspends collection still reports the agreement as **active** — pausing is not a status
+there. A local suspension is therefore treated as a decision the gateway cannot express, and a later
+notification saying "active" does not undo it. The same protection covers a local cancellation.
+:::
+
 A subscription does not end when checkout completes; it renews, can fall behind, and can be cancelled. The module tracks that afterlife from the payment gateway's notifications, so the site does not have to infer a subscription's fate from payments quietly stopping.
 
 | Gateway notification | Effect on the recorded subscription |
 | --- | --- |
 | Cycle payment succeeded | The payment is recorded with **its own collection date**, and the subscription's expiration advances by exactly one billing cycle. |
 | Cycle payment failed | The subscription moves to **Past due** and the date it first fell behind is recorded, so a dunning window can be measured from it. |
-| Subscription updated | The status, paid-through date, and pending cancellation are adopted from the gateway. |
+| Subscription updated | The status, paid-through date, and pending cancellation are adopted from the gateway — except where they would undo a local suspension or cancellation. |
 | Subscription deleted | The subscription is marked **Canceled** with the cancellation date. |
 
 Each recorded subscription carries a `SubscriptionLifecycleStatus` (`Active`, `Trialing`, `PastDue`, `Canceled`, `Expired`, `Paused`). Some deliberate rules:

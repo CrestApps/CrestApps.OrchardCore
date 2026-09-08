@@ -25,6 +25,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     private readonly IStripePaymentIntentService _paymentIntentService;
     private readonly IStripeSubscriptionService _subscriptionService;
     private readonly IStripeRefundService _refundService;
+    private readonly IStripeCheckoutCustomerResolver _customerResolver;
     private readonly IPaymentRefundStore _refundStore;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -37,6 +38,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
     /// <param name="paymentIntentService">The Stripe PaymentIntent service.</param>
     /// <param name="subscriptionService">The Stripe subscription service, used to verify recurring obligations.</param>
     /// <param name="refundService">The Stripe refund service.</param>
+    /// <param name="customerResolver">The resolver for the customer this checkout belongs to.</param>
     /// <param name="refundStore">The durable refund ledger used to record compensation refunds.</param>
     /// <param name="clock">The clock used to stamp refund completion.</param>
     /// <param name="logger">The logger.</param>
@@ -45,6 +47,7 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         IStripePaymentIntentService paymentIntentService,
         IStripeSubscriptionService subscriptionService,
         IStripeRefundService refundService,
+        IStripeCheckoutCustomerResolver customerResolver,
         IPaymentRefundStore refundStore,
         IClock clock,
         ILogger<StripeCheckoutPaymentProvider> logger,
@@ -53,10 +56,21 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
         _paymentIntentService = paymentIntentService;
         _subscriptionService = subscriptionService;
         _refundService = refundService;
+        _customerResolver = customerResolver;
         _refundStore = refundStore;
         _clock = clock;
         _logger = logger;
         S = stringLocalizer;
+    }
+
+    private static string GetProviderValue(IReadOnlyDictionary<string, string> providerData, string key)
+    {
+        if (providerData is not null && providerData.TryGetValue(key, out var value) && !string.IsNullOrEmpty(value))
+        {
+            return value;
+        }
+
+        return null;
     }
 
     /// <inheritdoc/>
@@ -95,10 +109,22 @@ public sealed class StripeCheckoutPaymentProvider : ICheckoutPaymentProvider, IC
 
         try
         {
+            // When the same checkout also establishes a recurring agreement, the browser tokenizes one
+            // reusable payment method and confirms every obligation with it. Stripe attaches that payment
+            // method to a customer, and then refuses to confirm an intent that does not name the same one,
+            // so a setup fee billed alongside a plan has to be created against that customer. A checkout
+            // with no recurring obligation sends no payment method here and stays customer-less.
+            var customerId = await _customerResolver.ResolveAsync(
+                context.Session,
+                attempt.SessionId,
+                GetProviderValue(context.ProviderData, StripeRecurringPaymentProvider.PaymentMethodDataKey),
+                GetProviderValue(context.ProviderData, StripeRecurringPaymentProvider.CustomerDataKey));
+
             var response = await _paymentIntentService.CreateForCheckoutAsync(new CreateCheckoutPaymentIntentRequest
             {
                 Amount = grossAmount,
                 Currency = attempt.Currency,
+                CustomerId = customerId,
 
                 // A stable idempotency key makes retrying BeginAsync return the same PaymentIntent instead
                 // of creating a duplicate charge.
