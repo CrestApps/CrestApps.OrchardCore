@@ -163,13 +163,6 @@
         document.getElementById('product-price-add').addEventListener('click', () => {
             const rows = container.querySelectorAll('.product-price-row');
 
-            if (rows.length === 0) {
-                // Nothing to clone from, so the editor has to be saved once with a price before more can
-                // be added in the browser.
-                window.location.reload();
-                return;
-            }
-
             const clone = rows[rows.length - 1].cloneNode(true);
             const next = rows.length;
 

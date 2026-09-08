@@ -134,13 +134,17 @@ public sealed class CheckoutSessionStore : ICheckoutSessionStore
     }
 
     /// <inheritdoc/>
-    public async Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default)
+    public async Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, Action<CheckoutSession> configure = null, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(referenceType);
 
         cancellationToken.ThrowIfCancellationRequested();
 
         var checkoutSession = await GetNewSessionAsync(referenceType, referenceId, referenceVersionId);
+
+        // Before activation, not after: activation is what creates the steps and their charges, so
+        // anything that decides what is being bought has to already be on the session.
+        configure?.Invoke(checkoutSession);
 
         var activatingContext = new CheckoutFlowActivatingContext(checkoutSession);
 

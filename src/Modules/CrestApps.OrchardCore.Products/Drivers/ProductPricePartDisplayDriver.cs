@@ -44,6 +44,13 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
         return Initialize<ProductPricePartViewModel>(GetEditorShapeType(context), async model =>
         {
             model.Prices = [.. (part.Prices ?? []).Select(ToViewModel)];
+
+            // A product with no prices still needs one row to fill in, or there is nothing on the page to
+            // type into and nothing for the browser to copy when adding a second.
+            if (model.Prices.Count == 0)
+            {
+                model.Prices.Add(new ProductPriceViewModel { IsDefault = true });
+            }
             model.Currencies = await BuildCurrencyOptionsAsync();
             model.Kinds =
             [
@@ -71,6 +78,13 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
             index++;
 
             if (entry is null || entry.Remove)
+            {
+                continue;
+            }
+
+            // The blank row the editor always offers is not an attempt to add a price, so it is dropped
+            // rather than reported as invalid.
+            if (!entry.Amount.HasValue && string.IsNullOrWhiteSpace(entry.Name))
             {
                 continue;
             }

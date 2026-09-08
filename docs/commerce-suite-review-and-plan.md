@@ -49,15 +49,20 @@ remain deliberately undone: the ledger relocation and the pricing rework (5.1 to
 | 6.x Entitlements and member access | Done, verified in the browser (buying a plan granted the role) |
 | 7.x Module READMEs, starter recipe, tests README, docs | Done; the starter recipe was executed |
 
-### Why two items were left alone
+### The two deferred items, since done
 
-**1.1 Ledger relocation.** A large mechanical namespace move with no user-visible effect. Nothing built since
-depends on it, and it can still be done as its own pass.
+**1.1 Ledger relocation** is done. One deliberate deviation: the ledger's index tables stay in
+`CheckoutMigrations` rather than moving to `TransactionMigrations`, because Checkout is what registers the
+index providers — splitting them would either create tables nothing writes to or register index providers
+for tables that were never created. An architecture test now asserts the direction at the project-reference
+level.
 
-**5.1 to 5.4, the pricing rework.** These replace `ProductPart.Price` with a repeatable `ProductPricePart` and
-rewrite the plan chooser, touching the content schema of every existing site. The goal they serve — selling
-any product at any price point — is already met by the Stripe adapter's inline pricing, so what is left is a
-nicer editing experience rather than a missing capability.
+**5.1 to 5.4, the pricing rework** is done, with one deliberate deviation. The plan called for
+`SubscriptionPart`'s billing fields to be migrated into a default recurring price and removed. Instead the
+new part is **additive**: prices win when a product has them, and a product without them is still sold at
+the single amount on its product part. That keeps every existing plan, recipe, and import working without a
+content migration, and it makes the simple case stay simple — one price needs no price list. 5.5 (trials)
+and 5.6 (coupons) were already delivered earlier, and 5.4's deletions had already happened.
 
 ### Independent review
 

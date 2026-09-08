@@ -99,22 +99,22 @@ public sealed class DefaultCheckoutEngine : ICheckoutEngine
             request.ReferenceType,
             request.ReferenceId,
             request.ReferenceVersionId,
+            newSession =>
+            {
+                // Both are seeded before the flow is built, because both change what the checkout contains.
+                // The chosen price decides what is charged and how often; a guest's contact details are the
+                // only way a completed guest purchase can be receipted or chased.
+                if (request.PriceSelection is not null)
+                {
+                    newSession.Put(request.PriceSelection);
+                }
+
+                if (request.Contact is not null && !string.IsNullOrEmpty(request.Contact.Email))
+                {
+                    newSession.Put(request.Contact);
+                }
+            },
             cancellationToken);
-
-        // A guest has no account to resolve contact details from later, so the contact captured up front is
-        // the only way a completed guest purchase can be receipted or chased.
-        if (request.PriceSelection is not null)
-        {
-            // Recorded on the session, not re-read per request: the terms the buyer picked have to survive
-            // them leaving the page, and have to be there when a provider notification finishes the
-            // purchase without a browser involved at all.
-            session.Put(request.PriceSelection);
-        }
-
-        if (request.Contact is not null && !string.IsNullOrEmpty(request.Contact.Email))
-        {
-            session.Put(request.Contact);
-        }
 
         await _sessionStore.SaveAsync(session, cancellationToken);
 

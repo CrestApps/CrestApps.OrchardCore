@@ -143,7 +143,41 @@ Reading `ProductPart.Price` directly couples a caller to today's flat, per-item 
 - **`PriceResult`** is an immutable value that always pairs an amount with the currency it is expressed in — its `UnitPrice`, `Currency`, `Quantity`, and computed `Subtotal`. A price is never passed around without its currency.
 - **`IPriceResolver`** resolves a `PriceResult` from a `ProductSnapshotContext`. The default resolver returns the product's list price tagged with the product-owned currency. It never converts between currencies: when the context requests a currency that differs from the product's currency it returns `null` and logs a warning, so a price is never charged in the wrong currency.
 
-A future pricing engine (price schedules, quantity breaks, or customer-specific pricing) can replace `IPriceResolver` to produce the same `PriceResult` without changing any consumer.
+A future pricing engine (customer-specific pricing, contract rates) can replace `IPriceResolver` to produce the same `PriceResult` without changing any consumer.
+
+## Selling one product several ways
+
+A product with a single amount forces a separate product for every way of selling the same thing. The
+**Product prices** part removes that: attach it and the product carries as many prices as it needs, and the
+buyer picks one.
+
+Each price is charged **once** or **recurring**, and carries everything that decides what a gateway is told:
+
+| | |
+| --- | --- |
+| Name and amount | What the buyer sees and pays, in the price's own currency. |
+| Interval, cycles | How often it repeats and how many times before it ends on its own. |
+| Trial, start delay | Free days, or a first cycle that begins later. |
+| Setup fee | A one-time amount charged alongside the first cycle. |
+| Buyer names the amount | Pay-what-you-want, bounded by a minimum and a maximum. |
+| Quantity | Seats, bounded by a maximum. |
+| Offered from / until | A window, so a launch price stops selling itself on its own. |
+
+A **recurring price is what makes a product subscribable** — no separate flag. The same product can offer a
+one-time purchase and a monthly plan side by side.
+
+Every rule is enforced when the price is resolved, not only in the editor, because the choice arrives from
+a form: an amount below the minimum, a quantity above the maximum, a price that is no longer offered, or a
+currency that does not match are each refused rather than adjusted. A product with no prices of its own is
+still sold at the single amount on its **Product** part, so the part is opt-in and nothing has to be
+migrated to keep working.
+
+:::note
+A price keeps its identifier for its whole life. Editing a price changes what new buyers pay and never what
+an existing agreement bills, and withdrawing one deactivates it rather than deleting it — an agreement
+created from a price still names it.
+:::
+
 
 ## Recipes and schema
 

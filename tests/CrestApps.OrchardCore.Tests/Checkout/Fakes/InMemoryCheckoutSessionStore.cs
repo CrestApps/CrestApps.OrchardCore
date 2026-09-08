@@ -41,7 +41,7 @@ internal sealed class InMemoryCheckoutSessionStore : ICheckoutSessionStore
             .OrderByDescending(session => session.CreatedUtc)
             .FirstOrDefault());
 
-    public async Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default)
+    public async Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, Action<CheckoutSession> configure = null, CancellationToken cancellationToken = default)
     {
         var session = new CheckoutSession
         {
@@ -53,6 +53,10 @@ internal sealed class InMemoryCheckoutSessionStore : ICheckoutSessionStore
             CreatedUtc = DateTime.UtcNow,
             ModifiedUtc = DateTime.UtcNow,
         };
+
+        // Mirrors the real store: whatever decides what is being bought is on the session before the
+        // handlers build the flow from it.
+        configure?.Invoke(session);
 
         foreach (var handler in _handlers)
         {

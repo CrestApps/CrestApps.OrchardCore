@@ -49,6 +49,19 @@ Each content item of that type becomes a purchasable plan, editable and securabl
 
 ## Buying a plan
 
+### Offering more than one price
+
+A plan sold one way needs no choice, and the plan card is a single **Sign up** button. Attach the
+**Product prices** part (see [Products](products.md)) and the same plan can be offered monthly and annually,
+per seat, or for whatever the buyer thinks it is worth — the card becomes a chooser and the checkout is
+started on the price they picked.
+
+The choice is recorded on the checkout itself rather than carried in the request. That matters because a
+checkout outlives the request that began it: the buyer can leave the payment page and come back, or have
+their purchase completed by a provider notification with no browser involved, and either way they are
+charged the terms they chose.
+
+
 A plan is bought through the shared [Checkout](checkout), started from the **Sign up** link on any published plan (`Subscription/Signup/{contentItemId}`). The checkout resolves the plan, records what is being bought, and hands the customer to the ordinary checkout experience.
 
 The plan itself contributes the charges: the recurring price and, when configured, a one-time setup fee. Those sit on a step that is never drawn — the customer already chose the plan, so there is nothing to ask them — but the charges are still billed. Other handlers contribute the steps that do ask for something:
@@ -151,7 +164,7 @@ Each recorded subscription carries a `SubscriptionLifecycleStatus` (`Active`, `T
 - Because payments now carry their own dates, revenue, tax, and product reports attribute a renewal to the month it was collected instead of the month the subscription started.
 
 :::note
-Grace-period enforcement, cancellation, and pausing are handled by the subscription agreement described above. What is still missing is a dunning email sequence and automatic revocation of roles granted at signup when an agreement ends.
+Grace-period enforcement, cancellation, pausing, and the revocation of whatever a plan granted are handled by the subscription agreement described above — an agreement that stops being current has its entitlements revoked by the same handler that applied them. What is still missing is a dunning email sequence.
 :::
 
 ## Member-only access

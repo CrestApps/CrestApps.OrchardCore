@@ -29,7 +29,7 @@ public interface ICheckoutSessionStore
     /// <param name="referenceId">The identifier of the thing being purchased.</param>
     /// <param name="referenceVersionId">An optional secondary identifier of the thing being purchased.</param>
     /// <param name="cancellationToken">A token used to cancel the operation.</param>
-    Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, CancellationToken cancellationToken = default);
+    Task<CheckoutSession> NewAsync(string referenceType, string referenceId, string referenceVersionId = null, Action<CheckoutSession> configure = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns the most recently created session that matches the supplied reference. The order owns the

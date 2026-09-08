@@ -236,6 +236,19 @@ one instead of leaving a duplicate behind.
 A checkout with nothing recurring in it tokenizes no reusable card and creates no customer, exactly as
 before.
 
+### Prices the buyer chose
+
+A product may be offered on several sets of terms, and `StartCheckoutRequest.PriceSelection` carries which
+one the buyer took, along with a quantity and any amount they named. It is applied to the session **before**
+the flow is built, because building the flow is what creates the steps and their charges: a selection
+applied afterwards is read by nothing, and the checkout quietly bills the default instead. Nothing in it is
+trusted — the pricing seam refuses a withdrawn price, an amount outside the bounds, or a quantity beyond
+the maximum.
+
+At a gateway, a fixed price becomes one reusable price object identified by a key that includes the amount,
+so the same offer is not recreated per customer and raising a price creates a new one rather than repricing
+everyone already on it. An amount the buyer named has no reusable offer behind it and is sent inline.
+
 ### Compensation
 
 When one obligation fails at the provider, the engine refunds the obligations that already settled — through `ICheckoutRefundService`, never straight to the gateway — so the customer is not left paying for half a purchase, and the gateway's own refund notification correlates to a local record instead of being quarantined for an operator.
