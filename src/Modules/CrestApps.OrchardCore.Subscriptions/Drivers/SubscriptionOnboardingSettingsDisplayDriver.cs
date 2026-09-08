@@ -53,6 +53,11 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
                 new SelectListItem(S["Generate a visible local domain"], nameof(LocalDomainType.Generated)),
                 new SelectListItem(S["Set the tenant name as a prefix"], nameof(LocalDomainType.Prefix)),
             ];
+
+            model.DatabaseProvider = settings.DatabaseProvider;
+            model.ConnectionString = settings.ConnectionString;
+            model.Schema = settings.Schema;
+            model.DatabaseProviders = _providers.Select(provider => new SelectListItem(provider.Name, provider.Value));
         }).Location("Content:5#Tenant Onboarding:5")
         .OnGroup(SettingsGroupId);
     }
@@ -131,8 +136,34 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
         settings.AllowCustomDomains = model.AllowCustomDomains;
         settings.LocalDomainType = model.LocalDomainType;
 
+        var match = Array.FindIndex(_providers, candidate =>
+            string.Equals(candidate.Value, model.DatabaseProvider, StringComparison.OrdinalIgnoreCase));
+
+        // A site cannot be created without a database, and the buyer never sees this screen, so a provider
+        // that needs a connection string has to have one before anything is sold.
+        if (match >= 0 && _providers[match].NeedsConnectionString && string.IsNullOrWhiteSpace(model.ConnectionString))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ConnectionString), S["A connection string is required for the '{0}' provider.", _providers[match].Name]);
+        }
+        else
+        {
+            settings.DatabaseProvider = model.DatabaseProvider;
+            settings.ConnectionString = model.ConnectionString;
+            settings.Schema = model.Schema;
+        }
+
         return Edit(site, settings, context);
     }
+
+    // The providers a site can be created on. Sqlite is first because it is the one that needs nothing
+    // configured, and so the one a site can be sold on before an operator has set anything up.
+    private static readonly (string Value, string Name, bool NeedsConnectionString)[] _providers =
+    [
+        ("Sqlite", "Sqlite", false),
+        ("SqlConnection", "SQL Server", true),
+        ("Postgres", "PostgreSQL", true),
+        ("MySql", "MySQL", true),
+    ];
 
     private static string GetLink(string domain)
     {

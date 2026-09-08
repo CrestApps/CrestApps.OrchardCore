@@ -225,7 +225,18 @@ Instead the checkout only records a **provisioning job**, and a sweep builds the
 - Everything the customer can still fix is checked **before** payment. A name that is taken, a domain that belongs to another site, a URL prefix already in use: all are refused by the step editor while they can still change them.
 - The administrator password is data-protected the moment it is captured, never rendered back into the form, and dropped once provisioning reaches a terminal outcome.
 - Each attempt is claimed under a lock, so two nodes cannot build the same site twice, and a job stranded by a process that died is picked up again rather than left in limbo.
-- A failure is recorded on the job with a growing back-off. After enough failures the job is **abandoned** rather than retried forever, because at that point the honest answer is that a person needs to look at it.
+- A failure is recorded on the job **and logged**, with a growing back-off. After enough failures the job is **abandoned** rather than retried forever, because at that point the honest answer is that a person needs to look at it. The job keeps only the newest message, so the log is where the first attempt's reason — usually the real one — survives.
+- A retry is judged on its own merits. Setup registers the tenant before it creates anything, so a failed attempt leaves the name behind in the running process; that residue is not treated as a name collision, or a job that failed once could never succeed.
+
+### The database new sites are created on
+
+Every site sold is created on the database configured under **Subscriptions → Tenant onboarding**. The buyer
+never chooses it and setup refuses to run without one, so it is a site-wide decision the operator makes once.
+
+Leave it empty and sites are created on **Sqlite**, which needs no server and gives each site its own file
+under its tenant folder — so selling a site works before anything is configured. Point it at SQL Server,
+PostgreSQL, or MySQL instead and every new site is created there, each with its own table prefix derived
+from its name, so the sites stay apart without anybody inventing a prefix per purchase.
 
 Customers watch progress under **My Sites**. Administrators see every job under **Subscriptions → Site provisioning**, including the abandoned ones, and can retry any of them once they have fixed the cause.
 

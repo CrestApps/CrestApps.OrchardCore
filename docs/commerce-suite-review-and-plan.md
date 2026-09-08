@@ -72,7 +72,7 @@ the 3.0.0 changelog lists them under *Fixes from an independent review*.
 
 ### Verification
 
-Release build with `-warnaserror` is clean, **2,335 tests pass**, and the docs site builds.
+Release build with `-warnaserror` is clean, **2,340 tests pass**, and the docs site builds.
 
 More importantly, the suite was **run**. A site was set up from scratch, the Commerce starter recipe was
 executed, and the following were exercised in a browser: creating a plan, the public plan list, starting a
@@ -115,9 +115,27 @@ setup fee could not be paid by card at all**, because the one-time payment inten
 the agreement had attached the buyer's card to one — a browser-only failure, since a headless test that
 mints a second payment method never reproduces it.
 
-**Still unproven:** tenant provisioning against a real setup service (the feature enables and migrates
-cleanly, but no site was provisioned), and the offline (Pay Later) renewal and lapse sweeps over real
-elapsed time, which have no gateway clock to advance and remain covered only by unit tests.
+### Selling a site
+
+Selling an Orchard Core site was then run end to end on the default tenant: the tenant-onboarding part
+attached to a plan, a buyer naming their site and administrator during checkout, a real card, and the
+provisioning sweep building the tenant. What that proved:
+
+- The new-site step refuses a name that is already taken **before** the buyer is asked for a card.
+- A paid checkout records a durable provisioning job, and the sweep builds the site from it.
+- The site is created with the recipe the plan names, titled as the buyer asked, reachable at its prefix,
+  with its own database and an administrator the buyer chose — signed into to confirm it.
+- The customer's **My Sites** screen shows the site as Ready with a link, and an operator's **Site
+  provisioning** screen shows attempts, the last error, and a **Retry now** action that works.
+- Breaking the database configuration on purpose, watching two attempts fail for the *real* reason, fixing
+  it and retrying, produced the site — the whole operator recovery story.
+
+It found two defects that made the feature unusable, plus a logging gap; they are listed in the 3.0.0
+changelog under *Fixes found by selling a site*. The first is the flat one: nothing gave the new tenant a
+database, so **every** purchased site failed setup with "DatabaseProvider setting is required".
+
+**Still unproven:** the offline (Pay Later) renewal and lapse sweeps over real elapsed time, which have no
+gateway clock to advance and remain covered only by unit tests.
 
 This document has two halves:
 

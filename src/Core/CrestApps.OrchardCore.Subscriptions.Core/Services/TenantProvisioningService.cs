@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Workflows.Events;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Subscriptions.Services;
@@ -9,6 +10,7 @@ using OrchardCore.Abstractions.Setup;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 using OrchardCore.Setup.Services;
 using OrchardCore.Workflows.Services;
 using ISession = YesSql.ISession;
@@ -40,6 +42,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(15);
 
     private readonly ITenantProvisioningJobStore _jobStore;
+    private readonly ISiteService _siteService;
     private readonly IShellHost _shellHost;
     private readonly IShellSettingsManager _shellSettingsManager;
     private readonly ISetupService _setupService;
@@ -54,6 +57,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     /// Initializes a new instance of the <see cref="TenantProvisioningService"/> class.
     /// </summary>
     /// <param name="jobStore">The durable provisioning job store.</param>
+    /// <param name="siteService">The site service used to read the operator's onboarding settings.</param>
     /// <param name="shellHost">The shell host.</param>
     /// <param name="shellSettingsManager">The manager used to create tenant shell settings.</param>
     /// <param name="setupService">The setup service that initializes the new tenant.</param>
@@ -64,6 +68,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     /// <param name="logger">The logger.</param>
     public TenantProvisioningService(
         ITenantProvisioningJobStore jobStore,
+        ISiteService siteService,
         IShellHost shellHost,
         IShellSettingsManager shellSettingsManager,
         ISetupService setupService,
@@ -75,6 +80,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         ILogger<TenantProvisioningService> logger)
     {
         _jobStore = jobStore;
+        _siteService = siteService;
         _shellHost = shellHost;
         _shellSettingsManager = shellSettingsManager;
         _setupService = setupService;
@@ -158,6 +164,14 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         }
         else
         {
+            // Logged here, not only recorded on the job. A setup that reports its failure as a message
+            // rather than an exception would otherwise leave nothing in the log at all, and the job keeps
+            // only the newest message — so the first attempt's reason, which is usually the real one, was
+            // overwritten by whatever the retry happened to hit.
+            _logger.LogError(
+                "Attempt {Attempt} to provision the tenant '{TenantName}' for job '{JobId}' failed: {Error}",
+                job.AttemptCount, job.TenantName, job.ItemId, failure);
+
             job.LastError = failure;
 
             if (job.AttemptCount >= MaxAttempts)
@@ -185,7 +199,13 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     {
         // A name taken between checkout and provisioning is the one collision that survives the pre-payment
         // check. It cannot be resolved automatically without renaming the customer's site behind their back.
-        if (_shellHost.TryGetSettings(job.TenantName, out _))
+        //
+        // An *uninitialized* shell of the same name is a different thing entirely: it is what a failed setup
+        // leaves behind in this process, since setup registers the tenant before it creates anything. Reading
+        // that as "taken" made every retry fail for a reason invented by the previous attempt, so a job that
+        // failed once could never succeed and burned its attempts until it was abandoned — with the customer
+        // already charged.
+        if (_shellHost.TryGetSettings(job.TenantName, out var existing) && !existing.IsUninitialized())
         {
             return $"The site name '{job.TenantName}' is already in use.";
         }
@@ -198,7 +218,9 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             return "No setup recipes are available.";
         }
 
-        using var shellSettings = CreateShellSettings(job);
+        var onboarding = await _siteService.GetSettingsAsync<SubscriptionOnboardingSettings>();
+
+        using var shellSettings = CreateShellSettings(job, onboarding);
 
         var setupContext = new SetupContext
         {
@@ -227,7 +249,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             : string.Join("; ", setupContext.Errors.Select(error => $"{error.Key}: {error.Value}"));
     }
 
-    private ShellSettings CreateShellSettings(TenantProvisioningJob job)
+    private ShellSettings CreateShellSettings(TenantProvisioningJob job, SubscriptionOnboardingSettings onboarding)
     {
         var settings = _shellSettingsManager
             .CreateDefaultSettings()
@@ -243,7 +265,48 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             settings["FeatureProfile"] = job.FeatureProfile;
         }
 
+        // Setup refuses outright without a database provider, and the host's defaults do not necessarily
+        // carry one, so the operator's onboarding settings decide it — falling back to the provider that
+        // needs nothing configured. Without this a site could be sold and paid for but never created.
+        if (string.IsNullOrEmpty(settings["DatabaseProvider"]))
+        {
+            settings["DatabaseProvider"] = onboarding.GetDatabaseProviderOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(onboarding.ConnectionString))
+            {
+                settings["ConnectionString"] = onboarding.ConnectionString.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(onboarding.Schema))
+            {
+                settings["Schema"] = onboarding.Schema.Trim();
+            }
+        }
+
+        // Sites that share one database need to be kept apart, and nobody is around to invent a prefix for
+        // a self-service purchase. A file-per-site provider needs none, and giving it one only makes the
+        // table names odd.
+        if (string.IsNullOrEmpty(settings["TablePrefix"]) &&
+            !string.Equals(settings["DatabaseProvider"], "Sqlite", StringComparison.OrdinalIgnoreCase))
+        {
+            settings["TablePrefix"] = BuildTablePrefix(job.TenantName);
+        }
+
         return settings;
+    }
+
+    // A prefix derived from the site's own name, reduced to what every supported database accepts as an
+    // identifier. The tenant name is already unique across the installation, so the prefix is too.
+    private static string BuildTablePrefix(string tenantName)
+    {
+        var prefix = new string([.. tenantName.Where(char.IsLetterOrDigit)]);
+
+        if (prefix.Length == 0 || !char.IsLetter(prefix[0]))
+        {
+            prefix = "t" + prefix;
+        }
+
+        return prefix.Length > 32 ? prefix[..32] : prefix;
     }
 
     // The password reaches the job data-protected. A failure to unprotect it (a rotated key ring, for
