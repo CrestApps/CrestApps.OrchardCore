@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -109,7 +109,7 @@ internal sealed class AIDeploymentCascadedRealtimeDisplayDriver : DisplayDriver<
         return Edit(deployment, context);
     }
 
-    private static IEnumerable<SelectListItem> BuildSelectList(IEnumerable<AIDeployment> deployments, LocalizedString placeholder)
+    private static List<SelectListItem> BuildSelectList(IEnumerable<AIDeployment> deployments, LocalizedString placeholder)
     {
         var items = new List<SelectListItem>
         {
