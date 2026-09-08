@@ -269,6 +269,127 @@ public sealed class StripeRecurringPaymentProviderTests
         subscriptionService.Verify(service => service.CreateAsync(It.IsAny<CreateSubscriptionRequest>()), Times.Never);
     }
 
+    /// <summary>
+    /// A fixed catalog price names a reusable offer, so the gateway holds one price for it instead of
+    /// creating a new one for every customer who subscribes.
+    /// </summary>
+    [Fact]
+    public async Task BeginRecurringAsync_ForAFixedCatalogPrice_NamesAReusableOffer()
+    {
+        var captured = await CaptureAsync(context => context.LineItems[0].PriceId = "price-abc");
+
+        var price = Assert.Single(captured.LineItems).Price;
+
+        Assert.Equal("price_price-abc_usd_2200_month1", price.LookupKey);
+    }
+
+    /// <summary>
+    /// The amount is part of the key on purpose: raising a price has to create a new one at the gateway
+    /// rather than silently repricing everyone already subscribed to the old one.
+    /// </summary>
+    [Fact]
+    public async Task BeginRecurringAsync_WhenTheAmountChanges_NamesADifferentOffer()
+    {
+        var cheap = await CaptureAsync(context =>
+        {
+            context.LineItems[0].PriceId = "price-abc";
+            context.CycleAmount = 22m;
+        });
+
+        var dear = await CaptureAsync(context =>
+        {
+            context.LineItems[0].PriceId = "price-abc";
+            context.CycleAmount = 30m;
+        });
+
+        Assert.NotEqual(
+            Assert.Single(cheap.LineItems).Price.LookupKey,
+            Assert.Single(dear.LineItems).Price.LookupKey);
+    }
+
+    /// <summary>
+    /// The interval is part of the key too, so the same catalog price sold monthly and annually does not
+    /// collide on one gateway price.
+    /// </summary>
+    [Fact]
+    public async Task BeginRecurringAsync_WhenTheIntervalDiffers_NamesADifferentOffer()
+    {
+        var monthly = await CaptureAsync(context => context.LineItems[0].PriceId = "price-abc");
+
+        var yearly = await CaptureAsync(context =>
+        {
+            context.LineItems[0].PriceId = "price-abc";
+            context.Interval = new BillingDurationKey(DurationType.Year, 1);
+        });
+
+        Assert.NotEqual(
+            Assert.Single(monthly.LineItems).Price.LookupKey,
+            Assert.Single(yearly.LineItems).Price.LookupKey);
+    }
+
+    /// <summary>
+    /// An amount the buyer named has no reusable offer behind it, so it is sent inline rather than
+    /// littering the gateway with a price object per customer.
+    /// </summary>
+    [Fact]
+    public async Task BeginRecurringAsync_ForABuyerNamedAmount_SendsThePriceInline()
+    {
+        var captured = await CaptureAsync(_ => { });
+
+        Assert.Null(Assert.Single(captured.LineItems).Price.LookupKey);
+    }
+
+    /// <summary>
+    /// A group assembled from several lines is not one offer, so there is nothing to reuse.
+    /// </summary>
+    [Fact]
+    public async Task BeginRecurringAsync_ForAGroupOfSeveralPrices_SendsThePriceInline()
+    {
+        var captured = await CaptureAsync(context =>
+        {
+            context.LineItems[0].PriceId = "price-abc";
+            context.LineItems.Add(new CheckoutLineItem
+            {
+                ItemId = "extra",
+                Description = "Extra",
+                Quantity = 1,
+                UnitPrice = 5m,
+                PriceId = "price-def",
+                Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 },
+            });
+        });
+
+        Assert.Null(Assert.Single(captured.LineItems).Price.LookupKey);
+    }
+
+    // Runs a begin and hands back what the provider asked Stripe for.
+    private static async Task<CreateSubscriptionRequest> CaptureAsync(Action<BeginRecurringPaymentContext> arrange)
+    {
+        CreateSubscriptionRequest captured = null;
+
+        var subscriptionService = new Mock<IStripeSubscriptionService>();
+        subscriptionService
+            .Setup(service => service.CreateAsync(It.IsAny<CreateSubscriptionRequest>()))
+            .ReturnsAsync((CreateSubscriptionRequest request) =>
+            {
+                captured = request;
+
+                return new CreateSubscriptionResponse { Id = "sub_1", Status = "active" };
+            });
+
+        var context = CreateContext();
+
+        arrange(context);
+
+        var result = await CreateProvider(subscriptionService.Object)
+            .BeginRecurringAsync(context, TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(captured);
+
+        return captured;
+    }
+
     private static BeginRecurringPaymentContext CreateContext()
     {
         var session = new CheckoutSession
@@ -298,17 +419,17 @@ public sealed class StripeRecurringPaymentProviderTests
             Interval = new BillingDurationKey(DurationType.Month, 1),
             CycleAmount = 22m,
             FirstCycleAmount = 22m,
-            LineItems =
-            [
-                new CheckoutLineItem
+            LineItems = new List<CheckoutLineItem>
+            {
+                new()
                 {
                     ItemId = "membership",
                     Description = "Membership",
                     Quantity = 1,
                     UnitPrice = 20m,
                     Plan = new RecurringPlan { DurationType = DurationType.Month, BillingDuration = 1 },
-                }
-            ],
+                },
+            },
             ProviderData = new Dictionary<string, string> { ["paymentMethodId"] = "pm_123" },
         };
     }

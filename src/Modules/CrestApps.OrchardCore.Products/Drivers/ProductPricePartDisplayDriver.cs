@@ -84,28 +84,30 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
 
             // The blank row the editor always offers is not an attempt to add a price, so it is dropped
             // rather than reported as invalid.
-            if (!entry.Amount.HasValue && string.IsNullOrWhiteSpace(entry.Name))
+            if (ProductPriceEditor.IsBlank(entry.Amount, entry.Name))
             {
                 continue;
             }
 
-            var price = Validate(context, entry, index);
+            var price = ToPrice(entry);
+            var errors = ProductPriceEditor.Validate(price);
 
-            if (price is not null)
+            foreach (var error in errors)
+            {
+                context.Updater.ModelState.AddModelError(Prefix, $"Prices[{index}].{error.Field}", Describe(error.Kind));
+            }
+
+            if (errors.Count == 0)
             {
                 prices.Add(price);
             }
         }
 
-        // Exactly one default, so "buy" without a chosen price is never ambiguous. When the editor marks
-        // none, the first that can be bought becomes it rather than refusing the whole save.
-        if (prices.Count > 0 && !prices.Exists(price => price.IsDefault))
+        var defaultError = ProductPriceEditor.SettleDefault(prices);
+
+        if (defaultError is not null)
         {
-            prices[0].IsDefault = true;
-        }
-        else if (prices.Count(price => price.IsDefault) > 1)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Prices), S["Only one price can be the default."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Prices), Describe(defaultError.Kind));
         }
 
         part.Prices = prices;
@@ -113,57 +115,28 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
         return Edit(part, context);
     }
 
-    private ProductPrice Validate(UpdatePartEditorContext context, ProductPriceViewModel entry, int index)
-    {
-        void Error(string field, string message)
-            => context.Updater.ModelState.AddModelError(Prefix, $"Prices[{index}].{field}", message);
-
-        if (!entry.Amount.HasValue || entry.Amount.Value < 0m)
+    private string Describe(ProductPriceErrorKind kind)
+        => kind switch
         {
-            Error(nameof(entry.Amount), S["Enter an amount of zero or more."]);
+            ProductPriceErrorKind.NegativeAmount => S["Enter an amount of zero or more."],
+            ProductPriceErrorKind.MissingBillingDuration => S["A recurring price needs a billing duration of at least one."],
+            ProductPriceErrorKind.MissingInterval => S["A recurring price needs a billing interval."],
+            ProductPriceErrorKind.MinimumAboveMaximum => S["The minimum cannot be more than the maximum."],
+            ProductPriceErrorKind.NegativeTrial => S["A trial cannot be a negative number of days."],
+            ProductPriceErrorKind.EndsBeforeItStarts => S["The end of the offer must come after its start."],
+            ProductPriceErrorKind.SeveralDefaults => S["Only one price can be the default."],
+            _ => S["That price cannot be saved."],
+        };
 
-            return null;
-        }
-
-        if (entry.Kind == PriceKind.Recurring)
-        {
-            if (!entry.BillingDuration.HasValue || entry.BillingDuration.Value < 1)
-            {
-                Error(nameof(entry.BillingDuration), S["A recurring price needs a billing duration of at least one."]);
-            }
-
-            if (!entry.Interval.HasValue)
-            {
-                Error(nameof(entry.Interval), S["A recurring price needs a billing interval."]);
-            }
-        }
-
-        if (entry.AllowCustomAmount &&
-            entry.MinimumAmount.HasValue && entry.MaximumAmount.HasValue &&
-            entry.MinimumAmount.Value > entry.MaximumAmount.Value)
-        {
-            Error(nameof(entry.MinimumAmount), S["The minimum cannot be more than the maximum."]);
-        }
-
-        if (entry.TrialDays is < 0)
-        {
-            Error(nameof(entry.TrialDays), S["A trial cannot be a negative number of days."]);
-        }
-
-        if (entry.EffectiveFromUtc.HasValue && entry.EffectiveToUtc.HasValue &&
-            entry.EffectiveFromUtc.Value >= entry.EffectiveToUtc.Value)
-        {
-            Error(nameof(entry.EffectiveToUtc), S["The end of the offer must come after its start."]);
-        }
-
-        return new ProductPrice
+    private static ProductPrice ToPrice(ProductPriceViewModel entry)
+        => new()
         {
             // A blank id means the editor added the row; anything else keeps the id it already had, because
             // agreements and gateway prices name it.
             PriceId = string.IsNullOrEmpty(entry.PriceId) ? IdGenerator.GenerateId() : entry.PriceId,
             Name = entry.Name?.Trim(),
             Currency = string.IsNullOrWhiteSpace(entry.Currency) ? null : entry.Currency.Trim().ToUpperInvariant(),
-            Amount = entry.Amount.Value,
+            Amount = entry.Amount ?? 0m,
             Kind = entry.Kind,
             BillingDuration = entry.Kind == PriceKind.Recurring ? entry.BillingDuration : null,
             Interval = entry.Kind == PriceKind.Recurring ? entry.Interval : null,
@@ -182,7 +155,6 @@ public sealed class ProductPricePartDisplayDriver : ContentPartDisplayDriver<Pro
             EffectiveFromUtc = entry.EffectiveFromUtc,
             EffectiveToUtc = entry.EffectiveToUtc,
         };
-    }
 
     private static ProductPriceViewModel ToViewModel(ProductPrice price)
         => new()
