@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
@@ -33,15 +33,8 @@ internal sealed class AIDeploymentModelCapabilitiesDisplayDriver : DisplayDriver
 
         return Initialize<EditDeploymentModelCapabilitiesViewModel>("AIDeploymentModelCapabilities_Edit", model =>
         {
-            deployment.TryGet<AIDeploymentMetadata>(out var metadata);
-
-            // A deployment that has never been configured defaults to the features flagged as enabled by
-            // default so existing chat deployments keep working without an explicit declaration.
-            var selectedFeatures = metadata?.Features is { Length: > 0 }
-                ? new HashSet<string>(metadata.Features, StringComparer.OrdinalIgnoreCase)
-                : context.IsNew
-                    ? new HashSet<string>(registeredFeatures.Where(feature => feature.EnabledByDefault).Select(feature => feature.Name), StringComparer.OrdinalIgnoreCase)
-                    : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var hasMetadata = deployment.TryGet<AIDeploymentMetadata>(out var metadata);
+            var selectedFeatures = ResolveSelectedFeatures(hasMetadata, metadata, registeredFeatures);
 
             model.AvailableFeatures = registeredFeatures;
             model.SelectedFeatures = [.. selectedFeatures];
@@ -67,6 +60,43 @@ internal sealed class AIDeploymentModelCapabilitiesDisplayDriver : DisplayDriver
                 })
                 .ToList();
         }).Location("Content:10");
+    }
+
+    /// <summary>
+    /// Chooses which features the editor shows as declared for a deployment.
+    /// </summary>
+    /// <param name="hasMetadata">Whether the deployment has ever had capability metadata stored on it.</param>
+    /// <param name="metadata">The stored metadata, or <see langword="null"/> when there is none.</param>
+    /// <param name="registeredFeatures">Every model feature the application registers.</param>
+    /// <remarks>
+    /// A deployment that has never declared capabilities is unconstrained at runtime, because enforcement
+    /// keys off the presence of the metadata rather than its contents. Saving this editor always writes
+    /// metadata, so showing an empty set for one would turn "unconstrained" into "declares nothing" the
+    /// first time an operator opened an older deployment to change something unrelated -- quietly costing
+    /// it streaming and tool calling. It is offered the defaults instead, which is how it already behaves.
+    /// <para>
+    /// Metadata that exists but lists no feature is left empty: that is an operator who cleared every box,
+    /// and their choice is not ours to undo.
+    /// </para>
+    /// </remarks>
+    internal static HashSet<string> ResolveSelectedFeatures(
+        bool hasMetadata,
+        AIDeploymentMetadata metadata,
+        IReadOnlyList<AIDeploymentFeatureDescriptor> registeredFeatures)
+    {
+        if (metadata?.Features is { Length: > 0 })
+        {
+            return new HashSet<string>(metadata.Features, StringComparer.OrdinalIgnoreCase);
+        }
+
+        if (hasMetadata)
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return new HashSet<string>(
+            registeredFeatures.Where(feature => feature.EnabledByDefault).Select(feature => feature.Name),
+            StringComparer.OrdinalIgnoreCase);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)

@@ -1,3 +1,4 @@
+﻿using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -20,6 +21,7 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIDeploymentCapabilityService _capabilityService;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
@@ -29,14 +31,17 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="deploymentManager">The AI deployment manager.</param>
+    /// <param name="capabilityService">The capability service, used to hide deployments that cannot hold a text conversation.</param>
     public DefaultAIDeploymentSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IAIDeploymentManager deploymentManager)
+        IAIDeploymentManager deploymentManager,
+        IAIDeploymentCapabilityService capabilityService)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _deploymentManager = deploymentManager;
+        _capabilityService = capabilityService;
     }
 
     public override IDisplayResult Edit(ISite site, DefaultAIDeploymentSettings settings, BuildEditorContext context)
@@ -52,10 +57,10 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
 
-            var chatModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat);
+            var chatModels = _capabilityService.WhereCanHoldTextConversation(await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
             model.ChatDeployments = BuildGroupedDeploymentItems(chatModels);
 
-            var utilities = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility);
+            var utilities = _capabilityService.WhereCanHoldTextConversation(await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
             model.UtilityDeployments = BuildGroupedDeploymentItems(utilities);
 
             var embeddingModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding);

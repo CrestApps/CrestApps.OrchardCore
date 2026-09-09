@@ -1,7 +1,8 @@
-using CrestApps.Core;
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.Core;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -15,6 +16,7 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly ISiteService _siteService;
 
     internal readonly IStringLocalizer S;
@@ -24,14 +26,17 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
     /// </summary>
     /// <param name="deploymentManager">The manager for retrieving AI deployments.</param>
     /// <param name="siteService">The site service for accessing site settings.</param>
+    /// <param name="capabilityService">The capability service, used to hide deployments that cannot hold a text conversation.</param>
     /// <param name="stringLocalizer">The string localizer for this driver.</param>
     public AIProfileTemplateDeploymentDisplayDriver(
         IAIDeploymentManager deploymentManager,
         ISiteService siteService,
+        IAIDeploymentCapabilityService capabilityService,
         IStringLocalizer<AIProfileTemplateDeploymentDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
         _siteService = siteService;
+        _capabilityService = capabilityService;
         S = stringLocalizer;
     }
 
@@ -54,10 +59,10 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
+                _capabilityService.WhereCanHoldTextConversation(await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat)));
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
+                _capabilityService.WhereCanHoldTextConversation(await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility)));
         }
 
         return Combine(

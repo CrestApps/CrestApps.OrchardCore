@@ -1,7 +1,9 @@
-﻿using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -17,6 +19,7 @@ namespace CrestApps.OrchardCore.AI.Chat.Interactions.Drivers;
 public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatInteraction>
 {
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly ISiteService _siteService;
     private readonly AIOptions _aiOptions;
 
@@ -28,16 +31,19 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
     /// <param name="deploymentManager">The deployment manager.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="aiOptions">The ai options.</param>
+    /// <param name="capabilityService">The capability service, used to hide deployments that cannot hold a text conversation.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionConnectionDisplayDriver(
         IAIDeploymentManager deploymentManager,
         ISiteService siteService,
         IOptions<AIOptions> aiOptions,
+        IAIDeploymentCapabilityService capabilityService,
         IStringLocalizer<ChatInteractionConnectionDisplayDriver> stringLocalizer)
     {
         _deploymentManager = deploymentManager;
         _siteService = siteService;
         _aiOptions = aiOptions.Value;
+        _capabilityService = capabilityService;
         S = stringLocalizer;
     }
 
@@ -49,7 +55,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         async ValueTask PopulateAsync(EditChatInteractionConnectionViewModel model)
         {
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
-            var chatDeployments = (await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat)).ToList();
+            var chatDeployments = _capabilityService.WhereCanHoldTextConversation(await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat)).ToList();
 
             model.ChatDeploymentName = interaction.ChatDeploymentName;
             model.UtilityDeploymentName = interaction.UtilityDeploymentName;
@@ -63,7 +69,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
                 ?.SupportsPurpose(AIDeploymentPurpose.Vision) == true;
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
+                _capabilityService.WhereCanHoldTextConversation(await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility)));
         }
 
         return Combine(

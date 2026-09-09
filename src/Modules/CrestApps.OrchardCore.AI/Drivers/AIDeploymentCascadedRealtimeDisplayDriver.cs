@@ -62,7 +62,7 @@ internal sealed class AIDeploymentCascadedRealtimeDisplayDriver : DisplayDriver<
                 S["Select a deployment that transcribes speech"]);
 
             model.ChatDeployments = BuildSelectList(
-                deployments.Where(candidate => candidate.SupportsPurpose(AIDeploymentPurpose.Chat) && candidate.CanServeTextCompletion()),
+                _capabilityService.WhereCanHoldTextConversation(deployments.Where(candidate => candidate.SupportsPurpose(AIDeploymentPurpose.Chat))),
                 S["Select a deployment that generates the reply"]);
 
             model.TextToSpeechDeployments = BuildSelectList(

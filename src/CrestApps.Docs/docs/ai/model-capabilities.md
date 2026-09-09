@@ -18,7 +18,7 @@ Anything a deployment does not declare is never rendered in the consuming editor
 
 Open **AI → Deployments**, create or edit a deployment, and use the **Model capabilities** card:
 
-- **Trained features** — tick the capabilities the underlying model was trained with. New deployments start from the features each provider registers as enabled by default, so existing chat deployments keep working without changes.
+- **Trained features** — tick the capabilities the underlying model was trained with. A deployment that has never declared any starts from the features registered as enabled by default — whether it is new or predates this editor — so opening an older deployment and saving it does not quietly take away streaming or tool calling. Clearing every box is respected as a deliberate choice and stays cleared.
 - **Model parameters** — enable each parameter the model exposes. For a *choice* parameter you can narrow the supported values and pick a default; for a *number*/*integer* parameter you can set the minimum, maximum, and step. A parameter that depends on a feature (its **required feature**) is only shown while that feature is enabled.
 
 The declared metadata is stored on the deployment. It is the single source of truth for the editors and for request generation.
