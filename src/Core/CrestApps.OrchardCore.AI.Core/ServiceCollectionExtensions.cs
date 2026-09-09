@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Markdown;
@@ -81,7 +81,8 @@ public static class ServiceCollectionExtensions
     {
         services
             .AddScoped<IAIDeploymentManager, SiteSettingsAIDeploymentManager>()
-            .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>();
+            .AddScoped<ICatalogEntryHandler<AIDeployment>, AIDeploymentHandler>()
+            .AddScoped<ICatalogEntryHandler<AIDeployment>, CascadedRealtimeDeploymentHandler>();
 
         return services;
     }

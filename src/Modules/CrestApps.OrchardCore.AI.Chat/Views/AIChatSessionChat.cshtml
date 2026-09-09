@@ -1,4 +1,4 @@
-@using System.Text.Json
+﻿@using System.Text.Json
 @using CrestApps.Core
 @using CrestApps.Core.AI
 @using CrestApps.Core.AI.Capabilities
@@ -163,7 +163,11 @@
                 <div id="@documentBarHtmlId" class="d-none"></div>
             }
 
-            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Profile?.ItemId ?? Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+            @* Realtime is audio-only. The element stays in the DOM because the chat app reads the session
+               and profile ids from it, but it is hidden: there is nothing to type into during a spoken
+               conversation. Hidden here rather than by the realtime controller, which only owns the
+               elements this app hands it -- and this app hands it only the button. *@
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Profile?.ItemId ?? Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId" hidden="@realtimeEnabled"></textarea>
 
             @* Single flex row so the realtime "Start speaking" button (flex-grow-1) can span the full input
                width when the client hides the text controls (audio-only). The shared realtime-audio
@@ -211,7 +215,7 @@
                         </button>
                     }
 
-                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled hidden="@realtimeEnabled" data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>

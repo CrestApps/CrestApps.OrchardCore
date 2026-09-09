@@ -69,6 +69,10 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         return Combine(
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionChatConnection_Edit", PopulateAsync)
                 .Location("Parameters:3#Settings;1"),
+            // The voice belongs to the chat deployment, so it sits with it rather than beside the chat's
+            // send controls. Hidden until the client sees that the selected deployment is realtime-capable.
+            View("ChatInteractionRealtimeVoice_Edit", interaction)
+                .Location("Parameters:3.5#Settings;1"),
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionUtilityConnection_Edit", PopulateAsync)
                 .Location("Parameters:3.7#Settings;1"));
     }

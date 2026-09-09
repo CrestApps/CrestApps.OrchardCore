@@ -11,7 +11,11 @@ A realtime-capable model can hold a live, spoken conversation — audio in, audi
 
 ## Prerequisites
 
-1. **A realtime deployment.** Create an **AI → Deployment** whose model supports speech-to-speech and, on its **Model capabilities** card, enable the **Realtime (speech-to-speech)** feature. See [Model Capabilities](model-capabilities.md). Optionally set the site's default realtime deployment.
+1. **A realtime deployment.** Either of:
+   - **A provider's own speech-to-speech model.** Create an **AI → Deployment** whose model supports speech-to-speech and, on its **Model capabilities** card, enable the **Realtime (speech-to-speech)** feature. See [Model Capabilities](model-capabilities.md).
+   - **A cascaded realtime deployment**, when no provider you use ships a speech-to-speech model. See [Cascaded realtime](#cascaded-realtime-when-no-provider-speaks) below.
+
+   Optionally set the site's default realtime deployment.
 2. **Chat mode set to Realtime.** A realtime model only runs a realtime session when the chat mode is **Realtime**:
    - **AI Chat session** — set the profile's chat mode to *Realtime (speech-to-speech)* on the profile editor. The option appears once a realtime deployment exists.
    - **Chat interactions** — set the site chat mode to *Realtime* under the AI settings, or select a realtime deployment on the interaction (a realtime-capable deployment forces realtime for that interaction).
@@ -27,6 +31,69 @@ When realtime is active, the chat surface becomes audio-only:
 - A short settings popover (from the shared realtime audio controller) exposes only per-device preferences — microphone, speaker, assistant volume, language, **Allow interruptions** (barge-in), and **Push-to-talk** — saved per browser. Everything acoustic (echo margins, the microphone gate, turn-detection timing) is measured automatically; there are no acoustic knobs to tune.
 
 The realtime experience is delivered by the `@crestapps/ai-chat-ui` package (the vendored `realtime-audio.js` controller plus the `ai-chat.js` / `chat-interaction.js` apps); no additional page script is required.
+
+## Cascaded realtime: when no provider speaks
+
+Most providers do not ship a speech-to-speech model. A **cascaded realtime deployment** produces the same
+experience by chaining three deployments you already have:
+
+```
+mic ──▶ speech-to-text ──▶ chat (tools, data sources) ──▶ text-to-speech ──▶ speaker
+```
+
+Nothing above it knows the difference: the profile, the chat UI, transcripts, and turn persistence behave
+exactly as they do with a provider's own realtime model. The three deployments may come from different
+providers — transcribe with one, reason with another, speak with a third.
+
+### Creating one
+
+1. Create the three deployments it will chain, if you do not have them already:
+   - a **speech-to-text** deployment whose model declares the **Realtime** feature (it has to transcribe
+     continuously, not file-at-a-time),
+   - a **chat** deployment,
+   - a **text-to-speech** deployment.
+2. Go to **AI → Deployments → Create** and choose the **Cascaded Realtime** provider.
+3. Name the deployment, then pick the three deployments on the **Cascaded realtime** card.
+
+The deployment declares the **Realtime** feature for you — a cascade is realtime by construction — so it
+appears wherever a realtime deployment is offered. It owns no connection of its own; the three deployments
+it names carry the credentials.
+
+Point a profile at it and set the chat mode to **Realtime** exactly as you would for a native realtime model.
+The **Voice** picker lists the voices of the text-to-speech deployment, since that is the one that speaks.
+
+### What to expect
+
+- **More delay before the assistant starts speaking.** A turn passes through three services rather than one.
+  The reply is spoken a sentence at a time so audio begins before the model has finished writing, but the
+  first word still arrives later than it would from a native speech-to-speech model.
+- **Interruption is driven by transcription.** When the user talks over the assistant, the first partial
+  transcript cancels the reply and drops the audio already buffered — so barge-in responds as quickly as the
+  transcribing model reports speech.
+- **Everything else is unchanged.** Tools, data sources, and the profile's instructions are applied to the
+  chat deployment, so a cascaded voice profile keeps every capability a text profile has.
+
+### In a recipe
+
+```json
+{
+  "name": "aideployment",
+  "deployments": [
+    {
+      "Name": "cascaded-voice",
+      "ClientName": "CascadedRealtime",
+      "Purpose": "Chat",
+      "Properties": {
+        "CascadedRealtimeMetadata": {
+          "SpeechToTextDeploymentName": "scribe",
+          "ChatDeploymentName": "gpt-4o",
+          "TextToSpeechDeploymentName": "eleven-tts"
+        }
+      }
+    }
+  ]
+}
+```
 
 ## Transports: WebRTC with WebSocket fallback
 

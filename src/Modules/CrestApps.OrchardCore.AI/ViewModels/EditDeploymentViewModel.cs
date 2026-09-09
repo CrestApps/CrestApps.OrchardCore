@@ -19,6 +19,13 @@ public class EditDeploymentViewModel
     public string ModelName { get; set; }
 
     /// <summary>
+    /// Gets or sets whether this deployment sends a model name to a provider. A cascaded realtime
+    /// deployment talks to no provider of its own, so it has no model name to give.
+    /// </summary>
+    [BindNever]
+    public bool HasModelName { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the selected purposes.
     /// </summary>
     public string[] SelectedPurposes { get; set; }
