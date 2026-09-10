@@ -100,7 +100,10 @@
             _ => ChatMode.TextInput,
         };
 
-    var realtimeWebRtcEnabled = realtimeEnabled && RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
+    // Whether the server can offer WebRTC is a capability of the host, not of this page's current mode. The
+    // client turns realtime on by itself when a realtime-capable deployment is picked after the page loaded, and
+    // gating this on realtimeEnabled left those sessions permanently on the WebSocket transport.
+    var realtimeWebRtcEnabled = RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
     var realtimeVoiceName = chatModeSettings?.VoiceName;
 
     // The conversation button doubles as the realtime "Start speaking" toggle, so render it for both modes.
