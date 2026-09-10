@@ -53,22 +53,18 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 model.VoiceName = settings.VoiceName;
             }
 
-            if (template.TryGet<ProfileTemplateMetadata>(out var metadata))
-            {
-                model.RealtimeDeploymentName = metadata.RealtimeDeploymentName;
-            }
-
-            var hasSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
+            var hasSpeech = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText) != null;
             var realtimeDeployments = await _capabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
 
-            model.HasRealtime = realtimeDeployments.Count > 0;
-            model.AvailableModes = GetAvailableModes(hasSpeech, model.HasRealtime);
+            model.AvailableModes = GetAvailableModes(hasSpeech);
             model.AvailableVoices = hasSpeech ? await GetAvailableVoicesAsync() : [];
-            model.RealtimeDeployments = realtimeDeployments
+
+            // Whether a template pre-fills a voice conversation follows from the chat deployment it names,
+            // so the editor only needs to know which deployments are the realtime ones.
+            model.RealtimeDeploymentNames = realtimeDeployments
                 .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
-                .OrderBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
-                .ToList();
+                .Select(deployment => deployment.Name)
+                .ToArray();
         }).Location("Content:8%General;1")
         .RenderWhen(async () =>
         {
@@ -77,7 +73,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 return false;
             }
 
-            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null
+            return await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText) != null
                 || await HasRealtimeDeploymentAsync();
         });
     }
@@ -93,24 +89,26 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        // A realtime deployment speaks with its own voices, so the voice applies to it as well as to
+        // conversation mode. The deployment driver runs first, so the metadata already carries the chat
+        // deployment this post selected.
+        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
+        var isRealtime = await _capabilityService.IsRealtimeDeploymentAsync(metadata.ChatDeploymentName);
+
         var settings = template.GetOrCreate<ChatModeProfileSettings>();
         settings.ChatMode = model.ChatMode;
-        settings.VoiceName = model.ChatMode is ChatMode.Conversation or ChatMode.Realtime
+        settings.VoiceName = model.ChatMode == ChatMode.Conversation || isRealtime
             ? model.VoiceName?.Trim()
             : null;
         template.Put(settings);
 
-        var metadata = template.GetOrCreate<ProfileTemplateMetadata>();
-        metadata.RealtimeDeploymentName = model.ChatMode == ChatMode.Realtime
-            ? model.RealtimeDeploymentName?.Trim()
-            : null;
-        template.Put(metadata);
-
         return Edit(template, context);
     }
 
-    private List<SelectListItem> GetAvailableModes(bool hasSpeech, bool hasRealtime)
+    private List<SelectListItem> GetAvailableModes(bool hasSpeech)
     {
+        // There is no realtime mode. A template pre-fills a speech-to-speech profile by naming a realtime
+        // chat deployment, and the editor hides this selector when it has.
         var modes = new List<SelectListItem>
         {
             new(S["Text only"], nameof(ChatMode.TextInput)),
@@ -120,11 +118,6 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
         {
             modes.Add(new(S["Audio input"], nameof(ChatMode.AudioInput)));
             modes.Add(new(S["Conversation"], nameof(ChatMode.Conversation)));
-        }
-
-        if (hasRealtime)
-        {
-            modes.Add(new(S["Realtime (speech-to-speech)"], nameof(ChatMode.Realtime)));
         }
 
         return modes;

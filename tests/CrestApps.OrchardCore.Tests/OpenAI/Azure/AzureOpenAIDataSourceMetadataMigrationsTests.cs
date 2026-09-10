@@ -23,7 +23,7 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
     {
         var deploymentManager = new Mock<IAIDeploymentManager>();
         deploymentManager
-            .Setup(x => x.GetByTypeAsync(AIDeploymentType.Embedding))
+            .Setup(x => x.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding, null, It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<IEnumerable<AIDeployment>>(
             [
                 new AIDeployment { ItemId = "embedding-1", Name = "embedding-1" },
@@ -44,7 +44,7 @@ public sealed class AzureOpenAIDataSourceMetadataMigrationsTests
     {
         var deploymentManager = new Mock<IAIDeploymentManager>();
         deploymentManager
-            .Setup(x => x.GetByTypeAsync(AIDeploymentType.Embedding))
+            .Setup(x => x.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding, null, It.IsAny<CancellationToken>()))
             .Returns(new ValueTask<IEnumerable<AIDeployment>>(Array.Empty<AIDeployment>()));
 
         var serviceProvider = new ServiceCollection()

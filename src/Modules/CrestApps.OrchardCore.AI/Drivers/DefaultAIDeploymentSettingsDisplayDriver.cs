@@ -52,25 +52,25 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
 
-            var chatModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat);
+            var chatModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat);
             model.ChatDeployments = BuildGroupedDeploymentItems(chatModels);
 
-            var utilities = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility);
+            var utilities = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility);
             model.UtilityDeployments = BuildGroupedDeploymentItems(utilities);
 
-            var embeddingModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding);
+            var embeddingModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding);
             model.EmbeddingDeployments = BuildGroupedDeploymentItems(embeddingModels);
 
-            var imageModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Image);
+            var imageModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Image);
             model.ImageDeployments = BuildGroupedDeploymentItems(imageModels);
 
-            var visionModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Vision);
+            var visionModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Vision);
             model.VisionDeployments = BuildGroupedDeploymentItems(visionModels);
 
-            var speechToTextModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.SpeechToText);
+            var speechToTextModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.SpeechToText);
             model.SpeechToTextDeployments = BuildGroupedDeploymentItems(speechToTextModels);
 
-            var textToSpeechModels = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.TextToSpeech);
+            var textToSpeechModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.TextToSpeech);
             model.TextToSpeechDeployments = BuildGroupedDeploymentItems(textToSpeechModels);
         }).Location("Content:2%Default Deployments;1")
         .OnGroup(SettingsGroupId)

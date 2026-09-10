@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Models;
@@ -70,9 +71,13 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             context.Result.Fail(new ValidationResult(S["Model name is required."], [nameof(AIDeployment.ModelName)]));
         }
 
-        if (!context.Model.Purpose.IsValidSelection())
+        // Validated on capabilities rather than the legacy purpose. PopulateAsync has already projected any
+        // legacy purpose onto features, so a payload that only carries a purpose still satisfies this, while
+        // a realtime-only deployment -- which deliberately declares no text generation -- now passes where the
+        // purpose check used to be the only thing describing it.
+        if (!context.Model.TryGet<AIDeploymentMetadata>(out var metadata) || metadata.Features is not { Length: > 0 })
         {
-            context.Result.Fail(new ValidationResult(S["The deployment purpose '{0}' is not valid.", context.Model.Purpose], [nameof(AIDeployment.Purpose)]));
+            context.Result.Fail(new ValidationResult(S["At least one model capability is required."], [nameof(AIDeployment.Properties)]));
         }
 
         var requiresConnection = !HasContainedConnection(context.Model.ClientName);
@@ -160,11 +165,7 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
         PopulateContainedConnectionAliases(deployment, data);
 
-        if (TryGetDeploymentPurpose(data[nameof(AIDeployment.Purpose)], out var purpose) ||
-            TryGetDeploymentPurpose(data["Type"], out purpose))
-        {
-            deployment.Purpose = purpose;
-        }
+        TryGetLegacyPurposes(data, out var legacyPurposes);
 
         var properties = data[nameof(AIDeployment.Properties)]?.AsObject();
 
@@ -176,6 +177,11 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
             currentJson.Merge(properties);
             deployment.Properties = JsonSerializer.Deserialize<Dictionary<string, object>>(currentJson) ?? [];
         }
+
+        // Runs after the properties merge so the already-declared features are visible to the rule. This is
+        // the recipe, configuration, and API half of the read-time normalization; the store deserialization
+        // half is AIDeployment.OnDeserialized.
+        AIDeploymentPurposeCompatibility.Normalize(deployment, legacyPurposes);
 
         return Task.CompletedTask;
     }
@@ -201,9 +207,21 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
         deployment.Properties[propertyName] = propertyValue;
     }
 
-    private static bool TryGetDeploymentPurpose(JsonNode purposeNode, out AIDeploymentPurpose purpose)
+    /// <summary>
+    /// Reads the legacy purpose names a payload may still carry, under any of the three field names this
+    /// field has had. The names themselves are interpreted by
+    /// <see cref="AIDeploymentPurposeCompatibility"/>, which ignores any it does not recognize.
+    /// </summary>
+    private static bool TryGetLegacyPurposes(JsonNode data, out string[] legacyPurposes)
     {
-        purpose = AIDeploymentPurpose.None;
+        legacyPurposes = null;
+
+        if (data is null)
+        {
+            return false;
+        }
+
+        var purposeNode = data["Purpose"] ?? data["Capability"] ?? data["Type"];
 
         if (purposeNode is null)
         {
@@ -212,27 +230,23 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
         if (purposeNode is JsonArray array)
         {
-            foreach (var item in array)
-            {
-                if (item is null ||
-                    !Enum.TryParse<AIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedPurpose) ||
-                        parsedPurpose == AIDeploymentPurpose.None)
-                {
-                    purpose = AIDeploymentPurpose.None;
-                    return false;
-                }
+            legacyPurposes = [.. array
+                .Select(static item => item?.GetValue<string>())
+                .Where(static name => !string.IsNullOrWhiteSpace(name))];
 
-                purpose |= parsedPurpose;
-            }
-
-            return purpose.IsValidSelection();
+            return legacyPurposes.Length > 0;
         }
 
-        var purposeValue = purposeNode.GetValue<string>();
+        var purposeText = purposeNode.GetValue<string>();
 
-        return !string.IsNullOrEmpty(purposeValue) &&
-            Enum.TryParse(purposeValue, ignoreCase: true, out purpose) &&
-                purpose.IsValidSelection();
+        if (string.IsNullOrWhiteSpace(purposeText))
+        {
+            return false;
+        }
+
+        legacyPurposes = [purposeText];
+
+        return true;
     }
 
     private bool HasContainedConnection(string clientName)

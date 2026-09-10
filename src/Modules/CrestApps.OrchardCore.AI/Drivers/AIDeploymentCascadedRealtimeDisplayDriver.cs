@@ -61,12 +61,17 @@ internal sealed class AIDeploymentCascadedRealtimeDisplayDriver : DisplayDriver<
                 deployments.Where(candidate => _capabilityService.GetCapabilities(candidate).SupportsFeature(AIDeploymentFeatureNames.Realtime)),
                 S["Select a deployment that transcribes speech"]);
 
+            // These are the chat and text-to-speech slot rules: text generation is opt-out, so a deployment
+            // that declares nothing still qualifies, while a realtime one is excluded because it answers a
+            // text completion with an HTTP 400. Text-to-speech is opt-in and has to be declared.
             model.ChatDeployments = BuildSelectList(
-                deployments.Where(candidate => candidate.SupportsPurpose(AIDeploymentPurpose.Chat) && candidate.CanServeTextCompletion()),
+                deployments.Where(candidate =>
+                    _capabilityService.SupportsFeatureOrUnconstrained(candidate, AIDeploymentFeatureNames.TextGeneration) &&
+                    !_capabilityService.GetCapabilities(candidate).SupportsFeature(AIDeploymentFeatureNames.Realtime)),
                 S["Select a deployment that generates the reply"]);
 
             model.TextToSpeechDeployments = BuildSelectList(
-                deployments.Where(candidate => candidate.SupportsPurpose(AIDeploymentPurpose.TextToSpeech)),
+                deployments.Where(candidate => _capabilityService.GetCapabilities(candidate).SupportsFeature(AIDeploymentFeatureNames.TextToSpeech)),
                 S["Select a deployment that speaks the reply"]);
         }).Location("Content:8");
     }

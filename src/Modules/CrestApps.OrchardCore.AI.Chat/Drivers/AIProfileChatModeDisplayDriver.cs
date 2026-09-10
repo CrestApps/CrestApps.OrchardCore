@@ -51,19 +51,19 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
                 model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             }
 
-            model.RealtimeDeploymentName = profile.RealtimeDeploymentName;
-
-            var hasSpeech = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null;
+            var hasSpeech = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText) != null;
             var realtimeDeployments = await _capabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
 
-            model.HasRealtime = realtimeDeployments.Count > 0;
-            model.AvailableModes = GetAvailableModes(hasSpeech, model.HasRealtime);
+            model.AvailableModes = GetAvailableModes(hasSpeech);
             model.AvailableVoices = hasSpeech ? await GetAvailableVoicesAsync() : [];
-            model.RealtimeDeployments = realtimeDeployments
+
+            // Whether this profile is a voice conversation follows from the chat deployment it selects, so
+            // the editor only needs to know which deployments are the realtime ones to answer that question
+            // as the operator changes the selection.
+            model.RealtimeDeploymentNames = realtimeDeployments
                 .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
-                .OrderBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
-                .ToList();
+                .Select(deployment => deployment.Name)
+                .ToArray();
         }).Location("Content:8%General;1")
         .RenderWhen(async () =>
         {
@@ -72,7 +72,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
                 return false;
             }
 
-            return await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText) != null
+            return await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText) != null
                 || await HasRealtimeDeploymentAsync();
         });
     }
@@ -88,24 +88,27 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        // A realtime deployment speaks with its own voices, so the voice applies to it as well as to
+        // conversation mode. The deployment drivers run first, so the profile already carries the chat
+        // deployment this post selected.
+        var isRealtime = await _capabilityService.IsRealtimeDeploymentAsync(profile.ChatDeploymentName);
+
         profile.AlterSettings<ChatModeProfileSettings>(settings =>
         {
             settings.ChatMode = model.ChatMode;
-            settings.VoiceName = model.ChatMode is ChatMode.Conversation or ChatMode.Realtime
+            settings.VoiceName = model.ChatMode == ChatMode.Conversation || isRealtime
                 ? model.VoiceName?.Trim()
                 : null;
             settings.EnableTextToSpeechPlayback = model.EnableTextToSpeechPlayback;
         });
 
-        profile.RealtimeDeploymentName = model.ChatMode == ChatMode.Realtime
-            ? model.RealtimeDeploymentName?.Trim()
-            : null;
-
         return Edit(profile, context);
     }
 
-    private List<SelectListItem> GetAvailableModes(bool hasSpeech, bool hasRealtime)
+    private List<SelectListItem> GetAvailableModes(bool hasSpeech)
     {
+        // There is no realtime mode. A profile becomes a speech-to-speech conversation by selecting a
+        // realtime chat deployment, and the editor hides this selector when it has.
         var modes = new List<SelectListItem>
         {
             new(S["Text only"], nameof(ChatMode.TextInput)),
@@ -115,11 +118,6 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
         {
             modes.Add(new(S["Audio input"], nameof(ChatMode.AudioInput)));
             modes.Add(new(S["Conversation"], nameof(ChatMode.Conversation)));
-        }
-
-        if (hasRealtime)
-        {
-            modes.Add(new(S["Realtime (speech-to-speech)"], nameof(ChatMode.Realtime)));
         }
 
         return modes;

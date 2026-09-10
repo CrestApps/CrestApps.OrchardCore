@@ -37,26 +37,3 @@
         window.initAutoGenerateTechnicalName('@Html.IdFor(x => x.ModelName)', '@Html.IdFor(x => x.Name)');
     </script>
 }
-
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <h6>@T["Purposes"]</h6>
-        <div>
-            @foreach (var purpose in Model.Purposes)
-            {
-                var isChecked = Model.SelectedPurposes?.Contains(purpose.Value, StringComparer.OrdinalIgnoreCase) ?? false;
-                <div class="form-check">
-                    <input id="@(Html.IdFor(m => m.SelectedPurposes))_@purpose.Value"
-                           name="@Html.NameFor(m => m.SelectedPurposes)"
-                           type="checkbox"
-                           value="@purpose.Value"
-                           class="form-check-input"
-                           checked="@isChecked" />
-                    <label class="form-check-label" for="@(Html.IdFor(m => m.SelectedPurposes))_@purpose.Value">@purpose.Text</label>
-                </div>
-            }
-            <span asp-validation-for="SelectedPurposes" class="text-danger"></span>
-            <span class="hint">@T["Select one or more purposes for this deployment."]</span>
-        </div>
-    </div>
-</div>

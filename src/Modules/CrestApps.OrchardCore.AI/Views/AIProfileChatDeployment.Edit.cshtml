@@ -18,10 +18,12 @@
 <div class="ocat-wrapper orchestrator-dependent orchestrator-dependent-default">
     <label asp-for="ChatDeploymentName" class="ocat-label">@T["Chat deployment"]</label>
     <div class="ocat-end">
-        <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
+        @* The chat mode editor reads this selection to decide whether the profile is a speech-to-speech
+           conversation, so the id is stable rather than generated. *@
+        <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select" id="profileChatDeploymentSelect">
             <option value="">@T["Default"]</option>
         </select>
         <span asp-validation-for="ChatDeploymentName" class="text-danger"></span>
-        <span class="hint">@T["Select the deployment to use for chat completions."]</span>
+        <span class="hint">@T["The model this profile converses with. A realtime model makes it a speech-to-speech profile."]</span>
     </div>
 </div>

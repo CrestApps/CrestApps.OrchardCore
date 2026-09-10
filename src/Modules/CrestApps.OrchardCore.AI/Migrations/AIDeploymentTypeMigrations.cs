@@ -1,5 +1,3 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
-
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -40,10 +38,10 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
             foreach (var connection in connectionDoc.Records.Values)
             {
-                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyChatDeploymentName(), AIDeploymentType.Chat);
-                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyEmbeddingDeploymentName(), AIDeploymentType.Embedding);
-                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyImageDeploymentName(), AIDeploymentType.Image);
-                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyUtilityDeploymentName(), AIDeploymentType.Utility);
+                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyChatDeploymentName(), LegacyAIDeploymentPurpose.Chat);
+                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyEmbeddingDeploymentName(), LegacyAIDeploymentPurpose.Embedding);
+                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyImageDeploymentName(), LegacyAIDeploymentPurpose.Image);
+                needsSave |= TryCreateDeployment(deploymentDoc, connection, connection.GetLegacyUtilityDeploymentName(), LegacyAIDeploymentPurpose.Utility);
             }
 
             if (needsSave)
@@ -72,7 +70,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIDeploymentTypeMigrations>>();
 
-            var deployments = (await deploymentManager.GetAllByTypeAsync(AIDeploymentType.Chat)).ToList();
+            var deployments = (await deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat)).ToList();
 
             var profiles = await profileCatalog.GetAllAsync();
 
@@ -255,50 +253,22 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     }
 
     /// <summary>
-    /// Migrates deployments from legacy Type property to the new Purpose property.
-    /// This ensures all stored deployment documents use the Purpose representation
-    /// for backward compatibility with the updated AIDeployment model.
+    /// Previously rewrote each stored deployment's legacy <c>Type</c> field into the <c>Purpose</c> field.
     /// </summary>
+    /// <remarks>
+    /// Both fields are gone. The framework now projects any legacy <c>Purpose</c>, <c>Capability</c>, or
+    /// <c>Type</c> a stored record still carries onto model capabilities every time that record is read, so
+    /// there is nothing left for this step to rewrite. It stays as a no-op because sites that have already
+    /// run it record step 7, and removing it would renumber the ones that have not.
+    /// </remarks>
     public static int UpdateFrom6()
-    {
-        ShellScope.AddDeferredTask(async scope =>
-        {
-            var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
-
-            var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();
-            var needsSave = false;
-
-            foreach (var deployment in deploymentDoc.Records.Values)
-            {
-                // The AIDeployment model now handles legacy Type → Purpose conversion
-                // via its JSON deserialization. Re-saving the document will persist
-                // the Purpose property and drop the obsolete Type field.
-                if (deployment.Purpose != AIDeploymentPurpose.None)
-                {
-                    // If Purpose is still None after deserialization, the legacy Type
-                    // was also None — nothing to migrate for this deployment.
-                    continue;
-                }
-
-                deployment.Purpose = deployment.Type.ToPurpose();
-
-                needsSave = true;
-            }
-
-            if (needsSave)
-            {
-                await deploymentDocManager.UpdateAsync(deploymentDoc);
-            }
-        });
-
-        return 7;
-    }
+        => 7;
 
     private static bool TryCreateDeployment(
         DictionaryDocument<AIDeployment> deploymentDoc,
         AIProviderConnection connection,
         string deploymentName,
-        AIDeploymentType type)
+        LegacyAIDeploymentPurpose type)
     {
         if (string.IsNullOrWhiteSpace(deploymentName))
         {
@@ -326,11 +296,15 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             ConnectionName = string.IsNullOrWhiteSpace(connection.Name)
                 ? connection.ItemId
                 : connection.Name,
-            Type = type,
             CreatedUtc = connection.CreatedUtc,
             Author = connection.Author,
             OwnerId = connection.OwnerId,
         };
+
+        // The purpose this deployment is being created for is declared as the capabilities that replaced it,
+        // so the record is written in the shape the framework reads today rather than a legacy one it would
+        // have to keep projecting.
+        type.ApplyTo(deployment);
 
         deploymentDoc.Records[deployment.ItemId] = deployment;
         return true;
@@ -457,7 +431,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             FindDefaultDeploymentId(
             connections,
             deployments,
-            AIDeploymentType.Chat,
+            LegacyAIDeploymentPurpose.Chat,
             static connection => connection.GetLegacyChatDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
@@ -466,7 +440,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             FindDefaultDeploymentId(
             connections,
             deployments,
-            AIDeploymentType.Utility,
+            LegacyAIDeploymentPurpose.Utility,
             static connection => connection.GetLegacyUtilityDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
@@ -475,7 +449,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             FindDefaultDeploymentId(
             connections,
             deployments,
-            AIDeploymentType.Embedding,
+            LegacyAIDeploymentPurpose.Embedding,
             static connection => connection.GetLegacyEmbeddingDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
@@ -484,18 +458,18 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             FindDefaultDeploymentId(
             connections,
             deployments,
-            AIDeploymentType.Image,
+            LegacyAIDeploymentPurpose.Image,
             static connection => connection.GetLegacyImageDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentId(
             settings.DefaultSpeechToTextDeploymentName,
             value => settings.DefaultSpeechToTextDeploymentName = value,
-            FindDefaultDeploymentId(connections, deployments, AIDeploymentType.SpeechToText));
+            FindDefaultDeploymentId(connections, deployments, LegacyAIDeploymentPurpose.SpeechToText));
 
         updated |= TryPopulateDefaultDeploymentId(
             settings.DefaultTextToSpeechDeploymentName,
             value => settings.DefaultTextToSpeechDeploymentName = value,
-            FindDefaultDeploymentId(connections, deployments, AIDeploymentType.TextToSpeech));
+            FindDefaultDeploymentId(connections, deployments, LegacyAIDeploymentPurpose.TextToSpeech));
 
         return updated;
     }
@@ -533,7 +507,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     private static string FindDefaultDeploymentId(
         IEnumerable<AIProviderConnection> connections,
         IEnumerable<AIDeployment> deployments,
-        AIDeploymentType type,
+        LegacyAIDeploymentPurpose type,
         Func<AIProviderConnection, string> legacyDeploymentNameAccessor = null)
     {
         if (legacyDeploymentNameAccessor != null)
@@ -554,7 +528,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
         }
 
         return deployments
-            .Where(deployment => deployment.SupportsType(type))
+            .Where(deployment => type.IsSupportedBy(deployment))
             .OrderBy(deployment => deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
             .Select(deployment => deployment.Name)
@@ -565,11 +539,11 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     {
         var legacyConnectionName = profile.GetLegacyConnectionName();
 
-        return FindDefaultDeploymentId(AIDeploymentType.Chat, legacyConnectionName, legacyConnectionName, deployments);
+        return FindDefaultDeploymentId(LegacyAIDeploymentPurpose.Chat, legacyConnectionName, legacyConnectionName, deployments);
     }
 
     private static string FindDefaultDeploymentId(
-        AIDeploymentType type,
+        LegacyAIDeploymentPurpose type,
         string connectionId,
         string connectionAlias,
         IEnumerable<AIDeployment> deployments)
@@ -581,7 +555,7 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
 
         var candidates = deployments
             .Where(deployment =>
-                deployment.SupportsType(type) &&
+                type.IsSupportedBy(deployment) &&
                 (string.Equals(deployment.ConnectionName, connectionId, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(deployment.ConnectionName, connectionAlias, StringComparison.OrdinalIgnoreCase)))
             .ToList();

@@ -26,19 +26,8 @@ public class EditDeploymentViewModel
     public bool HasModelName { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the selected purposes.
-    /// </summary>
-    public string[] SelectedPurposes { get; set; }
-
-    /// <summary>
     /// Gets or sets a value indicating whether is new.
     /// </summary>
     [BindNever]
     public bool IsNew { get; set; }
-
-    /// <summary>
-    /// Gets or sets the available purposes.
-    /// </summary>
-    [BindNever]
-    public IList<SelectListItem> Purposes { get; set; }
 }
