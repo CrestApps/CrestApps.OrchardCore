@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
@@ -5,14 +6,18 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Models;
+using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Settings;
+using YesSql;
+using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
@@ -270,17 +275,19 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This is cleanup, not a correctness fix: the framework projects a legacy <c>Purpose</c>,
-    /// <c>Capability</c>, or <c>Type</c> onto capabilities every time a record is read, and that projection
-    /// is permanent. What it buys is that the stored JSON finally says what the editors and the deployment
-    /// list show, and the dead legacy field stops being carried around.
+    /// Deserializing the document has already run <c>AIDeployment.OnDeserialized</c> over every record, so
+    /// each one is in memory with the framework's projection applied and its legacy purpose cleared. Saving
+    /// the document writes that down, which is what stops the dead legacy field from being carried around
+    /// and makes the stored JSON say what the editors and the deployment list show.
     /// </para>
     /// <para>
-    /// The projection is what does the work: deserializing the document has already run
-    /// <c>AIDeployment.OnDeserialized</c> over every record, so each one is in memory with its capabilities
-    /// filled in and its legacy purpose cleared. Saving the document is what writes that down. There is no
-    /// mapping to repeat here, which is deliberate -- a second copy of the rules could drift from the
-    /// framework's.
+    /// The framework's projection is not the whole mapping, though. The chat and utility purposes also
+    /// stood for tool calling and streaming -- see
+    /// <see cref="LegacyAIDeploymentPurposeExtensions.ToDeclaredFeatureNames"/> -- and the framework has no
+    /// way to infer those, because the purpose never named them separately. Nor can they be recovered from
+    /// the projected record: once the projection has run, a migrated chat deployment and a hand-authored
+    /// text-generation-only one are identical. So the purposes are read back out of the stored JSON first,
+    /// before this step overwrites it, and applied to the records.
     /// </para>
     /// <para>
     /// Deployments that come from configuration rather than the store are untouched, because they are not
@@ -300,6 +307,17 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             }
 
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIDeploymentTypeMigrations>>();
+            var storedPurposes = await ReadStoredDeploymentPurposesAsync(scope.ServiceProvider, logger);
+
+            var widenedCount = 0;
+
+            foreach (var (recordKey, deployment) in deploymentDoc.Records)
+            {
+                if (storedPurposes.TryGetValue(recordKey, out var purpose) && purpose.ApplyTo(deployment))
+                {
+                    widenedCount++;
+                }
+            }
 
             // Only worth reporting; every record is rewritten either way, since a record that already
             // declared its capabilities simply round-trips unchanged.
@@ -311,13 +329,95 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
             if (logger.IsEnabled(LogLevel.Information))
             {
                 logger.LogInformation(
-                    "Persisted model capabilities for {DeclaredCount} of {TotalCount} stored AI deployments.",
+                    "Persisted model capabilities for {DeclaredCount} of {TotalCount} stored AI deployments, {WidenedCount} of which gained capabilities their legacy purpose implied.",
                     declaredCount,
-                    deploymentDoc.Records.Count);
+                    deploymentDoc.Records.Count,
+                    widenedCount);
             }
         });
 
         return 8;
+    }
+
+    /// <summary>
+    /// Reads the legacy purpose each stored deployment still carries, keyed by the record key the
+    /// deployment document uses.
+    /// </summary>
+    /// <remarks>
+    /// This deliberately goes around the document manager. Its deserialization is what consumes the legacy
+    /// purpose and then clears it, so by the time a typed record exists the purpose is already gone.
+    /// </remarks>
+    private static async Task<Dictionary<string, LegacyAIDeploymentPurpose>> ReadStoredDeploymentPurposesAsync(
+        IServiceProvider serviceProvider,
+        ILogger logger)
+    {
+        var purposes = new Dictionary<string, LegacyAIDeploymentPurpose>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var store = serviceProvider.GetRequiredService<IStore>();
+            var dbConnectionAccessor = serviceProvider.GetRequiredService<IDbConnectionAccessor>();
+
+            var dialect = store.Configuration.SqlDialect;
+            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(string.Empty);
+            var table = $"{store.Configuration.TablePrefix}{documentTableName}";
+
+            var sqlBuilder = new SqlBuilder(store.Configuration.TablePrefix, dialect);
+            sqlBuilder.AddSelector(dialect.QuoteForColumnName(nameof(Document.Type)));
+            sqlBuilder.AddSelector("," + dialect.QuoteForColumnName(nameof(Document.Content)));
+            sqlBuilder.From(dialect.QuoteForTableName(table, store.Configuration.Schema));
+
+            // The row is picked out in memory rather than with a LIKE on the type column. A generic
+            // document's type name contains square brackets, which SQL Server reads as a character class
+            // in a LIKE pattern, so such a filter quietly matches nothing there. The document table holds
+            // one row per document type, so reading it whole costs nothing worth saving.
+            var typePrefix = GetDeploymentDocumentTypePrefix();
+
+            await using var connection = dbConnectionAccessor.CreateConnection();
+            await connection.OpenAsync();
+
+            foreach (var document in await connection.QueryAsync<Document>(sqlBuilder.ToSqlString()))
+            {
+                if (document.Type is null ||
+                    !document.Type.StartsWith(typePrefix, StringComparison.Ordinal) ||
+                    string.IsNullOrWhiteSpace(document.Content) ||
+                    JsonNode.Parse(document.Content)?["Records"] is not JsonObject recordsObject)
+                {
+                    continue;
+                }
+
+                foreach (var (recordKey, recordNode) in recordsObject)
+                {
+                    if (LegacyAIDeploymentMigrationHelper.TryReadLegacyPurpose(recordNode, out var purpose))
+                    {
+                        purposes[recordKey] = purpose;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // The capabilities the framework projected are already on every record; only the tool calling
+            // and streaming a chat or utility purpose additionally implied are lost. Failing the migration
+            // over that would leave the site on an older schema version, which is the worse outcome.
+            logger.LogWarning(ex, "Could not read the stored AI deployment purposes. Migrated chat and utility deployments may need tool calling and streaming enabled by hand.");
+        }
+
+        return purposes;
+    }
+
+    /// <summary>
+    /// Gets the leading portion of the deployment document's type name, stopping before the assembly
+    /// version so the row matches whether or not the store simplified the name it wrote.
+    /// </summary>
+    private static string GetDeploymentDocumentTypePrefix()
+    {
+        var fullName = typeof(DictionaryDocument<AIDeployment>).FullName;
+        var versionIndex = fullName.IndexOf(", Version=", StringComparison.Ordinal);
+
+        return versionIndex < 0
+            ? fullName
+            : fullName[..versionIndex];
     }
 
     private static bool TryCreateDeployment(

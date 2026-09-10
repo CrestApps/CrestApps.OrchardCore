@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 
@@ -5,6 +6,79 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal static class LegacyAIDeploymentMigrationHelper
 {
+    /// <summary>
+    /// The field names the deployment purpose was stored under, newest first.
+    /// </summary>
+    /// <remarks>
+    /// The same field was called <c>Type</c>, then <c>Capability</c>, then <c>Purpose</c> before it was
+    /// replaced by model capabilities. A stored document can still carry any one of them.
+    /// </remarks>
+    private static readonly string[] _legacyPurposeFieldNames = ["Purpose", "Capability", "Type"];
+
+    /// <summary>
+    /// Reads the legacy purpose a stored deployment still carries, under whichever of its historical field
+    /// names it was written with.
+    /// </summary>
+    /// <returns><see langword="true"/> when the document named a purpose this migration understands.</returns>
+    public static bool TryReadLegacyPurpose(JsonNode deploymentNode, out LegacyAIDeploymentPurpose purpose)
+    {
+        purpose = LegacyAIDeploymentPurpose.None;
+
+        if (deploymentNode is null)
+        {
+            return false;
+        }
+
+        foreach (var fieldName in _legacyPurposeFieldNames)
+        {
+            if (TryReadLegacyPurposeValue(deploymentNode[fieldName], out purpose))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Reads a single stored purpose value, which can be one name, a comma-separated set of names, the
+    /// numeric flags, or an array of names.
+    /// </summary>
+    public static bool TryReadLegacyPurposeValue(JsonNode purposeNode, out LegacyAIDeploymentPurpose purpose)
+    {
+        purpose = LegacyAIDeploymentPurpose.None;
+
+        if (purposeNode is null)
+        {
+            return false;
+        }
+
+        if (purposeNode is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is null ||
+                    !Enum.TryParse<LegacyAIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedPurpose) ||
+                    parsedPurpose == LegacyAIDeploymentPurpose.None)
+                {
+                    purpose = LegacyAIDeploymentPurpose.None;
+
+                    return false;
+                }
+
+                purpose |= parsedPurpose;
+            }
+
+            return purpose.IsValidSelection();
+        }
+
+        var purposeText = purposeNode.GetValue<string>();
+
+        return !string.IsNullOrWhiteSpace(purposeText) &&
+            Enum.TryParse(purposeText, ignoreCase: true, out purpose) &&
+            purpose.IsValidSelection();
+    }
+
     public static AIDeployment FindWritableDeployment(
         IEnumerable<AIDeployment> deployments,
         string itemId,

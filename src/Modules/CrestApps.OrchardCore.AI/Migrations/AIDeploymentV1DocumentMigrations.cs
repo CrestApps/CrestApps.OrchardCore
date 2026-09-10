@@ -414,37 +414,5 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
     }
 
     private static bool TryGetDeploymentType(JsonNode typeNode, out LegacyAIDeploymentPurpose purpose)
-    {
-        purpose = LegacyAIDeploymentPurpose.None;
-
-        if (typeNode is null)
-        {
-            return false;
-        }
-
-        if (typeNode is JsonArray array)
-        {
-            foreach (var item in array)
-            {
-                if (item is null ||
-                    !Enum.TryParse<LegacyAIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
-                    parsedType == LegacyAIDeploymentPurpose.None)
-                {
-                    purpose = LegacyAIDeploymentPurpose.None;
-
-                    return false;
-                }
-
-                purpose |= parsedType;
-            }
-
-            return purpose.IsValidSelection();
-        }
-
-        var typeValue = typeNode.GetValue<string>();
-
-        return !string.IsNullOrEmpty(typeValue) &&
-            Enum.TryParse(typeValue, ignoreCase: true, out purpose) &&
-            purpose.IsValidSelection();
-    }
+        => LegacyAIDeploymentMigrationHelper.TryReadLegacyPurposeValue(typeNode, out purpose);
 }

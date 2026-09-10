@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
 
 namespace CrestApps.OrchardCore.AI.Migrations;
 
@@ -62,6 +63,18 @@ internal static class LegacyAIDeploymentPurposeExtensions
         => AIDeploymentPurposeCompatibility.GetImpliedFeatures([purpose.ToString()], declaredFeatures);
 
     /// <summary>
+    /// Gets the capability features a legacy purpose is written down as.
+    /// </summary>
+    /// <remarks>
+    /// This is the write-time projection, and it is deliberately wider than <see cref="ToFeatureNames"/>:
+    /// a chat or utility purpose is written down as tool calling and streaming as well as text generation.
+    /// <see cref="LegacyAIDeploymentCapabilities"/> holds the rule and says why, so that the store
+    /// migrations here and the recipe and API imports in the handler credit a legacy purpose alike.
+    /// </remarks>
+    public static IReadOnlyList<string> ToDeclaredFeatureNames(this LegacyAIDeploymentPurpose purpose, IEnumerable<string> declaredFeatures = null)
+        => LegacyAIDeploymentCapabilities.GetImpliedFeatures([purpose.ToString()], declaredFeatures);
+
+    /// <summary>
     /// Declares on the deployment the capabilities implied by a legacy purpose, merging into whatever it
     /// already declares.
     /// </summary>
@@ -73,7 +86,7 @@ internal static class LegacyAIDeploymentPurposeExtensions
         deployment.Properties ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         var hasMetadata = deployment.TryGet<AIDeploymentMetadata>(out var metadata);
-        var implied = purpose.ToFeatureNames(hasMetadata ? metadata.Features : null);
+        var implied = purpose.ToDeclaredFeatureNames(hasMetadata ? metadata.Features : null);
 
         if (implied.Count == 0)
         {

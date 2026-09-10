@@ -180,8 +180,10 @@ public sealed class AIDeploymentHandler : CatalogEntryHandlerBase<AIDeployment>
 
         // Runs after the properties merge so the already-declared features are visible to the rule. This is
         // the recipe, configuration, and API half of the read-time normalization; the store deserialization
-        // half is AIDeployment.OnDeserialized.
-        AIDeploymentPurposeCompatibility.Normalize(deployment, legacyPurposes);
+        // half is AIDeployment.OnDeserialized. It goes through LegacyAIDeploymentCapabilities rather than
+        // the framework directly so an imported legacy deployment declares the same capabilities the store
+        // migrations give one, tool calling and streaming included.
+        LegacyAIDeploymentCapabilities.Normalize(deployment, legacyPurposes);
 
         return Task.CompletedTask;
     }
