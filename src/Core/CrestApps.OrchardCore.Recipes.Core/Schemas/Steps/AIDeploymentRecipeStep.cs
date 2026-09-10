@@ -46,10 +46,13 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
             .Enum("Default", "ManagedIdentity", "ApiKey")
             .Description("Azure authentication type. Supported values are Default, ManagedIdentity, or ApiKey.");
 
+        // The purpose was replaced by model capabilities. A recipe that still names one is read through the
+        // framework's read-time projection, so it keeps importing; new recipes declare AIDeploymentMetadata
+        // under Properties instead.
         var deploymentPurposeSchema = new JsonSchemaBuilder()
             .Type(SchemaValueType.String)
             .Enum("Chat", "Utility", "Embedding", "Image", "SpeechToText", "TextToSpeech", "Vision")
-            .Description("Deployment purpose identifier.");
+            .Description("Legacy deployment purpose identifier, projected onto model capabilities on import.");
 
         var modelCapabilitiesSchema = BuildModelCapabilitiesSchema();
 
@@ -93,9 +96,9 @@ public sealed class AIDeploymentRecipeStep : IRecipeStep
                 ("IdentityId", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Contained-connection managed identity client ID alias for recipe imports. Supported by AzureSpeech deployments.")),
                 ("Properties", containedConnectionPropertiesSchema.Description("Contained provider connection properties stored directly on the deployment.")),
                 ("Purpose", new JsonSchemaBuilder().AnyOf(
-                    deploymentPurposeSchema.Description("The deployment purpose. Defaults to Chat when not specified."),
+                    deploymentPurposeSchema.Description("Legacy. Declare the model's capabilities under Properties.AIDeploymentMetadata instead. A deployment that names neither is imported as a text chat deployment."),
                     new JsonSchemaBuilder().Type(SchemaValueType.Array).Items(
-                        deploymentPurposeSchema).MinItems(1).UniqueItems(true).Description("The deployment purposes."))))
+                        deploymentPurposeSchema).MinItems(1).UniqueItems(true).Description("Legacy deployment purposes, projected onto model capabilities on import."))))
             .Required("Name")
             .AdditionalProperties(true);
 

@@ -1,5 +1,3 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
-
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
@@ -106,7 +104,7 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                         var name = deploymentObject[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
                         var modelName = deploymentObject[nameof(AIDeployment.ModelName)]?.GetValue<string>()?.Trim();
                         var sourceName = deploymentObject[nameof(AIDeployment.ClientName)]?.GetValue<string>()?.Trim()
-                            ?? deploymentObject[nameof(AIDeployment.ProviderName)]?.GetValue<string>()?.Trim()
+                            ?? deploymentObject["ProviderName"]?.GetValue<string>()?.Trim()
                             ?? deploymentObject[nameof(AIDeployment.Source)]?.GetValue<string>()?.Trim();
                         var connectionName = deploymentObject[nameof(AIDeployment.ConnectionName)]?.GetValue<string>()?.Trim();
 
@@ -126,7 +124,6 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                             modelName,
                             sourceName,
                             connectionName);
-                        var existingDeploymentType = deployment?.Type ?? AIDeploymentType.None;
 
                         if (deployment is not null)
                         {
@@ -167,9 +164,12 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                             }
                         }
 
-                        if (TryGetDeploymentType(deploymentObject[nameof(AIDeployment.Type)], out var deploymentType))
+                        if (TryGetDeploymentType(deploymentObject["Type"], out var deploymentType))
                         {
-                            deployment.Type = LegacyAIDeploymentMigrationHelper.MergeDeploymentTypes(existingDeploymentType, deploymentType);
+                            // Capabilities merge additively, so a deployment that already declares some keeps
+                            // them and simply gains whatever the v1 type implied. That union is what merging
+                            // the two flag values used to do.
+                            deploymentType.ApplyTo(deployment);
                         }
 
                         var validationResult = await deploymentManager.ValidateAsync(deployment);
@@ -249,19 +249,19 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         var results = (await deploymentManager.GetAllAsync())
             .Where(deployment => !string.IsNullOrWhiteSpace(deployment.ItemId))
             .ToDictionary(deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase);
-        var types = new[]
+        var slotNames = new[]
         {
-            AIDeploymentType.Chat,
-            AIDeploymentType.Utility,
-            AIDeploymentType.Embedding,
-            AIDeploymentType.Image,
-            AIDeploymentType.SpeechToText,
-            AIDeploymentType.TextToSpeech,
+            AIDeploymentSlotNames.Chat,
+            AIDeploymentSlotNames.Utility,
+            AIDeploymentSlotNames.Embedding,
+            AIDeploymentSlotNames.Image,
+            AIDeploymentSlotNames.SpeechToText,
+            AIDeploymentSlotNames.TextToSpeech,
         };
 
-        foreach (var type in types)
+        foreach (var slotName in slotNames)
         {
-            foreach (var deployment in await deploymentManager.GetByTypeAsync(type))
+            foreach (var deployment in await deploymentManager.GetAllBySlotAsync(slotName))
             {
                 if (string.IsNullOrWhiteSpace(deployment.ItemId))
                 {
@@ -314,9 +314,11 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
             deploymentObject[nameof(AIDeployment.ClientName)] ??= deploymentObject[nameof(AIDeployment.Source)]?.DeepClone();
         }
 
-        if (!TryGetDeploymentType(deploymentObject[nameof(AIDeployment.Type)], out _))
+        // Written as the legacy type name the v1 document would have carried. The framework projects that
+        // onto model capabilities when the deployment is read back, so nothing here has to know the mapping.
+        if (!TryGetDeploymentType(deploymentObject["Type"], out _))
         {
-            deploymentObject[nameof(AIDeployment.Type)] = CreateTypeNode(
+            deploymentObject["Type"] = CreateTypeNode(
                 LegacyAIDeploymentMigrationHelper.NormalizeInteractiveTypes(
                     InferDeploymentType(
                     deploymentObject[nameof(AIDeployment.Name)]?.GetValue<string>(),
@@ -354,33 +356,33 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
                 string.Equals(connection.Name, connectionSelector, StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static AIDeploymentType InferDeploymentType(string deploymentName, AIProviderConnection connection)
+    private static LegacyAIDeploymentPurpose InferDeploymentType(string deploymentName, AIProviderConnection connection)
     {
         if (string.IsNullOrWhiteSpace(deploymentName) || connection is null)
         {
-            return AIDeploymentType.Chat;
+            return LegacyAIDeploymentPurpose.Chat;
         }
 
-        var deploymentType = AIDeploymentType.None;
+        var deploymentType = LegacyAIDeploymentPurpose.None;
 
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyChatDeploymentName(), AIDeploymentType.Chat);
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyUtilityDeploymentName(), AIDeploymentType.Utility);
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyEmbeddingDeploymentName(), AIDeploymentType.Embedding);
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyImageDeploymentName(), AIDeploymentType.Image);
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacySpeechToTextDeploymentName(), AIDeploymentType.SpeechToText);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyChatDeploymentName(), LegacyAIDeploymentPurpose.Chat);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyUtilityDeploymentName(), LegacyAIDeploymentPurpose.Utility);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyEmbeddingDeploymentName(), LegacyAIDeploymentPurpose.Embedding);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyImageDeploymentName(), LegacyAIDeploymentPurpose.Image);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacySpeechToTextDeploymentName(), LegacyAIDeploymentPurpose.SpeechToText);
 
         deploymentType = LegacyAIDeploymentMigrationHelper.NormalizeInteractiveTypes(deploymentType);
 
         return deploymentType.IsValidSelection()
             ? deploymentType
-            : AIDeploymentType.Chat;
+            : LegacyAIDeploymentPurpose.Chat;
     }
 
     private static void AddTypeIfMatch(
-        ref AIDeploymentType deploymentType,
+        ref LegacyAIDeploymentPurpose deploymentType,
         string deploymentName,
         string expectedName,
-        AIDeploymentType type)
+        LegacyAIDeploymentPurpose type)
     {
         if (!string.IsNullOrWhiteSpace(expectedName) &&
             string.Equals(deploymentName, expectedName, StringComparison.OrdinalIgnoreCase))
@@ -389,11 +391,11 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         }
     }
 
-    private static JsonNode CreateTypeNode(AIDeploymentType deploymentType)
+    private static JsonNode CreateTypeNode(LegacyAIDeploymentPurpose deploymentType)
     {
-        var supportedTypes = Enum.GetValues<AIDeploymentType>()
+        var supportedTypes = Enum.GetValues<LegacyAIDeploymentPurpose>()
             .Where(purpose =>
-                purpose != AIDeploymentType.None &&
+                purpose != LegacyAIDeploymentPurpose.None &&
                 deploymentType.HasFlag(purpose))
             .Select(type => (JsonNode)type.ToString())
             .ToList();
@@ -411,9 +413,9 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
         return LegacyAIDeploymentMigrationHelper.TryPopulateDefaultDeploymentSettings(settings, connections, deployments);
     }
 
-    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType purpose)
+    private static bool TryGetDeploymentType(JsonNode typeNode, out LegacyAIDeploymentPurpose purpose)
     {
-        purpose = AIDeploymentType.None;
+        purpose = LegacyAIDeploymentPurpose.None;
 
         if (typeNode is null)
         {
@@ -425,10 +427,10 @@ internal sealed class AIDeploymentV1DocumentMigrations : DataMigration
             foreach (var item in array)
             {
                 if (item is null ||
-                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
-                    parsedType == AIDeploymentType.None)
+                    !Enum.TryParse<LegacyAIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
+                    parsedType == LegacyAIDeploymentPurpose.None)
                 {
-                    purpose = AIDeploymentType.None;
+                    purpose = LegacyAIDeploymentPurpose.None;
 
                     return false;
                 }

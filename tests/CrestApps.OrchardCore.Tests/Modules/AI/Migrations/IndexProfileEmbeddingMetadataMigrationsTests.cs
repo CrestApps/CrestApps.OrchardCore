@@ -1,5 +1,3 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Tests cover legacy migration logic
-
 using System.Reflection;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Deployments;
@@ -65,7 +63,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
             .Setup(manager => manager.FindByNameAsync("text-embedding-3-small"))
             .ReturnsAsync((AIDeployment)null);
         deploymentManager
-            .Setup(manager => manager.GetByTypeAsync(AIDeploymentType.Embedding))
+            .Setup(manager => manager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new AIDeployment
@@ -75,8 +73,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
                     ConnectionName = "Default",
                     Name = "my-embedding-deployment",
                     ModelName = "text-embedding-3-small",
-                    Type = AIDeploymentType.Embedding,
-                },
+                }.Declaring(AIDeploymentFeatureNames.TextEmbedding),
             ]);
         deploymentManager
             .Setup(manager => manager.GetAllAsync("AzureOpenAI"))
@@ -89,8 +86,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
                     ConnectionName = "Default",
                     Name = "my-embedding-deployment",
                     ModelName = "text-embedding-3-small",
-                    Type = AIDeploymentType.Embedding,
-                },
+                }.Declaring(AIDeploymentFeatureNames.TextEmbedding),
             ]);
 
         var updated = await InvokeNormalizeIndexProfileMetadataAsync(indexProfile, deploymentManager.Object);
@@ -117,7 +113,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
             .Setup(manager => manager.FindByNameAsync("text-embedding-3-small"))
             .ReturnsAsync((AIDeployment)null);
         deploymentManager
-            .Setup(manager => manager.GetByTypeAsync(AIDeploymentType.Embedding))
+            .Setup(manager => manager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new AIDeployment
@@ -127,8 +123,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
                     ConnectionName = "Default",
                     Name = "embedding-prod-eastus",
                     ModelName = "text-embedding-3-small",
-                    Type = AIDeploymentType.Embedding,
-                },
+                }.Declaring(AIDeploymentFeatureNames.TextEmbedding),
             ]);
         deploymentManager
             .Setup(manager => manager.GetAllAsync("AzureOpenAI"))
@@ -141,8 +136,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
                     ConnectionName = "Default",
                     Name = "embedding-prod-eastus",
                     ModelName = "text-embedding-3-small",
-                    Type = AIDeploymentType.Embedding,
-                },
+                }.Declaring(AIDeploymentFeatureNames.TextEmbedding),
             ]);
 
         var updated = await InvokeNormalizeIndexProfileMetadataAsync(indexProfile, deploymentManager.Object);
@@ -173,8 +167,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
                 ConnectionName = "Default",
                 Name = "embedding-technical-name",
                 ModelName = "text-embedding-3-small",
-                Type = AIDeploymentType.Embedding,
-            });
+            }.Declaring(AIDeploymentFeatureNames.TextEmbedding));
 
         var updated = await InvokeNormalizeIndexProfileMetadataAsync(indexProfile, deploymentManager.Object);
 
@@ -201,8 +194,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
                 ItemId = "deployment-id-123",
                 Name = "embedding-eastus-prod",
                 ModelName = "text-embedding-3-small",
-                Type = AIDeploymentType.Embedding,
-            });
+            }.Declaring(AIDeploymentFeatureNames.TextEmbedding));
 
         var updated = await InvokeNormalizeIndexProfileMetadataAsync(indexProfile, deploymentManager.Object);
 
@@ -227,7 +219,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
             .Setup(manager => manager.FindByNameAsync("text-embedding-3-small"))
             .ReturnsAsync((AIDeployment)null);
         deploymentManager
-            .Setup(manager => manager.GetByTypeAsync(AIDeploymentType.Embedding))
+            .Setup(manager => manager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Array.Empty<AIDeployment>());
         deploymentManager
             .Setup(manager => manager.GetAllAsync("Azure"))
@@ -243,8 +235,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
                     ConnectionName = "winnerware",
                     Name = "winnerware-embedding-eastus",
                     ModelName = "text-embedding-3-small",
-                    Type = AIDeploymentType.Embedding,
-                },
+                }.Declaring(AIDeploymentFeatureNames.TextEmbedding),
             ]);
         deploymentManager
             .Setup(manager => manager.GetAllAsync("AzureOpenAIOwnData"))
@@ -273,7 +264,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
             .Setup(manager => manager.FindByNameAsync("Azure-text-embedding-3-small"))
             .ReturnsAsync((AIDeployment)null);
         deploymentManager
-            .Setup(manager => manager.GetByTypeAsync(AIDeploymentType.Embedding))
+            .Setup(manager => manager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new AIDeployment
@@ -283,8 +274,7 @@ public sealed class IndexProfileEmbeddingMetadataMigrationsTests
                     ConnectionName = "winnerware",
                     Name = "winnerware-embedding-eastus",
                     ModelName = "text-embedding-3-small",
-                    Type = AIDeploymentType.Embedding,
-                },
+                }.Declaring(AIDeploymentFeatureNames.TextEmbedding),
             ]);
 
         var updated = await InvokeNormalizeIndexProfileMetadataAsync(indexProfile, deploymentManager.Object);

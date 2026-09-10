@@ -229,7 +229,7 @@ public sealed class NamedRecipeStepHandlerTests
                     [nameof(AIDeployment.ItemId)] = "deployment-1",
                     [nameof(AIDeployment.Name)] = "default-chat",
                     [nameof(AIDeployment.ClientName)] = "openai",
-                    [nameof(AIDeployment.Purpose)] = nameof(AIDeploymentPurpose.Chat),
+                    ["Purpose"] = "Chat",
                 },
             },
         });

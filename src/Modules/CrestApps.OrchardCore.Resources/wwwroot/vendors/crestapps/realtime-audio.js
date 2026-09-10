@@ -264,6 +264,77 @@
   // Ramp over ~10 ms rather than switching instantly, so opening and closing never clicks.
   '    var step = 1 / (sampleRate * 0.01);', '    var delay = this.delay;', '    var pos = this.delayPos;', '    var len = delay.length;', '    for (var i = 0; i < out.length; i++) {', '      var delayed = delay[pos];', '      delay[pos] = mic ? mic[i] : 0;', '      pos = (pos + 1) % len;', '      if (this.gain < target) { this.gain = Math.min(target, this.gain + step); }', '      else if (this.gain > target) { this.gain = Math.max(target, this.gain - step); }', '      out[i] = delayed * this.gain;', '    }', '    this.delayPos = pos;', '    if (currentTime * 1000 - this.lastPost > 100) {', '      this.lastPost = currentTime * 1000;', '      this.port.postMessage({ micDb: micDb, floorDb: this.state.floorDb, echoReturnDb: this.state.echoReturnDb, open: this.state.open, assistantSpeaking: this.state.assistantSpeaking });', '    }', '    return true;', '  }', '}', 'registerProcessor("coreai-mic-gate", CoreAiMicGateProcessor);'].join('\n');
 
+  // How many samples make up one frame sent to the server. Unchanged from the ScriptProcessorNode this
+  // replaces, so the server sees exactly the cadence it always has.
+  var REALTIME_CAPTURE_FRAME_SAMPLES = 4096;
+
+  // Microphone capture as an AudioWorkletProcessor. ScriptProcessorNode, which this replaces, has been
+  // deprecated for years and ran its callback on the main thread, where a long task shows up as a gap in the
+  // captured audio. This buffers on the audio thread and posts whole frames instead. It deliberately keeps
+  // emitting frames when nothing is connected to its input: the server's voice-activity detector needs a
+  // continuous stream to notice a pause, and the gate's own worklet takes a moment to come up.
+  var REALTIME_CAPTURE_WORKLET_SOURCE = ['class CoreAiCaptureProcessor extends AudioWorkletProcessor {', '  constructor(options) {', '    super();', '    var o = (options && options.processorOptions) || {};', '    this.size = Math.max(128, o.frameSamples || 4096);', '    this.buf = new Float32Array(this.size);', '    this.pos = 0;', '  }', '  process(inputs) {', '    var input = (inputs[0] && inputs[0][0]) || null;',
+  // A render quantum is 128 frames; with no input connected there are no channels to read, so emit the
+  // same length of silence rather than stalling the stream.
+  '    var n = input ? input.length : 128;', '    for (var i = 0; i < n; i++) {', '      this.buf[this.pos++] = input ? input[i] : 0;', '      if (this.pos === this.size) {',
+  // postMessage structured-clones the buffer, so the processor keeps filling its own copy.
+  '        this.port.postMessage(this.buf);', '        this.pos = 0;', '      }', '    }', '    return true;', '  }', '}', 'registerProcessor("coreai-pcm-capture", CoreAiCaptureProcessor);'].join('\n');
+
+  /*
+   * Resolves with the node that turns captured microphone audio into fixed-size frames, handing each one to
+   * onFrame as a Float32Array. Prefers an AudioWorkletNode and falls back to a ScriptProcessorNode only where
+   * AudioWorklet is unavailable, so an older browser keeps working (and keeps its deprecation warning).
+   */
+  function createRealtimeCaptureNode(ctx, onFrame) {
+    function scriptProcessorNode() {
+      var node = ctx.createScriptProcessor(REALTIME_CAPTURE_FRAME_SAMPLES, 1, 1);
+      node.onaudioprocess = function (event) {
+        onFrame(event.inputBuffer.getChannelData(0));
+      };
+      return node;
+    }
+    var blobUrl = null;
+    if (ctx.audioWorklet && typeof ctx.audioWorklet.addModule === 'function' && typeof AudioWorkletNode === 'function') {
+      try {
+        blobUrl = URL.createObjectURL(new Blob([REALTIME_CAPTURE_WORKLET_SOURCE], {
+          type: 'application/javascript'
+        }));
+      } catch (err) {
+        blobUrl = null;
+      }
+    }
+    if (!blobUrl) {
+      return Promise.resolve(scriptProcessorNode());
+    }
+    return ctx.audioWorklet.addModule(blobUrl).then(function () {
+      try {
+        URL.revokeObjectURL(blobUrl);
+      } catch (e) {}
+      var node = new AudioWorkletNode(ctx, 'coreai-pcm-capture', {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [1],
+        processorOptions: {
+          frameSamples: REALTIME_CAPTURE_FRAME_SAMPLES
+        }
+      });
+      node.port.onmessage = function (e) {
+        if (e.data) {
+          onFrame(e.data);
+        }
+      };
+      return node;
+    })["catch"](function (err) {
+      try {
+        URL.revokeObjectURL(blobUrl);
+      } catch (e) {}
+      if (window.console && console.warn) {
+        console.warn('The realtime capture worklet could not be loaded; falling back to a ScriptProcessorNode.', err);
+      }
+      return scriptProcessorNode();
+    });
+  }
+
   /*
    * Builds a microphone gate for a captured stream.
    *
@@ -1447,6 +1518,11 @@
         startRealtimeWebRtcConversation();
         return;
       }
+
+      // Starting on WebSocket without even attempting WebRTC is a deployment fact worth stating once. The
+      // console is otherwise indistinguishable from a healthy WebRTC session, so "no warning" gets read as
+      // "WebRTC is working" when it can equally mean the server never offered the transport at all.
+      logWebSocketTransportReason(webRtcEnabled ? 'a WebRTC attempt already failed earlier in this browser session' : 'the server did not advertise the WebRTC transport');
       startRealtimeWebSocketConversation();
     }
     function startRealtimeWebSocketConversation() {
@@ -1514,34 +1590,24 @@
           realtimeGain.connect(realtimeAudioCtx.destination);
           realtimeSubject = new window.signalR.Subject();
           var ctxAtStart = realtimeAudioCtx;
-          var processor = realtimeAudioCtx.createScriptProcessor(4096, 1, 1);
-          realtimeProcessor = processor;
+
+          // A zero-gain node keeps the capture node alive without echoing the mic to the speakers.
+          var zeroGain = realtimeAudioCtx.createGain();
+          zeroGain.gain.value = 0;
+          realtimeZeroGain = zeroGain;
+          zeroGain.connect(realtimeAudioCtx.destination);
 
           // The gate watches the assistant's playback to know when it is audible; on this
           // transport the assistant is a Web Audio graph, so tap the output gain into a stream.
           var monitorDest = realtimeAudioCtx.createMediaStreamDestination();
           realtimeGain.connect(monitorDest);
 
-          // Send the gated microphone rather than the raw one, exactly as the WebRTC transport
-          // does, so this fallback is not the one transport where the model hears its own echo.
-          // Until the gate's worklet is ready the processor has no input and streams silence.
-          setupMicGate(stream).then(function (micTrack) {
-            if (!isRealtimeActive || realtimeAudioCtx !== ctxAtStart || !micTrack) {
-              return;
-            }
-            var gatedStream = new MediaStream([micTrack]);
-            var source = realtimeAudioCtx.createMediaStreamSource(gatedStream);
-            realtimeMicSource = source;
-            source.connect(processor);
-            if (realtimeGate) {
-              realtimeGate.attachAssistantStream(monitorDest.stream);
-            }
-          });
-          processor.onaudioprocess = function (event) {
-            var input = event.inputBuffer.getChannelData(0);
-            // Always send a frame (silence when muted) so the server keeps a continuous audio
-            // stream and its voice-activity detector promptly notices the pause and responds.
-            // Muted cases: push-to-talk not held, or the echo guard while the assistant plays back.
+          // Always send a frame (silence when muted) so the server keeps a continuous audio
+          // stream and its voice-activity detector promptly notices the pause and responds.
+          // Muted cases: push-to-talk not held, or the echo guard while the assistant plays back.
+          // The decision stays on the main thread because that is where the push-to-talk and
+          // playback state lives; the audio thread only frames the samples.
+          var sendCapturedFrame = function sendCapturedFrame(input) {
             var muted;
             if (realtimePushToTalk) {
               muted = !realtimePttActive;
@@ -1565,12 +1631,33 @@
             } catch (err) {/* completed */}
           };
 
-          // A zero-gain node keeps the processor alive without echoing the mic to the speakers.
-          var zeroGain = realtimeAudioCtx.createGain();
-          zeroGain.gain.value = 0;
-          realtimeZeroGain = zeroGain;
-          processor.connect(zeroGain);
-          zeroGain.connect(realtimeAudioCtx.destination);
+          // The capture node loads a worklet, so it arrives a tick later than the rest of the
+          // graph; it streams silence until the gated microphone is attached below.
+          createRealtimeCaptureNode(realtimeAudioCtx, sendCapturedFrame).then(function (captureNode) {
+            if (!isRealtimeActive || realtimeAudioCtx !== ctxAtStart) {
+              try {
+                captureNode.disconnect();
+              } catch (err) {}
+              return;
+            }
+            realtimeProcessor = captureNode;
+            captureNode.connect(zeroGain);
+
+            // Send the gated microphone rather than the raw one, exactly as the WebRTC transport
+            // does, so this fallback is not the one transport where the model hears its own echo.
+            setupMicGate(stream).then(function (micTrack) {
+              if (!isRealtimeActive || realtimeAudioCtx !== ctxAtStart || !micTrack) {
+                return;
+              }
+              var gatedStream = new MediaStream([micTrack]);
+              var source = realtimeAudioCtx.createMediaStreamSource(gatedStream);
+              realtimeMicSource = source;
+              source.connect(captureNode);
+              if (realtimeGate) {
+                realtimeGate.attachAssistantStream(monitorDest.stream);
+              }
+            });
+          });
 
           // "Auto" means auto-detect: send nothing. Sending the browser's locale instead pinned transcription
           // and the reply language to it, so a bilingual user with an English browser speaking Spanish
@@ -1946,6 +2033,14 @@
       });
     }
 
+    // Says why a realtime session is running on the WebSocket transport when it never attempted WebRTC.
+    // The connect-time fallback reports its own reason instead (see fallbackToWebSocket).
+    function logWebSocketTransportReason(reason) {
+      if (window.console && console.warn) {
+        console.warn('Realtime is using the WebSocket transport (' + reason + '); acoustic echo cancellation is weaker than on WebRTC.');
+      }
+    }
+
     // Connect-time only: tear down the failed WebRTC attempt and restart on the known-good WebSocket path.
     // Never called once a session is established (see the connection-state handlers), so we never migrate audio
     // mid-conversation — we only choose the transport before the model starts responding.
@@ -2013,10 +2108,18 @@
       } catch (err) {/* already completed */}
       realtimeSubject = null;
       stopWebRtcEchoGuard();
+
+      // Detach both shapes the capture node can take: the worklet delivers frames over its port, the
+      // ScriptProcessorNode fallback over onaudioprocess. Leaving either attached keeps pushing frames at
+      // a subject that is already completed.
       try {
         if (realtimeProcessor) {
           realtimeProcessor.disconnect();
           realtimeProcessor.onaudioprocess = null;
+          if (realtimeProcessor.port) {
+            realtimeProcessor.port.onmessage = null;
+            realtimeProcessor.port.close();
+          }
         }
       } catch (err) {}
       try {

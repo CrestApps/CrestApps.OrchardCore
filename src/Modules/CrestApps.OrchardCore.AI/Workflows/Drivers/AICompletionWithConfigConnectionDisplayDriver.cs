@@ -59,9 +59,9 @@ public sealed class AICompletionWithConfigConnectionDisplayDriver : DisplayDrive
             }
 
             model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
+                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat));
             model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
+                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility));
         }).Location("Content:2#Content;1");
     }
 

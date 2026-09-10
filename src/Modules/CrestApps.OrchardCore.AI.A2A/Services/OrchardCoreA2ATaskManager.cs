@@ -59,8 +59,8 @@ internal sealed class OrchardCoreA2ARequestHandler : IA2ARequestHandler
             var completionContext = await completionContextBuilder.BuildAsync(context.Profile, cancellationToken: cancellationToken);
             completionContext.DisableTools = true;
 
-            var deployment = await deploymentManager.ResolveOrDefaultAsync(
-                AIDeploymentPurpose.Chat,
+            var deployment = await deploymentManager.ResolveSlotAsync(
+                AIDeploymentSlotNames.Chat,
                 deploymentName: completionContext.ChatDeploymentName,
                 cancellationToken: cancellationToken)
                 ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{context.Profile.Name}'.");
@@ -118,8 +118,8 @@ internal sealed class OrchardCoreA2ARequestHandler : IA2ARequestHandler
         var completionContext = await completionContextBuilder.BuildAsync(context.Profile, cancellationToken: cancellationToken);
         completionContext.DisableTools = true;
 
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Chat,
+        var deployment = await deploymentManager.ResolveSlotAsync(
+            AIDeploymentSlotNames.Chat,
             deploymentName: completionContext.ChatDeploymentName,
             cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for profile '{context.Profile.Name}'.");

@@ -379,7 +379,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
     private static async Task<DataSourceIndexProfileMetadata> FindFirstEmbeddingMetadataAsync(IServiceProvider serviceProvider, ILogger logger)
     {
         var deploymentManager = serviceProvider.GetRequiredService<IAIDeploymentManager>();
-        var deployment = (await deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding)).FirstOrDefault();
+        var deployment = (await deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding)).FirstOrDefault();
 
         if (deployment != null)
         {

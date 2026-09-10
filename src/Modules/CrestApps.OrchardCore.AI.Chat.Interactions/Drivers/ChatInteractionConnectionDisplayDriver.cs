@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -49,21 +50,25 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         async ValueTask PopulateAsync(EditChatInteractionConnectionViewModel model)
         {
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
-            var chatDeployments = (await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat)).ToList();
+            // The chat picker asks "what can this interaction talk to", so it lists the text-capable
+            // deployments and the realtime (speech-to-speech) ones together.
+            var chatDeployments = (await _deploymentManager.GetConversationalDeploymentsAsync()).ToList();
 
             model.ChatDeploymentName = interaction.ChatDeploymentName;
             model.UtilityDeploymentName = interaction.UtilityDeploymentName;
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
             model.ChatDeployments = BuildGroupedDeploymentItems(chatDeployments);
+            // Vision is the imageInput capability, which is opt-in: a genuinely vision-capable model declares
+            // it rather than being inferred from a flag nobody remembered to tick.
             model.DeploymentVisionSupport = chatDeployments
-                .Where(deployment => deployment.SupportsPurpose(AIDeploymentPurpose.Vision))
+                .Where(SupportsVision)
                 .ToDictionary(deployment => deployment.Name, _ => true, StringComparer.OrdinalIgnoreCase);
-            model.DefaultChatDeploymentSupportsVision = (await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat))
-                ?.SupportsPurpose(AIDeploymentPurpose.Vision) == true;
+            model.DefaultChatDeploymentSupportsVision = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat) is { } defaultChatDeployment
+                && SupportsVision(defaultChatDeployment);
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
+                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility));
         }
 
         return Combine(
@@ -88,6 +93,11 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
         return Edit(interaction, context);
     }
+
+    // imageInput is opt-in, so a deployment that declares no capability metadata does not claim vision.
+    private static bool SupportsVision(AIDeployment deployment)
+        => deployment.TryGet<AIDeploymentMetadata>(out var metadata) &&
+            metadata.SupportsFeature(AIDeploymentFeatureNames.ImageInput);
 
     private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
     {

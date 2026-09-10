@@ -45,18 +45,22 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
+            // The chat picker asks "what can this profile talk to", so it lists the text-capable deployments
+            // and the realtime (speech-to-speech) ones together. Which of the two the selection turns out to
+            // be is read back from the deployment's own capabilities. The utility slot serves background text
+            // work and so stays text-only.
             model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Chat));
+                await _deploymentManager.GetConversationalDeploymentsAsync());
 
             model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Utility));
+                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility));
         }
 
         return Combine(
             Initialize<EditProfileDeploymentViewModel>("AIProfileChatDeployment_Edit", PopulateAsync)
-                .Location("Content:1%Deployments;2"),
+                .Location("Content:1%Deployments & Interactions;2"),
             Initialize<EditProfileDeploymentViewModel>("AIProfileUtilityDeployment_Edit", PopulateAsync)
-                .Location("Content:2%Deployments;2"));
+                .Location("Content:2%Deployments & Interactions;2"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

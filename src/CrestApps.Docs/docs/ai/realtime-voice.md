@@ -16,18 +16,33 @@ A realtime-capable model can hold a live, spoken conversation — audio in, audi
    - **A cascaded realtime deployment**, when no provider you use ships a speech-to-speech model. See [Cascaded realtime](#cascaded-realtime-when-no-provider-speaks) below.
 
    Optionally set the site's default realtime deployment.
-2. **Chat mode set to Realtime.** A realtime model only runs a realtime session when the chat mode is **Realtime**:
-   - **AI Chat session** — set the profile's chat mode to *Realtime (speech-to-speech)* on the profile editor. The option appears once a realtime deployment exists.
-   - **Chat interactions** — set the site chat mode to *Realtime* under the AI settings, or select a realtime deployment on the interaction (a realtime-capable deployment forces realtime for that interaction).
+2. **A profile or interaction that selects it as its chat deployment.** There is no realtime chat mode: whether a
+   conversation is spoken follows from the model the profile talks to.
+   - **AI Chat session** — pick the realtime deployment as the profile's **Chat deployment**. The chat deployment
+     picker lists text-capable and realtime deployments together.
+   - **Chat interactions** — pick the realtime deployment on the interaction. A site can no longer force realtime
+     globally through the chat mode.
 
-If a profile or interaction is set to Realtime but no realtime deployment is available, it falls back to the `Conversation` pipeline when speech-to-text and text-to-speech deployments exist, otherwise to plain text.
+Because the deployment *is* the answer, a profile can no longer be set to realtime while no realtime model is
+available, and there is nothing to fall back from. Selecting a text model instead gives the ordinary text,
+`AudioInput`, or `Conversation` experience.
+
+:::note
+A profile written before this change named its speech-to-speech model in a separate **Realtime deployment**
+field and declared a `Realtime` chat mode. Both are gone. When such a profile is read, the realtime deployment
+becomes its chat deployment, and the chat deployment it used to name moves to the **Utility deployment** when
+none was set — so background work such as summarization keeps running on the model it always did. No migration
+is required.
+:::
 
 ## What changes in the UI
 
 When realtime is active, the chat surface becomes audio-only:
 
 - The text input is hidden and a **Start speaking** button is shown. Press it and talk; press again to end the session.
-- On the chat interaction editor a **Voice** picker appears, populated from the selected realtime model's voices.
+- The **Chat mode** selector and the **text-to-speech playback** switch disappear from the editor: they layer
+  speech-to-text and text-to-speech over a text model, and a realtime model already speaks.
+- A **Voice** picker appears, populated from the selected realtime model's own voices.
 - A short settings popover (from the shared realtime audio controller) exposes only per-device preferences — microphone, speaker, assistant volume, language, **Allow interruptions** (barge-in), and **Push-to-talk** — saved per browser. Everything acoustic (echo margins, the microphone gate, turn-detection timing) is measured automatically; there are no acoustic knobs to tune.
 
 The realtime experience is delivered by the `@crestapps/ai-chat-ui` package (the vendored `realtime-audio.js` controller plus the `ai-chat.js` / `chat-interaction.js` apps); no additional page script is required.
@@ -82,8 +97,10 @@ The **Voice** picker lists the voices of the text-to-speech deployment, since th
     {
       "Name": "cascaded-voice",
       "ClientName": "CascadedRealtime",
-      "Purpose": "Chat",
       "Properties": {
+        "AIDeploymentMetadata": {
+          "Features": [ "realtime" ]
+        },
         "CascadedRealtimeMetadata": {
           "SpeechToTextDeploymentName": "scribe",
           "ChatDeploymentName": "gpt-4o",

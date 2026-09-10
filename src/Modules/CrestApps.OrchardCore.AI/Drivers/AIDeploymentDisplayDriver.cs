@@ -58,9 +58,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             {
                 model.Name = deployment.Name;
                 model.ModelName = deployment.ModelName;
-                model.SelectedPurposes = deployment.Purpose.GetSupportedPurposes().Select(static purpose => purpose.ToString()).ToArray();
                 model.IsNew = context.IsNew;
-                model.Purposes = GetPurposeSelectListItems();
             }).Location("Content:1"),
         };
 
@@ -102,15 +100,6 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
         else
         {
             deployment.ModelName = modelName;
-        }
-
-        if (!TryGetSelectedPurposes(model.SelectedPurposes, out var deploymentPurpose))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SelectedPurposes), S["At least one deployment purpose is required."]);
-        }
-        else
-        {
-            deployment.Purpose = deploymentPurpose;
         }
 
         if (HasContainedConnection(deployment.ClientName))
@@ -191,42 +180,4 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
 
     private bool HasContainedConnection(string providerName)
         => _aiOptions.Deployments.TryGetValue(providerName, out var entry) && entry.UseContainedConnection;
-
-    private List<SelectListItem> GetPurposeSelectListItems()
-    {
-        return
-        [
-            new SelectListItem(S["Chat"], nameof(AIDeploymentPurpose.Chat)),
-            new SelectListItem(S["Utility"], nameof(AIDeploymentPurpose.Utility)),
-            new SelectListItem(S["Embedding"], nameof(AIDeploymentPurpose.Embedding)),
-            new SelectListItem(S["Image"], nameof(AIDeploymentPurpose.Image)),
-            new SelectListItem(S["Vision"], nameof(AIDeploymentPurpose.Vision)),
-            new SelectListItem(S["Speech to text"], nameof(AIDeploymentPurpose.SpeechToText)),
-            new SelectListItem(S["Text to speech"], nameof(AIDeploymentPurpose.TextToSpeech)),
-        ];
-    }
-
-    private static bool TryGetSelectedPurposes(IEnumerable<string> selectedPurposes, out AIDeploymentPurpose deploymentPurpose)
-    {
-        deploymentPurpose = AIDeploymentPurpose.None;
-
-        if (selectedPurposes is null)
-        {
-            return false;
-        }
-
-        foreach (var purposeName in selectedPurposes.Where(static value => !string.IsNullOrWhiteSpace(value)))
-        {
-            if (!Enum.TryParse<AIDeploymentPurpose>(purposeName, ignoreCase: true, out var parsedPurpose) ||
-                parsedPurpose == AIDeploymentPurpose.None)
-            {
-                deploymentPurpose = AIDeploymentPurpose.None;
-                return false;
-            }
-
-            deploymentPurpose |= parsedPurpose;
-        }
-
-        return deploymentPurpose.IsValidSelection();
-    }
 }

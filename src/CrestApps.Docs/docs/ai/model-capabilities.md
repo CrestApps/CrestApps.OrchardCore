@@ -14,6 +14,10 @@ Instead of hardcoding provider- or model-specific options, the AI suite drives e
 
 Anything a deployment does not declare is never rendered in the consuming editors and is never sent to the provider.
 
+Capabilities are also what a deployment is *selected* by. The older **deployment purpose** is gone: a deployment
+says what its model can do, and where it gets used is decided by a **slot**. See
+[Capabilities and slots](#capabilities-and-slots) below.
+
 ## Declaring capabilities on a deployment
 
 Open **AI → Deployments**, create or edit a deployment, and use the **Model capabilities** card:
@@ -21,7 +25,52 @@ Open **AI → Deployments**, create or edit a deployment, and use the **Model ca
 - **Trained features** — tick the capabilities the underlying model was trained with. New deployments start from the features each provider registers as enabled by default, so existing chat deployments keep working without changes.
 - **Model parameters** — enable each parameter the model exposes. For a *choice* parameter you can narrow the supported values and pick a default; for a *number*/*integer* parameter you can set the minimum, maximum, and step. A parameter that depends on a feature (its **required feature**) is only shown while that feature is enabled.
 
-The declared metadata is stored on the deployment. It is the single source of truth for the editors and for request generation.
+The declared metadata is stored on the deployment. It is the single source of truth for the editors, for
+deployment selection, and for request generation. **At least one capability is required.**
+
+## Capabilities and slots
+
+A **capability** says what the model can do. A **slot** says what this installation uses a deployment *for*.
+The framework registers these slots, and each picker lists exactly the deployments that can fill the slot
+behind it:
+
+| Slot | Required capability | Notes |
+|------|--------------------|-------|
+| `chat` | `textGeneration` | Excludes realtime deployments — they cannot serve a text completion |
+| `utility` | `textGeneration` | Falls back to the `chat` slot; also excludes realtime |
+| `embedding` | `textEmbedding` | |
+| `image` | `imageOutput` | |
+| `vision` | `imageInput` | |
+| `speechToText` | `speechToText` | |
+| `textToSpeech` | `textToSpeech` | |
+| `realtime` | `realtime` | |
+
+`textGeneration` is **opt-out**: a deployment that declares no capability metadata at all is assumed to be
+text capable, so an installation that predates this card keeps working. Every other capability is
+**opt-in** and has to be declared.
+
+The chat deployment picker on an AI profile, profile template, or chat interaction is the one exception to
+the one-slot rule: it lists the text-capable *and* the realtime deployments together, because it answers
+"what can this converse with" rather than "what can serve a text completion". Which of the two a selection
+turns out to be is then read back from the deployment's own capabilities.
+
+### Upgrading from deployment purposes
+
+**No action is required.** A deployment record that still carries a `Purpose`, `Capability`, or `Type`
+field — in the store, in a recipe, or in `appsettings.json` — is projected onto capabilities every time it
+is read:
+
+| Legacy purpose | Capability |
+|----------------|-----------|
+| `Chat`, `Utility` | `textGeneration`, unless the deployment declares `realtime` |
+| `Embedding` | `textEmbedding` |
+| `Image` | `imageOutput` |
+| `Vision` | `imageInput` |
+| `SpeechToText` | `speechToText` |
+| `TextToSpeech` | `textToSpeech` |
+
+The projection is additive, and it is permanent rather than a one-time migration, so a site that never
+rewrites its stored JSON stays correct. Declaring capabilities directly is optional cleanup.
 
 ## Consuming parameters on profiles, templates, and interactions
 

@@ -247,7 +247,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             context.AdditionalProperties["Session"] = chatSession;
 
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken)
+            var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken)
             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for AI profile '{profile.ItemId}'.");
 
             var completion = await _aICompletionService.CompleteAsync(deployment, transcript, context, cancellationToken);
@@ -336,8 +336,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         context.DisableTools = true;
                     });
 
-                    var deployment = await deploymentManager.ResolveOrDefaultAsync(
-                        AIDeploymentPurpose.Chat,
+                    var deployment = await deploymentManager.ResolveSlotAsync(
+                        AIDeploymentSlotNames.Chat,
                         deploymentName: conclusionContext.ChatDeploymentName);
 
                     if (deployment == null)

@@ -70,10 +70,10 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
                 .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
                 .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId));
             model.SpeechToTextDeployments = BuildDeploymentOptions(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.SpeechToText),
+                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.SpeechToText),
                 model.SpeechToTextDeploymentName);
             model.TextToSpeechDeployments = BuildDeploymentOptions(
-                await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.TextToSpeech),
+                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.TextToSpeech),
                 model.TextToSpeechDeploymentName);
             model.TextToSpeechVoices = SelectVoice(
                 await _speechVoicePresenter.GetVoiceMenuItemsAsync(model.TextToSpeechDeploymentName),

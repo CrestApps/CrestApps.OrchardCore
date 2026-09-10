@@ -1,11 +1,29 @@
+@using CrestApps.Core
+@using CrestApps.Core.AI.Capabilities
 @using CrestApps.Core.AI.Models
 @using OrchardCore.DisplayManagement.Views
 
+@inject IAIDeploymentCapabilityService CapabilityService
+
 @model ShapeViewModel<AIDeployment>
 
-<span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Purposes"]">
-    <i class="text-secondary" aria-hidden="true"></i>@Model.Value.Purpose
-</span>
+@{
+    // Model capabilities are the only thing a deployment declares about itself now that the purpose is gone,
+    // so they are what this list shows.
+    var features = Model.Value.TryGet<AIDeploymentMetadata>(out var metadata) && metadata.Features is { Length: > 0 }
+        ? metadata.Features
+        : [];
+
+    var featureDisplayNames = CapabilityService.GetRegisteredFeatures()
+        .ToDictionary(feature => feature.Name, feature => feature.DisplayName?.Value ?? feature.Name, StringComparer.OrdinalIgnoreCase);
+}
+
+@foreach (var feature in features.OrderBy(static name => name, StringComparer.OrdinalIgnoreCase))
+{
+    <span class="badge ta-badge bg-info-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Model capability"]">
+        <i class="text-secondary" aria-hidden="true"></i>@(featureDisplayNames.TryGetValue(feature, out var displayName) ? displayName : feature)
+    </span>
+}
 
 <span class="badge ta-badge bg-warning-subtle font-weight-normal" data-bs-toggle="tooltip" title="@T["Client name"]">
     <i class="text-secondary" aria-hidden="true"></i>@Model.Value.ClientName
