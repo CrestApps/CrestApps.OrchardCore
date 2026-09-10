@@ -65,7 +65,7 @@ public sealed class AIProfileTemplateChatModeDisplayDriver : DisplayDriver<AIPro
                 .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
                 .Select(deployment => deployment.Name)
                 .ToArray();
-        }).Location("Content:8%General;1")
+        }).Location("Content:1.7%Deployments & Interactions;2")
         .RenderWhen(async () =>
         {
             if (template.Source != AITemplateSources.Profile)

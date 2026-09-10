@@ -37,7 +37,7 @@ internal sealed class AIProfileUtilityModelParametersDisplayDriver : DisplayDriv
             model.Parameters = built.Parameters;
             model.CapabilitiesJson = built.CapabilitiesJson;
             model.FeaturesJson = built.FeaturesJson;
-        }).Location("Content:2.5%Deployments;2");
+        }).Location("Content:2.5%Deployments & Interactions;2");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

@@ -264,6 +264,62 @@ internal sealed class AIDeploymentTypeMigrations : DataMigration
     public static int UpdateFrom6()
         => 7;
 
+    /// <summary>
+    /// Writes the model capabilities implied by each stored deployment's legacy purpose into the document,
+    /// so a deployment declares its capabilities directly instead of relying on the read-time projection.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is cleanup, not a correctness fix: the framework projects a legacy <c>Purpose</c>,
+    /// <c>Capability</c>, or <c>Type</c> onto capabilities every time a record is read, and that projection
+    /// is permanent. What it buys is that the stored JSON finally says what the editors and the deployment
+    /// list show, and the dead legacy field stops being carried around.
+    /// </para>
+    /// <para>
+    /// The projection is what does the work: deserializing the document has already run
+    /// <c>AIDeployment.OnDeserialized</c> over every record, so each one is in memory with its capabilities
+    /// filled in and its legacy purpose cleared. Saving the document is what writes that down. There is no
+    /// mapping to repeat here, which is deliberate -- a second copy of the rules could drift from the
+    /// framework's.
+    /// </para>
+    /// <para>
+    /// Deployments that come from configuration rather than the store are untouched, because they are not
+    /// in this document and are read-only. They are projected on every read, as before.
+    /// </para>
+    /// </remarks>
+    public static int UpdateFrom7()
+    {
+        ShellScope.AddDeferredTask(async scope =>
+        {
+            var deploymentDocManager = scope.ServiceProvider.GetRequiredService<IDocumentManager<DictionaryDocument<AIDeployment>>>();
+            var deploymentDoc = await deploymentDocManager.GetOrCreateMutableAsync();
+
+            if (deploymentDoc.Records.Count == 0)
+            {
+                return;
+            }
+
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<AIDeploymentTypeMigrations>>();
+
+            // Only worth reporting; every record is rewritten either way, since a record that already
+            // declared its capabilities simply round-trips unchanged.
+            var declaredCount = deploymentDoc.Records.Values
+                .Count(deployment => deployment.TryGet<AIDeploymentMetadata>(out var metadata) && metadata.Features is { Length: > 0 });
+
+            await deploymentDocManager.UpdateAsync(deploymentDoc);
+
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "Persisted model capabilities for {DeclaredCount} of {TotalCount} stored AI deployments.",
+                    declaredCount,
+                    deploymentDoc.Records.Count);
+            }
+        });
+
+        return 8;
+    }
+
     private static bool TryCreateDeployment(
         DictionaryDocument<AIDeployment> deploymentDoc,
         AIProviderConnection connection,

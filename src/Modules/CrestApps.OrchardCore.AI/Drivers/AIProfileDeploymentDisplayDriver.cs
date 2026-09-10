@@ -58,9 +58,9 @@ internal sealed class AIProfileDeploymentDisplayDriver : DisplayDriver<AIProfile
 
         return Combine(
             Initialize<EditProfileDeploymentViewModel>("AIProfileChatDeployment_Edit", PopulateAsync)
-                .Location("Content:1%Deployments;2"),
+                .Location("Content:1%Deployments & Interactions;2"),
             Initialize<EditProfileDeploymentViewModel>("AIProfileUtilityDeployment_Edit", PopulateAsync)
-                .Location("Content:2%Deployments;2"));
+                .Location("Content:2%Deployments & Interactions;2"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

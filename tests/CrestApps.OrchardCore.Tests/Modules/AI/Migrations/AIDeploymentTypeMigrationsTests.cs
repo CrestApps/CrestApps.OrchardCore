@@ -1,4 +1,6 @@
 using System.Reflection;
+using System.Text.Json;
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.Models;
@@ -7,6 +9,71 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 
 public sealed class AIDeploymentTypeMigrationsTests
 {
+    [Theory]
+    [InlineData("Embedding", AIDeploymentFeatureNames.TextEmbedding)]
+    [InlineData("Image", AIDeploymentFeatureNames.ImageOutput)]
+    [InlineData("Vision", AIDeploymentFeatureNames.ImageInput)]
+    [InlineData("SpeechToText", AIDeploymentFeatureNames.SpeechToText)]
+    [InlineData("TextToSpeech", AIDeploymentFeatureNames.TextToSpeech)]
+    [InlineData("Chat", AIDeploymentFeatureNames.TextGeneration)]
+    [InlineData("Chat, Utility", AIDeploymentFeatureNames.TextGeneration)]
+    public void ReadingAStoredDeployment_ShouldProjectItsLegacyPurposeOntoCapabilities(string storedPurpose, string expectedFeature)
+    {
+        // Arrange
+        // The shape a deployment document written before capabilities existed still has on disk.
+        var storedJson = $$"""
+        {
+            "ItemId": "dep-1",
+            "Name": "legacy-deployment",
+            "ModelName": "legacy-model",
+            "ClientName": "OpenAI",
+            "ConnectionName": "default",
+            "Purpose": "{{storedPurpose}}"
+        }
+        """;
+
+        // Act
+        var deployment = JsonSerializer.Deserialize<AIDeployment>(storedJson);
+
+        // Assert
+        Assert.NotNull(deployment);
+        Assert.True(deployment.TryGet<AIDeploymentMetadata>(out var metadata));
+        Assert.True(metadata.SupportsFeature(expectedFeature));
+    }
+
+    [Fact]
+    public void ReSavingAStoredDeployment_ShouldPersistCapabilitiesAndDropTheLegacyPurpose()
+    {
+        // Arrange
+        // This is exactly what the UpdateFrom7 migration does: read the document, which projects, then
+        // write it back. Reading performs the mapping, so the migration repeats none of the rules itself.
+        var storedJson = """
+        {
+            "ItemId": "dep-1",
+            "Name": "legacy-embedding",
+            "ModelName": "text-embedding-3-small",
+            "ClientName": "OpenAI",
+            "ConnectionName": "default",
+            "Purpose": "Embedding"
+        }
+        """;
+
+        // Act
+        var deployment = JsonSerializer.Deserialize<AIDeployment>(storedJson);
+        var rewritten = JsonSerializer.SerializeToNode(deployment).AsObject();
+
+        // Assert
+        Assert.Null(rewritten["Purpose"]);
+        Assert.Null(rewritten["Type"]);
+
+        var reread = rewritten.Deserialize<AIDeployment>();
+        Assert.True(reread.TryGet<AIDeploymentMetadata>(out var metadata));
+        Assert.True(metadata.SupportsFeature(AIDeploymentFeatureNames.TextEmbedding));
+
+        // Text generation is opt-out, so the embedding deployment must not have quietly acquired it.
+        Assert.False(metadata.SupportsFeature(AIDeploymentFeatureNames.TextGeneration));
+    }
+
     [Fact]
     public void FindDefaultChatDeploymentName_WhenConnectionNameMatches_ShouldReturnFirstMatchingDeploymentName()
     {
