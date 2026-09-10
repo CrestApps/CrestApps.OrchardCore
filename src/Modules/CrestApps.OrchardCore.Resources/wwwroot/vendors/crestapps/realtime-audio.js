@@ -1385,10 +1385,12 @@
         console.info('The realtime voice session ended (' + reason + ').');
       }
 
-      // An idle close is deliberate and recoverable, so say so and offer to pick the conversation back up
-      // rather than leaving the user staring at a button that silently stopped working.
+      // An idle or duration close is deliberate and recoverable, so say so and offer to pick the conversation
+      // back up rather than leaving the user staring at a button that silently stopped working.
       if (reason === 'idle') {
         showRealtimeStatus(localize('endedIdle', 'Voice paused after a period of silence.'), true);
+      } else if (reason === 'max_duration') {
+        showRealtimeStatus(localize('endedMaxDuration', 'Voice paused — this session reached its time limit. You can start another.'), true);
       } else if (reason === 'disconnected') {
         showRealtimeStatus(localize('endedDisconnected', 'Voice session ended — the connection dropped.'), true);
       } else if (reason === 'error') {
