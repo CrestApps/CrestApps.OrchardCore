@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Telephony.Core.Models
+
+@model ShapeViewModel<TelephonyExtension>
+
+@if (!string.IsNullOrEmpty(Model.Value.UserName))
+{
+    <span class="badge ta-badge">@Model.Value.UserName</span>
+}

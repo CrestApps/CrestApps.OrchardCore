@@ -12,11 +12,17 @@
     var capabilities = 0;
     var audioCapabilities = Model.AudioCapabilities is TelephonyAudioCapabilities configuredAudioCapabilities
         ? (int)configuredAudioCapabilities
-        : 0;
+        : Model.AudioCapabilities is int intAudioCapabilities
+            ? intAudioCapabilities
+            : 0;
     var audioMode = Model.AudioMode is TelephonyAudioMode configuredAudioMode
         ? (int)configuredAudioMode
-        : 0;
+        : Model.AudioMode is int intAudioMode
+            ? intAudioMode
+            : 0;
     var browserMediaAdapterName = Model.BrowserMediaAdapterName as string;
+    var defaultCountryCode = Model.DefaultCountryCode as string ?? string.Empty;
+    var enableDiagnostics = Model.EnableDiagnostics is bool configuredEnableDiagnostics && configuredEnableDiagnostics;
 
     if (Model.Capabilities is TelephonyCapabilities caps)
     {
@@ -28,23 +34,60 @@
     }
 
     var connectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthConnect);
+    var disconnectUrl = Url.RouteUrl(TelephonyConstants.RouteNames.OAuthDisconnect);
+
+    if (string.IsNullOrEmpty(connectUrl))
+    {
+        // Fall back to the well-known connect path (including any tenant prefix) when link generation
+        // cannot resolve the named route from this shape, so the "Connect to provider" button always has
+        // a destination instead of silently doing nothing.
+        connectUrl = $"{Context.Request.PathBase}/Telephony/Connect";
+    }
+
+    if (string.IsNullOrEmpty(disconnectUrl))
+    {
+        disconnectUrl = $"{Context.Request.PathBase}/Telephony/Disconnect";
+    }
+
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+
+    // The voicemail media endpoint is owned by the Contact Center module. Resolving its route by name keeps the
+    // soft phone decoupled from that module: when Contact Center is not enabled the route does not resolve, the
+    // template is null, and voicemail playback stays disabled.
+    var voicemailMediaUrlTemplate = Url.RouteUrl("ContactCenterVoicemailMedia", new { interactionId = "__INTERACTION_ID__" });
+    var voicemailDeleteUrlTemplate = Url.RouteUrl("ContactCenterVoicemailDelete", new { interactionId = "__INTERACTION_ID__" });
+
+    // Resolve the browser-media registration-config endpoint by route name so the client uses an absolute URL
+    // instead of deriving one from the current page path. Path derivation assumes the page lives under the admin
+    // prefix, which is true for the admin widget but not for the standalone /softphone page (where it would 404).
+    // The endpoint is owned by Contact Center; when that module is not enabled the route does not resolve and the
+    // value is empty, so the client falls back to its path derivation exactly as before.
+    var registrationConfigUrl = Url.RouteUrl("ContactCenterAgentSoftPhoneRegistrationConfig");
 
     var config = new Dictionary<string, object>
     {
         ["hubUrl"] = hubUrl,
+        ["registrationConfigUrl"] = registrationConfigUrl ?? string.Empty,
+        ["voicemailPlaybackEnabled"] = !string.IsNullOrEmpty(voicemailMediaUrlTemplate),
+        ["voicemailMediaUrlTemplate"] = voicemailMediaUrlTemplate ?? string.Empty,
+        ["voicemailDeleteEnabled"] = !string.IsNullOrEmpty(voicemailDeleteUrlTemplate),
+        ["voicemailDeleteUrlTemplate"] = voicemailDeleteUrlTemplate ?? string.Empty,
         ["capabilities"] = capabilities,
         ["audioCapabilities"] = audioCapabilities,
         ["audioMode"] = audioMode,
         ["browserMediaAdapterName"] = browserMediaAdapterName,
         ["recentCallsCount"] = recentCallsCount,
         ["connectUrl"] = connectUrl,
+        ["disconnectUrl"] = disconnectUrl,
         ["antiForgeryToken"] = antiForgeryToken,
         ["storageKey"] = "telephony-soft-phone",
+        ["defaultCountryCode"] = defaultCountryCode,
+        ["enableDiagnostics"] = enableDiagnostics,
         ["strings"] = new Dictionary<string, string>
         {
             ["idle"] = T["Ready"].Value,
             ["connecting"] = T["Connecting..."].Value,
+            ["answerOnDialpadDevice"] = T["Answer on your Dialpad device..."].Value,
             ["ringing"] = T["Ringing..."].Value,
             ["connected"] = T["In call"].Value,
             ["inConference"] = T["In conference"].Value,
@@ -52,10 +95,19 @@
             ["disconnected"] = T["Call ended"].Value,
             ["failed"] = T["Call failed"].Value,
             ["disconnectedHub"] = T["Disconnected"].Value,
+            ["reconnecting"] = T["Reconnecting..."].Value,
+            ["poorConnection"] = T["Poor connection"].Value,
             ["notReady"] = T["Not Ready"].Value,
             ["notConfigured"] = T["No provider is configured. To use the soft phone enable at least one provider and update the site settings by setting the default phone provider."].Value,
             ["notConnected"] = T["Not connected"].Value,
-            ["invalidNumber"] = T["Enter a phone number to call."].Value,
+            ["invalidNumber"] = T["Enter a valid phone number to call."].Value,
+            ["extensionRequired"] = T["Enter an extension to call."].Value,
+            ["dialExtension"] = T["Dial extension"].Value,
+            ["dialPhoneNumber"] = T["Dial phone number"].Value,
+            ["numberPlaceholder"] = T["Enter a number"].Value,
+            ["extensionPlaceholder"] = T["Enter an extension"].Value,
+            ["numberLabel"] = T["Phone number"].Value,
+            ["extensionLabel"] = T["Extension"].Value,
             ["transferPrompt"] = T["Transfer to number"].Value,
             ["transferTitle"] = T["Transfer call"].Value,
             ["transferDestination"] = T["Number or extension"].Value,
@@ -69,10 +121,28 @@
             ["conference"] = T["Conference selected calls"].Value,
             ["disconnectAll"] = T["Disconnect all calls"].Value,
             ["connectPrompt"] = T["Connect your account to the telephony provider to start making calls."].Value,
+            ["connectUnavailable"] = T["The connection could not be started. Refresh the page and try again."].Value,
+            ["connectPopupBlocked"] = T["Your browser blocked the connection window. Allow pop-ups for this site and try again."].Value,
+            ["connectFailed"] = T["The connection could not be completed. Please try connecting again."].Value,
+            ["disconnectProvider"] = T["Disconnect provider"].Value,
+            ["disconnectConfirm"] = T["Disconnect your provider account from the soft phone?"].Value,
+            ["disconnectFailed"] = T["The provider could not be disconnected. Please try again."].Value,
+            ["disconnectActiveCalls"] = T["End active calls before disconnecting from the provider."].Value,
             ["noInteractions"] = T["No recent calls."].Value,
             ["incoming"] = T["Incoming"].Value,
             ["outgoing"] = T["Outgoing"].Value,
             ["missed"] = T["Missed"].Value,
+            ["voicemailLabel"] = T["Voicemail"].Value,
+            ["playVoicemail"] = T["Play voicemail"].Value,
+            ["pauseVoicemail"] = T["Pause voicemail"].Value,
+            ["voicemailUnavailable"] = T["This voicemail is still processing. Try again in a moment."].Value,
+            ["voicemailPlaybackFailed"] = T["The voicemail could not be played."].Value,
+            ["voicemailDeleteFailed"] = T["The voicemail could not be deleted."].Value,
+            ["selectVoicemail"] = T["Select voicemail"].Value,
+            ["deleteSelected"] = T["Delete"].Value,
+            ["noVoicemails"] = T["No voicemails."].Value,
+            ["callBack"] = T["Call back"].Value,
+            ["call"] = T["Call"].Value,
             ["inProgress"] = T["In progress"].Value,
             ["completed"] = T["Completed"].Value,
             ["rejected"] = T["Rejected"].Value,
@@ -87,6 +157,29 @@
             ["offerUnavailable"] = T["This call is no longer available."].Value,
             ["microphoneUnavailable"] = T["The microphone is unavailable. Allow microphone access and try again."].Value,
             ["browserAudioUnavailable"] = T["The configured browser audio adapter is unavailable."].Value,
+            ["micPermissionDenied"] = T["Microphone access is blocked. Allow microphone access in your browser, then retry."].Value,
+            ["micNotFound"] = T["No microphone was found. Connect a microphone, then retry."].Value,
+            ["defaultMicrophone"] = T["Default microphone"].Value,
+            ["defaultSpeaker"] = T["Default speaker"].Value,
+            ["callCredentialExpiring"] = T["This call is nearing its session limit. If it drops, redial to reconnect."].Value,
+            ["diagNoData"] = T["No active call to measure."].Value,
+            ["micMeterUnavailable"] = T["Microphone metering is not available in this browser."].Value,
+            ["micMeterDenied"] = T["Allow microphone access to see the input level."].Value,
+            ["micMeterUsing"] = T["Using:"].Value,
+            ["diagUnavailable"] = T["Diagnostics are not available for this provider."].Value,
+            ["diagCollecting"] = T["Collecting..."].Value,
+            ["echoTestNoDestination"] = T["Configure an audio test destination in the provider settings first."].Value,
+            ["echoTestBusy"] = T["End the current call before running the audio test."].Value,
+            ["echoTestRunning"] = T["Running audio test..."].Value,
+            ["echoTestMeasuring"] = T["Connected. Measuring round-trip audio..."].Value,
+            ["echoTestUnavailable"] = T["The audio test is not available for this provider."].Value,
+            ["echoTestFailed"] = T["Audio test failed."].Value,
+            ["echoTestPass"] = T["Audio test passed"].Value,
+            ["echoTestFail"] = T["Audio test failed"].Value,
+            ["echoTestEndedEarly"] = T["the call ended before audio was confirmed"].Value,
+            ["echoTestNoPlace"] = T["could not place the test call"].Value,
+            ["echoTestConnectedNoStats"] = T["connected (stats unavailable)"].Value,
+            ["echoTestNoStats"] = T["could not read audio stats"].Value,
         },
     };
 }
@@ -103,11 +196,27 @@
     <div class="telephony-soft-phone__panel" data-telephony-panel hidden>
         <audio data-telephony-remote-audio autoplay></audio>
         <div class="telephony-soft-phone__header" data-telephony-drag-handle>
-            <span class="telephony-soft-phone__title">@T["Phone"]</span>
+            <span class="telephony-soft-phone__header-status" data-telephony-status>@T["Not Ready"]</span>
             @if (Model.HeaderActions != null)
             {
                 @await DisplayAsync(Model.HeaderActions)
             }
+            <button type="button"
+                    class="telephony-soft-phone__icon-btn"
+                    data-telephony-settings-toggle
+                    title="@T["Settings"]"
+                    aria-label="@T["Settings"]"
+                    hidden>
+                <i class="fa-solid fa-gear"></i>
+            </button>
+            <button type="button"
+                    class="telephony-soft-phone__icon-btn"
+                    data-telephony-disconnect
+                    title="@T["Disconnect provider"]"
+                    aria-label="@T["Disconnect provider"]"
+                    hidden>
+                <i class="fa-solid fa-link-slash"></i>
+            </button>
             <button type="button" class="telephony-soft-phone__icon-btn" data-telephony-close title="@T["Close"]" aria-label="@T["Close"]">
                 <i class="fa-solid fa-xmark"></i>
             </button>
@@ -115,9 +224,43 @@
 
         <div class="telephony-soft-phone__connect" data-telephony-connect-panel hidden>
             <p class="telephony-soft-phone__connect-text">@T["Connect your account to the telephony provider to start making calls."]</p>
+            <div class="telephony-soft-phone__connect-error alert alert-danger" data-telephony-connect-error hidden></div>
             <button type="button" class="telephony-soft-phone__connect-btn btn btn-primary" data-telephony-connect>
                 <i class="fa-solid fa-link"></i> @T["Connect to provider"]
             </button>
+        </div>
+
+        <div class="telephony-soft-phone__settings" data-telephony-settings-panel hidden>
+            <div class="telephony-soft-phone__settings-header">
+                <button type="button"
+                        class="telephony-soft-phone__settings-back"
+                        data-telephony-settings-back
+                        title="@T["Back"]"
+                        aria-label="@T["Back"]">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <span class="telephony-soft-phone__settings-title">@T["Settings"]</span>
+            </div>
+
+            <div class="telephony-soft-phone__settings-section">
+                <div class="telephony-soft-phone__settings-group-title">@T["Audio devices"]</div>
+                <label class="telephony-soft-phone__setting">
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-microphone" aria-hidden="true"></i> @T["Microphone"]
+                    </span>
+                    <select class="form-select form-select-sm"
+                            data-telephony-input-device
+                            aria-label="@T["Microphone"]"></select>
+                </label>
+                <label class="telephony-soft-phone__setting" data-telephony-output-device-row>
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-volume-high" aria-hidden="true"></i> @T["Speaker"]
+                    </span>
+                    <select class="form-select form-select-sm"
+                            data-telephony-output-device
+                            aria-label="@T["Speaker"]"></select>
+                </label>
+            </div>
         </div>
 
         <div class="telephony-soft-phone__body" data-telephony-body>
@@ -128,17 +271,30 @@
 
             <div class="telephony-soft-phone__view" data-telephony-view="keypad">
                 <div class="telephony-soft-phone__display">
-                    <div class="telephony-soft-phone__display-meta">
-                        <span class="telephony-soft-phone__status" data-telephony-status>@T["Not Ready"]</span>
-                    </div>
                     <input type="tel"
                            class="telephony-soft-phone__number"
                            data-telephony-number
                            placeholder="@T["Enter a number"]"
                            aria-label="@T["Phone number"]" />
+                    <button type="button"
+                            class="telephony-soft-phone__dial-mode"
+                            data-telephony-dial-mode-toggle
+                            aria-pressed="false"
+                            title="@T["Switch between dialing a phone number and an internal extension."]">
+                        <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
+                        <span data-telephony-dial-mode-label>@T["Dial extension"]</span>
+                    </button>
                 </div>
 
                 <div class="telephony-soft-phone__error alert alert-danger" data-telephony-error hidden></div>
+
+                <button type="button"
+                        class="telephony-soft-phone__mic-retry btn btn-sm btn-outline-primary"
+                        data-telephony-mic-retry
+                        hidden>
+                    <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> @T["Retry microphone"]
+                </button>
+
 
                 <div class="telephony-soft-phone__active-calls" data-telephony-active-calls hidden>
                     <div class="telephony-soft-phone__active-calls-heading">@T["Active calls"]</div>
@@ -205,6 +361,57 @@
                 <div class="telephony-soft-phone__history-list" data-telephony-history-list></div>
             </div>
 
+            <div class="telephony-soft-phone__view telephony-soft-phone__voicemail" data-telephony-view="voicemail" hidden>
+                <div class="telephony-soft-phone__voicemail-player" data-telephony-voicemail-player hidden>
+                    <div class="telephony-soft-phone__voicemail-player-info" data-telephony-voicemail-player-info></div>
+                    <audio class="telephony-soft-phone__voicemail-audio" data-telephony-voicemail-audio controls preload="none"></audio>
+                </div>
+                <div class="telephony-soft-phone__voicemail-toolbar" data-telephony-voicemail-toolbar hidden>
+                    <label class="telephony-soft-phone__voicemail-toolbar-select">
+                        <input type="checkbox" data-telephony-voicemail-select-all aria-label="@T["Select all voicemails"]">
+                        <span>@T["Select all"]</span>
+                    </label>
+                    <button type="button" class="telephony-soft-phone__voicemail-delete" data-telephony-voicemail-delete disabled>@T["Delete"]</button>
+                </div>
+                <div class="telephony-soft-phone__voicemail-list" data-telephony-voicemail-list></div>
+            </div>
+
+            <div class="telephony-soft-phone__view telephony-soft-phone__diagnostics-view" data-telephony-view="diagnostics" hidden>
+                <div class="telephony-soft-phone__diag-section">
+                    <div class="telephony-soft-phone__diag-label">@T["Microphone level"]</div>
+                    <div class="telephony-soft-phone__mic-meter" data-telephony-mic-meter>
+                        <div class="telephony-soft-phone__mic-meter-fill" data-telephony-mic-meter-fill></div>
+                    </div>
+                    <div class="telephony-soft-phone__diag-hint" data-telephony-mic-meter-hint>@T["Speak — the bar should move. A flat bar means the selected microphone is silent."]</div>
+                </div>
+
+                <div class="telephony-soft-phone__diag-section">
+                    <div class="telephony-soft-phone__diag-label">@T["Live call quality"]</div>
+                    <div class="telephony-soft-phone__diag-readout" data-telephony-diag-readout>@T["No active call to measure."]</div>
+                </div>
+
+                <div class="telephony-soft-phone__diag-section" data-telephony-diag-warnings-section hidden>
+                    <div class="telephony-soft-phone__diag-label">@T["Provider warnings"]</div>
+                    <div class="telephony-soft-phone__diag-warnings" data-telephony-diag-warnings></div>
+                </div>
+
+                <div class="telephony-soft-phone__diag-section">
+                    <div class="telephony-soft-phone__diag-label">@T["Audio test"]</div>
+                    <input type="text"
+                           class="form-control form-control-sm"
+                           data-telephony-diag-echo-input
+                           placeholder="@T["Audio test destination (optional)"]"
+                           aria-label="@T["Audio test destination"]" />
+                    <div class="telephony-soft-phone__diag-actions">
+                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-diag-run>@T["Run audio test"]</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-diag-dump>@T["Dump SDP/stats"]</button>
+                    </div>
+                    <div class="telephony-soft-phone__diag-status" data-telephony-diag-status></div>
+                </div>
+
+                <pre class="telephony-soft-phone__diag-output" data-telephony-diag-output></pre>
+            </div>
+
             @if (Model.Views != null)
             {
                 @await DisplayAsync(Model.Views)
@@ -219,6 +426,15 @@
             <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="history" aria-selected="false">
                 <i class="fa-solid fa-clock-rotate-left"></i>
                 <span>@T["Recent"]</span>
+            </button>
+            <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="voicemail" aria-selected="false">
+                <i class="fa-solid fa-voicemail"></i>
+                <span>@T["Voicemail"]</span>
+                <span class="telephony-soft-phone__tab-badge" data-telephony-voicemail-badge hidden aria-label="@T["Unread voicemails"]"></span>
+            </button>
+            <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="diagnostics" data-telephony-diagnostics-tab aria-selected="false" hidden>
+                <i class="fa-solid fa-wave-square"></i>
+                <span>@T["Diagnostics"]</span>
             </button>
             @if (Model.Tabs != null)
             {

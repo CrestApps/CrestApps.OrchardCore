@@ -8,7 +8,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Indexing;
 using OrchardCore.Mvc.ModelBinding;
 using OrchardCore.Settings;
@@ -23,7 +23,7 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     internal readonly IStringLocalizer S;
 
@@ -35,26 +35,24 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
     /// <param name="indexProfileStore">The index profile store.</param>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="optionsUpdateNotifier">The options update notifier.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AIMemorySettingsDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IShellReleaseManager shellReleaseManager,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IStringLocalizer<AIMemorySettingsDisplayDriver> stringLocalizer)
     {
         _indexProfileStore = indexProfileStore;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ISite site, AIMemorySettings settings, BuildEditorContext context)
     {
-        context.AddTenantReloadWarningWrapper();
-
         return Initialize<AIMemorySettingsViewModel>("AIMemorySettings_Edit", async model =>
         {
             model.IndexProfileName = settings.IndexProfileName;
@@ -106,7 +104,7 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
 
         if (settingsChanged)
         {
-            _shellReleaseManager.RequestRelease();
+            _optionsUpdateNotifier.RequestUpdate<AIMemoryOptions>();
         }
 
         return Edit(site, settings, context);

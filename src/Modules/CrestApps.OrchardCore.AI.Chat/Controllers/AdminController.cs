@@ -118,7 +118,12 @@ public sealed class AdminController : Controller
 
         if (!string.IsNullOrEmpty(sessionId))
         {
-            var chatSession = await _sessionManager.FindAsync(sessionId);
+            // Load the session unscoped: system-owned sessions (for example an automated AI voice or SMS
+            // conversation) carry no UserId, so the user-scoped FindAsync would never return them and the
+            // "Review AI conversation" link would 404. Ownership is enforced by the checks below instead —
+            // a user session belonging to someone else is rejected, and a system session must pass the
+            // resource-based access providers.
+            var chatSession = await _sessionManager.FindByIdAsync(sessionId);
 
             if (chatSession == null || chatSession.ProfileId != profile.ItemId)
             {

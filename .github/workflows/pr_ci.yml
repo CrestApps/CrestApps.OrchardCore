@@ -25,7 +25,8 @@ jobs:
         fetch-depth: 0
     - uses: actions/setup-node@v7
       with:
-        node-version: "15"
+        # The JavaScript unit tests run on Vitest, which needs a currently supported Node.
+        node-version: "22"
     - uses: actions/setup-dotnet@v6
       with:
         dotnet-version: |
@@ -39,4 +40,19 @@ jobs:
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
     - name: Unit Tests
       run: |
-        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+    # The soft phone's arithmetic and state mapping - number formatting, the call-quality score, the Telnyx
+    # call-state mapping, the reconnect schedule - now live in their own files with unit tests. A mistake in any
+    # of them reaches an agent as a wrong number on screen, a quality indicator that never warns, or a call that
+    # looks connected while it is still ringing, and none of it is visible to the .NET suites.
+    - name: JavaScript unit tests
+      run: |
+        npm ci --ignore-scripts
+        npm test
+    # The activation suite stands each feature up on its own tenant, so it catches the failures a unit test
+    # cannot see: a service registered by one feature and injected by another, a dependency closure that no
+    # longer constructs, a migration that does not run. Those break a tenant on enable, and finding them at
+    # release time means finding them after the pull request that caused them has been forgotten.
+    - name: Contact Center feature activation tests
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj 

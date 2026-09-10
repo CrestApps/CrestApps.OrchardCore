@@ -72,4 +72,16 @@ public enum TelephonyCapabilities
     /// destination before the call is released to it.
     /// </summary>
     AttendedTransfer = 1 << 11,
+
+    /// <summary>
+    /// The provider can place a call to an internal extension, connecting two on-platform users (for example
+    /// two browser soft phones) without routing through the PSTN.
+    /// </summary>
+    ExtensionDial = 1 << 12,
+
+    /// <summary>
+    /// The provider can add an internal extension into an active call as a conference participant, ringing the
+    /// target user and joining their leg to the existing conversation.
+    /// </summary>
+    ExtensionConference = 1 << 13,
 }

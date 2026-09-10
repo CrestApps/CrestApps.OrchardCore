@@ -1,0 +1,63 @@
+@model SoftPhoneStandaloneViewModel
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>@T["Soft Phone"]</title>
+
+    @* A chromeless page renders no theme layout, so it pulls in the UI framework the soft phone markup needs. *@
+    <style asp-name="bootstrap"></style>
+    <style asp-name="font-awesome"></style>
+    <style asp-name="bootstrap-select"></style>
+
+    @* Flush the soft phone styles the presenter registered at head (intl-tel-input, telephony-soft-phone). *@
+    <resources type="Meta" />
+    <resources type="HeadLink" />
+    <resources type="Stylesheet" />
+    <resources type="HeadScript" />
+
+    <style>
+        html, body { height: 100%; margin: 0; padding: 0; background: #fff; }
+        .softphone-standalone { height: 100vh; display: flex; }
+
+        /* Render the phone expanded to fill the window instead of the floating panel, and hide the floating
+           toggle/close chrome the standalone page does not need. */
+        .softphone-standalone .telephony-soft-phone { position: static; width: 100%; height: 100%; }
+        .softphone-standalone .telephony-soft-phone__toggle { display: none !important; }
+        .softphone-standalone .telephony-soft-phone__close,
+        .softphone-standalone [data-telephony-close] { display: none !important; }
+        .softphone-standalone .telephony-soft-phone__panel,
+        .softphone-standalone .telephony-soft-phone__panel[hidden] {
+            display: flex !important;
+            flex-direction: column;
+            position: static !important;
+            inset: auto !important;
+            width: 100% !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        .softphone-standalone .telephony-soft-phone__body { flex: 1 1 auto; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    @* data-softphone-answer-call-id and data-softphone-embedded are read by the soft phone client to render
+       expanded and, when present, auto-answer the matching pending offer on load (client wiring pending). *@
+    <div class="softphone-standalone"
+         data-softphone-embedded="true"
+         data-softphone-answer-call-id="@Model.AnswerCallId">
+        @await DisplayAsync(Model.Shape)
+    </div>
+
+    @* Bootstrap script so dropdowns / bootstrap-select work without the theme; then the soft phone scripts
+       the presenter registered at foot (signalr, telephony-client, intl-tel-input, telephony-soft-phone). *@
+    <script asp-name="bootstrap" at="Foot"></script>
+    <resources type="FootScript" />
+</body>
+</html>

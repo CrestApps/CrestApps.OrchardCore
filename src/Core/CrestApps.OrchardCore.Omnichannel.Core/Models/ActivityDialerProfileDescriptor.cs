@@ -19,14 +19,4 @@ public sealed class ActivityDialerProfileDescriptor
     /// Gets or sets the activity source applied by the profile.
     /// </summary>
     public string ActivitySource { get; set; }
-
-    /// <summary>
-    /// Gets or sets the campaign identifier applied by the profile.
-    /// </summary>
-    public string CampaignId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the implementation-defined routing target used when enqueueing activities.
-    /// </summary>
-    public string RoutingTargetId { get; set; }
 }

@@ -9,7 +9,6 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Data;
-using OrchardCore.Data.Migration;
 using OrchardCore.Environment.Shell.Scope;
 using YesSql;
 using YesSql.Services;

@@ -1,0 +1,30 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+
+@model SetAgentPresenceTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="UserId">
+    <label class="ocat-label" asp-for="UserId">@T["User"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="UserId" />
+        <span asp-validation-for="UserId"></span>
+        <span class="hint">@T["A Liquid expression resolving the agent's Orchard user identifier, for example <code>{{ Workflow.Input.ActorId }}</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Status">
+    <label class="ocat-label" asp-for="Status">@T["Status"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="Status" asp-items="Model.Statuses"></select>
+        <span asp-validation-for="Status"></span>
+        <span class="hint">@T["The presence status to apply to the agent."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label class="ocat-label" asp-for="Reason">@T["Reason"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Reason" />
+        <span asp-validation-for="Reason"></span>
+        <span class="hint">@T["An optional Liquid expression recorded as the reason for the change."]</span>
+    </div>
+</div>

@@ -1,0 +1,319 @@
+using System.Data.Common;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using OrchardCore.Modules;
+using YesSql;
+
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+
+/// <summary>
+/// Provides the default implementation of <see cref="IActivityQueueService"/>.
+/// </summary>
+public sealed class ActivityQueueService : IActivityQueueService
+{
+    private const int MaxEnqueueAttempts = 3;
+
+    private readonly IQueueItemManager _queueItemManager;
+    private readonly IActivityQueueManager _queueManager;
+    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly IContactCenterWorkStateService _workStateService;
+    private readonly IBusinessHoursService _businessHours;
+    private readonly IContactCenterEventPublisher _publisher;
+    private readonly ISession _session;
+    private readonly IContactCenterScopeExecutor _scopeExecutor;
+    private readonly IQueueTreatmentProvider _treatmentProvider;
+    private readonly IInteractionManager _interactionManager;
+    private readonly IClock _clock;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ActivityQueueService"/> class.
+    /// </summary>
+    /// <param name="queueItemManager">The queue item manager.</param>
+    /// <param name="queueManager">The queue manager.</param>
+    /// <param name="activityManager">The CRM activity manager.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
+    /// <param name="businessHours">The business-hours service used to evaluate after-hours overflow.</param>
+    /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="session">The YesSql session used to make newly queued work visible to immediate routing queries.</param>
+    /// <param name="scopeExecutor">The executor used to retry idempotent enqueue conflicts in a fresh scope.</param>
+    /// <param name="clock">The clock used to stamp queue times.</param>
+    public ActivityQueueService(
+        IQueueItemManager queueItemManager,
+        IActivityQueueManager queueManager,
+        IOmnichannelActivityManager activityManager,
+        IContactCenterWorkStateService workStateService,
+        IBusinessHoursService businessHours,
+        IContactCenterEventPublisher publisher,
+        ISession session,
+        IContactCenterScopeExecutor scopeExecutor,
+        IQueueTreatmentProvider treatmentProvider,
+        IInteractionManager interactionManager,
+        IClock clock)
+    {
+        _queueItemManager = queueItemManager;
+        _queueManager = queueManager;
+        _activityManager = activityManager;
+        _workStateService = workStateService;
+        _businessHours = businessHours;
+        _publisher = publisher;
+        _session = session;
+        _scopeExecutor = scopeExecutor;
+        _treatmentProvider = treatmentProvider;
+        _interactionManager = interactionManager;
+        _clock = clock;
+    }
+
+    /// <inheritdoc/>
+    public Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, CancellationToken cancellationToken = default)
+        => EnqueueAsync(activityItemId, queueId, priority, dialerProfileId: null, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<QueueItem> EnqueueAsync(string activityItemId, string queueId, InteractionPriority? priority, string dialerProfileId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(activityItemId);
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        try
+        {
+            return await EnqueueCoreAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
+        }
+        catch (Exception exception) when (IsEnqueueConflict(exception))
+        {
+            return await RetryEnqueueInFreshScopeAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
+        }
+    }
+
+    private async Task<QueueItem> EnqueueCoreAsync(
+        string activityItemId,
+        string queueId,
+        InteractionPriority? priority,
+        string dialerProfileId,
+        CancellationToken cancellationToken)
+    {
+        var existing = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+
+        if (existing is not null && existing.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned)
+        {
+            return existing;
+        }
+
+        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+        var activity = await _activityManager.FindByIdAsync(activityItemId, cancellationToken);
+        var item = await _queueItemManager.NewAsync(cancellationToken: cancellationToken);
+        item.QueueId = queueId;
+        item.ActivityItemId = activityItemId;
+        item.DialerProfileId = dialerProfileId;
+        item.Priority = priority ?? queue?.DefaultPriority ?? InteractionPriority.Normal;
+        item.TransitionTo(QueueItemStatus.Waiting);
+        var existingWorkState = activity is null
+            ? null
+            : await _workStateService.GetAsync(activity.ItemId, cancellationToken);
+        item.StickyAgentUserId = existingWorkState?.AssignedToId;
+        item.EnqueuedUtc = _clock.UtcNow;
+        item.QueueEnteredUtc = item.EnqueuedUtc;
+
+        await _queueItemManager.CreateAsync(item, cancellationToken: cancellationToken);
+
+        if (activity is not null)
+        {
+            await _workStateService.MutateAsync(
+                activity.ItemId,
+                workState => workState.TransitionTo(ActivityAssignmentStatus.Available),
+                cancellationToken);
+        }
+
+        await _session.SaveChangesAsync(cancellationToken);
+
+        await _publisher.PublishAsync(new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.QueueItemAdded,
+            AggregateType = nameof(QueueItem),
+            AggregateId = item.ItemId,
+            SourceComponent = ContactCenterConstants.Components.Queues,
+        }, cancellationToken);
+
+        return item;
+    }
+
+    private async Task<QueueItem> RetryEnqueueInFreshScopeAsync(
+        string activityItemId,
+        string queueId,
+        InteractionPriority? priority,
+        string dialerProfileId,
+        CancellationToken cancellationToken)
+    {
+        Exception lastException = null;
+
+        for (var attempt = 2; attempt <= MaxEnqueueAttempts; attempt++)
+        {
+            QueueItem item = null;
+
+            try
+            {
+                await _scopeExecutor.ExecuteAsync<IActivityQueueService>(async queueService =>
+                {
+                    item = await queueService.EnqueueAsync(activityItemId, queueId, priority, dialerProfileId, cancellationToken);
+                });
+
+                return item;
+            }
+            catch (Exception exception) when (IsEnqueueConflict(exception))
+            {
+                lastException = exception;
+            }
+        }
+
+        throw lastException ?? new ConcurrencyException(new Document());
+    }
+
+    private static bool IsEnqueueConflict(Exception exception)
+    {
+        return exception is ConcurrencyException or DbException;
+    }
+
+    /// <inheritdoc/>
+    public async Task DequeueAsync(QueueItem queueItem, QueueItemStatus status, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queueItem);
+
+        // Stop the hold music before the caller stops being a waiting caller. It is started on an infinite loop,
+        // and nothing else ever stopped it: whoever they went to next — an agent who answered, a voicemail
+        // greeting, the next queue in the overflow chain — was talking underneath it. A caller whose leg was torn
+        // down heard it play on into a call the system had already finished with.
+        var wasWaiting = queueItem.Status == QueueItemStatus.Waiting;
+
+        queueItem.TransitionTo(status);
+        queueItem.DequeuedUtc = _clock.UtcNow;
+        await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+
+        if (wasWaiting)
+        {
+            await StopHoldMusicAsync(queueItem, cancellationToken);
+        }
+
+        await _publisher.PublishAsync(new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.QueueItemDequeued,
+            AggregateType = nameof(QueueItem),
+            AggregateId = queueItem.ItemId,
+            SourceComponent = ContactCenterConstants.Components.Queues,
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Silences the hold music on the leg of a caller who has just left the queue.
+    /// </summary>
+    /// <remarks>
+    /// Best effort on purpose. The caller has already been dequeued and whatever comes next is more important
+    /// than the music: a provider that refuses the stop, or a leg that has already gone, must not fail the
+    /// dequeue and strand the caller in the queue they have just left.
+    /// </remarks>
+    private async Task StopHoldMusicAsync(QueueItem queueItem, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(queueItem.ActivityItemId))
+        {
+            return;
+        }
+
+        try
+        {
+            var interaction = await _interactionManager.FindByActivityIdAsync(queueItem.ActivityItemId, cancellationToken);
+
+            if (interaction is null || string.IsNullOrEmpty(interaction.ProviderInteractionId))
+            {
+                return;
+            }
+
+            await _treatmentProvider.StopHoldMusicAsync(interaction.ProviderInteractionId, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // Deliberately swallowed: see the remarks above.
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> OverflowDueAsync(ActivityQueue queue, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queue);
+
+        if (!OverflowScheduler.HasAnyTarget(queue))
+        {
+            return 0;
+        }
+
+        var waiting = await _queueItemManager.GetWaitingAsync(queue.ItemId, cancellationToken);
+
+        if (waiting.Count == 0)
+        {
+            return 0;
+        }
+
+        var now = _clock.UtcNow;
+
+        var closed = !string.IsNullOrEmpty(queue.BusinessHoursCalendarId)
+            && queue.AfterHoursAction == QueueAfterHoursAction.Overflow
+            && !await _businessHours.IsOpenAsync(queue.BusinessHoursCalendarId, now, cancellationToken);
+
+        var moved = 0;
+
+        foreach (var item in waiting)
+        {
+            if (item.QueueEnteredUtc == default)
+            {
+                item.QueueEnteredUtc = item.EnqueuedUtc;
+            }
+
+            // The scheduler owns which hop is due and refuses one this caller has already been through: passing
+            // somebody in a circle resets their wait at every hop and they never reach anybody. Closed hours
+            // send them on immediately, because nobody here is going to answer.
+            var target = closed
+                ? OverflowScheduler.SelectFirstEligibleTarget(item, queue)
+                : OverflowScheduler.SelectNextTarget(item, queue, now);
+
+            if (string.IsNullOrEmpty(target))
+            {
+                continue;
+            }
+
+            await OverflowItemAsync(item, queue, target, cancellationToken);
+
+            moved++;
+        }
+
+        return moved;
+    }
+
+    /// <inheritdoc/>
+    public async Task OverflowItemAsync(QueueItem queueItem, ActivityQueue fromQueue, string targetQueueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queueItem);
+        ArgumentNullException.ThrowIfNull(fromQueue);
+        ArgumentException.ThrowIfNullOrEmpty(targetQueueId);
+
+        if (!queueItem.OverflowHistory.Contains(fromQueue.ItemId, StringComparer.Ordinal))
+        {
+            queueItem.OverflowHistory.Add(fromQueue.ItemId);
+        }
+
+        queueItem.OverflowedFromQueueId = fromQueue.ItemId;
+        queueItem.QueueId = targetQueueId;
+        queueItem.QueueEnteredUtc = _clock.UtcNow;
+        await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+
+        await _publisher.PublishAsync(new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.QueueItemOverflowed,
+            AggregateType = nameof(QueueItem),
+            AggregateId = queueItem.ItemId,
+            SourceComponent = ContactCenterConstants.Components.Queues,
+        }, cancellationToken);
+    }
+}

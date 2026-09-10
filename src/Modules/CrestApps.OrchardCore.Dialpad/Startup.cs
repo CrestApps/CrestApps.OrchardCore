@@ -1,6 +1,13 @@
 using CrestApps.OrchardCore.Dialpad.Drivers;
+using CrestApps.OrchardCore.Dialpad.Endpoints;
 using CrestApps.OrchardCore.Dialpad.Services;
+using CrestApps.OrchardCore.Telephony.Extensions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Options;
+using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using Polly;
@@ -25,13 +32,34 @@ public sealed class Startup : StartupBase
                 options.Retry.BackoffType = DelayBackoffType.Exponential;
                 options.Retry.UseJitter = true;
 
+                // Never auto-replay non-idempotent requests. This client carries call-origination POSTs and
+                // OAuth authorization-code/refresh-token POSTs; retrying a POST after a lost response could
+                // place a second outbound call, and replaying a one-time authorization code or a rotated
+                // refresh token yields invalid_grant after the first request already succeeded. Safe methods
+                // (status GETs) still retry.
+                options.Retry.DisableForUnsafeHttpMethods();
+
                 options.CircuitBreaker.FailureRatio = 0.1;
                 options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
                 options.CircuitBreaker.MinimumThroughput = 100;
                 options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(5);
             });
 
-        services.AddTelephonyProviderOptionsConfiguration<DialpadProviderOptionsConfigurations>();
-        services.AddSiteDisplayDriver<DialpadSettingsDisplayDriver>();
+        services
+            .AddOptions<DialpadOptions>()
+            .Services
+            .AddTransient<IConfigureOptions<DialpadOptions>, DialpadOptionsConfigurations>()
+            .AddSignalOptionsChangeTokenSource<DialpadOptions>()
+            .AddTelephonyProviderOptionsConfiguration<DialpadProviderOptionsConfigurations>()
+            .AddSiteDisplayDriver<DialpadSettingsDisplayDriver>();
+
+        services.AddScoped<IDialpadWebhookService, DialpadWebhookService>();
+        services.AddScoped<IDialpadInboundCallRouter, DialpadDirectInboundCallRouter>();
+        services.AddScoped<IDialpadWebhookApiService, DialpadWebhookApiService>();
+    }
+
+    public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
+    {
+        routes.AddDialpadWebhookEndpoint();
     }
 }

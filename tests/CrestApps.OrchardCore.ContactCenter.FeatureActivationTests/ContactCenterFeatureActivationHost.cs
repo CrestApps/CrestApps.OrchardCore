@@ -1,0 +1,511 @@
+using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Handlers;
+using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Core.Services;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using OrchardCore.Abstractions.Setup;
+using OrchardCore.BackgroundTasks;
+using OrchardCore.Data;
+using OrchardCore.Data.Migration;
+using OrchardCore.Environment.Extensions.Features;
+using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Shell.Models;
+using OrchardCore.Setup.Services;
+using YesSql.Indexes;
+
+namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
+
+public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
+{
+    private readonly WebApplication _application;
+    private readonly string _applicationDataPath;
+    private readonly IShellHost _shellHost;
+    private readonly IShellSettingsManager _shellSettingsManager;
+
+    private ContactCenterFeatureActivationHost(
+        WebApplication application,
+        string applicationDataPath)
+    {
+        _application = application;
+        _applicationDataPath = applicationDataPath;
+        _shellHost = application.Services.GetRequiredService<IShellHost>();
+        _shellSettingsManager = application.Services.GetRequiredService<IShellSettingsManager>();
+    }
+
+    /// <summary>
+    /// Gets the base address the test host is listening on, so a test can exercise a mapped route over real
+    /// HTTP including the tenant request URL prefix.
+    /// </summary>
+    public Uri BaseAddress => new(_application.Services
+        .GetRequiredService<IServer>()
+        .Features
+        .Get<IServerAddressesFeature>()
+        .Addresses
+        .First());
+
+    /// <summary>
+    /// Starts a real Orchard Core host that the tests create tenants inside.
+    /// </summary>
+    /// <param name="environmentName">
+    /// The hosting environment the host reports. Defaults to development. Pass <see cref="Environments.Production"/>
+    /// to exercise the guards that only refuse a value outside development.
+    /// </param>
+    /// <param name="shellConfiguration">
+    /// Configuration entries applied to every tenant's shell configuration, keyed without the <c>OrchardCore:</c>
+    /// prefix, so a test can supply the deployment configuration an operator would write.
+    /// </param>
+    /// <returns>The started host.</returns>
+    public static async Task<ContactCenterFeatureActivationHost> StartAsync(
+        string environmentName = null,
+        IReadOnlyDictionary<string, string> shellConfiguration = null)
+    {
+        var applicationDataPath = Path.Combine(Path.GetTempPath(), $"crestapps-contact-center-{Guid.NewGuid():N}");
+        var webRootPath = Path.Combine(applicationDataPath, "wwwroot");
+        Directory.CreateDirectory(webRootPath);
+
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            ApplicationName = typeof(ContactCenterFeatureActivationHost).Assembly.FullName,
+            ContentRootPath = applicationDataPath,
+            EnvironmentName = environmentName ?? Environments.Development,
+            WebRootPath = webRootPath,
+        });
+
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Services
+            .AddOrchardCms();
+        builder.Services.AddContactCenterProcessLiveness();
+        builder.Services.Configure<ShellOptions>(options => options.ShellsApplicationDataPath = applicationDataPath);
+        builder.Configuration["OrchardCore:OrchardCore_Documents:CheckConcurrency"] = bool.FalseString;
+
+        foreach (var entry in shellConfiguration ?? new Dictionary<string, string>())
+        {
+            builder.Configuration[$"OrchardCore:{entry.Key}"] = entry.Value;
+        }
+
+        var application = builder.Build();
+
+        // Mirrors src/Startup/CrestApps.OrchardCore.Cms.Web/Program.cs: process liveness is installed ahead of
+        // the Orchard Core pipeline so it answers regardless of tenant state or request URL prefix.
+        application.UseContactCenterProcessLiveness();
+
+        application.UseOrchardCore();
+        await application.StartAsync();
+        await application.Services.GetRequiredService<IShellHost>().InitializeAsync();
+
+        return new ContactCenterFeatureActivationHost(application, applicationDataPath);
+    }
+
+    public async Task<ContactCenterTenant> CreateTenantAsync(ContactCenterTenantProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var tenantName = $"cc{Guid.NewGuid():N}";
+        var settings = _shellSettingsManager.CreateDefaultSettings();
+        settings.Name = tenantName;
+        settings.RequestUrlPrefix = tenantName;
+        settings.State = TenantState.Uninitialized;
+
+        await _shellHost.UpdateShellSettingsAsync(settings);
+        await SetupTenantAsync(settings);
+        await EnableProfileAsync(settings, profile);
+
+        return new ContactCenterTenant(settings, profile);
+    }
+
+    /// <summary>
+    /// Executes the supplied action inside the specified tenant's shell scope.
+    /// </summary>
+    /// <param name="tenant">The tenant whose shell scope should be used.</param>
+    /// <param name="action">The action to execute with the tenant service provider.</param>
+    public async Task ExecuteInTenantScopeAsync(
+        ContactCenterTenant tenant,
+        Func<IServiceProvider, Task> action)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+        ArgumentNullException.ThrowIfNull(action);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(shellScope => action(shellScope.ServiceProvider));
+    }
+
+    /// <summary>
+    /// Executes the supplied function inside the specified tenant's shell scope.
+    /// </summary>
+    /// <typeparam name="T">The value returned by the tenant-scoped operation.</typeparam>
+    /// <param name="tenant">The tenant whose shell scope should be used.</param>
+    /// <param name="action">The function to execute with the tenant service provider.</param>
+    /// <returns>The value returned by <paramref name="action"/>.</returns>
+    public async Task<T> ExecuteInTenantScopeAsync<T>(
+        ContactCenterTenant tenant,
+        Func<IServiceProvider, Task<T>> action)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+        ArgumentNullException.ThrowIfNull(action);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        var result = default(T);
+        await scope.UsingAsync(async shellScope =>
+        {
+            result = await action(shellScope.ServiceProvider);
+        });
+
+        return result;
+    }
+
+    /// <summary>
+    /// Forces the tenant's shell to activate, which is what the first request to that tenant does. Activation
+    /// is where <see cref="OrchardCore.Modules.IModularTenantEvents.ActivatingAsync"/> runs, so a guard that
+    /// refuses a configuration surfaces here rather than during setup.
+    /// </summary>
+    /// <param name="tenant">The tenant to activate.</param>
+    public Task ActivateTenantAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        return ExecuteInTenantScopeAsync(tenant, _ => Task.CompletedTask);
+    }
+
+    public async Task AssertTenantAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(async shellScope =>
+        {
+            var services = shellScope.ServiceProvider;
+            var featureManager = services.GetRequiredService<IShellFeaturesManager>();
+            var availableFeatures = await featureManager.GetAvailableFeaturesAsync();
+            var enabledFeatures = await featureManager.GetEnabledFeaturesAsync();
+            var expectedFeatures = GetDependencyClosure(availableFeatures, tenant.Profile.Features);
+            var enabledFeatureIds = enabledFeatures.Select(feature => feature.Id).ToHashSet(StringComparer.Ordinal);
+            var expectedCrestAppsFeatures = expectedFeatures
+                .Where(IsCrestAppsFeature)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+            var enabledCrestAppsFeatures = enabledFeatureIds
+                .Where(IsCrestAppsFeature)
+                .Where(featureId => !featureId.StartsWith(
+                    typeof(ContactCenterFeatureActivationHost).Assembly.GetName().Name ?? string.Empty,
+                    StringComparison.Ordinal))
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.All(expectedFeatures, featureId => Assert.Contains(featureId, enabledFeatureIds));
+            Assert.Equal(expectedCrestAppsFeatures, enabledCrestAppsFeatures);
+            Assert.NotNull(services.GetRequiredService<IAgentPresenceManager>());
+            Assert.NotNull(services.GetRequiredService<IAgentAvailabilityService>());
+            Assert.NotNull(services.GetRequiredService<IAgentAvailabilityRecoveryService>());
+            Assert.NotNull(services.GetRequiredService<IActivityQueueService>());
+            Assert.NotNull(services.GetRequiredService<IActivityRoutingService>());
+            Assert.NotNull(services.GetRequiredService<IInteractionManager>());
+            Assert.NotNull(services.GetRequiredService<IProviderIdentityResolver>());
+            Assert.NotNull(services.GetRequiredService<IContactCenterEventDeduplicationService>());
+            Assert.NotEmpty(services.GetServices<IBackgroundTask>());
+            Assert.Single(services.GetServices<IBackgroundTask>().OfType<AgentAvailabilityRecoveryBackgroundTask>());
+            Assert.Single(services.GetServices<IBackgroundTask>().OfType<OutboxDispatchBackgroundTask>());
+            Assert.Single(services.GetServices<IIndexProvider>().OfType<ContactCenterProcessedEventIndexProvider>());
+            Assert.Single(
+                services.GetServices<IDataMigration>(),
+                migration => migration.GetType().Name == "ContactCenterProcessedEventIndexMigrations");
+
+            var voiceProviders = services.GetServices<IContactCenterVoiceProvider>();
+            var provider = Assert.Single(voiceProviders);
+            var expectedProviderName = GetExpectedProviderName(tenant.Profile);
+            Assert.Equal(expectedProviderName, provider.TechnicalName);
+            Assert.Contains(
+                services.GetServices<IProviderIdentityProvider>().SelectMany(provider => provider.GetIdentities()),
+                identity => identity.CanonicalName == expectedProviderName);
+            Assert.Empty(services.GetServices<IContactCenterVoiceMediaProvider>());
+            Assert.Null(services.GetService<IContactCenterVoiceMediaProviderResolver>());
+            var webhookHandlers = services.GetServices<IProviderWebhookInboxHandler>().ToArray();
+            Assert.All(
+                webhookHandlers,
+                handler => Assert.NotEqual(ContactCenterHandlerReplaySafety.Unspecified, handler.ReplaySafety));
+
+            if (expectedProviderName == "Dialpad")
+            {
+                Assert.Single(webhookHandlers, handler => handler.TechnicalName == "dialpad-call-event");
+            }
+
+            Assert.Single(services.GetServices<IBackgroundTask>().OfType<ProviderWebhookInboxBackgroundTask>());
+        });
+    }
+
+    public async Task AssertVoiceFeatureAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(shellScope =>
+        {
+            var services = shellScope.ServiceProvider;
+
+            Assert.NotNull(services.GetRequiredService<IProviderCommandManager>());
+            Assert.NotNull(services.GetRequiredService<IProviderCommandStateService>());
+            Assert.NotNull(services.GetRequiredService<IProviderCommandProcessor>());
+            Assert.NotNull(services.GetRequiredService<ITelephonyCommandExecutor>());
+            var commandExecutors = services.GetServices<IProviderCommandTypeExecutor>().ToArray();
+            Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.Dial);
+            Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.Answer);
+            Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.Reject);
+            Assert.Single(commandExecutors, executor => executor.CommandType == ProviderCommandType.SendToVoicemail);
+            Assert.NotNull(services.GetRequiredService<IProviderVoiceEventService>());
+            Assert.NotNull(services.GetRequiredService<IProviderWebhookInbox>());
+            Assert.Single(services.GetServices<IBackgroundTask>().OfType<ProviderCommandRecoveryBackgroundTask>());
+            Assert.Single(services.GetServices<IIndexProvider>().OfType<ProviderCommandIndexProvider>());
+            Assert.Single(
+                services.GetServices<IDataMigration>(),
+                migration => migration.GetType().Name == "ProviderCommandIndexMigrations");
+
+            return Task.CompletedTask;
+        });
+    }
+
+    public async Task AssertRecordingFeatureAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(shellScope =>
+        {
+            var services = shellScope.ServiceProvider;
+
+            Assert.NotNull(services.GetRequiredService<IContactCenterRecordingService>());
+            Assert.NotNull(services.GetRequiredService<ITelephonyCommandExecutor>());
+
+            return Task.CompletedTask;
+        });
+    }
+
+    public async Task AssertWorkflowsFeatureAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(shellScope =>
+        {
+            var services = shellScope.ServiceProvider;
+
+            Assert.NotNull(services.GetRequiredService<IContactCenterEventDeduplicationService>());
+            Assert.Single(services.GetServices<IContactCenterEventHandler>().OfType<ContactCenterWorkflowEventHandler>());
+            Assert.Single(services.GetServices<IIndexProvider>().OfType<ContactCenterProcessedEventIndexProvider>());
+            Assert.Single(
+                services.GetServices<IDataMigration>(),
+                migration => migration.GetType().Name == "ContactCenterProcessedEventIndexMigrations");
+
+            return Task.CompletedTask;
+        });
+    }
+
+    public async Task DisableAndReenableProviderAsync(ContactCenterTenant tenant)
+    {
+        ArgumentNullException.ThrowIfNull(tenant);
+
+        var providerFeature = GetProviderFeature(tenant.Profile);
+        await UpdateFeatureAsync(tenant, providerFeature, enable: false);
+        await using (var disabledScope = await _shellHost.GetScopeAsync(tenant.Settings))
+        {
+            await disabledScope.UsingAsync(shellScope =>
+            {
+                Assert.Empty(shellScope.ServiceProvider.GetServices<IContactCenterVoiceProvider>());
+
+                return Task.CompletedTask;
+            });
+        }
+
+        await UpdateFeatureAsync(tenant, providerFeature, enable: true);
+        await AssertTenantAsync(tenant);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _application.StopAsync();
+        await _application.DisposeAsync();
+
+        // Microsoft.Data.Sqlite pools its connections for reuse, and a pooled connection keeps the underlying
+        // database file handle open even after the host and its YesSql store are disposed. On Windows an open
+        // handle blocks deleting the file, so the per-test data directory cannot be removed and DisposeAsync
+        // throws; on Linux the open handle does not block the delete, which is why this only bites on Windows.
+        // Clearing the pools releases the handles so teardown is deterministic on every platform.
+        ClearSqliteConnectionPools();
+
+        await TryDeleteApplicationDataAsync();
+    }
+
+    private async Task TryDeleteApplicationDataAsync()
+    {
+        // Even after the pools are cleared the operating system can take a moment to release the file handle, so
+        // the delete is retried briefly rather than failing the test on a transient lock.
+        for (var attempt = 0; ; attempt++)
+        {
+            if (!Directory.Exists(_applicationDataPath))
+            {
+                return;
+            }
+
+            try
+            {
+                Directory.Delete(_applicationDataPath, recursive: true);
+
+                return;
+            }
+            catch (Exception exception) when ((exception is IOException or UnauthorizedAccessException) && attempt < 10)
+            {
+                await Task.Delay(100);
+            }
+        }
+    }
+
+    private static void ClearSqliteConnectionPools()
+    {
+        // Microsoft.Data.Sqlite is only a transitive dependency of the CMS targets, so its connection type is
+        // reached by name rather than through a compile-time reference. The assembly is always loaded here
+        // because every test tenant is set up on SQLite.
+        var connectionType = Type.GetType("Microsoft.Data.Sqlite.SqliteConnection, Microsoft.Data.Sqlite");
+        connectionType
+            ?.GetMethod("ClearAllPools", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            ?.Invoke(null, null);
+    }
+
+    private async Task SetupTenantAsync(ShellSettings settings)
+    {
+        await using var scope = await _shellHost.GetScopeAsync(settings);
+        await scope.UsingAsync(async shellScope =>
+        {
+            var services = shellScope.ServiceProvider;
+            var httpContextAccessor = services.GetRequiredService<IHttpContextAccessor>();
+            httpContextAccessor.HttpContext = new DefaultHttpContext
+            {
+                RequestServices = services,
+            };
+
+            var setupService = services.GetRequiredService<ISetupService>();
+            var recipes = await setupService.GetSetupRecipesAsync();
+            var recipe = recipes.Single(recipe => recipe.Name == "Blank");
+            var errors = new Dictionary<string, string>();
+            var setupContext = new SetupContext
+            {
+                ShellSettings = settings,
+                EnabledFeatures = [],
+                Errors = errors,
+                Recipe = recipe,
+                Properties =
+                {
+                    [SetupConstants.SiteName] = settings.Name,
+                    [SetupConstants.AdminUsername] = "admin",
+                    [SetupConstants.AdminEmail] = $"{settings.Name}@example.invalid",
+                    [SetupConstants.AdminPassword] = $"Test-{Guid.NewGuid():N}!aA1",
+                    [SetupConstants.DatabaseProvider] = DatabaseProviderValue.Sqlite,
+                    [SetupConstants.DatabaseName] = $"{settings.Name}.db",
+                    [SetupConstants.DatabaseTablePrefix] = settings.Name,
+                },
+            };
+
+            await setupService.SetupAsync(setupContext);
+
+            Assert.Empty(errors);
+            httpContextAccessor.HttpContext = null;
+        });
+    }
+
+    private async Task EnableProfileAsync(
+        ShellSettings settings,
+        ContactCenterTenantProfile profile)
+    {
+        await using var scope = await _shellHost.GetScopeAsync(settings);
+        await scope.UsingAsync(async shellScope =>
+        {
+            var featureManager = shellScope.ServiceProvider.GetRequiredService<IShellFeaturesManager>();
+            var availableFeatures = await featureManager.GetAvailableFeaturesAsync();
+            var featuresById = availableFeatures.ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+            var missingFeatures = profile.Features.Where(featureId => !featuresById.ContainsKey(featureId)).ToArray();
+
+            Assert.Empty(missingFeatures);
+            await featureManager.EnableFeaturesAsync(
+                profile.Features.Select(featureId => featuresById[featureId]),
+                force: true);
+        });
+    }
+
+    private async Task UpdateFeatureAsync(
+        ContactCenterTenant tenant,
+        string featureId,
+        bool enable)
+    {
+        await using var scope = await _shellHost.GetScopeAsync(tenant.Settings);
+        await scope.UsingAsync(async shellScope =>
+        {
+            var featureManager = shellScope.ServiceProvider.GetRequiredService<IShellFeaturesManager>();
+            var availableFeatures = await featureManager.GetAvailableFeaturesAsync();
+            var feature = availableFeatures.Single(candidate => candidate.Id == featureId);
+
+            if (enable)
+            {
+                await featureManager.EnableFeaturesAsync([feature], force: true);
+            }
+            else
+            {
+                await featureManager.DisableFeaturesAsync([feature], force: false);
+            }
+        });
+    }
+
+    private static HashSet<string> GetDependencyClosure(
+        IEnumerable<IFeatureInfo> availableFeatures,
+        IEnumerable<string> seedFeatures)
+    {
+        var featuresById = availableFeatures.ToDictionary(feature => feature.Id, StringComparer.Ordinal);
+        var closure = new HashSet<string>(StringComparer.Ordinal);
+        var pending = new Stack<string>(seedFeatures);
+
+        while (pending.TryPop(out var featureId))
+        {
+            if (!closure.Add(featureId))
+            {
+                continue;
+            }
+
+            Assert.True(featuresById.TryGetValue(featureId, out var feature), $"Feature '{featureId}' is not available.");
+
+            foreach (var dependency in feature.Dependencies)
+            {
+                pending.Push(dependency);
+            }
+        }
+
+        return closure;
+    }
+
+    private static string GetProviderFeature(ContactCenterTenantProfile profile)
+    {
+        // The provider's Contact Center voice adapter is no longer a dedicated feature: it is integration glue
+        // gated on the provider module and Contact Center Voice. Toggling the provider module feature therefore
+        // activates and deactivates the voice-provider registration, so that is the feature the disable/re-enable
+        // round trip exercises.
+        return GetExpectedProviderName(profile) == "Asterisk"
+            ? "CrestApps.OrchardCore.Asterisk"
+            : "CrestApps.OrchardCore.Dialpad";
+    }
+
+    private static string GetExpectedProviderName(ContactCenterTenantProfile profile)
+    {
+        return profile.ProviderProfile.StartsWith("asterisk-", StringComparison.Ordinal)
+            ? "Asterisk"
+            : "Dialpad";
+    }
+
+    private static bool IsCrestAppsFeature(string featureId)
+    {
+        return featureId.StartsWith("CrestApps.", StringComparison.Ordinal);
+    }
+}

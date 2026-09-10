@@ -1,0 +1,41 @@
+{
+  "ariEventType": "ChannelVarset",
+  "description": "Asterisk ChannelVarset event as declared by the Asterisk REST Interface specification for the pinned release.",
+  "payload": {
+    "type": "ChannelVarset",
+    "application": "crestapps-telephony",
+    "timestamp": "2023-11-13T14:20:01.456+0000",
+    "asterisk_id": "02:42:ac:11:00:02",
+    "variable": "CRESTAPPS_STATE_ONHOLD",
+    "value": "True",
+    "channel": {
+      "id": "1699887600.42",
+      "name": "PJSIP/agent-0000002a",
+      "state": "Up",
+      "protocol_id": "a1b2c3d4@203.0.113.10",
+      "caller": {
+        "name": "Jordan Reyes",
+        "number": "+15550001"
+      },
+      "connected": {
+        "name": "",
+        "number": ""
+      },
+      "accountcode": "",
+      "dialplan": {
+        "context": "crestapps-inbound",
+        "exten": "5551000",
+        "priority": 1,
+        "app_name": "Stasis",
+        "app_data": "crestapps-telephony"
+      },
+      "creationtime": "2023-11-13T14:20:00.123+0000",
+      "language": "en"
+    }
+  },
+  "expected": {
+    "eventType": "ChannelVarset",
+    "state": "OnHold",
+    "isOnHold": true
+  }
+}

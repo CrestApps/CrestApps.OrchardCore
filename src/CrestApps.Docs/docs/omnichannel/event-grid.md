@@ -27,7 +27,7 @@ Use this when your SMS (or other channel) provider can publish events to Event G
 
 This module exposes an endpoint for Azure Event Grid notifications:
 
-- `~/Omnichannel/webhook/AzureEventGrid`
+- `~/api/azure/webhook/eventgrid`
 
 You can configure your Event Grid subscription to deliver events to this endpoint.
 
@@ -77,7 +77,7 @@ If you want bearer token authentication, configure **all three** AAD values. Par
 3. Choose **Webhook** as the endpoint type.
 4. Set the webhook URL to your Orchard endpoint, for example:
 
-   `https://your-host.example.com/Omnichannel/webhook/AzureEventGrid`
+   `https://your-host.example.com/api/azure/webhook/eventgrid`
 
 5. If you use SAS-key authentication, add the matching `aeg-sas-key` value to the subscription delivery settings.
 6. If you use Microsoft Entra ID delivery, configure the subscription to send bearer tokens for the same issuer, audience, and metadata endpoint values you configured in Orchard Core.

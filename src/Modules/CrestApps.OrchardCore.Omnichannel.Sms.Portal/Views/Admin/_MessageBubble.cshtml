@@ -1,0 +1,57 @@
+@model SmsMessageBubbleViewModel
+
+@{
+    var message = Model.Message;
+    var outbound = !message.IsInbound;
+    // Among outbound messages, a human agent sets SentByAgentId; automated (AI) replies leave it null.
+    var isAgent = outbound && !string.IsNullOrEmpty(message.SentByAgentId);
+    var isAi = outbound && string.IsNullOrEmpty(message.SentByAgentId);
+
+    var bubbleClass = isAgent
+        ? "bg-primary-subtle border border-primary-subtle text-body"
+        : isAi
+            ? "bg-info-subtle border border-info-subtle text-body"
+            : "bg-body border text-body";
+
+    // Normalize whitespace so a message an AI padded with blank lines does not inflate the bubble: unify line
+    // endings, trim the ends, and collapse any run of blank lines down to a single line break. A single
+    // intentional line break inside the message is preserved (pre-wrap still renders it).
+    var normalized = (message.Content ?? string.Empty)
+        .Replace("\r\n", "\n")
+        .Replace("\r", "\n")
+        .Trim();
+    var content = System.Text.RegularExpressions.Regex.Replace(normalized, "\n{2,}", "\n");
+}
+
+<div class="sms-message d-flex flex-column mb-2 @(outbound ? "align-items-end" : "align-items-start")"
+     data-message-id="@message.Id"
+     data-created-ticks="@message.CreatedUtc.Ticks">
+    <div class="p-2 px-3 rounded-4 @bubbleClass" style="max-width: 80%; min-width: 6rem;">
+        <div style="white-space: pre-wrap; word-break: break-word;">@content</div>
+
+        @* Sender name and time sit below the message in a slightly smaller, muted font. *@
+        <div class="d-flex justify-content-between align-items-baseline gap-3 text-muted mt-1" style="font-size: .72rem;">
+            <span class="text-truncate">
+                @if (isAgent)
+                {
+                    <i class="fa-solid fa-headset me-1" aria-hidden="true"></i>@(string.IsNullOrEmpty(Model.AgentName) ? T["Agent"].Value : Model.AgentName)
+                }
+                else if (isAi)
+                {
+                    <i class="fa-solid fa-robot me-1" aria-hidden="true"></i><text>@T["AI assistant"]</text>
+                }
+                else
+                {
+                    <i class="fa-solid fa-user me-1" aria-hidden="true"></i><text>@Model.ContactLabel</text>
+                }
+            </span>
+            <span class="text-nowrap">
+                @message.CreatedUtc.ToLocalTime().ToString("t")
+                @if (outbound && !string.IsNullOrEmpty(message.DeliveryStatus))
+                {
+                    <text>&middot; @message.DeliveryStatus</text>
+                }
+            </span>
+        </div>
+    </div>
+</div>

@@ -20,6 +20,7 @@ public sealed class ConfigurationRecipesStartup : StartupBase
         services.AddRecipeExecutionStep<OmnichannelChannelEndpointStep>();
         services.AddRecipeExecutionStep<OmnichannelCampaignGroupStep>();
         services.AddRecipeExecutionStep<OmnichannelCampaignStep>();
+        services.AddRecipeExecutionStep<CadenceStep>();
         services.AddRecipeExecutionStep<OmnichannelSubjectActionStep>();
     }
 }

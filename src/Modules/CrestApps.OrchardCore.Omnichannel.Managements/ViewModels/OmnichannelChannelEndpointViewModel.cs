@@ -1,10 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.Rendering;
-
-namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+﻿namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
 /// <summary>
-/// Represents the view model for omnichannel channel endpoint.
+/// Represents the view model for the shared (channel-neutral) channel-endpoint fields. Channel-specific fields
+/// such as the provider and routing are contributed by the display drivers that target each channel.
 /// </summary>
 public class OmnichannelChannelEndpointViewModel
 {
@@ -19,7 +17,7 @@ public class OmnichannelChannelEndpointViewModel
     public string Description { get; set; }
 
     /// <summary>
-    /// Gets or sets the channel.
+    /// Gets or sets the channel (the source key). Shown read-only; set when the endpoint is created.
     /// </summary>
     public string Channel { get; set; }
 
@@ -27,10 +25,4 @@ public class OmnichannelChannelEndpointViewModel
     /// Gets or sets the value.
     /// </summary>
     public string Value { get; set; }
-
-    /// <summary>
-    /// Gets or sets the channels.
-    /// </summary>
-    [BindNever]
-    public IEnumerable<SelectListItem> Channels { get; set; }
 }

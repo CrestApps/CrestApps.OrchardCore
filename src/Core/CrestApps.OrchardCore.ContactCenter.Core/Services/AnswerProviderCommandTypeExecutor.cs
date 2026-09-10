@@ -1,0 +1,580 @@
+using System.Globalization;
+using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+
+/// <summary>
+/// Handles provider-command execution for <see cref="ProviderCommandType.Answer"/> commands.
+/// It connects the accepted inbound call through the live provider when available, falls back to the
+/// default telephony facade when no voice provider is resolved, and projects the resulting call state
+/// onto the interaction and call session models.
+/// </summary>
+public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExecutor
+{
+    private const string OwnerMetadataKey = "providerCommandOwner";
+
+    private static readonly JsonSerializerOptions _serializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
+    private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
+    private readonly ITelephonyService _telephonyService;
+    private readonly IInteractionManager _interactionManager;
+    private readonly ICallSessionManager _callSessionManager;
+    private readonly ICallControlAuthorizationService _callControlAuthorizationService;
+    private readonly IContactCenterEventPublisher _publisher;
+    private readonly IClock _clock;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AnswerProviderCommandTypeExecutor"/> class.
+    /// </summary>
+    /// <param name="voiceProviderResolver">The resolver used to locate the live voice provider.</param>
+    /// <param name="telephonyService">The fallback telephony service used when no live voice provider exists.</param>
+    /// <param name="interactionManager">The manager used to load and update the interaction projection.</param>
+    /// <param name="callSessionManager">The manager used to load and update the call session projection.</param>
+    /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="clock">The clock used to stamp UTC projections.</param>
+    /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
+    public AnswerProviderCommandTypeExecutor(
+        IContactCenterVoiceProviderResolver voiceProviderResolver,
+        ITelephonyService telephonyService,
+        IInteractionManager interactionManager,
+        ICallSessionManager callSessionManager,
+        IContactCenterEventPublisher publisher,
+        IClock clock,
+        ICallControlAuthorizationService callControlAuthorizationService)
+    {
+        _voiceProviderResolver = voiceProviderResolver;
+        _telephonyService = telephonyService;
+        _interactionManager = interactionManager;
+        _callSessionManager = callSessionManager;
+        _callControlAuthorizationService = callControlAuthorizationService;
+        _publisher = publisher;
+        _clock = clock;
+    }
+
+    /// <inheritdoc/>
+    public ProviderCommandType CommandType => ProviderCommandType.Answer;
+
+    /// <inheritdoc/>
+    public async Task<bool> CanDispatchAsync(ProviderCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        if (command.CommandType != ProviderCommandType.Answer ||
+            string.IsNullOrWhiteSpace(command.ProviderName) ||
+            string.IsNullOrWhiteSpace(command.RequestPayload))
+        {
+            return false;
+        }
+
+        var request = TryDeserializeRequest(command.RequestPayload);
+
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.ActivityId) ||
+            string.IsNullOrWhiteSpace(request.InteractionId) ||
+            string.IsNullOrWhiteSpace(request.ProviderCallId) ||
+            string.IsNullOrWhiteSpace(request.AgentId) ||
+            string.IsNullOrWhiteSpace(request.AgentUserId) ||
+            string.IsNullOrWhiteSpace(request.QueueId))
+        {
+            return false;
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(request.InteractionId, cancellationToken);
+
+        if (interaction is null || IsTerminal(interaction.Status) ||
+            !string.Equals(interaction.ProviderInteractionId, request.ProviderCallId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var session = await _callSessionManager.FindByInteractionIdAsync(request.InteractionId, cancellationToken);
+
+        if (session is null || IsTerminal(session.State) ||
+            !string.Equals(session.ProviderCallId, request.ProviderCallId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+        {
+            UserId = request.AgentUserId,
+            Verb = CallControlVerb.Accept,
+            InteractionId = request.InteractionId,
+            ProviderName = command.ProviderName,
+            ProviderCallId = request.ProviderCallId,
+        }, cancellationToken);
+
+        return authorization.Succeeded;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterVoiceProviderResult> ExecuteAsync(
+        ProviderCommand command,
+        ProviderCommandClaim claim,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(claim);
+
+        var request = DeserializeRequest(command);
+
+        if (request is null)
+        {
+            throw new JsonException("The provider command request payload could not be deserialized.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ProviderCallId))
+        {
+            throw new InvalidOperationException("The provider answer request is missing a provider call identifier.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.InteractionId) ||
+            string.IsNullOrWhiteSpace(request.ActivityId) ||
+            string.IsNullOrWhiteSpace(request.AgentId) ||
+            string.IsNullOrWhiteSpace(request.AgentUserId) ||
+            string.IsNullOrWhiteSpace(request.QueueId))
+        {
+            throw new InvalidOperationException("The provider answer request is incomplete.");
+        }
+
+        var provider = _voiceProviderResolver.Get(command.ProviderName);
+
+        var authorization = await _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+        {
+            UserId = request.AgentUserId,
+            Verb = CallControlVerb.Accept,
+            InteractionId = request.InteractionId,
+            ProviderName = command.ProviderName,
+            ProviderCallId = request.ProviderCallId,
+        }, cancellationToken);
+
+        if (!authorization.Succeeded)
+        {
+            return new ContactCenterVoiceProviderResult
+            {
+                Succeeded = false,
+                OutcomeUnknown = true,
+                ProviderName = command.ProviderName,
+                ProviderCallId = request.ProviderCallId,
+                ErrorMessage = authorization.FailureReason,
+            };
+        }
+
+        if (provider is IContactCenterVoiceCallControlProvider callControlProvider)
+        {
+            var providerRequest = CreateProviderConnectRequest(request, claim);
+            var providerResult = await callControlProvider.ConnectToAgentAsync(providerRequest, cancellationToken);
+
+            return NormalizeProviderResult(
+                providerResult,
+                ResolveProviderName(command.ProviderName, provider.TechnicalName),
+                request.ProviderCallId);
+        }
+
+        if (_telephonyService is null)
+        {
+            throw new InvalidOperationException("No telephony service is available to answer the inbound call.");
+        }
+
+        var callReference = CreateCallReference(request, claim);
+        var telephonyResult = await _telephonyService.AnswerAsync(callReference, cancellationToken);
+
+        return ConvertTelephonyResult(telephonyResult, command.ProviderName, request.ProviderCallId);
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectSuccessAsync(
+        ProviderCommand command,
+        ContactCenterVoiceProviderResult result,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(result);
+
+        var request = DeserializeRequest(command);
+
+        if (request is null)
+        {
+            throw new JsonException("The provider command request payload could not be deserialized.");
+        }
+
+        var providerName = ResolveProviderName(command.ProviderName, result.ProviderName);
+
+        var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            interaction.AgentId = request.AgentId;
+            interaction.QueueId = request.QueueId;
+            interaction.ProviderName = providerName;
+
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+
+        var session = await _callSessionManager.FindByInteractionIdAsync(command.InteractionId, cancellationToken);
+
+        if (session is not null)
+        {
+            session.AgentId = request.AgentId;
+            session.QueueId = request.QueueId;
+            session.ProviderName = providerName;
+
+            // The provider reports the leg it created for the agent through the neutral result contract, so the
+            // agent becomes a real party on the topology instead of a name on the session. Without this the
+            // bridge would only ever show the customer and nothing could reconstruct who was talking to whom.
+            // The caller can hang up while the agent is being connected, and this projection runs after that
+            // provider round-trip. A terminal session has already ended every leg and closed its bridge, so
+            // adding the agent now would contradict the record and be refused at persist time, failing the
+            // whole accept rather than the one late join that caused it.
+            if (!string.IsNullOrEmpty(result.ProviderLegId) && !IsTerminal(session.State))
+            {
+                var now = _clock.UtcNow;
+
+                // Record the leg in the state the provider actually observed. Connecting an agent on a provider
+                // that rings a registered soft phone only originates the leg -- the invite is accepted for
+                // delivery and the endpoint has not picked up -- so asserting it answered would report the agent
+                // as talking to a call they may never be reached on, and a leg that clears without ever ringing
+                // would still read as a connected party. A provider that does not report a leg state is answering
+                // the call, so its leg is taken to be answered as before.
+                var legStatus = MapCallLegStatus(result.ProviderLegState);
+
+                CallTopologyProjector.UpsertLeg(
+                    session,
+                    result.ProviderLegId,
+                    CallPartyRole.Agent,
+                    legStatus,
+                    now,
+                    agentId: request.AgentId);
+
+                // Only a leg that is actually on the call joins the bridge. A leg still being reached is a party
+                // the platform is trying to add, not one the bridge can claim to be carrying.
+                if (legStatus is CallLegStatus.Answered or CallLegStatus.OnHold)
+                {
+                    CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
+                    CallTopologyProjector.Join(session, result.ProviderLegId, CallPartyRole.Agent, now, request.AgentId);
+                }
+            }
+
+            await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectFailureAsync(ProviderCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var request = DeserializeRequest(command);
+
+        if (request is null)
+        {
+            throw new JsonException("The provider command request payload could not be deserialized.");
+        }
+
+        var now = _clock.UtcNow;
+        var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            // The caller can hang up while the agent is being connected, and this projection runs after that
+            // provider round-trip, so a gone call is the most likely reason the answer failed in the first
+            // place. A settled interaction has already recorded its outcome; overwriting it with the failure of
+            // an answer nobody was waiting for would replace the real ending with an artifact of the retry.
+            if (!interaction.IsSettled)
+            {
+                if (request.ReofferOnFailure)
+                {
+                    interaction.Reoffer();
+                }
+                else
+                {
+                    interaction.TransitionTo(InteractionStatus.Failed);
+                }
+
+                interaction.EndedUtc = request.ReofferOnFailure ? null : now;
+            }
+
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+
+        var session = await _callSessionManager.FindByInteractionIdAsync(command.InteractionId, cancellationToken);
+
+        if (session is not null && !CallSessionLifecycle.IsTerminal(session.State))
+        {
+            session.TransitionTo(request.ReofferOnFailure
+                ? VoiceCallState.Ringing
+                : VoiceCallState.Ended);
+            session.EndedUtc = request.ReofferOnFailure ? null : now;
+
+            await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+        }
+
+        if (request.ReofferOnFailure)
+        {
+            await PublishAsync(
+                ContactCenterConstants.Events.OfferRequeued,
+                nameof(ActivityReservation),
+                string.IsNullOrWhiteSpace(command.ReservationId) ? command.ActivityItemId : command.ReservationId,
+                request.AgentId,
+                command.CommandId,
+                command.InteractionId,
+                cancellationToken,
+                new OfferDeclinedEventData
+                {
+                    QueueId = request.QueueId,
+                });
+
+            return;
+        }
+
+        await PublishAsync(
+            ContactCenterConstants.Events.CallEnded,
+            nameof(Interaction),
+            command.InteractionId,
+            request.AgentId,
+            command.CommandId,
+            command.InteractionId,
+            cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectOutcomeUnknownAsync(
+        ProviderCommand command,
+        string errorCode,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var request = DeserializeRequest(command);
+
+        if (request is null)
+        {
+            throw new JsonException("The provider command request payload could not be deserialized.");
+        }
+
+        var providerErrorCode = string.IsNullOrWhiteSpace(errorCode)
+            ? "provider_answer_unknown"
+            : errorCode;
+
+        var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            interaction.TechnicalMetadata["providerErrorCode"] = providerErrorCode;
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        }
+
+        var session = await _callSessionManager.FindByInteractionIdAsync(command.InteractionId, cancellationToken);
+
+        if (session is not null)
+        {
+            session.Metadata["providerErrorCode"] = providerErrorCode;
+            await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+        }
+    }
+
+    private static ContactCenterConnectRequest CreateProviderConnectRequest(
+        ProviderAnswerCommandRequest request,
+        ProviderCommandClaim claim)
+    {
+        var connectRequest = new ContactCenterConnectRequest
+        {
+            ActivityId = request.ActivityId,
+            InteractionId = request.InteractionId,
+            ProviderCallId = request.ProviderCallId,
+            AgentId = request.AgentId,
+            AgentUserId = request.AgentUserId,
+            QueueId = request.QueueId,
+        };
+
+        StampMetadata(connectRequest.Metadata, claim);
+
+        return connectRequest;
+    }
+
+    private static CallReference CreateCallReference(
+        ProviderAnswerCommandRequest request,
+        ProviderCommandClaim claim)
+    {
+        var callReference = new CallReference
+        {
+            CallId = request.ProviderCallId,
+            Metadata = new Dictionary<string, object>(),
+        };
+
+        StampMetadata(callReference.Metadata, claim);
+
+        return callReference;
+    }
+
+    private static void StampMetadata(IDictionary<string, string> metadata, ProviderCommandClaim claim)
+    {
+        metadata[ContactCenterConstants.CommandMetadata.CommandId] = claim.CommandId;
+        metadata[ContactCenterConstants.CommandMetadata.FenceToken] = claim.FenceToken.ToString(CultureInfo.InvariantCulture);
+        metadata[OwnerMetadataKey] = claim.OwnerToken;
+    }
+
+    private static void StampMetadata(IDictionary<string, object> metadata, ProviderCommandClaim claim)
+    {
+        metadata[ContactCenterConstants.CommandMetadata.CommandId] = claim.CommandId;
+        metadata[ContactCenterConstants.CommandMetadata.FenceToken] = claim.FenceToken.ToString(CultureInfo.InvariantCulture);
+        metadata[OwnerMetadataKey] = claim.OwnerToken;
+    }
+
+    private static ContactCenterVoiceProviderResult ConvertTelephonyResult(
+        TelephonyResult result,
+        string providerName,
+        string providerCallId)
+    {
+        if (result is null)
+        {
+            return new ContactCenterVoiceProviderResult
+            {
+                Succeeded = false,
+                OutcomeUnknown = true,
+                ProviderName = providerName,
+                ProviderCallId = providerCallId,
+                ErrorMessage = "The telephony service did not return a result.",
+            };
+        }
+
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = result.Succeeded,
+            OutcomeUnknown = result.OutcomeUnknown,
+            ProviderName = providerName,
+            ProviderCallId = result.Call?.CallId ?? providerCallId,
+            ErrorMessage = result.Error,
+        };
+    }
+
+    private static ContactCenterVoiceProviderResult NormalizeProviderResult(
+        ContactCenterVoiceProviderResult result,
+        string providerName,
+        string providerCallId)
+    {
+        if (result is null)
+        {
+            return new ContactCenterVoiceProviderResult
+            {
+                Succeeded = false,
+                OutcomeUnknown = true,
+                ProviderName = providerName,
+                ProviderCallId = providerCallId,
+                ErrorMessage = "The provider did not return a result.",
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(result.ProviderName))
+        {
+            result.ProviderName = providerName;
+        }
+
+        if (string.IsNullOrWhiteSpace(result.ProviderCallId))
+        {
+            result.ProviderCallId = providerCallId;
+        }
+
+        return result;
+    }
+
+    private static string ResolveProviderName(string commandProviderName, string resultProviderName)
+    {
+        return string.IsNullOrWhiteSpace(resultProviderName)
+            ? commandProviderName
+            : resultProviderName;
+    }
+
+    private static ProviderAnswerCommandRequest TryDeserializeRequest(string requestPayload)
+    {
+        if (string.IsNullOrWhiteSpace(requestPayload))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<ProviderAnswerCommandRequest>(requestPayload, _serializerOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static ProviderAnswerCommandRequest DeserializeRequest(ProviderCommand command)
+    {
+        return TryDeserializeRequest(command.RequestPayload);
+    }
+
+    /// <summary>
+    /// Maps the state a provider reported for the leg it created onto the topology's leg status. A provider that
+    /// reports no state is one whose operation answers the call, so its leg is answered.
+    /// </summary>
+    private static CallLegStatus MapCallLegStatus(VoiceCallState? providerLegState)
+        => providerLegState switch
+        {
+            null => CallLegStatus.Answered,
+            VoiceCallState.Planned => CallLegStatus.Unknown,
+            VoiceCallState.Dialing => CallLegStatus.Dialing,
+            VoiceCallState.Ringing => CallLegStatus.Ringing,
+            VoiceCallState.Connected => CallLegStatus.Answered,
+            VoiceCallState.OnHold => CallLegStatus.OnHold,
+            VoiceCallState.Ending => CallLegStatus.Answered,
+            VoiceCallState.Ended => CallLegStatus.Ended,
+            VoiceCallState.Failed or VoiceCallState.NoAnswer or VoiceCallState.Rejected or VoiceCallState.Canceled => CallLegStatus.Failed,
+            _ => CallLegStatus.Unknown,
+        };
+
+    private static bool IsTerminal(InteractionStatus status)
+    {
+        return status is InteractionStatus.Ended or InteractionStatus.Failed;
+    }
+
+    private static bool IsTerminal(VoiceCallState state)
+    {
+        return state is VoiceCallState.Ended or
+            VoiceCallState.Failed or
+            VoiceCallState.NoAnswer or
+            VoiceCallState.Rejected or
+            VoiceCallState.Canceled or
+            VoiceCallState.Transferred;
+    }
+
+    private Task PublishAsync(
+        string eventType,
+        string aggregateType,
+        string aggregateId,
+        string actorId,
+        string commandId,
+        string interactionId,
+        CancellationToken cancellationToken,
+        object data = null)
+    {
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = eventType,
+            InteractionId = interactionId,
+            AggregateType = aggregateType,
+            AggregateId = aggregateId,
+            ActorId = actorId,
+            SourceComponent = ContactCenterConstants.Components.Voice,
+            IdempotencyKey = ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(commandId, eventType),
+        };
+
+        if (data is not null)
+        {
+            interactionEvent.SetData(data);
+        }
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
+    }
+}

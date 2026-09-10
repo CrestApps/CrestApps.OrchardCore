@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
@@ -28,6 +29,7 @@ public sealed class OmnichannelConfigurationCoverageTests
     /// </summary>
     private static readonly Dictionary<string, string> _configuration = new(StringComparer.Ordinal)
     {
+        [nameof(Cadence)] = OmnichannelDeploymentSteps.Cadence,
         [nameof(OmnichannelCampaign)] = OmnichannelDeploymentSteps.Campaign,
         [nameof(OmnichannelCampaignGroup)] = OmnichannelDeploymentSteps.CampaignGroup,
         [nameof(OmnichannelChannelEndpoint)] = OmnichannelDeploymentSteps.ChannelEndpoint,
@@ -91,6 +93,79 @@ public sealed class OmnichannelConfigurationCoverageTests
 
         Assert.Equal(steps.Length, steps.Distinct(StringComparer.Ordinal).Count());
         Assert.All(steps, step => Assert.False(string.IsNullOrWhiteSpace(step)));
+    }
+
+    [Fact]
+    public void EveryAutomationTunable_IsReadFromOptions_NotFromAConstant()
+    {
+        // A tuning number compiled into the pass cannot be changed for a node that is slower or busier than the
+        // one it was chosen on, so an operator's only remedy is a rebuild. The lease is the single exception: it
+        // is an attribute argument, which the language requires to be a constant.
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "Modules",
+            "CrestApps.OrchardCore.Omnichannel.Managements",
+            "BackgroundTasks",
+            "AutomatedActivitiesProcessorBackgroundTask.cs"));
+
+        var constants = Regex.Matches(source, @"private const int (?<name>\w+)")
+            .Select(match => match.Groups["name"].Value)
+            .Where(name => !string.Equals(name, "_leaseMilliseconds", StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.True(
+            constants.Length == 0,
+            "These tuning values are compiled into the automated-activity processor instead of being bound from " +
+            "'CrestApps:Omnichannel:Automation': " + string.Join(", ", constants) + ". Add the value to " +
+            nameof(OmnichannelAutomationOptions) + ", validate it, and read it through IOptions in DoWorkAsync.");
+
+        Assert.Contains("IOptions<" + nameof(OmnichannelAutomationOptions) + ">", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void EveryAutomationOption_IsValidated()
+    {
+        // An option nobody validates is one a typo can set to zero, which presents as a queue that silently never
+        // drains rather than as a tenant that refuses to start.
+        var validatorSource = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "Core",
+            "CrestApps.OrchardCore.Omnichannel.Core",
+            "Services",
+            "OmnichannelAutomationOptionsValidator.cs"));
+
+        var unvalidated = typeof(OmnichannelAutomationOptions)
+            .GetProperties()
+            .Where(property => property.CanWrite)
+            .Select(property => property.Name)
+            .Where(name => !validatorSource.Contains("options." + name, StringComparison.Ordinal))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.True(
+            unvalidated.Length == 0,
+            "These automation options are never validated, so a nonsensical value reaches the processing pass: " +
+            string.Join(", ", unvalidated) + ".");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null)
+        {
+            if (Directory.Exists(Path.Combine(directory.FullName, "src"))
+                && Directory.Exists(Path.Combine(directory.FullName, "tests", "CrestApps.OrchardCore.Tests")))
+            {
+                return directory.FullName;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Unable to locate the repository root from the test assembly location.");
     }
 
     private static Type[] GetEntities()

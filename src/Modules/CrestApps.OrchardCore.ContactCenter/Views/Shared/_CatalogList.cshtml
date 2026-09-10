@@ -1,0 +1,54 @@
+@model CatalogListViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(Model.Title)</h1></zone>
+
+@* The form is necessary to generate an antiforgery token for delete actions. *@
+<form asp-action="Index" method="post" class="no-multisubmit">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-3">
+                <div class="col">
+                    <div class="has-search">
+                        <i class="fa-solid fa-search form-control-feedback" aria-hidden="true"></i>
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@Model.CreateLabel</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="list-group with-checkbox" id="@Model.ListId">
+        @if (Model.Entries.Count > 0)
+        {
+            <li class="list-group-item text-bg-theme ignore-elements">
+                @(Model.Entries.Count == 1 ? T["1 item"] : T["{0} items", Model.Entries.Count])
+            </li>
+
+            @foreach (var entry in Model.Entries)
+            {
+                <li class="list-group-item item d-flex justify-content-between align-items-center" data-filter-value="@entry.FilterValue">
+                    <div class="flex-grow-1">
+                        @await DisplayAsync(entry.Shape)
+                    </div>
+                </li>
+            }
+        }
+        else
+        {
+            <li class="list-group-item list-group-item-info text-center ignore-elements">
+                @Model.EmptyMessage
+            </li>
+        }
+    </ul>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>
+
+@await DisplayAsync(Model.Pager)

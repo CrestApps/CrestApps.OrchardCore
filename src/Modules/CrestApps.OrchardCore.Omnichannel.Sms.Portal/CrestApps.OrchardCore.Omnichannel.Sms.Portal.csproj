@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore SMS Communication Portal</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The human two-way SMS Communication Portal: inbox, conversation threads, and composer, department and
+      personal number routing, the per-number provider dispatcher, and real-time messaging notifications, built
+      on the Omnichannel number catalog and the channel-neutral Contact Center features.
+    </Description>
+    <PackageTags>$(PackageTags) Telephony SMS Portal</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+    <PackageReference Include="OrchardCore.SignalR" />
+    <PackageReference Include="OrchardCore.Sms.Abstractions" />
+    <PackageReference Include="OrchardCore.Flows.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Abstractions/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
+  </ItemGroup>
+
+</Project>

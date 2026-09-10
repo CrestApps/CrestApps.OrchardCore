@@ -104,4 +104,31 @@ public sealed class SubjectFlowSettings
     /// do-not-SMS preference.
     /// </summary>
     public string[] SmsOptOutKeywords { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the automated conversation may hand off to a live human agent.
+    /// A handoff also requires <see cref="HandoffQueueId"/> to be set.
+    /// </summary>
+    public bool EnableAgentHandoff { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the Contact Center queue an escalated conversation is handed to.
+    /// </summary>
+    public string HandoffQueueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may hand off when the customer explicitly asks for a human.
+    /// </summary>
+    public bool HandoffOnUserRequest { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may hand off once the customer is a qualified, ready lead.
+    /// </summary>
+    public bool HandoffOnQualifiedLead { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the AI may hand off when the customer is frustrated or the AI is
+    /// repeatedly unable to help.
+    /// </summary>
+    public bool HandoffOnFrustration { get; set; }
 }

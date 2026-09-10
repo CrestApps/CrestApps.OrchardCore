@@ -1,0 +1,34 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using CrestApps.OrchardCore.ContactCenter.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AgentStateReasonCode>
+
+@{
+    var appliesToText = Model.Value.AppliesTo switch
+    {
+        AgentPresenceStatus.Break => T["Break"],
+        AgentPresenceStatus.Away => T["Away"],
+        AgentPresenceStatus.DoNotDisturb => T["Do not disturb"],
+        AgentPresenceStatus.Meeting => T["Meeting"],
+        AgentPresenceStatus.Training => T["Training"],
+        AgentPresenceStatus.AfterHoursUnavailable => T["After-hours unavailable"],
+        _ => T[Model.Value.AppliesTo.ToString()],
+    };
+}
+
+<h5>@Model.Value.Name</h5>
+
+@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+{
+    <div class="text-muted">@Model.Value.Description</div>
+}
+
+<div class="mt-1">
+    <span class="badge text-bg-secondary">@T["Sets state: {0}", appliesToText]</span>
+
+    @if (!Model.Value.Enabled)
+    {
+        <span class="badge text-bg-warning">@T["Disabled"]</span>
+    }
+</div>

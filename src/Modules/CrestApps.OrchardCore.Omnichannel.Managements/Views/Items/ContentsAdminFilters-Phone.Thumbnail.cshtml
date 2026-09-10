@@ -1,0 +1,19 @@
+@using OrchardCore.Contents.ViewModels
+@model ShapeViewModel<ContentOptionsViewModel>
+@{
+    var term = Model.Value.FilterResult.FirstOrDefault(x => x.TermName == "phone");
+}
+
+<div class="ocat-wrapper">
+    <h4 class="card-title ocat-label">@T["Phone"]</h4>
+    <div class="ocat-end">
+        <pre>@(term?.ToString() ?? "phone:...")</pre>
+    </div>
+</div>
+<p>@T["Filters contacts by primary cell or home phone number. Variants: phone-exact:, phone-starts:, phone-ends:."]</p>
+<p>@T["On this contact list the plain search box also matches phone numbers, so a bare number finds the contact without the phone: prefix. An exact E.164 number (e.g. +15551234567) always searches by number."]</p>
+<div class="d-block text-end">
+    <span>
+        <i class="fa-solid fa-sm fa-minus text-primary" aria-hidden="true"></i>
+    </span>
+</div>

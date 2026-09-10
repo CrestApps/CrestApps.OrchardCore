@@ -1,0 +1,18 @@
+# CrestApps Contact Center coturn template for browser SIP/WebRTC media.
+# Use REST credentials: Orchard signs username "<unix-expiry>:<tenant>:<session>" with static-auth-secret.
+# Rotate this secret through tenant/provider configuration and keep it out of source-controlled production files.
+realm=crestapps.local
+listening-port=3478
+tls-listening-port=5349
+fingerprint
+lt-cred-mech
+use-auth-secret
+static-auth-secret=<replace-with-tenant-protected-secret>
+no-cli
+no-multicast-peers
+no-loopback-peers
+stale-nonce=600
+cert=/etc/coturn/certs/fullchain.pem
+pkey=/etc/coturn/certs/privkey.pem
+log-file=stdout
+simple-log

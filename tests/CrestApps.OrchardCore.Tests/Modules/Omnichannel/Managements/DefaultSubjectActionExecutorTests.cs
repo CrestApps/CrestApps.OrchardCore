@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Modules;

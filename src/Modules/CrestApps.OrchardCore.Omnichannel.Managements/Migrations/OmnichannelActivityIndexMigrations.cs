@@ -60,7 +60,8 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
             .Column<DateTime>("CreatedUtc", column => column.NotNull())
             .Column<ActivityUrgencyLevel>("UrgencyLevel")
             .Column<ActivityStatus>("Status")
-            .Column<ActivityInteractionType>("InteractionType"),
+            .Column<ActivityInteractionType>("InteractionType")
+            .Column<bool>("AiEscalated"),
         collection: OmnichannelConstants.CollectionName
         );
 
@@ -107,7 +108,7 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName
         );
 
-        return 5;
+        return 6;
     }
 
     /// <summary>
@@ -280,5 +281,20 @@ internal sealed class OmnichannelActivityIndexMigrations : DataMigration
         collection: OmnichannelConstants.CollectionName);
 
         return 5;
+    }
+
+    /// <summary>
+    /// Adds the AI-escalation flag used by containment reporting to count handoffs across channels.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom5Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
+        {
+            table.AddColumn<bool>("AiEscalated");
+        },
+        collection: OmnichannelConstants.CollectionName);
+
+        return 6;
     }
 }

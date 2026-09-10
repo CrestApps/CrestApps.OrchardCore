@@ -1,10 +1,15 @@
 /*
  * Enhances Phone Field editors and displays with a "dial" button when the telephony soft phone is
- * available on the page. The button reads the phone number and asks the soft phone to place the call,
- * so this script never talks to a provider directly.
+ * available on the page. Clicking it posts the number to the dial endpoint, which pushes the request to the
+ * operator's own soft phone (the in-page widget or the browser-extension window) to place the call. This
+ * script never talks to a provider directly, and it does not require an in-page soft phone instance.
  */
 (function () {
     'use strict';
+
+    function getConfig() {
+        return window.__telephonyPhoneFieldDialer || null;
+    }
 
     function getNumber(placeholder) {
         if (placeholder.hasAttribute('data-phone-number')) {
@@ -33,11 +38,58 @@
     function createButton() {
         var button = document.createElement('button');
         button.type = 'button';
-        button.className = 'btn btn-sm btn-outline-success telephony-phone-dial-btn';
+        button.className = 'btn btn-sm btn-outline-success telephony-phone-dial-btn ms-1';
         button.title = 'Call with the soft phone';
         button.innerHTML = '<i class="fa-solid fa-phone"></i>';
 
         return button;
+    }
+
+    function flash(button, iconClass, revertMs) {
+        var original = button.innerHTML;
+        button.innerHTML = '<i class="' + iconClass + '"></i>';
+
+        setTimeout(function () {
+            button.innerHTML = original;
+        }, revertMs || 1500);
+    }
+
+    function dial(button, number) {
+        var config = getConfig();
+
+        if (!config || !config.dialUrl) {
+            return;
+        }
+
+        button.disabled = true;
+
+        var body = new URLSearchParams();
+        body.append('number', number);
+
+        var headers = { 'X-Requested-With': 'XMLHttpRequest' };
+
+        if (config.antiforgeryToken) {
+            headers['RequestVerificationToken'] = config.antiforgeryToken;
+        }
+
+        fetch(config.dialUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: headers,
+            body: body
+        }).then(function (response) {
+            button.disabled = false;
+
+            if (response.ok) {
+                // The call is placed on the operator's soft phone; confirm the request was accepted.
+                flash(button, 'fa-solid fa-check');
+            } else {
+                flash(button, 'fa-solid fa-triangle-exclamation');
+            }
+        }).catch(function () {
+            button.disabled = false;
+            flash(button, 'fa-solid fa-triangle-exclamation');
+        });
     }
 
     function enhance(placeholder) {
@@ -52,8 +104,8 @@
         button.addEventListener('click', function () {
             var number = getNumber(placeholder);
 
-            if (number && window.telephonySoftPhone && typeof window.telephonySoftPhone.dial === 'function') {
-                window.telephonySoftPhone.dial(number);
+            if (number) {
+                dial(button, number);
             }
         });
 

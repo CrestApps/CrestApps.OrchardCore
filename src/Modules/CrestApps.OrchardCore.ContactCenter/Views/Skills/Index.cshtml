@@ -1,0 +1,22 @@
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<ContactCenterSkill>>
+
+@{
+    var listModel = new CatalogListViewModel
+    {
+        Title = T["Skills"],
+        CreateLabel = T["Add Skill"],
+        ListId = "skills-list",
+        EmptyMessage = T["<strong>Nothing here!</strong> There are no skills at the moment."],
+        Options = Model.Options,
+        Pager = Model.Pager,
+        Entries = Model.Models
+            .Select(entry => new CatalogListEntry
+            {
+                Shape = entry.Shape,
+                FilterValue = entry.Model.Name?.ToLowerInvariant(),
+            })
+            .ToList(),
+    };
+}
+
+<partial name="_CatalogList" model="listModel" />

@@ -30,6 +30,14 @@ public sealed class OmnichannelChannelEndpoint : CatalogItem, IDisplayTextAwareM
     public string Description { get; set; }
 
     /// <summary>
+    /// Gets or sets the technical name of the messaging/telephony provider that owns this number (for example
+    /// "Twilio", "Telnyx", or "AzureCommunicationServices"). When empty, the tenant-default provider is used.
+    /// The SMS portal's dispatcher reads this to route an outbound send through the provider that owns the
+    /// sending number.
+    /// </summary>
+    public string ProviderName { get; set; }
+
+    /// <summary>
     /// Gets or sets the created utc.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
@@ -61,6 +69,7 @@ public sealed class OmnichannelChannelEndpoint : CatalogItem, IDisplayTextAwareM
             Channel = Channel,
             Value = Value,
             Description = Description,
+            ProviderName = ProviderName,
             CreatedUtc = CreatedUtc,
             ModifiedUtc = ModifiedUtc,
             Author = Author,

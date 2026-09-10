@@ -31,6 +31,15 @@ public interface ITelephonyClient
     Task CredentialsIssued(TelephonyClientCredentials credentials);
 
     /// <summary>
+    /// Asks the client to place an outbound call. This is raised when a call is started from outside the soft
+    /// phone surface, such as the "call" button next to a phone-number field. The client decides how to place
+    /// the call (for example, registering first if needed, or holding an active call).
+    /// </summary>
+    /// <param name="request">The dial request describing the number to call.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task DialRequested(TelephonyDialRequest request);
+
+    /// <summary>
     /// Notifies the client that an error occurred while processing a request.
     /// </summary>
     /// <param name="message">A human-readable description of the error.</param>

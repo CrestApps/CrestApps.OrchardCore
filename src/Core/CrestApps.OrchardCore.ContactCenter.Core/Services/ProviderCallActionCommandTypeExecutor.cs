@@ -1,0 +1,666 @@
+using System.Globalization;
+using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
+using OrchardCore.Modules;
+
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+
+/// <summary>
+/// Provides the shared implementation for durable provider commands that act on an existing call.
+/// </summary>
+public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTypeExecutor
+{
+    private const string OwnerMetadataKey = "providerCommandOwner";
+
+    private static readonly JsonSerializerOptions _serializerOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
+
+    private readonly ITelephonyService _telephonyService;
+    private readonly IInteractionManager _interactionManager;
+    private readonly IAgentProfileManager _agentProfileManager;
+    private readonly ICallControlAuthorizationService _callControlAuthorizationService;
+    private readonly IActivityQueueService _queueService;
+    private readonly IContactCenterWorkStateService _workStateService;
+    private readonly IContactCenterActivityWriter _activityWriter;
+    private readonly IContactCenterEventPublisher _publisher;
+    private readonly IClock _clock;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProviderCallActionCommandTypeExecutor"/> class.
+    /// </summary>
+    /// <param name="telephonyServices">The optional telephony services used to execute the provider action.</param>
+    /// <param name="interactionManager">The interaction manager used to validate and project linked interactions.</param>
+    /// <param name="queueService">The queue service used to restore live work after a definitive action failure.</param>
+    /// <param name="workStateService">The routing-owned work state service.</param>
+    /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
+    /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="clock">The clock used to stamp projections.</param>
+    /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
+    protected ProviderCallActionCommandTypeExecutor(
+        IEnumerable<ITelephonyService> telephonyServices,
+        IInteractionManager interactionManager,
+        IAgentProfileManager agentProfileManager,
+        IActivityQueueService queueService,
+        IContactCenterWorkStateService workStateService,
+        IContactCenterActivityWriter activityWriter,
+        IContactCenterEventPublisher publisher,
+        IClock clock,
+        ICallControlAuthorizationService callControlAuthorizationService)
+    {
+        _telephonyService = telephonyServices.FirstOrDefault();
+        _interactionManager = interactionManager;
+        _agentProfileManager = agentProfileManager;
+        _callControlAuthorizationService = callControlAuthorizationService;
+        _queueService = queueService;
+        _workStateService = workStateService;
+        _activityWriter = activityWriter;
+        _publisher = publisher;
+        _clock = clock;
+    }
+
+    /// <inheritdoc/>
+    public abstract ProviderCommandType CommandType { get; }
+
+    /// <inheritdoc/>
+    public async Task<bool> CanDispatchAsync(ProviderCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        if (command.CommandType != CommandType ||
+            _telephonyService is null)
+        {
+            return false;
+        }
+
+        var request = DeserializeRequest(command.RequestPayload);
+
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.ProviderCallId) ||
+            string.IsNullOrWhiteSpace(command.InteractionId))
+        {
+            return false;
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+        if (interaction is null || IsTerminal(interaction.Status))
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(interaction.ProviderInteractionId) &&
+            !string.Equals(interaction.ProviderInteractionId, request.ProviderCallId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (request.Initiator == CallControlInitiator.Agent &&
+            string.IsNullOrWhiteSpace(request.AgentUserId))
+        {
+            return false;
+        }
+
+        var authorization = await AuthorizeAsync(command, request, cancellationToken);
+
+        return authorization.Succeeded;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterVoiceProviderResult> ExecuteAsync(
+        ProviderCommand command,
+        ProviderCommandClaim claim,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(claim);
+
+        var request = DeserializeRequest(command.RequestPayload);
+
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.ProviderCallId))
+        {
+            return CreateUnknownResult(command, request?.ProviderCallId, "invalid_request", "The provider call action request could not be deserialized.");
+        }
+
+        if (_telephonyService is null)
+        {
+            return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("unavailable"), "No telephony service is registered.");
+        }
+
+        if (request.Initiator == CallControlInitiator.Agent &&
+            string.IsNullOrWhiteSpace(request.AgentUserId))
+        {
+            return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("denied"), "The requested call is not available.");
+        }
+
+        var authorization = await AuthorizeAsync(command, request, cancellationToken);
+
+        if (!authorization.Succeeded)
+        {
+            return CreateUnknownResult(command, request.ProviderCallId, GetErrorCodePrefix("denied"), authorization.FailureReason);
+        }
+
+        var resolvedProviderCallId = authorization.ProviderCallId;
+
+        var call = new CallReference
+        {
+            CallId = resolvedProviderCallId,
+            Metadata = NormalizeMetadata(request.Metadata),
+        };
+
+        call.Metadata[ContactCenterConstants.CommandMetadata.CommandId] = claim.CommandId;
+        call.Metadata[ContactCenterConstants.CommandMetadata.FenceToken] = claim.FenceToken.ToString(CultureInfo.InvariantCulture);
+        call.Metadata[OwnerMetadataKey] = claim.OwnerToken;
+
+        if (!string.IsNullOrWhiteSpace(request.InteractionId))
+        {
+            call.Metadata[ContactCenterConstants.CommandMetadata.InteractionId] = request.InteractionId;
+        }
+
+        // Sending a ringing call to voicemail answers the provider leg to record the caller's message. Flag the
+        // interaction and project a missed call to the target agent's soft phone before that answer arrives, so the
+        // recording leg is never surfaced to the agent as a live "in call" state for a call they never took. The
+        // recipient agent's per-agent greeting (when set) travels to the provider so it is spoken before recording.
+        if (CommandType == ProviderCommandType.SendToVoicemail)
+        {
+            var greeting = await MarkVoicemailProjectionAsync(command, request, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(greeting.Text))
+            {
+                call.Metadata[ContactCenterConstants.Voicemail.GreetingTextMetadataKey] = greeting.Text;
+            }
+
+            if (!string.IsNullOrWhiteSpace(greeting.MediaUrl))
+            {
+                call.Metadata[ContactCenterConstants.Voicemail.GreetingMediaUrlMetadataKey] = greeting.MediaUrl;
+            }
+
+            if (!string.IsNullOrWhiteSpace(greeting.MediaName))
+            {
+                call.Metadata[ContactCenterConstants.Voicemail.GreetingMediaNameMetadataKey] = greeting.MediaName;
+            }
+        }
+
+        var result = await ExecuteTelephonyAsync(_telephonyService, call, cancellationToken);
+
+        return ToVoiceProviderResult(command, request, result);
+    }
+
+    private async Task<(string Text, string MediaUrl, string MediaName)> MarkVoicemailProjectionAsync(
+        ProviderCommand command,
+        ProviderCallActionCommandRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(command.InteractionId))
+        {
+            return default;
+        }
+
+        var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+
+        if (interaction is null)
+        {
+            return default;
+        }
+
+        // While this flag is set the soft-phone projection renders the call as a terminal, missed call for the
+        // recipient agent rather than a live call, and the platform-answered recording leg never reactivates it.
+        interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.ProjectionMetadataKey] = true;
+
+        // The reservation and call session release their agent association when the offer is released, so record the
+        // recipient agent explicitly. The offer-timeout path carries the agent on the request; the direct-to-agent
+        // path carries the target agent in interaction metadata.
+        var recipientAgentId = !string.IsNullOrWhiteSpace(request.AgentId)
+            ? request.AgentId
+            : interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.DirectRouting.TargetAgentMetadataKey, out var targetAgent)
+                ? targetAgent?.ToString()
+                : null;
+
+        string greetingText = null;
+        string greetingMediaUrl = null;
+        string greetingMediaName = null;
+
+        if (!string.IsNullOrWhiteSpace(recipientAgentId))
+        {
+            interaction.TechnicalMetadata[ContactCenterConstants.Voicemail.RecipientAgentMetadataKey] = recipientAgentId;
+
+            // Resolve the recipient agent's per-agent greeting so the provider can play it before recording. A
+            // provider-hosted recording (media_name) is preferred, then a hosted audio URL, then the spoken text; a
+            // missing agent or empty greeting falls back to the provider's default greeting.
+            var recipientAgent = await _agentProfileManager.FindByIdAsync(recipientAgentId, cancellationToken);
+            greetingText = recipientAgent?.VoicemailGreetingText;
+            greetingMediaUrl = recipientAgent?.VoicemailGreetingMediaUrl;
+            greetingMediaName = recipientAgent?.VoicemailGreetingMediaName;
+        }
+
+        // Fall back to the entry point's default spoken greeting (stamped on the interaction when the call arrived)
+        // when the recipient agent has no spoken greeting of their own. A recorded agent greeting still wins.
+        if (string.IsNullOrWhiteSpace(greetingText) &&
+            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.Voicemail.EntryPointGreetingTextMetadataKey, out var entryGreeting) &&
+            entryGreeting?.ToString() is { Length: > 0 } entryGreetingText)
+        {
+            greetingText = entryGreetingText;
+        }
+
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+        await _publisher.PublishAsync(CreateSentToVoicemailEvent(command, interaction), cancellationToken);
+
+        return (greetingText, greetingMediaUrl, greetingMediaName);
+    }
+
+    private InteractionEvent CreateSentToVoicemailEvent(ProviderCommand command, Interaction interaction)
+    {
+        return new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.CallSentToVoicemail,
+            InteractionId = interaction.ItemId,
+            AggregateType = nameof(Interaction),
+            AggregateId = interaction.ItemId,
+            CorrelationId = interaction.CorrelationId,
+            CausationId = command.CommandId,
+            ActorId = string.IsNullOrWhiteSpace(command.ProviderName)
+                ? ContactCenterConstants.SystemActor
+                : command.ProviderName,
+            SourceComponent = ContactCenterConstants.Components.CallSessions,
+            OccurredUtc = _clock.UtcNow,
+            IdempotencyKey = ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(
+                command.CommandId,
+                ContactCenterConstants.Events.CallSentToVoicemail),
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectSuccessAsync(
+        ProviderCommand command,
+        ContactCenterVoiceProviderResult result,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(result);
+
+        var request = DeserializeRequest(command.RequestPayload);
+
+        if (request is null)
+        {
+            return;
+        }
+
+        var interaction = await GetInteractionAsync(command.InteractionId, cancellationToken);
+
+        if (interaction is null)
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        // A hangup that succeeds at the provider can land after the call had already been recorded as failed,
+        // and a settled interaction keeps whichever ending it recorded first.
+        if (!interaction.IsSettled)
+        {
+            interaction.TransitionTo(InteractionStatus.Ended);
+        }
+
+        interaction.EndedUtc ??= now;
+        ApplyProjectionMetadata(interaction, command, request, "Succeeded", null, null, now);
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+        await _publisher.PublishAsync(CreateCallEndedEvent(command, interaction, request, now), cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectFailureAsync(ProviderCommand command, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        var request = DeserializeRequest(command.RequestPayload);
+        var interaction = await GetInteractionAsync(command.InteractionId, cancellationToken);
+
+        if (request?.ReofferOnFailure == true &&
+            interaction is not null &&
+            !IsTerminal(interaction.Status) &&
+            !string.IsNullOrWhiteSpace(request.ActivityItemId) &&
+            !string.IsNullOrWhiteSpace(request.QueueId))
+        {
+            await _queueService.EnqueueAsync(request.ActivityItemId, request.QueueId, null, cancellationToken);
+            await _workStateService.MutateAsync(
+                request.ActivityItemId,
+                workState => workState.TransitionTo(ActivityAssignmentStatus.Available),
+                cancellationToken);
+
+            await _activityWriter.ScheduleUpdateAsync(request.ActivityItemId, activity =>
+            {
+                activity.Status = ActivityStatus.AwaitingAgentResponse;
+                activity.CompletedUtc = null;
+            }, cancellationToken);
+
+            interaction.Requeue();
+            interaction.EndedUtc = null;
+            ApplyProjectionMetadata(
+                interaction,
+                command,
+                request,
+                "FailedRequeued",
+                GetErrorCodePrefix("failed"),
+                "The provider action failed and the live call was returned to routing.",
+                _clock.UtcNow);
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+            await _publisher.PublishAsync(CreateOfferRequeuedEvent(command, request), cancellationToken);
+
+            return;
+        }
+
+        await ProjectDiagnosticAsync(
+            command,
+            "Failed",
+            GetErrorCodePrefix("failed"),
+            "The provider action failed.",
+            cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task ProjectOutcomeUnknownAsync(
+        ProviderCommand command,
+        string errorCode,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        await ProjectDiagnosticAsync(
+            command,
+            "Unknown",
+            errorCode,
+            "The provider could not prove the provider action outcome.",
+            cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the provider-specific telephony action.
+    /// </summary>
+    /// <param name="telephonyService">The telephony service used to execute the action.</param>
+    /// <param name="call">The call reference and metadata for the action.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The telephony result.</returns>
+    protected abstract Task<TelephonyResult> ExecuteTelephonyAsync(
+        ITelephonyService telephonyService,
+        CallReference call,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Gets the display name used in diagnostic metadata.
+    /// </summary>
+    protected abstract string ActionName { get; }
+
+    /// <summary>
+    /// Gets the prefix used when constructing provider-facing error codes.
+    /// </summary>
+    protected abstract string ErrorCodePrefix { get; }
+
+    private async Task ProjectDiagnosticAsync(
+        ProviderCommand command,
+        string outcome,
+        string errorCode,
+        string errorMessage,
+        CancellationToken cancellationToken)
+    {
+        var request = DeserializeRequest(command.RequestPayload);
+
+        if (request is null)
+        {
+            return;
+        }
+
+        var interaction = await GetInteractionAsync(command.InteractionId, cancellationToken);
+
+        if (interaction is null)
+        {
+            return;
+        }
+
+        ApplyProjectionMetadata(interaction, command, request, outcome, errorCode, errorMessage, _clock.UtcNow);
+        await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+    }
+
+    private static ProviderCallActionCommandRequest DeserializeRequest(string payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<ProviderCallActionCommandRequest>(payload, _serializerOptions);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (NotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    private Task<CallControlAuthorizationResult> AuthorizeAsync(
+        ProviderCommand command,
+        ProviderCallActionCommandRequest request,
+        CancellationToken cancellationToken)
+    {
+        return _callControlAuthorizationService.AuthorizeAsync(new CallControlAuthorizationContext
+        {
+            Initiator = request.Initiator,
+            UserId = request.AgentUserId,
+            Verb = CommandType == ProviderCommandType.SendToVoicemail
+                ? CallControlVerb.Voicemail
+                : CallControlVerb.Decline,
+            InteractionId = command.InteractionId,
+            ProviderName = command.ProviderName,
+            ProviderCallId = request.ProviderCallId,
+        }, cancellationToken);
+    }
+
+    private static bool IsTerminal(InteractionStatus status)
+    {
+        return status is InteractionStatus.Ended or InteractionStatus.Failed;
+    }
+
+    private static ContactCenterVoiceProviderResult CreateUnknownResult(
+        ProviderCommand command,
+        string providerCallId,
+        string errorCode,
+        string errorMessage)
+    {
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = false,
+            OutcomeUnknown = true,
+            ErrorCode = errorCode,
+            ErrorMessage = errorMessage,
+            ProviderCallId = providerCallId ?? string.Empty,
+            ProviderName = command.ProviderName ?? string.Empty,
+        };
+    }
+
+    private ContactCenterVoiceProviderResult ToVoiceProviderResult(
+        ProviderCommand command,
+        ProviderCallActionCommandRequest request,
+        TelephonyResult result)
+    {
+        if (result is null)
+        {
+            return CreateUnknownResult(
+                command,
+                request.ProviderCallId,
+                GetErrorCodePrefix("outcome_unknown"),
+                "The provider did not return a result.");
+        }
+
+        return new ContactCenterVoiceProviderResult
+        {
+            Succeeded = result.Succeeded,
+            OutcomeUnknown = result.OutcomeUnknown,
+            ErrorCode = result.OutcomeUnknown
+                ? GetErrorCodePrefix("outcome_unknown")
+                : result.Succeeded
+                    ? null
+                    : GetErrorCodePrefix("failed"),
+            ErrorMessage = result.Error,
+            ProviderCallId = request.ProviderCallId,
+            ProviderName = command.ProviderName ?? string.Empty,
+        };
+    }
+
+    private async Task<Interaction> GetInteractionAsync(string interactionId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(interactionId))
+        {
+            return null;
+        }
+
+        return await _interactionManager.FindByIdAsync(interactionId, cancellationToken);
+    }
+
+    private static Dictionary<string, object> NormalizeMetadata(IDictionary<string, object> metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+        {
+            return [];
+        }
+
+        var normalized = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var entry in metadata)
+        {
+            normalized[entry.Key] = NormalizeValue(entry.Value);
+        }
+
+        return normalized;
+    }
+
+    private static object NormalizeValue(object value)
+    {
+        if (value is not JsonElement jsonElement)
+        {
+            return value;
+        }
+
+        return NormalizeJsonElement(jsonElement);
+    }
+
+    private static object NormalizeJsonElement(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number when element.TryGetInt64(out var longValue) => longValue,
+            JsonValueKind.Number when element.TryGetDecimal(out var decimalValue) => decimalValue,
+            JsonValueKind.Number when element.TryGetDouble(out var doubleValue) => doubleValue,
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Array => element.EnumerateArray().Select(NormalizeJsonElement).ToList(),
+            JsonValueKind.Object => element.EnumerateObject().ToDictionary(
+                property => property.Name,
+                property => NormalizeJsonElement(property.Value),
+                StringComparer.OrdinalIgnoreCase),
+            _ => element.ToString(),
+        };
+    }
+
+    private InteractionEvent CreateCallEndedEvent(
+        ProviderCommand command,
+        Interaction interaction,
+        ProviderCallActionCommandRequest request,
+        DateTime occurredUtc)
+    {
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.CallEnded,
+            InteractionId = interaction.ItemId,
+            AggregateType = nameof(Interaction),
+            AggregateId = interaction.ItemId,
+            CorrelationId = interaction.CorrelationId,
+            CausationId = command.CommandId,
+            ActorId = string.IsNullOrWhiteSpace(command.ProviderName)
+                ? ContactCenterConstants.SystemActor
+                : command.ProviderName,
+            SourceComponent = ContactCenterConstants.Components.CallSessions,
+            OccurredUtc = occurredUtc,
+            IdempotencyKey = command.CommandId,
+        };
+
+        interactionEvent.SetData(new Dictionary<string, object>
+        {
+            ["action"] = ActionName,
+            ["providerCallId"] = request.ProviderCallId ?? string.Empty,
+            ["providerName"] = command.ProviderName ?? string.Empty,
+            ["metadata"] = NormalizeMetadata(request.Metadata),
+        });
+
+        return interactionEvent;
+    }
+
+    private static InteractionEvent CreateOfferRequeuedEvent(
+        ProviderCommand command,
+        ProviderCallActionCommandRequest request)
+    {
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.OfferRequeued,
+            InteractionId = command.InteractionId,
+            AggregateType = nameof(ActivityReservation),
+            AggregateId = command.ActivityItemId,
+            ActorId = ContactCenterConstants.SystemActor,
+            SourceComponent = ContactCenterConstants.Components.Voice,
+            IdempotencyKey = ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(
+                command.CommandId,
+                ContactCenterConstants.Events.OfferRequeued),
+        };
+
+        interactionEvent.SetData(new OfferDeclinedEventData
+        {
+            QueueId = request.QueueId,
+        });
+
+        return interactionEvent;
+    }
+
+    private static void ApplyProjectionMetadata(
+        Interaction interaction,
+        ProviderCommand command,
+        ProviderCallActionCommandRequest request,
+        string outcome,
+        string errorCode,
+        string errorMessage,
+        DateTime projectedUtc)
+    {
+        interaction.TechnicalMetadata["providerCallActionCommandId"] = command.CommandId;
+        interaction.TechnicalMetadata["providerCallActionType"] = command.CommandType.ToString();
+        interaction.TechnicalMetadata["providerCallActionOutcome"] = outcome;
+        interaction.TechnicalMetadata["providerCallActionProviderCallId"] = request.ProviderCallId ?? string.Empty;
+        interaction.TechnicalMetadata["providerCallActionProviderName"] = command.ProviderName ?? string.Empty;
+        interaction.TechnicalMetadata["providerCallActionProjectedUtc"] = projectedUtc;
+        interaction.TechnicalMetadata["providerCallActionMetadata"] = NormalizeMetadata(request.Metadata);
+
+        if (!string.IsNullOrWhiteSpace(errorCode))
+        {
+            interaction.TechnicalMetadata["providerCallActionErrorCode"] = errorCode;
+        }
+
+        if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            interaction.TechnicalMetadata["providerCallActionErrorMessage"] = errorMessage;
+        }
+    }
+
+    private string GetErrorCodePrefix(string suffix)
+    {
+        return $"{ErrorCodePrefix}_{suffix}";
+    }
+}

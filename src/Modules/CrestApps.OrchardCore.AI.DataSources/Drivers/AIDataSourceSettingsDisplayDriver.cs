@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell;
+using OrchardCore.Environment.Options;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.DataSources.Drivers;
@@ -18,7 +18,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IShellReleaseManager _shellReleaseManager;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
@@ -27,21 +27,19 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="shellReleaseManager">The shell release manager.</param>
+    /// <param name="optionsUpdateNotifier">The options update notifier.</param>
     public AIDataSourceSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IShellReleaseManager shellReleaseManager)
+        IOptionsUpdateNotifier optionsUpdateNotifier)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
-        _shellReleaseManager = shellReleaseManager;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
     }
 
     public override IDisplayResult Edit(ISite site, AIDataSourceSettings settings, BuildEditorContext context)
     {
-        context.AddTenantReloadWarningWrapper();
-
         return Initialize<AIDataSourceSettingsViewModel>("AIDataSourceSettings_Edit", model =>
         {
             model.DefaultStrictness = settings.DefaultStrictness;
@@ -73,7 +71,7 @@ public sealed class AIDataSourceSettingsDisplayDriver : SiteDisplayDriver<AIData
 
         if (settingsChanged)
         {
-            _shellReleaseManager.RequestRelease();
+            _optionsUpdateNotifier.RequestUpdate<AIDataSourceOptions>();
         }
 
         return Edit(site, settings, context);

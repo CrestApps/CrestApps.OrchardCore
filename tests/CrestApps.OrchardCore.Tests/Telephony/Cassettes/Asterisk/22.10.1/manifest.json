@@ -1,0 +1,33 @@
+{
+  "$schema": "./manifest.schema.md",
+  "provider": "asterisk",
+  "asteriskVersion": "22.10.1",
+  "containerImageTag": "andrius/asterisk:22.10.1_debian-trixie",
+  "containerImageDigest": "sha256:4cfb208f877b45e88115b35140b1edba06e1374e9bce4b6f5e55a84e60254b92",
+  "sourceRepository": "https://github.com/asterisk/asterisk",
+  "sourceRef": "22.10.1",
+  "sourcePath": "rest-api/api-docs",
+  "description": "Verbatim Asterisk REST Interface (ARI) Swagger 1.2 declarations published by the Asterisk project for the exact release that the single-node Contact Center container image is pinned to. These files are the provider contract; they are never hand-edited.",
+  "specFiles": [
+    {
+      "name": "spec-events.json",
+      "url": "https://raw.githubusercontent.com/asterisk/asterisk/22.10.1/rest-api/api-docs/events.json",
+      "sha256": "7de66c3cbf05dbb3b65a317649d677c631bc0a766c172932c59df44b76e32f57"
+    },
+    {
+      "name": "spec-channels.json",
+      "url": "https://raw.githubusercontent.com/asterisk/asterisk/22.10.1/rest-api/api-docs/channels.json",
+      "sha256": "4800249f054f87a6db14aa75e75bed16e81f9a4193a188f651d0f66c0237c66d"
+    },
+    {
+      "name": "spec-bridges.json",
+      "url": "https://raw.githubusercontent.com/asterisk/asterisk/22.10.1/rest-api/api-docs/bridges.json",
+      "sha256": "89477cdf54ca41639c114123d42dc3cf097d2ab2b542a8fe46bd868aa3f49a8e"
+    },
+    {
+      "name": "spec-recordings.json",
+      "url": "https://raw.githubusercontent.com/asterisk/asterisk/22.10.1/rest-api/api-docs/recordings.json",
+      "sha256": "8da75756aef89cc06a8c13d16a49d9b3870f731327088050d3ed0d5a3f0754c8"
+    }
+  ]
+}

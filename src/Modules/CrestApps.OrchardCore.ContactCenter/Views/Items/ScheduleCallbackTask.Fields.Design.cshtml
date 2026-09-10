@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.Models
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<ScheduleCallbackTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-phone-volume" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Schedule Callback."])
+    </h4>
+</header>

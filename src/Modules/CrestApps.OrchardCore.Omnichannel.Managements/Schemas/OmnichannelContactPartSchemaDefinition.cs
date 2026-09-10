@@ -38,6 +38,10 @@ public sealed class OmnichannelContactPartSchemaDefinition : PartSchemaDefinitio
                             .Type(SchemaValueType.Boolean)
                             .Default(true)
                             .Description("Require a time zone for the contact.")),
+                        ("AutoDetectTimeZone", new JsonSchemaBuilder()
+                            .Type(SchemaValueType.Boolean)
+                            .Default(true)
+                            .Description("Automatically detect the contact time zone from the contact's phone number when one was not selected.")),
                         ("UseDoNotCall", new JsonSchemaBuilder()
                             .Type(SchemaValueType.Boolean)
                             .Default(true)

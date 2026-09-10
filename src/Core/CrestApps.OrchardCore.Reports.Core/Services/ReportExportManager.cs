@@ -34,7 +34,7 @@ public sealed class ReportExportManager : IReportExportManager
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<IReportExportFormat> ListFormats()
+    public IReadOnlyList<IReportExportFormat> GetFormats()
     {
         return _formats;
     }

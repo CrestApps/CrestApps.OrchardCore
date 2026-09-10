@@ -1,8 +1,12 @@
 @model CrestApps.OrchardCore.ContentFields.ViewModels.DisplayPhoneFieldViewModel
 @using System.Globalization
 @using System.Text.Json.Nodes
+@using CrestApps.OrchardCore.PhoneNumbers
 @using OrchardCore.ContentManagement
 @using OrchardCore.ContentManagement.Metadata.Models
+
+@inject IPhoneNumberService PhoneNumberService
+
 @{
     var verification = GetPhoneVerificationInfo(Model.Part, Model.Field.PhoneNumber);
     var verificationStatus = verification.Matches ? verification.Status : "Unverified";
@@ -29,7 +33,9 @@
     <div class="ocat-wrapper">
         <span class="ocat-label">@Model.PartFieldDefinition.DisplayName()</span>
         <div class="ocat-end d-flex align-items-center gap-2">
-            <a href="tel:@Model.Field.PhoneNumber">@(Model.Field.NationalNumber ?? Model.Field.PhoneNumber)</a>
+            @* Grouped for reading rather than shown as stored: an agent reads this back to a customer mid-call,
+               and a run of digits is a string to decode. The tel: href keeps the exact stored number. *@
+            <a href="tel:@Model.Field.PhoneNumber">@PhoneNumberService.FormatForDisplay(Model.Field.PhoneNumber)</a>
             <span class="phone-field-dial" data-phone-dial data-phone-number="@Model.Field.PhoneNumber"></span>
             <i class="@verificationIconClass" title="@verificationTitle" aria-label="@verificationTitle"></i>
         </div>

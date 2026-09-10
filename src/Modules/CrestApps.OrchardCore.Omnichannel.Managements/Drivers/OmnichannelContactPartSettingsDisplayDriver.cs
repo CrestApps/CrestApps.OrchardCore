@@ -16,6 +16,7 @@ internal sealed class OmnichannelContactPartSettingsDisplayDriver : ContentTypeP
             var settings = contentTypePartDefinition.GetSettings<OmnichannelContactPartSettings>();
 
             model.RequireTimeZone = settings.RequireTimeZone;
+            model.AutoDetectTimeZone = settings.AutoDetectTimeZone;
             model.UseDoNotCall = settings.UseDoNotCall;
             model.UseDoNotSms = settings.UseDoNotSms;
             model.UseDoNotChat = settings.UseDoNotChat;
@@ -32,6 +33,7 @@ internal sealed class OmnichannelContactPartSettingsDisplayDriver : ContentTypeP
         context.Builder.WithSettings(new OmnichannelContactPartSettings
         {
             RequireTimeZone = model.RequireTimeZone,
+            AutoDetectTimeZone = model.AutoDetectTimeZone,
             UseDoNotCall = model.UseDoNotCall,
             UseDoNotSms = model.UseDoNotSms,
             UseDoNotChat = model.UseDoNotChat,

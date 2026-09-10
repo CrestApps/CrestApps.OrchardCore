@@ -23,7 +23,7 @@ You describe what you want the AI to do (tone, rules, goals), and the AI carries
 ## What this module provides
 
 - An SMS channel implementation for Omnichannel automated activities.
-- Integration points for an SMS provider (e.g. Twilio) to send/receive messages.
+- Integration points for an SMS provider (for example [Telnyx SMS](../telephony/telnyx#telnyx-sms) or Twilio) to send/receive messages.
 - AI chat session orchestration for "automated activities".
 
 ## Enable the feature

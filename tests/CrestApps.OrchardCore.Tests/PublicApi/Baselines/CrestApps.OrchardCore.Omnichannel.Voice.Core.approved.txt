@@ -1,0 +1,117 @@
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Omnichannel.Voice")]
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
+{
+    public sealed class PendingVoiceHandoff
+    {
+        public PendingVoiceHandoff() { }
+        public string Reason { get; set; }
+    }
+    public sealed class VoiceAgentEvent
+    {
+        public VoiceAgentEvent() { }
+        public string ActivityId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEventKind Kind { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public bool TranscriptionIsFinal { get; set; }
+        public string TranscriptionText { get; set; }
+    }
+    public enum VoiceAgentEventKind
+    {
+        Unknown = 0,
+        Answered = 1,
+        SpeechEnded = 2,
+        Transcription = 3,
+        Hangup = 4,
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Voice
+{
+    public static class OmnichannelVoiceConstants
+    {
+        public static class Feature
+        {
+            public const string Area = "CrestApps.OrchardCore.Omnichannel.Voice";
+        }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
+{
+    public sealed class CallAmbience
+    {
+        public CallAmbience(int sampleRate, bool includeTyping = true, int? seed = default) { }
+        public void MixIntoPcmBytes(System.Span<byte> pcm) { }
+        public void Next(System.Span<short> destination) { }
+        public System.ReadOnlyMemory<byte> NextPcmBytes(int sampleCount) { }
+        public static void MixInto(System.Span<short> destination, System.ReadOnlySpan<short> ambience) { }
+    }
+    public interface IRealtimeVoiceConversationRunner
+    {
+        System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IVoiceAgentConversationLoop
+    {
+        System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class NoRealtimeVoiceConversationRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner
+    {
+        public NoRealtimeVoiceConversationRunner() { }
+        public System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class RealtimeAudioConverter
+    {
+        public const int RealtimeSampleRate = 24000;
+        public static short DecodeMuLawSample(byte value) { }
+        public static byte EncodeMuLawSample(short sample) { }
+        public static System.ReadOnlyMemory<byte> FromRealtime(System.ReadOnlyMemory<byte> audio, CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat format) { }
+        public static short[] Resample(short[] samples, int fromRate, int toRate) { }
+        public static System.ReadOnlyMemory<byte> ToRealtime(System.ReadOnlyMemory<byte> frame, CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat format) { }
+    }
+    public sealed class RealtimeVoiceConversationContext
+    {
+        public RealtimeVoiceConversationContext() { }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public System.Threading.CancellationToken HandoffRequested { get; set; }
+        public string InteractionId { get; set; }
+        public CrestApps.Core.AI.Models.AIProfile Profile { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public CrestApps.Core.AI.Models.AIChatSession Session { get; set; }
+        public bool UseCallAmbience { get; set; }
+    }
+    public sealed class RealtimeVoiceConversationRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner
+    {
+        public RealtimeVoiceConversationRunner(CrestApps.Core.AI.Realtime.IRealtimeOrchestrator orchestrator, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaProviderResolver mediaResolver, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationRunner> logger) { }
+        public System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class VoiceAgentConversationLoop : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceAgentConversationLoop
+    {
+        public VoiceAgentConversationLoop(
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore activityStore,
+                    CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager,
+                    CrestApps.Core.AI.IAIChatSessionPromptStore promptStore,
+                    CrestApps.Core.AI.Completions.IAICompletionService completionService,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn handoffTurn,
+                    CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
+                    CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,
+                    CrestApps.Core.AI.Profiles.IAIProfileManager profileManager,
+                    CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffService> handoffServices,
+                    CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver mediaResolver,
+                    CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner realtimeRunner,
+                    OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager,
+                    OrchardCore.ContentManagement.IContentManager contentManager,
+                    OrchardCore.Modules.IClock clock,
+                    Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> logger) { }
+        public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class VoiceCallConclusionPolicy
+    {
+        public const string CompletedWithoutSummaryNote = "Automated AI voice call completed.";
+        public const string NoConversationNote = "The automated call produced no conversation: nothing was said by either side.";
+        public static bool HasConversation(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
+        public static string ResolveNotes(bool hasConversation, string modelSummary) { }
+        public static bool ShouldConclude(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
+    }
+}

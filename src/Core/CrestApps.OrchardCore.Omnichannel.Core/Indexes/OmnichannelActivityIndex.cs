@@ -137,4 +137,9 @@ public sealed class OmnichannelActivityIndex : CatalogItemIndex
     /// Gets or sets the status.
     /// </summary>
     public ActivityStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the automated conversation was escalated to a live agent.
+    /// </summary>
+    public bool AiEscalated { get; set; }
 }

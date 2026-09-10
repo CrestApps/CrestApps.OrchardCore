@@ -13,6 +13,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using QueryContext = CrestApps.Core.Models.QueryContext;
@@ -23,6 +24,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
 /// Provides endpoints for managing channel endpoints resources.
 /// </summary>
 [Admin]
+[Feature(OmnichannelConstants.Features.ChannelEndpoints)]
 public sealed class ChannelEndpointsController : Controller
 {
     private const string _optionsSearch = "Options.Search";
@@ -32,6 +34,7 @@ public sealed class ChannelEndpointsController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<OmnichannelChannelEndpoint> _displayDriver;
     private readonly INotifier _notifier;
+    private readonly ChannelEndpointSourceOptions _sourceOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -44,6 +47,7 @@ public sealed class ChannelEndpointsController : Controller
     /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="displayManager">The display manager.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="sourceOptions">The registered channel-endpoint sources.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ChannelEndpointsController(
@@ -52,6 +56,7 @@ public sealed class ChannelEndpointsController : Controller
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<OmnichannelChannelEndpoint> displayManager,
         INotifier notifier,
+        IOptions<ChannelEndpointSourceOptions> sourceOptions,
         IHtmlLocalizer<ChannelEndpointsController> htmlLocalizer,
         IStringLocalizer<ChannelEndpointsController> stringLocalizer)
     {
@@ -60,6 +65,7 @@ public sealed class ChannelEndpointsController : Controller
         _updateModelAccessor = updateModelAccessor;
         _displayDriver = displayManager;
         _notifier = notifier;
+        _sourceOptions = sourceOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -98,11 +104,12 @@ public sealed class ChannelEndpointsController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListCatalogEntryViewModel<CatalogEntryViewModel<OmnichannelChannelEndpoint>>
+        var viewModel = new ListSourceCatalogEntryViewModel<OmnichannelChannelEndpoint>
         {
             Models = [],
             Options = options,
             Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Sources = _sourceOptions.Sources.Keys.Order(),
         };
 
         foreach (var model in result.Entries)
@@ -141,21 +148,28 @@ public sealed class ChannelEndpointsController : Controller
     }
 
     /// <summary>
-    /// Creates a new .
+    /// Displays the form for creating a new endpoint on the given channel source.
     /// </summary>
-    [Admin("omnichannel/channel-endpoints/create", "OmnichannelChannelEndpointsCreate")]
-    public async Task<ActionResult> Create()
+    /// <param name="source">The channel the endpoint is being created for (the source key).</param>
+    [Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
+    public async Task<ActionResult> Create(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageChannelEndpoints))
         {
             return Forbid();
         }
 
+        if (!_sourceOptions.Sources.TryGetValue(source, out var channelSource))
+        {
+            return NotFound();
+        }
+
         var model = await _manager.NewAsync();
+        model.Channel = source;
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["Channel Endpoint"],
+            DisplayName = channelSource.DisplayName,
             Editor = await _displayDriver.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 
@@ -163,23 +177,30 @@ public sealed class ChannelEndpointsController : Controller
     }
 
     /// <summary>
-    /// Creates a new post.
+    /// Creates a new endpoint on the given channel source.
     /// </summary>
+    /// <param name="source">The channel the endpoint is being created for (the source key).</param>
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("omnichannel/channel-endpoints/create", "OmnichannelChannelEndpointsCreate")]
-    public async Task<ActionResult> CreatePost()
+    [Admin("omnichannel/channel-endpoints/create/{source}", "OmnichannelChannelEndpointsCreate")]
+    public async Task<ActionResult> CreatePost(string source)
     {
         if (!await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ManageChannelEndpoints))
         {
             return Forbid();
         }
 
+        if (!_sourceOptions.Sources.TryGetValue(source, out var channelSource))
+        {
+            return NotFound();
+        }
+
         var model = await _manager.NewAsync();
+        model.Channel = source;
 
         var viewModel = new EditCatalogEntryViewModel
         {
-            DisplayName = S["New Channel Endpoint"],
+            DisplayName = channelSource.DisplayName,
             Editor = await _displayDriver.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true),
         };
 

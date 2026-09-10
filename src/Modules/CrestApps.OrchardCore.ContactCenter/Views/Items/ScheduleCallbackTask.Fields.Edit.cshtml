@@ -1,0 +1,48 @@
+@using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels
+
+@model ScheduleCallbackTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Destination">
+    <label class="ocat-label" asp-for="Destination">@T["Destination"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="Destination" />
+        <span asp-validation-for="Destination"></span>
+        <span class="hint">@T["A Liquid expression resolving the number or address to call back."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DelayMinutes">
+    <label class="ocat-label" asp-for="DelayMinutes">@T["Delay (minutes)"]</label>
+    <div class="ocat-end">
+        <input class="form-control" type="number" min="0" asp-for="DelayMinutes" />
+        <span asp-validation-for="DelayMinutes"></span>
+        <span class="hint">@T["The number of minutes from now before the callback becomes due. Use 0 to schedule it immediately."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CampaignId">
+    <label class="ocat-label" asp-for="CampaignId">@T["Campaign"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="CampaignId" />
+        <span asp-validation-for="CampaignId"></span>
+        <span class="hint">@T["An optional Liquid expression resolving the campaign the callback belongs to."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="QueueId">
+    <label class="ocat-label" asp-for="QueueId">@T["Queue"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="QueueId" />
+        <span asp-validation-for="QueueId"></span>
+        <span class="hint">@T["An optional Liquid expression resolving the queue the promoted activity is enqueued into."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactContentItemId">
+    <label class="ocat-label" asp-for="ContactContentItemId">@T["Contact"]</label>
+    <div class="ocat-end">
+        <input class="form-control" asp-for="ContactContentItemId" />
+        <span asp-validation-for="ContactContentItemId"></span>
+        <span class="hint">@T["An optional Liquid expression resolving the content item identifier of the contact being called back."]</span>
+    </div>
+</div>

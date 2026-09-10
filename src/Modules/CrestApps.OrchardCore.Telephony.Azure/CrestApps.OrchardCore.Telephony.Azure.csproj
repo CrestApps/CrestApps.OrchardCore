@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>$(MSBuildProjectName)</RootNamespace>
+    <Title>CrestApps OrchardCore Telephony - Azure Blob Storage</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Azure Blob Storage backend for Contact Center call recordings, preserving the encryption-at-rest of the
+      default local recording store.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Telephony Recording Azure Blob</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.FileStorage.AzureBlob" />
+    <PackageReference Include="OrchardCore.Media.Azure" />
+    <PackageReference Include="OrchardCore.Module.Targets" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Depend directly on the Telephony module so installing this package resolves the Telephony feature
+      dependency and gives access to the encrypted recording media store it reuses over an Azure Blob backend.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>
