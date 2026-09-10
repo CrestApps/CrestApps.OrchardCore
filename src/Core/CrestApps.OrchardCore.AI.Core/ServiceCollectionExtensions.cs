@@ -8,6 +8,7 @@ using CrestApps.Core.AI.Tooling;
 using CrestApps.Core.Infrastructure.Indexing;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core.Handlers;
+using CrestApps.Core.AI.Realtime;
 using CrestApps.OrchardCore.AI.Core.Services;
 using Fluid;
 using Microsoft.AspNetCore.Authorization;
@@ -125,6 +126,11 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IOptions<AIOptions>>(),
                 sp.GetRequiredService<IOptions<AIDeploymentCatalogOptions>>(),
                 sp.GetRequiredService<ILogger<ConfigurationAIDeploymentSource>>()));
+
+        // Options, unlike the catalog sources below, cannot be replaced: the core registration has already
+        // bound the host configuration by the time this runs. Post-configure instead, which applies after every
+        // Configure regardless of the order the modules registered in.
+        services.AddTransient<IPostConfigureOptions<RealtimeTransportOptions>, RealtimeTransportOptionsConfiguration>();
 
         ReplaceService<INamedSourceCatalogSource<AIProviderConnection>, ConfigurationAIProviderConnectionSource>(
             services,
