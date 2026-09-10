@@ -60,14 +60,24 @@ turns out to be is then read back from the deployment's own capabilities.
 field — in the store, in a recipe, or in `appsettings.json` — is projected onto capabilities every time it
 is read:
 
-| Legacy purpose | Capability |
+| Legacy purpose | Capabilities |
 |----------------|-----------|
-| `Chat`, `Utility` | `textGeneration`, unless the deployment declares `realtime` |
+| `Chat`, `Utility` | `textGeneration`, `toolCalling`, `streaming` — nothing, if the deployment declares `realtime` |
 | `Embedding` | `textEmbedding` |
 | `Image` | `imageOutput` |
 | `Vision` | `imageInput` |
 | `SpeechToText` | `speechToText` |
 | `TextToSpeech` | `textToSpeech` |
+
+The chat and utility purposes are the only two that never named a single capability, and they are credited
+with three. A deployment on the legacy purpose was driven through a chat client that called tools and
+streamed its response, with no switch to turn either off, so text generation on its own would understate
+what the site already had. Anything a particular model cannot really do is one checkbox away in the
+deployment editor.
+
+A deployment that declares `realtime` is credited with none of the three. It is a speech-to-speech model
+stored under the chat purpose: it answers a text completion with an HTTP 400, and the purpose says nothing
+about it beyond that it is conversational.
 
 The projection is additive, and it is permanent rather than a one-time migration, so a site that never
 rewrites its stored JSON stays correct. Declaring capabilities directly is optional cleanup.

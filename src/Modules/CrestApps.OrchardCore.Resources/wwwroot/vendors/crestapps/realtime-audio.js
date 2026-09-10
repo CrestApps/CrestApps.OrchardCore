@@ -762,6 +762,13 @@
     // network where WebRTC cannot work pays the full connection timeout — and a second microphone prompt —
     // at the start of every single conversation.
     var REALTIME_WEBRTC_BLOCKED_KEY = 'coreai.realtime.webrtcBlocked';
+    // The ICE servers resolved for the conversation currently starting. Scoped to one attempt, not to the page:
+    // TURN credentials are short-lived, so every conversation resolves its own set — but within an attempt the
+    // transport decision and the peer must see the same servers, and one hub round-trip is enough.
+    var realtimeAttemptIceServers = null;
+    // Identifies the conversation currently starting, so an ICE resolution that lands after the user gave up
+    // (or started again) cannot open a session for an attempt that no longer exists.
+    var realtimeAttemptToken = 0;
     var realtimeSawRelayCandidate = false;
     // WebRTC half-duplex echo guard: the shared microphone gate (see createMicGate) watches both the mic and
     // the assistant's remote audio and silences the outbound track unless the user is genuinely speaking, so
@@ -1441,28 +1448,63 @@
       if (webRtcIceServers) {
         return Promise.resolve(webRtcIceServers);
       }
+      if (realtimeAttemptIceServers) {
+        return Promise.resolve(realtimeAttemptIceServers);
+      }
       if (!connection || typeof connection.invoke !== 'function') {
         return Promise.resolve(DEFAULT_ICE_SERVERS);
       }
       return connection.invoke('GetRealtimeIceServers').then(function (servers) {
-        return Array.isArray(servers) && servers.length ? servers : DEFAULT_ICE_SERVERS;
+        realtimeAttemptIceServers = Array.isArray(servers) && servers.length ? servers : DEFAULT_ICE_SERVERS;
+        return realtimeAttemptIceServers;
       })["catch"](function (err) {
         if (window.console && console.warn) {
           console.warn('Could not resolve the realtime ICE servers; using the default STUN server.', err);
         }
-        return DEFAULT_ICE_SERVERS;
+        realtimeAttemptIceServers = DEFAULT_ICE_SERVERS;
+        return realtimeAttemptIceServers;
       });
     }
-    function isWebRtcKnownBlocked() {
+
+    // Identifies an ICE configuration by its server URLs, deliberately ignoring usernames and credentials:
+    // ephemeral TURN credentials (Cloudflare, coturn HMAC) are reissued for every session, so including them
+    // would change the fingerprint on each attempt and make the remembered failure worthless. Adding, removing
+    // or repointing a STUN/TURN server does change it — which is the case that must invalidate the memory.
+    function iceServersFingerprint(servers) {
+      var urls = [];
       try {
-        return window.sessionStorage.getItem(REALTIME_WEBRTC_BLOCKED_KEY) === '1';
+        (servers || []).forEach(function (server) {
+          var list = server && server.urls;
+          if (typeof list === 'string') {
+            urls.push(list);
+          } else if (Array.isArray(list)) {
+            list.forEach(function (url) {
+              if (url) {
+                urls.push(url);
+              }
+            });
+          }
+        });
+      } catch (err) {
+        return 'none';
+      }
+      return urls.length ? urls.sort().join('|') : 'none';
+    }
+
+    // A remembered failure only applies to the ICE configuration that produced it. Anything else strands a
+    // deployment that has since been given a TURN server on the WebSocket transport until every open tab is
+    // closed, with no way for the user to tell why. Values written by older builds ('1') match no fingerprint,
+    // so upgrading clears the flag on its own.
+    function isWebRtcKnownBlocked(servers) {
+      try {
+        return window.sessionStorage.getItem(REALTIME_WEBRTC_BLOCKED_KEY) === iceServersFingerprint(servers);
       } catch (err) {
         return false;
       }
     }
     function rememberWebRtcBlocked() {
       try {
-        window.sessionStorage.setItem(REALTIME_WEBRTC_BLOCKED_KEY, '1');
+        window.sessionStorage.setItem(REALTIME_WEBRTC_BLOCKED_KEY, iceServersFingerprint(realtimeAttemptIceServers || webRtcIceServers));
       } catch (err) {}
     }
 
@@ -1503,6 +1545,8 @@
         return;
       }
       applyRealtimeAudioPrefs(loadRealtimeAudioPrefs());
+      realtimeAttemptIceServers = null;
+      var attempt = ++realtimeAttemptToken;
       realtimeFellBack = false;
       realtimeSessionReady = false;
       realtimeEndedNotice = null;
@@ -1510,20 +1554,34 @@
       bindRealtimeLifecycleHandlers();
       setRealtimeState('requesting-mic');
 
+      // Starting on WebSocket without even attempting WebRTC is a deployment fact worth stating once. The
+      // console is otherwise indistinguishable from a healthy WebRTC session, so "no warning" gets read as
+      // "WebRTC is working" when it can equally mean the server never offered the transport at all.
+      if (!webRtcEnabled) {
+        logWebSocketTransportReason('the server did not advertise the WebRTC transport');
+        startRealtimeWebSocketConversation();
+        return;
+      }
+
       // Prefer the WebRTC transport when the server advertises it: the browser's echo canceller references
       // the assistant's media track, so the model can ignore its own voice with the mic open (open rooms).
       // If the peer cannot connect (blocked UDP, no TURN, unsupported), we fall back to WebSocket at connect
       // time — see fallbackToWebSocket. The decision is made once, before the session starts.
-      if (webRtcEnabled && !isWebRtcKnownBlocked()) {
+      //
+      // Resolving the ICE servers before choosing a transport costs no extra round-trip — the peer reuses
+      // realtimeAttemptIceServers — and it is what lets a remembered failure be scoped to the configuration
+      // that actually caused it.
+      resolveIceServers().then(function (servers) {
+        if (attempt !== realtimeAttemptToken || !isRealtimeMode || isRealtimeActive) {
+          return;
+        }
+        if (isWebRtcKnownBlocked(servers)) {
+          logWebSocketTransportReason('a WebRTC attempt already failed earlier in this browser session with the same ICE configuration');
+          startRealtimeWebSocketConversation();
+          return;
+        }
         startRealtimeWebRtcConversation();
-        return;
-      }
-
-      // Starting on WebSocket without even attempting WebRTC is a deployment fact worth stating once. The
-      // console is otherwise indistinguishable from a healthy WebRTC session, so "no warning" gets read as
-      // "WebRTC is working" when it can equally mean the server never offered the transport at all.
-      logWebSocketTransportReason(webRtcEnabled ? 'a WebRTC attempt already failed earlier in this browser session' : 'the server did not advertise the WebRTC transport');
-      startRealtimeWebSocketConversation();
+      });
     }
     function startRealtimeWebSocketConversation() {
       if (webRtcEnabled) {
