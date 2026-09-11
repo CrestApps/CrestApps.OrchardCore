@@ -19,9 +19,15 @@ namespace CrestApps.OrchardCore.AI.Chat.Core.Services;
 internal sealed class CloudflareTurnOptionsConfiguration : IPostConfigureOptions<CloudflareTurnOptions>
 {
     /// <summary>
-    /// The configuration section, matching the one CrestApps.Core binds from the host configuration so a
-    /// value moved from <c>appsettings.json</c> into a tenant's own configuration keeps its spelling.
+    /// The configuration section, matching the one CrestApps.Core binds so a value moved from the host into
+    /// a tenant's own configuration keeps its spelling.
     /// </summary>
+    /// <remarks>
+    /// <see cref="IShellConfiguration"/> is already scoped to the tenant, so the section is named without the
+    /// <c>OrchardCore</c> prefix the host <c>appsettings.json</c> nests it under. A host writes
+    /// <c>OrchardCore:CrestApps:AI:RealtimeTransport:Cloudflare</c>; a tenant's own
+    /// <c>App_Data/Sites/{tenant}/appsettings.json</c> writes the key below verbatim.
+    /// </remarks>
     public const string ConfigurationSection = "CrestApps:AI:RealtimeTransport:Cloudflare";
 
     private readonly IShellConfiguration _shellConfiguration;
