@@ -34,11 +34,6 @@ public class DataSourceSearchToolInstanceViewModel
     public string Filter { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the model must answer only from the retrieved content.
-    /// </summary>
-    public bool IsInScope { get; set; }
-
-    /// <summary>
     /// Gets or sets the data sources offered in the data source list.
     /// </summary>
     [BindNever]

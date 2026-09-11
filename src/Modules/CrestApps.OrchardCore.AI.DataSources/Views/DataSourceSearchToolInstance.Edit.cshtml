@@ -62,15 +62,3 @@
         <span class="hint">@T["Optional OData filter expression that narrows the search to a subset of the indexed data. It is translated to the index provider's own filter syntax before the search runs."]</span>
     </div>
 </div>
-
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <div class="form-check">
-            <input class="form-check-input" type="checkbox" asp-for="IsInScope" />
-            <label class="form-check-label" asp-for="IsInScope">
-                @T["Restrict answers to retrieved data only"]
-            </label>
-            <span class="hint dashed">@T["When enabled, a search that finds nothing tells the model the answer is unavailable instead of inviting it to fall back to its general knowledge."]</span>
-        </div>
-    </div>
-</div>

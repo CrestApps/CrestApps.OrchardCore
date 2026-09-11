@@ -86,11 +86,14 @@ Each instance binds **one** data source plus the retrieval parameters applied to
 - **Strictness** — how relevant a result must be to survive (1–5). Leave it empty to use the site default from **Settings → Artificial Intelligence → Data Sources**.
 - **Retrieved documents** — the number of top-scoring results to return (3–20). Leave it empty to use the site default.
 - **Filter** — an optional OData filter expression, validated as you save and translated to the index provider's own filter syntax before the search runs.
-- **Restrict answers to retrieved data only** — when checked, a search that finds nothing tells the model the answer is unavailable rather than inviting it to fall back to its general knowledge.
 
 The model supplies only the search phrases — one, or up to three when a question spans genuinely distinct topics (*"how does our vacation policy compare with sick leave?"*). They are embedded in a single batched call with the **same embedding deployment the knowledge base index was indexed with**, searched in parallel, and fused into one ranking, so a passage matched by two phrases is returned once. Results carry `[doc:N]` citations, one per source document.
 
 Leaving strictness and retrieved documents empty keeps reading the site defaults, so changing them under **Settings** moves every instance that did not pin its own value.
+
+:::note
+There is no **restrict answers to retrieved data only** option here, unlike the data source attached to a profile. Scope is enforceable on a profile because retrieval runs before the turn and shapes the prompt the model answers from. A tool the model chose to call cannot enforce it: the most it could do is word the "nothing found" reply differently, and the model stays free to answer from its general knowledge. Keep retrieval on the profile when answers must be grounded.
+:::
 
 :::tip
 This source and the data source attached directly to an AI profile share one retrieval pipeline, so an instance honors exactly the same parameters, thresholds, and output format. The difference is where the parameters come from: the instance carries its own, and the model decides when to search rather than retrieval running on every turn.

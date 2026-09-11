@@ -174,8 +174,7 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("RetrievalMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chunk", "Hierarchical").Description("Whether a search returns only the matching chunks or the full source documents they belong to.")),
                 ("TopNDocuments", RecipeStepSchemaBuilders.Integer().Description("Number of top-scoring documents returned for a single search. Empty uses the site default.")),
                 ("Strictness", RecipeStepSchemaBuilders.Integer().Description("Relevance threshold a result must clear to be returned. Empty uses the site default.")),
-                ("Filter", RecipeStepSchemaBuilders.String().Description("OData filter expression translated to the index provider's own syntax before the search runs.")),
-                ("IsInScope", RecipeStepSchemaBuilders.Boolean().Description("Whether the model must answer only from the retrieved content.")))
+                ("Filter", RecipeStepSchemaBuilders.String().Description("OData filter expression translated to the index provider's own syntax before the search runs.")))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildWebsiteSearchSettingsSchema()
