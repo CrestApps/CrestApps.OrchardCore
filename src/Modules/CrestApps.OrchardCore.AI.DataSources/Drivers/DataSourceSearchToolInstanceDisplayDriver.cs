@@ -73,7 +73,6 @@ internal sealed class DataSourceSearchToolInstanceDisplayDriver : DisplayDriver<
         }
 
         var model = new DataSourceSearchToolInstanceViewModel();
-        var existing = instance.GetOrCreate<DataSourceSearchToolSettings>();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -114,13 +113,6 @@ internal sealed class DataSourceSearchToolInstanceDisplayDriver : DisplayDriver<
             TopNDocuments = model.TopNDocuments,
             Strictness = model.Strictness,
             Filter = string.IsNullOrWhiteSpace(model.Filter) ? null : model.Filter.Trim(),
-
-            // Carried over rather than edited. There is no editor control for it because nothing here can
-            // honor it: at tool level it only changes the wording of the "nothing found" string the model
-            // reads, and the model is free to answer from general knowledge regardless. Scope is enforceable
-            // on a profile, where retrieval runs before the turn and shapes the prompt, not on a function the
-            // model chose to call. Preserved so an instance imported with a value keeps it.
-            IsInScope = existing.IsInScope,
         });
 
         return Edit(instance, context);
