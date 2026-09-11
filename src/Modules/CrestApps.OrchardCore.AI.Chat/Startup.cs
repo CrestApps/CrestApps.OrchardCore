@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Chat.Core;
 using CrestApps.OrchardCore.AI.Chat.Core.Hubs;
 using CrestApps.OrchardCore.AI.Chat.Core.Services;
 using CrestApps.OrchardCore.AI.Chat.Drivers;
@@ -82,6 +83,10 @@ public sealed class Startup : StartupBase
         // Enables realtime (speech-to-speech) voice over the server-relay WebRTC transport, with automatic
         // WebSocket fallback. The realtime hubs advertise WebRTC to the browser when this is registered.
         services.AddWebRtcRealtimeTransport();
+
+        // Lets a tenant mint its own short-lived TURN credentials from Cloudflare Realtime instead of
+        // sharing the host's, falling back to the configured STUN and TURN servers while it has no token.
+        services.AddTenantCloudflareRealtimeTurn();
 
         services.AddDataProtection();
         services.AddOptions<AIVisitorIdentityOptions>();

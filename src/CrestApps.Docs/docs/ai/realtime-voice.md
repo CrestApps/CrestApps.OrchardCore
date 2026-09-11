@@ -124,18 +124,20 @@ The WebRTC transport ships in the `CrestApps.Core.AI.Realtime.WebRtc` package an
 
 ## Configuration: turn detection, idle timeout, STUN/TURN
 
-Realtime transport options bind to the `CrestApps:AI:RealtimeTransport` configuration section:
+Realtime transport options bind to the `OrchardCore:CrestApps:AI:RealtimeTransport` configuration section:
 
 ```json
 {
-  "CrestApps": {
-    "AI": {
-      "RealtimeTransport": {
-        "EnableWebRtc": true,
-        "TurnDetectionType": "semantic_vad",
-        "TurnDetectionEagerness": "auto",
-        "IdleTimeoutMinutes": 10,
-        "StunUrls": [ "stun:stun.l.google.com:19302" ]
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "RealtimeTransport": {
+          "EnableWebRtc": true,
+          "TurnDetectionType": "semantic_vad",
+          "TurnDetectionEagerness": "auto",
+          "IdleTimeoutMinutes": 10,
+          "StunUrls": [ "stun:stun.l.google.com:19302" ]
+        }
       }
     }
   }
@@ -154,6 +156,42 @@ Realtime transport options bind to the `CrestApps:AI:RealtimeTransport` configur
 | `TurnUsername` / `TurnCredential` | Static TURN credentials, used only when `TurnSecret` is unset. |
 
 STUN enables direct connectivity through most home/office NATs. A **TURN** server is required where traffic must be relayed; without it, those users fall back to WebSocket. ICE servers are fetched per session (over the hub), so ephemeral TURN credentials are always fresh.
+
+The section is read through `IShellConfiguration`, so it is a **per-tenant** setting and each tenant can point realtime at its own STUN and TURN servers. A tenant that declares nothing inherits the host's values, and a tenant that declares `StunUrls` or `TurnUrls` replaces the host's list rather than appending to it.
+
+:::note
+The `OrchardCore` wrapper above is how the host `appsettings.json` is shaped — Orchard Core reads its own configuration from that section. A tenant that overrides the values in its own `App_Data/Sites/{tenant}/appsettings.json` writes the same keys **without** the wrapper, starting at `CrestApps`, because that file is already scoped to the tenant.
+:::
+
+### Cloudflare Realtime TURN
+
+Running a TURN server is not the only option. Cloudflare Realtime mints short-lived TURN credentials through an API, so nothing long-lived is handed to the browser and nothing has to be rotated by hand. Cloudflare exposes no shared secret, so the credentials cannot be signed locally the way coturn's `use-auth-secret` allows — they are issued by an API call authenticated with a TURN Token ID and API token:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "RealtimeTransport": {
+          "Cloudflare": {
+            "TokenId": "<turn-token-id>",
+            "ApiToken": "<api-token>",
+            "TtlSeconds": 86400
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+| Property | Purpose |
+| --- | --- |
+| `TokenId` | The **TURN Token ID** shown in the Cloudflare dashboard. |
+| `ApiToken` | The API token issued alongside it. Both are long-lived and belong in a secret store rather than a configuration file checked into source control. |
+| `TtlSeconds` | Lifetime requested for each set of credentials (default `86400`). Credentials are replaced halfway through, so the value only needs to comfortably exceed the longest call — it is not a session limit; that is `MaxSessionDurationSeconds`. |
+
+This is read through `IShellConfiguration` like the rest of the section, so each tenant can mint credentials from its own Cloudflare account. While a tenant supplies no `TokenId` and `ApiToken`, realtime falls back to the `StunUrls` and `TurnUrls` configured above, so a tenant running its own coturn — or none at all — is unaffected until it opts in. The same fallback covers a Cloudflare outage that leaves no credentials to serve.
 
 ## How it runs (for the curious)
 
