@@ -1,8 +1,12 @@
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
+using CrestApps.Core.AI.Tooling;
+using CrestApps.Core.AI.Tooling.Instances.DataSources;
 using CrestApps.Core.Data.YesSql;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.BackgroundTasks;
 using CrestApps.OrchardCore.AI.DataSources.Deployments;
@@ -125,5 +129,26 @@ public sealed class ChatInteractionsWorkflowsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddActivity<AICompletionWithConfigTask, AICompletionWithConfigDataSourceDisplayDriver>();
+    }
+}
+
+/// <summary>
+/// Registers the data source search tool instance source, which exposes an existing AI data source to the
+/// model as a callable vector search function.
+/// </summary>
+[RequireFeatures(AIConstants.Feature.ToolInstances)]
+public sealed class DataSourcesToolInstancesStartup : StartupBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddAISuite(ai => ai
+                .AddToolInstances(toolInstances => toolInstances
+                    .AddDataSourceSearchSource()
+                )
+            )
+        );
+
+        services.AddDisplayDriver<AIToolInstance, DataSourceSearchToolInstanceDisplayDriver>();
     }
 }

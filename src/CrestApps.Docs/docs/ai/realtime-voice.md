@@ -155,6 +155,36 @@ Realtime transport options bind to the `CrestApps:AI:RealtimeTransport` configur
 
 STUN enables direct connectivity through most home/office NATs. A **TURN** server is required where traffic must be relayed; without it, those users fall back to WebSocket. ICE servers are fetched per session (over the hub), so ephemeral TURN credentials are always fresh.
 
+The section is read from the tenant's own configuration, so each tenant can point realtime at its own STUN and TURN servers. A tenant that declares nothing inherits the host's values, and a tenant that declares `StunUrls` or `TurnUrls` replaces the host's list rather than appending to it. In the host `appsettings.json` the whole block sits under `OrchardCore`, as `OrchardCore:CrestApps:AI:RealtimeTransport`; in a tenant's `App_Data/Sites/{tenant}/appsettings.json` it sits at the root, exactly as shown above.
+
+### Cloudflare Realtime TURN
+
+Running a TURN server is not the only option. Cloudflare Realtime mints short-lived TURN credentials through an API, so nothing long-lived is handed to the browser and nothing has to be rotated by hand. Cloudflare exposes no shared secret, so the credentials cannot be signed locally the way coturn's `use-auth-secret` allows — they are issued by an API call authenticated with a TURN Token ID and API token:
+
+```json
+{
+  "CrestApps": {
+    "AI": {
+      "RealtimeTransport": {
+        "Cloudflare": {
+          "TokenId": "<turn-token-id>",
+          "ApiToken": "<api-token>",
+          "TtlSeconds": 86400
+        }
+      }
+    }
+  }
+}
+```
+
+| Property | Purpose |
+| --- | --- |
+| `TokenId` | The **TURN Token ID** shown in the Cloudflare dashboard. |
+| `ApiToken` | The API token issued alongside it. Both are long-lived and belong in a secret store rather than a configuration file checked into source control. |
+| `TtlSeconds` | Lifetime requested for each set of credentials (default `86400`). Credentials are replaced halfway through, so the value only needs to comfortably exceed the longest call — it is not a session limit; that is `MaxSessionDurationSeconds`. |
+
+This is a per-tenant setting like the rest of the section. While a tenant supplies no `TokenId` and `ApiToken`, realtime falls back to the `StunUrls` and `TurnUrls` configured above, so a tenant running its own coturn — or none at all — is unaffected until it opts in. The same fallback covers a Cloudflare outage that leaves no credentials to serve.
+
 ## How it runs (for the curious)
 
 Realtime turns are dispatched through `IRealtimeOrchestrator` rather than the standard orchestrator, so tool calling, system-prompt injection, data sources, and turn persistence all apply to the spoken conversation. The server owns the session lifecycle and reports it to the browser over a single hub event (`session_ready`, `speech_started`, `playback_flush`, `user_turn_pending`, `session_ended`, …). Transcripts and errors stay on SignalR; the WebRTC path carries audio only.

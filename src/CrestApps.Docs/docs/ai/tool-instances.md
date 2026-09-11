@@ -75,6 +75,27 @@ The sitemap and search index sources materialize a corpus (the crawled pages or 
 
 These instances are usable anywhere tool instances are — on a profile, a chat interaction, or exposed to external clients through the [MCP server](mcp/server#tool-exposure).
 
+## The data source search source
+
+When the **AI Data Sources** feature is enabled, the tool instances feature also registers a **Data source search (vector)** source (`data-source-search`), also under the **Knowledgebase** category. It turns one of the [AI data sources](data-sources/index.md) you already curate into a callable vector search function, so the model can reach a knowledge base on demand instead of having it attached to a profile and retrieved on every turn.
+
+Each instance binds **one** data source plus the retrieval parameters applied to every search it runs, so several instances can expose several knowledge bases side by side, each under its own function name and description. The instance captures:
+
+- **Data source** — the knowledge base this tool searches. Required.
+- **Retrieval mode** — *Chunk* returns only the matching chunks; *Hierarchical* returns the full source documents those chunks belong to, which gives the model complete context at a much larger payload.
+- **Strictness** — how relevant a result must be to survive (1–5). Leave it empty to use the site default from **Settings → Artificial Intelligence → Data Sources**.
+- **Retrieved documents** — the number of top-scoring results to return (3–20). Leave it empty to use the site default.
+- **Filter** — an optional OData filter expression, validated as you save and translated to the index provider's own filter syntax before the search runs.
+- **Restrict answers to retrieved data only** — when checked, a search that finds nothing tells the model the answer is unavailable rather than inviting it to fall back to its general knowledge.
+
+The model supplies only the search phrases — one, or up to three when a question spans genuinely distinct topics (*"how does our vacation policy compare with sick leave?"*). They are embedded in a single batched call with the **same embedding deployment the knowledge base index was indexed with**, searched in parallel, and fused into one ranking, so a passage matched by two phrases is returned once. Results carry `[doc:N]` citations, one per source document.
+
+Leaving strictness and retrieved documents empty keeps reading the site defaults, so changing them under **Settings** moves every instance that did not pin its own value.
+
+:::tip
+This source and the data source attached directly to an AI profile share one retrieval pipeline, so an instance honors exactly the same parameters, thresholds, and output format. The difference is where the parameters come from: the instance carries its own, and the model decides when to search rather than retrieval running on every turn.
+:::
+
 ## Assigning instances to a profile
 
 Open an **AI Profile** (or an **AI Profile Template** of the *Profile* source) and go to the **Capabilities** tab. The **Tool Instances** section lists every instance the current user is allowed to access. Selected instances are passed to the AI model alongside the profile's regular tools.
