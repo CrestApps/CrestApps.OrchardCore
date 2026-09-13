@@ -342,23 +342,48 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public CallQualityReport() { }
         public double AvgMos { get; set; }
         public long BytesReceived { get; set; }
+        public long BytesSent { get; set; }
         public string CallId { get; set; }
+        public string CaptureDevice { get; set; }
+        public double CaptureProbeLevel { get; set; }
+        public string CaptureProcessing { get; set; }
+        public bool CaptureReported { get; set; }
+        public int CaptureSampleRate { get; set; }
         public string Codec { get; set; }
         public string Direction { get; set; }
         public long DurationMs { get; set; }
+        public double EchoReturnLossDb { get; set; }
+        public double EchoReturnLossEnhancementDb { get; set; }
+        public bool EchoStatsReported { get; set; }
         public bool Final { get; set; }
+        public double InboundLevel { get; set; }
+        public double JitterBufferMs { get; set; }
         public double JitterMs { get; set; }
         public string LocalCandidateType { get; set; }
         public double LossPercent { get; set; }
+        public double MaxJitterBufferMs { get; set; }
         public double MaxLossPercent { get; set; }
+        public double MicrophoneLevel { get; set; }
+        public double MinMicrophoneLevel { get; set; }
         public double MinMos { get; set; }
         public double Mos { get; set; }
         public long PacketsLost { get; set; }
         public long PacketsReceived { get; set; }
+        public long PacketsSent { get; set; }
         public bool Poor { get; set; }
+        public string ProviderCallControlId { get; set; }
+        public string ProviderLegId { get; set; }
+        public string ProviderSessionId { get; set; }
         public string RemoteCandidateType { get; set; }
+        public double RemoteFractionLostPercent { get; set; }
+        public double RemoteJitterMs { get; set; }
         public double RoundTripTimeMs { get; set; }
+        public string RttSource { get; set; }
         public int SampleCount { get; set; }
+        public string SendCodec { get; set; }
+        public bool SentTrackIsLocalStream { get; set; }
+        public string SentTrackLabel { get; set; }
+        public bool SentTrackReported { get; set; }
     }
     public sealed class CallReference
     {

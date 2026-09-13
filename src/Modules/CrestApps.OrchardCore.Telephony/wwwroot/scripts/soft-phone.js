@@ -94,6 +94,14 @@
   var QUALITY_POOR_MOS = 3.5;
   var QUALITY_POOR_LOSS_PERCENT = 5;
 
+  // The capture level (RTCAudioSourceStats.audioLevel, 0..1 where 1.0 is full scale) at or below which the
+  // microphone is delivering nothing the far end could hear. Room noise on a live microphone sits above this.
+  var QUALITY_SILENT_MIC_LEVEL = 0.005;
+
+  // Consecutive silent samples before a capture is called dead. One sample is just a pause in the
+  // conversation; several in a row while the call is up is a microphone that is not working.
+  var QUALITY_SILENT_MIC_SAMPLES = 3;
+
   // Estimates a Mean Opinion Score (1.0-4.5) from round-trip time, jitter, and packet loss using the ITU-T
   // G.107 E-model approximation widely used for WebRTC quality monitoring. Latency and jitter are in
   // milliseconds, loss in percent. A higher score is better; ~4.0+ is good, below ~3.5 is poor.
@@ -110,13 +118,56 @@
     return 1 + 0.035 * r + r * (r - 60) * (100 - r) * 0.000007;
   }
 
-  // Extracts the audio inbound-rtp, selected candidate pair, negotiated codec, and candidate types from an
-  // RTCStatsReport. Written defensively because the exact shape and which candidate pair is flagged "selected"
-  // varies across browsers (Chrome nominates a succeeded pair; Firefox marks one `selected`; the transport may
-  // name the pair through selectedCandidatePairId).
+  // The average jitter-buffer delay above which a conversation starts to feel like a walkie-talkie: the two
+  // parties begin talking over each other because each hears the other late. Well under the point where any
+  // other metric reacts.
+  var QUALITY_HIGH_JITTER_BUFFER_MS = 200;
+
+  // Average time received audio waited in the jitter buffer before it was played out, over the window since
+  // the previous sample.
+  //
+  // This is the missing half of perceived delay. Round-trip time measures the network between the browser and
+  // the provider edge; the jitter buffer is what the browser itself adds on top, adapting to conditions and
+  // routinely holding hundreds of milliseconds. A call can therefore have a healthy round-trip time, no
+  // packet loss, low jitter and a good score while the people on it are audibly talking over each other --
+  // which is exactly what a clean-looking call that the agent described as delayed turned out to be. Nothing
+  // transmitted before this could see it.
+  //
+  // Measured over the window rather than the call, because these counters are cumulative and a call-lifetime
+  // average hides a buffer that grew late. Returns -1 when the browser does not report the counters.
+  function readJitterBufferMs(inbound, previous) {
+    if (!inbound || typeof inbound.jitterBufferDelay !== 'number' || typeof inbound.jitterBufferEmittedCount !== 'number') {
+      return -1;
+    }
+    var delayDelta = inbound.jitterBufferDelay - (previous && previous.jitterBufferDelay || 0);
+    var emittedDelta = inbound.jitterBufferEmittedCount - (previous && previous.jitterBufferEmittedCount || 0);
+    if (emittedDelta > 0) {
+      return delayDelta / emittedDelta * 1000;
+    }
+
+    // No audio was emitted in this window (the call just started, or playout stalled). The call-lifetime
+    // average is less sharp but still true; only when there is nothing at all is the answer unknown.
+    return inbound.jitterBufferEmittedCount > 0 ? inbound.jitterBufferDelay / inbound.jitterBufferEmittedCount * 1000 : -1;
+  }
+
+  // Distinguishes a microphone that is dead from one that is merely quiet. The capture level alone cannot:
+  // an agent who is listening rather than talking also reads near zero. totalAudioEnergy, by contrast, only
+  // accumulates while the track actually delivers samples, so a level at the floor AND no new energy since
+  // the previous sample means nothing is being captured at all. That is the case the far end experiences as
+  // "I cannot hear you" while every other measurement on the call looks healthy.
+  function isCaptureSilent(level, energyDelta) {
+    return (level || 0) <= QUALITY_SILENT_MIC_LEVEL && (energyDelta || 0) <= 0;
+  }
+
+  // Extracts the audio inbound-rtp, the capture (media-source) and outbound-rtp, the selected candidate pair,
+  // negotiated codec, and candidate types from an RTCStatsReport. Written defensively because the exact shape
+  // and which candidate pair is flagged "selected" varies across browsers (Chrome nominates a succeeded pair;
+  // Firefox marks one `selected`; the transport may name the pair through selectedCandidatePairId).
   function parseWebRtcStats(report) {
     var inbound = null;
     var remoteInbound = null;
+    var mediaSource = null;
+    var outbound = null;
     var selectedPair = null;
     var nominatedPair = null;
     var transportPairId = null;
@@ -134,6 +185,19 @@
         case 'remote-inbound-rtp':
           if (stat.kind === 'audio' || stat.mediaType === 'audio') {
             remoteInbound = stat;
+          }
+          break;
+        case 'media-source':
+          // The capture itself: audioLevel and totalAudioEnergy describe what the microphone is
+          // feeding the encoder, which is the only measurement that says whether the agent can be
+          // heard. Everything else on this report describes the direction they are listening to.
+          if (stat.kind === 'audio' || stat.mediaType === 'audio') {
+            mediaSource = stat;
+          }
+          break;
+        case 'outbound-rtp':
+          if (stat.kind === 'audio' || stat.mediaType === 'audio') {
+            outbound = stat;
           }
           break;
         case 'candidate-pair':
@@ -165,21 +229,306 @@
     });
     var pair = selectedPair || transportPairId && pairs[transportPairId] || nominatedPair || null;
     var codec = inbound && inbound.codecId && codecs[inbound.codecId] ? codecs[inbound.codecId] : null;
+    // The codec the browser SENDS. Only the receive codec was reported until now, so the direction the far
+    // end hears -- the one every complaint has been about -- had no codec on record at all.
+    var sendCodec = outbound && outbound.codecId && codecs[outbound.codecId] ? codecs[outbound.codecId] : null;
     var localCandidate = pair && pair.localCandidateId ? localCandidates[pair.localCandidateId] : null;
     var remoteCandidate = pair && pair.remoteCandidateId ? remoteCandidates[pair.remoteCandidateId] : null;
     return {
       inbound: inbound,
       remoteInbound: remoteInbound,
+      mediaSource: mediaSource,
+      outbound: outbound,
       pair: pair,
       codec: codec ? codec.mimeType || '' : '',
+      sendCodec: sendCodec ? sendCodec.mimeType || '' : '',
       localCandidateType: localCandidate ? localCandidate.candidateType || '' : '',
       remoteCandidateType: remoteCandidate ? remoteCandidate.candidateType || '' : ''
     };
   }
   softPhone.QUALITY_POOR_MOS = QUALITY_POOR_MOS;
   softPhone.QUALITY_POOR_LOSS_PERCENT = QUALITY_POOR_LOSS_PERCENT;
+  softPhone.QUALITY_SILENT_MIC_LEVEL = QUALITY_SILENT_MIC_LEVEL;
+  softPhone.QUALITY_SILENT_MIC_SAMPLES = QUALITY_SILENT_MIC_SAMPLES;
+  softPhone.QUALITY_HIGH_JITTER_BUFFER_MS = QUALITY_HIGH_JITTER_BUFFER_MS;
   softPhone.estimateMos = estimateMos;
+  softPhone.readJitterBufferMs = readJitterBufferMs;
+  softPhone.isCaptureSilent = isCaptureSilent;
   softPhone.parseWebRtcStats = parseWebRtcStats;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Audio level probe: how loud a stream actually is, measured identically in every browser.
+ *
+ * getStats already reports a capture level, but only where the browser implements RTCAudioSourceStats --
+ * Chrome does, Firefox does not -- and it reports nothing at all about how loud the audio arriving from the
+ * far end is. Both gaps showed up on the same call: an agent reported the caller sounding distant while every
+ * transmitted metric said the connection was healthy, and the capture measurement that was supposed to cover
+ * the other direction came back unavailable because the call was answered in Firefox.
+ *
+ * So loudness is measured here instead of asked for: an AnalyserNode over the stream, sampled continuously
+ * and reduced to a peak per reporting window. Peak rather than average, because the question is "was there
+ * ever speech in this window", and an average over eight seconds of a normal conversation is mostly silence.
+ *
+ * The value is an RMS amplitude in 0..1, which is NOT the same scale as RTCAudioSourceStats.audioLevel --
+ * conversational speech peaks around 0.1-0.3 here. The two are reported as separate fields for that reason,
+ * rather than merged into one number that would mean different things depending on the browser.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit
+ * tests. The WebAudio pieces are injectable so the accumulate/peak/reset logic can be tested without a
+ * browser.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How often the waveform is read. Fast enough that a brief utterance inside a long reporting window is not
+  // missed, slow enough to cost nothing next to the call itself.
+  var LEVEL_PROBE_INTERVAL_MS = 100;
+
+  // Reported when no measurement could be taken, matching the rest of the quality contract: an absent
+  // measurement must stay distinguishable from a measured silence, because the two call for opposite
+  // responses.
+  var LEVEL_UNKNOWN = -1;
+
+  // The peak RMS below which a window contained nothing a person would call speech. Room tone on a live
+  // microphone, and comfort noise on a live call, both sit above it.
+  var LEVEL_SILENT = 0.005;
+
+  // Root-mean-square amplitude of one waveform frame.
+  function frameRms(samples, length) {
+    var total = 0;
+    for (var i = 0; i < length; i++) {
+      total += samples[i] * samples[i];
+    }
+    return Math.sqrt(total / length);
+  }
+
+  /*
+   * Watches one MediaStream and accumulates its level until read.
+   *
+   * options.audioContext  - AudioContext constructor (defaults to the browser's).
+   * options.timers        - object with setInterval/clearInterval (defaults to the global).
+   *
+   * Returns null when the stream carries no audio or the browser has no usable AudioContext -- a caller that
+   * gets null reports the level as unknown rather than as zero.
+   */
+  function createLevelProbe(stream, options) {
+    var settings = options || {};
+    var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
+    var timers = settings.timers || root;
+    if (!AudioCtx || !stream || typeof stream.getAudioTracks !== 'function' || !stream.getAudioTracks().length) {
+      return null;
+    }
+    var context;
+    var analyser;
+    var source;
+    var sink;
+    var data;
+    try {
+      context = new AudioCtx();
+      source = context.createMediaStreamSource(stream);
+      analyser = context.createAnalyser();
+      analyser.fftSize = 512;
+      source.connect(analyser);
+
+      // Firefox only pulls an audio graph that reaches the context destination. Left unconnected, the
+      // analyser is never processed and every read comes back as digital silence -- which is far worse
+      // than no measurement, because it looks exactly like a dead microphone on a call that is working.
+      // Chrome pulls an analyser regardless, which is precisely why this hid until a call was answered
+      // in Firefox and both directions reported 0.000 while the two people could hear each other.
+      //
+      // The route to the destination is through a silent gain stage: the graph runs, and nothing is
+      // added to what the agent hears. That matters most for the far end's audio, which the remote
+      // element is already playing -- routing it here at any audible gain would play it twice.
+      sink = context.createGain();
+      sink.gain.value = 0;
+      analyser.connect(sink);
+      sink.connect(context.destination);
+      data = new Float32Array(analyser.fftSize);
+    } catch (error) {
+      // A stream with no usable audio, or a browser that refuses the graph. Unknown, not silent.
+      return null;
+    }
+
+    // An AudioContext created outside a user gesture starts suspended, and a suspended graph reads as pure
+    // silence -- which would be indistinguishable from a dead microphone. Ask for it to run; if the request
+    // is refused the reads stay at zero and the caller sees a silent window, so also re-check on read.
+    function resume() {
+      if (context.state === 'suspended' && typeof context.resume === 'function') {
+        try {
+          Promise.resolve(context.resume()).catch(function () {});
+        } catch (error) {/* best effort */}
+      }
+    }
+    resume();
+    var peak = 0;
+    var sum = 0;
+    var reads = 0;
+    var disposed = false;
+    var timer = timers.setInterval(function () {
+      if (disposed) {
+        return;
+      }
+      try {
+        analyser.getFloatTimeDomainData(data);
+      } catch (error) {
+        return;
+      }
+      var rms = frameRms(data, data.length);
+      peak = Math.max(peak, rms);
+      sum += rms;
+      reads++;
+    }, LEVEL_PROBE_INTERVAL_MS);
+    return {
+      /*
+       * Returns the window since the previous read and starts a new one:
+       *   peak    - loudest frame in the window (the one to judge "was anything heard" on)
+       *   average - mean across the window, dominated by the silence between words
+       *   reads   - how many frames went into it; zero means the window produced no measurement
+       */
+      read: function () {
+        resume();
+        if (!reads) {
+          return {
+            peak: 0,
+            average: 0,
+            reads: 0
+          };
+        }
+        var window = {
+          peak: peak,
+          average: sum / reads,
+          reads: reads
+        };
+        peak = 0;
+        sum = 0;
+        reads = 0;
+        return window;
+      },
+      dispose: function () {
+        if (disposed) {
+          return;
+        }
+        disposed = true;
+        timers.clearInterval(timer);
+        try {
+          source.disconnect();
+          analyser.disconnect();
+          sink.disconnect();
+        } catch (error) {/* best effort */}
+        try {
+          if (typeof context.close === 'function') {
+            context.close();
+          }
+        } catch (error) {/* best effort */}
+      }
+    };
+  }
+
+  // Whether a captured track can deliver audio at all. A track is 'live' until it is stopped, but a source
+  // that has stopped feeding it -- a device asleep, unplugged, or switched away by the OS -- leaves it live and
+  // MUTED, and a muted track produces no frames: the encoder sends nothing, and the far end hears nothing. A
+  // check on readyState alone waved exactly such a track through onto a call that then ran thirty seconds with
+  // zero bytes sent.
+  function isTrackDeliverable(track) {
+    return !!track && track.readyState === 'live' && !track.muted;
+  }
+
+  // The level to report for a probe window: the peak, or unknown when the window produced no frames at all.
+  // A window that was measured and found silent reports 0, which is a finding; a window that could not be
+  // measured reports -1, which is not.
+  function probeLevel(probe) {
+    if (!probe) {
+      return LEVEL_UNKNOWN;
+    }
+    var window = probe.read();
+    return window && window.reads ? window.peak : LEVEL_UNKNOWN;
+  }
+  softPhone.LEVEL_PROBE_INTERVAL_MS = LEVEL_PROBE_INTERVAL_MS;
+  softPhone.LEVEL_UNKNOWN = LEVEL_UNKNOWN;
+  softPhone.LEVEL_SILENT = LEVEL_SILENT;
+  softPhone.frameRms = frameRms;
+  softPhone.createLevelProbe = createLevelProbe;
+  softPhone.probeLevel = probeLevel;
+  softPhone.isTrackDeliverable = isTrackDeliverable;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Diagnostic text: turning whatever a provider SDK hands us into something a person can read in a log.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How much of a serialized warning to keep. Long enough to carry a real payload, short enough that a
+  // pathological object cannot flood the telemetry channel.
+  var WARNING_TEXT_LIMIT = 400;
+
+  // Describes a provider SDK warning.
+  //
+  // Reading a few hand-picked property names off the object and falling back to the literal string
+  // "Provider warning" threw the payload away whenever the SDK used a different shape -- which Telnyx does.
+  // Four warnings were logged during a call the caller could barely hear, and every one of them reached the
+  // server with no code, no message, and no context: the one signal that would have named the problem
+  // ("Low local microphone audio detected") arrived empty. A warning whose content is dropped is worse than
+  // no warning at all, because it reads as one that was already looked at.
+  //
+  // So an unrecognized shape is serialized rather than discarded. It only has to be seen once to be handled
+  // properly, and until then it is still readable.
+  function describeProviderWarning(warning) {
+    if (!warning) {
+      return '';
+    }
+    if (typeof warning === 'string') {
+      return warning;
+    }
+    var code = warning.code || warning.name || warning.type || '';
+    var message = warning.message || warning.error || warning.detail || warning.reason || '';
+    if (!message) {
+      try {
+        var serialized = JSON.stringify(warning);
+
+        // "{}" means the properties are non-enumerable (an Error-like object), so name the keys the
+        // object does expose rather than reporting an empty payload.
+        message = serialized && serialized !== '{}' ? serialized.slice(0, WARNING_TEXT_LIMIT) : 'keys=[' + Object.keys(warning).join(',') + ']';
+      } catch (error) {
+        // Circular or host objects cannot be serialized; the type is still more than nothing.
+        message = 'unserializable ' + typeof warning;
+      }
+    }
+    if (typeof message !== 'string') {
+      message = String(message);
+    }
+    return (code ? '[' + code + '] ' : '') + (message || 'no payload');
+  }
+
+  // Provider warnings that describe an ordinary pause rather than a fault. The SDK raises LOW_INBOUND_AUDIO
+  // (31006) when the audio arriving AT this browser averages below 0.001 for three consecutive seconds,
+  // and re-raises it every fifteen seconds while that holds. In a two-party call that is the other person not
+  // talking for three seconds -- it fired steadily while an agent read a test passage aloud. It says nothing
+  // about what the far end hears, and the soft phone's own inbound probe measures the same direction more
+  // usefully. Surfacing it as a warning buried the signals that mattered under twenty identical lines a call.
+  //
+  // Kept visible as information, never dropped: the description is accurate, and on a call where the far end
+  // really has gone silent it is still the first hint. Judged by code, not by text, so a reworded message in a
+  // later SDK does not change the classification.
+  var PAUSE_DRIVEN_WARNING_CODES = {
+    31006: true
+  };
+
+  // The diagnostic level a provider warning should be reported at.
+  function classifyProviderWarning(warning) {
+    var code = warning && typeof warning === 'object' ? warning.code || warning.warning && warning.warning.code : null;
+    return code != null && PAUSE_DRIVEN_WARNING_CODES[code] ? 'info' : 'warning';
+  }
+  softPhone.PAUSE_DRIVEN_WARNING_CODES = PAUSE_DRIVEN_WARNING_CODES;
+  softPhone.classifyProviderWarning = classifyProviderWarning;
+  softPhone.describeProviderWarning = describeProviderWarning;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * Translating the Telnyx WebRTC SDK's view of a call into the soft phone's, and the ICE-server check that keeps
@@ -544,8 +893,19 @@
   var formatPhoneNumber = softPhoneModules.formatPhoneNumber;
   var QUALITY_POOR_MOS = softPhoneModules.QUALITY_POOR_MOS;
   var QUALITY_POOR_LOSS_PERCENT = softPhoneModules.QUALITY_POOR_LOSS_PERCENT;
+  var QUALITY_SILENT_MIC_SAMPLES = softPhoneModules.QUALITY_SILENT_MIC_SAMPLES;
+  var LEVEL_UNKNOWN = softPhoneModules.LEVEL_UNKNOWN;
+  var LEVEL_SILENT = softPhoneModules.LEVEL_SILENT;
   var estimateMos = softPhoneModules.estimateMos;
+  var isCaptureSilent = softPhoneModules.isCaptureSilent;
+  var readJitterBufferMs = softPhoneModules.readJitterBufferMs;
   var parseWebRtcStats = softPhoneModules.parseWebRtcStats;
+  var createLevelProbe = softPhoneModules.createLevelProbe;
+  var probeLevel = softPhoneModules.probeLevel;
+  var isTrackDeliverable = softPhoneModules.isTrackDeliverable;
+  var findAudioSender = softPhoneModules.findAudioSender;
+  var describeProviderWarning = softPhoneModules.describeProviderWarning;
+  var classifyProviderWarning = softPhoneModules.classifyProviderWarning;
   var mapTelnyxOutboundState = softPhoneModules.mapTelnyxOutboundState;
   var isTelnyxTerminalState = softPhoneModules.isTelnyxTerminalState;
   var iceServersIncludeTurn = softPhoneModules.iceServersIncludeTurn;
@@ -1083,6 +1443,63 @@
     var QUALITY_TRANSMIT_EVERY = 3;
     var qualityTimer = null;
     var qualityState = null;
+
+    // Loudness probes for the two directions, measured in the browser rather than read out of getStats.
+    // They cover what getStats cannot: how loud the far end actually is (no browser reports it), and the
+    // capture level in browsers that do not implement RTCAudioSourceStats.
+    var captureProbe = null;
+    var inboundProbe = null;
+    function startLevelProbes() {
+      stopLevelProbes();
+      captureProbe = createLevelProbe(context.localStream);
+
+      // The far end's audio is attached to the remote element by the provider SDK, so that element is
+      // where the received stream can be found.
+      var remoteStream = remoteElement && remoteElement.srcObject;
+      inboundProbe = createLevelProbe(remoteStream);
+    }
+    function stopLevelProbes() {
+      if (captureProbe) {
+        captureProbe.dispose();
+        captureProbe = null;
+      }
+      if (inboundProbe) {
+        inboundProbe.dispose();
+        inboundProbe = null;
+      }
+    }
+
+    // Records what was negotiated the moment media is up: the audio m= line and codec maps of both the offer
+    // Telnyx sent and the answer the browser gave (or vice versa), the direction, and the provider's leg ids.
+    // Every call so far had its codec inferred after the fact from an RTP statistic; nothing ever recorded
+    // which codecs the far side OFFERED, so "why G722 and not Opus" could not be answered from any log.
+    function reportNegotiation(call) {
+      if (typeof context.onNegotiated !== 'function') {
+        return;
+      }
+      try {
+        var peer = call && call.peer && call.peer.instance;
+        if (!peer) {
+          return;
+        }
+        var audioLines = function (description) {
+          if (!description || !description.sdp) {
+            return '(none)';
+          }
+          var lines = description.sdp.split(/\r?\n/);
+          var kept = [];
+          for (var i = 0; i < lines.length; i++) {
+            if (lines[i].indexOf('m=audio') === 0 || /^a=(rtpmap|fmtp|ptime|maxptime):/.test(lines[i])) {
+              kept.push(lines[i]);
+            }
+          }
+          return kept.join(' ; ');
+        };
+        var options = call.options || {};
+        var text = 'direction=' + (call.direction || '') + ' callId=' + (call.id || '') + ' ccid=' + (options.telnyxCallControlId || '') + ' leg=' + (options.telnyxLegId || '') + ' | remote(' + (peer.remoteDescription && peer.remoteDescription.type || '?') + '): ' + audioLines(peer.remoteDescription) + ' | local(' + (peer.localDescription && peer.localDescription.type || '?') + '): ' + audioLines(peer.localDescription);
+        context.onNegotiated(text);
+      } catch (error) {/* diagnostics only */}
+    }
     function startQualitySampler(call) {
       // Already sampling this call, or nothing to sample.
       if (!call || qualityState && qualityState.call === call) {
@@ -1102,8 +1519,21 @@
         lastPacketsLost: 0,
         lastPoor: false,
         finalSent: false,
+        // Capture-side state. minMicLevel starts at Infinity so the first sample sets it, and is
+        // reported on the summary: it answers "was this agent audible for the whole call?" from the
+        // server log alone, which nothing could before.
+        lastAudioEnergy: 0,
+        silentSamples: 0,
+        minMicLevel: Infinity,
+        captureAlerted: false,
+        // The previous raw inbound stats, kept so the jitter-buffer delay can be read over the window
+        // since the last sample rather than averaged across the whole call, which would flatten a
+        // buffer that only grew late.
+        lastInbound: null,
+        maxJitterBufferMs: -1,
         last: null
       };
+      startLevelProbes();
       qualityTimer = window.setInterval(sampleQuality, QUALITY_SAMPLE_INTERVAL_MS);
     }
     function sampleQuality() {
@@ -1131,15 +1561,129 @@
         var lossPercent = deltaReceived + deltaLost > 0 ? deltaLost / (deltaReceived + deltaLost) * 100 : 0;
         var jitterMs = (inbound.jitter || 0) * 1000;
         var rttMs = parsed.pair && typeof parsed.pair.currentRoundTripTime === 'number' ? parsed.pair.currentRoundTripTime * 1000 : parsed.remoteInbound && typeof parsed.remoteInbound.roundTripTime === 'number' ? parsed.remoteInbound.roundTripTime * 1000 : 0;
+        // Which statistic the round trip came from. A candidate-pair value is a STUN round trip over the
+        // media path; the remote-inbound value is RTCP-derived. When one call reported a steady 2.8 s
+        // with healthy jitter and loss, nothing recorded which of the two had said so.
+        var rttSource = parsed.pair && typeof parsed.pair.currentRoundTripTime === 'number' ? 'candidate-pair' : parsed.remoteInbound && typeof parsed.remoteInbound.roundTripTime === 'number' ? 'remote-inbound-rtp' : 'none';
+
+        // What Telnyx reports RECEIVING from this browser: the only far-end-side view of the agent's own
+        // audio that the browser can see. Loss and jitter here describe the direction the caller hears.
+        var remoteInbound = parsed.remoteInbound;
+        var remoteFractionLostPercent = remoteInbound && typeof remoteInbound.fractionLost === 'number' ? remoteInbound.fractionLost * 100 : -1;
+        var remoteJitterMs = remoteInbound && typeof remoteInbound.jitter === 'number' ? remoteInbound.jitter * 1000 : -1;
+
+        // The echo canceller's own view of the capture. A wired headset has almost no acoustic echo to
+        // cancel, so a canceller that is nonetheless working hard on it is suppressing the agent's voice
+        // -- a classic source of a hollow, distant sound that no level measurement can show.
+        var echoStatsReported = !!parsed.mediaSource && typeof parsed.mediaSource.echoReturnLoss === 'number';
+        var echoReturnLossDb = echoStatsReported ? parsed.mediaSource.echoReturnLoss : 0;
+        var echoReturnLossEnhancementDb = echoStatsReported && typeof parsed.mediaSource.echoReturnLossEnhancement === 'number' ? parsed.mediaSource.echoReturnLossEnhancement : 0;
+
+        // Which track the peer connection is actually sending, and whether it is the stream the soft phone
+        // captured. The provider SDK is free to ignore the stream it is handed on the answer path and
+        // capture its own -- on the browser's default device, with default constraints -- in which case
+        // everything the soft phone measures and configures about "its" microphone describes a track
+        // the far end never hears. Comparing track identity here is the only direct test of that.
+        var sentTrack = null;
+        if (typeof peer.getSenders === 'function') {
+          var senders = peer.getSenders();
+          for (var s = 0; s < senders.length; s++) {
+            if (senders[s].track && senders[s].track.kind === 'audio') {
+              sentTrack = senders[s].track;
+              break;
+            }
+          }
+        }
+        var localTrack = context.localStream && typeof context.localStream.getAudioTracks === 'function' ? context.localStream.getAudioTracks()[0] : null;
+        var sentTrackReported = !!sentTrack;
+        var sentTrackLabel = sentTrack ? sentTrack.label || '' : '';
+        var sentTrackIsLocalStream = !!(sentTrack && localTrack && sentTrack.id === localTrack.id);
+
+        // The provider's own identifiers for this leg, so a browser-side observation can be joined to the
+        // server's webhook and command log for the same leg instead of being lined up by timestamp.
+        var callOptions = call && call.options || {};
+        var providerCallControlId = callOptions.telnyxCallControlId || '';
+        var providerLegId = callOptions.telnyxLegId || '';
+        var providerSessionId = callOptions.telnyxSessionId || '';
         var bytesReceived = inbound.bytesReceived || 0;
         var mos = estimateMos(rttMs, jitterMs, lossPercent);
         var poor = lossPercent > QUALITY_POOR_LOSS_PERCENT || mos < QUALITY_POOR_MOS || bytesReceived === 0 && packetsReceived > 0;
+
+        // The capture side. Everything above measures the direction the agent is listening to, so a call
+        // where the caller cannot hear the agent produced a clean bill of health: no loss, low jitter, a
+        // good MOS, and not one number describing the microphone.
+        var mediaSource = parsed.mediaSource;
+        // Whether the browser reported a capture at all. Reporting an absent measurement as 0 would
+        // make "this browser does not expose media-source stats" indistinguishable from "this
+        // microphone is delivering silence" -- the same conflation that made a dropped round-trip time
+        // read as a perfect connection. So an unmeasured capture is -1, and nothing is concluded from
+        // it.
+        var captureReported = !!mediaSource && typeof mediaSource.audioLevel === 'number';
+        var micLevel = captureReported ? mediaSource.audioLevel : -1;
+        var audioEnergy = mediaSource && typeof mediaSource.totalAudioEnergy === 'number' ? mediaSource.totalAudioEnergy : 0;
+        var energyDelta = audioEnergy - qualityState.lastAudioEnergy;
+        var bytesSent = parsed.outbound && parsed.outbound.bytesSent ? parsed.outbound.bytesSent : 0;
+        var packetsSent = parsed.outbound && parsed.outbound.packetsSent ? parsed.outbound.packetsSent : 0;
+
+        // How long the browser held this audio before playing it. Added to the round-trip time, this is
+        // the delay the two people on the call actually experience -- and it is the only one of the two
+        // that a healthy network does nothing to keep small.
+        var jitterBufferMs = readJitterBufferMs(inbound, qualityState.lastInbound);
+
+        // The far end may not have been attached when the call started; take the probe as soon as it is.
+        if (!inboundProbe && remoteElement && remoteElement.srcObject) {
+          inboundProbe = createLevelProbe(remoteElement.srcObject);
+        }
+
+        // Measured loudness in both directions, on the same scale, whatever the browser reports.
+        // "The caller sounds far away" is a statement about this number and about nothing else on the
+        // report, which is why a call that sounded distant rated Good on every other measurement.
+        var inboundLevel = probeLevel(inboundProbe);
+        var captureProbeLevel = probeLevel(captureProbe);
+
+        // The format the microphone is delivering in. Read every sample rather than once, because a
+        // Bluetooth headset switches profile when a call claims its microphone -- the value at
+        // registration is not the value on the call.
+        var captureSettings = typeof context.readCaptureSettings === 'function' ? context.readCaptureSettings() : null;
+        qualityState.lastInbound = {
+          jitterBufferDelay: inbound.jitterBufferDelay,
+          jitterBufferEmittedCount: inbound.jitterBufferEmittedCount
+        };
+        if (jitterBufferMs >= 0) {
+          qualityState.maxJitterBufferMs = Math.max(qualityState.maxJitterBufferMs, jitterBufferMs);
+        }
         qualityState.lastPacketsReceived = packetsReceived;
         qualityState.lastPacketsLost = packetsLost;
+        qualityState.lastAudioEnergy = audioEnergy;
         qualityState.samples++;
         qualityState.mosSum += mos;
         qualityState.minMos = Math.min(qualityState.minMos, mos);
         qualityState.maxLoss = Math.max(qualityState.maxLoss, lossPercent);
+        if (captureReported) {
+          qualityState.minMicLevel = Math.min(qualityState.minMicLevel, micLevel);
+        }
+
+        // A capture that delivers nothing across several consecutive samples is a dead microphone, not a
+        // pause. Tell the agent once per call: they are on a call the caller cannot hear them on, and
+        // today the only way they find out is the caller saying so.
+        //
+        // Only when the browser actually reported a capture. Warning an agent that their microphone is
+        // dead because the measurement is missing would be worse than saying nothing: they would go
+        // hunting a device that is working.
+        //
+        // Where the browser reports no capture statistics at all -- Firefox, where this call was
+        // answered -- the probe stands in, so the agent is told about a dead microphone there too
+        // instead of the check quietly never firing.
+        var captureSilent = captureReported ? isCaptureSilent(micLevel, energyDelta) : captureProbeLevel >= 0 && captureProbeLevel <= LEVEL_SILENT;
+        if (captureSilent) {
+          qualityState.silentSamples++;
+        } else {
+          qualityState.silentSamples = 0;
+        }
+        if (qualityState.silentSamples >= QUALITY_SILENT_MIC_SAMPLES && !qualityState.captureAlerted && typeof context.onCaptureSilent === 'function') {
+          qualityState.captureAlerted = true;
+          context.onCaptureSilent();
+        }
         var sample = {
           callId: qualityState.callId,
           direction: call && call.direction || '',
@@ -1152,6 +1696,29 @@
           jitterMs: jitterMs,
           rttMs: rttMs,
           bytesReceived: bytesReceived,
+          micLevel: micLevel,
+          captureReported: captureReported,
+          bytesSent: bytesSent,
+          packetsSent: packetsSent,
+          jitterBufferMs: jitterBufferMs,
+          inboundLevel: inboundLevel,
+          captureProbeLevel: captureProbeLevel,
+          sendCodec: parsed.sendCodec,
+          rttSource: rttSource,
+          remoteFractionLostPercent: remoteFractionLostPercent,
+          remoteJitterMs: remoteJitterMs,
+          echoStatsReported: echoStatsReported,
+          echoReturnLossDb: echoReturnLossDb,
+          echoReturnLossEnhancementDb: echoReturnLossEnhancementDb,
+          sentTrackReported: sentTrackReported,
+          sentTrackLabel: sentTrackLabel,
+          sentTrackIsLocalStream: sentTrackIsLocalStream,
+          providerCallControlId: providerCallControlId,
+          providerLegId: providerLegId,
+          providerSessionId: providerSessionId,
+          captureSampleRate: captureSettings && captureSettings.sampleRate || 0,
+          captureDevice: typeof context.captureDeviceLabel === 'function' ? context.captureDeviceLabel() : '',
+          captureProcessing: captureSettings ? [captureSettings.echoCancellation ? 'ec' : '', captureSettings.noiseSuppression ? 'ns' : '', captureSettings.autoGainControl ? 'agc' : ''].filter(Boolean).join('+') : '',
           mos: mos,
           poor: poor
         };
@@ -1186,6 +1753,41 @@
         // reads as a scoring bug and hides the actual half-second latency behind it.
         roundTripTimeMs: sample.rttMs,
         bytesReceived: sample.bytesReceived,
+        // The capture side, so a call the caller could not hear is visible in the server log rather than
+        // only in what the caller says afterwards. A microphone level of -1 with captureReported false
+        // means the browser exposed no capture stats: unknown, not silent.
+        microphoneLevel: sample.micLevel,
+        captureReported: !!sample.captureReported,
+        bytesSent: sample.bytesSent,
+        packetsSent: sample.packetsSent,
+        // The delay the browser itself adds on top of the network round trip, and the measured loudness
+        // of each direction. All three are -1 when they could not be measured. Together they are what
+        // separates "this call sounded bad" from "every number said the call was fine", which is the
+        // gap the reports had until now.
+        jitterBufferMs: sample.jitterBufferMs,
+        inboundLevel: sample.inboundLevel,
+        captureProbeLevel: sample.captureProbeLevel,
+        // The capture format, so a call that measured perfectly and sounded wrong can be explained
+        // from the server log instead of from a live diagnostics panel nobody had open at the time.
+        captureSampleRate: sample.captureSampleRate,
+        captureDevice: sample.captureDevice,
+        captureProcessing: sample.captureProcessing,
+        // The direction the far end hears: the codec the browser sends, what Telnyx reports receiving,
+        // the echo canceller's activity, and -- decisively -- whether the track being sent is the stream
+        // the soft phone captured at all. Plus the provider's leg ids as the join key to the server log.
+        sendCodec: sample.sendCodec,
+        rttSource: sample.rttSource,
+        remoteFractionLostPercent: sample.remoteFractionLostPercent,
+        remoteJitterMs: sample.remoteJitterMs,
+        echoStatsReported: !!sample.echoStatsReported,
+        echoReturnLossDb: sample.echoReturnLossDb,
+        echoReturnLossEnhancementDb: sample.echoReturnLossEnhancementDb,
+        sentTrackReported: !!sample.sentTrackReported,
+        sentTrackLabel: sample.sentTrackLabel,
+        sentTrackIsLocalStream: !!sample.sentTrackIsLocalStream,
+        providerCallControlId: sample.providerCallControlId,
+        providerLegId: sample.providerLegId,
+        providerSessionId: sample.providerSessionId,
         mos: sample.mos,
         poor: sample.poor,
         final: !!isFinal,
@@ -1193,6 +1795,10 @@
         minMos: qualityState && isFinite(qualityState.minMos) ? qualityState.minMos : sample.mos,
         avgMos: qualityState && qualityState.samples ? qualityState.mosSum / qualityState.samples : sample.mos,
         maxLossPercent: qualityState ? qualityState.maxLoss : sample.lossPercent,
+        minMicrophoneLevel: qualityState && isFinite(qualityState.minMicLevel) ? qualityState.minMicLevel : sample.micLevel,
+        // The worst the playout delay got at any point, so a call that drifted into walkie-talkie
+        // territory late is visible from the summary line alone rather than only from the samples.
+        maxJitterBufferMs: qualityState ? qualityState.maxJitterBufferMs : sample.jitterBufferMs,
         durationMs: qualityState ? Date.now() - qualityState.started : 0
       };
       return payload;
@@ -1217,6 +1823,10 @@
       if (qualityState.lastPoor && typeof context.onConnectionQuality === 'function') {
         context.onConnectionQuality(false);
       }
+
+      // Release the audio graphs the probes hold. They outlive nothing: a probe left running would keep
+      // an AudioContext (and, for the capture probe, a reference to the microphone) alive after the call.
+      stopLevelProbes();
       qualityState = null;
     }
     var clientOptions = {
@@ -1276,6 +1886,23 @@
         };
         if (preferredCodecs) {
           answerOptions.preferred_codecs = preferredCodecs;
+        }
+
+        // The SDK's answer() copies only customHeaders and the media elements out of these options; the
+        // localStream (and preferred_codecs) it is handed here are silently discarded, and its Peer then
+        // calls getUserMedia itself -- {audio:true}, on the browser's default input, with default
+        // constraints. So on every inbound call the track the far end heard was whatever Windows had as
+        // its default microphone at the moment of answer, while the soft phone's device picker, mono
+        // constraint, level meter and telemetry all described a different track. A quality line from a
+        // live call read "Capture=... Microphone Array (Intel Smart Sound)" against "Sent=OTHER/Headset
+        // Microphone (Realtek)": two devices, one of them a far-field room mic, with nothing on screen to
+        // say which the caller was hearing.
+        //
+        // The Peer reads the stream from call.options, which answer() preserves (it merges into a copy
+        // of the existing options). Setting it there, before answering, is the one place the SDK will
+        // honour it -- and makes inbound calls send the same stream outbound calls already do.
+        if (context.localStream && call.options && typeof call.options === 'object') {
+          call.options.localStream = context.localStream;
         }
         call.answer(answerOptions);
       } catch (error) {
@@ -1383,6 +2010,7 @@
         // and begin sampling media quality for this call.
         if (call.state === 'active') {
           ensureRemotePlayback();
+          reportNegotiation(call);
           startQualitySampler(call);
         }
         if (outboundNotify) {
@@ -1525,6 +2153,21 @@
         echoTestDestination: registrationConfig.echoTestDestination || '',
         // On-demand live diagnostics (SDP + getStats) for the diagnostics panel and the echo test.
         getDiagnostics: getCallDiagnostics,
+        // Swaps the outgoing audio track of the live call without renegotiating, for a capture that died
+        // mid-call. Resolves false when there is no live sender to swap.
+        replaceLocalAudioTrack: function (track) {
+          var peer = currentCall && currentCall.peer && currentCall.peer.instance;
+          if (!peer || typeof peer.getSenders !== 'function') {
+            return Promise.resolve(false);
+          }
+          var sender = findAudioSender(peer.getSenders());
+          if (!sender || typeof sender.replaceTrack !== 'function') {
+            return Promise.resolve(false);
+          }
+          return Promise.resolve(sender.replaceTrack(track)).then(function () {
+            return true;
+          });
+        },
         // Places an outbound call through the Telnyx SDK and returns a controller. onState receives
         // soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
         originate: function (destination, callerId, onState) {
@@ -2164,6 +2807,179 @@
       localAudioStream = null;
     }
 
+    // The captured microphone outlives any single call: it is acquired once when the phone registers and
+    // kept for the life of that registration, which can be an hour of idle time. Over that window the track
+    // can die underneath the phone -- the machine sleeps, a Bluetooth headset powers down, the device is
+    // unplugged -- and a dead track raises no error anywhere: getUserMedia already succeeded, the stream
+    // object is still there, and the provider encodes and sends its silence perfectly happily. The call
+    // connects, the agent hears the caller normally, and only the caller knows anything is wrong. These
+    // read the track's actual state so that case is caught rather than inferred from a complaint.
+    function getLocalAudioTrack() {
+      if (!localAudioStream || typeof localAudioStream.getAudioTracks !== 'function') {
+        return null;
+      }
+      return localAudioStream.getAudioTracks()[0] || null;
+    }
+    function localAudioTrackLabel() {
+      var track = getLocalAudioTrack();
+      return track && track.label || '';
+    }
+
+    // What the microphone is actually delivering, as opposed to what was asked for.
+    //
+    // The sample rate is the one to read first. A Bluetooth headset can only run its microphone in
+    // hands-free mode, and Windows then delivers capture at 8 kHz (narrowband) or 16 kHz (wideband) instead
+    // of 48 kHz -- while the same headset keeps playing back at full quality, so the agent hears a perfect
+    // call and the far end hears a thin, hollow, distant voice. Nothing else on the call reflects this: the
+    // codec is still negotiated at G722, the bitrate is unchanged, no packets are lost, and the score stays
+    // high. The constraints are reported next to it because they were requested, not guaranteed -- and
+    // echo cancellation and noise suppression layered on top of a headset's own processing add exactly the
+    // hollowness this is trying to explain.
+    function localCaptureSettings() {
+      var track = getLocalAudioTrack();
+      if (!track || typeof track.getSettings !== 'function') {
+        return null;
+      }
+      try {
+        return track.getSettings() || null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    // A compact, readable rendering of the capture format for the diagnostics line.
+    function describeCaptureSettings() {
+      var settings = localCaptureSettings();
+      if (!settings) {
+        return '';
+      }
+      var parts = [];
+      if (settings.sampleRate) {
+        parts.push(Math.round(settings.sampleRate / 1000) + 'kHz');
+      }
+      if (settings.channelCount) {
+        parts.push(settings.channelCount === 1 ? 'mono' : settings.channelCount + 'ch');
+      }
+      var processing = [];
+      if (settings.echoCancellation) {
+        processing.push('ec');
+      }
+      if (settings.noiseSuppression) {
+        processing.push('ns');
+      }
+      if (settings.autoGainControl) {
+        processing.push('agc');
+      }
+      if (processing.length) {
+        parts.push(processing.join('+'));
+      }
+      return parts.join(' ');
+    }
+    function isLocalAudioTrackDead() {
+      // Nothing captured yet is not a dead capture: the phone simply has not registered.
+      if (!localAudioStream) {
+        return false;
+      }
+      return !isTrackDeliverable(getLocalAudioTrack());
+    }
+
+    // Watches the captured track for the two ways it stops delivering audio. 'ended' is terminal -- the
+    // device is gone and only a fresh getUserMedia can recover. 'mute' means the source stopped feeding the
+    // track (a headset switching profile, a device going to sleep) and can recover on its own, so it is
+    // reported and surfaced but not acted on destructively.
+    function watchLocalAudioTrack() {
+      var track = getLocalAudioTrack();
+      if (!track) {
+        return;
+      }
+      track.onended = function () {
+        handleLocalAudioTrackLost('ended');
+      };
+      track.onmute = function () {
+        handleLocalAudioTrackLost('muted');
+      };
+      track.onunmute = function () {
+        reportDiagnostic('info', 'microphone-restored', 'The captured microphone is delivering audio again.', localAudioTrackLabel());
+        if (micPermissionState === null) {
+          showError(null);
+        }
+        startMicMeter();
+      };
+    }
+
+    // The capture is live but delivering nothing measurable, sustained long enough not to be a pause in the
+    // conversation. This is the muted-headset and wrong-device case, which the track state cannot see: the
+    // track is 'live' and unmuted, it is simply carrying silence. Worth interrupting the agent for -- the
+    // alternative is finding out from the caller, which is how tonight went.
+    function handleSilentCapture() {
+      var label = localAudioTrackLabel();
+      reportDiagnostic('warning', 'microphone-silent', 'The microphone is live but has delivered no audio for several samples.', label);
+      showError(strings.microphoneSilent || 'Your microphone is not picking up any sound, so the caller cannot hear you. Check that it is not muted and that the right device is selected.');
+    }
+    function handleLocalAudioTrackLost(reason) {
+      reportDiagnostic('warning', 'microphone-lost', 'The captured microphone stopped delivering audio (' + reason + ').', localAudioTrackLabel());
+
+      // During a call, re-registering would tear down the media session, but the capture itself can be
+      // replaced under the live call: acquire a fresh track from the same device selection and swap it onto
+      // the sender with replaceTrack, which needs no renegotiation. Only if that fails is the agent left to
+      // be told -- and they are, at that moment, on a call the caller cannot hear them on.
+      if (hasLiveCall()) {
+        recoverLocalAudioTrackMidCall().catch(function () {
+          showError(strings.microphoneLostOnCall || 'Your microphone stopped working, so the caller cannot hear you. Check the device and call back.');
+        });
+        return;
+      }
+
+      // Idle: drop the dead capture and register again, so the next call starts from a live microphone
+      // instead of inheriting this one.
+      showError(strings.microphoneLostIdle || 'Your microphone stopped working and is being reconnected.');
+      releaseBrowserAudio();
+      registerBrowserAudioForInbound();
+    }
+
+    // Replaces a capture that died under a live call. The registration-time stream is kept for the life of the
+    // registration, and a source that stops delivering (a headset that went to sleep overnight, a device that
+    // was switched) leaves a track that is still 'live' but muted -- and a muted track produces no frames, so
+    // the encoder sends nothing at all: a call this morning ran for thirty seconds with BytesSent=0 while the
+    // caller heard silence. A fresh getUserMedia on the current device selection, swapped onto the sender with
+    // replaceTrack, restores audio without renegotiating; the new track is put into the SAME MediaStream so
+    // everything holding a reference to it (the adapter, the probes, the meter) follows.
+    function recoverLocalAudioTrackMidCall() {
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        return Promise.reject(new Error('Media capture is not available.'));
+      }
+      return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
+        var fresh = stream.getAudioTracks()[0];
+        if (!fresh) {
+          throw new Error('No audio track was captured.');
+        }
+        var replace = browserAudioSession && typeof browserAudioSession.replaceLocalAudioTrack === 'function' ? Promise.resolve(browserAudioSession.replaceLocalAudioTrack(fresh)) : Promise.reject(new Error('The media session cannot replace its outgoing track.'));
+        return replace.then(function () {
+          if (localAudioStream) {
+            localAudioStream.getAudioTracks().forEach(function (old) {
+              if (old !== fresh) {
+                localAudioStream.removeTrack(old);
+                old.stop();
+              }
+            });
+            localAudioStream.addTrack(fresh);
+          }
+          watchLocalAudioTrack();
+          reportDiagnostic('info', 'microphone-recovered', 'The captured microphone was replaced under the live call.', fresh.label || '');
+          if (micPermissionState === null) {
+            showError(null);
+          }
+          stopMicMeter();
+          startMicMeter();
+        }, function (error) {
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          throw error;
+        });
+      });
+    }
+
     // Builds the microphone capture constraints. The three processing flags (echo cancellation, noise
     // suppression, automatic gain control) are on by default so captured audio is clean without extra
     // configuration. When the agent has picked a specific input device (item 5) it is requested exactly;
@@ -2172,7 +2988,16 @@
       var audio = {
         echoCancellation: true,
         noiseSuppression: true,
-        autoGainControl: true
+        autoGainControl: true,
+        // Ask for a single channel. A call is mono end to end, so stereo capture buys nothing and can
+        // cost a great deal: headset microphones routed through a shared audio codec are often
+        // presented as a stereo pair carrying the microphone on one side and silence on the other, and
+        // WebRTC then downmixes (L+R)/2 -- roughly 6 dB of the agent's voice thrown away before it ever
+        // reaches the encoder, with automatic gain control pumping to compensate. The far end hears
+        // someone thin and distant while every transmitted measurement stays perfect. Asking for mono
+        // lets the browser take the channel that carries signal instead of averaging it with one that
+        // does not. It is a request, not a requirement, so a device that only offers stereo still works.
+        channelCount: 1
       };
       if (selectedInputDeviceId) {
         audio.deviceId = {
@@ -2340,7 +3165,13 @@
       if (!hasLiveCall()) {
         releaseBrowserAudio();
         registerBrowserAudioForInbound();
+        return;
       }
+
+      // Say so, rather than accepting the change silently. An agent who switches microphone mid-call
+      // because the caller cannot hear them reasonably reads the picker moving as the change having taken
+      // effect; it has not, and they go on not being heard with no indication why.
+      showError(strings.microphoneChangeOnNextCall || 'The microphone will change on your next call. This call keeps the one it started with.');
     }
     function onOutputDeviceChange() {
       selectedOutputDeviceId = dom.outputDevice && dom.outputDevice.value || null;
@@ -2437,10 +3268,15 @@
       var supersededCredentialId = null;
       if (browserAudioSession) {
         // Self-heal on every entry point (placing or answering a call, or becoming available): when
-        // the credential is at or near expiry, re-establish with a fresh one first. Only do so while
-        // idle -- re-establishing tears down the provider media client and would drop a live call, so
-        // during an active call the current session is kept and the heartbeat renews once it ends.
-        if (isBrowserAudioExpiring(browserAudioSession) && !hasLiveCall()) {
+        // the credential is at or near expiry, or the captured microphone has died since it was
+        // acquired, re-establish first. Only do so while idle -- re-establishing tears down the
+        // provider media client and would drop a live call, so during an active call the current
+        // session is kept and the heartbeat renews once it ends.
+        //
+        // The microphone half matters as much as the credential: a session whose capture has ended is
+        // still a perfectly valid session, and reusing it puts the agent on a call nobody can hear
+        // them on.
+        if ((isBrowserAudioExpiring(browserAudioSession) || isLocalAudioTrackDead()) && !hasLiveCall()) {
           // Remember the credential being replaced so it can be revoked once the fresh one is live.
           supersededCredentialId = browserAudioCredentialId(browserAudioSession);
           releaseBrowserAudio();
@@ -2467,6 +3303,9 @@
           throw categorizeMicError(mediaError);
         }).then(function (stream) {
           localAudioStream = stream;
+          // This capture has to survive until the registration is replaced, so watch it for the
+          // device dying underneath it rather than discovering it on the next call.
+          watchLocalAudioTrack();
           // Capture succeeded: clear any prior mic-permission guidance and refresh the device pickers
           // (labels are only available now that permission has been granted).
           clearMicPermissionIssue();
@@ -2493,7 +3332,23 @@
             onSignalingDegraded: setMediaReconnecting,
             // Diagnostics: provider SDK warnings (e.g. "Low local microphone audio detected") are
             // collected for the Diagnostics tab and forwarded to server telemetry.
-            onProviderWarning: addProviderWarning
+            onProviderWarning: addProviderWarning,
+            // The capture went silent mid-call: the microphone is live as far as the browser is
+            // concerned but is delivering nothing, so the caller cannot hear the agent.
+            onCaptureSilent: handleSilentCapture,
+            // The capture format, read at sample time rather than at registration: a Bluetooth
+            // headset changes it when the call takes its microphone, so reading it once up front
+            // would record the format the call is not using.
+            readCaptureSettings: localCaptureSettings,
+            captureDeviceLabel: localAudioTrackLabel,
+            // The negotiated SDP at connect, forwarded as a diagnostic so the codecs each side offered
+            // are on the server for the call, next to the webhook and command log for its legs.
+            onNegotiated: function (text) {
+              if (window.console && typeof window.console.info === 'function') {
+                window.console.info('[soft-phone] negotiated ' + text);
+              }
+              reportDiagnostic('info', 'sdp-negotiated', text, localAudioTrackLabel());
+            }
           }));
         });
       }).then(function (session) {
@@ -2826,6 +3681,7 @@
     // of problem that is otherwise painful to diagnose (a virtual-cable default, a muted device, etc.).
     var micMeterCtx = null;
     var micMeterAnalyser = null;
+    var micMeterSink = null;
     var micMeterRaf = null;
     var micMeterOwnStream = null;
     var micMeterData = null;
@@ -2847,13 +3703,31 @@
           micMeterAnalyser = micMeterCtx.createAnalyser();
           micMeterAnalyser.fftSize = 512;
           source.connect(micMeterAnalyser);
+
+          // Firefox only processes a graph that reaches the destination, so an analyser left hanging
+          // reads silence forever -- a meter that stays flat no matter how loudly the agent talks,
+          // which is the one reading it exists to rule out. Route it there through a silent gain so
+          // the graph runs without the agent hearing their own microphone.
+          micMeterSink = micMeterCtx.createGain();
+          micMeterSink.gain.value = 0;
+          micMeterAnalyser.connect(micMeterSink);
+          micMeterSink.connect(micMeterCtx.destination);
           micMeterData = new Float32Array(micMeterAnalyser.fftSize);
 
           // Show which device is actually being captured. A wrong/virtual default (for example
           // "CABLE Output (VB-Audio Virtual Cable)") shows up here immediately, next to a flat meter.
           var track = stream.getAudioTracks()[0];
           if (dom.micMeterHint && track) {
-            dom.micMeterHint.textContent = (strings.micMeterUsing || 'Using:') + ' ' + (track.label || strings.defaultMicrophone || 'Default microphone');
+            // A track that has ended or been muted produces exactly the same flat bar as a
+            // microphone nobody is speaking into, so name the difference instead of leaving the
+            // agent to conclude the meter is broken.
+            if (track.readyState !== 'live') {
+              dom.micMeterHint.textContent = strings.micMeterEnded || 'This microphone has stopped and needs to be reconnected.';
+            } else if (track.muted) {
+              dom.micMeterHint.textContent = strings.micMeterMuted || 'This microphone is delivering no audio right now.';
+            } else {
+              dom.micMeterHint.textContent = (strings.micMeterUsing || 'Using:') + ' ' + (track.label || strings.defaultMicrophone || 'Default microphone');
+            }
           }
           micMeterTick();
         } catch (error) {/* best effort */}
@@ -2908,6 +3782,7 @@
         micMeterCtx = null;
       }
       micMeterAnalyser = null;
+      micMeterSink = null;
       micMeterData = null;
       if (micMeterOwnStream) {
         micMeterOwnStream.getTracks().forEach(function (track) {
@@ -2930,14 +3805,18 @@
       if (!warning) {
         return;
       }
-      var code = warning.code || warning.name || '';
-      var message = warning.message || warning.error || (typeof warning === 'string' ? warning : '');
-      var text = (code ? '[' + code + '] ' : '') + (message || 'Provider warning');
-      providerWarnings.unshift(new Date().toLocaleTimeString() + '  ' + text);
+      var text = describeProviderWarning(warning);
+      // A pause-driven warning (the far end quiet for three seconds) is information, not a fault; it is
+      // shown and logged as such so the warnings that do matter are not buried under it.
+      var level = classifyProviderWarning(warning);
+      providerWarnings.unshift(new Date().toLocaleTimeString() + '  ' + (level === 'info' ? '(info) ' : '') + text);
       if (providerWarnings.length > 20) {
         providerWarnings.length = 20;
       }
-      reportDiagnostic('warning', 'provider-warning', text, null);
+
+      // The captured device goes with it: "Low local microphone audio detected" is only actionable next to
+      // the name of the microphone it was detected on.
+      reportDiagnostic(level, 'provider-warning', text, localAudioTrackLabel());
       renderProviderWarnings();
     }
     function renderProviderWarnings() {
@@ -2959,7 +3838,31 @@
         dom.diagReadout.textContent = strings.diagNoData || 'No active call to measure.';
         return;
       }
-      dom.diagReadout.textContent = ['MOS ' + (sample.mos ? sample.mos.toFixed(2) : '-'), 'loss ' + (sample.lossPercent != null ? sample.lossPercent.toFixed(1) : '-') + '%', 'jitter ' + (sample.jitterMs != null ? Math.round(sample.jitterMs) : '-') + 'ms', 'rtt ' + (sample.rttMs != null ? Math.round(sample.rttMs) : '-') + 'ms', 'bytesRecv ' + (sample.bytesReceived != null ? sample.bytesReceived : '-'), 'codec ' + (sample.codec || '-'), 'ice ' + (sample.localCandidateType || '-') + '/' + (sample.remoteCandidateType || '-')].join('  •  ');
+
+      // Read the payload's own key names: this is the sample as sent, so renaming rttMs to
+      // roundTripTimeMs for the server quietly turned the panel's round trip into a dash.
+      dom.diagReadout.textContent = ['MOS ' + (sample.mos ? sample.mos.toFixed(2) : '-'), 'loss ' + (sample.lossPercent != null ? sample.lossPercent.toFixed(1) : '-') + '%', 'jitter ' + (sample.jitterMs != null ? Math.round(sample.jitterMs) : '-') + 'ms', 'rtt ' + (sample.roundTripTimeMs != null ? Math.round(sample.roundTripTimeMs) : '-') + 'ms',
+      // The browser's own playout delay, alongside the network round trip. On a call that feels
+      // delayed these two are the whole story, and only one of them was ever shown.
+      'buffer ' + (sample.jitterBufferMs >= 0 ? Math.round(sample.jitterBufferMs) + 'ms' : 'n/a'),
+      // Measured loudness of each direction. "They sound far away" is this number, in
+      // ('in' being what the agent hears) and nothing else.
+      'in ' + (sample.inboundLevel >= 0 ? sample.inboundLevel.toFixed(3) : 'n/a'), 'out ' + (sample.captureProbeLevel >= 0 ? sample.captureProbeLevel.toFixed(3) : 'n/a'),
+      // The capture side, next to everything else: a healthy call the far end cannot hear looks
+      // perfect on every number except this one. Unmeasured reads as "n/a" rather than as zero.
+      'mic ' + (sample.captureReported && sample.microphoneLevel != null ? sample.microphoneLevel.toFixed(3) : 'n/a'), 'bytesSent ' + (sample.bytesSent != null ? sample.bytesSent : '-'), 'bytesRecv ' + (sample.bytesReceived != null ? sample.bytesReceived : '-'), 'codec ' + (sample.codec || '-'), 'send ' + (sample.sendCodec || '-'),
+      // Whether the far end is hearing the soft phone's own capture or a track the provider SDK
+      // acquired on its own. "OTHER" here means every microphone setting on this page is describing
+      // a track nobody is listening to.
+      'sent ' + (sample.sentTrackReported ? sample.sentTrackIsLocalStream ? 'soft-phone stream' : 'OTHER: ' + (sample.sentTrackLabel || '?') : 'n/a'), 'echo ' + (sample.echoStatsReported ? 'erl ' + sample.echoReturnLossDb.toFixed(1) + 'dB erle ' + sample.echoReturnLossEnhancementDb.toFixed(1) + 'dB' : 'n/a'), 'remote loss ' + (sample.remoteFractionLostPercent >= 0 ? sample.remoteFractionLostPercent.toFixed(1) + '%' : 'n/a'), 'ice ' + (sample.localCandidateType || '-') + '/' + (sample.remoteCandidateType || '-'),
+      // The microphone the call is actually on. An agent wearing a headset whose soft phone is
+      // capturing a webcam's far-field array sounds distant and hollow to the far end while
+      // everything they hear is perfect -- and nothing else on this line would show it.
+      'mic device ' + (localAudioTrackLabel() || '-'),
+      // The format that microphone is actually capturing in. A headset that drops to 8 or 16 kHz to
+      // free its microphone sounds thin and far away to the far end while every other number here
+      // stays perfect, so this is the line to read when a call measures well and sounds wrong.
+      'capture ' + (describeCaptureSettings() || '-')].join('  •  ');
     }
 
     // Dumps the live SDP + getStats for the current call into the diagnostics output on demand.
@@ -5162,6 +6065,19 @@
         callStateRevision++;
         var isTerminal = !call || normalizeState(call.state) === 'Disconnected' || normalizeState(call.state) === 'Failed';
         if (isTerminal) {
+          // A terminal state from the server for a call THIS browser placed is bookkeeping, not the call
+          // ending: the platform never saw the call and cannot know when it ends -- the provider SDK
+          // reports that through the media adapter, which is the only authority for these calls. The
+          // one thing the server can say about a browser-originated call is that it stopped tracking
+          // its history entry, and acting on that as a hang-up is how a reconciliation sweep dropped
+          // every keypad call that outlived the next minute: the entry was removed, this ran, the call
+          // was taken out of the active list, and with nothing left in it the session was torn down
+          // under a live conversation.
+          var terminatedBrowserCall = call && call.callId ? activeCalls[call.callId] : null;
+          if (terminatedBrowserCall && terminatedBrowserCall.browserOriginated) {
+            reportDiagnostic('info', 'browser-call-server-terminal-ignored', 'The server reported a terminal state for a browser-originated call that is still live; ignored.', call.callId);
+            return;
+          }
           if (!call || !call.callId) {
             // Keep browser-originated calls; this server signal is about server-tracked calls only.
             var keptBrowserCalls = Object.keys(activeCalls).map(function (id) {
@@ -5530,6 +6446,14 @@
     // input device (item 5).
     loadDeviceSelection();
     render();
+
+    // A restored Diagnostics tab is active without setActiveTab having run, so the meter that tab owns was
+    // never started: the panel opens showing a bar that cannot move, which reads as a microphone that is not
+    // being read at all.
+    if (activeTab === 'diagnostics' && diagnosticsEnabled) {
+      startMicMeter();
+      updateDiagnosticsReadout();
+    }
     rootElement.style.visibility = '';
     var startPromise = connect();
     return {

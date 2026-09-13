@@ -46,6 +46,20 @@ describe('the call-quality payload', () => {
         expect(match, `CallQualityReport has no property matching the payload key "${key}", so it binds to nothing and arrives as its default.`).toBe(true);
     });
 
+    it('sends the capture side, not only the direction the agent listens to', () => {
+        // Named explicitly because its absence is what made "the caller could not hear me" undiagnosable: every
+        // number on the report described inbound audio, so a call with a dead microphone was indistinguishable
+        // from a healthy one in the logs.
+        expect(payloadKeys).toContain('microphoneLevel');
+        expect(payloadKeys).toContain('bytesSent');
+    });
+
+    it('says whether the capture was measured at all', () => {
+        // Without this flag a browser that exposes no capture statistics is indistinguishable from a
+        // microphone delivering silence, and the level reads 0 for both.
+        expect(payloadKeys).toContain('captureReported');
+    });
+
     it('sends the round-trip time under the name the report binds', () => {
         // Named explicitly because this is the one that was wrong, and the one whose absence is least visible:
         // a missing round trip reads as a perfect connection rather than a missing measurement.
