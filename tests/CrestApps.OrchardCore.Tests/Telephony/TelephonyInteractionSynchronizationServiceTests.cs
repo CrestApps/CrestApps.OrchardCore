@@ -363,6 +363,61 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
             Times.Once);
     }
 
+    // A browser-originated call is recorded by the client with a call id but no provider identity, because the
+    // provider SDK placed it directly and the platform never saw it. The reconciler has nothing to look it up
+    // against; treating that as "orphaned" announced a terminal state to a soft phone still on the call, which
+    // then hung up its own live session -- on the first sweep after every keypad call passed the minute mark.
+    [Fact]
+    public async Task ReconcileActiveInteractionsAsync_WhenInteractionIsClientRecordedAndRecent_LeavesItAloneWithoutNotifying()
+    {
+        // Arrange
+        var interaction = CreateInteraction("browser-1789315548135");
+        interaction.ProviderName = null;
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        var (hubContext, client) = CreateHubContext();
+        var service = CreateService(store, hubContext, new TelephonyCallLookupResult(), lockAcquired: true);
+
+        // Act
+        var changed = await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(0, changed);
+        store.Verify(value => value.DeleteAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Never);
+        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+    }
+
+    // The one case the sweep still owns for a client-recorded call: the browser went away mid-call and never
+    // reported the end. That is caught by age and removed quietly -- there is no live phone left to tell, and a
+    // late announcement could only reach a phone that has since started another call.
+    [Fact]
+    public async Task ReconcileActiveInteractionsAsync_WhenInteractionIsClientRecordedAndStale_RemovesItWithoutNotifying()
+    {
+        // Arrange
+        var interaction = CreateInteraction("browser-1789315548135");
+        interaction.ProviderName = null;
+        interaction.StartedUtc = _now.AddHours(-5);
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store
+            .Setup(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        var (hubContext, client) = CreateHubContext();
+        var service = CreateService(store, hubContext, new TelephonyCallLookupResult(), lockAcquired: true);
+
+        // Act
+        var changed = await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, changed);
+        store.Verify(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()), Times.Once);
+        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+    }
+
     private static TelephonyInteractionSynchronizationService CreateService(
         Mock<ITelephonyInteractionStore> store,
         Mock<IHubContext<TelephonyHub, ITelephonyClient>> hubContext,

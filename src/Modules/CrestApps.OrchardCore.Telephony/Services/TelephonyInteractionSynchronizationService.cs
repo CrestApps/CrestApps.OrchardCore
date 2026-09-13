@@ -28,6 +28,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     private readonly TimeSpan _lockTimeout;
     private readonly TimeSpan _lockExpiration;
     private readonly TimeSpan _newInteractionGracePeriod;
+    private readonly TimeSpan _clientRecordedCallMaxAge;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelephonyInteractionSynchronizationService"/> class.
@@ -60,6 +61,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         _lockTimeout = coordinationOptions.Value.InteractionLockTimeout;
         _lockExpiration = coordinationOptions.Value.InteractionLockExpiration;
         _newInteractionGracePeriod = coordinationOptions.Value.NewInteractionGracePeriod;
+        _clientRecordedCallMaxAge = coordinationOptions.Value.ClientRecordedCallMaxAge;
     }
 
     /// <inheritdoc/>
@@ -187,13 +189,12 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         bool notifyProviderState,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(interaction.ProviderName) ||
-            string.IsNullOrWhiteSpace(interaction.CallId))
+        if (string.IsNullOrWhiteSpace(interaction.CallId))
         {
             await RemoveOrphanAsync(
                 interaction,
                 notifyOrphanRemoval,
-                "the interaction does not contain a complete provider identity",
+                "the interaction does not contain a call identifier",
                 cancellationToken);
 
             return (new TelephonyCallLookupResult
@@ -201,6 +202,39 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
                 Succeeded = true,
                 Found = false,
             }, true);
+        }
+
+        // An interaction with a call identifier but no provider identity is one the client recorded itself: a
+        // browser-originated call the provider SDK placed directly, which the platform never saw and cannot look
+        // up. There is nothing here to reconcile against, and the client settles it when the call ends. Treating
+        // it as an orphan announced a terminal state to the soft phone that was still on the call -- which then
+        // hung up its own live session -- on the first sweep after the call passed the minute mark. The only case
+        // left for the sweep is a browser that vanished mid-call and never reported the end; that is caught by
+        // age, and removed quietly, since there is no live phone left to tell and a late announcement could only
+        // reach a phone that has since started another call.
+        if (string.IsNullOrWhiteSpace(interaction.ProviderName))
+        {
+            if (interaction.StartedUtc != default &&
+                _clock.UtcNow - interaction.StartedUtc > _clientRecordedCallMaxAge)
+            {
+                await RemoveOrphanAsync(
+                    interaction,
+                    notifyUser: false,
+                    "a client-recorded call exceeded the maximum age without the client reporting its end",
+                    cancellationToken);
+
+                return (new TelephonyCallLookupResult
+                {
+                    Succeeded = true,
+                    Found = false,
+                }, true);
+            }
+
+            return (new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = false,
+            }, false);
         }
 
         var provider = await _providerResolver.GetAsync(interaction.ProviderName);

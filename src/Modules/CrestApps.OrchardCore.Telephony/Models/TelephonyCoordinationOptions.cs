@@ -25,6 +25,17 @@ public sealed class TelephonyCoordinationOptions
     public TimeSpan NewInteractionGracePeriod { get; set; } = TimeSpan.FromSeconds(15);
 
     /// <summary>
+    /// Gets or sets how long an in-progress interaction the client recorded itself -- a browser-originated call, which
+    /// has no provider identity the reconciler could look up -- is left alone before it is treated as abandoned.
+    /// The client settles these when the call ends; the reconciler only has to catch the case where the browser
+    /// went away mid-call and never did. Set well above any plausible call, because removing one of these while it is
+    /// live disconnects the agent: the removal is announced to the soft phone as a terminal call state, and the
+    /// phone tears the session down. That is exactly what a sweep with no such ceiling did to every keypad call that
+    /// outlived the next minute tick.
+    /// </summary>
+    public TimeSpan ClientRecordedCallMaxAge { get; set; } = TimeSpan.FromHours(4);
+
+    /// <summary>
     /// Gets or sets how long a caller waits to acquire the per-user OAuth token-refresh lock before giving up.
     /// While one request refreshes a user's tokens, its peers wait here for that refresh to land rather than
     /// starting a competing refresh that would rotate the replacement token out from under it.

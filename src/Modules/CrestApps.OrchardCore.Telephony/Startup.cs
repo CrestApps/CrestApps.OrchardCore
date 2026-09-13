@@ -78,6 +78,9 @@ public sealed class Startup : StartupBase
                 options => options.NewInteractionGracePeriod > TimeSpan.Zero,
                 "'CrestApps_Telephony:Coordination:NewInteractionGracePeriod' must be greater than zero, otherwise reconciliation can terminate an interaction another node has only just written.")
             .Validate(
+                options => options.ClientRecordedCallMaxAge > options.NewInteractionGracePeriod,
+                "'CrestApps_Telephony:Coordination:ClientRecordedCallMaxAge' must exceed 'NewInteractionGracePeriod', otherwise reconciliation can disconnect a browser-originated call that is still in progress.")
+            .Validate(
                 options => options.TokenRefreshLockTimeout > TimeSpan.Zero,
                 "'CrestApps_Telephony:Coordination:TokenRefreshLockTimeout' must be greater than zero.")
             .Validate(

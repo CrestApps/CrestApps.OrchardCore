@@ -275,6 +275,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public sealed class TelephonyCoordinationOptions
     {
         public TelephonyCoordinationOptions() { }
+        public System.TimeSpan ClientRecordedCallMaxAge { get; set; }
         public System.TimeSpan InteractionLockExpiration { get; set; }
         public System.TimeSpan InteractionLockTimeout { get; set; }
         public System.TimeSpan NewInteractionGracePeriod { get; set; }
