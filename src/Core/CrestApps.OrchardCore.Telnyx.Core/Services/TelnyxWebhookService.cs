@@ -1,6 +1,8 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
@@ -18,6 +20,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     private readonly ITelnyxOutboundBridgeOrchestrator _outboundBridgeOrchestrator;
     private readonly IEnumerable<ITelnyxRecordingSavedHandler> _recordingSavedHandlers;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxWebhookService"/> class.
@@ -30,13 +33,15 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     /// recording into the encrypted media store; when none are registered, saved-recording events are ignored.
     /// </param>
     /// <param name="clock">The clock used to stamp event times.</param>
+    /// <param name="logger">The logger.</param>
     public TelnyxWebhookService(
         INormalizedVoiceEventIngestor normalizedVoiceEventIngestor,
         ITelnyxInboundCallRouter inboundCallRouter,
         IInboundVoiceDigitsSink digitsSink,
         ITelnyxOutboundBridgeOrchestrator outboundBridgeOrchestrator,
         IEnumerable<ITelnyxRecordingSavedHandler> recordingSavedHandlers,
-        IClock clock)
+        IClock clock,
+        ILogger<TelnyxWebhookService> logger)
     {
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
@@ -44,12 +49,32 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
         _outboundBridgeOrchestrator = outboundBridgeOrchestrator;
         _recordingSavedHandlers = recordingSavedHandlers;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
     public async Task<TelnyxWebhookResult> ProcessAsync(TelnyxCallEvent callEvent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(callEvent);
+
+        // One line per delivery, carrying the provider's own identifiers. Until this existed, which event had
+        // arrived for which leg -- and whether it was call.answered or call.bridged -- could only be inferred from
+        // the byte size of the webhook body, and an observation made in the browser could not be joined to the
+        // leg it happened on except by lining up timestamps.
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telnyx webhook {EventType}: CallControlId={CallControlId}, Leg={CallLegId}, Session={CallSessionId}, Direction={Direction}, State={State}, HangupCause={HangupCause}, SipHangupCause={SipHangupCause}, ClientState={ClientState}.",
+                callEvent.EventType.SanitizeLogValue(),
+                callEvent.CallControlId.SanitizeLogValue(),
+                callEvent.CallLegId.SanitizeLogValue(),
+                callEvent.CallSessionId.SanitizeLogValue(),
+                callEvent.Direction.SanitizeLogValue(),
+                callEvent.State.SanitizeLogValue(),
+                callEvent.HangupCause.SanitizeLogValue(),
+                callEvent.SipHangupCause.SanitizeLogValue(),
+                callEvent.ClientState.SanitizeLogValue());
+        }
 
         // Advance an outbound soft-phone bridge before anything else. The destination leg is an internal leg
         // the platform created only to reach the dialed party, so it is bridged here and never surfaced to the

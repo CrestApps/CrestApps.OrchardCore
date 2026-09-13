@@ -102,12 +102,25 @@ public sealed class TelnyxApiClient
 
         var (result, json) = await SendAsync(HttpMethod.Post, "calls", body, retryable: false, cancellationToken);
 
+        var callControlId = ReadDataString(json, "call_control_id");
+
+        // The new leg's identifier, next to what was dialled. This is the server half of the join key between a
+        // browser-side observation (which carries the provider's leg ids) and the leg the platform created.
+        if (result.Succeeded && _logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Telnyx originated a leg to {To} from {From}: CallControlId={CallControlId}.",
+                request.To,
+                request.From,
+                callControlId);
+        }
+
         return new TelnyxCallApiResult
         {
             Succeeded = result.Succeeded,
             StatusCode = result.StatusCode,
             ErrorBody = result.ErrorBody,
-            CallControlId = ReadDataString(json, "call_control_id"),
+            CallControlId = callControlId,
         };
     }
 
@@ -613,8 +626,30 @@ public sealed class TelnyxApiClient
                         "application/json");
                 }
 
+                // The command and its body. Until this was logged, the only trace of an answer, dial or bridge
+                // was the transport layer's "Sending HTTP request POST .../calls" line -- which leg was bridged
+                // to which, what a dial asked for, and what a command omitted (a codec preference, say) could
+                // be established only by reading the code, never from the log of the call in question.
+                if (body is not null && _logger.IsEnabled(LogLevel.Debug))
+                {
+                    _logger.LogDebug(
+                        "Telnyx command {Method} {Path} body: {Body}",
+                        method,
+                        path,
+                        JsonSerializer.Serialize(body, _serializerOptions));
+                }
+
                 using var response = await _httpClient.SendAsync(request, cancellationToken);
                 var content = await ReadContentAsync(response, cancellationToken);
+
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Telnyx command {Method} {Path} returned {StatusCode}.",
+                        method,
+                        path,
+                        (int)response.StatusCode);
+                }
 
                 if (response.IsSuccessStatusCode)
                 {
