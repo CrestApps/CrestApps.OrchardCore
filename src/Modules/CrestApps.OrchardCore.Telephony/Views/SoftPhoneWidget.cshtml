@@ -171,7 +171,9 @@
             ["microphoneLostOnCall"] = T["Your microphone stopped working, so the caller cannot hear you. Check the device and call back."].Value,
             ["microphoneLostIdle"] = T["Your microphone stopped working and is being reconnected."].Value,
             ["microphoneSilent"] = T["Your microphone is not picking up any sound, so the caller cannot hear you. Check that it is not muted and that the right device is selected."].Value,
-            ["microphoneChangeOnNextCall"] = T["The microphone will change on your next call. This call keeps the one it started with."].Value,
+            ["microphoneChangeOnNextCall"] = T["The microphone could not be switched on this call. It will be used on your next call."].Value,
+            ["processingSwitchFailed"] = T["The microphone processing change could not be applied on this call."].Value,
+            ["outputDeviceFailed"] = T["The selected speaker could not be applied. The call keeps its current output."].Value,
             ["diagUnavailable"] = T["Diagnostics are not available for this provider."].Value,
             ["diagCollecting"] = T["Collecting..."].Value,
             ["echoTestNoDestination"] = T["Configure an audio test destination in the provider settings first."].Value,
@@ -265,6 +267,23 @@
                     <select class="form-select form-select-sm"
                             data-telephony-output-device
                             aria-label="@T["Speaker"]"></select>
+                </label>
+            </div>
+
+            <div class="telephony-soft-phone__settings-section">
+                <div class="telephony-soft-phone__settings-group-title">@T["Microphone processing"]</div>
+                <p class="telephony-soft-phone__settings-hint">@T["Changes apply immediately, including on a call in progress. Turn one off at a time if the other party hears you hollow, distant, or with artifacts."]</p>
+                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
+                    <input type="checkbox" class="form-check-input" data-telephony-processing-ec checked>
+                    <span class="telephony-soft-phone__setting-label">@T["Echo cancellation"]</span>
+                </label>
+                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
+                    <input type="checkbox" class="form-check-input" data-telephony-processing-ns checked>
+                    <span class="telephony-soft-phone__setting-label">@T["Noise suppression"]</span>
+                </label>
+                <label class="telephony-soft-phone__setting telephony-soft-phone__setting--check">
+                    <input type="checkbox" class="form-check-input" data-telephony-processing-agc checked>
+                    <span class="telephony-soft-phone__setting-label">@T["Automatic gain control"]</span>
                 </label>
             </div>
         </div>

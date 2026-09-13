@@ -2436,6 +2436,9 @@
       settingsBack: rootElement.querySelector('[data-telephony-settings-back]'),
       inputDevice: rootElement.querySelector('[data-telephony-input-device]'),
       outputDevice: rootElement.querySelector('[data-telephony-output-device]'),
+      processingEc: rootElement.querySelector('[data-telephony-processing-ec]'),
+      processingNs: rootElement.querySelector('[data-telephony-processing-ns]'),
+      processingAgc: rootElement.querySelector('[data-telephony-processing-agc]'),
       outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
       diagnosticsTab: rootElement.querySelector('[data-telephony-diagnostics-tab]'),
       diagStatus: rootElement.querySelector('[data-telephony-diag-status]'),
@@ -2924,7 +2927,7 @@
       // the sender with replaceTrack, which needs no renegotiation. Only if that fails is the agent left to
       // be told -- and they are, at that moment, on a call the caller cannot hear them on.
       if (hasLiveCall()) {
-        recoverLocalAudioTrackMidCall().catch(function () {
+        switchLocalAudioTrack(reason).catch(function () {
           showError(strings.microphoneLostOnCall || 'Your microphone stopped working, so the caller cannot hear you. Check the device and call back.');
         });
         return;
@@ -2937,14 +2940,23 @@
       registerBrowserAudioForInbound();
     }
 
-    // Replaces a capture that died under a live call. The registration-time stream is kept for the life of the
-    // registration, and a source that stops delivering (a headset that went to sleep overnight, a device that
-    // was switched) leaves a track that is still 'live' but muted -- and a muted track produces no frames, so
-    // the encoder sends nothing at all: a call this morning ran for thirty seconds with BytesSent=0 while the
-    // caller heard silence. A fresh getUserMedia on the current device selection, swapped onto the sender with
-    // replaceTrack, restores audio without renegotiating; the new track is put into the SAME MediaStream so
-    // everything holding a reference to it (the adapter, the probes, the meter) follows.
-    function recoverLocalAudioTrackMidCall() {
+    // Switches the captured microphone to the current device selection -- because the agent picked another
+    // device, or because the source died -- without disturbing a call in progress.
+    //
+    // The registration-time stream is kept for the life of the registration, so both cases used to mean the
+    // same thing: either tear the whole session down and register again (dropping any live call, and
+    // re-issuing the provider credential every time), or do nothing and promise "the next call". Nothing ever
+    // honoured that promise -- the old track lived on until the registration was renewed -- so an agent who
+    // switched headsets mid-call watched the picker move while the far end kept hearing the old microphone,
+    // and still heard it on the next call.
+    //
+    // A fresh getUserMedia on the selection, swapped onto the live sender with replaceTrack, changes what the
+    // far end hears within a packet or two and needs no renegotiation. The new track goes into the SAME
+    // MediaStream object, so the adapter (which reads that stream when the next call starts), the probes and
+    // the meter all follow without being told. Known edge: a switch made while a call is on hold replaces
+    // the hold audio too; unhold then restores the original, now stopped, track. Rare enough to note rather
+    // than guard.
+    function switchLocalAudioTrack(reason) {
       if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
         return Promise.reject(new Error('Media capture is not available.'));
       }
@@ -2953,7 +2965,22 @@
         if (!fresh) {
           throw new Error('No audio track was captured.');
         }
-        var replace = browserAudioSession && typeof browserAudioSession.replaceLocalAudioTrack === 'function' ? Promise.resolve(browserAudioSession.replaceLocalAudioTrack(fresh)) : Promise.reject(new Error('The media session cannot replace its outgoing track.'));
+
+        // Under a live call the sender must take the new track, and a failure there is a failure of the
+        // whole switch: leaving the far end on the old track while the meter shows the new one would be
+        // exactly the lie this replaces. Idle, the swap into the stream below is enough on its own.
+        var replace;
+        if (!hasLiveCall()) {
+          replace = Promise.resolve();
+        } else if (browserAudioSession && typeof browserAudioSession.replaceLocalAudioTrack === 'function') {
+          replace = Promise.resolve(browserAudioSession.replaceLocalAudioTrack(fresh)).then(function (replaced) {
+            if (!replaced) {
+              throw new Error('The live call has no outgoing audio track to replace.');
+            }
+          });
+        } else {
+          replace = Promise.reject(new Error('The media session cannot replace its outgoing track.'));
+        }
         return replace.then(function () {
           if (localAudioStream) {
             localAudioStream.getAudioTracks().forEach(function (old) {
@@ -2963,14 +2990,17 @@
               }
             });
             localAudioStream.addTrack(fresh);
+          } else {
+            localAudioStream = stream;
           }
           watchLocalAudioTrack();
-          reportDiagnostic('info', 'microphone-recovered', 'The captured microphone was replaced under the live call.', fresh.label || '');
+          reportDiagnostic('info', 'microphone-switched', 'The captured microphone was switched (' + reason + ').', fresh.label || '');
           if (micPermissionState === null) {
             showError(null);
           }
           stopMicMeter();
           startMicMeter();
+          populateDevicePickers();
         }, function (error) {
           stream.getTracks().forEach(function (track) {
             track.stop();
@@ -2986,9 +3016,11 @@
     // otherwise the browser's default input is used.
     function buildAudioConstraints() {
       var audio = {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
+        // On by default; each can be switched off in the settings overlay, live, when a caller reports
+        // the agent sounding hollow or processed -- these three are the usual suspects.
+        echoCancellation: processingSettings.echoCancellation,
+        noiseSuppression: processingSettings.noiseSuppression,
+        autoGainControl: processingSettings.autoGainControl,
         // Ask for a single channel. A call is mono end to end, so stereo capture buys nothing and can
         // cost a great deal: headset microphones routed through a shared audio codec are often
         // presented as a stereo pair carrying the microphone on one side and silence on the other, and
@@ -3068,15 +3100,68 @@
 
     // ---- Audio device selection (item 5) ----
 
+    // The browser's capture processing (echo cancellation, noise suppression, automatic gain control). All on
+    // by default; persisted with the device selection so an agent who found that one of them made them sound
+    // hollow to callers does not have to rediscover it every day. Stored as explicit booleans -- a missing
+    // value means "on", never "off".
+    var processingSettings = {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true
+    };
+    function readProcessingFlag(value, fallback) {
+      return typeof value === 'boolean' ? value : fallback;
+    }
     function loadDeviceSelection() {
       var layout = loadLayout();
       selectedInputDeviceId = layout.inputDeviceId || null;
       selectedOutputDeviceId = layout.outputDeviceId || null;
+      processingSettings = {
+        echoCancellation: readProcessingFlag(layout.echoCancellation, true),
+        noiseSuppression: readProcessingFlag(layout.noiseSuppression, true),
+        autoGainControl: readProcessingFlag(layout.autoGainControl, true)
+      };
     }
     function persistDeviceSelection() {
       saveLayout({
         inputDeviceId: selectedInputDeviceId || '',
-        outputDeviceId: selectedOutputDeviceId || ''
+        outputDeviceId: selectedOutputDeviceId || '',
+        echoCancellation: processingSettings.echoCancellation,
+        noiseSuppression: processingSettings.noiseSuppression,
+        autoGainControl: processingSettings.autoGainControl
+      });
+    }
+
+    // Reflects the stored processing flags into the settings checkboxes.
+    function syncProcessingControls() {
+      if (dom.processingEc) {
+        dom.processingEc.checked = processingSettings.echoCancellation;
+      }
+      if (dom.processingNs) {
+        dom.processingNs.checked = processingSettings.noiseSuppression;
+      }
+      if (dom.processingAgc) {
+        dom.processingAgc.checked = processingSettings.autoGainControl;
+      }
+    }
+
+    // A processing checkbox changed. Re-capture with the new constraints and swap the track under any live
+    // call -- applyConstraints cannot change these on an open capture in Chrome (it is refused or silently
+    // ignored), so a fresh capture is the only way, and replaceTrack makes it seamless. This is the A/B an
+    // agent needs when a caller says they sound hollow: flip one switch, ask "better?", flip it back.
+    function onProcessingChange() {
+      processingSettings = {
+        echoCancellation: !dom.processingEc || dom.processingEc.checked,
+        noiseSuppression: !dom.processingNs || dom.processingNs.checked,
+        autoGainControl: !dom.processingAgc || dom.processingAgc.checked
+      };
+      persistDeviceSelection();
+      if (!localAudioStream) {
+        return;
+      }
+      switchLocalAudioTrack('processing changed').catch(function (error) {
+        reportDiagnostic('warning', 'processing-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+        showError(strings.processingSwitchFailed || 'The microphone processing change could not be applied on this call.');
       });
     }
     function fillDeviceSelect(select, devices, selectedId, defaultLabel) {
@@ -3102,7 +3187,15 @@
       if (!outputDeviceSelectionSupported()) {
         return;
       }
-      Promise.resolve(dom.remoteAudio.setSinkId(selectedOutputDeviceId || '')).catch(function () {});
+
+      // A failure here used to vanish: the picker moved, the audio stayed where it was, and nothing said
+      // so. Now it is reported, and the agent is told the call keeps its current output.
+      Promise.resolve(dom.remoteAudio.setSinkId(selectedOutputDeviceId || '')).then(function () {
+        reportDiagnostic('info', 'output-device-applied', 'Remote audio routed to the selected output device.', selectedOutputDeviceId || 'default');
+      }, function (error) {
+        reportDiagnostic('warning', 'output-device-failed', 'The selected output device could not be applied: ' + String(error && error.message || error), selectedOutputDeviceId || 'default');
+        showError(strings.outputDeviceFailed || 'The selected speaker could not be applied. The call keeps its current output.');
+      });
     }
 
     // Enumerates audio devices and fills the pickers. Device labels are only exposed once microphone
@@ -3160,18 +3253,18 @@
       selectedInputDeviceId = dom.inputDevice && dom.inputDevice.value || null;
       persistDeviceSelection();
 
-      // Apply now when idle by re-registering with the new input. A live call keeps its current microphone
-      // (re-acquiring would drop the call); the new device takes effect on the next call.
-      if (!hasLiveCall()) {
-        releaseBrowserAudio();
-        registerBrowserAudioForInbound();
+      // Nothing captured yet: the registration that follows reads the selection when it captures.
+      if (!localAudioStream) {
         return;
       }
 
-      // Say so, rather than accepting the change silently. An agent who switches microphone mid-call
-      // because the caller cannot hear them reasonably reads the picker moving as the change having taken
-      // effect; it has not, and they go on not being heard with no indication why.
-      showError(strings.microphoneChangeOnNextCall || 'The microphone will change on your next call. This call keeps the one it started with.');
+      // Switch the capture in place, live call or not. Tearing the registration down re-issued the
+      // provider credential on every change, and deferring to "the next call" was never actually carried
+      // out. Only if the switch fails is the agent told -- with the truth: this call keeps the old device.
+      switchLocalAudioTrack('device selected').catch(function (error) {
+        reportDiagnostic('warning', 'microphone-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+        showError(strings.microphoneChangeOnNextCall || 'The microphone could not be switched on this call. It will be used on your next call.');
+      });
     }
     function onOutputDeviceChange() {
       selectedOutputDeviceId = dom.outputDevice && dom.outputDevice.value || null;
@@ -6314,6 +6407,14 @@
       if (dom.outputDevice) {
         dom.outputDevice.addEventListener('change', onOutputDeviceChange);
       }
+      [dom.processingEc, dom.processingNs, dom.processingAgc].forEach(function (control) {
+        if (control) {
+          control.addEventListener('change', onProcessingChange);
+        }
+      });
+      if (dom.processingEc || dom.processingNs || dom.processingAgc) {
+        syncProcessingControls();
+      }
       if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
         // Re-enumerate when devices are plugged in or removed so the picker stays current (item 5).
         navigator.mediaDevices.addEventListener('devicechange', function () {
@@ -6445,6 +6546,8 @@
     // Load the persisted device selection before the first registration so getUserMedia uses the saved
     // input device (item 5).
     loadDeviceSelection();
+    // The stored processing flags are known only now; the checkboxes were wired (and defaulted) earlier.
+    syncProcessingControls();
     render();
 
     // A restored Diagnostics tab is active without setActiveTab having run, so the meter that tab owns was

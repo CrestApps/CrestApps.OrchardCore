@@ -652,6 +652,28 @@
         margin: 0;
     }
 
+    // A checkbox setting: the control sits inline before its label rather than under it.
+    &__setting--check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        .form-check-input {
+            margin: 0;
+            flex: 0 0 auto;
+        }
+
+        .telephony-soft-phone__setting-label {
+            margin-bottom: 0;
+        }
+    }
+
+    &__settings-hint {
+        font-size: 0.72rem;
+        color: var(--bs-secondary-color, #6c757d);
+        margin: 0 0 0.35rem;
+    }
+
     &__setting-label {
         display: flex;
         align-items: center;

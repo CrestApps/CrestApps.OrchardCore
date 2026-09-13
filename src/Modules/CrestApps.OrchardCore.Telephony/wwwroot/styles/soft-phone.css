@@ -543,6 +543,23 @@
   display: block;
   margin: 0;
 }
+.telephony-soft-phone__setting--check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.telephony-soft-phone__setting--check .form-check-input {
+  margin: 0;
+  flex: 0 0 auto;
+}
+.telephony-soft-phone__setting--check .telephony-soft-phone__setting-label {
+  margin-bottom: 0;
+}
+.telephony-soft-phone__settings-hint {
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color, #6c757d);
+  margin: 0 0 0.35rem;
+}
 .telephony-soft-phone__setting-label {
   display: flex;
   align-items: center;
