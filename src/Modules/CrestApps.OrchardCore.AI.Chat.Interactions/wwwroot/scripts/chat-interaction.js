@@ -2727,30 +2727,42 @@ window.chatInteractionDocumentManager = function () {
       }
       interactionDocuments.forEach(function (documentInfo) {
         var row = window.document.createElement('div');
-        row.className = 'd-flex justify-content-between align-items-start gap-2 border rounded px-2 py-2 bg-white chat-document-row';
+        row.className = 'd-flex align-items-center gap-2 border rounded px-2 py-2 bg-white chat-document-row';
         row.dataset.chatDocumentId = documentInfo.documentId;
         row.dataset.chatDocumentName = documentInfo.fileName;
         row.dataset.chatDocumentSize = documentInfo.fileSize;
+        var actions = window.document.createElement('div');
+        actions.className = 'd-flex gap-1';
+        var downloadBaseUrl = config.downloadDocumentBaseUrl || '/ai/documents/';
+        var downloadLink = createTextElement('a', 'btn btn-sm btn-outline-secondary', '');
+        downloadLink.title = 'Download';
+        downloadLink.href = downloadBaseUrl + encodeURIComponent(documentInfo.documentId) + '/download';
+        var downloadIcon = window.document.createElement('i');
+        downloadIcon.className = 'fa-solid fa-download';
+        downloadLink.appendChild(downloadIcon);
+        var removeButton = createTextElement('button', 'btn btn-sm btn-outline-danger remove-chat-document-btn', '');
+        removeButton.type = 'button';
+        removeButton.title = 'Remove';
+        removeButton.dataset.documentId = documentInfo.documentId;
+        var removeIcon = window.document.createElement('i');
+        removeIcon.className = 'fa-solid fa-trash';
+        removeButton.appendChild(removeIcon);
+        removeButton.addEventListener('click', function () {
+          return removeDocument(documentInfo.documentId);
+        });
+        actions.appendChild(downloadLink);
+        actions.appendChild(removeButton);
         var details = window.document.createElement('div');
-        details.className = 'me-2 min-w-0';
-        var name = createTextElement('div', 'fw-semibold small', documentInfo.fileName || 'Document');
+        details.className = 'min-w-0';
+        var name = createTextElement('div', 'fw-semibold small text-truncate', documentInfo.fileName || 'Document');
         var icon = window.document.createElement('i');
         icon.className = 'fa-solid fa-file-lines me-1';
         name.prepend(icon);
         var size = createTextElement('div', 'text-muted small', formatFileSize(documentInfo.fileSize));
         details.appendChild(name);
         details.appendChild(size);
-        var removeButton = createTextElement('button', 'btn btn-sm btn-outline-danger remove-chat-document-btn', ' Remove');
-        removeButton.type = 'button';
-        removeButton.dataset.documentId = documentInfo.documentId;
-        var removeIcon = window.document.createElement('i');
-        removeIcon.className = 'fa-solid fa-trash';
-        removeButton.prepend(removeIcon);
-        removeButton.addEventListener('click', function () {
-          return removeDocument(documentInfo.documentId);
-        });
+        row.appendChild(actions);
         row.appendChild(details);
-        row.appendChild(removeButton);
         documentsList.appendChild(row);
       });
     }
