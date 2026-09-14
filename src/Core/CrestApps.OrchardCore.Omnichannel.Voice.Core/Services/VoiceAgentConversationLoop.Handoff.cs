@@ -80,6 +80,13 @@ public sealed partial class VoiceAgentConversationLoop
         // passing it here is what silently dropped the handoff.
         var cancellationToken = CancellationToken.None;
 
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Finishing the automated call for activity '{ActivityId}' on its own scope.",
+                completion.ActivityId.SanitizeLogValue());
+        }
+
         var media = _mediaResolver.Get(completion.ProviderName) ?? _mediaResolver.GetDefault();
 
         if (media is null)

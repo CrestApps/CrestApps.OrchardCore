@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
+﻿namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
 /// <summary>
 /// Represents a recent interaction handled by the agent, rendered in the agent desktop history list.
@@ -19,6 +19,13 @@ public sealed class WorkspaceHistoryEntryViewModel
     /// Gets or sets the final communication-session status of the interaction.
     /// </summary>
     public string Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the call was answered, or <see langword="null"/> when it never was. With
+    /// <see cref="EndedUtc"/> this is how long the agent was talking; a call that was never answered has no talk
+    /// time to show.
+    /// </summary>
+    public DateTime? AnsweredUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the customer label shown for the history entry.

@@ -235,6 +235,15 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     : OmnichannelHandoffHelper.BuildHandoffInstructions(realtimeFlowSettings),
             }, cancellationToken))
             {
+                // The session is over. Said plainly on the record, because the failure this instrumentation was
+                // added for looked exactly like the session never ending.
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "The realtime session for activity '{ActivityId}' ended.",
+                        activity.ItemId.SanitizeLogValue());
+                }
+
                 // What the live session decided, read here while the turns that recorded it are still this
                 // scope's. Everything after this point runs somewhere else.
                 var handoffRequested = _handoffTurn.HandoffRequested;

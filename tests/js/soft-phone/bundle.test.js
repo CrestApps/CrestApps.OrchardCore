@@ -32,6 +32,16 @@ describe('the soft phone asset group', () => {
 describe('the telephony client asset group', () => {
     const clientGroup = assets.find(group => group.output === 'wwwroot/scripts/telephony-client.js');
 
+    it('carries the phone formatter, so every surface shows a number the same way', () => {
+        // The agent workspace renders call history through this bundle and has no soft phone on the page. Without
+        // the formatter here it silently fell back to raw digits — +17024445506 where a person expects
+        // (702) 444-5506 — with nothing failing to say so.
+        const inputs = clientGroup.inputs;
+
+        expect(inputs).toContain('Assets/js/soft-phone/format.js');
+        expect(inputs.indexOf('Assets/js/soft-phone/format.js')).toBeLessThan(inputs.indexOf('Assets/js/telephony-client.js'));
+    });
+
     it('concatenates the shared call timer ahead of the client that re-exports it', () => {
         // Every surface that shows a call duration reads it off this client. If the timer is not in the bundle
         // ahead of it, the export is undefined and every call on screen shows a blank timer.

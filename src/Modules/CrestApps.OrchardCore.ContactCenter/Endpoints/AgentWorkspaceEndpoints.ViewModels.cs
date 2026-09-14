@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -241,6 +241,7 @@ internal static partial class AgentWorkspaceEndpoints
             Status = interaction.Status.ToString(),
             CustomerLabel = interaction.CustomerAddress,
             CreatedUtc = interaction.CreatedUtc,
+            AnsweredUtc = interaction.AnsweredUtc,
             EndedUtc = interaction.EndedUtc,
         })];
     }

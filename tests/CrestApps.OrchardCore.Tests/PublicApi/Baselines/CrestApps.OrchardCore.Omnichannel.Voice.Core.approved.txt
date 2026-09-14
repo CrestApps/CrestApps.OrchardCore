@@ -92,7 +92,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     }
     public sealed class RealtimeCallCompletionRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner
     {
-        public RealtimeCallCompletionRunner(System.IServiceProvider serviceProvider) { }
+        public RealtimeCallCompletionRunner(OrchardCore.Environment.Shell.IShellHost shellHost, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeCallCompletionRunner> logger) { }
         public System.Threading.Tasks.Task RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.RealtimeCallCompletion completion) { }
     }
     public sealed class RealtimeVoiceConversationContext

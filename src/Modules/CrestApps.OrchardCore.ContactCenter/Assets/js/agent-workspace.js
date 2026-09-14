@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Contact Center agent desktop client.
  *
  * Binds the agent workspace page to the real-time Contact Center hub and the workspace state endpoint.
@@ -333,6 +333,39 @@
                 '</div>';
         }
 
+        // The number as a person would read it out. The formatter is shared with the soft phone rather than
+        // reimplemented, so a number looks the same wherever an agent sees it; an unrecognized value is shown as
+        // it came, which is better than hiding it.
+        function formatCustomer(value) {
+            var shared = window.CrestAppsSoftPhone;
+
+            if (shared && typeof shared.formatPhoneNumber === 'function') {
+                return shared.formatPhoneNumber(value) || value;
+            }
+
+            return value;
+        }
+
+        // How long the agent was actually talking: from the moment the call was answered to the moment it ended.
+        // A call that was never answered has no talk time, and showing "0:00" for it would read as a call that
+        // connected and said nothing — so it shows nothing at all and the status carries the outcome.
+        function formatTalkTime(entry) {
+            var shared = window.CrestAppsTelephonyShared;
+
+            if (!entry || !shared || typeof shared.formatDuration !== 'function') {
+                return '';
+            }
+
+            var answered = parseUtc(entry.answeredUtc);
+            var ended = parseUtc(entry.endedUtc);
+
+            if (!answered || !ended || ended <= answered) {
+                return '';
+            }
+
+            return shared.formatDuration(Math.round((ended - answered) / 1000));
+        }
+
         function renderHistory() {
             if (!refs.history || !state) {
                 return;
@@ -349,10 +382,8 @@
             refs.history.innerHTML = history.map(function (entry) {
                 var inbound = entry.direction === 'Inbound';
                 var when = parseUtc(entry.endedUtc || entry.createdUtc);
-                var formattedNumber = window.telephonySoftPhone &&
-                    typeof window.telephonySoftPhone.formatPhoneNumber === 'function'
-                    ? window.telephonySoftPhone.formatPhoneNumber(entry.customerLabel)
-                    : entry.customerLabel;
+                var formattedNumber = formatCustomer(entry.customerLabel);
+                var duration = formatTalkTime(entry);
 
                 return '<li class="cc-history__item">' +
                     '<span class="cc-history__dir"><i class="fa-solid ' + (inbound ? 'fa-arrow-down-left' : 'fa-arrow-up-right') + '"></i></span>' +
@@ -361,7 +392,13 @@
                             '<span class="cc-history__customer">' + escapeHtml(formattedNumber || label('unknownCaller', 'Unknown caller')) + '</span>' +
                             '<span class="badge text-bg-secondary">' + escapeHtml(entry.status) + '</span>' +
                         '</span>' +
-                        (when ? '<span class="cc-history__meta">' + escapeHtml(new Date(when).toLocaleString()) + '</span>' : '') +
+                        (when || duration
+                            ? '<span class="cc-history__meta">' +
+                                (when ? escapeHtml(new Date(when).toLocaleString()) : '') +
+                                (when && duration ? ' &middot; ' : '') +
+                                (duration ? '<i class="fa-solid fa-stopwatch"></i> ' + escapeHtml(duration) : '') +
+                              '</span>'
+                            : '') +
                     '</span>' +
                 '</li>';
             }).join('');
