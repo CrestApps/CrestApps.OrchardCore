@@ -2391,6 +2391,12 @@
             return Promise.resolve(false);
           }
           return Promise.resolve(sender.replaceTrack(track)).then(function () {
+            // A MediaStreamAudioSourceNode binds to the track it was built from and does not follow
+            // a track swapped into the same stream, so the level probes would go on measuring the
+            // old -- now stopped -- track and report silence for the rest of the call. Rebuild them
+            // against what is being sent now. (Observed live: media-source read full scale while the
+            // probe alongside it read 0.000 after a mid-call microphone change.)
+            startLevelProbes();
             return true;
           });
         },
