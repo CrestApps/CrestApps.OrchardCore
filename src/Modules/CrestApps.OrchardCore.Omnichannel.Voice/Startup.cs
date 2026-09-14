@@ -24,7 +24,12 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IVoiceAgentConversationLoop, VoiceAgentConversationLoop>();
+        // Registered as itself as well as behind the interface: when a live session ends, the call is finished
+        // in a child scope that resolves a fresh loop of its own, because the scope the session ran in belongs to
+        // a webhook request the provider has long since abandoned.
+        services.AddScoped<VoiceAgentConversationLoop>();
+        services.AddScoped<IVoiceAgentConversationLoop>(serviceProvider => serviceProvider.GetRequiredService<VoiceAgentConversationLoop>());
+        services.AddScoped<IRealtimeCallCompletionRunner, RealtimeCallCompletionRunner>();
 
         // One per call, so the tool and the session holding the line share an instance and two calls running at
         // once cannot end each other.

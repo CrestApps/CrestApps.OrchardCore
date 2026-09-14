@@ -7,6 +7,16 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public PendingVoiceHandoff() { }
         public string Reason { get; set; }
     }
+    public sealed class RealtimeCallCompletion
+    {
+        public RealtimeCallCompletion() { }
+        public string ActivityId { get; set; }
+        public string EndCallReason { get; set; }
+        public bool EndCallRequested { get; set; }
+        public bool HandoffRequested { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+    }
     public sealed class VoiceAgentEvent
     {
         public VoiceAgentEvent() { }
@@ -46,6 +56,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public System.ReadOnlyMemory<byte> NextPcmBytes(int sampleCount) { }
         public static void MixInto(System.Span<short> destination, System.ReadOnlySpan<short> ambience) { }
     }
+    public interface IRealtimeCallCompletionRunner
+    {
+        System.Threading.Tasks.Task RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.RealtimeCallCompletion completion);
+    }
     public interface IRealtimeVoiceConversationRunner
     {
         System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default);
@@ -76,6 +90,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public static short[] Resample(short[] samples, int fromRate, int toRate) { }
         public static System.ReadOnlyMemory<byte> ToRealtime(System.ReadOnlyMemory<byte> frame, CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat format) { }
     }
+    public sealed class RealtimeCallCompletionRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner
+    {
+        public RealtimeCallCompletionRunner(System.IServiceProvider serviceProvider) { }
+        public System.Threading.Tasks.Task RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.RealtimeCallCompletion completion) { }
+    }
     public sealed class RealtimeVoiceConversationContext
     {
         public RealtimeVoiceConversationContext() { }
@@ -104,6 +123,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.Core.AI.Completions.IAICompletionService completionService,
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn handoffTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn endCallTurn,
+                    CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner completionRunner,
                     CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
                     CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,
                     CrestApps.Core.AI.Profiles.IAIProfileManager profileManager,

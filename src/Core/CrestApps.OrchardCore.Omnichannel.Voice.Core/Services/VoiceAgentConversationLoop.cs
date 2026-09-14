@@ -60,6 +60,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IAICompletionService _completionService;
     private readonly IOmnichannelHandoffTurn _handoffTurn;
     private readonly IVoiceCallEndTurn _endCallTurn;
+    private readonly IRealtimeCallCompletionRunner _completionRunner;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAICompletionContextBuilder _contextBuilder;
     private readonly IAIProfileManager _profileManager;
@@ -79,6 +80,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IAICompletionService completionService,
         IOmnichannelHandoffTurn handoffTurn,
         IVoiceCallEndTurn endCallTurn,
+        IRealtimeCallCompletionRunner completionRunner,
         IAIDeploymentManager deploymentManager,
         IAICompletionContextBuilder contextBuilder,
         IAIProfileManager profileManager,
@@ -97,6 +99,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _completionService = completionService;
         _handoffTurn = handoffTurn;
         _endCallTurn = endCallTurn;
+        _completionRunner = completionRunner;
         _deploymentManager = deploymentManager;
         _contextBuilder = contextBuilder;
         _profileManager = profileManager;
@@ -232,35 +235,40 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     : OmnichannelHandoffHelper.BuildHandoffInstructions(realtimeFlowSettings),
             }, cancellationToken))
             {
-                // A realtime session holds the call for its whole duration, and the model escalates from inside
-                // it by invoking the transfer tool — which only RECORDS the request. The turn-based loop below
-                // reads that flag after every completion, but this branch used to return without ever looking at
-                // it: the caller heard "I'm connecting you to a specialist" and then stayed with the bot, because
-                // nothing enqueued them. Honour it here, on the same enqueue-and-offer path the turn-based loop
-                // uses, so a handoff means the same thing on both.
-                if (_handoffTurn.HandoffRequested)
-                {
-                    await PerformVoiceHandoffAsync(voiceEvent, media, activity, cancellationToken);
+                // What the live session decided, read here while the turns that recorded it are still this
+                // scope's. Everything after this point runs somewhere else.
+                var handoffRequested = _handoffTurn.HandoffRequested;
+                var endCallRequested = _endCallTurn.EndCallRequested;
+                var endCallReason = _endCallTurn.Reason;
 
+                if (!handoffRequested && !endCallRequested)
+                {
                     return;
                 }
 
-                // The session ended because the model said the conversation was over, not because the caller hung
-                // up — so the call is still up and somebody has to end it. The session already waited for the
-                // closing line and gave the caller their moment; all that is left is the hangup itself. A caller
-                // who hung up first never sets this, so we do not chase a call that is already gone.
-                if (_endCallTurn.EndCallRequested)
+                // Finish the call in a scope of its own.
+                //
+                // A realtime session holds the caller for the whole call, and this branch is running inside the
+                // provider's "call answered" webhook request. No provider waits minutes for a webhook response:
+                // ours timed out, was retried, and its connection was aborted the moment the session ended. The
+                // work that came after -- the handoff -- went with it. Observed live: the model asked to
+                // transfer, the tool recorded it, the caller heard the assistant stop, and nothing ever enqueued
+                // them, with not one line logged because the request that would have logged it was already gone.
+                //
+                // A child scope has its own services and its own lifetime, and the work is given a cancellation
+                // token of its own, so finishing the call no longer depends on a request the provider abandoned
+                // long ago.
+                var completion = new RealtimeCallCompletion
                 {
-                    if (_logger.IsEnabled(LogLevel.Information))
-                    {
-                        _logger.LogInformation(
-                            "Ending automated call for activity '{ActivityId}': {Reason}",
-                            activity.ItemId.SanitizeLogValue(),
-                            (_endCallTurn.Reason ?? "the model reported the conversation finished").SanitizeLogValue());
-                    }
+                    ActivityId = activity.ItemId,
+                    ProviderName = voiceEvent.ProviderName,
+                    ProviderCallId = voiceEvent.ProviderCallId,
+                    HandoffRequested = handoffRequested,
+                    EndCallRequested = endCallRequested,
+                    EndCallReason = endCallReason,
+                };
 
-                    await media.HangupAsync(voiceEvent.ProviderCallId, cancellationToken);
-                }
+                await _completionRunner.RunAsync(completion);
 
                 return;
             }
@@ -588,153 +596,6 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] =
             new List<ToolRegistryEntry> { entry };
-    }
-
-    // Resolves the phone handoff service and this subject's flow settings, returning a non-null service only when
-    // handoff is both configured (enabled with a target queue) and a channel implementation is registered. The flow
-    // settings are always returned so callers can read the target queue.
-    private async Task<(IOmnichannelHandoffService Service, SubjectFlowSettings FlowSettings)> ResolveVoiceHandoffAsync(
-        OmnichannelActivity activity,
-        CancellationToken cancellationToken)
-    {
-        var flowSettings = string.IsNullOrWhiteSpace(activity.SubjectContentType)
-            ? null
-            : await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(activity.SubjectContentType, cancellationToken);
-
-        if (!OmnichannelHandoffHelper.IsHandoffEnabled(flowSettings))
-        {
-            return (null, flowSettings);
-        }
-
-        var service = _handoffServices?.FirstOrDefault(candidate => candidate.CanHandle(OmnichannelConstants.Channels.Phone));
-
-        return (service, flowSettings);
-    }
-
-    // Seats the still-connected caller in the configured queue and offers the call to an agent, reusing the inbound
-    // enqueue-and-offer pipeline. On success the call stays up while the queue rings an agent; on failure there is
-    // nowhere to route the caller, so the call is ended.
-    /// <summary>
-    /// Clears the durable "a transfer is pending" flag, so the speak.ended raised by whatever we say next does
-    /// not come back around and perform the transfer again.
-    /// </summary>
-    /// <param name="activity">The activity being handed off.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    private async Task ClearPendingHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
-    {
-        // Re-read: the handoff moved this row through another service, so the copy held here is already stale.
-        var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
-
-        if (current is not null && current.Properties.Remove(nameof(PendingVoiceHandoff)))
-        {
-            await _activityStore.UpdateAsync(current, cancellationToken);
-        }
-
-        // Also on the in-memory copy the caller is still holding, so a second pass inside this same scope sees
-        // the flag gone rather than re-reading it from a row it has not reloaded.
-        activity.Properties?.Remove(nameof(PendingVoiceHandoff));
-    }
-
-    private async Task PerformVoiceHandoffAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, OmnichannelActivity activity, CancellationToken cancellationToken)
-    {
-        var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
-
-        if (handoffService is null)
-        {
-            _logger.LogWarning("An AI voice handoff was requested for Activity {ActivityId} but no handoff destination is available; ending the call.", activity.ItemId.SanitizeLogValue());
-            await media.HangupAsync(voiceEvent.ProviderCallId, cancellationToken);
-
-            return;
-        }
-
-        OmnichannelHandoffResult result;
-
-        try
-        {
-            result = await handoffService.RequestHandoffAsync(new OmnichannelHandoffRequest
-            {
-                Activity = activity,
-                TargetQueueId = flowSettings.HandoffQueueId,
-                Reason = "The automated assistant escalated the call to a live agent.",
-                ContactAddress = activity.PreferredDestination,
-                ProviderName = voiceEvent.ProviderName,
-                ProviderCallId = voiceEvent.ProviderCallId,
-                // Carried onto the interaction so the answering agent sees what the caller has already been
-                // through, and can open the transcript rather than asking them to repeat it.
-                AiSessionId = activity.AISessionId,
-            }, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "The AI voice handoff for Activity {ActivityId} threw; ending the call.", activity.ItemId.SanitizeLogValue());
-            await media.HangupAsync(voiceEvent.ProviderCallId, cancellationToken);
-
-            return;
-        }
-
-        if (!result.Succeeded)
-        {
-            _logger.LogWarning("The AI voice handoff for Activity {ActivityId} did not complete: {Reason}. Ending the call.", activity.ItemId.SanitizeLogValue(), result.Message);
-            await media.HangupAsync(voiceEvent.ProviderCallId, cancellationToken);
-
-            return;
-        }
-
-        // The handoff has now happened, so clear the durable flag before anything else is spoken.
-        //
-        // Every branch below says something to the caller, and speaking raises another speak.ended, which comes
-        // straight back into the handler that re-reads this flag. Leaving it set turned one transfer into an
-        // endless loop: a caller heard "Thanks for waiting..." seven times in forty-five seconds, once every few
-        // seconds until they hung up. It used to be cleared only on the after-hours branch, which is why the
-        // ordinary routed transfer — much the commoner path — was the one that repeated.
-        await ClearPendingHandoffAsync(activity, cancellationToken);
-
-        // After hours the destination queue is closed, so a callback was scheduled instead of routing the live
-        // call. Tell the caller and end the call gracefully. The closing line is spoken and stored with the
-        // hangup marker so the next speak.ended reaches the hangup path.
-        if (result.Disposition == HandoffDisposition.CallbackScheduled)
-        {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("AI voice Activity {ActivityId} could not route live (after hours); a callback was scheduled.", activity.ItemId.SanitizeLogValue());
-            }
-
-            const string closing = "Thanks for your patience. Our specialists aren't available right now, so we've scheduled a callback and someone will reach out to you shortly. Goodbye.";
-
-            if (!string.IsNullOrWhiteSpace(activity.AISessionId))
-            {
-                var session = await _chatSessionManager.FindByIdAsync(activity.AISessionId, cancellationToken);
-
-                if (session is not null)
-                {
-                    // Store with the hangup marker so the next speak.ended ends the call.
-                    await StorePromptAsync(session, ChatRole.Assistant, closing + " " + HangupMarker, cancellationToken);
-                }
-            }
-
-            await SpeakAsync(media, voiceEvent.ProviderCallId, activity, closing, cancellationToken);
-
-            return;
-        }
-
-        // "Connecting you now" and "you are in a queue" are different promises. Saying the first to a caller
-        // nobody is free to take leaves them listening to silence, waiting for a person who was never offered
-        // the call, so each disposition gets its own line.
-        var routed = result.Disposition == HandoffDisposition.Routed;
-
-        var handoffLine = routed
-            ? "Thanks for waiting. I'm connecting you to a specialist now."
-            : "Thanks for waiting. All of our specialists are busy right now, so I've placed you in the queue and the next available person will be with you shortly.";
-
-        await SpeakAsync(media, voiceEvent.ProviderCallId, activity, handoffLine, cancellationToken);
-
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "Handed off AI voice Activity {ActivityId} to a live agent; {OfferState}.",
-                activity.ItemId.SanitizeLogValue(),
-                routed ? "the call was offered to an available agent" : "the call is held while the queue waits for one");
-        }
     }
 
     private static Task<bool> SpeakAsync(IVoiceAgentMediaProvider media, string providerCallId, OmnichannelActivity activity, string text, CancellationToken cancellationToken)

@@ -275,26 +275,63 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     [Fact]
-    public async Task WhenARealtimeSessionEscalates_TheCallerIsActuallyHandedOff()
+    public async Task AnEscalatedRealtimeCall_IsFinishedAfterTheRequestCarryingItHasBeenAbandoned()
     {
         // Arrange
-        // The model escalates from inside the live session by invoking the transfer tool, which only RECORDS the
-        // request — performing it is the caller's job. The realtime branch used to return the moment the session
-        // ended without ever reading that flag, so a caller who asked for a person heard "I'm connecting you to a
-        // specialist" and then stayed with the bot, because nothing ever enqueued them.
+        // The session runs inside the provider's "call answered" webhook request, for the whole length of the
+        // call. No provider waits that long: ours timed out, retried, and the connection was aborted the moment
+        // the session ended, taking the handoff with it. Live, the tool recorded the transfer, the assistant went
+        // quiet, and the caller was never enqueued — with nothing logged, because the request that would have
+        // logged it was already gone.
+        //
+        // An abandoned request is reproduced here the way it actually arrives: a cancelled token.
         var harness = new LoopHarness();
         harness.EnableHandoff();
         harness.Profile.RealtimeDeploymentName = "realtime-deployment";
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
 
+        using var aborted = new CancellationTokenSource();
+        await aborted.CancelAsync();
+
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: aborted.Token);
 
         // Assert
-        Assert.Single(harness.Realtime.Sessions);
+        // The call is handed on to be finished elsewhere rather than finished on the dying request.
+        Assert.NotNull(harness.CompletionRunner.Completion);
+        Assert.True(harness.CompletionRunner.Completion.HandoffRequested);
+        Assert.Equal(harness.Activity.ItemId, harness.CompletionRunner.Completion.ActivityId);
+        Assert.Equal("call-1", harness.CompletionRunner.Completion.ProviderCallId);
+    }
+
+    [Fact]
+    public async Task FinishingAnEscalatedCall_PutsTheCallerInTheQueue()
+    {
+        // Arrange
+        // The other half of the seam: what the child scope does when it gets there. Together these two cover the
+        // journey the old test skipped — it asserted the loop enqueues when the flag is set, which stayed green
+        // while the live path could neither set the flag nor survive long enough to act on it.
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
+
+        using var aborted = new CancellationTokenSource();
+        await aborted.CancelAsync();
+
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: aborted.Token);
+
+        // Act
+        await harness.FinishAsync();
+
+        // Assert
         harness.HandoffService.Verify(
             x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()),
             Times.Once);
+
+        // And not with the token that was already cancelled: passing the request's token is what dropped the
+        // handoff in the first place, silently, because a cancelled token fails before anything is logged.
+        Assert.False(harness.HandoffToken.IsCancellationRequested);
     }
 
     [Fact]
@@ -302,14 +339,14 @@ public sealed class VoiceAgentConversationLoopTests
     {
         // Arrange
         // The session stopping is not the call stopping: the line is still up, and on a realtime call nothing was
-        // ever hanging it up. A customer heard the goodbye and then sat on an open line until they gave up and
-        // disconnected themselves.
+        // ever hanging it up. A customer heard the goodbye and then sat on an open line until they gave up.
         var harness = new LoopHarness();
         harness.Profile.RealtimeDeploymentName = "realtime-deployment";
         harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(true);
 
         // Act
         await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.FinishAsync();
 
         // Assert
         Assert.Single(harness.Realtime.Sessions);
@@ -317,20 +354,22 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     [Fact]
-    public async Task ARealtimeCallTheCallerEnded_IsNotHungUpAgain()
+    public async Task ARealtimeCallTheCallerEnded_IsNotFinishedAgain()
     {
         // Arrange
-        // When the caller hangs up first the session ends the same way, but the call is already gone. Chasing it
-        // with a hangup asks the provider about a call that no longer exists.
+        // When the caller hangs up first, nothing was decided by the model: there is no handoff to perform and no
+        // call left to hang up, so nothing should be scheduled at all.
         var harness = new LoopHarness();
         harness.Profile.RealtimeDeploymentName = "realtime-deployment";
         harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(false);
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(false);
 
         // Act
         await harness.HandleAsync(VoiceAgentEventKind.Answered);
 
         // Assert
         Assert.Single(harness.Realtime.Sessions);
+        Assert.Null(harness.CompletionRunner.Completion);
         Assert.Equal(0, harness.Media.Hangups);
     }
 
@@ -348,6 +387,7 @@ public sealed class VoiceAgentConversationLoopTests
 
         // Act
         await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.FinishAsync();
 
         // Assert
         harness.HandoffService.Verify(
@@ -371,6 +411,7 @@ public sealed class VoiceAgentConversationLoopTests
 
         // Assert
         Assert.Single(harness.Realtime.Sessions);
+        Assert.Null(harness.CompletionRunner.Completion);
         harness.HandoffService.Verify(
             x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -568,10 +609,12 @@ public sealed class VoiceAgentConversationLoopTests
             HandoffService = new Mock<IOmnichannelHandoffService>();
             HandoffService.Setup(x => x.CanHandle(It.IsAny<string>())).Returns(true);
             HandoffService.Setup(x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()))
+                .Callback<OmnichannelHandoffRequest, CancellationToken>((_, token) => HandoffToken = token)
                 .ReturnsAsync(() => HandoffResult);
 
             HandoffTurn = new Mock<IOmnichannelHandoffTurn>();
             EndCallTurn = new Mock<IVoiceCallEndTurn>();
+            CompletionRunner = new RecordingCompletionRunner();
 
             Loop = new VoiceAgentConversationLoop(
                 activityStore.Object,
@@ -580,6 +623,7 @@ public sealed class VoiceAgentConversationLoopTests
                 completionService.Object,
                 HandoffTurn.Object,
                 EndCallTurn.Object,
+                CompletionRunner,
                 deploymentManager.Object,
                 contextBuilder.Object,
                 profileManager.Object,
@@ -610,6 +654,14 @@ public sealed class VoiceAgentConversationLoopTests
 
         public Mock<IVoiceCallEndTurn> EndCallTurn { get; }
 
+        public RecordingCompletionRunner CompletionRunner { get; }
+
+        /// <summary>
+        /// The token the enqueue was actually given. The request's own token, already cancelled by the time the
+        /// call ends, is what silently dropped the handoff live.
+        /// </summary>
+        public CancellationToken HandoffToken { get; private set; }
+
         public Mock<ISubjectFlowSettingsService> FlowSettingsService { get; }
 
         public SubjectFlowSettings FlowSettings { get; private set; }
@@ -631,15 +683,43 @@ public sealed class VoiceAgentConversationLoopTests
             VoiceAgentEventKind kind,
             string transcript = null,
             bool isFinal = true,
-            string providerName = "Fake")
-            => Loop.HandleAsync(new VoiceAgentEvent
-            {
-                Kind = kind,
-                ProviderCallId = "call-1",
-                ProviderName = providerName,
-                ActivityId = Activity.ItemId,
-                TranscriptionText = transcript,
-                TranscriptionIsFinal = isFinal,
-            });
+            string providerName = "Fake",
+            CancellationToken cancellationToken = default)
+            => Loop.HandleAsync(
+                new VoiceAgentEvent
+                {
+                    Kind = kind,
+                    ProviderCallId = "call-1",
+                    ProviderName = providerName,
+                    ActivityId = Activity.ItemId,
+                    TranscriptionText = transcript,
+                    TranscriptionIsFinal = isFinal,
+                },
+                cancellationToken);
+
+        /// <summary>
+        /// Finishes the call the way the real runner does — on this same loop, but with the request's token out of
+        /// the picture, which is the whole point of the seam.
+        /// </summary>
+        public Task FinishAsync()
+            => CompletionRunner.Completion is null
+                ? Task.CompletedTask
+                : Loop.FinishRealtimeCallAsync(CompletionRunner.Completion);
+    }
+
+    /// <summary>
+    /// Records what the loop asked to have finished elsewhere, standing in for the child scope the real runner
+    /// opens.
+    /// </summary>
+    internal sealed class RecordingCompletionRunner : IRealtimeCallCompletionRunner
+    {
+        public RealtimeCallCompletion Completion { get; private set; }
+
+        public Task RunAsync(RealtimeCallCompletion completion)
+        {
+            Completion = completion;
+
+            return Task.CompletedTask;
+        }
     }
 }

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CrestApps.OrchardCore.Tests.Architecture;
@@ -54,6 +54,9 @@ public sealed class DependencyInjectionArchitectureTests
         new DependencyInjectionException(
             "ContactCenterScopeExecutor",
             "Its whole purpose is to open a tenant scope and run work in it, so the container is the thing it operates on."),
+        new DependencyInjectionException(
+            "RealtimeCallCompletionRunner",
+            "Like the scope executor, opening a scope and running work in it is the whole of what it does: the call it finishes outlives the request the session ran in."),
         new DependencyInjectionException(
             "ContactCenterFeatureLifecycleHandler",
             "It runs while features are being enabled and disabled, when the set of registered services is exactly what is changing."),
