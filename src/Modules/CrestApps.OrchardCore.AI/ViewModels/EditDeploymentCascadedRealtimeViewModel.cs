@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.AI.ViewModels;
 /// The editor for a cascaded realtime deployment: the three deployments it chains together to answer
 /// speech with speech.
 /// </summary>
-public sealed class EditDeploymentCascadedRealtimeViewModel
+public class EditDeploymentCascadedRealtimeViewModel
 {
     /// <summary>
     /// Gets or sets the technical name of the deployment that transcribes the user's speech.
