@@ -455,6 +455,223 @@
   softPhone.isTrackDeliverable = isTrackDeliverable;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * Call status text with elapsed time, and call duration for history rows.
+ *
+ * The soft phone said "In call" for as long as a call lasted and nothing more; an agent testing audio, or one
+ * being asked how long they were on with a customer, had no way to tell twenty seconds from twenty minutes
+ * without a clock of their own. The header now carries the elapsed time next to the state, ticking once a
+ * second while the call is connected, and each entry in Recent carries the call's total duration.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * Formatting delegates to the shared call timer when its bundle is present (so every surface agrees past the
+ * hour mark) and carries a matching fallback so the soft phone never shows a bare number if it is not.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The separator between the state and the elapsed time: "In call · 1:23".
+  var STATUS_SEPARATOR = ' · ';
+  function pad(value) {
+    return value < 10 ? '0' + value : String(value);
+  }
+
+  // m:ss, or h:mm:ss past the hour. Same shape as the shared call timer, which is preferred when loaded.
+  function formatElapsed(totalSeconds) {
+    var shared = root.CrestAppsTelephonyShared;
+    if (shared && typeof shared.formatDuration === 'function') {
+      return shared.formatDuration(totalSeconds);
+    }
+    if (!isFinite(totalSeconds) || totalSeconds < 0) {
+      totalSeconds = 0;
+    }
+    var seconds = Math.floor(totalSeconds % 60);
+    var minutes = Math.floor(totalSeconds / 60 % 60);
+    var hours = Math.floor(totalSeconds / 3600);
+    return (hours > 0 ? hours + ':' + pad(minutes) : minutes) + ':' + pad(seconds);
+  }
+
+  // The header text for a call: the state, and the elapsed time when one is known. An elapsed time that is
+  // not a finite number (no connected moment recorded yet, or a call that is not connected) leaves the state
+  // alone rather than showing "In call · 0:00" for a call that is still ringing.
+  function formatCallStatus(statusText, elapsedSeconds) {
+    var text = statusText || '';
+    if (typeof elapsedSeconds !== 'number' || !isFinite(elapsedSeconds) || elapsedSeconds < 0) {
+      return text;
+    }
+    return text + STATUS_SEPARATOR + formatElapsed(elapsedSeconds);
+  }
+
+  // When a call became connected, as the soft phone should remember it. The first moment the call is seen
+  // connected is kept for as long as the call lasts; later state refreshes must not restart the clock, and a
+  // call that is not (yet) connected has no connected moment at all.
+  function connectedAtFor(isConnected, previousConnectedAt, nowMs) {
+    if (!isConnected) {
+      return null;
+    }
+    return typeof previousConnectedAt === 'number' && isFinite(previousConnectedAt) ? previousConnectedAt : nowMs;
+  }
+
+  // The duration to show on a history row: the recorded total, or nothing for a call that never connected or
+  // is still going (its length is not known yet, and "0:00" next to a live call would read as a bug).
+  function durationMeta(durationSeconds, inProgress) {
+    if (inProgress || typeof durationSeconds !== 'number' || !isFinite(durationSeconds) || durationSeconds <= 0) {
+      return '';
+    }
+    return formatElapsed(durationSeconds);
+  }
+  softPhone.STATUS_SEPARATOR = STATUS_SEPARATOR;
+  softPhone.formatElapsed = formatElapsed;
+  softPhone.formatCallStatus = formatCallStatus;
+  softPhone.connectedAtFor = connectedAtFor;
+  softPhone.durationMeta = durationMeta;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * Microphone boost: a gain stage with a limiter in front of the encoder.
+ *
+ * The far end of a call compared the agent's live voice with the platform's text-to-speech and found the voice
+ * low and dull -- the speech was leaving the browser at about -21 dBFS active level, against the -12 to -16 that
+ * a synthesized prompt carries, after Chrome's automatic gain control had already done what it could. Nothing
+ * downstream changes level, so the gap arrives at the caller intact. This closes it in the one place the soft
+ * phone controls: the capture is routed through a gain node and a hard limiter and the limiter's output is what
+ * the call sends. The limiter is what makes the boost safe to leave on: a loud word hits the ceiling and is held
+ * there for a few milliseconds instead of clipping.
+ *
+ * Off by default, and off means no graph at all -- the capture is sent as it is, exactly as before this existed.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
+ * shared namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ * The AudioContext is injectable so the graph wiring can be tested without a browser.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // The boosts an agent can choose. Bounded above because the limiter can hold peaks but cannot make a
+  // twelve-decibel lift of a quiet room sound like anything but a quiet room amplified.
+  var MIC_BOOST_OPTIONS_DB = [0, 3, 6, 9, 12];
+
+  // Limiter settings: a hard knee just under full scale, fast attack, short release. Speech peaks that the gain
+  // pushes past the ceiling are caught within a few milliseconds and let go quickly enough not to pump.
+  var LIMITER_THRESHOLD_DB = -3;
+  var LIMITER_KNEE_DB = 0;
+  var LIMITER_RATIO = 20;
+  var LIMITER_ATTACK_S = 0.003;
+  var LIMITER_RELEASE_S = 0.05;
+
+  // Normalizes a stored or chosen value to one of the allowed boosts. Anything unrecognized is off, never a
+  // surprise lift.
+  function clampBoostDb(value) {
+    var db = typeof value === 'number' ? value : parseInt(value, 10);
+    return MIC_BOOST_OPTIONS_DB.indexOf(db) === -1 ? 0 : db;
+  }
+
+  // The linear gain for a boost in decibels.
+  function boostGainFor(db) {
+    return Math.pow(10, clampBoostDb(db) / 20);
+  }
+
+  // A short label for the capture-format readout: "boost+6".
+  function describeBoost(db) {
+    var clamped = clampBoostDb(db);
+    return clamped > 0 ? 'boost+' + clamped : '';
+  }
+
+  /*
+   * Builds the send stream for a captured microphone stream.
+   *
+   * With no boost, the source stream is returned as the send stream and there is nothing to dispose. With a
+   * boost, the source is routed through gain -> limiter -> a MediaStreamAudioDestinationNode, and that node's
+   * stream is returned; its track is what the call should send.
+   *
+   * options.audioContext - AudioContext constructor (defaults to the browser's).
+   *
+   * Returns { stream, boosted, dispose } -- dispose releases the graph (and is a no-op when nothing was built).
+   */
+  function createBoostPipeline(sourceStream, boostDb, options) {
+    var db = clampBoostDb(boostDb);
+    var settings = options || {};
+    var AudioCtx = settings.audioContext || root.AudioContext || root.webkitAudioContext;
+    if (!sourceStream || db === 0 || !AudioCtx) {
+      return {
+        stream: sourceStream,
+        boosted: false,
+        dispose: function () {}
+      };
+    }
+    var context;
+    var source;
+    var gain;
+    var limiter;
+    var destination;
+    try {
+      context = new AudioCtx();
+      source = context.createMediaStreamSource(sourceStream);
+      gain = context.createGain();
+      gain.gain.value = boostGainFor(db);
+      limiter = context.createDynamicsCompressor();
+      limiter.threshold.value = LIMITER_THRESHOLD_DB;
+      limiter.knee.value = LIMITER_KNEE_DB;
+      limiter.ratio.value = LIMITER_RATIO;
+      limiter.attack.value = LIMITER_ATTACK_S;
+      limiter.release.value = LIMITER_RELEASE_S;
+      destination = context.createMediaStreamDestination();
+      source.connect(gain);
+      gain.connect(limiter);
+      limiter.connect(destination);
+
+      // A context created outside a user gesture starts suspended and a suspended graph is silence; the
+      // switch that builds this runs from a settings change or a call, so the request is normally granted.
+      if (context.state === 'suspended' && typeof context.resume === 'function') {
+        try {
+          Promise.resolve(context.resume()).catch(function () {});
+        } catch (error) {/* best effort */}
+      }
+    } catch (error) {
+      // A browser that refuses any part of the graph: send the capture as it is rather than nothing.
+      try {
+        if (context && typeof context.close === 'function') {
+          context.close();
+        }
+      } catch (closeError) {/* best effort */}
+      return {
+        stream: sourceStream,
+        boosted: false,
+        dispose: function () {}
+      };
+    }
+    var disposed = false;
+    return {
+      stream: destination.stream,
+      boosted: true,
+      dispose: function () {
+        if (disposed) {
+          return;
+        }
+        disposed = true;
+        try {
+          source.disconnect();
+          gain.disconnect();
+          limiter.disconnect();
+        } catch (error) {/* best effort */}
+        try {
+          if (typeof context.close === 'function') {
+            context.close();
+          }
+        } catch (error) {/* best effort */}
+      }
+    };
+  }
+  softPhone.MIC_BOOST_OPTIONS_DB = MIC_BOOST_OPTIONS_DB;
+  softPhone.clampBoostDb = clampBoostDb;
+  softPhone.boostGainFor = boostGainFor;
+  softPhone.describeBoost = describeBoost;
+  softPhone.createBoostPipeline = createBoostPipeline;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * Diagnostic text: turning whatever a provider SDK hands us into something a person can read in a log.
  *
  * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a
@@ -904,6 +1121,12 @@
   var probeLevel = softPhoneModules.probeLevel;
   var isTrackDeliverable = softPhoneModules.isTrackDeliverable;
   var findAudioSender = softPhoneModules.findAudioSender;
+  var formatCallStatus = softPhoneModules.formatCallStatus;
+  var connectedAtFor = softPhoneModules.connectedAtFor;
+  var durationMeta = softPhoneModules.durationMeta;
+  var clampBoostDb = softPhoneModules.clampBoostDb;
+  var describeBoost = softPhoneModules.describeBoost;
+  var createBoostPipeline = softPhoneModules.createBoostPipeline;
   var describeProviderWarning = softPhoneModules.describeProviderWarning;
   var classifyProviderWarning = softPhoneModules.classifyProviderWarning;
   var mapTelnyxOutboundState = softPhoneModules.mapTelnyxOutboundState;
@@ -1718,7 +1941,10 @@
           providerSessionId: providerSessionId,
           captureSampleRate: captureSettings && captureSettings.sampleRate || 0,
           captureDevice: typeof context.captureDeviceLabel === 'function' ? context.captureDeviceLabel() : '',
-          captureProcessing: captureSettings ? [captureSettings.echoCancellation ? 'ec' : '', captureSettings.noiseSuppression ? 'ns' : '', captureSettings.autoGainControl ? 'agc' : ''].filter(Boolean).join('+') : '',
+          captureProcessing: [captureSettings && captureSettings.echoCancellation ? 'ec' : '', captureSettings && captureSettings.noiseSuppression ? 'ns' : '', captureSettings && captureSettings.autoGainControl ? 'agc' : '',
+          // The soft phone's own gain stage, when set: a caller's "louder now" or "distorted now"
+          // has to be readable against the boost that was active.
+          typeof context.captureBoostLabel === 'function' ? context.captureBoostLabel() : ''].filter(Boolean).join('+'),
           mos: mos,
           poor: poor
         };
@@ -2439,6 +2665,7 @@
       processingEc: rootElement.querySelector('[data-telephony-processing-ec]'),
       processingNs: rootElement.querySelector('[data-telephony-processing-ns]'),
       processingAgc: rootElement.querySelector('[data-telephony-processing-agc]'),
+      micBoost: rootElement.querySelector('[data-telephony-mic-boost]'),
       outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
       diagnosticsTab: rootElement.querySelector('[data-telephony-diagnostics-tab]'),
       diagStatus: rootElement.querySelector('[data-telephony-diag-status]'),
@@ -2801,6 +3028,16 @@
       });
     }
     function stopLocalAudioStream() {
+      if (micBoostPipeline) {
+        micBoostPipeline.dispose();
+        micBoostPipeline = null;
+      }
+      if (sourceAudioStream) {
+        sourceAudioStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        sourceAudioStream = null;
+      }
       if (!localAudioStream) {
         return;
       }
@@ -2817,7 +3054,15 @@
     // object is still there, and the provider encodes and sends its silence perfectly happily. The call
     // connects, the agent hears the caller normally, and only the caller knows anything is wrong. These
     // read the track's actual state so that case is caught rather than inferred from a complaint.
+    // The captured microphone track as a DEVICE: its label, whether it is still delivering, its settings.
+    // That is the raw capture when a boost graph sits between it and the send stream, and the send track
+    // itself otherwise -- the boosted output is always 'live' and carries no device label, so reading it
+    // here would hide a dead microphone behind a healthy-looking track.
     function getLocalAudioTrack() {
+      var track = getSourceAudioTrack();
+      if (track) {
+        return track;
+      }
       if (!localAudioStream || typeof localAudioStream.getAudioTracks !== 'function') {
         return null;
       }
@@ -2875,6 +3120,10 @@
       }
       if (processing.length) {
         parts.push(processing.join('+'));
+      }
+      var boost = describeBoost(micBoostDb);
+      if (boost) {
+        parts.push(boost);
       }
       return parts.join(' ');
     }
@@ -2961,9 +3210,18 @@
         return Promise.reject(new Error('Media capture is not available.'));
       }
       return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
-        var fresh = stream.getAudioTracks()[0];
+        // The new send track: the capture itself, or the boost graph's output when a boost is set.
+        var pipeline = createBoostPipeline(stream, micBoostDb);
+        var fresh = pipeline.stream.getAudioTracks()[0];
+        var abandon = function (error) {
+          pipeline.dispose();
+          stream.getTracks().forEach(function (track) {
+            track.stop();
+          });
+          throw error;
+        };
         if (!fresh) {
-          throw new Error('No audio track was captured.');
+          return abandon(new Error('No audio track was captured.'));
         }
 
         // Under a live call the sender must take the new track, and a failure there is a failure of the
@@ -2982,31 +3240,16 @@
           replace = Promise.reject(new Error('The media session cannot replace its outgoing track.'));
         }
         return replace.then(function () {
-          if (localAudioStream) {
-            localAudioStream.getAudioTracks().forEach(function (old) {
-              if (old !== fresh) {
-                localAudioStream.removeTrack(old);
-                old.stop();
-              }
-            });
-            localAudioStream.addTrack(fresh);
-          } else {
-            localAudioStream = stream;
-          }
+          commitCapture(stream, pipeline);
           watchLocalAudioTrack();
-          reportDiagnostic('info', 'microphone-switched', 'The captured microphone was switched (' + reason + ').', fresh.label || '');
+          reportDiagnostic('info', 'microphone-switched', 'The captured microphone was switched (' + reason + ').', localAudioTrackLabel() + (describeBoost(micBoostDb) ? ' ' + describeBoost(micBoostDb) : ''));
           if (micPermissionState === null) {
             showError(null);
           }
           stopMicMeter();
           startMicMeter();
           populateDevicePickers();
-        }, function (error) {
-          stream.getTracks().forEach(function (track) {
-            track.stop();
-          });
-          throw error;
-        });
+        }, abandon);
       });
     }
 
@@ -3109,6 +3352,55 @@
       noiseSuppression: true,
       autoGainControl: true
     };
+
+    // Microphone boost in decibels (0 = off). When set, the raw capture is routed through a gain stage and a
+    // limiter, and the limiter's output is what the call sends. See mic-boost.js for why.
+    var micBoostDb = 0;
+
+    // The raw capture from the device -- what the device label, mute/ended state and capture settings are
+    // read from -- as distinct from localAudioStream, which is the stream the call SENDS. Without a boost the
+    // two carry the same track; with one, localAudioStream carries the boosted output.
+    var sourceAudioStream = null;
+    var micBoostPipeline = null;
+    function getSourceAudioTrack() {
+      if (!sourceAudioStream || typeof sourceAudioStream.getAudioTracks !== 'function') {
+        return null;
+      }
+      return sourceAudioStream.getAudioTracks()[0] || null;
+    }
+
+    // Makes a fresh capture (already routed through its pipeline) the stream the call sends. localAudioStream
+    // is a long-lived container that the provider adapter holds a reference to and reads when a call starts,
+    // so its identity never changes: tracks are swapped inside it. The previous capture and graph are retired
+    // once the new track is in place.
+    function commitCapture(stream, pipeline) {
+      var previousSource = sourceAudioStream;
+      var previousPipeline = micBoostPipeline;
+      var fresh = pipeline.stream.getAudioTracks()[0] || null;
+      sourceAudioStream = stream;
+      micBoostPipeline = pipeline;
+      if (!localAudioStream) {
+        localAudioStream = new MediaStream();
+      }
+      localAudioStream.getAudioTracks().forEach(function (old) {
+        if (old !== fresh) {
+          localAudioStream.removeTrack(old);
+          old.stop();
+        }
+      });
+      if (fresh && localAudioStream.getAudioTracks().indexOf(fresh) === -1) {
+        localAudioStream.addTrack(fresh);
+      }
+      if (previousPipeline && previousPipeline !== pipeline) {
+        previousPipeline.dispose();
+      }
+      if (previousSource && previousSource !== stream) {
+        previousSource.getTracks().forEach(function (track) {
+          track.stop();
+        });
+      }
+      return fresh;
+    }
     function readProcessingFlag(value, fallback) {
       return typeof value === 'boolean' ? value : fallback;
     }
@@ -3121,6 +3413,7 @@
         noiseSuppression: readProcessingFlag(layout.noiseSuppression, true),
         autoGainControl: readProcessingFlag(layout.autoGainControl, true)
       };
+      micBoostDb = clampBoostDb(layout.micBoostDb);
     }
     function persistDeviceSelection() {
       saveLayout({
@@ -3128,7 +3421,21 @@
         outputDeviceId: selectedOutputDeviceId || '',
         echoCancellation: processingSettings.echoCancellation,
         noiseSuppression: processingSettings.noiseSuppression,
-        autoGainControl: processingSettings.autoGainControl
+        autoGainControl: processingSettings.autoGainControl,
+        micBoostDb: micBoostDb
+      });
+    }
+
+    // The boost selector changed: persist and rebuild the capture through the new gain, live if need be.
+    function onBoostChange() {
+      micBoostDb = clampBoostDb(dom.micBoost ? dom.micBoost.value : 0);
+      persistDeviceSelection();
+      if (!localAudioStream) {
+        return;
+      }
+      switchLocalAudioTrack('boost changed').catch(function (error) {
+        reportDiagnostic('warning', 'processing-switch-failed', String(error && error.message || error), localAudioTrackLabel());
+        showError(strings.processingSwitchFailed || 'The microphone processing change could not be applied on this call.');
       });
     }
 
@@ -3142,6 +3449,9 @@
       }
       if (dom.processingAgc) {
         dom.processingAgc.checked = processingSettings.autoGainControl;
+      }
+      if (dom.micBoost) {
+        dom.micBoost.value = String(micBoostDb);
       }
     }
 
@@ -3395,7 +3705,8 @@
           // Turn a permission/device rejection into an actionable, categorized error (item 9).
           throw categorizeMicError(mediaError);
         }).then(function (stream) {
-          localAudioStream = stream;
+          // The capture becomes the send stream through the boost pipeline (a no-op when boost is off).
+          commitCapture(stream, createBoostPipeline(stream, micBoostDb));
           // This capture has to survive until the registration is replaced, so watch it for the
           // device dying underneath it rather than discovering it on the next call.
           watchLocalAudioTrack();
@@ -3406,7 +3717,9 @@
           applyOutputDevice();
           return Promise.resolve(adapter({
             credentials: credentials,
-            localStream: stream,
+            // The send stream, not the raw capture: through the boost when one is set, and a stable
+            // container whose track is swapped on device or processing changes.
+            localStream: localAudioStream,
             remoteAudioElement: dom.remoteAudio,
             setRemoteStream: setRemoteAudioStream,
             showError: showError,
@@ -3434,6 +3747,9 @@
             // would record the format the call is not using.
             readCaptureSettings: localCaptureSettings,
             captureDeviceLabel: localAudioTrackLabel,
+            captureBoostLabel: function () {
+              return describeBoost(micBoostDb);
+            },
             // The negotiated SDP at connect, forwarded as a diagnostic so the codecs each side offered
             // are on the server for the call, next to the webhook and command log for its legs.
             onNegotiated: function (text) {
@@ -3809,7 +4125,8 @@
 
           // Show which device is actually being captured. A wrong/virtual default (for example
           // "CABLE Output (VB-Audio Virtual Cable)") shows up here immediately, next to a flat meter.
-          var track = stream.getAudioTracks()[0];
+          // The raw capture carries the device label; the boosted send track does not.
+          var track = getSourceAudioTrack() || stream.getAudioTracks()[0];
           if (dom.micMeterHint && track) {
             // A track that has ended or been muted produces exactly the same flat bar as a
             // microphone nobody is speaking into, so name the difference instead of leaving the
@@ -4266,6 +4583,42 @@
         return !isTelephonyTab(tab.getAttribute('data-telephony-tab'));
       });
     }
+
+    // ---- Call timer ----
+    // When each active call was first seen connected (ms since epoch), by call id. Kept outside the call
+    // objects because the server replaces those on every state refresh.
+    var callConnectedAt = {};
+    var callTimerInterval = null;
+    function currentCallElapsedSeconds() {
+      var connectedAt = currentCall && currentCall.callId ? callConnectedAt[currentCall.callId] : null;
+      return typeof connectedAt === 'number' ? (Date.now() - connectedAt) / 1000 : null;
+    }
+
+    // Ticks the header once a second while a call has a running clock; stops the moment none does. Only the
+    // status text is refreshed on each tick -- a full render every second would re-lay out the whole widget.
+    function scheduleCallTimer() {
+      var running = currentCallElapsedSeconds() !== null;
+      if (running && !callTimerInterval) {
+        callTimerInterval = window.setInterval(function () {
+          var elapsed = currentCallElapsedSeconds();
+          if (elapsed === null) {
+            scheduleCallTimer();
+            return;
+          }
+
+          // Reconnect and poor-connection overlays own the header while they last; the clock resumes
+          // with the next render once they clear.
+          var tickState = normalizeState(currentCall && currentCall.state);
+          var tickLive = tickState === 'Connected' || tickState === 'OnHold';
+          if (!hubReconnecting && !mediaReconnecting && !(connectionQualityPoor && tickLive)) {
+            setStatus(formatCallStatus(statusTextForCall(currentCall), elapsed));
+          }
+        }, 1000);
+      } else if (!running && callTimerInterval) {
+        window.clearInterval(callTimerInterval);
+        callTimerInterval = null;
+      }
+    }
     function statusTextForState(stateName) {
       var key = stateName.charAt(0).toLowerCase() + stateName.slice(1);
       return strings[key] || stateName;
@@ -4319,6 +4672,7 @@
       }
       delete activeCalls[callId];
       delete conferenceSelections[callId];
+      delete callConnectedAt[callId];
       if (currentCall && currentCall.callId === callId) {
         currentCall = getActiveCalls()[0] || null;
       }
@@ -4798,7 +5152,15 @@
       } else if (connectionQualityPoor && liveMedia) {
         baseStatus = strings.poorConnection || 'Poor connection';
       }
-      setStatus(baseStatus);
+
+      // The elapsed time of the current call, from the first moment it was seen connected. Recorded here,
+      // in the one place every call state passes through -- server-tracked and browser-originated alike --
+      // so the clock is the same however the call was placed.
+      if (currentCall && currentCall.callId) {
+        callConnectedAt[currentCall.callId] = connectedAtFor(stateName === 'Connected' || stateName === 'OnHold', callConnectedAt[currentCall.callId], Date.now());
+      }
+      setStatus(formatCallStatus(baseStatus, currentCallElapsedSeconds()));
+      scheduleCallTimer();
       if (dom.number && currentCall && (active || stateName === 'OnHold')) {
         // The dial has materialized into a real call, so the pending-dial state is done. Clear it now
         // rather than letting its 30s timer keep it alive -- otherwise, once this call ends, render()
@@ -6129,6 +6491,12 @@
         var time = formatTime(interaction.startedUtc);
         var extensionTag = isExtension ? escapeHtml(strings.extensionLabel || 'Extension') + ' \u2022 ' : '';
         var meta = extensionTag + escapeHtml(label) + (time ? ' \u2022 ' + escapeHtml(time) : '');
+        // The call's total length, once it has one. A call that never connected or is still going
+        // shows none rather than a misleading zero.
+        var duration = durationMeta(interaction.durationSeconds, inProgress);
+        if (duration) {
+          meta += ' \u2022 ' + escapeHtml(duration);
+        }
         // Extension targets are display names, not numbers, so they are shown verbatim; phone numbers are
         // run through the display formatter.
         var displayNumber = escapeHtml(isExtension ? number || dialTarget || label : formatPhoneNumber(number) || number || label);
@@ -6412,7 +6780,10 @@
           control.addEventListener('change', onProcessingChange);
         }
       });
-      if (dom.processingEc || dom.processingNs || dom.processingAgc) {
+      if (dom.micBoost) {
+        dom.micBoost.addEventListener('change', onBoostChange);
+      }
+      if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost) {
         syncProcessingControls();
       }
       if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {

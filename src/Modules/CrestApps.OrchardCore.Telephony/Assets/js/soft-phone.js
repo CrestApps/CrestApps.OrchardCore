@@ -35,6 +35,12 @@
     var probeLevel = softPhoneModules.probeLevel;
     var isTrackDeliverable = softPhoneModules.isTrackDeliverable;
     var findAudioSender = softPhoneModules.findAudioSender;
+    var formatCallStatus = softPhoneModules.formatCallStatus;
+    var connectedAtFor = softPhoneModules.connectedAtFor;
+    var durationMeta = softPhoneModules.durationMeta;
+    var clampBoostDb = softPhoneModules.clampBoostDb;
+    var describeBoost = softPhoneModules.describeBoost;
+    var createBoostPipeline = softPhoneModules.createBoostPipeline;
     var describeProviderWarning = softPhoneModules.describeProviderWarning;
     var classifyProviderWarning = softPhoneModules.classifyProviderWarning;
 
@@ -992,13 +998,14 @@
                     providerSessionId: providerSessionId,
                     captureSampleRate: (captureSettings && captureSettings.sampleRate) || 0,
                     captureDevice: typeof context.captureDeviceLabel === 'function' ? context.captureDeviceLabel() : '',
-                    captureProcessing: captureSettings
-                        ? [
-                            captureSettings.echoCancellation ? 'ec' : '',
-                            captureSettings.noiseSuppression ? 'ns' : '',
-                            captureSettings.autoGainControl ? 'agc' : ''
-                        ].filter(Boolean).join('+')
-                        : '',
+                    captureProcessing: [
+                        captureSettings && captureSettings.echoCancellation ? 'ec' : '',
+                        captureSettings && captureSettings.noiseSuppression ? 'ns' : '',
+                        captureSettings && captureSettings.autoGainControl ? 'agc' : '',
+                        // The soft phone's own gain stage, when set: a caller's "louder now" or "distorted now"
+                        // has to be readable against the boost that was active.
+                        typeof context.captureBoostLabel === 'function' ? context.captureBoostLabel() : ''
+                    ].filter(Boolean).join('+'),
                     mos: mos,
                     poor: poor
                 };
@@ -1819,6 +1826,7 @@
             processingEc: rootElement.querySelector('[data-telephony-processing-ec]'),
             processingNs: rootElement.querySelector('[data-telephony-processing-ns]'),
             processingAgc: rootElement.querySelector('[data-telephony-processing-agc]'),
+            micBoost: rootElement.querySelector('[data-telephony-mic-boost]'),
             outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
             diagnosticsTab: rootElement.querySelector('[data-telephony-diagnostics-tab]'),
             diagStatus: rootElement.querySelector('[data-telephony-diag-status]'),
@@ -2241,6 +2249,18 @@
         }
 
         function stopLocalAudioStream() {
+            if (micBoostPipeline) {
+                micBoostPipeline.dispose();
+                micBoostPipeline = null;
+            }
+
+            if (sourceAudioStream) {
+                sourceAudioStream.getTracks().forEach(function (track) {
+                    track.stop();
+                });
+                sourceAudioStream = null;
+            }
+
             if (!localAudioStream) {
                 return;
             }
@@ -2258,7 +2278,17 @@
         // object is still there, and the provider encodes and sends its silence perfectly happily. The call
         // connects, the agent hears the caller normally, and only the caller knows anything is wrong. These
         // read the track's actual state so that case is caught rather than inferred from a complaint.
+        // The captured microphone track as a DEVICE: its label, whether it is still delivering, its settings.
+        // That is the raw capture when a boost graph sits between it and the send stream, and the send track
+        // itself otherwise -- the boosted output is always 'live' and carries no device label, so reading it
+        // here would hide a dead microphone behind a healthy-looking track.
         function getLocalAudioTrack() {
+            var track = getSourceAudioTrack();
+
+            if (track) {
+                return track;
+            }
+
             if (!localAudioStream || typeof localAudioStream.getAudioTracks !== 'function') {
                 return null;
             }
@@ -2330,6 +2360,12 @@
 
             if (processing.length) {
                 parts.push(processing.join('+'));
+            }
+
+            var boost = describeBoost(micBoostDb);
+
+            if (boost) {
+                parts.push(boost);
             }
 
             return parts.join(' ');
@@ -2436,10 +2472,18 @@
             }
 
             return navigator.mediaDevices.getUserMedia(buildAudioConstraints()).then(function (stream) {
-                var fresh = stream.getAudioTracks()[0];
+                // The new send track: the capture itself, or the boost graph's output when a boost is set.
+                var pipeline = createBoostPipeline(stream, micBoostDb);
+                var fresh = pipeline.stream.getAudioTracks()[0];
+
+                var abandon = function (error) {
+                    pipeline.dispose();
+                    stream.getTracks().forEach(function (track) { track.stop(); });
+                    throw error;
+                };
 
                 if (!fresh) {
-                    throw new Error('No audio track was captured.');
+                    return abandon(new Error('No audio track was captured.'));
                 }
 
                 // Under a live call the sender must take the new track, and a failure there is a failure of the
@@ -2460,22 +2504,11 @@
                 }
 
                 return replace.then(function () {
-                    if (localAudioStream) {
-                        localAudioStream.getAudioTracks().forEach(function (old) {
-                            if (old !== fresh) {
-                                localAudioStream.removeTrack(old);
-                                old.stop();
-                            }
-                        });
-
-                        localAudioStream.addTrack(fresh);
-                    } else {
-                        localAudioStream = stream;
-                    }
-
+                    commitCapture(stream, pipeline);
                     watchLocalAudioTrack();
                     reportDiagnostic('info', 'microphone-switched',
-                        'The captured microphone was switched (' + reason + ').', fresh.label || '');
+                        'The captured microphone was switched (' + reason + ').',
+                        localAudioTrackLabel() + (describeBoost(micBoostDb) ? ' ' + describeBoost(micBoostDb) : ''));
 
                     if (micPermissionState === null) {
                         showError(null);
@@ -2484,10 +2517,7 @@
                     stopMicMeter();
                     startMicMeter();
                     populateDevicePickers();
-                }, function (error) {
-                    stream.getTracks().forEach(function (track) { track.stop(); });
-                    throw error;
-                });
+                }, abandon);
             });
         }
 
@@ -2602,6 +2632,62 @@
         // value means "on", never "off".
         var processingSettings = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
 
+        // Microphone boost in decibels (0 = off). When set, the raw capture is routed through a gain stage and a
+        // limiter, and the limiter's output is what the call sends. See mic-boost.js for why.
+        var micBoostDb = 0;
+
+        // The raw capture from the device -- what the device label, mute/ended state and capture settings are
+        // read from -- as distinct from localAudioStream, which is the stream the call SENDS. Without a boost the
+        // two carry the same track; with one, localAudioStream carries the boosted output.
+        var sourceAudioStream = null;
+        var micBoostPipeline = null;
+
+        function getSourceAudioTrack() {
+            if (!sourceAudioStream || typeof sourceAudioStream.getAudioTracks !== 'function') {
+                return null;
+            }
+
+            return sourceAudioStream.getAudioTracks()[0] || null;
+        }
+
+        // Makes a fresh capture (already routed through its pipeline) the stream the call sends. localAudioStream
+        // is a long-lived container that the provider adapter holds a reference to and reads when a call starts,
+        // so its identity never changes: tracks are swapped inside it. The previous capture and graph are retired
+        // once the new track is in place.
+        function commitCapture(stream, pipeline) {
+            var previousSource = sourceAudioStream;
+            var previousPipeline = micBoostPipeline;
+            var fresh = pipeline.stream.getAudioTracks()[0] || null;
+
+            sourceAudioStream = stream;
+            micBoostPipeline = pipeline;
+
+            if (!localAudioStream) {
+                localAudioStream = new MediaStream();
+            }
+
+            localAudioStream.getAudioTracks().forEach(function (old) {
+                if (old !== fresh) {
+                    localAudioStream.removeTrack(old);
+                    old.stop();
+                }
+            });
+
+            if (fresh && localAudioStream.getAudioTracks().indexOf(fresh) === -1) {
+                localAudioStream.addTrack(fresh);
+            }
+
+            if (previousPipeline && previousPipeline !== pipeline) {
+                previousPipeline.dispose();
+            }
+
+            if (previousSource && previousSource !== stream) {
+                previousSource.getTracks().forEach(function (track) { track.stop(); });
+            }
+
+            return fresh;
+        }
+
         function readProcessingFlag(value, fallback) {
             return typeof value === 'boolean' ? value : fallback;
         }
@@ -2615,6 +2701,7 @@
                 noiseSuppression: readProcessingFlag(layout.noiseSuppression, true),
                 autoGainControl: readProcessingFlag(layout.autoGainControl, true)
             };
+            micBoostDb = clampBoostDb(layout.micBoostDb);
         }
 
         function persistDeviceSelection() {
@@ -2623,7 +2710,25 @@
                 outputDeviceId: selectedOutputDeviceId || '',
                 echoCancellation: processingSettings.echoCancellation,
                 noiseSuppression: processingSettings.noiseSuppression,
-                autoGainControl: processingSettings.autoGainControl
+                autoGainControl: processingSettings.autoGainControl,
+                micBoostDb: micBoostDb
+            });
+        }
+
+        // The boost selector changed: persist and rebuild the capture through the new gain, live if need be.
+        function onBoostChange() {
+            micBoostDb = clampBoostDb(dom.micBoost ? dom.micBoost.value : 0);
+            persistDeviceSelection();
+
+            if (!localAudioStream) {
+                return;
+            }
+
+            switchLocalAudioTrack('boost changed').catch(function (error) {
+                reportDiagnostic('warning', 'processing-switch-failed',
+                    String((error && error.message) || error), localAudioTrackLabel());
+                showError(strings.processingSwitchFailed ||
+                    'The microphone processing change could not be applied on this call.');
             });
         }
 
@@ -2639,6 +2744,10 @@
 
             if (dom.processingAgc) {
                 dom.processingAgc.checked = processingSettings.autoGainControl;
+            }
+
+            if (dom.micBoost) {
+                dom.micBoost.value = String(micBoostDb);
             }
         }
 
@@ -2940,7 +3049,8 @@
                     // Turn a permission/device rejection into an actionable, categorized error (item 9).
                     throw categorizeMicError(mediaError);
                 }).then(function (stream) {
-                    localAudioStream = stream;
+                    // The capture becomes the send stream through the boost pipeline (a no-op when boost is off).
+                    commitCapture(stream, createBoostPipeline(stream, micBoostDb));
                     // This capture has to survive until the registration is replaced, so watch it for the
                     // device dying underneath it rather than discovering it on the next call.
                     watchLocalAudioTrack();
@@ -2952,7 +3062,9 @@
 
                     return Promise.resolve(adapter({
                         credentials: credentials,
-                        localStream: stream,
+                        // The send stream, not the raw capture: through the boost when one is set, and a stable
+                        // container whose track is swapped on device or processing changes.
+                        localStream: localAudioStream,
                         remoteAudioElement: dom.remoteAudio,
                         setRemoteStream: setRemoteAudioStream,
                         showError: showError,
@@ -2980,6 +3092,7 @@
                         // would record the format the call is not using.
                         readCaptureSettings: localCaptureSettings,
                         captureDeviceLabel: localAudioTrackLabel,
+                        captureBoostLabel: function () { return describeBoost(micBoostDb); },
                         // The negotiated SDP at connect, forwarded as a diagnostic so the codecs each side offered
                         // are on the server for the call, next to the webhook and command log for its legs.
                         onNegotiated: function (text) {
@@ -3409,7 +3522,8 @@
 
                     // Show which device is actually being captured. A wrong/virtual default (for example
                     // "CABLE Output (VB-Audio Virtual Cable)") shows up here immediately, next to a flat meter.
-                    var track = stream.getAudioTracks()[0];
+                    // The raw capture carries the device label; the boosted send track does not.
+                    var track = getSourceAudioTrack() || stream.getAudioTracks()[0];
 
                     if (dom.micMeterHint && track) {
                         // A track that has ended or been muted produces exactly the same flat bar as a
@@ -3973,6 +4087,48 @@
             });
         }
 
+        // ---- Call timer ----
+        // When each active call was first seen connected (ms since epoch), by call id. Kept outside the call
+        // objects because the server replaces those on every state refresh.
+        var callConnectedAt = {};
+        var callTimerInterval = null;
+
+        function currentCallElapsedSeconds() {
+            var connectedAt = currentCall && currentCall.callId ? callConnectedAt[currentCall.callId] : null;
+
+            return typeof connectedAt === 'number' ? (Date.now() - connectedAt) / 1000 : null;
+        }
+
+        // Ticks the header once a second while a call has a running clock; stops the moment none does. Only the
+        // status text is refreshed on each tick -- a full render every second would re-lay out the whole widget.
+        function scheduleCallTimer() {
+            var running = currentCallElapsedSeconds() !== null;
+
+            if (running && !callTimerInterval) {
+                callTimerInterval = window.setInterval(function () {
+                    var elapsed = currentCallElapsedSeconds();
+
+                    if (elapsed === null) {
+                        scheduleCallTimer();
+
+                        return;
+                    }
+
+                    // Reconnect and poor-connection overlays own the header while they last; the clock resumes
+                    // with the next render once they clear.
+                    var tickState = normalizeState(currentCall && currentCall.state);
+                    var tickLive = tickState === 'Connected' || tickState === 'OnHold';
+
+                    if (!hubReconnecting && !mediaReconnecting && !(connectionQualityPoor && tickLive)) {
+                        setStatus(formatCallStatus(statusTextForCall(currentCall), elapsed));
+                    }
+                }, 1000);
+            } else if (!running && callTimerInterval) {
+                window.clearInterval(callTimerInterval);
+                callTimerInterval = null;
+            }
+        }
+
         function statusTextForState(stateName) {
             var key = stateName.charAt(0).toLowerCase() + stateName.slice(1);
 
@@ -4044,6 +4200,7 @@
 
             delete activeCalls[callId];
             delete conferenceSelections[callId];
+            delete callConnectedAt[callId];
 
             if (currentCall && currentCall.callId === callId) {
                 currentCall = getActiveCalls()[0] || null;
@@ -4648,7 +4805,18 @@
                 baseStatus = strings.poorConnection || 'Poor connection';
             }
 
-            setStatus(baseStatus);
+            // The elapsed time of the current call, from the first moment it was seen connected. Recorded here,
+            // in the one place every call state passes through -- server-tracked and browser-originated alike --
+            // so the clock is the same however the call was placed.
+            if (currentCall && currentCall.callId) {
+                callConnectedAt[currentCall.callId] = connectedAtFor(
+                    stateName === 'Connected' || stateName === 'OnHold',
+                    callConnectedAt[currentCall.callId],
+                    Date.now());
+            }
+
+            setStatus(formatCallStatus(baseStatus, currentCallElapsedSeconds()));
+            scheduleCallTimer();
 
             if (dom.number && currentCall && (active || stateName === 'OnHold')) {
                 // The dial has materialized into a real call, so the pending-dial state is done. Clear it now
@@ -6305,6 +6473,13 @@
                 var time = formatTime(interaction.startedUtc);
                 var extensionTag = isExtension ? escapeHtml(strings.extensionLabel || 'Extension') + ' \u2022 ' : '';
                 var meta = extensionTag + escapeHtml(label) + (time ? ' \u2022 ' + escapeHtml(time) : '');
+                // The call's total length, once it has one. A call that never connected or is still going
+                // shows none rather than a misleading zero.
+                var duration = durationMeta(interaction.durationSeconds, inProgress);
+
+                if (duration) {
+                    meta += ' \u2022 ' + escapeHtml(duration);
+                }
                 // Extension targets are display names, not numbers, so they are shown verbatim; phone numbers are
                 // run through the display formatter.
                 var displayNumber = escapeHtml(isExtension ? (number || dialTarget || label) : (formatPhoneNumber(number) || number || label));
@@ -6664,7 +6839,11 @@
                 }
             });
 
-            if (dom.processingEc || dom.processingNs || dom.processingAgc) {
+            if (dom.micBoost) {
+                dom.micBoost.addEventListener('change', onBoostChange);
+            }
+
+            if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost) {
                 syncProcessingControls();
             }
 

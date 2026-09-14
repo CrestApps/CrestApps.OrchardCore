@@ -556,9 +556,13 @@
   margin-bottom: 0;
 }
 .telephony-soft-phone__settings-hint {
+  display: block;
   font-size: 0.72rem;
   color: var(--bs-secondary-color, #6c757d);
   margin: 0 0 0.35rem;
+}
+.telephony-soft-phone__setting > .telephony-soft-phone__settings-hint {
+  margin: 0.25rem 0 0;
 }
 .telephony-soft-phone__setting-label {
   display: flex;

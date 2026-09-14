@@ -285,6 +285,19 @@
                     <input type="checkbox" class="form-check-input" data-telephony-processing-agc checked>
                     <span class="telephony-soft-phone__setting-label">@T["Automatic gain control"]</span>
                 </label>
+                <label class="telephony-soft-phone__setting">
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-volume-up" aria-hidden="true"></i> @T["Microphone boost"]
+                    </span>
+                    <select class="form-select form-select-sm" data-telephony-mic-boost aria-label="@T["Microphone boost"]">
+                        <option value="0">@T["Off"]</option>
+                        <option value="3">+3 dB</option>
+                        <option value="6">+6 dB</option>
+                        <option value="9">+9 dB</option>
+                        <option value="12">+12 dB</option>
+                    </select>
+                    <small class="telephony-soft-phone__settings-hint">@T["Raises your voice before it is sent, with a limiter so loud words do not distort. Use it when the other party says you are quiet."]</small>
+                </label>
             </div>
         </div>
 

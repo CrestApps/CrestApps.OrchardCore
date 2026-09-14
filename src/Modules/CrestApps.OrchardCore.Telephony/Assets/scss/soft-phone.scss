@@ -669,9 +669,16 @@
     }
 
     &__settings-hint {
+        // Used both as a paragraph above a group and as a note under a control, so it is a block either way.
+        display: block;
         font-size: 0.72rem;
         color: var(--bs-secondary-color, #6c757d);
         margin: 0 0 0.35rem;
+
+        // Under a control the note belongs to what precedes it, not to what follows.
+        .telephony-soft-phone__setting > & {
+            margin: 0.25rem 0 0;
+        }
     }
 
     &__setting-label {
