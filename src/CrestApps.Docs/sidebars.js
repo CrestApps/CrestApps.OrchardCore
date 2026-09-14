@@ -113,6 +113,7 @@ const sidebars = {
                 'telephony/extension-dialing',
                 'telephony/recording-azure-blob-storage',
                 'telephony/custom-providers',
+                'telephony/soft-phone-audio-quality',
                 'telephony/production-readiness-soft-phone-telnyx',
             ],
         },
