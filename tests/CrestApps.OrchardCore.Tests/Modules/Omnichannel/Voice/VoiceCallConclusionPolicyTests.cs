@@ -182,4 +182,125 @@ public sealed class VoiceCallConclusionPolicyTests
         // Act & Assert
         Assert.False(VoiceCallConclusionPolicy.HasConversation(null));
     }
+
+    // Which dispositions an automated call may be classified as. The model is shown the subject's own choices and
+    // held to them, because a disposition is not a label: it is what the subject's workflow acts on afterwards.
+
+    [Fact]
+    public void TheChoicesOffered_AreTheOnesTheSubjectsWorkflowActsOn()
+    {
+        // Arrange
+        var actions = new[]
+        {
+            new SubjectAction { SubjectContentType = "LeadGeneration", DispositionId = "interested" },
+            new SubjectAction { SubjectContentType = "LeadGeneration", DispositionId = "not-interested" },
+            new SubjectAction { SubjectContentType = "SupportCase", DispositionId = "resolved" },
+        };
+
+        // Act
+        var ids = VoiceCallConclusionPolicy.ResolveSubjectDispositionIds(actions, "LeadGeneration");
+
+        // Assert
+        Assert.Equal(["interested", "not-interested"], ids);
+    }
+
+    [Fact]
+    public void ADispositionWiredToSeveralActions_IsOfferedOnce()
+    {
+        // Arrange
+        var actions = new[]
+        {
+            new SubjectAction { SubjectContentType = "LeadGeneration", DispositionId = "interested" },
+            new SubjectAction { SubjectContentType = "LeadGeneration", DispositionId = "interested" },
+        };
+
+        // Act
+        var ids = VoiceCallConclusionPolicy.ResolveSubjectDispositionIds(actions, "LeadGeneration");
+
+        // Assert
+        Assert.Equal(["interested"], ids);
+    }
+
+    [Fact]
+    public void AnActionWiredToNoDisposition_OffersNothing()
+    {
+        // Arrange
+        var actions = new[]
+        {
+            new SubjectAction { SubjectContentType = "LeadGeneration", DispositionId = null },
+            new SubjectAction { SubjectContentType = "LeadGeneration", DispositionId = string.Empty },
+        };
+
+        // Act
+        var ids = VoiceCallConclusionPolicy.ResolveSubjectDispositionIds(actions, "LeadGeneration");
+
+        // Assert
+        Assert.Empty(ids);
+    }
+
+    [Fact]
+    public void ASubjectWithNoActions_OffersNothing_SoTheCallerCanFallBackToTheWholeCatalog()
+    {
+        // Arrange
+        // Empty is the signal to offer every configured disposition instead. A subject nobody has wired up yet
+        // must still produce a classified call rather than an unclassified one.
+        var actions = new[]
+        {
+            new SubjectAction { SubjectContentType = "SupportCase", DispositionId = "resolved" },
+        };
+
+        // Act & Assert
+        Assert.Empty(VoiceCallConclusionPolicy.ResolveSubjectDispositionIds(actions, "LeadGeneration"));
+        Assert.Empty(VoiceCallConclusionPolicy.ResolveSubjectDispositionIds(actions, null));
+        Assert.Empty(VoiceCallConclusionPolicy.ResolveSubjectDispositionIds(null, "LeadGeneration"));
+    }
+
+    [Fact]
+    public void TheModelsChoice_IsTakenWhenItIsOneOfTheOnesOffered()
+    {
+        // Arrange
+        var choices = new[]
+        {
+            new OmnichannelDisposition { ItemId = "interested" },
+            new OmnichannelDisposition { ItemId = "not-interested" },
+        };
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseDisposition(choices, "not-interested");
+
+        // Assert
+        Assert.Equal("not-interested", chosen.ItemId);
+    }
+
+    [Theory]
+    [InlineData("a-disposition-it-invented")]
+    [InlineData("resolved")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void AChoiceTheModelWasNotOffered_IsNotWrittenToTheRecord(string modelChoice)
+    {
+        // Arrange
+        // Including one that exists elsewhere in the catalog ("resolved" belongs to another subject): the
+        // subject's workflow has no action for it, so a call concluded that way would lead nowhere.
+        var choices = new[]
+        {
+            new OmnichannelDisposition { ItemId = "interested" },
+            new OmnichannelDisposition { ItemId = "not-interested" },
+        };
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseDisposition(choices, modelChoice);
+
+        // Assert
+        Assert.Equal("interested", chosen.ItemId);
+    }
+
+    [Fact]
+    public void ACallWithNothingToChooseFrom_IsLeftUndispositionedRatherThanInventingOne()
+    {
+        // Arrange & Act & Assert
+        // Nothing configured anywhere. There is no honest answer here, and picking one would be fabrication.
+        Assert.Null(VoiceCallConclusionPolicy.ChooseDisposition([], "interested"));
+        Assert.Null(VoiceCallConclusionPolicy.ChooseDisposition(null, "interested"));
+    }
 }

@@ -71,4 +71,68 @@ public static class VoiceCallConclusionPolicy
             ? CompletedWithoutSummaryNote
             : modelSummary;
     }
+
+    /// <summary>
+    /// The dispositions the subject's own workflow allows, as the identifiers its actions are wired to.
+    /// </summary>
+    /// <remarks>
+    /// An automated call is classified by the model, but not from the whole catalog: what a call about this
+    /// subject is allowed to conclude as is exactly what the subject's actions can act on, so a disposition the
+    /// model picks always has somewhere to lead. An empty result means the subject has no actions configured,
+    /// and the caller falls back to every disposition rather than leaving the call unclassified.
+    /// </remarks>
+    /// <param name="subjectActions">Every configured subject action.</param>
+    /// <param name="subjectContentType">The subject content type of the call being concluded.</param>
+    public static IReadOnlyList<string> ResolveSubjectDispositionIds(
+        IEnumerable<SubjectAction> subjectActions,
+        string subjectContentType)
+    {
+        if (subjectActions is null || string.IsNullOrEmpty(subjectContentType))
+        {
+            return [];
+        }
+
+        return subjectActions
+            .Where(action => action is not null &&
+                string.Equals(action.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrEmpty(action.DispositionId))
+            .Select(action => action.DispositionId)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>
+    /// The disposition to record, given what the model chose.
+    /// </summary>
+    /// <remarks>
+    /// The model is asked for one of the choices it was shown, and is held to it: a value it invented, or one
+    /// belonging to a different subject, would put an outcome on the record that the subject's workflow cannot
+    /// act on. Anything outside the list falls back to the first choice rather than to nothing, because a
+    /// concluded call with no disposition is invisible to every report that counts outcomes.
+    /// </remarks>
+    /// <param name="choices">The dispositions the model was offered.</param>
+    /// <param name="modelChoiceId">The identifier the model returned, if it ran at all.</param>
+    public static OmnichannelDisposition ChooseDisposition(
+        IEnumerable<OmnichannelDisposition> choices,
+        string modelChoiceId)
+    {
+        var offered = choices as IList<OmnichannelDisposition> ?? choices?.ToList();
+
+        if (offered is null || offered.Count == 0)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(modelChoiceId))
+        {
+            var chosen = offered.FirstOrDefault(disposition => disposition?.ItemId == modelChoiceId);
+
+            if (chosen is not null)
+            {
+                return chosen;
+            }
+        }
+
+        return offered.FirstOrDefault(disposition => disposition is not null);
+    }
 }

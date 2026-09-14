@@ -80,12 +80,7 @@ public sealed partial class VoiceAgentConversationLoop
         // Dispositions the AI may choose from: those wired to the subject's actions, falling back to all
         // configured dispositions so a call is never left without a way to be classified.
         var allActions = await actionCatalog.GetAllAsync();
-        var subjectDispositionIds = allActions
-            .Where(a => string.Equals(a.SubjectContentType, activity.SubjectContentType, StringComparison.OrdinalIgnoreCase))
-            .Select(a => a.DispositionId)
-            .Where(id => !string.IsNullOrEmpty(id))
-            .Distinct()
-            .ToList();
+        var subjectDispositionIds = VoiceCallConclusionPolicy.ResolveSubjectDispositionIds(allActions, activity.SubjectContentType);
 
         var dispositions = subjectDispositionIds.Count > 0
             ? (await dispositionCatalog.GetAsync(subjectDispositionIds)).ToList()
@@ -200,14 +195,8 @@ public sealed partial class VoiceAgentConversationLoop
         }
 
         // Decide the disposition and summary from the (read-only) analysis before touching the activity.
-        var dispositionId = result?.DispositionId;
-
-        if (string.IsNullOrWhiteSpace(dispositionId) || !dispositions.Any(d => d.ItemId == dispositionId))
-        {
-            dispositionId = dispositions.FirstOrDefault()?.ItemId;
-        }
-
-        var disposition = dispositions.FirstOrDefault(d => d.ItemId == dispositionId);
+        var disposition = VoiceCallConclusionPolicy.ChooseDisposition(dispositions, result?.DispositionId);
+        var dispositionId = disposition?.ItemId;
 
         var notes = VoiceCallConclusionPolicy.ResolveNotes(hasConversation, result?.Summary);
 

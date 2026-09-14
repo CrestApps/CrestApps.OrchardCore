@@ -271,6 +271,20 @@ How a call runs:
 3. When the conversation ends, the activity is **settled** with an AI-generated summary and a disposition,
    just like any other omnichannel activity.
 
+How the disposition is chosen matters, because a disposition is not a label — it is what the subject's workflow
+acts on next:
+
+- The model is offered **the dispositions the subject's own actions are wired to**, so whatever it picks always
+  has somewhere to lead. A subject with no actions configured falls back to every disposition on the site, so a
+  call is never left unclassified.
+- It is **held to that list**. A disposition it invents, or one belonging to a different subject, is discarded in
+  favour of the first choice it was offered.
+- A call **nobody spoke on** — rang out, declined, answered and hung up — is never sent for review. Asked to
+  summarize an empty transcript the model writes a plausible account of a conversation that did not happen, and
+  that account would be saved as fact; such a call is recorded as having produced no conversation.
+- A call **handed to a live agent** is not concluded here at all. The model's leg ends the moment the caller is
+  transferred, and the outcome belongs to the agent who took it.
+
 The AI profile, speech-to-text deployment, text-to-speech deployment, voice, update permissions, and reply
 delay are the **automated voice settings** configured on the subject flow (and overridable per activity
 batch), resolved in order **activity batch → subject flow → global AI site settings**. See
