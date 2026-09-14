@@ -76,4 +76,23 @@ public sealed class RealtimeVoiceConversationContext
     /// staying with an assistant that has already told them a person is coming.
     /// </summary>
     public CancellationToken HandoffRequested { get; set; }
+
+    /// <summary>
+    /// Gets or sets a token that is cancelled when the model reports the conversation finished. The session
+    /// lets the closing line play, leaves the caller a moment to add anything, and then ends the call — so the
+    /// customer is not left holding a line that nobody is going to hang up.
+    /// </summary>
+    public CancellationToken EndCallRequested { get; set; }
+
+    /// <summary>
+    /// Gets or sets the guidance telling the model when to hand the caller to a live agent, or
+    /// <see langword="null"/> when this call has nowhere to hand them.
+    /// </summary>
+    /// <remarks>
+    /// A realtime session is configured once from the profile, so unlike a turn-based completion it never sees
+    /// the per-call handoff guidance the flow settings produce. Without this the model on a live call is not told
+    /// that escalating is possible — and is given no tool to do it with — so a caller asking for a person was
+    /// talked to by the assistant instead.
+    /// </remarks>
+    public string HandoffInstructions { get; set; }
 }

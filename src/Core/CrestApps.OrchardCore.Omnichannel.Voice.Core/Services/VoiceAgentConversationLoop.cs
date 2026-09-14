@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI;
@@ -59,6 +59,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAICompletionService _completionService;
     private readonly IOmnichannelHandoffTurn _handoffTurn;
+    private readonly IVoiceCallEndTurn _endCallTurn;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAICompletionContextBuilder _contextBuilder;
     private readonly IAIProfileManager _profileManager;
@@ -77,6 +78,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IAIChatSessionPromptStore promptStore,
         IAICompletionService completionService,
         IOmnichannelHandoffTurn handoffTurn,
+        IVoiceCallEndTurn endCallTurn,
         IAIDeploymentManager deploymentManager,
         IAICompletionContextBuilder contextBuilder,
         IAIProfileManager profileManager,
@@ -94,6 +96,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _promptStore = promptStore;
         _completionService = completionService;
         _handoffTurn = handoffTurn;
+        _endCallTurn = endCallTurn;
         _deploymentManager = deploymentManager;
         _contextBuilder = contextBuilder;
         _profileManager = profileManager;
@@ -193,8 +196,14 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         if (!string.IsNullOrWhiteSpace(profile.RealtimeDeploymentName))
         {
             // The transfer tool records the model's escalation on this turn rather than performing it, so the
-            // flag has to start clean for the session we are about to hold.
+            // flag has to start clean for the session we are about to hold. The end-call tool works the same way.
             _handoffTurn.Reset();
+            _endCallTurn.Reset();
+
+            // Resolved before the session starts, because a realtime session is configured once and never again:
+            // the guidance about when to escalate, and the tool that does it, have to be in place before the
+            // caller says a word. The turn-based loop below re-reads this on every turn instead.
+            var (realtimeHandoffService, realtimeFlowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
 
             if (await _realtimeRunner.RunAsync(new RealtimeVoiceConversationContext
             {
@@ -211,6 +220,16 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 // Ends the session as soon as the transfer tool fires, so the handoff below happens while the
                 // caller is still expecting it rather than whenever the call would otherwise have ended.
                 HandoffRequested = _handoffTurn.HandoffRequestedToken,
+
+                // Ends the session once the model says the conversation is finished, so the platform hangs up
+                // rather than leaving the customer to notice that nobody is going to.
+                EndCallRequested = _endCallTurn.EndCallRequestedToken,
+
+                // Only when this call actually has an agent to reach. Telling a model it may transfer, on a call
+                // where nothing can receive the caller, promises the caller a person who is not coming.
+                HandoffInstructions = realtimeHandoffService is null
+                    ? null
+                    : OmnichannelHandoffHelper.BuildHandoffInstructions(realtimeFlowSettings),
             }, cancellationToken))
             {
                 // A realtime session holds the call for its whole duration, and the model escalates from inside
@@ -222,6 +241,25 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 if (_handoffTurn.HandoffRequested)
                 {
                     await PerformVoiceHandoffAsync(voiceEvent, media, activity, cancellationToken);
+
+                    return;
+                }
+
+                // The session ended because the model said the conversation was over, not because the caller hung
+                // up — so the call is still up and somebody has to end it. The session already waited for the
+                // closing line and gave the caller their moment; all that is left is the hangup itself. A caller
+                // who hung up first never sets this, so we do not chase a call that is already gone.
+                if (_endCallTurn.EndCallRequested)
+                {
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation(
+                            "Ending automated call for activity '{ActivityId}': {Reason}",
+                            activity.ItemId.SanitizeLogValue(),
+                            (_endCallTurn.Reason ?? "the model reported the conversation finished").SanitizeLogValue());
+                    }
+
+                    await media.HangupAsync(voiceEvent.ProviderCallId, cancellationToken);
                 }
 
                 return;

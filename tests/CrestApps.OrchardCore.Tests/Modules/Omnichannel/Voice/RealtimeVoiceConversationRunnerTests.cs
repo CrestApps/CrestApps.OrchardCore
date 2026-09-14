@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
@@ -7,7 +7,9 @@ using CrestApps.Core.AI.Realtime;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -240,6 +242,165 @@ public sealed class RealtimeVoiceConversationRunnerTests
 
         // Assert
         Assert.Contains(harness.StoredPrompts, prompt => prompt.Content == "Alright, connecting you with an agent right now.");
+    }
+
+    // Ending a call the model knows is over. A realtime session has no hangup marker to write — it is speaking,
+    // not returning text — so before this it said goodbye and then held the line until the customer worked out
+    // that nobody was going to hang up. Observed on a live call: the assistant finished, and the line stayed open
+    // until the customer disconnected.
+
+    [Fact]
+    public async Task WhenTheModelEndsTheCall_TheLineIsClosedRatherThanLeftOpen()
+    {
+        // Arrange
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+
+        // Both stay open, as on a live call, so the only thing that can end this is the closing itself.
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        // Act
+        var run = harness.RunAsync();
+
+        // The goodbye, then the tool: the assistant has spoken, so the session has something to wait for the end of.
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantAudioDelta,
+            Audio = new byte[320],
+        });
+
+        await endCall.CancelAsync();
+
+        // Assert
+        var completed = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        Assert.Same(run, completed);
+        Assert.True(await run);
+        Assert.True(harness.Media.Stopped);
+    }
+
+    [Fact]
+    public async Task TheGoodbyeIsNotCutOff_WhileTheAssistantIsStillSayingIt()
+    {
+        // Arrange
+        // The tool call and the closing line are one action to the model, and the tool usually lands first. Cutting
+        // on the tool call would drop the caller into silence mid-word — the thing this whole path exists to avoid.
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        // Act
+        var run = harness.RunAsync();
+        await endCall.CancelAsync();
+
+        // Still talking: audio keeps arriving for longer than the listening grace would otherwise allow.
+        for (var i = 0; i < 12; i++)
+        {
+            harness.Conversation.Queue(new RealtimeConversationEvent
+            {
+                Type = RealtimeConversationEventType.AssistantAudioDelta,
+                Audio = new byte[320],
+            });
+
+            await Task.Delay(TimeSpan.FromMilliseconds(250), TestContext.Current.CancellationToken);
+
+            // Assert
+            // The call is still up at every point while the assistant is speaking.
+            Assert.False(run.IsCompleted);
+        }
+
+        // Then it ends, once the speaking stops — bounded, so a regression that never closes the call fails here
+        // rather than hanging the suite.
+        var completed = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        Assert.Same(run, completed);
+        await run;
+    }
+
+    [Fact]
+    public async Task ACustomerWhoSpeaksAfterTheGoodbye_IsNotHungUpOn()
+    {
+        // Arrange
+        // "Actually, one more thing" — said in the breath after goodbye, which is when people say it. The model
+        // already decided the call was over; the customer decides otherwise, and the customer is right.
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        // Act
+        var run = harness.RunAsync();
+
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantAudioDelta,
+            Audio = new byte[320],
+        });
+
+        await endCall.CancelAsync();
+
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.UserTranscript,
+            Text = "Actually, one more thing.",
+        });
+
+        // Well past the window in which the call would otherwise have been ended.
+        await Task.Delay(TimeSpan.FromSeconds(4), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(run.IsCompleted);
+
+        // Let the call go, so the session does not outlive the test.
+        harness.Conversation.KeepAlive = false;
+        harness.Media.KeepAlive = false;
+
+        await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task TheSessionIsGivenTheToolsACallNeeds()
+    {
+        // Arrange
+        // A realtime session is configured once, from the profile, and never sees the per-turn tool wiring the
+        // turn-based path does. Before this, the model on a live call had no way to end the call and no way to
+        // escalate: the loop read a handoff flag that nothing on a realtime call could ever set.
+        var harness = new RealtimeHarness();
+        harness.HandoffInstructions = "Hand off when the customer asks for a human.";
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var orchestration = harness.Orchestrator.Contexts.Single();
+
+        Assert.Contains(EndCallTool.ToolName, orchestration.MustIncludeTools);
+        Assert.Contains(OmnichannelHandoffHelper.TransferToAgentToolName, orchestration.MustIncludeTools);
+        Assert.Contains("Hand off when the customer asks for a human.", orchestration.SystemMessageBuilder.ToString());
+    }
+
+    [Fact]
+    public async Task ACallWithNowhereToEscalate_IsNotOfferedTheTransferTool()
+    {
+        // Arrange
+        // Telling a model it may transfer, on a call where nothing can receive the caller, has it promise a
+        // person who is never coming. Ending the call is always available; escalating is not.
+        var harness = new RealtimeHarness();
+        harness.HandoffInstructions = null;
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var orchestration = harness.Orchestrator.Contexts.Single();
+
+        Assert.Contains(EndCallTool.ToolName, orchestration.MustIncludeTools);
+        Assert.DoesNotContain(OmnichannelHandoffHelper.TransferToAgentToolName, orchestration.MustIncludeTools);
     }
 
     [Fact]
@@ -484,6 +645,16 @@ public sealed class RealtimeVoiceConversationRunnerTests
         /// </summary>
         public CancellationToken HandoffRequested { get; set; }
 
+        /// <summary>
+        /// The token the loop passes when the end-call tool fires.
+        /// </summary>
+        public CancellationToken EndCallRequested { get; set; }
+
+        /// <summary>
+        /// The escalation guidance the loop passes when this call has an agent queue behind it.
+        /// </summary>
+        public string HandoffInstructions { get; set; }
+
         public List<AIChatSessionPrompt> StoredPrompts => _prompts;
 
         public Task<bool> RunAsync()
@@ -495,6 +666,8 @@ public sealed class RealtimeVoiceConversationRunnerTests
                 ProviderName = "Fake",
                 ProviderCallId = "call-1",
                 HandoffRequested = HandoffRequested,
+                EndCallRequested = EndCallRequested,
+                HandoffInstructions = HandoffInstructions,
             }, TestContext.Current.CancellationToken);
     }
 
@@ -512,6 +685,11 @@ public sealed class RealtimeVoiceConversationRunnerTests
 
         public List<RealtimeOrchestrationRequest> Requests { get; } = [];
 
+        /// <summary>
+        /// The contexts the caller configured, so a test can assert what the session was actually built with.
+        /// </summary>
+        public List<OrchestrationContext> Contexts { get; } = [];
+
         public bool Fail { get; set; }
 
         public Task<IRealtimeConversation> StartAsync(RealtimeOrchestrationRequest request, CancellationToken cancellationToken = default)
@@ -522,6 +700,17 @@ public sealed class RealtimeVoiceConversationRunnerTests
             }
 
             Requests.Add(request);
+
+            // The real orchestrator builds a context and hands it to the caller to configure. Doing the same here
+            // is what lets a test see the tools and guidance a live session would have been given.
+            var context = new OrchestrationContext
+            {
+                CompletionContext = new AICompletionContext(),
+            };
+
+            request.ConfigureContext?.Invoke(context);
+
+            Contexts.Add(context);
 
             return Task.FromResult(_conversation);
         }

@@ -54,6 +54,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IVoiceCallEndTurn
+    {
+        bool EndCallRequested { get; }
+        System.Threading.CancellationToken EndCallRequestedToken { get; }
+        string Reason { get; }
+        void RequestEndCall(string reason);
+        void Reset();
+    }
     public sealed class NoRealtimeVoiceConversationRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner
     {
         public NoRealtimeVoiceConversationRunner() { }
@@ -72,6 +80,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         public RealtimeVoiceConversationContext() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public System.Threading.CancellationToken EndCallRequested { get; set; }
+        public string HandoffInstructions { get; set; }
         public System.Threading.CancellationToken HandoffRequested { get; set; }
         public string InteractionId { get; set; }
         public CrestApps.Core.AI.Models.AIProfile Profile { get; set; }
@@ -93,6 +103,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.Core.AI.IAIChatSessionPromptStore promptStore,
                     CrestApps.Core.AI.Completions.IAICompletionService completionService,
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn handoffTurn,
+                    CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn endCallTurn,
                     CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
                     CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,
                     CrestApps.Core.AI.Profiles.IAIProfileManager profileManager,
@@ -115,5 +126,27 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public static string ResolveNotes(bool hasConversation, string modelSummary) { }
         public static System.Collections.Generic.IReadOnlyList<string> ResolveSubjectDispositionIds(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
         public static bool ShouldConclude(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
+    }
+    public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn
+    {
+        public VoiceCallEndTurn() { }
+        public bool EndCallRequested { get; }
+        public System.Threading.CancellationToken EndCallRequestedToken { get; }
+        public string Reason { get; }
+        public void RequestEndCall(string reason) { }
+        public void Reset() { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Voice.Tools
+{
+    public sealed class EndCallTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string ToolName = "endCall";
+        public EndCallTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
     }
 }

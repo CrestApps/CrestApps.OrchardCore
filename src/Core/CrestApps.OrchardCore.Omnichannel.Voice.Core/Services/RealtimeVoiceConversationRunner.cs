@@ -1,12 +1,16 @@
 ﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
@@ -43,11 +47,43 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
     private long _lastAssistantAudioTicks;
 
     /// <summary>
+    /// When the caller was last heard to say something, so a closing call can tell "they are done" from "they
+    /// had one more thing".
+    /// </summary>
+    private long _lastCallerSpeechTicks;
+
+    /// <summary>
     /// How long the session is given to finish its closing line after the model asks to transfer, before it is
     /// closed and the caller is handed to the queue. Long enough for "connecting you now", short enough that a
     /// caller is never left with the assistant after being promised a person.
     /// </summary>
     private static readonly TimeSpan HandoffClosingGrace = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// How long the assistant is given to begin its closing line after asking to end the call.
+    /// </summary>
+    /// <remarks>
+    /// The tool call and the goodbye are one action as far as the model is concerned, and the tool usually lands
+    /// first. Without this wait the silence in between reads as "finished speaking" and the goodbye is cut off at
+    /// the first word. Bounded, because a model that ends a call without saying anything must still hang up.
+    /// </remarks>
+    private static readonly TimeSpan ClosingSpeechStartGrace = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// How long the caller is left the line after the assistant's goodbye before the call is hung up.
+    /// </summary>
+    /// <remarks>
+    /// Hanging up the instant the closing line ends cuts off the person who was drawing breath to say "actually,
+    /// one more thing" — and being hung up on is remembered long after the rest of the call is forgotten. If they
+    /// do speak, the assistant answers and the call carries on; this window only ends a conversation that both
+    /// sides have finished.
+    /// </remarks>
+    private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// How often the closing watchdog re-checks. Fine enough that the hangup lands when it was meant to.
+    /// </summary>
+    private static readonly TimeSpan ClosingPollInterval = TimeSpan.FromMilliseconds(150);
 
     /// <summary>
     /// How long the caller must be quiet before the session treats their turn as finished. Longer than the
@@ -156,6 +192,13 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
             ? context.HandoffRequested.Register(() => callScope.CancelAfter(HandoffClosingGrace))
             : default;
 
+        // The model saying the conversation is over is not the same as the call being over, which is why this is
+        // a watchdog rather than another CancelAfter: it waits for the goodbye to finish and then leaves the line
+        // open a moment, and abandons the hangup entirely if the caller uses it.
+        var closing = context.EndCallRequested.CanBeCanceled
+            ? CloseWhenConversationEndsAsync(context.EndCallRequested, callScope)
+            : Task.CompletedTask;
+
         // One generator drives both paths, at the rate the model speaks: the bed is mixed under the assistant's
         // own audio while it talks, and written on its own while it does not, so the room never cuts in and out.
         var ambience = context.UseCallAmbience
@@ -180,12 +223,177 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
         {
             await callScope.CancelAsync();
 
-            // All three are awaited so none is left writing to a disposed session.
-            await Task.WhenAll(Settle(toModel), Settle(toCaller), Settle(bed));
+            // All of them are awaited so none is left writing to a disposed session.
+            await Task.WhenAll(Settle(toModel), Settle(toCaller), Settle(bed), Settle(closing));
             await media.StopAsync(CancellationToken.None);
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Gives the live session the tools a phone call needs, and tells it when to use them.
+    /// </summary>
+    /// <remarks>
+    /// A realtime session is configured once, at the start, from this context — there is no per-turn completion
+    /// to hang a tool on the way the turn-based path does. The end-call tool is registered as a scoped system
+    /// entry and named in <c>MustIncludeTools</c> so the profile's own tool selection cannot leave it out: every
+    /// call has to be endable, whatever else the profile is configured to do.
+    /// </remarks>
+    /// <param name="context">The orchestration context the session is built from.</param>
+    private static void ConfigureCallTools(OrchestrationContext orchestration, RealtimeVoiceConversationContext call)
+    {
+        if (orchestration?.CompletionContext is null)
+        {
+            return;
+        }
+
+        AttachTool(orchestration, EndCallTool.ToolName, "Ends the phone call once the conversation is over.");
+
+        // Escalation, when this call has somewhere to escalate to. The tool and the guidance travel together:
+        // a tool the model is never told about is not used, and guidance without a tool has the model promising
+        // a transfer that nothing performs.
+        if (!string.IsNullOrWhiteSpace(call?.HandoffInstructions))
+        {
+            AttachTool(
+                orchestration,
+                OmnichannelHandoffHelper.TransferToAgentToolName,
+                "Transfers the current conversation to a live human agent.");
+
+            orchestration.SystemMessageBuilder.AppendLine();
+            orchestration.SystemMessageBuilder.AppendLine(call.HandoffInstructions);
+        }
+
+        // Said plainly, because the model is speaking rather than writing and cannot see the call state: on a
+        // phone call somebody has to hang up, and if it does not, the customer is left holding a dead line.
+        orchestration.SystemMessageBuilder.AppendLine();
+        orchestration.SystemMessageBuilder.AppendLine("## Ending the call");
+        orchestration.SystemMessageBuilder.AppendLine();
+        orchestration.SystemMessageBuilder.AppendLine(
+            $"You are on a live phone call. When the conversation has genuinely finished — the customer has what " +
+            $"they needed, has declined, has asked not to be called again, or has said goodbye — say a short, warm " +
+            $"closing line and then call the {EndCallTool.ToolName} tool. The call is hung up for you once you have " +
+            $"finished speaking and the customer has had a moment to add anything, so do not announce that you are " +
+            $"hanging up and do not wait for them to do it. Never call it while the customer still has questions or " +
+            $"is being transferred to a person.");
+    }
+
+    /// <summary>
+    /// Puts one system tool in front of a realtime session.
+    /// </summary>
+    /// <remarks>
+    /// Registered as a scoped entry (the profile's own tool list skips system tools) and named in
+    /// <c>MustIncludeTools</c> so the profile's selection cannot leave it out. Both are idempotent, because this
+    /// runs once per call and a duplicate would be offered to the model twice.
+    /// </remarks>
+    /// <param name="orchestration">The orchestration context the session is built from.</param>
+    /// <param name="toolName">The tool's registered name.</param>
+    /// <param name="description">What the tool does, for the registry entry.</param>
+    private static void AttachTool(OrchestrationContext orchestration, string toolName, string description)
+    {
+        var scoped = orchestration.CompletionContext.AdditionalProperties
+            .TryGetValue(FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey, out var existing) &&
+            existing is List<ToolRegistryEntry> entries
+                ? entries
+                : [];
+
+        if (!scoped.Exists(entry => entry.Id == toolName))
+        {
+            scoped.Add(new ToolRegistryEntry
+            {
+                Id = toolName,
+                Name = toolName,
+                Description = description,
+                Source = ToolRegistryEntrySource.System,
+                CreateAsync = serviceProvider => ValueTask.FromResult(
+                    serviceProvider.GetKeyedService<AITool>(toolName)),
+            });
+        }
+
+        orchestration.CompletionContext.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = scoped;
+
+        if (!orchestration.MustIncludeTools.Contains(toolName))
+        {
+            orchestration.MustIncludeTools.Add(toolName);
+        }
+    }
+
+    /// <summary>
+    /// Ends the call once the model has said the conversation is over and the goodbye has actually been said.
+    /// </summary>
+    /// <remarks>
+    /// Three things have to be true before a call is cut, and each was learned by picturing the person holding
+    /// the phone. The model has to have decided the conversation is finished. Its closing line has to have
+    /// finished playing, or the caller hears "thanks for your ti-" and a dead line. And the caller has to have
+    /// been given a breath to say the thing people say after goodbye — if they take it, the hangup is abandoned
+    /// altogether and the assistant answers them, because a caller who is still talking has not finished the
+    /// call no matter what the model concluded.
+    /// </remarks>
+    /// <param name="endCallRequested">Cancelled when the model reports the conversation finished.</param>
+    /// <param name="callScope">The scope whose cancellation ends the call.</param>
+    private async Task CloseWhenConversationEndsAsync(CancellationToken endCallRequested, CancellationTokenSource callScope)
+    {
+        try
+        {
+            // Wait for the model to say the conversation is over. Nothing below runs on an ordinary call.
+            await Task.Delay(Timeout.InfiniteTimeSpan, endCallRequested);
+        }
+        catch (OperationCanceledException) when (endCallRequested.IsCancellationRequested)
+        {
+            // This is the signal, not a failure.
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        var requestedAtTicks = DateTime.UtcNow.Ticks;
+        var closingLineStarted = false;
+
+        while (!callScope.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(ClosingPollInterval, callScope.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow.Ticks;
+            var lastAssistantTicks = Interlocked.Read(ref _lastAssistantAudioTicks);
+
+            // The caller spoke after the model decided it was done. They get the call back: the assistant is
+            // already answering them, and hanging up mid-answer would be worse than never having closed at all.
+            if (Interlocked.Read(ref _lastCallerSpeechTicks) > requestedAtTicks)
+            {
+                return;
+            }
+
+            closingLineStarted |= lastAssistantTicks > requestedAtTicks;
+
+            // The model usually calls the tool and says its goodbye immediately after, so the silence at this
+            // moment is the gap before it starts — not the end of anything. Waiting for it to speak is what keeps
+            // the closing line from being cut off at the first word. A model that says nothing at all still has
+            // to end the call, so the wait is bounded.
+            if (!closingLineStarted && now - requestedAtTicks < ClosingSpeechStartGrace.Ticks)
+            {
+                continue;
+            }
+
+            // Quiet since the goodbye ended — and long enough that the caller has had their moment to answer it.
+            // Measured from the assistant's last audio rather than from the tool call, so a long closing line
+            // does not eat the window the caller was supposed to get.
+            if (now - lastAssistantTicks < ClosingListeningGrace.Ticks)
+            {
+                continue;
+            }
+
+            await callScope.CancelAsync();
+
+            return;
+        }
     }
 
     private async Task<IRealtimeConversation> StartConversationAsync(
@@ -211,6 +419,11 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
                 // A caller who talks over the assistant is interrupting a person as far as they are concerned,
                 // and being talked through is the single most common complaint about automated calls.
                 AllowInterruption = true,
+
+                // A realtime session is built from this context rather than from a per-turn completion, so the
+                // tools a live call needs — and the instruction to use them — have to be put here. Without it the
+                // model has no way to end a call it knows is over.
+                ConfigureContext = orchestration => ConfigureCallTools(orchestration, context),
             }, cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -336,6 +549,14 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
                     case RealtimeConversationEventType.AssistantAudioDelta:
                         var speech = conversationEvent.Audio;
 
+                        if (!speech.IsEmpty)
+                        {
+                            // Stamped for two readers: the bed pump, which must stay quiet while the assistant is
+                            // talking or the room doubles, and the closing watchdog, which waits for the goodbye
+                            // to actually finish before it hangs up.
+                            Interlocked.Exchange(ref _lastAssistantAudioTicks, DateTime.UtcNow.Ticks);
+                        }
+
                         if (ambience is not null && !speech.IsEmpty)
                         {
                             // Mixed before conversion so the bed is resampled and companded with the voice, and
@@ -343,9 +564,6 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
                             var mixed = speech.ToArray();
                             ambience.MixIntoPcmBytes(mixed);
                             speech = mixed;
-
-                            // The bed pump must stay quiet while this is playing, or the room doubles.
-                            Interlocked.Exchange(ref _lastAssistantAudioTicks, DateTime.UtcNow.Ticks);
                         }
 
                         var audio = RealtimeAudioConverter.FromRealtime(speech, media.OutgoingFormat);
@@ -358,6 +576,13 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
                         break;
 
                     case RealtimeConversationEventType.UserTranscript:
+                        // The caller said something. Stamped before the store so a closing call counts it even if
+                        // persisting the turn takes a moment.
+                        if (!string.IsNullOrWhiteSpace(conversationEvent.Text))
+                        {
+                            Interlocked.Exchange(ref _lastCallerSpeechTicks, DateTime.UtcNow.Ticks);
+                        }
+
                         // Recorded so the call is concluded, summarized and dispositioned exactly the way a
                         // turn-based one is: everything downstream reads the transcript, not the audio.
                         await StorePromptAsync(context, ChatRole.User, conversationEvent.Text, cancellationToken);

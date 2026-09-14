@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice
     }
     public sealed class Startup : OrchardCore.Modules.StartupBase
     {
-        public Startup() { }
+        public Startup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Voice.Startup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }

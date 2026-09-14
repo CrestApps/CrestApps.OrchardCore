@@ -1,7 +1,10 @@
-﻿using CrestApps.OrchardCore.ContactCenter;
+﻿using CrestApps.Core.AI;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice;
@@ -12,9 +15,27 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice;
 /// </summary>
 public sealed class Startup : StartupBase
 {
+    internal readonly IStringLocalizer S;
+
+    public Startup(IStringLocalizer<Startup> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddScoped<IVoiceAgentConversationLoop, VoiceAgentConversationLoop>();
+
+        // One per call, so the tool and the session holding the line share an instance and two calls running at
+        // once cannot end each other.
+        services.TryAddScoped<IVoiceCallEndTurn, VoiceCallEndTurn>();
+
+        // The end-call tool is turned on by the call itself rather than by an administrator - every automated
+        // call has to be endable - so it is registered without being selectable, like the transfer tool.
+        services.AddCoreAITool<EndCallTool>(EndCallTool.ToolName)
+            .WithTitle(S["End the call"])
+            .WithDescription(S["Lets an automated call hang up once the conversation is over."])
+            .WithCategory(S["Omnichannel"]);
 
         // Speech-to-speech needs a bidirectional media path to the caller's leg, which only the Contact Center
         // Voice Media feature provides. This feature does not depend on it - automated calls run perfectly well

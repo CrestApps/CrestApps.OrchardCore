@@ -1,4 +1,4 @@
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
@@ -298,6 +298,65 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task WhenARealtimeSessionEndsTheCall_ThePlatformHangsUp()
+    {
+        // Arrange
+        // The session stopping is not the call stopping: the line is still up, and on a realtime call nothing was
+        // ever hanging it up. A customer heard the goodbye and then sat on an open line until they gave up and
+        // disconnected themselves.
+        var harness = new LoopHarness();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(true);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Single(harness.Realtime.Sessions);
+        Assert.Equal(1, harness.Media.Hangups);
+    }
+
+    [Fact]
+    public async Task ARealtimeCallTheCallerEnded_IsNotHungUpAgain()
+    {
+        // Arrange
+        // When the caller hangs up first the session ends the same way, but the call is already gone. Chasing it
+        // with a hangup asks the provider about a call that no longer exists.
+        var harness = new LoopHarness();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(false);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Single(harness.Realtime.Sessions);
+        Assert.Equal(0, harness.Media.Hangups);
+    }
+
+    [Fact]
+    public async Task AnEscalatedRealtimeCall_IsHandedOverRatherThanHungUp()
+    {
+        // Arrange
+        // Both can be recorded on one call: the model transfers, and the closing machinery also sees the session
+        // end. The caller belongs to the agent now, so hanging up would drop the person who was just promised one.
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
+        harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(true);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        harness.HandoffService.Verify(
+            x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        Assert.Equal(0, harness.Media.Hangups);
+    }
+
+    [Fact]
     public async Task ARealtimeSessionThatNeverEscalates_HandsOffNobody()
     {
         // Arrange
@@ -512,6 +571,7 @@ public sealed class VoiceAgentConversationLoopTests
                 .ReturnsAsync(() => HandoffResult);
 
             HandoffTurn = new Mock<IOmnichannelHandoffTurn>();
+            EndCallTurn = new Mock<IVoiceCallEndTurn>();
 
             Loop = new VoiceAgentConversationLoop(
                 activityStore.Object,
@@ -519,6 +579,7 @@ public sealed class VoiceAgentConversationLoopTests
                 promptStore.Object,
                 completionService.Object,
                 HandoffTurn.Object,
+                EndCallTurn.Object,
                 deploymentManager.Object,
                 contextBuilder.Object,
                 profileManager.Object,
@@ -546,6 +607,8 @@ public sealed class VoiceAgentConversationLoopTests
         public Mock<IOmnichannelHandoffService> HandoffService { get; }
 
         public Mock<IOmnichannelHandoffTurn> HandoffTurn { get; }
+
+        public Mock<IVoiceCallEndTurn> EndCallTurn { get; }
 
         public Mock<ISubjectFlowSettingsService> FlowSettingsService { get; }
 
