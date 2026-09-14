@@ -69,6 +69,12 @@ public sealed class TelnyxOptions
     public string WebRtcCodecs { get; set; }
 
     /// <summary>
+    /// Gets or sets the Telnyx signaling region browser soft phones register on. Empty leaves the choice to
+    /// Telnyx's geo-routing.
+    /// </summary>
+    public string WebRtcRegion { get; set; }
+
+    /// <summary>
     /// Gets or sets the STUN/TURN URLs advertised to the browser for ICE negotiation.
     /// </summary>
     public string IceUrls { get; set; }

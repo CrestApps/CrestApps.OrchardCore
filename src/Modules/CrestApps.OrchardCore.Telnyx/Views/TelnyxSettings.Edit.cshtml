@@ -131,6 +131,21 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="WebRtcRegion">@T["Soft phone region"]</label>
+                <select class="form-select" asp-for="WebRtcRegion">
+                    <option value="">@T["Automatic (chosen by Telnyx)"]</option>
+                    <option value="us-west">@T["US West"]</option>
+                    <option value="us-central">@T["US Central"]</option>
+                    <option value="us-east">@T["US East"]</option>
+                    <option value="ca-central">@T["Canada Central"]</option>
+                    <option value="eu">@T["Europe"]</option>
+                    <option value="apac">@T["Asia Pacific"]</option>
+                    <option value="south-asia">@T["South Asia"]</option>
+                </select>
+                <span class="hint">@T["The Telnyx location agents' soft phones connect to. Telnyx normally picks this by looking up where the browser is, and documents that the answer can be wrong. Set it when your team is in one place; agents can still choose a nearer location for themselves in the soft phone."]</span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="IceUrls">@T["ICE (STUN/TURN) URLs"]</label>
                 <input type="text" class="form-control" asp-for="IceUrls" placeholder="stun:stun.telnyx.com:3478" />
             </div>

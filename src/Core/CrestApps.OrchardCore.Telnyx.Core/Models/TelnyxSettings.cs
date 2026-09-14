@@ -82,6 +82,13 @@ public sealed class TelnyxSettings
     public string WebRtcCodecs { get; set; }
 
     /// <summary>
+    /// Gets or sets the Telnyx signaling region browser soft phones register on, as one of
+    /// <see cref="Services.TelnyxSignalingRegions.All"/>. When empty Telnyx's own geo-routing chooses. Agents may
+    /// override this for themselves in the soft phone.
+    /// </summary>
+    public string WebRtcRegion { get; set; }
+
+    /// <summary>
     /// Gets or sets the comma- or space-separated STUN/TURN URLs advertised to the browser for ICE
     /// negotiation. When empty a default Telnyx STUN server is advertised.
     /// </summary>

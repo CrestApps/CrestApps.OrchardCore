@@ -45,6 +45,10 @@
     var describePlayoutDelay = softPhoneModules.describePlayoutDelay;
     var applyPlayoutDelay = softPhoneModules.applyPlayoutDelay;
     var concealmentPercent = softPhoneModules.concealmentPercent;
+    var clampSignalingRegion = softPhoneModules.clampSignalingRegion;
+    var describeSignalingRegion = softPhoneModules.describeSignalingRegion;
+    var resolveSignalingRegion = softPhoneModules.resolveSignalingRegion;
+    var withSignalingRegion = softPhoneModules.withSignalingRegion;
     var describeProviderWarning = softPhoneModules.describeProviderWarning;
     var classifyProviderWarning = softPhoneModules.classifyProviderWarning;
 
@@ -1180,7 +1184,22 @@
             clientOptions.iceServers = ice.iceServers;
         }
 
+        // Which of the provider's signaling edges this browser registers on: the agent's own choice, else the
+        // tenant setting, else the provider's geo-routing. It can only be set as the client is built, which is
+        // why changing it re-registers rather than taking effect on the next call. See signaling-region.js.
+        var signalingRegion = resolveSignalingRegion(
+            signaling.region,
+            typeof context.readSignalingRegion === 'function' ? context.readSignalingRegion() : '');
+
+        withSignalingRegion(clientOptions, signalingRegion);
+
         var client = new telnyx.TelnyxRTC(clientOptions);
+
+        // Say which edge this registration landed on. Until now nothing did, so an agent on a distant edge had
+        // no way to know that was what they were hearing -- and neither did anyone reading the call afterwards.
+        if (typeof context.onSignalingRegion === 'function') {
+            context.onSignalingRegion(signalingRegion, describeSignalingRegion(signalingRegion));
+        }
 
         function clearCall(call) {
             if (currentCall === call) {
@@ -1518,6 +1537,9 @@
             return {
                 providerConfig: registrationConfig,
                 mediaCodecs: media.codecs || [],
+                // The signaling edge this registration is on, for the diagnostics readout. Empty means the
+                // provider's own geo-routing chose it and cannot tell us which one it picked.
+                signalingRegion: signalingRegion,
                 // The browser places its own outbound calls through the Telnyx SDK.
                 canOriginate: true,
                 outboundCallerId: registrationConfig.outboundCallerId || '',
@@ -1879,6 +1901,8 @@
             processingAgc: rootElement.querySelector('[data-telephony-processing-agc]'),
             micBoost: rootElement.querySelector('[data-telephony-mic-boost]'),
             playoutDelay: rootElement.querySelector('[data-telephony-playout-delay]'),
+            signalingRegion: rootElement.querySelector('[data-telephony-signaling-region]'),
+            signalingRegionStatus: rootElement.querySelector('[data-telephony-signaling-region-status]'),
             outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
             diagnosticsTab: rootElement.querySelector('[data-telephony-diagnostics-tab]'),
             diagStatus: rootElement.querySelector('[data-telephony-diag-status]'),
@@ -2693,6 +2717,15 @@
         // the reply is spent here; see playout-delay.js.
         var playoutDelaySeconds = -1;
 
+        // Which of the provider's signaling edges this agent registers on (empty = follow the tenant setting,
+        // and failing that the provider's geo-routing). Unlike every other setting here this one is fixed when
+        // the provider client is built, so changing it re-registers. See signaling-region.js.
+        var signalingRegion = '';
+
+        // Set when the agent changes the region above: the next time the registration is ensured it is rebuilt
+        // rather than reused, through the same path that revokes the credential it replaces.
+        var reregisterOnNextEnsure = false;
+
         // The raw capture from the device -- what the device label, mute/ended state and capture settings are
         // read from -- as distinct from localAudioStream, which is the stream the call SENDS. Without a boost the
         // two carry the same track; with one, localAudioStream carries the boosted output.
@@ -2763,6 +2796,7 @@
                 Object.prototype.hasOwnProperty.call(layout, 'playoutDelaySeconds')
                     ? layout.playoutDelaySeconds
                     : config.playoutDelaySeconds);
+            signalingRegion = clampSignalingRegion(layout.signalingRegion);
         }
 
         function persistDeviceSelection() {
@@ -2773,7 +2807,46 @@
                 noiseSuppression: processingSettings.noiseSuppression,
                 autoGainControl: processingSettings.autoGainControl,
                 micBoostDb: micBoostDb,
-                playoutDelaySeconds: playoutDelaySeconds
+                playoutDelaySeconds: playoutDelaySeconds,
+                signalingRegion: signalingRegion
+            });
+        }
+
+        // The signaling-region choice changed. The provider fixes the edge when its client is constructed, so
+        // unlike the other audio settings this cannot be applied to what is already running: the registration has
+        // to be rebuilt. Doing that under a live call would drop the call, so a call in progress keeps the edge it
+        // started on and the agent is told the change waits for it to end -- the same rule the credential renewal
+        // already follows. Idle, it re-registers immediately, because an agent who just moved themselves to a
+        // nearer edge is trying to fix the call they are about to take.
+        function onSignalingRegionChange() {
+            signalingRegion = clampSignalingRegion(dom.signalingRegion ? dom.signalingRegion.value : '');
+            persistDeviceSelection();
+
+            if (!browserAudioSession) {
+                // Nothing registered yet; whatever is stored is read when registration happens.
+                return;
+            }
+
+            // Hand the rebuild to ensureBrowserAudio rather than tearing down here: it is the path that remembers
+            // the credential being replaced and revokes it once the fresh one is registered. Releasing directly
+            // would leave the old provider credential live until its own expiry, and there is a cap on how many
+            // an agent may hold -- reached, it refuses the login outright.
+            reregisterOnNextEnsure = true;
+
+            if (hasLiveCall()) {
+                // The flag stays set, so the rebuild happens the next time the registration is ensured, which is
+                // the next call or the next time this agent goes available -- both after this call has ended.
+                showError(strings.signalingRegionOnNextCall ||
+                    'The connection region will be used the next time you register, once this call ends.');
+
+                return;
+            }
+
+            ensureBrowserAudio().catch(function (error) {
+                reportDiagnostic('warning', 'signaling-region-register-failed',
+                    String((error && error.message) || error), '');
+                showError(strings.signalingRegionRegisterFailed ||
+                    'The phone could not re-register on the selected connection region.');
             });
         }
 
@@ -2826,6 +2899,23 @@
             if (dom.playoutDelay) {
                 dom.playoutDelay.value = String(playoutDelaySeconds);
             }
+
+            if (dom.signalingRegion) {
+                dom.signalingRegion.value = signalingRegion;
+            }
+        }
+
+        // Shows the edge the live registration is actually on. Automatic is the common case and the one worth
+        // reporting: it is where the tenant setting, or the provider's own geo-routing, put this agent -- the
+        // thing nobody could see before, and the reason a picker exists at all.
+        function showSignalingRegion(region, label) {
+            if (!dom.signalingRegionStatus) {
+                return;
+            }
+
+            dom.signalingRegionStatus.textContent = region
+                ? (strings.signalingRegionConnected || 'Connected via {0}.').replace('{0}', label)
+                : (strings.signalingRegionAutomatic || 'Connected via the region your provider selected.');
         }
 
         // A processing checkbox changed. Re-capture with the new constraints and swap the track under any live
@@ -3092,9 +3182,13 @@
                 // The microphone half matters as much as the credential: a session whose capture has ended is
                 // still a perfectly valid session, and reusing it puts the agent on a call nobody can hear
                 // them on.
-                if ((isBrowserAudioExpiring(browserAudioSession) || isLocalAudioTrackDead()) && !hasLiveCall()) {
+                // The third reason is the agent choosing a different signaling region: the provider fixes the edge
+                // when its client is constructed, so a live session cannot be moved -- it has to be rebuilt.
+                if ((isBrowserAudioExpiring(browserAudioSession) || isLocalAudioTrackDead() || reregisterOnNextEnsure) &&
+                    !hasLiveCall()) {
                     // Remember the credential being replaced so it can be revoked once the fresh one is live.
                     supersededCredentialId = browserAudioCredentialId(browserAudioSession);
+                    reregisterOnNextEnsure = false;
                     releaseBrowserAudio();
                 } else {
                     return Promise.resolve(browserAudioSession);
@@ -3171,6 +3265,16 @@
                         captureDeviceLabel: localAudioTrackLabel,
                         captureBoostLabel: function () { return describeBoost(micBoostDb); },
                         readPlayoutDelay: function () { return playoutDelaySeconds; },
+                        // This agent's signaling-edge choice. The adapter resolves it against the tenant setting
+                        // it receives in the registration config.
+                        readSignalingRegion: function () { return signalingRegion; },
+                        // Which edge the registration actually landed on, once resolved.
+                        onSignalingRegion: function (region, label) {
+                            showSignalingRegion(region, label);
+                            reportDiagnostic('info', 'signaling-region',
+                                region ? 'Registered on the ' + label + ' signaling edge.'
+                                    : 'Registered on the signaling edge chosen by the provider.', '');
+                        },
                         onPlayoutDelayUnsupported: function () {
                             reportDiagnostic('info', 'playout-delay-unsupported',
                                 'This browser does not support a playout delay hint; the call keeps its own buffering.', '');
@@ -6931,7 +7035,12 @@
                 dom.playoutDelay.addEventListener('change', onPlayoutDelayChange);
             }
 
-            if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost || dom.playoutDelay) {
+            if (dom.signalingRegion) {
+                dom.signalingRegion.addEventListener('change', onSignalingRegionChange);
+            }
+
+            if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost || dom.playoutDelay ||
+                dom.signalingRegion) {
                 syncProcessingControls();
             }
 

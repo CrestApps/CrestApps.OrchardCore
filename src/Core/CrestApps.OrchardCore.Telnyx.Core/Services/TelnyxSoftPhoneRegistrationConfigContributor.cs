@@ -69,6 +69,9 @@ public sealed class TelnyxSoftPhoneRegistrationConfigContributor : ISoftPhoneReg
                 SipUri = $"sip:{credential.SipUsername}@{_options.SipDomain}",
                 AuthorizationUser = credential.SipUsername,
                 DisplayName = context.DisplayName,
+                // The tenant's signaling edge, when one is pinned. The browser treats it as the default and lets
+                // the agent choose a nearer one for themselves.
+                Region = _options.WebRtcRegion,
             },
             Credential = new SoftPhoneCredentialConfig
             {

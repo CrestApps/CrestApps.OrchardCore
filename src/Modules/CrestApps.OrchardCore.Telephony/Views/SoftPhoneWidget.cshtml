@@ -173,6 +173,10 @@
             ["microphoneSilent"] = T["Your microphone is not picking up any sound, so the caller cannot hear you. Check that it is not muted and that the right device is selected."].Value,
             ["microphoneChangeOnNextCall"] = T["The microphone could not be switched on this call. It will be used on your next call."].Value,
             ["processingSwitchFailed"] = T["The microphone processing change could not be applied on this call."].Value,
+            ["signalingRegionOnNextCall"] = T["The connection region will be used the next time you register, once this call ends."].Value,
+            ["signalingRegionRegisterFailed"] = T["The phone could not re-register on the selected connection region."].Value,
+            ["signalingRegionConnected"] = T["Connected via {0}."].Value,
+            ["signalingRegionAutomatic"] = T["Connected via the region your provider selected."].Value,
             ["outputDeviceFailed"] = T["The selected speaker could not be applied. The call keeps its current output."].Value,
             ["diagUnavailable"] = T["Diagnostics are not available for this provider."].Value,
             ["diagCollecting"] = T["Collecting..."].Value,
@@ -314,6 +318,27 @@
                         <option value="0.02">20 ms</option>
                     </select>
                     <small class="telephony-soft-phone__settings-hint">@T["How long incoming audio is held before it plays. A shorter hold shortens the pause before you hear the other party, but too short and their voice breaks up. Applies to the call you are on."]</small>
+                </label>
+            </div>
+
+            <div class="telephony-soft-phone__settings-section">
+                <div class="telephony-soft-phone__settings-group-title">@T["Connection"]</div>
+                <label class="telephony-soft-phone__setting">
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-earth-americas" aria-hidden="true"></i> @T["Region"]
+                    </span>
+                    <select class="form-select form-select-sm" data-telephony-signaling-region aria-label="@T["Region"]">
+                        <option value="">@T["Automatic"]</option>
+                        <option value="us-west">@T["US West"]</option>
+                        <option value="us-central">@T["US Central"]</option>
+                        <option value="us-east">@T["US East"]</option>
+                        <option value="ca-central">@T["Canada Central"]</option>
+                        <option value="eu">@T["Europe"]</option>
+                        <option value="apac">@T["Asia Pacific"]</option>
+                        <option value="south-asia">@T["South Asia"]</option>
+                    </select>
+                    <small class="telephony-soft-phone__settings-hint">@T["Which of your provider's locations your phone connects to. Automatic follows your team's setting, and then your provider's own choice. Pick the one nearest you if calls feel delayed. Changing this re-registers your phone, so it waits until your current call ends."]</small>
+                    <small class="telephony-soft-phone__settings-hint" data-telephony-signaling-region-status></small>
                 </label>
             </div>
         </div>

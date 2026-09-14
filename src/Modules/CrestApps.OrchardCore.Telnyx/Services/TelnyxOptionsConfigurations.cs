@@ -51,6 +51,7 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
         options.IceUrls = string.IsNullOrWhiteSpace(settings.IceUrls) ? TelnyxConstants.DefaultStunUrl : settings.IceUrls.Trim();
         options.IceTransportPolicy = string.IsNullOrWhiteSpace(settings.IceTransportPolicy) ? "all" : settings.IceTransportPolicy.Trim();
         options.WebRtcCodecs = settings.WebRtcCodecs?.Trim();
+        options.WebRtcRegion = TelnyxSignalingRegions.Normalize(settings.WebRtcRegion);
         options.SipWebSocketUrl = string.IsNullOrWhiteSpace(settings.SipWebSocketUrl)
             ? TelnyxConstants.DefaultSipWebSocketUrl
             : settings.SipWebSocketUrl.Trim();

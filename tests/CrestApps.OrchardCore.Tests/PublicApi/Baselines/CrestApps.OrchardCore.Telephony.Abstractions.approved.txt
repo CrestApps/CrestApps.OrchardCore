@@ -616,6 +616,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public SoftPhoneSignalingConfig() { }
         public string AuthorizationUser { get; set; }
         public string DisplayName { get; set; }
+        public string Region { get; set; }
         public string SipUri { get; set; }
         public string WebSocketUrl { get; set; }
     }

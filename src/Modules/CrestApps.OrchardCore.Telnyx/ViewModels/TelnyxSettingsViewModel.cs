@@ -80,6 +80,11 @@ public class TelnyxSettingsViewModel
     public string WebRtcCodecs { get; set; }
 
     /// <summary>
+    /// Gets or sets the signaling region browser soft phones register on. Empty leaves the choice to Telnyx.
+    /// </summary>
+    public string WebRtcRegion { get; set; }
+
+    /// <summary>
     /// Gets or sets the STUN/TURN ICE URLs.
     /// </summary>
     public string IceUrls { get; set; }

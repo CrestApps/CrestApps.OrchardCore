@@ -80,6 +80,11 @@ All live, on a call in progress, under the gear icon.
   too high** and transients are pinning.
 - **Audio delay** — how long incoming audio is held before playing. Automatic by default. Shortening it shortens
   the pause before the agent hears a reply; too short and the caller's voice breaks up, which `conceal` will show.
+- **Region** — which of the provider's locations the phone connects to. Automatic by default, which follows the
+  tenant's **Soft phone region** setting and then the provider's own geo-routing. Unlike everything else here this
+  is fixed when the provider client is built, so changing it re-registers the phone — immediately when idle, and
+  after the current call ends otherwise. It moves the **signaling** edge; whether the media gateway follows is not
+  documented by the provider, so judge it by `rtt` on a call before and after rather than by assumption.
 
 ## Limits that no setting removes
 
@@ -89,8 +94,9 @@ All live, on a call in progress, under the gear icon.
 - **Delay.** A browser bridged to the PSTN will always lag a phone-to-phone call. Of a round trip near half a
   second, the parts that can be influenced are the browser's playout buffer (60–105 ms, and 310–628 ms in the
   first half-minute of a call — hence the **Audio delay** setting) and the round trip to the provider's media edge
-  (measured 86–263 ms, which is high for the distance and worth investigating as a network or anchor-site
-  question). Everything after the provider is the carrier's.
+  (measured 86–263 ms, which is high for the distance — the **Region** setting is the lever that moves it, and the
+  one that decides whether it helps is `rtt` measured before and after). Everything after the provider is the
+  carrier's.
 
 ## A caution about interpretation
 

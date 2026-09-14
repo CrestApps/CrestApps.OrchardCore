@@ -73,6 +73,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             model.SipWebSocketUrl = settings.SipWebSocketUrl;
             model.SipDomain = settings.SipDomain;
             model.WebRtcCodecs = settings.WebRtcCodecs;
+            model.WebRtcRegion = settings.WebRtcRegion;
             model.IceUrls = settings.IceUrls;
             model.TurnUsername = settings.TurnUsername;
             model.IceTransportPolicy = settings.IceTransportPolicy;
@@ -128,6 +129,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             hasChanges |= settings.SipWebSocketUrl != Trim(model.SipWebSocketUrl);
             hasChanges |= settings.SipDomain != Trim(model.SipDomain);
             hasChanges |= settings.WebRtcCodecs != Trim(model.WebRtcCodecs);
+            hasChanges |= settings.WebRtcRegion != TelnyxSignalingRegions.Normalize(model.WebRtcRegion);
             hasChanges |= settings.IceUrls != Trim(model.IceUrls);
             hasChanges |= settings.TurnUsername != Trim(model.TurnUsername);
             hasChanges |= settings.IceTransportPolicy != Trim(model.IceTransportPolicy);
@@ -140,6 +142,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             settings.SipWebSocketUrl = Trim(model.SipWebSocketUrl);
             settings.SipDomain = Trim(model.SipDomain);
             settings.WebRtcCodecs = Trim(model.WebRtcCodecs);
+            settings.WebRtcRegion = TelnyxSignalingRegions.Normalize(model.WebRtcRegion);
             settings.IceUrls = Trim(model.IceUrls);
             settings.TurnUsername = Trim(model.TurnUsername);
             settings.IceTransportPolicy = Trim(model.IceTransportPolicy);
