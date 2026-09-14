@@ -131,6 +131,15 @@ public sealed class CallQualityReport
     public double MaxJitterBufferMs { get; set; }
 
     /// <summary>
+    /// Gets or sets the percentage of received audio the browser had to conceal -- invent, because the packet
+    /// carrying it arrived too late to play -- during this sample's window. It is the price of a short playout
+    /// buffer, so it belongs beside <see cref="JitterBufferMs"/>: a shorter buffer is an improvement only while
+    /// this stays near zero, and a few percent is heard as roughness in the far end's voice. It is <c>-1</c>
+    /// when the browser does not report the underlying counters.
+    /// </summary>
+    public double ConcealmentPercent { get; set; }
+
+    /// <summary>
     /// Gets or sets the sample rate, in hertz, the microphone is actually capturing at. It is the first thing
     /// to read on a call that measured well and sounded wrong: a Bluetooth headset can only run its microphone
     /// in hands-free mode, and capture then drops to 8 kHz (narrowband) or 16 kHz (wideband) while the same

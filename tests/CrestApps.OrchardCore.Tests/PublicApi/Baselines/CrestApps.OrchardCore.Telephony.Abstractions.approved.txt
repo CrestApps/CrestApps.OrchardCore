@@ -350,6 +350,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public bool CaptureReported { get; set; }
         public int CaptureSampleRate { get; set; }
         public string Codec { get; set; }
+        public double ConcealmentPercent { get; set; }
         public string Direction { get; set; }
         public long DurationMs { get; set; }
         public double EchoReturnLossDb { get; set; }

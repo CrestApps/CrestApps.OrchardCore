@@ -299,6 +299,23 @@
                     <small class="telephony-soft-phone__settings-hint">@T["Raises your voice before it is sent, with a limiter so loud words do not distort. Use it when the other party says you are quiet."]</small>
                 </label>
             </div>
+
+            <div class="telephony-soft-phone__settings-section">
+                <div class="telephony-soft-phone__settings-group-title">@T["Incoming audio"]</div>
+                <label class="telephony-soft-phone__setting">
+                    <span class="telephony-soft-phone__setting-label">
+                        <i class="fa-solid fa-stopwatch" aria-hidden="true"></i> @T["Audio delay"]
+                    </span>
+                    <select class="form-select form-select-sm" data-telephony-playout-delay aria-label="@T["Audio delay"]">
+                        <option value="-1">@T["Automatic"]</option>
+                        <option value="0.12">120 ms</option>
+                        <option value="0.08">80 ms</option>
+                        <option value="0.04">40 ms</option>
+                        <option value="0.02">20 ms</option>
+                    </select>
+                    <small class="telephony-soft-phone__settings-hint">@T["How long incoming audio is held before it plays. A shorter hold shortens the pause before you hear the other party, but too short and their voice breaks up. Applies to the call you are on."]</small>
+                </label>
+            </div>
         </div>
 
         <div class="telephony-soft-phone__body" data-telephony-body>

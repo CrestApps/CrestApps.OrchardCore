@@ -41,6 +41,10 @@
     var clampBoostDb = softPhoneModules.clampBoostDb;
     var describeBoost = softPhoneModules.describeBoost;
     var createBoostPipeline = softPhoneModules.createBoostPipeline;
+    var clampPlayoutDelay = softPhoneModules.clampPlayoutDelay;
+    var describePlayoutDelay = softPhoneModules.describePlayoutDelay;
+    var applyPlayoutDelay = softPhoneModules.applyPlayoutDelay;
+    var concealmentPercent = softPhoneModules.concealmentPercent;
     var describeProviderWarning = softPhoneModules.describeProviderWarning;
     var classifyProviderWarning = softPhoneModules.classifyProviderWarning;
 
@@ -735,6 +739,28 @@
             } catch (error) { /* diagnostics only */ }
         }
 
+        // Asks the browser to hold less incoming audio before playing it, when the agent (or the operator) has
+        // chosen a shorter hold. Applied when media goes live and again whenever the choice changes, since the
+        // receiver is only there once the call is up.
+        function applyPlayoutDelayToCall(call) {
+            if (typeof context.readPlayoutDelay !== 'function') {
+                return;
+            }
+
+            var seconds = context.readPlayoutDelay();
+            var peer = call && call.peer && call.peer.instance;
+
+            if (!peer) {
+                return;
+            }
+
+            var applied = applyPlayoutDelay(peer, seconds);
+
+            if (applied === 0 && seconds >= 0 && typeof context.onPlayoutDelayUnsupported === 'function') {
+                context.onPlayoutDelayUnsupported();
+            }
+        }
+
         function startQualitySampler(call) {
             // Already sampling this call, or nothing to sample.
             if (!call || (qualityState && qualityState.call === call)) {
@@ -899,6 +925,11 @@
                 // that a healthy network does nothing to keep small.
                 var jitterBufferMs = readJitterBufferMs(inbound, qualityState.lastInbound);
 
+                // The share of received audio the browser had to invent because a packet arrived after its
+                // moment. It is the price of a shorter playout buffer, so it is reported beside the delay: a
+                // buffer setting is only worth keeping while this stays near zero.
+                var concealment = concealmentPercent(inbound, qualityState.lastInbound);
+
                 // The far end may not have been attached when the call started; take the probe as soon as it is.
                 if (!inboundProbe && remoteElement && remoteElement.srcObject) {
                     inboundProbe = createLevelProbe(remoteElement.srcObject);
@@ -919,7 +950,9 @@
 
                 qualityState.lastInbound = {
                     jitterBufferDelay: inbound.jitterBufferDelay,
-                    jitterBufferEmittedCount: inbound.jitterBufferEmittedCount
+                    jitterBufferEmittedCount: inbound.jitterBufferEmittedCount,
+                    concealedSamples: inbound.concealedSamples,
+                    totalSamplesReceived: inbound.totalSamplesReceived
                 };
 
                 if (jitterBufferMs >= 0) {
@@ -981,6 +1014,7 @@
                     bytesSent: bytesSent,
                     packetsSent: packetsSent,
                     jitterBufferMs: jitterBufferMs,
+                    concealmentPercent: concealment,
                     inboundLevel: inboundLevel,
                     captureProbeLevel: captureProbeLevel,
                     sendCodec: parsed.sendCodec,
@@ -1059,6 +1093,9 @@
                 // separates "this call sounded bad" from "every number said the call was fine", which is the
                 // gap the reports had until now.
                 jitterBufferMs: sample.jitterBufferMs,
+                // What a shorter playout buffer costs, if anything: audio the browser invented for packets that
+                // arrived too late to play. -1 when the browser does not report it.
+                concealmentPercent: sample.concealmentPercent,
                 inboundLevel: sample.inboundLevel,
                 captureProbeLevel: sample.captureProbeLevel,
                 // The capture format, so a call that measured perfectly and sounded wrong can be explained
@@ -1333,6 +1370,7 @@
                 if (call.state === 'active') {
                     ensureRemotePlayback();
                     reportNegotiation(call);
+                    applyPlayoutDelayToCall(call);
                     startQualitySampler(call);
                 }
 
@@ -1487,6 +1525,12 @@
                 echoTestDestination: registrationConfig.echoTestDestination || '',
                 // On-demand live diagnostics (SDP + getStats) for the diagnostics panel and the echo test.
                 getDiagnostics: getCallDiagnostics,
+                // Re-applies the playout hint to the live call after the agent changes it.
+                refreshPlayoutDelay: function () {
+                    if (currentCall) {
+                        applyPlayoutDelayToCall(currentCall);
+                    }
+                },
                 // Swaps the outgoing audio track of the live call without renegotiating, for a capture that died
                 // mid-call. Resolves false when there is no live sender to swap.
                 replaceLocalAudioTrack: function (track) {
@@ -1834,6 +1878,7 @@
             processingNs: rootElement.querySelector('[data-telephony-processing-ns]'),
             processingAgc: rootElement.querySelector('[data-telephony-processing-agc]'),
             micBoost: rootElement.querySelector('[data-telephony-mic-boost]'),
+            playoutDelay: rootElement.querySelector('[data-telephony-playout-delay]'),
             outputDeviceRow: rootElement.querySelector('[data-telephony-output-device-row]'),
             diagnosticsTab: rootElement.querySelector('[data-telephony-diagnostics-tab]'),
             diagStatus: rootElement.querySelector('[data-telephony-diag-status]'),
@@ -2643,6 +2688,11 @@
         // limiter, and the limiter's output is what the call sends. See mic-boost.js for why.
         var micBoostDb = 0;
 
+        // How long the browser should hold arriving audio before playing it, in seconds (-1 = the browser's own
+        // judgement, which is the default). Half of the pause between an agent finishing a sentence and hearing
+        // the reply is spent here; see playout-delay.js.
+        var playoutDelaySeconds = -1;
+
         // The raw capture from the device -- what the device label, mute/ended state and capture settings are
         // read from -- as distinct from localAudioStream, which is the stream the call SENDS. Without a boost the
         // two carry the same track; with one, localAudioStream carries the boosted output.
@@ -2709,6 +2759,10 @@
                 autoGainControl: readProcessingFlag(layout.autoGainControl, true)
             };
             micBoostDb = clampBoostDb(layout.micBoostDb);
+            playoutDelaySeconds = clampPlayoutDelay(
+                Object.prototype.hasOwnProperty.call(layout, 'playoutDelaySeconds')
+                    ? layout.playoutDelaySeconds
+                    : config.playoutDelaySeconds);
         }
 
         function persistDeviceSelection() {
@@ -2718,8 +2772,20 @@
                 echoCancellation: processingSettings.echoCancellation,
                 noiseSuppression: processingSettings.noiseSuppression,
                 autoGainControl: processingSettings.autoGainControl,
-                micBoostDb: micBoostDb
+                micBoostDb: micBoostDb,
+                playoutDelaySeconds: playoutDelaySeconds
             });
+        }
+
+        // The playout-delay choice changed. It is applied to the live call at once -- this is the one audio
+        // setting whose effect the agent can hear on the call they are already on.
+        function onPlayoutDelayChange() {
+            playoutDelaySeconds = clampPlayoutDelay(dom.playoutDelay ? dom.playoutDelay.value : -1);
+            persistDeviceSelection();
+
+            if (browserAudioSession && typeof browserAudioSession.refreshPlayoutDelay === 'function') {
+                browserAudioSession.refreshPlayoutDelay();
+            }
         }
 
         // The boost selector changed: persist and rebuild the capture through the new gain, live if need be.
@@ -2755,6 +2821,10 @@
 
             if (dom.micBoost) {
                 dom.micBoost.value = String(micBoostDb);
+            }
+
+            if (dom.playoutDelay) {
+                dom.playoutDelay.value = String(playoutDelaySeconds);
             }
         }
 
@@ -3100,6 +3170,11 @@
                         readCaptureSettings: localCaptureSettings,
                         captureDeviceLabel: localAudioTrackLabel,
                         captureBoostLabel: function () { return describeBoost(micBoostDb); },
+                        readPlayoutDelay: function () { return playoutDelaySeconds; },
+                        onPlayoutDelayUnsupported: function () {
+                            reportDiagnostic('info', 'playout-delay-unsupported',
+                                'This browser does not support a playout delay hint; the call keeps its own buffering.', '');
+                        },
                         // The negotiated SDP at connect, forwarded as a diagnostic so the codecs each side offered
                         // are on the server for the call, next to the webhook and command log for its legs.
                         onNegotiated: function (text) {
@@ -3684,6 +3759,8 @@
                 // The browser's own playout delay, alongside the network round trip. On a call that feels
                 // delayed these two are the whole story, and only one of them was ever shown.
                 'buffer ' + (sample.jitterBufferMs >= 0 ? Math.round(sample.jitterBufferMs) + 'ms' : 'n/a'),
+                // Read these two together: a shorter buffer is only an improvement while concealment stays low.
+                'conceal ' + (sample.concealmentPercent >= 0 ? sample.concealmentPercent.toFixed(1) + '%' : 'n/a'),
                 // Measured loudness of each direction. "They sound far away" is this number, in
                 // ('in' being what the agent hears) and nothing else.
                 'in ' + (sample.inboundLevel >= 0 ? sample.inboundLevel.toFixed(3) : 'n/a'),
@@ -6850,7 +6927,11 @@
                 dom.micBoost.addEventListener('change', onBoostChange);
             }
 
-            if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost) {
+            if (dom.playoutDelay) {
+                dom.playoutDelay.addEventListener('change', onPlayoutDelayChange);
+            }
+
+            if (dom.processingEc || dom.processingNs || dom.processingAgc || dom.micBoost || dom.playoutDelay) {
                 syncProcessingControls();
             }
 
