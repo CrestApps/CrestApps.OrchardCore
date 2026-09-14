@@ -172,8 +172,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/technical-name-generator.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.173/dist/technical-name-generator.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.173/dist/technical-name-generator.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.175/dist/technical-name-generator.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.175/dist/technical-name-generator.js")
             .SetCdnIntegrity(
                 "sha384-vk5MiCC6biz7ygKi3CY+whjnNoLe2Ol+ZWoxUr/aoifSyfm9c2WFazGMhNLi8g7I",
                 "sha384-9cJ5WEY0z1tJkCLND8ZMhN+rT6IySJKbK/R1yJcaSqmWgiCMuOyZJ+UUobxuScNs")
@@ -185,8 +185,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.173/dist/document-drop-zone.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.173/dist/document-drop-zone.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.175/dist/document-drop-zone.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.175/dist/document-drop-zone.js")
             .SetCdnIntegrity(
                 "sha384-AvXYh7cCLTVJu3IoIikt5045awzgrmZ4S6e8Z5mHQydf5f9mHIPAbZ2xTP+LT5BC",
                 "sha384-8W/wOs7j6d1l50bR3wLRiY6M3/yf0acllYpEJRFraFBwtAXwvYcoyITxQ6FxyNkb")
@@ -198,8 +198,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.min.css",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/document-drop-zone.css")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.173/dist/document-drop-zone.min.css",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.173/dist/document-drop-zone.css")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.175/dist/document-drop-zone.min.css",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.175/dist/document-drop-zone.css")
             .SetCdnIntegrity(
                 "sha384-cTjcD1YHMzaJ5FIvmpJhm3VZDBheTcbiNfGCQfFvBTDg1pZi7PWE5lO6VHRYX9zq",
                 "sha384-NLPKccGh39Ymb5v2aC3tD6zdtg+MhT/Sa+QpCRmDVY2xXSC10rxBNBh0iRqLUQkK")
@@ -213,8 +213,8 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/realtime-audio.min.js",
                 "~/CrestApps.OrchardCore.Resources/vendors/crestapps/realtime-audio.js")
             .SetCdn(
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.173/dist/realtime-audio.min.js",
-                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.173/dist/realtime-audio.js")
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.175/dist/realtime-audio.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.175/dist/realtime-audio.js")
             .SetCdnIntegrity(
                 "sha384-8BMMYE2/teNp6CXSt4hKOFQbN0HGEl4hZaNC5QYDCwjxrg0SoV8O4W4OZqBUqV3U",
                 "sha384-J5nV53+rOG9KryOl4zjs0pGDNLLZLOHdiNqHd71t+sr2fJ3IzHc00OtGjHiXpkw7")
