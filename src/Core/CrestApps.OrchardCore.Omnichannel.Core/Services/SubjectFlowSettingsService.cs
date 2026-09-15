@@ -137,6 +137,11 @@ public sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
             NoResponseTimeoutInMinutes = aiSettings.NoResponseTimeoutInMinutes,
             SmsResponseDelayInSeconds = aiSettings.SmsResponseDelayInSeconds,
             SmsOptOutKeywords = aiSettings.SmsOptOutKeywords,
+            EnableAgentHandoff = aiSettings.EnableAgentHandoff,
+            HandoffQueueId = aiSettings.HandoffQueueId,
+            HandoffOnUserRequest = aiSettings.HandoffOnUserRequest,
+            HandoffOnQualifiedLead = aiSettings.HandoffOnQualifiedLead,
+            HandoffOnFrustration = aiSettings.HandoffOnFrustration,
         };
     }
 }

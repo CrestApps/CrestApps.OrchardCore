@@ -1,8 +1,7 @@
-using Microsoft.Extensions.Caching.Memory;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Descriptors;
-using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
@@ -22,53 +21,43 @@ internal sealed class OmnichannelSubjectButtonsShapeTableProvider : IShapeTableP
         "ContentPreview_Button",
     ];
 
+    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
-    private readonly IMemoryCache _memoryCache;
-    private readonly string _cacheKey;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelSubjectButtonsShapeTableProvider"/> class.
     /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager used to warm the omnichannel content type cache.</param>
     /// <param name="contentTypeProvider">The provider that reports whether a content type is an omnichannel subject.</param>
-    /// <param name="memoryCache">The per-tenant memory cache the placement delegate reads the subject content types from.</param>
-    /// <param name="shellSettings">The shell settings used to scope the cache entry to the current tenant.</param>
     public OmnichannelSubjectButtonsShapeTableProvider(
-        OmnichannelContentTypeProvider contentTypeProvider,
-        IMemoryCache memoryCache,
-        ShellSettings shellSettings)
+        IContentDefinitionManager contentDefinitionManager,
+        OmnichannelContentTypeProvider contentTypeProvider)
     {
+        _contentDefinitionManager = contentDefinitionManager;
         _contentTypeProvider = contentTypeProvider;
-        _memoryCache = memoryCache;
-        _cacheKey = OmnichannelContentTypeProvider.GetCacheKey(shellSettings);
     }
 
     /// <inheritdoc/>
     public async ValueTask DiscoverAsync(ShapeTableBuilder builder)
     {
-        // Warm the per-tenant cache so the synchronous placement delegate below can read the current subject
-        // content types. The shape table is cached for the tenant's lifetime, so the delegate reads the live
-        // cache entry - kept current through the content definition notifications - rather than a snapshot.
-        await _contentTypeProvider.GetSubjectContentTypesAsync();
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
 
-        var memoryCache = _memoryCache;
-        var cacheKey = _cacheKey;
+        var contentTypeProvider = _contentTypeProvider;
 
         foreach (var shapeType in _shapeTypes)
         {
             builder.Describe(shapeType)
-                .Placement(context => IsSubjectEditor(context, memoryCache, cacheKey), _hidden);
+                .Placement(context => IsSubjectEditor(context, contentTypeProvider), _hidden);
         }
     }
 
-    private static bool IsSubjectEditor(ShapePlacementContext context, IMemoryCache memoryCache, string cacheKey)
+    private static bool IsSubjectEditor(ShapePlacementContext context, OmnichannelContentTypeProvider contentTypeProvider)
     {
         if (context.ZoneShape is not null &&
             context.ZoneShape.TryGetProperty<ContentItem>("ContentItem", out var contentItem) &&
-            contentItem is not null &&
-            memoryCache.TryGetValue<OmnichannelContentTypeSet>(cacheKey, out var set) &&
-            set is not null)
+            contentItem is not null)
         {
-            return set.SubjectContentTypes.Contains(contentItem.ContentType);
+            return contentTypeProvider.IsSubjectContentType(contentItem.ContentType);
         }
 
         return false;

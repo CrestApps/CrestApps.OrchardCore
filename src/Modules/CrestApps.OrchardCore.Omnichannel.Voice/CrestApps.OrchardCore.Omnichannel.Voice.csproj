@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Title>CrestApps OrchardCore Automated Voice</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The provider-neutral automated voice conversation: an AI chat profile converses with a caller over
+      whichever telephony provider is carrying the call, then settles the omnichannel activity with a summary
+      and a disposition, escalating to a live agent when the caller asks for one.
+    </Description>
+    <PackageTags>$(PackageTags) OrchardCoreCMS Telephony Voice AI</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.DisplayManagement" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Omnichannel.Voice.Core/CrestApps.OrchardCore.Omnichannel.Voice.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Depend directly on the modules whose features this one requires, so installing automated voice resolves
+      the Telephony and Omnichannel feature dependencies without a separate manual package reference.
+    -->
+    <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
+    <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Managements/CrestApps.OrchardCore.Omnichannel.Managements.csproj" PrivateAssets="none" />
+  </ItemGroup>
+
+</Project>

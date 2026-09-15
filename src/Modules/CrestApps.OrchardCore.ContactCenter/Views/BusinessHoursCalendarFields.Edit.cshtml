@@ -1,0 +1,85 @@
+@model BusinessHoursCalendarViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["A clear calendar name, such as Support Hours or US Holidays."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <div class="ocat-end">
+        <input asp-for="TimeZoneId" class="form-control" placeholder="UTC" />
+        <span asp-validation-for="TimeZoneId" class="text-danger"></span>
+        <span class="hint">@T["The time zone the weekly schedule and holidays are evaluated in. Leave empty to use UTC."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Weekly schedule"]</label>
+    <div class="ocat-end">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Day"]</th>
+                    <th scope="col">@T["Open"]</th>
+                    <th scope="col">@T["From"]</th>
+                    <th scope="col">@T["To"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Days.Count; i++)
+                {
+                    <tr>
+                        <td>
+                            <input type="hidden" asp-for="Days[i].Day" />
+                            @Model.Days[i].DayName
+                        </td>
+                        <td>
+                            <div class="form-check">
+                                <input asp-for="Days[i].IsOpen" class="form-check-input" />
+                            </div>
+                        </td>
+                        <td>
+                            <input asp-for="Days[i].OpenTime" type="time" class="form-control" />
+                        </td>
+                        <td>
+                            <input asp-for="Days[i].CloseTime" type="time" class="form-control" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <span class="hint">@T["Uncheck a day to mark the queue closed. The close time is exclusive."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="HolidaysText">
+    <label asp-for="HolidaysText" class="ocat-label">@T["Holidays"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="HolidaysText" class="form-control" rows="4" placeholder="2026-01-01&#10;2026-12-25"></textarea>
+        <span asp-validation-for="HolidaysText" class="text-danger"></span>
+        <span class="hint">@T["One date per line in yyyy-MM-dd format. The queue is closed all day on these dates."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Enabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+        <span class="hint dashed">@T["Disabled calendars do not gate routing; queues that use them route around the clock."]</span>
+    </div>
+</div>

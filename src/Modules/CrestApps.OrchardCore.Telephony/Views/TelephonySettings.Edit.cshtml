@@ -10,3 +10,12 @@
         <span class="hint">@T["The soft phone uses the selected provider to place and control calls. Enable a provider on its own tab to make it available here."]</span>
     </div>
 </div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AllowedShortCodes">
+    <label asp-for="AllowedShortCodes" class="ocat-label">@T["Allowed short codes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="AllowedShortCodes" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="AllowedShortCodes"></span>
+        <span class="hint">@T["Short codes this tenant may dial, one per line, for example a carrier service number. Emergency codes are never dialable and cannot be opened here."]</span>
+    </div>
+</div>

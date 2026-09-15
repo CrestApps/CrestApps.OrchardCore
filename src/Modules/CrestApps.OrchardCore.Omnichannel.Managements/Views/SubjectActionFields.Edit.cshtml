@@ -1,6 +1,13 @@
+@using System.Text.Json
 @using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
 
 @model SubjectActionViewModel
+
+@{
+    var guidanceFieldId = Html.IdFor(m => m.DispositionGuidance);
+    var dispositionFieldId = Html.IdFor(m => m.DispositionId);
+    var descriptions = JsonSerializer.Serialize(Model.DispositionDescriptions ?? new Dictionary<string, string>());
+}
 
 <div class="ocat-wrapper">
     <label asp-for="DispositionId" class="ocat-label">@T["Disposition"]</label>
@@ -12,3 +19,40 @@
         <span asp-validation-for="DispositionId" class="text-danger"></span>
     </div>
 </div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DispositionGuidance" class="ocat-label">@T["When to choose this disposition"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="DispositionGuidance" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["Given to the AI when it dispositions an automated call or message, so it can tell this outcome from the others. Starts as the disposition's own description; edit it to say what the disposition means for this subject."]</span>
+        <span asp-validation-for="DispositionGuidance" class="text-danger"></span>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        var disposition = document.getElementById('@dispositionFieldId');
+        var guidance = document.getElementById('@guidanceFieldId');
+
+        if (!disposition || !guidance) {
+            return;
+        }
+
+        var descriptions = @Html.Raw(descriptions);
+
+        // Only ever replaces text the author has not written: an empty box, or a box still holding the previous
+        // disposition's description verbatim. Anything they typed survives changing their mind about which
+        // disposition this action is for.
+        var offered = descriptions[disposition.value] || '';
+
+        disposition.addEventListener('change', function () {
+            var current = guidance.value.trim();
+
+            if (current === '' || current === offered.trim()) {
+                guidance.value = descriptions[disposition.value] || '';
+            }
+
+            offered = descriptions[disposition.value] || '';
+        });
+    })();
+</script>

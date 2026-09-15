@@ -1,0 +1,22 @@
+@model ListCatalogEntryViewModel<CatalogEntryViewModel<ContactCenterEntryPoint>>
+
+@{
+    var listModel = new CatalogListViewModel
+    {
+        Title = T["Inbound entry points"],
+        CreateLabel = T["Add inbound entry point"],
+        ListId = "entry-points-list",
+        EmptyMessage = T["<strong>Nothing here!</strong> There are no inbound entry points at the moment."],
+        Options = Model.Options,
+        Pager = Model.Pager,
+        Entries = Model.Models
+            .Select(entry => new CatalogListEntry
+            {
+                Shape = entry.Shape,
+                FilterValue = entry.Model.Name?.ToLowerInvariant(),
+            })
+            .ToList(),
+    };
+}
+
+<partial name="_CatalogList" model="listModel" />

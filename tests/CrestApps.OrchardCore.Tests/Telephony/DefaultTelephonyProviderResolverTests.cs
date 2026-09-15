@@ -103,7 +103,7 @@ public sealed class DefaultTelephonyProviderResolverTests
 
         return new DefaultTelephonyProviderResolver(
             siteService,
-            Options.Create(options),
+            new TestOptionsMonitor<TelephonyProviderOptions>(options),
             serviceProvider,
             NullLogger<DefaultTelephonyProviderResolver>.Instance);
     }

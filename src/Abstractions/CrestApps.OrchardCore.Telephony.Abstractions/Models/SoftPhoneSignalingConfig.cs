@@ -24,4 +24,12 @@ public sealed class SoftPhoneSignalingConfig
     /// Gets or sets the display name to present in SIP signaling.
     /// </summary>
     public string DisplayName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider signaling region browser clients should register on, when the provider supports
+    /// choosing one. Empty leaves the choice to the provider, which is how every client behaved before this
+    /// existed. An agent may override this for themselves in the soft phone, since the nearest edge follows where
+    /// the person is rather than where the tenant was configured.
+    /// </summary>
+    public string Region { get; set; }
 }

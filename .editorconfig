@@ -23,6 +23,7 @@ csharp_style_var_for_built_in_types                        = true : suggestion
 csharp_style_var_when_type_is_apparent                     = true : suggestion
 csharp_style_var_elsewhere                                 = true : suggestion
 
+
 # Newline settings
 csharp_new_line_before_open_brace                          = all
 csharp_new_line_before_else                                = true
@@ -305,3 +306,4 @@ dotnet_diagnostic.SA1651.severity = none            # Do not use placeholder ele
 
 # IDE0290: Use primary constructor
 dotnet_diagnostic.IDE0290.severity = none
+dotnet_diagnostic.IDE0060.severity = warning        # Remove unused parameter

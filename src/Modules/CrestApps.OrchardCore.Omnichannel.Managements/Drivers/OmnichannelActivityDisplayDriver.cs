@@ -124,11 +124,11 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 model.SubjectContentType = subjectContentTypes[0].Value;
             }
 
-            var contactContentTypeNames = await _contentTypeProvider.GetContactContentTypesAsync();
+            await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
 
             foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
             {
-                if (contactContentTypeNames.Contains(contentType.Name))
+                if (_contentTypeProvider.IsContactContentType(contentType.Name))
                 {
                     contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
                 }

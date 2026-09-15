@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -11,7 +11,6 @@ using CrestApps.OrchardCore.AI.Chat.Interactions.Migrations;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Services;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
-using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;

@@ -1,0 +1,46 @@
+@*
+    Adds and removes rows of a repeatable form section without a client framework. A container carries
+    data-repeater and data-repeater-prefix (the model-binding prefix of the list); its rows live under
+    data-repeater-rows, a <template data-repeater-template> holds one blank row with __KEY__ where the
+    collection index goes, and buttons marked data-repeater-add / data-repeater-remove drive it. Rows bind
+    through the .Index hidden field convention, so keys need not be sequential.
+*@
+<script at="Foot">
+    (function () {
+        function initRepeater(container) {
+            var rows = container.querySelector('[data-repeater-rows]');
+            var template = container.querySelector('template[data-repeater-template]');
+            var addButton = container.querySelector('[data-repeater-add]');
+            var counter = 0;
+
+            if (addButton && template && rows) {
+                addButton.addEventListener('click', function () {
+                    var key = 'n' + Date.now().toString(36) + (counter++).toString(36);
+                    var html = template.innerHTML.split('__KEY__').join(key);
+                    var holder = document.createElement(rows.tagName === 'TBODY' ? 'tbody' : 'div');
+                    holder.innerHTML = html;
+
+                    while (holder.firstElementChild) {
+                        rows.appendChild(holder.firstElementChild);
+                    }
+                });
+            }
+
+            container.addEventListener('click', function (event) {
+                var removeButton = event.target.closest('[data-repeater-remove]');
+
+                if (!removeButton || !container.contains(removeButton)) {
+                    return;
+                }
+
+                var row = removeButton.closest('[data-repeater-row]');
+
+                if (row) {
+                    row.remove();
+                }
+            });
+        }
+
+        document.querySelectorAll('[data-repeater]').forEach(initRepeater);
+    })();
+</script>

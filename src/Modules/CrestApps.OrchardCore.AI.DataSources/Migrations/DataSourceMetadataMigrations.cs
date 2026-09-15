@@ -117,7 +117,7 @@ internal sealed class DataSourceMetadataMigrations : DataMigration
         var dbConnectionAccessor = serviceProvider.GetRequiredService<IDbConnectionAccessor>();
         var dataSourceManager = serviceProvider.GetRequiredService<ICatalogManager<AIDataSource>>();
         var indexProfileStore = serviceProvider.GetRequiredService<IIndexProfileStore>();
-        var dataSourceOptions = serviceProvider.GetRequiredService<IOptions<AIDataSourceOptions>>().Value;
+        var dataSourceOptions = serviceProvider.GetRequiredService<IOptionsMonitor<AIDataSourceOptions>>().CurrentValue;
         var logger = serviceProvider.GetRequiredService<ILogger<DataSourceMetadataMigrations>>();
 
         var dialect = store.Configuration.SqlDialect;

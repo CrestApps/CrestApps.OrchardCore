@@ -26,14 +26,17 @@
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
+    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <!--
       Ensure this module directly depends on the Telephony module so that when someone installs it,
-      they won't need to manually include the Telephony package. This resolves the feature dependency
-      while the Dialpad code itself depends only on the provider-agnostic Telephony abstractions.
+      they won't need to manually include the Telephony package. This resolves the feature dependency.
+      The base Dialpad telephony feature depends only on the provider-agnostic Telephony abstractions;
+      the optional Dialpad Contact Center feature additionally implements the Contact Center voice
+      extension contract, which is why this assembly also references ContactCenter.Abstractions below.
     -->
     <ProjectReference Include="../CrestApps.OrchardCore.Telephony/CrestApps.OrchardCore.Telephony.csproj" PrivateAssets="none" />
   </ItemGroup>

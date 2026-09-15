@@ -23,6 +23,7 @@ public sealed class ConfigurationDeploymentStartup : StartupBase
         services.AddDeployment<OmnichannelChannelEndpointDeploymentSource, OmnichannelChannelEndpointDeploymentStep>();
         services.AddDeployment<OmnichannelCampaignGroupDeploymentSource, OmnichannelCampaignGroupDeploymentStep>();
         services.AddDeployment<OmnichannelCampaignDeploymentSource, OmnichannelCampaignDeploymentStep>();
+        services.AddDeployment<CadenceDeploymentSource, CadenceDeploymentStep>();
         services.AddDeployment<OmnichannelSubjectActionDeploymentSource, OmnichannelSubjectActionDeploymentStep>();
     }
 }
@@ -43,6 +44,7 @@ public sealed class ConfigurationDeploymentAdminStartup : StartupBase
         services.AddDisplayDriver<DeploymentStep, OmnichannelChannelEndpointDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, OmnichannelCampaignGroupDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, OmnichannelCampaignDeploymentStepDisplayDriver>();
+        services.AddDisplayDriver<DeploymentStep, CadenceDeploymentStepDisplayDriver>();
         services.AddDisplayDriver<DeploymentStep, OmnichannelSubjectActionDeploymentStepDisplayDriver>();
     }
 }

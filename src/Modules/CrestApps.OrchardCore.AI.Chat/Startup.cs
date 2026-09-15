@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Chat;
+﻿using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Security;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
@@ -17,7 +17,6 @@ using CrestApps.OrchardCore.AI.Chat.Schemas;
 using CrestApps.OrchardCore.AI.Chat.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
-using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;

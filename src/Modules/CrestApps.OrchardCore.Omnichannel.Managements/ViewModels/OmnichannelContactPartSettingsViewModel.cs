@@ -11,6 +11,12 @@ public class OmnichannelContactPartSettingsViewModel
     public bool RequireTimeZone { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the contact time zone is automatically
+    /// detected from the contact's phone number when one was not explicitly selected.
+    /// </summary>
+    public bool AutoDetectTimeZone { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the Do not call preference is available.
     /// </summary>
     public bool UseDoNotCall { get; set; } = true;

@@ -1,0 +1,151 @@
+using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Endpoints;
+using CrestApps.OrchardCore.ContactCenter.Hubs;
+using CrestApps.OrchardCore.ContactCenter.ViewModels;
+using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Users;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using OrchardCore.Admin;
+using OrchardCore.Modules;
+using OrchardCore.Settings;
+using OrchardCore.Users;
+
+namespace CrestApps.OrchardCore.ContactCenter.Controllers;
+
+/// <summary>
+/// Serves the CRM-integrated agent desktop page where an agent spends the shift. The workspace is
+/// integration glue that activates whenever the agents, real-time transport, voice, and Telephony
+/// soft-phone capabilities are all enabled, rather than a separately selectable feature.
+/// </summary>
+[Admin]
+[RequireFeatures(
+    ContactCenterConstants.Feature.Agents,
+    ContactCenterConstants.Feature.RealTime,
+    ContactCenterConstants.Feature.Voice,
+    TelephonyConstants.Feature.SoftPhoneCore)]
+public sealed class AgentWorkspaceController : Controller
+{
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IAgentStateReasonCodeManager _reasonCodeManager;
+    private readonly UserManager<IUser> _userManager;
+    private readonly IDisplayNameProvider _displayNameProvider;
+    private readonly ISiteService _siteService;
+    private readonly ITelephonyExtensionManager _extensionManager;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentWorkspaceController"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="reasonCodeManager">The agent state reason code manager used to build presence options.</param>
+    /// <param name="userManager">The user manager used to resolve the current Orchard user.</param>
+    /// <param name="displayNameProvider">The display name provider used to render the agent's full name.</param>
+    /// <param name="siteService">The site service used to read the tenant recording governance settings.</param>
+    public AgentWorkspaceController(
+        IAuthorizationService authorizationService,
+        IAgentStateReasonCodeManager reasonCodeManager,
+        UserManager<IUser> userManager,
+        IDisplayNameProvider displayNameProvider,
+        ISiteService siteService,
+        ITelephonyExtensionManager extensionManager)
+    {
+        _authorizationService = authorizationService;
+        _reasonCodeManager = reasonCodeManager;
+        _userManager = userManager;
+        _displayNameProvider = displayNameProvider;
+        _siteService = siteService;
+        _extensionManager = extensionManager;
+    }
+
+    /// <summary>
+    /// Renders the agent desktop page.
+    /// </summary>
+    /// <returns>The agent workspace view.</returns>
+    [Admin("contact-center/workspace", "ContactCenterAgentWorkspace")]
+    public async Task<IActionResult> Index()
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SignIntoQueues))
+        {
+            return Forbid();
+        }
+
+        var reasonCodes = await _reasonCodeManager.GetEnabledAsync();
+        var displayName = await GetCurrentUserDisplayNameAsync(HttpContext.RequestAborted);
+
+        var userId = _userManager.GetUserId(User);
+        var myExtension = string.IsNullOrEmpty(userId)
+            ? null
+            : await _extensionManager.FindByUserIdAsync(userId, HttpContext.RequestAborted);
+
+        var recordingSettings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<ContactCenterRecordingSettings>();
+        var canSecurePause = recordingSettings.AllowAgentSecurePause &&
+            await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.SecurePauseRecording);
+
+        var secureCaptureSettings = (await _siteService.GetSiteSettingsAsync()).GetOrCreate<SecureCaptureSettings>();
+        var beginSecureCaptureUrl = Url.RouteUrl(SecureCaptureEndpoints.BeginRouteName);
+        var canInitiateSecureCapture = secureCaptureSettings.Enabled &&
+            beginSecureCaptureUrl is not null &&
+            await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.InitiateSecureCapture);
+
+        var viewModel = new AgentWorkspaceIndexViewModel
+        {
+            DisplayName = displayName,
+            MyExtension = myExtension?.Number,
+            CanMonitor = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.MonitorContactCenter),
+            HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(HttpContext),
+            StateUrl = Url.RouteUrl(AgentWorkspaceEndpoints.StateRouteName),
+            SetPresenceUrl = Url.RouteUrl(AgentWorkspaceEndpoints.SetPresenceRouteName),
+            PauseRecordingUrl = Url.RouteUrl(AgentWorkspaceEndpoints.PauseRecordingRouteName),
+            ResumeRecordingUrl = Url.RouteUrl(AgentWorkspaceEndpoints.ResumeRecordingRouteName),
+            CanSecurePause = canSecurePause,
+            RequirePauseReason = recordingSettings.RequirePauseReason,
+            BeginSecureCaptureUrl = beginSecureCaptureUrl,
+            CanInitiateSecureCapture = canInitiateSecureCapture,
+            SecureCaptureFields = "CreditCardNumber,CardExpiry,CardSecurityCode",
+            AcceptOfferUrl = Url.RouteUrl(VoiceOfferEndpoints.AcceptOfferRouteName),
+            DeclineOfferUrl = Url.RouteUrl(VoiceOfferEndpoints.DeclineOfferRouteName),
+            SupervisorDashboardUrl = Url.Action(nameof(SupervisorDashboardController.Index), "SupervisorDashboard"),
+            ReasonCodes = [.. reasonCodes.Select(code => new WorkspaceLookupViewModel
+            {
+                Id = code.AppliesTo.ToString(),
+                Name = code.Name,
+            })],
+        };
+
+        return View(viewModel);
+    }
+
+    private async Task<string> GetCurrentUserDisplayNameAsync(CancellationToken cancellationToken)
+    {
+        var user = await _userManager.GetUserAsync(User);
+
+        if (user is not null)
+        {
+            return await GetUserDisplayNameAsync(user, "Unknown user", cancellationToken);
+        }
+
+        return "Unknown user";
+    }
+
+    private async Task<string> GetUserDisplayNameAsync(
+        IUser user,
+        string fallback,
+        CancellationToken cancellationToken)
+    {
+        if (user is not null)
+        {
+            var displayName = await _displayNameProvider.GetAsync(user, cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(displayName))
+            {
+                return displayName;
+            }
+        }
+
+        return fallback;
+    }
+}

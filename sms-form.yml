@@ -1,0 +1,191 @@
+- generic [ref=f7e2]:
+  - navigation [ref=f7e3]:
+    - generic [ref=f7e5]:
+      - link "DialPad DialPad" [ref=f7e8] [cursor=pointer]:
+        - /url: /Admin
+        - generic [ref=f7e9]:
+          - img "DialPad" [ref=f7e10]
+          - generic [ref=f7e11]: DialPad
+      - list [ref=f7e12]:
+        - listitem [ref=f7e13]:
+          - button "Toggle theme (light)" [ref=f7e15] [cursor=pointer]
+        - listitem [ref=f7e18]:
+          - button "Visit Site" [ref=f7e19] [cursor=pointer]
+        - listitem [ref=f7e21]:
+          - button [ref=f7e23] [cursor=pointer]
+  - generic [ref=f7e25]:
+    - navigation [ref=f7e26]:
+      - list [ref=f7e27]:
+        - listitem [ref=f7e28]:
+          - figure [ref=f7e29]:
+            - button "Content" [ref=f7e31] [cursor=pointer]
+        - listitem [ref=f7e37]:
+          - figure [ref=f7e38]:
+            - button "Design" [ref=f7e40] [cursor=pointer]
+        - listitem [ref=f7e46]:
+          - figure [ref=f7e47]:
+            - button "Access Control" [ref=f7e49] [cursor=pointer]
+        - listitem [ref=f7e55]:
+          - figure [ref=f7e56]:
+            - button "Interaction Center" [expanded] [ref=f7e58] [cursor=pointer]
+            - list [ref=f7e64]:
+              - listitem [ref=f7e65]:
+                - figure [ref=f7e66]:
+                  - link "My workspace My workspace" [ref=f7e68] [cursor=pointer]:
+                    - /url: /Admin/contact-center/workspace
+                    - generic "My workspace" [ref=f7e69]
+                    - generic [ref=f7e70]: My workspace
+              - listitem [ref=f7e71]:
+                - figure [ref=f7e72]:
+                  - link "My voicemail greeting My voicemail greeting" [ref=f7e74] [cursor=pointer]:
+                    - /url: /Admin/contact-center/my-voicemail-greeting
+                    - generic "My voicemail greeting" [ref=f7e75]
+                    - generic [ref=f7e76]: My voicemail greeting
+              - listitem [ref=f7e77]:
+                - figure [ref=f7e78]:
+                  - button "Management Management" [expanded] [ref=f7e80] [cursor=pointer]:
+                    - generic "Management" [ref=f7e81]
+                    - generic [ref=f7e82]: Management
+                  - list [ref=f7e85]:
+                    - listitem [ref=f7e86]:
+                      - figure [ref=f7e87]:
+                        - link "Agent states Agent states" [ref=f7e89] [cursor=pointer]:
+                          - /url: /Admin/contact-center/agent-states
+                          - generic "Agent states" [ref=f7e90]
+                          - generic [ref=f7e91]: Agent states
+                    - listitem [ref=f7e92]:
+                      - figure [ref=f7e93]:
+                        - link "Business hours Business hours" [ref=f7e95] [cursor=pointer]:
+                          - /url: /Admin/contact-center/business-hours
+                          - generic "Business hours" [ref=f7e96]
+                          - generic [ref=f7e97]: Business hours
+                    - listitem [ref=f7e98]:
+                      - figure [ref=f7e99]:
+                        - link "Campaign Groups Campaign Groups" [ref=f7e101] [cursor=pointer]:
+                          - /url: /Admin/omnichannel/campaign-groups
+                          - generic "Campaign Groups" [ref=f7e102]
+                          - generic [ref=f7e103]: Campaign Groups
+                    - listitem [ref=f7e104]:
+                      - figure [ref=f7e105]:
+                        - link "Campaigns Campaigns" [ref=f7e107] [cursor=pointer]:
+                          - /url: /Admin/omnichannel/campaigns
+                          - generic "Campaigns" [ref=f7e108]
+                          - generic [ref=f7e109]: Campaigns
+                    - listitem [ref=f7e110]:
+                      - figure [ref=f7e111]:
+                        - link "Channel Endpoints Channel Endpoints" [ref=f7e113] [cursor=pointer]:
+                          - /url: /Admin/omnichannel/channel-endpoints
+                          - generic "Channel Endpoints" [ref=f7e114]
+                          - generic [ref=f7e115]: Channel Endpoints
+                    - listitem [ref=f7e116]:
+                      - figure [ref=f7e117]:
+                        - link "Dialer Profiles Dialer Profiles" [ref=f7e119] [cursor=pointer]:
+                          - /url: /Admin/contact-center/dialers
+                          - generic "Dialer Profiles" [ref=f7e120]
+                          - generic [ref=f7e121]: Dialer Profiles
+                    - listitem [ref=f7e122]:
+                      - figure [ref=f7e123]:
+                        - link "Dispositions Dispositions" [ref=f7e125] [cursor=pointer]:
+                          - /url: /Admin/omnichannel/dispositions
+                          - generic "Dispositions" [ref=f7e126]
+                          - generic [ref=f7e127]: Dispositions
+                    - listitem [ref=f7e128]:
+                      - figure [ref=f7e129]:
+                        - link "Extensions Extensions" [ref=f7e131] [cursor=pointer]:
+                          - /url: /Admin/telephony/extensions
+                          - generic "Extensions" [ref=f7e132]
+                          - generic [ref=f7e133]: Extensions
+                    - listitem [ref=f7e134]:
+                      - figure [ref=f7e135]:
+                        - link "Inbound entry points Inbound entry points" [ref=f7e137] [cursor=pointer]:
+                          - /url: /Admin/contact-center/entry-points
+                          - generic "Inbound entry points" [ref=f7e138]
+                          - generic [ref=f7e139]: Inbound entry points
+                    - listitem [ref=f7e140]:
+                      - figure [ref=f7e141]:
+                        - link "Load Inventory Load Inventory" [ref=f7e143] [cursor=pointer]:
+                          - /url: /Admin/omnichannel/activity/batches
+                          - generic "Load Inventory" [ref=f7e144]
+                          - generic [ref=f7e145]: Load Inventory
+                    - listitem [ref=f7e146]:
+                      - figure [ref=f7e147]:
+                        - link "Manage Activities Manage Activities" [ref=f7e149] [cursor=pointer]:
+                          - /url: /Admin/omnichannel/manage-activities
+                          - generic "Manage Activities" [ref=f7e150]
+                          - generic [ref=f7e151]: Manage Activities
+                    - listitem [ref=f7e152]:
+                      - figure [ref=f7e153]:
+                        - link "Queue groups Queue groups" [ref=f7e155] [cursor=pointer]:
+                          - /url: /Admin/contact-center/queue-groups
+                          - generic "Queue groups" [ref=f7e156]
+                          - generic [ref=f7e157]: Queue groups
+                    - listitem [ref=f7e158]:
+                      - figure [ref=f7e159]:
+                        - link "Queues Queues" [ref=f7e161] [cursor=pointer]:
+                          - /url: /Admin/contact-center/queues
+                          - generic "Queues" [ref=f7e162]
+                          - generic [ref=f7e163]: Queues
+                    - listitem [ref=f7e164]:
+                      - figure [ref=f7e165]:
+                        - link "Skills Skills" [ref=f7e167] [cursor=pointer]:
+                          - /url: /Admin/contact-center/skills
+                          - generic "Skills" [ref=f7e168]
+                          - generic [ref=f7e169]: Skills
+                    - listitem [ref=f7e170]:
+                      - figure [ref=f7e171]:
+                        - link "Subject Flows Subject Flows" [ref=f7e173] [cursor=pointer]:
+                          - /url: /Admin/omnichannel/subject-flows
+                          - generic "Subject Flows" [ref=f7e174]
+                          - generic [ref=f7e175]: Subject Flows
+                    - listitem [ref=f7e176]:
+                      - figure [ref=f7e177]:
+                        - link "Voice Media Voice Media" [ref=f7e179] [cursor=pointer]:
+                          - /url: /Admin/contact-center/voice-media
+                          - generic "Voice Media" [ref=f7e180]
+                          - generic [ref=f7e181]: Voice Media
+              - listitem [ref=f7e182]:
+                - figure [ref=f7e183]:
+                  - link "Activities Activities" [ref=f7e185] [cursor=pointer]:
+                    - /url: /Admin/omnichannel/activities
+                    - generic "Activities" [ref=f7e186]
+                    - generic [ref=f7e187]: Activities
+              - listitem [ref=f7e188]:
+                - figure [ref=f7e189]:
+                  - link "Contacts Contacts" [ref=f7e191] [cursor=pointer]:
+                    - /url: /Admin/Contents/ContentItems/Customer
+                    - generic "Contacts" [ref=f7e192]
+                    - generic [ref=f7e193]: Contacts
+        - listitem [ref=f7e194]:
+          - figure [ref=f7e195]:
+            - button "Artificial Intelligence" [ref=f7e197] [cursor=pointer]
+        - listitem [ref=f7e203]:
+          - figure [ref=f7e204]:
+            - button "Multi-Tenancy" [ref=f7e206] [cursor=pointer]
+        - listitem [ref=f7e212]:
+          - figure [ref=f7e213]:
+            - button "Reports" [ref=f7e215] [cursor=pointer]
+        - listitem [ref=f7e221]:
+          - figure [ref=f7e222]:
+            - button "Tools" [ref=f7e224] [cursor=pointer]
+        - listitem [ref=f7e230]:
+          - figure [ref=f7e231]:
+            - button "Settings" [ref=f7e233] [cursor=pointer]
+    - button "⟪" [ref=f7e240] [cursor=pointer]
+  - generic [ref=f7e241]:
+    - heading "Edit 'SMS AI Line' Channel Endpoint" [level=1] [ref=f7e242]
+    - generic [ref=f7e243]:
+      - generic:
+        - list
+      - generic [ref=f7e244]:
+        - generic [ref=f7e245]: Name
+        - textbox "Name" [ref=f7e247]: SMS AI Line
+      - generic [ref=f7e248]:
+        - generic [ref=f7e249]: Endpoint value
+        - textbox "Endpoint value" [ref=f7e251]: "+17787204596"
+      - generic [ref=f7e252]:
+        - generic [ref=f7e253]: Description
+        - textbox "Description" [ref=f7e255]
+      - generic [ref=f7e257]:
+        - button "Save" [ref=f7e258] [cursor=pointer]
+        - button "Cancel" [ref=f7e259] [cursor=pointer]
+  - button "session-expired" [ref=f7e261] [cursor=pointer]

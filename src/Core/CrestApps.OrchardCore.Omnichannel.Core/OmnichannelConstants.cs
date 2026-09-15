@@ -89,6 +89,30 @@ public static class OmnichannelConstants
     }
 
     /// <summary>
+    /// Well-known stable reason codes recorded on <see cref="Models.OmnichannelActivity.TerminalReasonCode"/>
+    /// when an automated activity reaches a terminal state.
+    /// </summary>
+    public static class TerminalReasons
+    {
+        /// <summary>
+        /// The automated conversation was concluded because it was handed off to a live human agent.
+        /// </summary>
+        public const string HandedOffToAgent = "handed_off_to_agent";
+
+        /// <summary>
+        /// The automated conversation could not be routed live (for example the destination queue was closed
+        /// after hours), so a callback was scheduled instead.
+        /// </summary>
+        public const string HandedOffAfterHoursCallback = "handed_off_after_hours_callback";
+
+        /// <summary>
+        /// The set of terminal reason codes that count as an escalation to a human for reporting.
+        /// </summary>
+        public static bool IsHandoff(string terminalReasonCode)
+            => terminalReasonCode is HandedOffToAgent or HandedOffAfterHoursCallback;
+    }
+
+    /// <summary>
     /// Represents the features.
     /// </summary>
     public static class Features
@@ -98,6 +122,8 @@ public static class OmnichannelConstants
         public const string AzureCommunicationServices = "CrestApps.OrchardCore.Omnichannel.AzureCommunicationServices";
 
         public const string Activities = "CrestApps.OrchardCore.Omnichannel.Activities";
+
+        public const string ChannelEndpoints = "CrestApps.OrchardCore.Omnichannel.ChannelEndpoints";
 
         public const string Managements = "CrestApps.OrchardCore.Omnichannel.Managements";
 
@@ -142,6 +168,11 @@ public static class OmnichannelConstants
         /// Gets the permission to manage campaigns.
         /// </summary>
         public readonly static Permission ManageCampaigns = new("ManageCampaigns", "Manage campaigns");
+
+        /// <summary>
+        /// Gets the permission to manage re-engagement (nudge) schedules.
+        /// </summary>
+        public readonly static Permission ManageCadences = new("ManageCadences", "Manage cadences");
 
         /// <summary>
         /// Gets the permission to manage campaign groups.

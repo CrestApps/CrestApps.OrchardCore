@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Contents;
 using OrchardCore.Navigation;
 
@@ -8,6 +9,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
 
 internal sealed class AdminMenu : AdminNavigationProvider
 {
+    private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
 
     internal readonly IStringLocalizer S;
@@ -15,19 +17,24 @@ internal sealed class AdminMenu : AdminNavigationProvider
     /// <summary>
     /// Initializes a new instance of the <see cref="AdminMenu"/> class.
     /// </summary>
+    /// <param name="contentDefinitionManager">The content definition manager used to warm the contact content type cache.</param>
     /// <param name="contentTypeProvider">The provider that exposes the cached omnichannel contact content types.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AdminMenu(
+        IContentDefinitionManager contentDefinitionManager,
         OmnichannelContentTypeProvider contentTypeProvider,
         IStringLocalizer<AdminMenu> stringLocalizer)
     {
+        _contentDefinitionManager = contentDefinitionManager;
         _contentTypeProvider = contentTypeProvider;
         S = stringLocalizer;
     }
 
     protected override async ValueTask BuildAsync(NavigationBuilder builder)
     {
-        var contactContentTypes = await _contentTypeProvider.GetContactContentTypesAsync();
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
+
+        var contactContentTypes = _contentTypeProvider.GetContactContentTypes();
 
         builder
             .Add(S["Interaction Center"], "80", interactionCenter => interactionCenter
@@ -99,13 +106,12 @@ internal sealed class AdminMenu : AdminNavigationProvider
                         .Action("Index", "Dispositions", "CrestApps.OrchardCore.Omnichannel.Managements")
                         .Permission(OmnichannelConstants.Permissions.ManageDispositions)
                         .LocalNav())
-                    .Add(S["Channel Endpoints"], S["Channel Endpoints"].PrefixPosition(), endpoints => endpoints
-                        .AddClass("channel-endpoints")
-                        .Id("channelEndpoints")
-                        .Action("Index", "ChannelEndpoints", "CrestApps.OrchardCore.Omnichannel.Managements")
-                        .Permission(OmnichannelConstants.Permissions.ManageChannelEndpoints)
-                        .LocalNav()
-                    )
+                    .Add(S["Cadences"], S["Cadences"].PrefixPosition(), cadences => cadences
+                        .AddClass("cadences")
+                        .Id("cadences")
+                        .Action("Index", "Cadences", "CrestApps.OrchardCore.Omnichannel.Managements")
+                        .Permission(OmnichannelConstants.Permissions.ManageCadences)
+                        .LocalNav())
                 ),
                 priority: 1);
     }

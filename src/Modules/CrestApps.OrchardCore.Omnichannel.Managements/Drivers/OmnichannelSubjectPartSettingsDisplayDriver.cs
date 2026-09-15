@@ -63,7 +63,6 @@ internal sealed class OmnichannelSubjectPartSettingsDisplayDriver : ContentTypeP
             [
                 new(S["Phone"], OmnichannelConstants.Channels.Phone),
                 new(S["SMS"], OmnichannelConstants.Channels.Sms),
-                new(S["Email"], OmnichannelConstants.Channels.Email),
             ];
 
             model.ChannelEndpoints = (await _channelEndpointsCatalog.GetAllAsync())
