@@ -282,6 +282,57 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task ATransferredCall_StillEnds_ThoughTheModelNeverAskedToEndIt()
+    {
+        // Arrange
+        // The closing watchdog waited on the end-call signal alone. On a transfer that signal never comes — the
+        // model asked for a person, not for the call to end — so the watchdog never finished, and the teardown
+        // waits for it. The session therefore never returned, and everything after it never ran: the caller was
+        // told a person was coming and then left on a line nobody was ever going to be seated on. Every existing
+        // test passed straight through this, because none of them supplied an end-call token at all.
+        var harness = new RealtimeHarness();
+        using var handoff = new CancellationTokenSource();
+        using var endCall = new CancellationTokenSource();
+        harness.HandoffRequested = handoff.Token;
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        // Act
+        var run = harness.RunAsync();
+        await handoff.CancelAsync();
+
+        // Assert
+        // It has to come back, so the handoff that follows it can happen at all.
+        var completed = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        Assert.Same(run, completed);
+        Assert.True(await run);
+    }
+
+    [Fact]
+    public async Task ACallTheCallerEnded_StillReturns_WithAnEndCallTokenThatNeverFired()
+    {
+        // Arrange
+        // The same hazard by the commonest route of all: the caller simply hangs up. Nothing signals the end-call
+        // token then either, and a session that cannot finish tearing down is a call whose outcome is never
+        // written.
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+
+        // Act
+        var run = harness.RunAsync();
+
+        // Assert
+        var completed = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        Assert.Same(run, completed);
+        Assert.True(await run);
+        Assert.True(harness.Media.Stopped);
+    }
+
+    [Fact]
     public async Task TheGoodbyeIsNotCutOff_WhileTheAssistantIsStillSayingIt()
     {
         // Arrange

@@ -196,7 +196,7 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
         // a watchdog rather than another CancelAfter: it waits for the goodbye to finish and then leaves the line
         // open a moment, and abandons the hangup entirely if the caller uses it.
         var closing = context.EndCallRequested.CanBeCanceled
-            ? CloseWhenConversationEndsAsync(context.EndCallRequested, callScope)
+            ? CloseWhenConversationEndsAsync(callScope, context.EndCallRequested)
             : Task.CompletedTask;
 
         // One generator drives both paths, at the rate the model speaks: the bed is mixed under the assistant's
@@ -329,14 +329,22 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
     /// altogether and the assistant answers them, because a caller who is still talking has not finished the
     /// call no matter what the model concluded.
     /// </remarks>
-    /// <param name="endCallRequested">Cancelled when the model reports the conversation finished.</param>
     /// <param name="callScope">The scope whose cancellation ends the call.</param>
-    private async Task CloseWhenConversationEndsAsync(CancellationToken endCallRequested, CancellationTokenSource callScope)
+    /// <param name="endCallRequested">Cancelled when the model reports the conversation finished.</param>
+    private async Task CloseWhenConversationEndsAsync(CancellationTokenSource callScope, CancellationToken endCallRequested)
     {
+        // Watched together, because a call ends for all sorts of reasons that are nothing to do with this: the
+        // caller hangs up, the model asks to transfer, the session fails. Waiting on the end-call signal alone
+        // meant that on every one of those calls this task simply never finished -- and the teardown waits for
+        // it, so the session never returned and everything after it never ran. That is what left a caller who
+        // had just been promised a person listening to nothing: the transfer was recorded and the code that
+        // would have seated them in the queue was never reached.
+        using var closing = CancellationTokenSource.CreateLinkedTokenSource(endCallRequested, callScope.Token);
+
         try
         {
             // Wait for the model to say the conversation is over. Nothing below runs on an ordinary call.
-            await Task.Delay(Timeout.InfiniteTimeSpan, endCallRequested);
+            await Task.Delay(Timeout.InfiniteTimeSpan, closing.Token);
         }
         catch (OperationCanceledException) when (endCallRequested.IsCancellationRequested)
         {
@@ -344,6 +352,7 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
         }
         catch (OperationCanceledException)
         {
+            // The call ended on its own. There is nothing left to close.
             return;
         }
 
