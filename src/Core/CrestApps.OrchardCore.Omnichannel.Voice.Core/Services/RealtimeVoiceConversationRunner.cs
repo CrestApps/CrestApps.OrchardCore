@@ -78,8 +78,12 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
     /// one more thing" — and being hung up on is remembered long after the rest of the call is forgotten. If they
     /// do speak, the assistant answers and the call carries on; this window only ends a conversation that both
     /// sides have finished.
+    /// <para>
+    /// Two seconds was about the length of a breath, and it read on a real call as being hung up on. The cost of
+    /// the extra couple of seconds is a little silence at the end of a call that was over anyway.
+    /// </para>
     /// </remarks>
-    private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(2);
+    private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(4);
 
     /// <summary>
     /// How often the closing watchdog re-checks. Fine enough that the hangup lands when it was meant to.
@@ -612,6 +616,15 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
                         {
                             await media.WriteOutgoingAsync(new ContactCenterVoiceMediaFrame { Data = audio }, cancellationToken);
                         }
+
+                        break;
+
+                    case RealtimeConversationEventType.UserSpeechStarted:
+                        // The first syllable, not the finished sentence. A transcript only exists once the caller
+                        // has stopped talking and the provider has transcribed them, which is seconds later --
+                        // long enough that a call closing down would already have been cut. This is the moment
+                        // the caller decides the conversation is not over, so it is the moment that has to count.
+                        Interlocked.Exchange(ref _lastCallerSpeechTicks, DateTime.UtcNow.Ticks);
 
                         break;
 

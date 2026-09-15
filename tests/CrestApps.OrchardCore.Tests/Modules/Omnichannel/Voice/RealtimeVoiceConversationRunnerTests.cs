@@ -374,6 +374,50 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task ACustomerWhoStartsSpeakingAfterTheGoodbye_IsNotHungUpOn()
+    {
+        // Arrange
+        // The one the other test could not catch. A transcript only exists once the customer has stopped talking
+        // and the provider has transcribed them, which is seconds after they opened their mouth -- by which time
+        // the line was already cut. Voice detection fires on the first syllable, and that is the moment the call
+        // stops being over.
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        // Act
+        var run = harness.RunAsync();
+
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantAudioDelta,
+            Audio = new byte[320],
+        });
+
+        await endCall.CancelAsync();
+
+        // They start talking, and say nothing the provider has finished transcribing yet.
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.UserSpeechStarted,
+        });
+
+        // Well past the window in which the call would otherwise have been ended.
+        await Task.Delay(TimeSpan.FromSeconds(6), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(run.IsCompleted);
+
+        // Let the call go, so the session does not outlive the test.
+        harness.Conversation.KeepAlive = false;
+        harness.Media.KeepAlive = false;
+
+        await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task ACustomerWhoSpeaksAfterTheGoodbye_IsNotHungUpOn()
     {
         // Arrange
