@@ -57,6 +57,13 @@ public class EditAIProfileDocumentsViewModel
     public bool HasVectorSearchService { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the attached documents can be downloaded. Only profile documents are
+    /// downloadable; profile template documents use a reference type the download endpoint does not serve.
+    /// </summary>
+    [BindNever]
+    public bool AllowDownload { get; set; }
+
+    /// <summary>
     /// Gets or sets the available document retrieval modes.
     /// </summary>
     [BindNever]

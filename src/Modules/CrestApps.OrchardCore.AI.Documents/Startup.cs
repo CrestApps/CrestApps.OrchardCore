@@ -61,6 +61,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<IAuthorizationHandler, OrchardChatInteractionDocumentAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, OrchardAIChatSessionDocumentAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, OrchardAIProfileDocumentAuthorizationHandler>();
         services.AddScoped<IAIChatDocumentEventHandler, OrchardAIChatDocumentEventHandler>();
 
         // Register the session document cleanup handler to remove documents when a chat session is deleted.

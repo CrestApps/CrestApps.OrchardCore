@@ -106,6 +106,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
         {
             model.ProfileId = profile.ItemId;
+            model.AllowDownload = true;
 
             var documentsMetadata = profile.GetOrCreate<DocumentsMetadata>();
             model.Documents = documentsMetadata.Documents ?? [];
