@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using CrestApps.OrchardCore.Telephony.Services;
 using Fluid;
 using Fluid.Values;
@@ -350,25 +351,36 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
     private async Task<string> ResolveRealtimeDeploymentNameAsync(AIProfile profile, CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(profile.ChatDeploymentName))
+        // Asked of the deployment catalog by capability, not through the chat slot. A speech-to-speech model
+        // cannot serve a text completion, so the framework excludes the realtime feature from that slot -- which
+        // means asking the chat slot to resolve the profile's deployment answers "no such deployment" for
+        // precisely the deployment being looked for. Nothing failed when it did: the call connected, the
+        // assistant spoke, and the only symptom was that it could not hear the caller while it was talking.
+        //
+        // With no deployment named, this falls back to whatever deployment the tenant has with the capability,
+        // which is how the rest of the platform resolves it.
+        var deployment = await _capabilityService.ResolveDeploymentWithFeatureAsync(
+            AIDeploymentFeatureNames.Realtime,
+            profile.ChatDeploymentName,
+            cancellationToken);
+
+        if (deployment is not null)
         {
-            var chatDeployment = await _deploymentManager.ResolveSlotAsync(
-                AIDeploymentSlotNames.Chat,
-                deploymentName: profile.ChatDeploymentName,
-                cancellationToken: cancellationToken);
-
-            if (chatDeployment is not null &&
-                _capabilityService.GetCapabilities(chatDeployment).SupportsFeature(AIDeploymentFeatureNames.Realtime))
-            {
-                return chatDeployment.Name;
-            }
-
-            return null;
+            return deployment.Name;
         }
 
-        var resolved = await _capabilityService.ResolveDeploymentWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
+        // Said plainly on the record, because running turn-based is not an error and produces no other trace:
+        // the difference is audible on the phone and invisible in the log.
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Profile '{ProfileName}' runs the turn-based voice loop: deployment '{DeploymentName}' does not declare the '{Feature}' capability.",
+                profile.Name.SanitizeLogValue(),
+                profile.ChatDeploymentName.SanitizeLogValue(),
+                AIDeploymentFeatureNames.Realtime);
+        }
 
-        return resolved?.Name;
+        return null;
     }
 
     private async Task MarkInProgressAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
@@ -453,7 +465,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         await StorePromptAsync(session, ChatRole.User, caller, cancellationToken);
 
-        var (reply, handoffRequested, handoffReason) = await CompleteAsync(profile, session, activity, cancellationToken);
+        var (reply, handoffRequested, handoffReason, endCallRequested) = await CompleteAsync(profile, session, activity, cancellationToken);
 
         await stopListening;
 
@@ -466,7 +478,14 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         if (!string.IsNullOrWhiteSpace(reply))
         {
-            await StorePromptAsync(session, ChatRole.Assistant, reply, cancellationToken);
+            // The marker is how the speak.ended handler knows this line was the last one, and it is stripped
+            // before anything is spoken or shown. Recorded on the turn rather than acted on here, because the
+            // closing line has not been said yet: hanging up now would cut it off mid-word.
+            await StorePromptAsync(
+                session,
+                ChatRole.Assistant,
+                endCallRequested ? reply + " " + HangupMarker : reply,
+                cancellationToken);
         }
 
         if (handoffRequested)
@@ -611,7 +630,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         return rendered?.Trim();
     }
 
-    private async Task<(string Reply, bool HandoffRequested, string Reason)> CompleteAsync(AIProfile profile, AIChatSession session, OmnichannelActivity activity, CancellationToken cancellationToken)
+    private async Task<(string Reply, bool HandoffRequested, string Reason, bool EndCallRequested)> CompleteAsync(AIProfile profile, AIChatSession session, OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         var prompts = await _promptStore.GetPromptsAsync(session.SessionId);
 
@@ -640,28 +659,29 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // Attach the transfer tool to this completion once the context exists. The automated conversation calls the
         // completion service directly rather than through the tool orchestrator, so the tool must be added here or
         // the model never receives it. See the identical fix in the SMS handler.
-        if (handoffService is not null)
-        {
-            AttachTransferToAgentTool(context);
-        }
+        AttachCallTools(context, offerTransfer: handoffService is not null);
 
         var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 
         if (deployment is null)
         {
-            return (null, false, null);
+            return (null, false, null, false);
         }
 
-        // The completion auto-invokes the transfer tool when the model decides to escalate; the tool records the
-        // decision on the scoped turn, which is reset first and read back once the completion returns.
+        // The completion auto-invokes these tools when the model decides to escalate or to finish; each records
+        // its decision on a scoped turn, which is reset first and read back once the completion returns.
         _handoffTurn.Reset();
+        _endCallTurn.Reset();
 
         var completion = await _completionService.CompleteAsync(deployment, transcript, context, cancellationToken);
 
         var reply = completion?.Messages?.FirstOrDefault()?.Text;
         var handoffRequested = handoffService is not null && _handoffTurn.HandoffRequested;
 
-        return (reply, handoffRequested, _handoffTurn.Reason);
+        // A call being handed to a person is not a call that is over, whatever the model asked for alongside it.
+        var endCallRequested = _endCallTurn.EndCallRequested && !handoffRequested;
+
+        return (reply, handoffRequested, _handoffTurn.Reason, endCallRequested);
     }
 
     // Attaches the transfer-to-agent tool to this single completion. The automated conversation calls the completion
@@ -670,20 +690,38 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     // as a scoped system-tool entry for this turn only (the context is built per turn and never persisted). Enabling
     // it through the profile's tool-name list does not work: the profile tool provider reads the names snapshotted
     // when the context was built and, either way, skips system tools — which the transfer tool is.
-    private static void AttachTransferToAgentTool(AICompletionContext context)
+    private static void AttachCallTools(AICompletionContext context, bool offerTransfer)
     {
-        var entry = new ToolRegistryEntry
+        // The end-call tool is offered on every turn, and the transfer tool only when this call has somewhere to
+        // transfer to. Ending the call needs no such condition: the model can always be finished talking, and a
+        // call it cannot end is one that ends when the customer works out that nobody is going to hang up.
+        var entries = new List<ToolRegistryEntry>
         {
-            Id = OmnichannelHandoffHelper.TransferToAgentToolName,
-            Name = OmnichannelHandoffHelper.TransferToAgentToolName,
-            Description = "Transfers the current conversation to a live human agent.",
-            Source = ToolRegistryEntrySource.System,
-            CreateAsync = serviceProvider => ValueTask.FromResult(
-                serviceProvider.GetKeyedService<AITool>(OmnichannelHandoffHelper.TransferToAgentToolName)),
+            new()
+            {
+                Id = EndCallTool.ToolName,
+                Name = EndCallTool.ToolName,
+                Description = "Ends the phone call once the conversation has genuinely finished.",
+                Source = ToolRegistryEntrySource.System,
+                CreateAsync = serviceProvider => ValueTask.FromResult(
+                    serviceProvider.GetKeyedService<AITool>(EndCallTool.ToolName)),
+            },
         };
 
-        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] =
-            new List<ToolRegistryEntry> { entry };
+        if (offerTransfer)
+        {
+            entries.Add(new ToolRegistryEntry
+            {
+                Id = OmnichannelHandoffHelper.TransferToAgentToolName,
+                Name = OmnichannelHandoffHelper.TransferToAgentToolName,
+                Description = "Transfers the current conversation to a live human agent.",
+                Source = ToolRegistryEntrySource.System,
+                CreateAsync = serviceProvider => ValueTask.FromResult(
+                    serviceProvider.GetKeyedService<AITool>(OmnichannelHandoffHelper.TransferToAgentToolName)),
+            });
+        }
+
+        context.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = entries;
     }
 
     private static Task<bool> SpeakAsync(IVoiceAgentMediaProvider media, string providerCallId, OmnichannelActivity activity, string text, CancellationToken cancellationToken)

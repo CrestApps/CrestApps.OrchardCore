@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
+using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
@@ -12,6 +13,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -253,6 +255,46 @@ public sealed class VoiceAgentConversationLoopTests
 
         // Assert
         Assert.Equal(1, harness.Media.Spoken.Count(text => text == "Understood."));
+    }
+
+    [Fact]
+    public async Task TheEndCallTool_IsOfferedOnATurnBasedCall()
+    {
+        // Arrange
+        // A call the model cannot end is a call that ends when the customer gives up on it. The tool reached
+        // realtime sessions only, so on every turn-based call the assistant said goodbye and then sat there.
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "No thanks, I am all set.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(EndCallTool.ToolName, harness.OfferedTools);
+    }
+
+    [Fact]
+    public async Task WhenTheModelCallsTheEndCallTool_TheCallIsHungUpAfterTheClosingLine()
+    {
+        // Arrange
+        // The tool records on the scoped turn from inside the completion, exactly as it does live; the closing
+        // line still has to be spoken in full before the line is cut.
+        var harness = new LoopHarness(useRealTurns: true);
+        harness.Reply = "No problem at all. Take care.";
+        harness.DuringCompletion = () => harness.RealEndCallTurn.RequestEndCall("customer declined");
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "No thanks, I am all set.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("No problem at all. Take care.", harness.Media.Spoken[^1]);
+        Assert.Equal(0, harness.Media.Hangups);
+
+        // The closing line finishes.
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, harness.Media.Hangups);
     }
 
     [Fact]
@@ -728,6 +770,14 @@ public sealed class VoiceAgentConversationLoopTests
                     It.IsAny<IEnumerable<ChatMessage>>(),
                     It.IsAny<AICompletionContext>(),
                     It.IsAny<CancellationToken>()))
+                .Callback<AIDeployment, IEnumerable<ChatMessage>, AICompletionContext, CancellationToken>((_, _, context, _) =>
+                {
+                    // The context is what carries the tools to the model, so keeping it is how a test can ask
+                    // what the model was actually offered on this turn. DuringCompletion stands in for the model
+                    // invoking one of them: the real tools record on the scoped turn from inside the completion.
+                    CompletionContext = context;
+                    DuringCompletion?.Invoke();
+                })
                 .ReturnsAsync(() => new ChatResponse(new ChatMessage(ChatRole.Assistant, Reply)));
 
             DeploymentManager = new Mock<IAIDeploymentManager>();
@@ -841,22 +891,18 @@ public sealed class VoiceAgentConversationLoopTests
         {
             Profile.ChatDeploymentName = "realtime-deployment";
 
-            var deployment = new AIDeployment { ItemId = "deployment-1", Name = "realtime-deployment" };
+            var deployment = new AIDeployment { ItemId = "realtime-deployment-1", Name = "realtime-deployment" };
 
-            DeploymentManager
-                .Setup(x => x.ResolveSlotAsync(
-                    AIDeploymentSlotNames.Chat,
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<IReadOnlyDictionary<string, string>>(),
+            // Deliberately only through the capability service, and deliberately not through the chat slot: a
+            // realtime deployment is excluded from that slot by the framework, because a speech-to-speech model
+            // cannot serve a text completion. Setting the chat slot up to hand one back is what let every test
+            // here pass while live calls ran the turn-based loop against a correctly configured realtime model.
+            CapabilityService
+                .Setup(x => x.ResolveDeploymentWithFeatureAsync(
+                    AIDeploymentFeatureNames.Realtime,
+                    "realtime-deployment",
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(deployment);
-
-            CapabilityService
-                .Setup(x => x.GetCapabilities(It.IsAny<AIDeployment>()))
-                .Returns(new AIDeploymentCapabilities(
-                    [new AIDeploymentFeatureDescriptor { Name = AIDeploymentFeatureNames.Realtime }],
-                    []));
         }
 
         /// <summary>
@@ -872,6 +918,26 @@ public sealed class VoiceAgentConversationLoopTests
         public OmnichannelHandoffResult HandoffResult { get; set; } = OmnichannelHandoffResult.Success();
 
         public string Reply { get; set; } = "Sure, I can help with that.";
+
+        /// <summary>
+        /// The completion context the model was given on the last turn.
+        /// </summary>
+        public AICompletionContext CompletionContext { get; private set; }
+
+        /// <summary>
+        /// Runs while the completion is in flight, standing in for the model invoking a tool.
+        /// </summary>
+        public Action DuringCompletion { get; set; }
+
+        /// <summary>
+        /// The tools the model was offered on the last turn.
+        /// </summary>
+        public IEnumerable<string> OfferedTools =>
+            CompletionContext is not null &&
+            CompletionContext.AdditionalProperties.TryGetValue(FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey, out var entries) &&
+            entries is IEnumerable<ToolRegistryEntry> registry
+                ? registry.Select(entry => entry.Name)
+                : [];
 
         public void EnableHandoff()
         {
