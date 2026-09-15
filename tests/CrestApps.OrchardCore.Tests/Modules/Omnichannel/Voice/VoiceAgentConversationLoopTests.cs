@@ -274,6 +274,24 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task ATurnBasedCall_IsToldThatHangingUpIsItsJob()
+    {
+        // Arrange
+        // Offering the tool is not the same as telling the model it is expected to use it. Live, with the tool
+        // attached and nothing said about it, the assistant closed the conversation and then waited.
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "No thanks, I am all set.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(
+            harness.Transcript,
+            message => message.Role == ChatRole.System && (message.Text ?? string.Empty).Contains(EndCallTool.ToolName, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task WhenTheModelCallsTheEndCallTool_TheCallIsHungUpAfterTheClosingLine()
     {
         // Arrange
@@ -770,8 +788,10 @@ public sealed class VoiceAgentConversationLoopTests
                     It.IsAny<IEnumerable<ChatMessage>>(),
                     It.IsAny<AICompletionContext>(),
                     It.IsAny<CancellationToken>()))
-                .Callback<AIDeployment, IEnumerable<ChatMessage>, AICompletionContext, CancellationToken>((_, _, context, _) =>
+                .Callback<AIDeployment, IEnumerable<ChatMessage>, AICompletionContext, CancellationToken>((_, messages, context, _) =>
                 {
+                    Transcript = [.. messages];
+
                     // The context is what carries the tools to the model, so keeping it is how a test can ask
                     // what the model was actually offered on this turn. DuringCompletion stands in for the model
                     // invoking one of them: the real tools record on the scoped turn from inside the completion.
@@ -918,6 +938,11 @@ public sealed class VoiceAgentConversationLoopTests
         public OmnichannelHandoffResult HandoffResult { get; set; } = OmnichannelHandoffResult.Success();
 
         public string Reply { get; set; } = "Sure, I can help with that.";
+
+        /// <summary>
+        /// The messages the model was given on the last turn.
+        /// </summary>
+        public List<ChatMessage> Transcript { get; private set; } = [];
 
         /// <summary>
         /// The completion context the model was given on the last turn.

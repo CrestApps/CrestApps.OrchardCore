@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -793,6 +794,21 @@ public sealed class RealtimeVoiceConversationRunnerTests
     /// <summary>
     /// A realtime orchestrator that records what it was asked for and hands back a scripted conversation.
     /// </summary>
+    [Fact]
+    public async Task TheSession_IsStartedInsideAnActiveInvocationScope()
+    {
+        // Arrange
+        // The orchestrator refuses to start a session that carries tools without one, because tools read their
+        // context from that scope. Live, that refusal ended the call before the assistant said a word.
+        var harness = new RealtimeHarness();
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.NotNull(harness.Orchestrator.InvocationScopeAtStart);
+    }
+
     private sealed class RecordingRealtimeOrchestrator : IRealtimeOrchestrator
     {
         private readonly IRealtimeConversation _conversation;
@@ -811,8 +827,16 @@ public sealed class RealtimeVoiceConversationRunnerTests
 
         public bool Fail { get; set; }
 
+        /// <summary>
+        /// The invocation context that was current when the session was started, which the real orchestrator
+        /// refuses to start a tool-carrying session without.
+        /// </summary>
+        public AIInvocationContext InvocationScopeAtStart { get; private set; }
+
         public Task<IRealtimeConversation> StartAsync(RealtimeOrchestrationRequest request, CancellationToken cancellationToken = default)
         {
+            InvocationScopeAtStart = AIInvocationScope.Current;
+
             if (Fail)
             {
                 throw new InvalidOperationException("The realtime session could not be opened.");

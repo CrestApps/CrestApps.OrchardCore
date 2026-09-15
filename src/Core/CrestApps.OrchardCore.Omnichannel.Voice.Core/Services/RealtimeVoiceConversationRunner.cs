@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Orchestration;
 using CrestApps.Core.AI.Realtime;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
@@ -145,6 +146,12 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
         {
             return false;
         }
+
+        // Opened before the session and held for the whole call. A session that carries tools is refused without
+        // one, because a tool reads its context from this scope -- and the tools here are the call's controls:
+        // ending it and handing it to a person. Refused meant the call fell back to the turn-based loop, so the
+        // symptom was not an error on the line but an assistant that could not hear the caller while it spoke.
+        using var invocationScope = AIInvocationScope.Begin();
 
         var mediaProvider = _mediaResolver.Get(context.ProviderName);
 
@@ -299,13 +306,7 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
         orchestration.SystemMessageBuilder.AppendLine();
         orchestration.SystemMessageBuilder.AppendLine("## Ending the call");
         orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine(
-            $"You are on a live phone call. When the conversation has genuinely finished — the customer has what " +
-            $"they needed, has declined, has asked not to be called again, or has said goodbye — say a short, warm " +
-            $"closing line and then call the {EndCallTool.ToolName} tool. The call is hung up for you once you have " +
-            $"finished speaking and the customer has had a moment to add anything, so do not announce that you are " +
-            $"hanging up and do not wait for them to do it. Never call it while the customer still has questions or " +
-            $"is being transferred to a person.");
+        orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.EndingTheCall);
     }
 
     /// <summary>

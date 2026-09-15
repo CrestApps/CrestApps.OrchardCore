@@ -653,6 +653,10 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             }
         }
 
+        // The same thing the live session is told, because a turn-based call is the same call: somebody has to
+        // hang up, and the model is the only one here who knows the conversation is over.
+        transcript.Insert(0, new ChatMessage(ChatRole.System, VoiceCallGuidance.EndingTheCall));
+
         var context = await _contextBuilder.BuildAsync(profile, cancellationToken: cancellationToken);
         context.AdditionalProperties["Session"] = session;
 
