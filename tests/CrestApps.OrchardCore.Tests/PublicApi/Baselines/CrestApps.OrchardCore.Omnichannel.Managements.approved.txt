@@ -1325,6 +1325,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
     public class SubjectActionViewModel
     {
         public SubjectActionViewModel() { }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public System.Collections.Generic.IDictionary<string, string> DispositionDescriptions { get; set; }
+        public string DispositionGuidance { get; set; }
         public string DispositionId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Dispositions { get; set; }

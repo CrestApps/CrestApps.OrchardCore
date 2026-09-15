@@ -692,7 +692,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         Current UTC time: {_clock.UtcNow:O}
                         Chat Summary: {JsonSerializer.Serialize(sessionPrompts)}
                         Subject Goal: {flowSettings.SubjectGoal}
-                        List of Dispositions: {JsonSerializer.Serialize(dispositions.Select(x => new { Id = x.ItemId, x.Name, x.Description }))}
+                        List of Dispositions: {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
 
                         Decide whether the conversation has genuinely ended. Set Concluded to true ONLY when the exchange is clearly over: the agent has said goodbye or sent a closing message, or the customer has opted out, declined, or stopped engaging. Do NOT conclude while the agent is still asking a question or waiting for the customer to answer or confirm something (for example, right after the agent asked "is that correct?" the conversation is NOT concluded). When Concluded is true, select the single best DispositionId from the list above.
                         Always return Notes: a concise plain-text summary of the outcome to store on the account.

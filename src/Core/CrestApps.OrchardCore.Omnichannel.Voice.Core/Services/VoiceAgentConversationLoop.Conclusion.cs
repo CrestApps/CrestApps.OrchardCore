@@ -128,7 +128,7 @@ public sealed partial class VoiceAgentConversationLoop
 
             Subject goal: {flowSettings?.SubjectGoal}
 
-            Available dispositions (choose one DispositionId): {JsonSerializer.Serialize(dispositions.Select(d => new { Id = d.ItemId, d.Name, d.Description }))}
+            Available dispositions (choose one DispositionId): {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
             """;
 
         if (allowUpdateSubject && subject is not null && subjectTextFields.Count > 0)

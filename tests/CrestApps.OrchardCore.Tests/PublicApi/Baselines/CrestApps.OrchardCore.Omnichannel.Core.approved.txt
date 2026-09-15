@@ -823,6 +823,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string Author { get; set; }
         public System.DateTime CreatedUtc { get; set; }
         public string DisplayText { get; set; }
+        public string DispositionGuidance { get; set; }
         public string DispositionId { get; set; }
         public string OwnerId { get; set; }
         public bool? SetDoNotCall { get; set; }
@@ -942,6 +943,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         public ContentDefinitionOmnichannelContactTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
         public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DispositionChoice
+    {
+        public DispositionChoice() { }
+        public string Description { get; init; }
+        public string Id { get; init; }
+        public string Name { get; init; }
     }
     public sealed class HandoffQueueOption
     {
@@ -1153,6 +1161,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
                 "Field"})]
         public static System.Collections.Generic.List<System.ValueTuple<string, string>> GetSubjectTextFields(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition typeDefinition) { }
         public static System.Threading.Tasks.Task<bool> TryApplyContactEmailAsync(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.ContentManagement.ContentItem contact, string email) { }
+    }
+    public static class SubjectDispositionGuidance
+    {
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.DispositionChoice> Describe(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositions, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> actions, string subjectContentType) { }
     }
     public sealed class SubjectFlowSettingsService : CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService
     {
