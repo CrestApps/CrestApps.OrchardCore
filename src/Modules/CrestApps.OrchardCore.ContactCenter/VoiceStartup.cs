@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+﻿using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
@@ -94,6 +94,11 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<INormalizedVoiceEventHandler, ContactCenterVoiceProjection>()
             .AddScoped<IProviderWebhookInboxHandler, ProviderVoiceEventInboxHandler>()
             .AddScoped<IProviderVoiceOfferSynchronizationService, ProviderVoiceOfferSynchronizationService>()
+
+            // Lets the automated voice module tell the queue that a caller it handed over has hung up. Registered
+            // here because it is the Contact Center that owns queues; the voice module resolves it optionally and
+            // runs without it.
+            .AddScoped<IQueuedCallerAbandonmentHandler, QueuedCallerAbandonmentHandler>()
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()

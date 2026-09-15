@@ -1,19 +1,14 @@
-﻿using System.Text.Json;
-using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI;
-using CrestApps.Core.AI.Chat;
-using CrestApps.Core.AI.Clients;
-using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Capabilities;
+using CrestApps.Core.AI.Chat;
+using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
-using CrestApps.Core.AI.Resilience;
-using CrestApps.Core.Services;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
@@ -23,17 +18,11 @@ using Fluid.Values;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;
-using OrchardCore.Flows.Models;
 using OrchardCore.Environment.Shell.Scope;
-using OrchardCore.Json;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
@@ -62,6 +51,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IOmnichannelHandoffTurn _handoffTurn;
     private readonly IVoiceCallEndTurn _endCallTurn;
     private readonly IRealtimeCallCompletionRunner _completionRunner;
+
+    // Optional: automated voice runs on tenants with no Contact Center, which have no queue to release.
+    private readonly IEnumerable<IQueuedCallerAbandonmentHandler> _abandonmentHandlers;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly IAICompletionContextBuilder _contextBuilder;
@@ -83,6 +75,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IOmnichannelHandoffTurn handoffTurn,
         IVoiceCallEndTurn endCallTurn,
         IRealtimeCallCompletionRunner completionRunner,
+        IEnumerable<IQueuedCallerAbandonmentHandler> abandonmentHandlers,
         IAIDeploymentManager deploymentManager,
         IAIDeploymentCapabilityService capabilityService,
         IAICompletionContextBuilder contextBuilder,
@@ -103,6 +96,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _handoffTurn = handoffTurn;
         _endCallTurn = endCallTurn;
         _completionRunner = completionRunner;
+        _abandonmentHandlers = abandonmentHandlers;
         _deploymentManager = deploymentManager;
         _capabilityService = capabilityService;
         _contextBuilder = contextBuilder;
@@ -315,6 +309,33 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     /// </summary>
     /// <param name="activity">The call's activity.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <summary>
+    /// Tells the Contact Center that a caller waiting for an agent has gone.
+    /// </summary>
+    /// <remarks>
+    /// Nothing thrown here is allowed out. This runs while a call is ending, and a queue that cannot be reached
+    /// must not stop the rest of the hangup from being handled.
+    /// </remarks>
+    /// <param name="activityItemId">The activity the caller was handed over on.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task ReleaseQueuedCallerAsync(string activityItemId, CancellationToken cancellationToken)
+    {
+        foreach (var handler in _abandonmentHandlers)
+        {
+            try
+            {
+                await handler.CallerAbandonedAsync(activityItemId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Could not release the queue work for the caller who left activity '{ActivityId}'.",
+                    activityItemId.SanitizeLogValue());
+            }
+        }
+    }
+
     private async Task<string> ResolveContactNameAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(activity?.ContactContentItemId))
@@ -477,11 +498,21 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // disconnects the moment the caller is passed to a live agent.
         if (!VoiceCallConclusionPolicy.ShouldConclude(activity))
         {
-            if (activity is not null && activity.AiEscalated && _logger.IsEnabled(LogLevel.Information))
+            if (activity is not null && activity.AiEscalated)
             {
-                _logger.LogInformation(
-                    "AI voice activity '{ActivityId}' was handed to a live agent, so its outcome is left to that agent rather than concluded here.",
-                    activity.ItemId.SanitizeLogValue());
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "AI voice activity '{ActivityId}' was handed to a live agent, so its outcome is left to that agent rather than concluded here.",
+                        activity.ItemId.SanitizeLogValue());
+                }
+
+                // The caller was handed to a queue and has now hung up, which the queue would otherwise never
+                // learn: this leg's events are deliberately kept out of Contact Center routing, and that is right
+                // until the handover and wrong after it. Left unsaid, the item stays reserved for somebody who is
+                // no longer on the line, the hold music plays to a dead leg, and the call is missing from the
+                // abandonment figure that exists to show exactly this.
+                await ReleaseQueuedCallerAsync(activity.ItemId, cancellationToken);
             }
 
             return;

@@ -1,36 +1,23 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
-using CrestApps.Core;
 using CrestApps.Core.AI;
-using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
-using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Voice.Models;
-using CrestApps.OrchardCore.Telephony.Services;
-using Fluid;
-using Fluid.Values;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
-using OrchardCore.ContentManagement.Metadata.Models;
-using OrchardCore.Entities;
-using OrchardCore.Flows.Models;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Json;
-using OrchardCore.Liquid;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -122,16 +109,18 @@ public sealed partial class VoiceAgentConversationLoop
             ? OmnichannelSubjectWriter.GetSubjectTextFields(await definitionManager.GetTypeDefinitionAsync(activity.SubjectContentType))
             : [];
 
-        var systemPrompt = $$"""
-            You review a finished outbound sales phone call between an AI agent and a customer, and produce a
-            structured result as JSON. Always write a concise, factual Summary (2-4 sentences) capturing what the
-            customer is looking for (vehicle type, timeline, budget, trade-in, any contact details they gave)
-            and the outcome. Always choose the single DispositionId from the provided list that best matches the
-            outcome; if none clearly fits, choose the closest.
-            {{((allowUpdateSubject && subjectTextFields.Count > 0) ? "You are given a list of subject fields. Return SubjectFields as a JSON object mapping the exact field key shown to a short plain-text value, for any field the call clearly revealed; omit fields you did not learn and never invent keys." : "Do not return SubjectFields.")}}
-            {{(allowUpdateContact ? "If, and only if, the customer clearly stated an email address to use for follow-up, set ContactEmail to that exact address (lowercased, with no surrounding words); if it matches the current email on file or none was given, omit ContactEmail." : "Do not return ContactEmail.")}}
-            Only output the requested fields.
-            """;
+        // The prompt lives in Templates/Prompts as a file, like every other system prompt here, so it can be read
+        // and changed by someone who is not editing C#. The two guarded sections are passed as variables rather
+        // than assembled in code.
+        var templateService = services.GetRequiredService<ITemplateService>();
+
+        var systemPrompt = await templateService.RenderAsync(
+            VoiceTemplateIds.ConclusionAnalysis,
+            new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["AllowSubjectFields"] = allowUpdateSubject && subjectTextFields.Count > 0,
+                ["AllowContactEmail"] = allowUpdateContact,
+            });
 
         var userPrompt = $"""
             Call transcript:

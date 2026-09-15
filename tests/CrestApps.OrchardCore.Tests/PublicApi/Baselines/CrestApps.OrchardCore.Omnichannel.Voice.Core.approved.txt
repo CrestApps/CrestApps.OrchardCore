@@ -45,6 +45,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice
             public const string Area = "CrestApps.OrchardCore.Omnichannel.Voice";
         }
     }
+    public static class VoiceTemplateIds
+    {
+        public const string ConclusionAnalysis = "voice-conclusion-analysis";
+    }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
 {
@@ -126,6 +130,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn handoffTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn endCallTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner completionRunner,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IQueuedCallerAbandonmentHandler> abandonmentHandlers,
                     CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
                     CrestApps.Core.AI.Capabilities.IAIDeploymentCapabilityService capabilityService,
                     CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,

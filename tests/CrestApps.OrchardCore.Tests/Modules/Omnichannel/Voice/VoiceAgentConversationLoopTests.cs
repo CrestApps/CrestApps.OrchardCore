@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -281,6 +282,42 @@ public sealed class VoiceAgentConversationLoopTests
     // test stopped at a seam: the model had no tool to escalate with, the work died with the webhook request it
     // ran inside, and the session never returned so nothing after it ran at all. The caller heard the assistant
     // promise a person and then silence, three times. These follow the whole path instead.
+
+    [Fact]
+    public async Task ACallerWhoWasHandedToAQueueAndThenHungUp_IsReleasedFromIt()
+    {
+        // Arrange
+        // The handed-over leg's events are deliberately kept out of Contact Center routing — right up to the
+        // handover, wrong after it. Left unsaid, the queue item stayed reserved for somebody no longer on the
+        // line, hold music played to a dead leg for a further minute, and the call never counted as abandoned,
+        // so the figure that exists to show people giving up read zero while it happened.
+        var harness = new LoopHarness();
+        harness.Activity.AiEscalated = true;
+        harness.Activity.Status = ActivityStatus.InProgress;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Hangup);
+
+        // Assert
+        Assert.Equal([harness.Activity.ItemId], harness.AbandonmentHandler.Released);
+    }
+
+    [Fact]
+    public async Task ACallThatWasNeverHandedOver_ReleasesNoQueueWork()
+    {
+        // Arrange
+        // An ordinary automated call has no queue behind it. Telling the Contact Center a caller abandoned one
+        // would settle work that never existed.
+        var harness = new LoopHarness();
+        harness.Activity.AiEscalated = false;
+        harness.Activity.Status = ActivityStatus.InProgress;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Hangup);
+
+        // Assert
+        Assert.Empty(harness.AbandonmentHandler.Released);
+    }
 
     [Fact]
     public async Task ACallerWhoAsksForAPerson_ReachesTheQueue_EvenWhenTheProviderHasAbandonedTheWebhook()
@@ -739,6 +776,7 @@ public sealed class VoiceAgentConversationLoopTests
             var endCallTurn = useRealTurns ? (IVoiceCallEndTurn)RealEndCallTurn : EndCallTurn.Object;
 
             CompletionRunner = new RecordingCompletionRunner();
+            AbandonmentHandler = new RecordingAbandonmentHandler();
 
             Loop = new VoiceAgentConversationLoop(
                 activityStore.Object,
@@ -748,6 +786,7 @@ public sealed class VoiceAgentConversationLoopTests
                 handoffTurn,
                 endCallTurn,
                 CompletionRunner,
+                [AbandonmentHandler],
                 deploymentManager.Object,
                 CapabilityService.Object,
                 contextBuilder.Object,
@@ -787,6 +826,8 @@ public sealed class VoiceAgentConversationLoopTests
         public VoiceCallEndTurn RealEndCallTurn { get; }
 
         public RecordingCompletionRunner CompletionRunner { get; }
+
+        public RecordingAbandonmentHandler AbandonmentHandler { get; }
 
         public Mock<IAIDeploymentManager> DeploymentManager { get; }
 
@@ -873,6 +914,21 @@ public sealed class VoiceAgentConversationLoopTests
     /// Records what the loop asked to have finished elsewhere, standing in for the child scope the real runner
     /// opens.
     /// </summary>
+    /// <summary>
+    /// Stands in for the Contact Center, recording the callers it was told had gone.
+    /// </summary>
+    internal sealed class RecordingAbandonmentHandler : IQueuedCallerAbandonmentHandler
+    {
+        public List<string> Released { get; } = [];
+
+        public Task CallerAbandonedAsync(string activityItemId, CancellationToken cancellationToken = default)
+        {
+            Released.Add(activityItemId);
+
+            return Task.CompletedTask;
+        }
+    }
+
     internal sealed class RecordingCompletionRunner : IRealtimeCallCompletionRunner
     {
         public RealtimeCallCompletion Completion { get; private set; }

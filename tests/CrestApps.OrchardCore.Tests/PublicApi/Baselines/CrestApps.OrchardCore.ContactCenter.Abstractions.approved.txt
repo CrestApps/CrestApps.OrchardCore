@@ -369,6 +369,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.ContactCenter.Models.ProviderWebhookIngressLease> AcquireRateAsync(string provider, System.Threading.CancellationToken cancellationToken = default);
         bool IsFresh(System.DateTime? occurredUtc);
     }
+    public interface IQueuedCallerAbandonmentHandler
+    {
+        System.Threading.Tasks.Task CallerAbandonedAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IRecordingErasureGuard
     {
         System.Threading.Tasks.Task<bool> IsRecordingErasedAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);

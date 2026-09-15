@@ -264,6 +264,21 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
             orchestration.SystemMessageBuilder.AppendLine(call.HandoffInstructions);
         }
 
+        // Somebody trying to end contact must never be handed to a person instead. This is written for the way it
+        // actually arrives: speech recognition on a phone line drops small words, and "don't call me" reaches the
+        // model as "call me" — which reads as a request to be connected and was, on a live call, acted on as one.
+        // The safe reading of an ambiguous fragment near a refusal is the one that stops calling.
+        orchestration.SystemMessageBuilder.AppendLine();
+        orchestration.SystemMessageBuilder.AppendLine("## When somebody asks you to stop calling");
+        orchestration.SystemMessageBuilder.AppendLine();
+        orchestration.SystemMessageBuilder.AppendLine(
+            "If the customer asks not to be called, to be taken off the list, or to stop calling, that is an " +
+            "opt-out and it ends the call. Acknowledge it plainly, say they will not be contacted again, and end " +
+            "the call. Never transfer somebody who is trying to end contact, and never treat it as interest. " +
+            "Phone audio drops small words, so a short or garbled phrase around a refusal — including one that " +
+            "sounds like an invitation to call — is an opt-out unless the customer clearly says otherwise; if you " +
+            "genuinely cannot tell, ask them to confirm rather than assuming the answer that keeps them on the list.");
+
         // Who picked up. A model opening a sales call with no name does not decline to use one — it invents a
         // plausible one, and the person who answers knows immediately that nobody actually knows them. Observed
         // live: "is this Marcus?" to a contact named Amani, who asked who it was looking for, which the assistant

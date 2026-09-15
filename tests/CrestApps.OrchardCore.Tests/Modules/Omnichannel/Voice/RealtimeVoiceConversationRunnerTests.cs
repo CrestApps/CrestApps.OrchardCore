@@ -457,6 +457,25 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task TheSessionIsToldThatAnOptOutEndsTheCall_RatherThanTransferringThem()
+    {
+        // Arrange
+        // On a live call the customer asked not to be called. Speech recognition delivered "call me", the model
+        // read it as a request to be connected, and transferred them — the one response an opt-out must never
+        // get. The session is told how this arrives and which way to resolve the ambiguity.
+        var harness = new RealtimeHarness();
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var systemMessage = harness.Orchestrator.Contexts.Single().SystemMessageBuilder.ToString();
+
+        Assert.Contains("that is an opt-out and it ends the call", systemMessage);
+        Assert.Contains("Never transfer somebody who is trying to end contact", systemMessage);
+    }
+
+    [Fact]
     public async Task ACallToSomebodyWithNoName_IsToldToUseNoneRatherThanInventOne()
     {
         // Arrange
