@@ -183,7 +183,10 @@ public sealed class ActivityQueueService : IActivityQueueService
         // and nothing else ever stopped it: whoever they went to next — an agent who answered, a voicemail
         // greeting, the next queue in the overflow chain — was talking underneath it. A caller whose leg was torn
         // down heard it play on into a call the system had already finished with.
-        var wasWaiting = queueItem.Status == QueueItemStatus.Waiting;
+        //
+        // Reserved counts as waiting for this. A caller being rung is still a caller in the queue, still hearing
+        // the music, and an offer that is cancelled with removal takes them somewhere else from that state.
+        var wasWaiting = queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved;
 
         queueItem.TransitionTo(status);
         queueItem.DequeuedUtc = _clock.UtcNow;
@@ -203,16 +206,16 @@ public sealed class ActivityQueueService : IActivityQueueService
         }, cancellationToken);
     }
 
-    /// <summary>
-    /// Silences the hold music on the leg of a caller who has just left the queue.
-    /// </summary>
+    /// <inheritdoc/>
     /// <remarks>
-    /// Best effort on purpose. The caller has already been dequeued and whatever comes next is more important
+    /// Best effort on purpose. The caller has already stopped waiting and whatever comes next is more important
     /// than the music: a provider that refuses the stop, or a leg that has already gone, must not fail the
     /// dequeue and strand the caller in the queue they have just left.
     /// </remarks>
-    private async Task StopHoldMusicAsync(QueueItem queueItem, CancellationToken cancellationToken)
+    public async Task StopHoldMusicAsync(QueueItem queueItem, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(queueItem);
+
         if (string.IsNullOrEmpty(queueItem.ActivityItemId))
         {
             return;
@@ -222,7 +225,12 @@ public sealed class ActivityQueueService : IActivityQueueService
         {
             var interaction = await _interactionManager.FindByActivityIdAsync(queueItem.ActivityItemId, cancellationToken);
 
-            if (interaction is null || string.IsNullOrEmpty(interaction.ProviderInteractionId))
+            // Only a live voice leg has anything playing on it. A queued message thread also carries a provider
+            // identifier, and sending it a stop-playback asks the telephony provider about something that is not
+            // a call.
+            if (interaction is null
+                || interaction.Channel != InteractionChannel.Voice
+                || string.IsNullOrEmpty(interaction.ProviderInteractionId))
             {
                 return;
             }

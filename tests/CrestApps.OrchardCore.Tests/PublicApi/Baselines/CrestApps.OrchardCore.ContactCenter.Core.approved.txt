@@ -2200,6 +2200,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> EnqueueAsync(string activityItemId, string queueId, CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority? priority, string dialerProfileId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> OverflowDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task OverflowItemAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue fromQueue, string targetQueueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StopHoldMusicAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ActivityQueueStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue, CrestApps.OrchardCore.ContactCenter.Core.Indexes.ActivityQueueIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueStore
     {
@@ -2923,6 +2924,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem> EnqueueAsync(string activityItemId, string queueId, CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority? priority, string dialerProfileId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> OverflowDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task OverflowItemAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue fromQueue, string targetQueueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StopHoldMusicAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IActivityQueueStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue>
     {
@@ -3547,6 +3549,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public interface IQueueTreatmentService
     {
         System.Threading.Tasks.Task<int> RunDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task StartHoldMusicAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IQueuedCallbackService
     {
@@ -4034,6 +4037,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public QueueTreatmentService(CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Services.IQueueTreatmentProvider treatmentProvider, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityService availabilityService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.QueueTreatmentService> logger) { }
         public System.Threading.Tasks.Task<int> RunDueAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StartHoldMusicAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class QueuedCallbackService : CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedCallbackService
     {

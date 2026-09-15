@@ -64,6 +64,57 @@ public sealed partial class VoiceAgentConversationLoop
     }
 
     /// <summary>
+    /// Hands whatever the finished live session decided to a scope of its own, so it is carried out somewhere
+    /// the request that held the session cannot take down with it.
+    /// </summary>
+    /// <remarks>
+    /// A realtime session holds the caller for the whole call, inside the provider's "call answered" webhook
+    /// request. No provider waits minutes for a webhook response: ours timed out, was retried, and had its
+    /// connection aborted the moment the session ended — and the work that came after, the handoff, went with it.
+    /// Observed live: the model asked to transfer, the tool recorded it, the caller heard the assistant stop, and
+    /// nothing ever enqueued them.
+    /// <para>
+    /// Nothing thrown here escapes. This is called while the session may itself be failing, and an exception
+    /// raised on the way out would replace the one that explains why.
+    /// </para>
+    /// </remarks>
+    /// <param name="activity">The call the session was held for.</param>
+    /// <param name="voiceEvent">The provider event the session was started from.</param>
+    private async Task FinishTheCallElsewhereAsync(OmnichannelActivity activity, VoiceAgentEvent voiceEvent)
+    {
+        // Read here, while the turns that recorded them are still this scope's. Everything after this point runs
+        // somewhere else and can carry nothing but plain values.
+        var handoffRequested = _handoffTurn.HandoffRequested;
+        var endCallRequested = _endCallTurn.EndCallRequested;
+
+        // The caller hung up, or the session never got far enough to decide anything. There is nothing to finish.
+        if (!handoffRequested && !endCallRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await _completionRunner.RunAsync(new RealtimeCallCompletion
+            {
+                ActivityId = activity.ItemId,
+                ProviderName = voiceEvent.ProviderName,
+                ProviderCallId = voiceEvent.ProviderCallId,
+                HandoffRequested = handoffRequested,
+                EndCallRequested = endCallRequested,
+                EndCallReason = _endCallTurn.Reason,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "The automated call for activity '{ActivityId}' could not be handed on to be finished; the caller is still on the line.",
+                activity.ItemId.SanitizeLogValue());
+        }
+    }
+
+    /// <summary>
     /// Carries out what a finished live session decided: hand the caller to an agent, or end the call.
     /// </summary>
     /// <remarks>

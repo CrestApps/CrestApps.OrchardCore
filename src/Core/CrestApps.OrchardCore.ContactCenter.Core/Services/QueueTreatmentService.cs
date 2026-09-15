@@ -128,6 +128,23 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
         return treated;
     }
 
+    /// <inheritdoc/>
+    public Task StartHoldMusicAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(queue);
+
+        var mediaId = queue.Treatment?.HoldMusicMediaId;
+
+        // A queue with no hold music has asked for silence, and a caller with no live leg has nothing to hear it
+        // on. Neither is an error.
+        if (string.IsNullOrWhiteSpace(providerCallId) || string.IsNullOrWhiteSpace(mediaId))
+        {
+            return Task.CompletedTask;
+        }
+
+        return _treatmentProvider.StartHoldMusicAsync(providerCallId, mediaId, cancellationToken);
+    }
+
     /// <summary>
     /// Plays one step, and says whether the caller actually heard anything.
     /// </summary>

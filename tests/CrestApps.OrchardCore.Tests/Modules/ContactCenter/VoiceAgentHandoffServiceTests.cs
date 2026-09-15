@@ -61,11 +61,13 @@ public class VoiceAgentHandoffServiceTests
     }
 
     [Fact]
-    public async Task ACallerAnAgentTookStraightAway_IsNotPlayedHoldMusicOverTheAgent()
+    public async Task ACallerAnAgentIsBeingRungFor_HearsTheQueueUntilSomebodyPicksUp()
     {
         // Arrange
-        // Treatment is for people who are waiting. Starting music for a caller who has just been connected would
-        // play it over the agent who answered.
+        // An offer is not an answer. The agent has until the queue's reservation timeout to pick up, and a caller
+        // who has just been told "connecting you now" spent all of it listening to nothing. A treatment pass
+        // cannot reach them — the offer reserves the item, and a pass reads waiting items only — so the music is
+        // started on its own. It is stopped when the reservation is accepted, not when it is made.
         var activity = new OmnichannelActivity
         {
             ItemId = "act1",
@@ -87,6 +89,11 @@ public class VoiceAgentHandoffServiceTests
         }, TestContext.Current.CancellationToken);
 
         // Assert
+        harness.TreatmentService.Verify(
+            x => x.StartHoldMusicAsync(It.IsAny<ActivityQueue>(), "call-abc", It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // And not a pass, which would read the waiting items this caller is no longer one of.
         harness.TreatmentService.Verify(
             x => x.RunDueAsync(It.IsAny<ActivityQueue>(), It.IsAny<CancellationToken>()),
             Times.Never);

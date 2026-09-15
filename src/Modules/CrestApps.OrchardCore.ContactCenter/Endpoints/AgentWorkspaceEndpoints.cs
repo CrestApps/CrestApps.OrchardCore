@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -357,6 +357,7 @@ internal static partial class AgentWorkspaceEndpoints
         string interactionId,
         IInteractionManager interactionManager,
         IAgentProfileManager agentProfileManager,
+        ITelephonyInteractionStore telephonyInteractionStore,
         HttpContext httpContext)
     {
         if (httpContext.User.Identity?.IsAuthenticated != true)
@@ -384,7 +385,12 @@ internal static partial class AgentWorkspaceEndpoints
             }
         }
 
-        var interaction = await interactionManager.FindByIdAsync(interactionId, httpContext.RequestAborted);
+        var interaction = await ResolveVoicemailInteractionAsync(
+            interactionId,
+            userId,
+            interactionManager,
+            telephonyInteractionStore,
+            httpContext.RequestAborted);
 
         // Only a voicemail interaction is playable through this endpoint; a normal call recording is governed and
         // surfaced elsewhere, so this endpoint deliberately refuses to expose it.
@@ -436,8 +442,11 @@ internal static partial class AgentWorkspaceEndpoints
             return TypedResults.NotFound();
         }
 
+        // Audited against the interaction that was resolved, not the identifier the soft phone asked with: the two
+        // differ whenever the inbox row carries its own, and an audit trail keyed to a soft-phone row cannot be
+        // followed back to the recording it is about.
         var granted = await recordingAccessGovernanceService.RecordAccessAsync(
-            interactionId,
+            interaction.ItemId,
             userId,
             "voicemail-playback",
             httpContext.RequestAborted);
@@ -496,7 +505,12 @@ internal static partial class AgentWorkspaceEndpoints
             return TypedResults.BadRequest();
         }
 
-        var interaction = await interactionManager.FindByIdAsync(interactionId, httpContext.RequestAborted);
+        var interaction = await ResolveVoicemailInteractionAsync(
+            interactionId,
+            userId,
+            interactionManager,
+            telephonyInteractionStore,
+            httpContext.RequestAborted);
 
         if (interaction is null || !IsVoicemailInteraction(interaction))
         {
@@ -535,7 +549,9 @@ internal static partial class AgentWorkspaceEndpoints
 
         if (governance is not null)
         {
-            await governance.EraseAsync(interactionId, userId, "voicemail-deleted", httpContext.RequestAborted);
+            // Erased by the resolved interaction's identifier, for the same reason the playback audit uses it: an
+            // erase recorded against a soft-phone row would leave the recording's own tombstone unwritten.
+            await governance.EraseAsync(interaction.ItemId, userId, "voicemail-deleted", httpContext.RequestAborted);
         }
 
         // Finally remove the soft-phone projection so the voicemail leaves the recipient's inbox. It is keyed by the
@@ -551,6 +567,45 @@ internal static partial class AgentWorkspaceEndpoints
         }
 
         return TypedResults.Ok();
+    }
+
+    /// <summary>
+    /// Finds the platform interaction behind the voicemail the soft phone is asking about.
+    /// </summary>
+    /// <remarks>
+    /// The soft phone addresses a voicemail by the identifier on its own inbox row, and that is the platform
+    /// interaction's identifier only when the platform projected the row. A call the soft phone sent to voicemail
+    /// itself carries a generated identifier instead, and looking that up as an interaction found nothing — so
+    /// the voicemail could be neither played nor deleted, and both endpoints answered "not found" about a
+    /// recording sitting in plain sight in the agent's inbox.
+    /// <para>
+    /// The inbox row knows the call it was recorded on, and the interaction can be found by that. The row is read
+    /// as the signed-in user's own, so an identifier belonging to somebody else resolves to nothing rather than to
+    /// their voicemail; the recipient check the callers perform afterwards still applies either way.
+    /// </para>
+    /// </remarks>
+    private static async Task<Interaction> ResolveVoicemailInteractionAsync(
+        string interactionId,
+        string userId,
+        IInteractionManager interactionManager,
+        ITelephonyInteractionStore telephonyInteractionStore,
+        CancellationToken cancellationToken)
+    {
+        var interaction = await interactionManager.FindByIdAsync(interactionId, cancellationToken);
+
+        if (interaction is not null)
+        {
+            return interaction;
+        }
+
+        var projection = await telephonyInteractionStore.FindByInteractionIdAsync(userId, interactionId, cancellationToken);
+
+        if (projection is null || string.IsNullOrEmpty(projection.CallId))
+        {
+            return null;
+        }
+
+        return await interactionManager.FindByProviderInteractionIdAsync(projection.CallId, cancellationToken);
     }
 
     private static bool IsVoicemailInteraction(Interaction interaction)

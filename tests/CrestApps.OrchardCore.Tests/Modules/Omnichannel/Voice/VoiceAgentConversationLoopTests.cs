@@ -35,7 +35,7 @@ public sealed class VoiceAgentConversationLoopTests
         var harness = new LoopHarness();
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(harness.Media.Spoken);
@@ -53,7 +53,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.Profile.RealtimeDeploymentName = "realtime-deployment";
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(harness.Realtime.Sessions);
@@ -71,7 +71,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.Activity.TextToSpeechVoiceId = "chosen-voice";
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         var session = harness.Realtime.Sessions.Single();
@@ -94,7 +94,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.Realtime.CanRun = false;
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(harness.Media.Spoken);
@@ -108,7 +108,7 @@ public sealed class VoiceAgentConversationLoopTests
         var harness = new LoopHarness();
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(harness.Realtime.Sessions);
@@ -126,7 +126,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.Realtime.OnRun = () => Assert.Equal(ActivityStatus.InProgress, harness.Activity.Status);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(harness.Realtime.Sessions);
@@ -142,7 +142,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.Activity.Status = ActivityStatus.AwaitingCustomerAnswer;
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(ActivityStatus.InProgress, harness.Activity.Status);
@@ -156,8 +156,8 @@ public sealed class VoiceAgentConversationLoopTests
         var harness = new LoopHarness();
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(harness.Media.Spoken);
@@ -170,7 +170,7 @@ public sealed class VoiceAgentConversationLoopTests
         var harness = new LoopHarness();
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("fake-default-voice", harness.Media.Voices[0]);
@@ -184,7 +184,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.Activity.TextToSpeechVoiceId = "chosen-voice";
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("chosen-voice", harness.Media.Voices[0]);
@@ -195,10 +195,10 @@ public sealed class VoiceAgentConversationLoopTests
     {
         // Arrange
         var harness = new LoopHarness();
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, harness.Media.TranscriptionStarts);
@@ -211,10 +211,10 @@ public sealed class VoiceAgentConversationLoopTests
         // Listening through the assistant's own text-to-speech feeds it back in as if the person had said it.
         var harness = new LoopHarness();
         harness.Reply = "We have a few that would suit you.";
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.");
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, harness.Media.TranscriptionStops);
@@ -227,11 +227,11 @@ public sealed class VoiceAgentConversationLoopTests
         // Arrange
         // Answering half a sentence talks over the person saying the rest of it.
         var harness = new LoopHarness();
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         var spokenAfterGreeting = harness.Media.Spoken.Count;
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for", isFinal: false);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for", isFinal: false, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(spokenAfterGreeting, harness.Media.Spoken.Count);
@@ -243,11 +243,11 @@ public sealed class VoiceAgentConversationLoopTests
         // Arrange
         var harness = new LoopHarness();
         harness.Reply = "Understood.";
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.");
-        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.");
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.", cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, harness.Media.Spoken.Count(text => text == "Understood."));
@@ -260,18 +260,100 @@ public sealed class VoiceAgentConversationLoopTests
         // Hanging up the moment the model decides to stop cuts the closing line off mid-word.
         var harness = new LoopHarness();
         harness.Reply = "Thanks for your time. Goodbye. [[HANGUP]]";
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
-        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "No thanks.");
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "No thanks.", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, harness.Media.Hangups);
         Assert.DoesNotContain("[[HANGUP]]", harness.Media.Spoken[^1], StringComparison.Ordinal);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, harness.Media.Hangups);
+    }
+
+    // ---- The journey a caller asking for a person actually takes ----
+    //
+    // Three separate defects broke this in production, and each one passed the tests of the day because every
+    // test stopped at a seam: the model had no tool to escalate with, the work died with the webhook request it
+    // ran inside, and the session never returned so nothing after it ran at all. The caller heard the assistant
+    // promise a person and then silence, three times. These follow the whole path instead.
+
+    [Fact]
+    public async Task ACallerWhoAsksForAPerson_ReachesTheQueue_EvenWhenTheProviderHasAbandonedTheWebhook()
+    {
+        // Arrange
+        // The real turn objects, because the tool records on one and the loop reads it: a mock of either cannot
+        // show that they are the same instance. The request token is already cancelled, which is how an
+        // abandoned provider webhook actually arrives -- a voice session holds one open for the length of a call,
+        // and no provider waits that long.
+        var harness = new LoopHarness(useRealTurns: true);
+        harness.EnableHandoff();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+
+        // The session stands in for a live one: while it is held, the model invokes the transfer tool, which is
+        // all the tool does -- record the ask on the turn for somebody else to carry out.
+        harness.Realtime.OnRun = () => harness.RealHandoffTurn.RequestHandoff("the customer asked for a person");
+
+        // And the completion is carried out rather than merely recorded, as the child scope does on a live call.
+        harness.CompletionRunner.FinishOn = harness.Loop;
+
+        using var abandoned = new CancellationTokenSource();
+        await abandoned.CancelAsync();
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: abandoned.Token);
+
+        // Assert
+        // The caller is handed to the queue, which is the whole point of asking for a person.
+        harness.HandoffService.Verify(
+            x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+
+        // And not on the token that was already dead, which is what silently dropped it in production.
+        Assert.False(harness.HandoffToken.IsCancellationRequested);
+    }
+
+    [Fact]
+    public async Task ACallerWhoAsksForAPerson_IsNotHungUpOnInstead()
+    {
+        // Arrange
+        // The two endings are decided by the same machinery, and the call belongs to the agent now. Hanging up
+        // here would drop the person who was just promised one.
+        var harness = new LoopHarness(useRealTurns: true);
+        harness.EnableHandoff();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.Realtime.OnRun = () => harness.RealHandoffTurn.RequestHandoff("the customer asked for a person");
+        harness.CompletionRunner.FinishOn = harness.Loop;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Equal(0, harness.Media.Hangups);
+    }
+
+    [Fact]
+    public async Task ACallNobodyAskedToEscalate_ReachesNoQueue()
+    {
+        // Arrange
+        // The other half of the guard, with the real turns: simply holding a live call must never route a caller
+        // to an agent. A turn that reported a handoff nobody asked for would send every automated call to a queue.
+        var harness = new LoopHarness(useRealTurns: true);
+        harness.EnableHandoff();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.CompletionRunner.FinishOn = harness.Loop;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+
+        // Assert
+        Assert.Null(harness.CompletionRunner.Completion);
+        harness.HandoffService.Verify(
+            x => x.RequestHandoffAsync(It.IsAny<OmnichannelHandoffRequest>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -302,6 +384,29 @@ public sealed class VoiceAgentConversationLoopTests
         Assert.True(harness.CompletionRunner.Completion.HandoffRequested);
         Assert.Equal(harness.Activity.ItemId, harness.CompletionRunner.Completion.ActivityId);
         Assert.Equal("call-1", harness.CompletionRunner.Completion.ProviderCallId);
+    }
+
+    [Fact]
+    public async Task AnEscalatedRealtimeCall_IsStillFinished_WhenTheSessionEndsByFailing()
+    {
+        // Arrange
+        // A session can fail on its way out — a media socket closing badly, a provider connection torn down with
+        // the request it was opened on — and it does so after the model has told the caller a person is coming
+        // and the tool has recorded it. Hanging the finishing work off the success path meant that failure left
+        // the caller on an open, silent line with nothing queued and nobody coming.
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
+        harness.Realtime.OnRun = () => throw new IOException("The media socket closed while the session was shutting down.");
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(harness.CompletionRunner.Completion);
+        Assert.True(harness.CompletionRunner.Completion.HandoffRequested);
+        Assert.Equal(harness.Activity.ItemId, harness.CompletionRunner.Completion.ActivityId);
     }
 
     [Fact]
@@ -345,7 +450,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(true);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.FinishAsync();
 
         // Assert
@@ -365,7 +470,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(false);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(harness.Realtime.Sessions);
@@ -386,7 +491,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(true);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.FinishAsync();
 
         // Assert
@@ -407,7 +512,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(false);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Single(harness.Realtime.Sessions);
@@ -425,12 +530,12 @@ public sealed class VoiceAgentConversationLoopTests
         harness.EnableHandoff();
         harness.Reply = "Let me put you through.";
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
-        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Can I speak to a person?");
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Can I speak to a person?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         // The escalation is decided during the turn but only acted on once the closing line has been spoken.
-        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         harness.HandoffService.Verify(
@@ -450,15 +555,15 @@ public sealed class VoiceAgentConversationLoopTests
         harness.EnableHandoff();
         harness.Reply = "Let me put you through.";
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
-        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Can I speak to a person?");
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Can I speak to a person?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         // The first speak.ended performs the transfer and announces it. The announcement itself then ends, which
         // is the event that used to start the whole thing again.
-        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
-        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
-        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         harness.HandoffService.Verify(
@@ -477,11 +582,11 @@ public sealed class VoiceAgentConversationLoopTests
         harness.HandoffResult = OmnichannelHandoffResult.Failure("No queue.");
         harness.Reply = "Let me put you through.";
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
-        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Can I speak to a person?");
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Can I speak to a person?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(1, harness.Media.Hangups);
@@ -496,7 +601,7 @@ public sealed class VoiceAgentConversationLoopTests
         var harness = new LoopHarness();
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered, providerName: "SomeOtherProvider");
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, providerName: "SomeOtherProvider", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(harness.Media.Spoken);
@@ -536,7 +641,7 @@ public sealed class VoiceAgentConversationLoopTests
     {
         private readonly List<AIChatSessionPrompt> _prompts = [];
 
-        public LoopHarness()
+        public LoopHarness(bool useRealTurns = false)
         {
             Activity = new OmnichannelActivity
             {
@@ -614,6 +719,15 @@ public sealed class VoiceAgentConversationLoopTests
 
             HandoffTurn = new Mock<IOmnichannelHandoffTurn>();
             EndCallTurn = new Mock<IVoiceCallEndTurn>();
+
+            // A journey test uses the real turns: they are the objects the tools record on, and a mock of them
+            // cannot show that the thing recording and the thing reading are the same instance.
+            RealHandoffTurn = new OmnichannelHandoffTurn();
+            RealEndCallTurn = new VoiceCallEndTurn();
+
+            var handoffTurn = useRealTurns ? RealHandoffTurn : HandoffTurn.Object;
+            var endCallTurn = useRealTurns ? (IVoiceCallEndTurn)RealEndCallTurn : EndCallTurn.Object;
+
             CompletionRunner = new RecordingCompletionRunner();
 
             Loop = new VoiceAgentConversationLoop(
@@ -621,8 +735,8 @@ public sealed class VoiceAgentConversationLoopTests
                 sessionManager.Object,
                 promptStore.Object,
                 completionService.Object,
-                HandoffTurn.Object,
-                EndCallTurn.Object,
+                handoffTurn,
+                endCallTurn,
                 CompletionRunner,
                 deploymentManager.Object,
                 contextBuilder.Object,
@@ -653,6 +767,13 @@ public sealed class VoiceAgentConversationLoopTests
         public Mock<IOmnichannelHandoffTurn> HandoffTurn { get; }
 
         public Mock<IVoiceCallEndTurn> EndCallTurn { get; }
+
+        /// <summary>
+        /// The real turns, used by the journey test. The transfer tool records on one of these on a live call.
+        /// </summary>
+        public OmnichannelHandoffTurn RealHandoffTurn { get; }
+
+        public VoiceCallEndTurn RealEndCallTurn { get; }
 
         public RecordingCompletionRunner CompletionRunner { get; }
 
@@ -715,11 +836,20 @@ public sealed class VoiceAgentConversationLoopTests
     {
         public RealtimeCallCompletion Completion { get; private set; }
 
-        public Task RunAsync(RealtimeCallCompletion completion)
+        /// <summary>
+        /// Set by the journey test to the loop that should carry the completion out, standing in for the child
+        /// scope the real runner opens — so the test follows the work through instead of stopping at the seam.
+        /// </summary>
+        public VoiceAgentConversationLoop FinishOn { get; set; }
+
+        public async Task RunAsync(RealtimeCallCompletion completion)
         {
             Completion = completion;
 
-            return Task.CompletedTask;
+            if (FinishOn is not null)
+            {
+                await FinishOn.FinishRealtimeCallAsync(completion);
+            }
         }
     }
 }

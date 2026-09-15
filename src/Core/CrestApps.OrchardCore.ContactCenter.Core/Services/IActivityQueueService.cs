@@ -39,6 +39,19 @@ public interface IActivityQueueService
     Task DequeueAsync(QueueItem queueItem, QueueItemStatus status, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Silences the hold music on the leg of a caller who has stopped waiting.
+    /// </summary>
+    /// <remarks>
+    /// Dequeuing does this already, but not every way out of a queue is a dequeue: an agent who accepts the
+    /// offer leaves the item in the queue as assigned, and the caller they are about to speak to is still
+    /// listening to music started on an infinite loop. Best effort — the caller has already stopped waiting,
+    /// and whatever comes next matters more than the music.
+    /// </remarks>
+    /// <param name="queueItem">The item whose caller has stopped waiting.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task StopHoldMusicAsync(QueueItem queueItem, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Moves waiting items from the queue to its configured overflow queue when they have waited past the
     /// overflow threshold, or when the queue is closed and configured to overflow after hours.
     /// </summary>

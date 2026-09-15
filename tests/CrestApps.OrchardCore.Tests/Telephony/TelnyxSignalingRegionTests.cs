@@ -67,7 +67,7 @@ public sealed class TelnyxSignalingRegionTests
         {
             UserId = "user-1",
             DisplayName = "Agent One",
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal("eu", config.Signaling.Region);
@@ -86,7 +86,7 @@ public sealed class TelnyxSignalingRegionTests
         {
             UserId = "user-1",
             DisplayName = "Agent One",
-        });
+        }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(config.Signaling.Region);

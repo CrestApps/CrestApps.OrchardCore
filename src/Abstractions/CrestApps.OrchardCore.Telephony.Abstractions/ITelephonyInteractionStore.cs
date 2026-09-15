@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Telephony.Models;
+﻿using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony;
 
@@ -78,6 +78,20 @@ public interface ITelephonyInteractionStore
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The interaction, or <see langword="null"/> when none matches.</returns>
     Task<TelephonyInteraction> FindByCallIdAsync(string userId, string callId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Finds one of the user's own interactions by the identifier carried on their inbox row.
+    /// </summary>
+    /// <remarks>
+    /// That identifier is the soft phone's own, and is only the platform interaction's identifier when the
+    /// platform projected the row; a call the soft phone recorded itself carries a generated one. Scoped to the
+    /// user on purpose, so a row can never be reached by guessing an identifier that belongs to somebody else.
+    /// </remarks>
+    /// <param name="userId">The user identifier.</param>
+    /// <param name="interactionId">The identifier on the soft phone's row.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The interaction, or <see langword="null"/> when none matches.</returns>
+    Task<TelephonyInteraction> FindByInteractionIdAsync(string userId, string interactionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds the interaction for the given provider and provider call identifier, regardless of the

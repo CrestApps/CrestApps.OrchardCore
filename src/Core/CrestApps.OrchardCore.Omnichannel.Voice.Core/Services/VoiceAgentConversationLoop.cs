@@ -208,77 +208,59 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             // caller says a word. The turn-based loop below re-reads this on every turn instead.
             var (realtimeHandoffService, realtimeFlowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
 
-            if (await _realtimeRunner.RunAsync(new RealtimeVoiceConversationContext
+            var sessionHeldTheCall = false;
+
+            try
             {
-                Activity = activity,
-                Profile = profile,
-                Session = session,
-                ProviderName = voiceEvent.ProviderName,
-                ProviderCallId = voiceEvent.ProviderCallId,
+                sessionHeldTheCall = await _realtimeRunner.RunAsync(new RealtimeVoiceConversationContext
+                {
+                    Activity = activity,
+                    Profile = profile,
+                    Session = session,
+                    ProviderName = voiceEvent.ProviderName,
+                    ProviderCallId = voiceEvent.ProviderCallId,
 
-                // Snapshotted onto the activity when the inventory was loaded, so the campaign that chose the
-                // voice also chose whether the call sounds like someone is sitting in a room.
-                UseCallAmbience = activity.UseCallAmbience,
+                    // Snapshotted onto the activity when the inventory was loaded, so the campaign that chose the
+                    // voice also chose whether the call sounds like someone is sitting in a room.
+                    UseCallAmbience = activity.UseCallAmbience,
 
-                // Ends the session as soon as the transfer tool fires, so the handoff below happens while the
-                // caller is still expecting it rather than whenever the call would otherwise have ended.
-                HandoffRequested = _handoffTurn.HandoffRequestedToken,
+                    // Ends the session as soon as the transfer tool fires, so the handoff below happens while the
+                    // caller is still expecting it rather than whenever the call would otherwise have ended.
+                    HandoffRequested = _handoffTurn.HandoffRequestedToken,
 
-                // Ends the session once the model says the conversation is finished, so the platform hangs up
-                // rather than leaving the customer to notice that nobody is going to.
-                EndCallRequested = _endCallTurn.EndCallRequestedToken,
+                    // Ends the session once the model says the conversation is finished, so the platform hangs up
+                    // rather than leaving the customer to notice that nobody is going to.
+                    EndCallRequested = _endCallTurn.EndCallRequestedToken,
 
-                // Only when this call actually has an agent to reach. Telling a model it may transfer, on a call
-                // where nothing can receive the caller, promises the caller a person who is not coming.
-                HandoffInstructions = realtimeHandoffService is null
-                    ? null
-                    : OmnichannelHandoffHelper.BuildHandoffInstructions(realtimeFlowSettings),
-            }, cancellationToken))
-            {
+                    // Only when this call actually has an agent to reach. Telling a model it may transfer, on a
+                    // call where nothing can receive the caller, promises the caller a person who is not coming.
+                    HandoffInstructions = realtimeHandoffService is null
+                        ? null
+                        : OmnichannelHandoffHelper.BuildHandoffInstructions(realtimeFlowSettings),
+                }, cancellationToken);
+
                 // The session is over. Said plainly on the record, because the failure this instrumentation was
-                // added for looked exactly like the session never ending.
-                if (_logger.IsEnabled(LogLevel.Information))
+                // added for looked exactly like the session never ending. Only when there was a session: a
+                // provider that cannot carry live media reports that here, and never held one.
+                if (sessionHeldTheCall && _logger.IsEnabled(LogLevel.Information))
                 {
                     _logger.LogInformation(
                         "The realtime session for activity '{ActivityId}' ended.",
                         activity.ItemId.SanitizeLogValue());
                 }
+            }
+            finally
+            {
+                // In a finally because what the caller was promised does not depend on how the session ended. A
+                // session that fails on its way out -- a media socket closing badly, a provider connection torn
+                // down with the request -- still fails after the model has told the caller a person is coming and
+                // the tool has recorded it. Leaving that to the success path put the caller on an open, silent
+                // line with nothing queued and nobody coming.
+                await FinishTheCallElsewhereAsync(activity, voiceEvent);
+            }
 
-                // What the live session decided, read here while the turns that recorded it are still this
-                // scope's. Everything after this point runs somewhere else.
-                var handoffRequested = _handoffTurn.HandoffRequested;
-                var endCallRequested = _endCallTurn.EndCallRequested;
-                var endCallReason = _endCallTurn.Reason;
-
-                if (!handoffRequested && !endCallRequested)
-                {
-                    return;
-                }
-
-                // Finish the call in a scope of its own.
-                //
-                // A realtime session holds the caller for the whole call, and this branch is running inside the
-                // provider's "call answered" webhook request. No provider waits minutes for a webhook response:
-                // ours timed out, was retried, and its connection was aborted the moment the session ended. The
-                // work that came after -- the handoff -- went with it. Observed live: the model asked to
-                // transfer, the tool recorded it, the caller heard the assistant stop, and nothing ever enqueued
-                // them, with not one line logged because the request that would have logged it was already gone.
-                //
-                // A child scope has its own services and its own lifetime, and the work is given a cancellation
-                // token of its own, so finishing the call no longer depends on a request the provider abandoned
-                // long ago.
-                var completion = new RealtimeCallCompletion
-                {
-                    ActivityId = activity.ItemId,
-                    ProviderName = voiceEvent.ProviderName,
-                    ProviderCallId = voiceEvent.ProviderCallId,
-                    HandoffRequested = handoffRequested,
-                    EndCallRequested = endCallRequested,
-                    EndCallReason = endCallReason,
-                };
-
-                await _completionRunner.RunAsync(completion);
-
+            if (sessionHeldTheCall)
+            {
                 return;
             }
         }

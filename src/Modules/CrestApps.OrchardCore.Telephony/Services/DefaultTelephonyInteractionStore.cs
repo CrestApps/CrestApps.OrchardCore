@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Telephony.Core.Services;
+﻿using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Models;
 using YesSql;
@@ -156,6 +156,19 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
 
         return await _session
             .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.UserId == userId && x.CallId == callId)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<TelephonyInteraction> FindByInteractionIdAsync(string userId, string interactionId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(interactionId))
+        {
+            return null;
+        }
+
+        return await _session
+            .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.UserId == userId && x.InteractionId == interactionId)
             .FirstOrDefaultAsync(cancellationToken);
     }
 

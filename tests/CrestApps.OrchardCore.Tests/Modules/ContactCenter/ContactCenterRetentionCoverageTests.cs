@@ -136,7 +136,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ],
         ["ActivityReservation"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.cs", "ReleaseAsync", "reservation.ModifiedUtc = "),
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.Expiry.cs", "ReleaseAsync", "reservation.ModifiedUtc = "),
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.cs", "CompensateAsync", "reservation.ModifiedUtc = "),
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceOfferSynchronizationService.cs", "ReconcileEndedOfferAsync", "reservation.ModifiedUtc = "),
         ],

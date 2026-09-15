@@ -228,9 +228,18 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         // with a gap between them, so a caller seated during that gap heard nothing at all — and a transferred
         // caller is already live on the line, listening, having just been told a person is coming. Silence there
         // is indistinguishable from a dropped call, and most of these waits are shorter than one sweep cycle.
+        //
+        // Which of the two the caller gets turns on whether anybody was offered the call, because an offered
+        // caller is no longer a waiting one: the item is reserved the instant the offer goes out, and every
+        // treatment pass reads waiting items only. A pass would find nobody and play nothing, so the offered
+        // caller gets the music on its own — they are still on the line for as long as the agent's phone rings.
         if (string.IsNullOrEmpty(offeredUserId))
         {
             await StartQueueTreatmentAsync(queue, cancellationToken);
+        }
+        else
+        {
+            await StartHoldMusicAsync(queue, request.ProviderCallId, cancellationToken);
         }
 
         if (_logger.IsEnabled(LogLevel.Information))
@@ -298,6 +307,30 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Could not start queue treatment for the caller handed to queue '{QueueId}'.", queue.ItemId.SanitizeLogValue());
+        }
+    }
+
+    /// <summary>
+    /// Plays the queue's hold music to a caller whose agent is being rung.
+    /// </summary>
+    /// <remarks>
+    /// Swallowed the same way, and for the same reason, as the treatment pass above: the agent is on their way
+    /// either way, and losing the music must not lose the call.
+    /// </remarks>
+    private async Task StartHoldMusicAsync(ActivityQueue queue, string providerCallId, CancellationToken cancellationToken)
+    {
+        if (queue is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _treatmentService.StartHoldMusicAsync(queue, providerCallId, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not start hold music for the caller handed to queue '{QueueId}'.", queue.ItemId.SanitizeLogValue());
         }
     }
 

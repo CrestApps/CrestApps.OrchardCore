@@ -60,6 +60,45 @@ public sealed class ActivityReservationServiceTests
     }
 
     [Fact]
+    public async Task AcceptAsync_StopsTheHoldMusic_SoTheAgentIsNotTalkingUnderIt()
+    {
+        // Arrange
+        // Hold music is started on an infinite loop and an assigned item is never dequeued, so this is the only
+        // point at which a call that went the way it should stops playing to the caller. Without it the agent
+        // introduced themselves over the music.
+        var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        reservationManager.Setup(m => m.GetActiveByAgentAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+
+        var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1", ReservationId = "r1", AgentId = "a1" }.RestorePersistedStatus(QueueItemStatus.Reserved);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Reserved, ActiveReservationId = "r1" });
+
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager.Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>())).ReturnsAsync(new ActivityQueue { ItemId = "q1" });
+
+        var queueService = new Mock<IActivityQueueService>();
+        var interactionManager = new Mock<IInteractionManager>();
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+        activityManager.Setup(m => m.FindByIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new OmnichannelActivity { ItemId = "act-1" });
+
+        var service = CreateService(reservationManager, queueItemManager, agentManager, queueManager, queueService, interactionManager, activityManager, new Mock<IContactCenterEventPublisher>(), new Mock<ITelephonyService>());
+
+        // Act
+        var accepted = await service.AcceptAsync("r1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(accepted);
+        Assert.Equal(QueueItemStatus.Assigned, queueItem.Status);
+        queueService.Verify(s => s.StopHoldMusicAsync(queueItem, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
     public async Task ReserveAsync_WhenConcurrentTransitionWins_ThrowsAndAbortsScope()
     {
         // Arrange

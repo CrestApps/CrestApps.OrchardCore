@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -487,6 +487,18 @@ public sealed class TelephonyHubAuthorizationTests
             var interaction = _interactions.FirstOrDefault(value =>
                 string.Equals(value.UserId, userId, StringComparison.Ordinal) &&
                 string.Equals(value.CallId, callId, StringComparison.Ordinal));
+
+            return Task.FromResult(interaction);
+        }
+
+        public Task<TelephonyInteraction> FindByInteractionIdAsync(
+            string userId,
+            string interactionId,
+            CancellationToken cancellationToken = default)
+        {
+            var interaction = _interactions.FirstOrDefault(value =>
+                string.Equals(value.UserId, userId, StringComparison.Ordinal) &&
+                string.Equals(value.InteractionId, interactionId, StringComparison.Ordinal));
 
             return Task.FromResult(interaction);
         }

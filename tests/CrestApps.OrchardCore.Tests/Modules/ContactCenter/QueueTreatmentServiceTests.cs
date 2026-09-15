@@ -240,6 +240,38 @@ public sealed class QueueTreatmentServiceTests
         Assert.Equal(1, treated);
     }
 
+    [Fact]
+    public async Task ACallerWhoseAgentIsBeingRung_CanBeGivenTheMusicWithoutASweep()
+    {
+        // Arrange
+        // The offer reserves the queue item, and a sweep reads waiting items only, so the one caller a sweep can
+        // never reach is the one who was connected fastest — left listening to nothing for the length of the ring.
+        var harness = new TreatmentHarness();
+
+        // Act
+        await harness.Service.StartHoldMusicAsync(harness.Queue, "call-ringing", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("https://example.test/hold.mp3", harness.Provider.HoldMusic.Single());
+        Assert.Empty(harness.Provider.Spoken);
+    }
+
+    [Fact]
+    public async Task AQueueWithNoHoldMusic_PlaysNothingToACallerWhoseAgentIsBeingRung()
+    {
+        // Arrange
+        // A queue that configured no music asked for silence, and asking the provider to play nothing logs an
+        // error every time somebody is offered a call.
+        var harness = new TreatmentHarness();
+        harness.Settings.HoldMusicMediaId = null;
+
+        // Act
+        await harness.Service.StartHoldMusicAsync(harness.Queue, "call-ringing", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(harness.Provider.HoldMusic);
+    }
+
     private sealed class TreatmentHarness
     {
         private readonly List<QueueItem> _waiting = [];
