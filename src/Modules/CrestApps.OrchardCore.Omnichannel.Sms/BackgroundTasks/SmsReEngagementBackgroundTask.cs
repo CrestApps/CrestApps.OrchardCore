@@ -1,4 +1,4 @@
-using CrestApps.Core;
+﻿using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
@@ -348,7 +348,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                 }, cancellationToken);
                 context.AdditionalProperties["Session"] = chatSession;
 
-                var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
+                var deployment = await deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 
                 if (deployment is null)
                 {

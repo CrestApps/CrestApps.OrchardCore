@@ -632,7 +632,7 @@ public sealed class RealtimeVoiceConversationRunnerTests
             Profile = new AIProfile
             {
                 ItemId = "profile-1",
-                RealtimeDeploymentName = "realtime-deployment",
+                ChatDeploymentName = "realtime-deployment",
             };
 
             var mediaProvider = new Mock<IContactCenterVoiceMediaProvider>();
@@ -719,6 +719,9 @@ public sealed class RealtimeVoiceConversationRunnerTests
                 HandoffRequested = HandoffRequested,
                 EndCallRequested = EndCallRequested,
                 HandoffInstructions = HandoffInstructions,
+
+                // The loop decides this now, by asking whether the profile's chat deployment can hold a live call.
+                RealtimeDeploymentName = "realtime-deployment",
             }, TestContext.Current.CancellationToken);
     }
 
@@ -798,6 +801,26 @@ public sealed class RealtimeVoiceConversationRunnerTests
                 _events.Enqueue(conversationEvent);
             }
         }
+
+        /// <summary>
+        /// The session drives its own turns unless a test says otherwise, which is how the provider behaves.
+        /// </summary>
+        public bool RespondsAutomatically { get; set; } = true;
+
+        public List<string> Grounded { get; } = [];
+
+        public Task<bool> GroundTurnAsync(string utterance, CancellationToken cancellationToken = default)
+        {
+            Grounded.Add(utterance);
+
+            return Task.FromResult(true);
+        }
+
+        public Task RequestResponseAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task RequestAcknowledgementAsync(string instructions, CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
 
         public Task SendAudioAsync(ReadOnlyMemory<byte> audio, CancellationToken cancellationToken = default)
         {

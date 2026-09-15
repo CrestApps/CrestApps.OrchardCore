@@ -58,6 +58,7 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("SearchIndexDocumentationToolSettings", BuildSearchIndexSettingsSchema().Description("Settings for the built-in prebuilt search index documentation source.")),
                 ("AlgoliaDocumentationToolSettings", BuildAlgoliaSettingsSchema().Description("Settings for the built-in Algolia DocSearch documentation source.")),
                 ("WebsiteSearchToolSettings", BuildWebsiteSearchSettingsSchema().Description("Settings for the built-in live website search source.")),
+                ("DataSourceSearchToolSettings", BuildDataSourceSearchSettingsSchema().Description("Settings for the built-in AI data source vector search source.")),
                 ("AIToolInstanceParametersMetadata", BuildParametersMetadataSchema().Description("User-declared parameters for sources that opt into parameter support.")))
             .AdditionalProperties(true)
             .Description("Source-specific tool instance settings, grouped by settings object name. Secrets are stored encrypted at rest.");
@@ -163,6 +164,17 @@ public sealed class AIToolInstanceRecipeStep : IRecipeStep
                 ("ApiKey", RecipeStepSchemaBuilders.String().Description("Algolia search-only API key. Stored encrypted at rest.")),
                 ("IndexName", RecipeStepSchemaBuilders.String().Description("Algolia index name.")),
                 ("MaxResults", RecipeStepSchemaBuilders.Integer().Description("Maximum passages returned for a single search.")))
+            .AdditionalProperties(true);
+
+    private static JsonSchemaBuilder BuildDataSourceSearchSettingsSchema()
+        => new JsonSchemaBuilder()
+            .Type(SchemaValueType.Object)
+            .Properties(
+                ("DataSourceId", RecipeStepSchemaBuilders.String().Description("Identifier of the AI data source the instance searches.")),
+                ("RetrievalMode", new JsonSchemaBuilder().Type(SchemaValueType.String).Enum("Chunk", "Hierarchical").Description("Whether a search returns only the matching chunks or the full source documents they belong to.")),
+                ("TopNDocuments", RecipeStepSchemaBuilders.Integer().Description("Number of top-scoring documents returned for a single search. Empty uses the site default.")),
+                ("Strictness", RecipeStepSchemaBuilders.Integer().Description("Relevance threshold a result must clear to be returned. Empty uses the site default.")),
+                ("Filter", RecipeStepSchemaBuilders.String().Description("OData filter expression translated to the index provider's own syntax before the search runs.")))
             .AdditionalProperties(true);
 
     private static JsonSchemaBuilder BuildWebsiteSearchSettingsSchema()

@@ -95,4 +95,14 @@ public sealed class RealtimeVoiceConversationContext
     /// talked to by the assistant instead.
     /// </remarks>
     public string HandoffInstructions { get; set; }
+
+    /// <summary>
+    /// Gets or sets the deployment this call is held on.
+    /// </summary>
+    /// <remarks>
+    /// Realtime is a capability a model either has or does not, rather than a deployment of its own, so the call
+    /// is held on the profile's chat deployment when that deployment declares it. The loop resolves it, because
+    /// the same answer decides whether there is a live session at all.
+    /// </remarks>
+    public string RealtimeDeploymentName { get; set; }
 }

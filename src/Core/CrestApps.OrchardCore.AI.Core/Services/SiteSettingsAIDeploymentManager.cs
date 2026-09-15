@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Services;
 using CrestApps.Core.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AI.Core.Services;
@@ -22,12 +23,18 @@ public sealed class SiteSettingsAIDeploymentManager : AIDeploymentManagerBase
     /// <param name="handlers">The catalog entry handlers for deployment lifecycle events.</param>
     /// <param name="siteService">The site service for reading global deployment settings.</param>
     /// <param name="logger">The logger instance.</param>
+    /// <param name="slotOptions">
+    /// The registered deployment slots. Passed through so a module that registers its own slot with
+    /// <c>AddAIDeploymentSlot</c> is visible here; without it the base falls back to the framework's
+    /// built-in slots alone.
+    /// </param>
     public SiteSettingsAIDeploymentManager(
         IAIDeploymentStore deploymentStore,
         IEnumerable<ICatalogEntryHandler<AIDeployment>> handlers,
         ISiteService siteService,
-        ILogger<SiteSettingsAIDeploymentManager> logger)
-        : base(deploymentStore, handlers, logger)
+        ILogger<SiteSettingsAIDeploymentManager> logger,
+        IOptions<AIDeploymentSlotOptions> slotOptions)
+        : base(deploymentStore, handlers, logger, slotOptions)
     {
         _siteService = siteService;
     }

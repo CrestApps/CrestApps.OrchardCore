@@ -50,7 +50,7 @@ public sealed class DefaultSpeechVoicePresenter
         {
             var deployment = !string.IsNullOrEmpty(deploymentName)
             ? await _deploymentManager.FindByNameAsync(deploymentName)
-            : await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.TextToSpeech);
+            : await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.TextToSpeech);
 
             if (deployment == null)
             {

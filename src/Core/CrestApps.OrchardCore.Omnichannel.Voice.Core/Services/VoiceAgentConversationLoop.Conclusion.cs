@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI;
@@ -166,7 +166,7 @@ public sealed partial class VoiceAgentConversationLoop
             context.DisableTools = true;
         });
 
-        var deployment = await deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: conclusionContext.ChatDeploymentName);
+        var deployment = await deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: conclusionContext.ChatDeploymentName);
 
         if (deployment is null)
         {

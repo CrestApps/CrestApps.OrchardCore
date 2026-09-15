@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 
@@ -8,42 +9,43 @@ namespace CrestApps.OrchardCore.Tests.Modules.AI.Handlers;
 public sealed class AIDeploymentHandlerTests
 {
     [Fact]
-    public async Task PopulateAsync_WhenLegacyTypeIsProvided_ShouldPopulatePurpose()
+    public async Task PopulateAsync_WhenLegacyTypeIsProvided_ShouldProjectItOntoCapabilities()
     {
         // Arrange
         var deployment = new AIDeployment();
-#pragma warning disable CS0618 // Type or member is obsolete
         var data = new JsonObject
         {
-            [nameof(AIDeployment.Type)] = new JsonArray("Chat", "Utility"),
+            ["Type"] = new JsonArray("Chat", "Utility"),
         };
-#pragma warning restore CS0618 // Type or member is obsolete
 
         // Act
         await InvokePopulateAsync(deployment, data);
 
         // Assert
-        Assert.Equal(AIDeploymentPurpose.Chat | AIDeploymentPurpose.Utility, deployment.Purpose);
+        Assert.True(deployment.TryGet<AIDeploymentMetadata>(out var metadata));
+        Assert.True(metadata.SupportsFeature(AIDeploymentFeatureNames.TextGeneration));
     }
 
     [Fact]
-    public async Task PopulateAsync_WhenPurposeIsInvalidAndLegacyTypeIsProvided_ShouldFallbackToLegacyType()
+    public async Task PopulateAsync_WhenPurposeIsUnrecognized_ShouldNotDeclareAnyCapability()
     {
         // Arrange
         var deployment = new AIDeployment();
-#pragma warning disable CS0618 // Type or member is obsolete
         var data = new JsonObject
         {
-            [nameof(AIDeployment.Purpose)] = "InvalidPurpose",
-            [nameof(AIDeployment.Type)] = "Embedding",
+            ["Purpose"] = "InvalidPurpose",
+            ["Type"] = "Embedding",
         };
-#pragma warning restore CS0618 // Type or member is obsolete
 
         // Act
         await InvokePopulateAsync(deployment, data);
 
         // Assert
-        Assert.Equal(AIDeploymentPurpose.Embedding, deployment.Purpose);
+        // Purpose, Capability, and Type are three names for one field, so the first one present is the one
+        // read -- the framework's own handler behaves identically. A value naming nothing the projection
+        // recognizes therefore implies no capability, and validation rejects the payload rather than
+        // quietly guessing a different field's answer.
+        Assert.False(deployment.TryGet<AIDeploymentMetadata>(out _));
     }
 
     private static Task InvokePopulateAsync(AIDeployment deployment, JsonObject data)

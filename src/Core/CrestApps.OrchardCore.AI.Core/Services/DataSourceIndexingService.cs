@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
@@ -969,7 +970,7 @@ public sealed class DataSourceIndexingService
 
         var configuredDeployment = await _deploymentManager.FindByNameAsync(embeddingDeploymentName, cancellationToken);
 
-        if (configuredDeployment?.SupportsPurpose(AIDeploymentPurpose.Embedding) == true)
+        if (configuredDeployment is not null && SupportsEmbedding(configuredDeployment))
         {
             return configuredDeployment;
         }
@@ -1006,7 +1007,7 @@ public sealed class DataSourceIndexingService
             return null;
         }
 
-        var deployments = (await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding, cancellationToken) ?? [])
+        var deployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding, clientName: null, cancellationToken) ?? [])
             .Where(deployment => MatchesEmbeddingSelector(deployment, selectorCandidates))
             .ToArray();
 
@@ -1136,10 +1137,17 @@ public sealed class DataSourceIndexingService
         ArgumentNullException.ThrowIfNull(deployment);
         ArgumentNullException.ThrowIfNull(selectorCandidates);
 
-        return deployment.SupportsPurpose(AIDeploymentPurpose.Embedding) &&
+        return SupportsEmbedding(deployment) &&
             (selectorCandidates.Contains(deployment.Name) ||
                 selectorCandidates.Contains(deployment.ModelName));
     }
+
+    // textEmbedding is opt-in, so a deployment that declares no capability metadata does not qualify --
+    // an embedding endpoint has to say so. A record still carrying the legacy Embedding purpose has already
+    // been projected onto this feature by the time it is read.
+    private static bool SupportsEmbedding(AIDeployment deployment)
+        => deployment.TryGet<AIDeploymentMetadata>(out var metadata) &&
+            metadata.SupportsFeature(AIDeploymentFeatureNames.TextEmbedding);
 
     private static HashSet<string> GetEmbeddingSelectorCandidates(string embeddingDeploymentName)
     {

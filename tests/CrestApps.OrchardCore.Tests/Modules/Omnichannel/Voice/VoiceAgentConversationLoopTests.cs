@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI;
+using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
@@ -50,7 +51,7 @@ public sealed class VoiceAgentConversationLoopTests
         // model has answered and the answer has been synthesized. On a phone call that is seconds of dead air per
         // turn, which is what makes an automated call sound automated.
         var harness = new LoopHarness();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
 
         // Act
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
@@ -67,7 +68,7 @@ public sealed class VoiceAgentConversationLoopTests
         // Everything downstream — the summary, the disposition, the subject write-back — reads the chat session,
         // so a realtime call has to be handed the same session the turn-based one would have used.
         var harness = new LoopHarness();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.Activity.TextToSpeechVoiceId = "chosen-voice";
 
         // Act
@@ -90,7 +91,7 @@ public sealed class VoiceAgentConversationLoopTests
         // A provider with no live-media path, or a session that fails to start, must not leave the person on a
         // silent call: the turn-based loop still works and is better than nothing.
         var harness = new LoopHarness();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.Realtime.CanRun = false;
 
         // Act
@@ -122,7 +123,7 @@ public sealed class VoiceAgentConversationLoopTests
         // A realtime session holds the call for its whole duration. Leaving the activity awaiting an answer for
         // that long lets the no-response expiry pass fail a call that is happening right now.
         var harness = new LoopHarness();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.Realtime.OnRun = () => Assert.Equal(ActivityStatus.InProgress, harness.Activity.Status);
 
         // Act
@@ -291,7 +292,7 @@ public sealed class VoiceAgentConversationLoopTests
         // and no provider waits that long.
         var harness = new LoopHarness(useRealTurns: true);
         harness.EnableHandoff();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
 
         // The session stands in for a live one: while it is held, the model invokes the transfer tool, which is
         // all the tool does -- record the ask on the turn for somebody else to carry out.
@@ -324,7 +325,7 @@ public sealed class VoiceAgentConversationLoopTests
         // here would drop the person who was just promised one.
         var harness = new LoopHarness(useRealTurns: true);
         harness.EnableHandoff();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.Realtime.OnRun = () => harness.RealHandoffTurn.RequestHandoff("the customer asked for a person");
         harness.CompletionRunner.FinishOn = harness.Loop;
 
@@ -343,7 +344,7 @@ public sealed class VoiceAgentConversationLoopTests
         // to an agent. A turn that reported a handoff nobody asked for would send every automated call to a queue.
         var harness = new LoopHarness(useRealTurns: true);
         harness.EnableHandoff();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.CompletionRunner.FinishOn = harness.Loop;
 
         // Act
@@ -369,7 +370,7 @@ public sealed class VoiceAgentConversationLoopTests
         // An abandoned request is reproduced here the way it actually arrives: a cancelled token.
         var harness = new LoopHarness();
         harness.EnableHandoff();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
 
         using var aborted = new CancellationTokenSource();
@@ -396,7 +397,7 @@ public sealed class VoiceAgentConversationLoopTests
         // the caller on an open, silent line with nothing queued and nobody coming.
         var harness = new LoopHarness();
         harness.EnableHandoff();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
         harness.Realtime.OnRun = () => throw new IOException("The media socket closed while the session was shutting down.");
 
@@ -418,7 +419,7 @@ public sealed class VoiceAgentConversationLoopTests
         // while the live path could neither set the flag nor survive long enough to act on it.
         var harness = new LoopHarness();
         harness.EnableHandoff();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
 
         using var aborted = new CancellationTokenSource();
@@ -446,7 +447,7 @@ public sealed class VoiceAgentConversationLoopTests
         // The session stopping is not the call stopping: the line is still up, and on a realtime call nothing was
         // ever hanging it up. A customer heard the goodbye and then sat on an open line until they gave up.
         var harness = new LoopHarness();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(true);
 
         // Act
@@ -465,7 +466,7 @@ public sealed class VoiceAgentConversationLoopTests
         // When the caller hangs up first, nothing was decided by the model: there is no handoff to perform and no
         // call left to hang up, so nothing should be scheduled at all.
         var harness = new LoopHarness();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(false);
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(false);
 
@@ -486,7 +487,7 @@ public sealed class VoiceAgentConversationLoopTests
         // end. The caller belongs to the agent now, so hanging up would drop the person who was just promised one.
         var harness = new LoopHarness();
         harness.EnableHandoff();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
         harness.EndCallTurn.Setup(x => x.EndCallRequested).Returns(true);
 
@@ -508,7 +509,7 @@ public sealed class VoiceAgentConversationLoopTests
         // The other half of the guard: holding a realtime call must not by itself route the caller to a queue.
         var harness = new LoopHarness();
         harness.EnableHandoff();
-        harness.Profile.RealtimeDeploymentName = "realtime-deployment";
+        harness.UseRealtime();
         harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(false);
 
         // Act
@@ -692,11 +693,20 @@ public sealed class VoiceAgentConversationLoopTests
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => new ChatResponse(new ChatMessage(ChatRole.Assistant, Reply)));
 
-            var deploymentManager = new Mock<IAIDeploymentManager>();
-            deploymentManager.Setup(x => x.ResolveOrDefaultAsync(
-                    It.IsAny<AIDeploymentPurpose>(),
+            DeploymentManager = new Mock<IAIDeploymentManager>();
+            var deploymentManager = DeploymentManager;
+
+            // Realtime is a model capability now, so a profile holds a live call when its chat deployment
+            // declares the feature. Off unless a test turns it on with UseRealtime().
+            CapabilityService = new Mock<IAIDeploymentCapabilityService>();
+            CapabilityService
+                .Setup(x => x.GetCapabilities(It.IsAny<AIDeployment>()))
+                .Returns(AIDeploymentCapabilities.Empty);
+            deploymentManager.Setup(x => x.ResolveSlotAsync(
                     It.IsAny<string>(),
                     It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyDictionary<string, string>>(),
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new AIDeployment { ItemId = "deployment-1" });
 
@@ -739,6 +749,7 @@ public sealed class VoiceAgentConversationLoopTests
                 endCallTurn,
                 CompletionRunner,
                 deploymentManager.Object,
+                CapabilityService.Object,
                 contextBuilder.Object,
                 profileManager.Object,
                 FlowSettingsService.Object,
@@ -776,6 +787,36 @@ public sealed class VoiceAgentConversationLoopTests
         public VoiceCallEndTurn RealEndCallTurn { get; }
 
         public RecordingCompletionRunner CompletionRunner { get; }
+
+        public Mock<IAIDeploymentManager> DeploymentManager { get; }
+
+        public Mock<IAIDeploymentCapabilityService> CapabilityService { get; }
+
+        /// <summary>
+        /// Gives this profile a chat deployment whose model declares the realtime capability, which is how a call
+        /// is held as a live session now that realtime is not a deployment of its own.
+        /// </summary>
+        public void UseRealtime()
+        {
+            Profile.ChatDeploymentName = "realtime-deployment";
+
+            var deployment = new AIDeployment { ItemId = "deployment-1", Name = "realtime-deployment" };
+
+            DeploymentManager
+                .Setup(x => x.ResolveSlotAsync(
+                    AIDeploymentSlotNames.Chat,
+                    It.IsAny<string>(),
+                    It.IsAny<string>(),
+                    It.IsAny<IReadOnlyDictionary<string, string>>(),
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync(deployment);
+
+            CapabilityService
+                .Setup(x => x.GetCapabilities(It.IsAny<AIDeployment>()))
+                .Returns(new AIDeploymentCapabilities(
+                    [new AIDeploymentFeatureDescriptor { Name = AIDeploymentFeatureNames.Realtime }],
+                    []));
+        }
 
         /// <summary>
         /// The token the enqueue was actually given. The request's own token, already cancelled by the time the

@@ -1,5 +1,3 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
-
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Deployments;
@@ -160,12 +158,12 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                 var connectionName = deploymentObject[nameof(AIDeployment.ConnectionName)]?.GetValue<string>()?.Trim();
 
                 var sourceName = deploymentObject[nameof(AIDeployment.ClientName)]?.GetValue<string>()
-                    ?? deploymentObject[nameof(AIDeployment.ProviderName)]?.GetValue<string>()
+                    ?? deploymentObject["ProviderName"]?.GetValue<string>()
                     ?? deploymentObject[nameof(AIDeployment.Source)]?.GetValue<string>();
                 var name = deploymentObject[nameof(AIDeployment.Name)]?.GetValue<string>()?.Trim();
                 var modelName = deploymentObject[nameof(AIDeployment.ModelName)]?.GetValue<string>()?.Trim();
 
-                var deploymentType = TryGetDeploymentType(deploymentObject[nameof(AIDeployment.Type)], out var parsedDeploymentType)
+                var deploymentType = TryGetDeploymentType(deploymentObject["Type"], out var parsedDeploymentType)
                     ? parsedDeploymentType
                     : InferLegacyDeploymentType(
                         itemId,
@@ -182,7 +180,6 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                     modelName,
                     sourceName,
                     connectionName);
-                var existingDeploymentType = deployment?.Type ?? AIDeploymentType.None;
 
                 if (deployment is not null)
                 {
@@ -221,7 +218,9 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
 
                 if (deploymentType.IsValidSelection())
                 {
-                    deployment.Type = LegacyAIDeploymentMigrationHelper.MergeDeploymentTypes(existingDeploymentType, deploymentType);
+                    // Capabilities merge additively, so a deployment that already declares some keeps them
+                    // and simply gains whatever the legacy type implied.
+                    deploymentType.ApplyTo(deployment);
                 }
 
                 var validationResult = await deploymentManager.ValidateAsync(deployment);
@@ -291,19 +290,19 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
         IEnumerable<AIDeployment> deployments)
     {
         var results = deployments.ToDictionary(deployment => deployment.ItemId, StringComparer.OrdinalIgnoreCase);
-        var types = new[]
+        var slotNames = new[]
         {
-            AIDeploymentType.Chat,
-            AIDeploymentType.Utility,
-            AIDeploymentType.Embedding,
-            AIDeploymentType.Image,
-            AIDeploymentType.SpeechToText,
-            AIDeploymentType.TextToSpeech,
+            AIDeploymentSlotNames.Chat,
+            AIDeploymentSlotNames.Utility,
+            AIDeploymentSlotNames.Embedding,
+            AIDeploymentSlotNames.Image,
+            AIDeploymentSlotNames.SpeechToText,
+            AIDeploymentSlotNames.TextToSpeech,
         };
 
-        foreach (var type in types)
+        foreach (var slotName in slotNames)
         {
-            foreach (var deployment in await deploymentManager.GetByTypeAsync(type))
+            foreach (var deployment in await deploymentManager.GetAllBySlotAsync(slotName))
             {
                 if (string.IsNullOrWhiteSpace(deployment.ItemId))
                 {
@@ -351,8 +350,8 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
             quotedContentColumnName,
             quotedTableName,
             _legacyProfileDocumentTypePrefix);
-        var deploymentTypesById = new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase);
-        var deploymentTypesByName = new Dictionary<string, AIDeploymentType>(StringComparer.OrdinalIgnoreCase);
+        var deploymentTypesById = new Dictionary<string, LegacyAIDeploymentPurpose>(StringComparer.OrdinalIgnoreCase);
+        var deploymentTypesByName = new Dictionary<string, LegacyAIDeploymentPurpose>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var document in documents)
         {
@@ -423,33 +422,33 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
 
     private static void AddLegacyProfileDeploymentTypeHint(
         JsonObject profileObject,
-        IDictionary<string, AIDeploymentType> deploymentTypesById,
-        IDictionary<string, AIDeploymentType> deploymentTypesByName)
+        IDictionary<string, LegacyAIDeploymentPurpose> deploymentTypesById,
+        IDictionary<string, LegacyAIDeploymentPurpose> deploymentTypesByName)
     {
-        AddDeploymentTypeHint(profileObject[_legacyDeploymentIdPropertyName], AIDeploymentType.Chat, deploymentTypesById);
-        AddDeploymentTypeHint(profileObject[_legacyChatDeploymentIdPropertyName], AIDeploymentType.Chat, deploymentTypesById);
-        AddDeploymentTypeHint(profileObject[_legacyUtilityDeploymentIdPropertyName], AIDeploymentType.Utility, deploymentTypesById);
-        AddDeploymentTypeHint(profileObject[_legacyDeploymentNamePropertyName], AIDeploymentType.Chat, deploymentTypesByName);
-        AddDeploymentTypeHint(profileObject[_legacyChatDeploymentNamePropertyName], AIDeploymentType.Chat, deploymentTypesByName);
-        AddDeploymentTypeHint(profileObject[_legacyUtilityDeploymentNamePropertyName], AIDeploymentType.Utility, deploymentTypesByName);
+        AddDeploymentTypeHint(profileObject[_legacyDeploymentIdPropertyName], LegacyAIDeploymentPurpose.Chat, deploymentTypesById);
+        AddDeploymentTypeHint(profileObject[_legacyChatDeploymentIdPropertyName], LegacyAIDeploymentPurpose.Chat, deploymentTypesById);
+        AddDeploymentTypeHint(profileObject[_legacyUtilityDeploymentIdPropertyName], LegacyAIDeploymentPurpose.Utility, deploymentTypesById);
+        AddDeploymentTypeHint(profileObject[_legacyDeploymentNamePropertyName], LegacyAIDeploymentPurpose.Chat, deploymentTypesByName);
+        AddDeploymentTypeHint(profileObject[_legacyChatDeploymentNamePropertyName], LegacyAIDeploymentPurpose.Chat, deploymentTypesByName);
+        AddDeploymentTypeHint(profileObject[_legacyUtilityDeploymentNamePropertyName], LegacyAIDeploymentPurpose.Utility, deploymentTypesByName);
 
         if (profileObject[_legacyProfilePropertiesPropertyName] is not JsonObject propertiesObject)
         {
             return;
         }
 
-        AddDeploymentTypeHint(propertiesObject[_legacyDeploymentIdPropertyName], AIDeploymentType.Chat, deploymentTypesById);
-        AddDeploymentTypeHint(propertiesObject[_legacyChatDeploymentIdPropertyName], AIDeploymentType.Chat, deploymentTypesById);
-        AddDeploymentTypeHint(propertiesObject[_legacyUtilityDeploymentIdPropertyName], AIDeploymentType.Utility, deploymentTypesById);
-        AddDeploymentTypeHint(propertiesObject[_legacyDeploymentNamePropertyName], AIDeploymentType.Chat, deploymentTypesByName);
-        AddDeploymentTypeHint(propertiesObject[_legacyChatDeploymentNamePropertyName], AIDeploymentType.Chat, deploymentTypesByName);
-        AddDeploymentTypeHint(propertiesObject[_legacyUtilityDeploymentNamePropertyName], AIDeploymentType.Utility, deploymentTypesByName);
+        AddDeploymentTypeHint(propertiesObject[_legacyDeploymentIdPropertyName], LegacyAIDeploymentPurpose.Chat, deploymentTypesById);
+        AddDeploymentTypeHint(propertiesObject[_legacyChatDeploymentIdPropertyName], LegacyAIDeploymentPurpose.Chat, deploymentTypesById);
+        AddDeploymentTypeHint(propertiesObject[_legacyUtilityDeploymentIdPropertyName], LegacyAIDeploymentPurpose.Utility, deploymentTypesById);
+        AddDeploymentTypeHint(propertiesObject[_legacyDeploymentNamePropertyName], LegacyAIDeploymentPurpose.Chat, deploymentTypesByName);
+        AddDeploymentTypeHint(propertiesObject[_legacyChatDeploymentNamePropertyName], LegacyAIDeploymentPurpose.Chat, deploymentTypesByName);
+        AddDeploymentTypeHint(propertiesObject[_legacyUtilityDeploymentNamePropertyName], LegacyAIDeploymentPurpose.Utility, deploymentTypesByName);
     }
 
     private static void AddDeploymentTypeHint(
         JsonNode selectorNode,
-        AIDeploymentType deploymentType,
-        IDictionary<string, AIDeploymentType> hints)
+        LegacyAIDeploymentPurpose deploymentType,
+        IDictionary<string, LegacyAIDeploymentPurpose> hints)
     {
         if (selectorNode?.GetValue<string>()?.Trim() is not { Length: > 0 } selector)
         {
@@ -460,16 +459,16 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
         hints[selector] = existingType | deploymentType;
     }
 
-    private static AIDeploymentType InferLegacyDeploymentType(
+    private static LegacyAIDeploymentPurpose InferLegacyDeploymentType(
         string itemId,
         string deploymentName,
         string connectionSelector,
         string sourceName,
-        IReadOnlyDictionary<string, AIDeploymentType> profileDeploymentTypesById,
-        IReadOnlyDictionary<string, AIDeploymentType> profileDeploymentTypesByName,
+        IReadOnlyDictionary<string, LegacyAIDeploymentPurpose> profileDeploymentTypesById,
+        IReadOnlyDictionary<string, LegacyAIDeploymentPurpose> profileDeploymentTypesByName,
         IEnumerable<AIProviderConnection> legacyConnections)
     {
-        var deploymentType = AIDeploymentType.None;
+        var deploymentType = LegacyAIDeploymentPurpose.None;
 
         if (!string.IsNullOrWhiteSpace(itemId) &&
             profileDeploymentTypesById.TryGetValue(itemId, out var profileTypeById))
@@ -496,7 +495,7 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
 
         return deploymentType.IsValidSelection()
             ? deploymentType
-            : AIDeploymentType.Chat;
+            : LegacyAIDeploymentPurpose.Chat;
     }
 
     private static AIProviderConnection FindMatchingConnection(
@@ -516,29 +515,29 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
                 string.Equals(connection.Name, connectionSelector, StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static AIDeploymentType InferDeploymentType(string deploymentName, AIProviderConnection connection)
+    private static LegacyAIDeploymentPurpose InferDeploymentType(string deploymentName, AIProviderConnection connection)
     {
         if (string.IsNullOrWhiteSpace(deploymentName) || connection is null)
         {
-            return AIDeploymentType.None;
+            return LegacyAIDeploymentPurpose.None;
         }
 
-        var deploymentType = AIDeploymentType.None;
+        var deploymentType = LegacyAIDeploymentPurpose.None;
 
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyChatDeploymentName(), AIDeploymentType.Chat);
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyUtilityDeploymentName(), AIDeploymentType.Utility);
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyEmbeddingDeploymentName(), AIDeploymentType.Embedding);
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyImageDeploymentName(), AIDeploymentType.Image);
-        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacySpeechToTextDeploymentName(), AIDeploymentType.SpeechToText);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyChatDeploymentName(), LegacyAIDeploymentPurpose.Chat);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyUtilityDeploymentName(), LegacyAIDeploymentPurpose.Utility);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyEmbeddingDeploymentName(), LegacyAIDeploymentPurpose.Embedding);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacyImageDeploymentName(), LegacyAIDeploymentPurpose.Image);
+        AddTypeIfMatch(ref deploymentType, deploymentName, connection.GetLegacySpeechToTextDeploymentName(), LegacyAIDeploymentPurpose.SpeechToText);
 
         return deploymentType;
     }
 
     private static void AddTypeIfMatch(
-        ref AIDeploymentType deploymentType,
+        ref LegacyAIDeploymentPurpose deploymentType,
         string deploymentName,
         string expectedName,
-        AIDeploymentType type)
+        LegacyAIDeploymentPurpose type)
     {
         if (!string.IsNullOrWhiteSpace(expectedName) &&
             string.Equals(deploymentName, expectedName, StringComparison.OrdinalIgnoreCase))
@@ -547,9 +546,9 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
         }
     }
 
-    private static bool TryGetDeploymentType(JsonNode typeNode, out AIDeploymentType type)
+    private static bool TryGetDeploymentType(JsonNode typeNode, out LegacyAIDeploymentPurpose type)
     {
-        type = AIDeploymentType.None;
+        type = LegacyAIDeploymentPurpose.None;
 
         if (typeNode is null)
         {
@@ -561,10 +560,10 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
             foreach (var item in array)
             {
                 if (item is null ||
-                    !Enum.TryParse<AIDeploymentType>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
-                    parsedType == AIDeploymentType.None)
+                    !Enum.TryParse<LegacyAIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedType) ||
+                    parsedType == LegacyAIDeploymentPurpose.None)
                 {
-                    type = AIDeploymentType.None;
+                    type = LegacyAIDeploymentPurpose.None;
                     return false;
                 }
 
@@ -582,6 +581,6 @@ public sealed class AIDeploymentIndexMigrations : DataMigration
     }
 
     private sealed record LegacyProfileDeploymentTypeHints(
-        IReadOnlyDictionary<string, AIDeploymentType> DeploymentTypesById,
-        IReadOnlyDictionary<string, AIDeploymentType> DeploymentTypesByName);
+        IReadOnlyDictionary<string, LegacyAIDeploymentPurpose> DeploymentTypesById,
+        IReadOnlyDictionary<string, LegacyAIDeploymentPurpose> DeploymentTypesByName);
 }

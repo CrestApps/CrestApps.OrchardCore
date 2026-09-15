@@ -15,15 +15,9 @@ public class AIProfileChatModeViewModel
     public ChatMode ChatMode { get; set; }
 
     /// <summary>
-    /// Gets or sets the voice name (used for Conversation and Realtime modes).
+    /// Gets or sets the voice name, used by conversation mode and by a realtime chat deployment.
     /// </summary>
     public string VoiceName { get; set; }
-
-    /// <summary>
-    /// Gets or sets the realtime (speech-to-speech) deployment that backs the voice session. Empty uses
-    /// the site's default realtime deployment.
-    /// </summary>
-    public string RealtimeDeploymentName { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether enable text to speech playback.
@@ -43,14 +37,13 @@ public class AIProfileChatModeViewModel
     public IEnumerable<SelectListItem> AvailableVoices { get; set; }
 
     /// <summary>
-    /// Gets or sets the realtime-capable deployments available for Realtime mode.
+    /// Gets or sets the technical names of the realtime-capable deployments.
     /// </summary>
+    /// <remarks>
+    /// The editor compares the selected chat deployment against these to decide whether the profile is a
+    /// speech-to-speech conversation, which is the same question
+    /// <c>IAIDeploymentCapabilityService.IsRealtimeDeploymentAsync</c> answers on the server.
+    /// </remarks>
     [BindNever]
-    public IEnumerable<SelectListItem> RealtimeDeployments { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets whether a realtime-capable deployment is available.
-    /// </summary>
-    [BindNever]
-    public bool HasRealtime { get; set; }
+    public string[] RealtimeDeploymentNames { get; set; } = [];
 }

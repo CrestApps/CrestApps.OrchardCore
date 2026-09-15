@@ -5,6 +5,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
+using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
@@ -62,6 +63,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IVoiceCallEndTurn _endCallTurn;
     private readonly IRealtimeCallCompletionRunner _completionRunner;
     private readonly IAIDeploymentManager _deploymentManager;
+    private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly IAICompletionContextBuilder _contextBuilder;
     private readonly IAIProfileManager _profileManager;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
@@ -82,6 +84,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IVoiceCallEndTurn endCallTurn,
         IRealtimeCallCompletionRunner completionRunner,
         IAIDeploymentManager deploymentManager,
+        IAIDeploymentCapabilityService capabilityService,
         IAICompletionContextBuilder contextBuilder,
         IAIProfileManager profileManager,
         ISubjectFlowSettingsService subjectFlowSettingsService,
@@ -101,6 +104,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _endCallTurn = endCallTurn;
         _completionRunner = completionRunner;
         _deploymentManager = deploymentManager;
+        _capabilityService = capabilityService;
         _contextBuilder = contextBuilder;
         _profileManager = profileManager;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -191,12 +195,18 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // for that long lets the no-response expiry pass fail a call that is being held right now.
         await MarkInProgressAsync(activity, cancellationToken);
 
-        // A profile configured with a realtime deployment holds the call as a live speech-to-speech session
-        // instead of the transcribe-complete-synthesize loop below. That loop cannot begin a reply until the
-        // caller has stopped talking, the transcript has come back, the model has answered and the answer has
-        // been synthesized; a realtime session answers while they are still finishing, and hears them if they
+        // A profile whose model can hold a live conversation takes the call as a speech-to-speech session instead
+        // of the transcribe-complete-synthesize loop below. That loop cannot begin a reply until the caller has
+        // stopped talking, the transcript has come back, the model has answered and the answer has been
+        // synthesized; a realtime session answers while they are still finishing, and hears them if they
         // interrupt. Everything downstream is unchanged, because both write the same transcript.
-        if (!string.IsNullOrWhiteSpace(profile.RealtimeDeploymentName))
+        //
+        // Realtime is a capability of the chat deployment now rather than a deployment of its own, so the
+        // question is no longer "was a second deployment configured" but "can the one this profile already uses
+        // do it".
+        var realtimeDeploymentName = await ResolveRealtimeDeploymentNameAsync(profile, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(realtimeDeploymentName))
         {
             // The transfer tool records the model's escalation on this turn rather than performing it, so the
             // flag has to start clean for the session we are about to hold. The end-call tool works the same way.
@@ -284,6 +294,39 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     /// window — that pass only transitions rows still awaiting an answer — so it cannot race the conclusion and
     /// flip a live, answered call to Failed while somebody is still on it.
     /// </remarks>
+    /// <summary>
+    /// The deployment a live session would be held on, or <see langword="null"/> when this profile cannot hold one.
+    /// </summary>
+    /// <remarks>
+    /// Realtime used to be its own deployment on the profile; it is a model capability now, so the profile's chat
+    /// deployment is asked whether it declares it. A profile that names no chat deployment falls back to whatever
+    /// deployment the tenant has with the capability, which is how the rest of the platform resolves it.
+    /// </remarks>
+    /// <param name="profile">The profile driving the conversation.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task<string> ResolveRealtimeDeploymentNameAsync(AIProfile profile, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(profile.ChatDeploymentName))
+        {
+            var chatDeployment = await _deploymentManager.ResolveSlotAsync(
+                AIDeploymentSlotNames.Chat,
+                deploymentName: profile.ChatDeploymentName,
+                cancellationToken: cancellationToken);
+
+            if (chatDeployment is not null &&
+                _capabilityService.GetCapabilities(chatDeployment).SupportsFeature(AIDeploymentFeatureNames.Realtime))
+            {
+                return chatDeployment.Name;
+            }
+
+            return null;
+        }
+
+        var resolved = await _capabilityService.ResolveDeploymentWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
+
+        return resolved?.Name;
+    }
+
     private async Task MarkInProgressAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         if (activity.Status == ActivityStatus.InProgress)
@@ -548,7 +591,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             AttachTransferToAgentTool(context);
         }
 
-        var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
+        var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: cancellationToken);
 
         if (deployment is null)
         {

@@ -62,6 +62,8 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
             View("AIProfile_Buttons_SummaryAdmin", profile).Location("Actions:5"),
             View("AIProfile_DefaultTags_SummaryAdmin", profile).Location("Tags:5"),
             View("AIProfile_DefaultMeta_SummaryAdmin", profile).Location("Meta:5"),
+            View("AIProfile_CloneActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:5")
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile)),
             View("AIProfile_ActionsMenu_SummaryAdmin", profile).Location("ActionsMenu:10")
             .RenderWhen(async () => profile.GetSettings<AIProfileSettings>().IsRemovable && await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles, profile))
         );
@@ -107,13 +109,15 @@ internal sealed class AIProfileDisplayDriver : DisplayDriver<AIProfile>
         {
             var metadata = profile.GetOrCreate<AIProfileMetadata>();
 
+            // Prefer any value already on the profile (e.g. an existing profile, a cloned draft, or a
+            // template-prefilled draft) and fall back to the configured defaults for a blank new profile.
             model.SystemMessage = metadata.SystemMessage;
-            model.FrequencyPenalty = context.IsNew ? _defaultAIOptions.FrequencyPenalty : metadata.FrequencyPenalty;
+            model.FrequencyPenalty = metadata.FrequencyPenalty ?? _defaultAIOptions.FrequencyPenalty;
             model.PastMessagesCount = metadata.PastMessagesCount ?? _defaultAIOptions.PastMessagesCount;
-            model.PresencePenalty = context.IsNew ? _defaultAIOptions.PresencePenalty : metadata.PresencePenalty;
-            model.Temperature = context.IsNew ? _defaultAIOptions.Temperature : metadata.Temperature;
-            model.MaxTokens = context.IsNew ? _defaultAIOptions.MaxOutputTokens : metadata.MaxTokens;
-            model.TopP = context.IsNew ? _defaultAIOptions.TopP : metadata.TopP;
+            model.PresencePenalty = metadata.PresencePenalty ?? _defaultAIOptions.PresencePenalty;
+            model.Temperature = metadata.Temperature ?? _defaultAIOptions.Temperature;
+            model.MaxTokens = metadata.MaxTokens ?? _defaultAIOptions.MaxOutputTokens;
+            model.TopP = metadata.TopP ?? _defaultAIOptions.TopP;
             model.UseCaching = metadata.UseCaching;
             model.AllowCaching = _defaultAIOptions.EnableDistributedCaching;
 

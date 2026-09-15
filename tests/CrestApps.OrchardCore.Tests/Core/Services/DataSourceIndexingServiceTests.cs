@@ -14,6 +14,8 @@ using OrchardCore.Indexing.Models;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
+using CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
+
 namespace CrestApps.OrchardCore.Tests.Core.Services;
 
 public sealed class DataSourceIndexingServiceTests
@@ -52,8 +54,7 @@ public sealed class DataSourceIndexingServiceTests
         {
             ItemId = "deployment-1",
             Name = "text-embedding-3-small",
-            Purpose = AIDeploymentPurpose.Embedding,
-        };
+        }.Declaring(AIDeploymentFeatureNames.TextEmbedding);
 
         indexProfileManager
             .Setup(manager => manager.FindByIdAsync(listProfile.Id))
@@ -109,8 +110,7 @@ public sealed class DataSourceIndexingServiceTests
             ItemId = "deployment-1",
             Name = "Azure-text-embedding-3-small",
             ModelName = "text-embedding-3-small",
-            Purpose = AIDeploymentPurpose.Embedding,
-        };
+        }.Declaring(AIDeploymentFeatureNames.TextEmbedding);
 
         indexProfileManager
             .Setup(manager => manager.FindByIdAsync(storedProfile.Id))
@@ -123,7 +123,7 @@ public sealed class DataSourceIndexingServiceTests
             .Setup(manager => manager.FindByNameAsync("text-embedding-3-small", It.IsAny<CancellationToken>()))
             .ReturnsAsync((AIDeployment)null);
         deploymentManager
-            .Setup(manager => manager.GetByPurposeAsync(AIDeploymentPurpose.Embedding, It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([deployment]);
 
         var service = new DataSourceIndexingService(

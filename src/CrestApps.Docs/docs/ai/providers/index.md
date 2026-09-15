@@ -36,21 +36,30 @@ AI deployments are first-class records. Each deployment has:
 - a **Name** used throughout Orchard editors, recipes, and settings
 - an optional **ModelName** when the Orchard deployment name should differ from the vendor model name
 - a **ConnectionName** that points at the provider connection
-- a **Purpose** that describes what the deployment is used for
+- the **model capabilities** it declares, which decide where it can be used
 
-### Deployment purposes
+### Model capabilities
 
-| Purpose | Description |
-|---------|-------------|
-| `Chat` | Primary chat completions |
-| `Utility` | Lightweight auxiliary tasks such as query rewriting or planning |
-| `Embedding` | Vector embeddings for RAG and semantic search |
-| `Image` | Image generation |
-| `SpeechToText` | Speech-to-text transcription |
-| `TextToSpeech` | Text-to-speech synthesis |
-| `Vision` | Vision and image-understanding workloads |
+A deployment no longer declares a *purpose*. It declares what its model can do, and the framework matches
+those capabilities against the **slot** each picker is filling — so an embedding model appears in the
+embedding picker and nowhere else.
 
-When configuring connections through `appsettings.json`, each connection can define a `Deployments` array:
+| Capability | Description |
+|------------|-------------|
+| `textGeneration` | Text chat completions. Opt-out: a deployment declaring nothing is assumed to have it |
+| `textEmbedding` | Vector embeddings for RAG and semantic search |
+| `imageOutput` | Image generation |
+| `imageInput` | Vision and image-understanding workloads |
+| `speechToText` | Speech-to-text transcription |
+| `textToSpeech` | Text-to-speech synthesis |
+| `realtime` | Speech-to-speech conversation |
+
+See [Model Capabilities](../model-capabilities.md) for the full registry, the slot table, and how a legacy
+`Purpose` is projected onto capabilities when it is read.
+
+When configuring connections through `appsettings.json`, each connection can define a `Deployments` array.
+The legacy `Purpose` key is still accepted and projected onto capabilities, so existing configuration keeps
+working:
 
 ```json
 {

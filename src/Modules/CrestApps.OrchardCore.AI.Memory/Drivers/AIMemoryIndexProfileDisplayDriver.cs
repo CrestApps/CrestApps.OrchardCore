@@ -1,3 +1,4 @@
+using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
@@ -47,7 +48,7 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
             var selectedDeployment = string.IsNullOrWhiteSpace(embeddingDeploymentName)
                 ? null
                 : await _deploymentManager.FindByNameAsync(embeddingDeploymentName);
-            var deployments = await _deploymentManager.GetByPurposeAsync(AIDeploymentPurpose.Embedding);
+            var deployments = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding);
 
             model.EmbeddingDeploymentName = selectedDeployment?.Name ?? embeddingDeploymentName;
             model.EmbeddingDeploymentText = selectedDeployment != null ? GetDeploymentDisplayText(selectedDeployment) : model.EmbeddingDeploymentName;
@@ -79,7 +80,10 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
 
         var deployment = await _deploymentManager.FindByNameAsync(model.EmbeddingDeploymentName);
 
-        if (deployment == null || !deployment.SupportsPurpose(AIDeploymentPurpose.Embedding))
+        // textEmbedding is opt-in, so a deployment that declares no capability metadata does not qualify.
+        if (deployment == null ||
+            !deployment.TryGet<AIDeploymentMetadata>(out var deploymentMetadata) ||
+            !deploymentMetadata.SupportsFeature(AIDeploymentFeatureNames.TextEmbedding))
         {
             context.Updater.ModelState.AddModelError(Prefix, S["The selected embedding deployment could not be found."]);
             return Edit(indexProfile, context);

@@ -192,8 +192,8 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             {
                 var profileMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
                 var deployment = await ResolveDeploymentAsync(profileMetadata);
-                var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-                    AIDeploymentPurpose.Embedding,
+                var embeddingDeployment = await _deploymentManager.ResolveSlotAsync(
+                    AIDeploymentSlotNames.Embedding,
                     clientName: deployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null
@@ -269,12 +269,12 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
     private async Task<AIDeployment> ResolveDeploymentAsync(ProfileTemplateMetadata profileMetadata)
     {
-        return await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Chat,
-            deploymentName: profileMetadata.ChatDeploymentName)
-        ?? await _deploymentManager.ResolveOrDefaultAsync(
-            AIDeploymentPurpose.Utility,
-            deploymentName: profileMetadata.UtilityDeploymentName);
+        // One resolve, not two joined with "??". The chat slot's own chain already ends in the first
+        // text-capable deployment, so a second independent resolve for the utility slot -- which filters on
+        // the same capability -- could never answer.
+        return await _deploymentManager.ResolveSlotAsync(
+            AIDeploymentSlotNames.Chat,
+            deploymentName: profileMetadata.ChatDeploymentName);
     }
 
     private static async Task IndexDocumentChunksAsync(ShellScope scope, List<AIDocument> documents)

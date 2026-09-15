@@ -117,16 +117,16 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
                 }
             }
 
-            if (TryGetDeploymentPurpose(token[nameof(AIDeployment.Purpose)], out var deploymentPurpose) ||
-                TryGetDeploymentPurpose(token["Type"], out deploymentPurpose))
+            // A legacy Purpose, Capability, or Type the recipe still carries has already been projected onto
+            // model capabilities while the deployment was populated. Only the old default is left to apply
+            // here: a recipe that names no purpose and declares no capabilities of its own is a text chat
+            // deployment, which validation now requires it to say.
+            if (!deployment.TryGet<AIDeploymentMetadata>(out var metadata) || metadata.Features is not { Length: > 0 })
             {
-                deployment.Purpose = deploymentPurpose;
-            }
-            else
-            {
-                // Default to Chat for backward compatibility with recipes
-                // that do not include the purpose property.
-                deployment.Purpose = AIDeploymentPurpose.Chat;
+                deployment.Put(new AIDeploymentMetadata
+                {
+                    Features = [AIDeploymentFeatureNames.TextGeneration],
+                });
             }
 
             var validationResult = await _manager.ValidateAsync(deployment);
@@ -154,39 +154,5 @@ internal sealed class AIDeploymentStep : NamedRecipeStepHandler
         /// Gets or sets the collection of AI deployment definitions to import.
         /// </summary>
         public JsonArray Deployments { get; set; }
-    }
-
-    private static bool TryGetDeploymentPurpose(JsonNode typeNode, out AIDeploymentPurpose purpose)
-    {
-        purpose = AIDeploymentPurpose.None;
-
-        if (typeNode is null)
-        {
-            return false;
-        }
-
-        if (typeNode is JsonArray array)
-        {
-            foreach (var item in array)
-            {
-                if (item is null ||
-                    !Enum.TryParse<AIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedPurpose) ||
-                        parsedPurpose == AIDeploymentPurpose.None)
-                {
-                    purpose = AIDeploymentPurpose.None;
-                    return false;
-                }
-
-                purpose |= parsedPurpose;
-            }
-
-            return purpose.IsValidSelection();
-        }
-
-        var typeValue = typeNode.GetValue<string>();
-
-        return !string.IsNullOrEmpty(typeValue) &&
-            Enum.TryParse(typeValue, ignoreCase: true, out purpose) &&
-                purpose.IsValidSelection();
     }
 }

@@ -64,7 +64,7 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
             model.AllowImageUploads = settings.AllowImageUploads;
             model.IndexProfileName = settings.IndexProfileName;
             model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
-            model.VisionEnabled = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision) != null;
+            model.VisionEnabled = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Vision) != null;
 
             if (model.HasIndexProfile)
             {

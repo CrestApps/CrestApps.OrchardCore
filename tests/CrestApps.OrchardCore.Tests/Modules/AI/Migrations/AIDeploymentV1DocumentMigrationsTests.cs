@@ -1,5 +1,3 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Tests cover legacy migration logic
-
 using System.Reflection;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
@@ -38,7 +36,7 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
         Assert.Equal("legacy-deployment-id", deploymentObject[nameof(AIDeployment.ItemId)]?.GetValue<string>());
         Assert.Equal("gpt-4.1-mini", deploymentObject[nameof(AIDeployment.ModelName)]?.GetValue<string>());
         Assert.Equal("Azure", deploymentObject[nameof(AIDeployment.ClientName)]?.GetValue<string>());
-        Assert.Equal(@"[""Chat"",""Utility""]", deploymentObject[nameof(AIDeployment.Type)]?.ToJsonString());
+        Assert.Equal(@"[""Chat"",""Utility""]", deploymentObject["Type"]?.ToJsonString());
         Assert.Null(deploymentObject[nameof(AIDeployment.Properties)]?["ConnectionNameAlias"]);
     }
 
@@ -91,8 +89,7 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
                 ModelName = "ui-default",
                 ClientName = "Azure",
                 ConnectionName = "legacy-connection",
-                Type = AIDeploymentType.Chat,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextGeneration),
             new AIDeployment
             {
                 ItemId = "legacy-default-id",
@@ -100,8 +97,7 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
                 ModelName = "legacy-default",
                 ClientName = "Azure",
                 ConnectionName = "legacy-connection",
-                Type = AIDeploymentType.Chat,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextGeneration),
         };
 
         // Act
@@ -126,8 +122,7 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
                 ModelName = "chat-b",
                 ClientName = "Azure",
                 ConnectionName = "b-connection",
-                Type = AIDeploymentType.Chat,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextGeneration),
             new AIDeployment
             {
                 ItemId = "chat-a",
@@ -135,8 +130,7 @@ public sealed class AIDeploymentV1DocumentMigrationsTests
                 ModelName = "chat-a",
                 ClientName = "Azure",
                 ConnectionName = "a-connection",
-                Type = AIDeploymentType.Chat,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextGeneration),
         };
 
         // Act

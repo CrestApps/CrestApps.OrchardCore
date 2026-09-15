@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
@@ -451,7 +451,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             }
                         }
 
-                        var deployment = await _deploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: generationToken)
+                        var deployment = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat, deploymentName: context.ChatDeploymentName, cancellationToken: generationToken)
                             ?? throw new InvalidOperationException($"Unable to resolve a chat deployment for AI profile '{profile.ItemId}'.");
 
                         // One AI request per turn, cancelled by generationToken the moment a newer inbound message arrives.
@@ -661,8 +661,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             context.DisableTools = true;
                         });
 
-                        var deployment = await deploymentManager.ResolveOrDefaultAsync(
-                            AIDeploymentPurpose.Chat,
+                        var deployment = await deploymentManager.ResolveSlotAsync(
+                            AIDeploymentSlotNames.Chat,
                             deploymentName: conclusionContext.ChatDeploymentName);
 
                         if (deployment == null)
@@ -991,8 +991,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 builder.DisableTools = true;
             }, cancellationToken);
 
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(
-                AIDeploymentPurpose.Chat,
+            var deployment = await _deploymentManager.ResolveSlotAsync(
+                AIDeploymentSlotNames.Chat,
                 deploymentName: context.ChatDeploymentName,
                 cancellationToken: cancellationToken);
 
@@ -1107,8 +1107,8 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 builder.DisableTools = true;
             }, cancellationToken);
 
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(
-                AIDeploymentPurpose.Chat,
+            var deployment = await _deploymentManager.ResolveSlotAsync(
+                AIDeploymentSlotNames.Chat,
                 deploymentName: context.ChatDeploymentName,
                 cancellationToken: cancellationToken);
 

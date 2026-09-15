@@ -1,4 +1,4 @@
-using OrchardCore.Indexing.Core;
+﻿using OrchardCore.Indexing.Core;
 
 namespace CrestApps.OrchardCore.AI.Core;
 
@@ -14,6 +14,13 @@ public static class AIConstants
     public const string ConnectionProtectorName = "AIProviderConnection";
 
     public const string AISettingsGroupId = "ai-settings";
+
+    /// <summary>
+    /// The client name of the deployment provider that answers speech with speech by chaining a
+    /// speech-to-text deployment, a chat deployment, and a text-to-speech deployment. A deployment created
+    /// under this provider owns no connection of its own; it only names the three deployments to chain.
+    /// </summary>
+    public const string CascadedRealtimeClientName = "CascadedRealtime";
 
     /// <summary>
     /// Represents the feature.

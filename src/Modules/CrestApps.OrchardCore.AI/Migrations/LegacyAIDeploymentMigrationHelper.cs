@@ -1,5 +1,4 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
-
+using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 
@@ -7,6 +6,79 @@ namespace CrestApps.OrchardCore.AI.Migrations;
 
 internal static class LegacyAIDeploymentMigrationHelper
 {
+    /// <summary>
+    /// The field names the deployment purpose was stored under, newest first.
+    /// </summary>
+    /// <remarks>
+    /// The same field was called <c>Type</c>, then <c>Capability</c>, then <c>Purpose</c> before it was
+    /// replaced by model capabilities. A stored document can still carry any one of them.
+    /// </remarks>
+    private static readonly string[] _legacyPurposeFieldNames = ["Purpose", "Capability", "Type"];
+
+    /// <summary>
+    /// Reads the legacy purpose a stored deployment still carries, under whichever of its historical field
+    /// names it was written with.
+    /// </summary>
+    /// <returns><see langword="true"/> when the document named a purpose this migration understands.</returns>
+    public static bool TryReadLegacyPurpose(JsonNode deploymentNode, out LegacyAIDeploymentPurpose purpose)
+    {
+        purpose = LegacyAIDeploymentPurpose.None;
+
+        if (deploymentNode is null)
+        {
+            return false;
+        }
+
+        foreach (var fieldName in _legacyPurposeFieldNames)
+        {
+            if (TryReadLegacyPurposeValue(deploymentNode[fieldName], out purpose))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Reads a single stored purpose value, which can be one name, a comma-separated set of names, the
+    /// numeric flags, or an array of names.
+    /// </summary>
+    public static bool TryReadLegacyPurposeValue(JsonNode purposeNode, out LegacyAIDeploymentPurpose purpose)
+    {
+        purpose = LegacyAIDeploymentPurpose.None;
+
+        if (purposeNode is null)
+        {
+            return false;
+        }
+
+        if (purposeNode is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                if (item is null ||
+                    !Enum.TryParse<LegacyAIDeploymentPurpose>(item.GetValue<string>(), ignoreCase: true, out var parsedPurpose) ||
+                    parsedPurpose == LegacyAIDeploymentPurpose.None)
+                {
+                    purpose = LegacyAIDeploymentPurpose.None;
+
+                    return false;
+                }
+
+                purpose |= parsedPurpose;
+            }
+
+            return purpose.IsValidSelection();
+        }
+
+        var purposeText = purposeNode.GetValue<string>();
+
+        return !string.IsNullOrWhiteSpace(purposeText) &&
+            Enum.TryParse(purposeText, ignoreCase: true, out purpose) &&
+            purpose.IsValidSelection();
+    }
+
     public static AIDeployment FindWritableDeployment(
         IEnumerable<AIDeployment> deployments,
         string itemId,
@@ -78,13 +150,13 @@ internal static class LegacyAIDeploymentMigrationHelper
         }
     }
 
-    public static AIDeploymentType MergeDeploymentTypes(
-        AIDeploymentType existingType,
-        AIDeploymentType incomingType)
+    public static LegacyAIDeploymentPurpose MergeDeploymentTypes(
+        LegacyAIDeploymentPurpose existingType,
+        LegacyAIDeploymentPurpose incomingType)
     {
         var mergedType = existingType.IsValidSelection()
             ? existingType
-            : AIDeploymentType.None;
+            : LegacyAIDeploymentPurpose.None;
 
         if (incomingType.IsValidSelection())
         {
@@ -94,11 +166,11 @@ internal static class LegacyAIDeploymentMigrationHelper
         return NormalizeInteractiveTypes(mergedType);
     }
 
-    public static AIDeploymentType NormalizeInteractiveTypes(AIDeploymentType deploymentType)
+    public static LegacyAIDeploymentPurpose NormalizeInteractiveTypes(LegacyAIDeploymentPurpose deploymentType)
     {
-        if (deploymentType.HasFlag(AIDeploymentType.Chat) || deploymentType.HasFlag(AIDeploymentType.Utility))
+        if (deploymentType.HasFlag(LegacyAIDeploymentPurpose.Chat) || deploymentType.HasFlag(LegacyAIDeploymentPurpose.Utility))
         {
-            deploymentType |= AIDeploymentType.Chat | AIDeploymentType.Utility;
+            deploymentType |= LegacyAIDeploymentPurpose.Chat | LegacyAIDeploymentPurpose.Utility;
         }
 
         return deploymentType;
@@ -121,7 +193,7 @@ internal static class LegacyAIDeploymentMigrationHelper
             FindPreferredDeploymentName(
                 deployments,
                 connections,
-                AIDeploymentType.Chat,
+                LegacyAIDeploymentPurpose.Chat,
                 static connection => connection.GetLegacyChatDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentName(
@@ -130,7 +202,7 @@ internal static class LegacyAIDeploymentMigrationHelper
             FindPreferredDeploymentName(
                 deployments,
                 connections,
-                AIDeploymentType.Utility,
+                LegacyAIDeploymentPurpose.Utility,
                 static connection => connection.GetLegacyUtilityDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentName(
@@ -139,7 +211,7 @@ internal static class LegacyAIDeploymentMigrationHelper
             FindPreferredDeploymentName(
                 deployments,
                 connections,
-                AIDeploymentType.Embedding,
+                LegacyAIDeploymentPurpose.Embedding,
                 static connection => connection.GetLegacyEmbeddingDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentName(
@@ -148,7 +220,7 @@ internal static class LegacyAIDeploymentMigrationHelper
             FindPreferredDeploymentName(
                 deployments,
                 connections,
-                AIDeploymentType.Image,
+                LegacyAIDeploymentPurpose.Image,
                 static connection => connection.GetLegacyImageDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentName(
@@ -157,7 +229,7 @@ internal static class LegacyAIDeploymentMigrationHelper
             FindPreferredDeploymentName(
                 deployments,
                 connections,
-                AIDeploymentType.SpeechToText,
+                LegacyAIDeploymentPurpose.SpeechToText,
                 static connection => connection.GetLegacySpeechToTextDeploymentName()));
 
         updated |= TryPopulateDefaultDeploymentName(
@@ -166,7 +238,7 @@ internal static class LegacyAIDeploymentMigrationHelper
             FindPreferredDeploymentName(
                 deployments,
                 connections,
-                AIDeploymentType.TextToSpeech));
+                LegacyAIDeploymentPurpose.TextToSpeech));
 
         return updated;
     }
@@ -210,11 +282,11 @@ internal static class LegacyAIDeploymentMigrationHelper
     private static string FindPreferredDeploymentName(
         IEnumerable<AIDeployment> deployments,
         IEnumerable<AIProviderConnection> connections,
-        AIDeploymentType type,
+        LegacyAIDeploymentPurpose type,
         Func<AIProviderConnection, string> legacyDeploymentNameAccessor = null)
     {
         var candidates = deployments
-            .Where(deployment => deployment.SupportsType(type))
+            .Where(deployment => type.IsSupportedBy(deployment))
             .OrderBy(deployment => deployment.ConnectionName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -238,14 +310,14 @@ internal static class LegacyAIDeploymentMigrationHelper
     }
 
     private static string FindConnectionDeploymentName(
-        AIDeploymentType type,
+        LegacyAIDeploymentPurpose type,
         AIProviderConnection connection,
         IEnumerable<AIDeployment> deployments,
         string deploymentName)
     {
         return deployments
             .Where(deployment =>
-                deployment.SupportsType(type) &&
+                type.IsSupportedBy(deployment) &&
                 MatchesLegacyDeploymentName(deployment, deploymentName) &&
                 (string.Equals(deployment.ConnectionName, connection.ItemId, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(deployment.ConnectionName, connection.Name, StringComparison.OrdinalIgnoreCase)))
@@ -253,7 +325,7 @@ internal static class LegacyAIDeploymentMigrationHelper
             .FirstOrDefault()
             ?? deployments
                 .Where(deployment =>
-                    deployment.SupportsType(type) &&
+                    type.IsSupportedBy(deployment) &&
                     MatchesLegacyDeploymentName(deployment, deploymentName))
                 .Select(deployment => deployment.Name)
                 .FirstOrDefault();

@@ -55,9 +55,24 @@ internal static class AIProfileTemplateApplicator
             profile.OrchestratorName = templateMetadata.OrchestratorName;
         }
 
-        if (!string.IsNullOrEmpty(templateMetadata.RealtimeDeploymentName))
+        // A template written before realtime became a model capability named its speech-to-speech model in a
+        // separate field. That model is now simply the model the profile converses with, so it supplies the
+        // chat deployment -- and the template's own chat deployment, which such a profile could only ever
+        // reach for background work, moves to the utility slot when the template has not named one. This
+        // mirrors how AIProfile folds the same pair of stored values.
+#pragma warning disable CS0618 // Type or member is obsolete - an existing template still applies.
+        var legacyRealtimeDeploymentName = templateMetadata.RealtimeDeploymentName;
+#pragma warning restore CS0618
+
+        if (!string.IsNullOrEmpty(legacyRealtimeDeploymentName) &&
+            !string.Equals(legacyRealtimeDeploymentName, profile.ChatDeploymentName, StringComparison.OrdinalIgnoreCase))
         {
-            profile.RealtimeDeploymentName = templateMetadata.RealtimeDeploymentName;
+            if (string.IsNullOrEmpty(profile.UtilityDeploymentName))
+            {
+                profile.UtilityDeploymentName = profile.ChatDeploymentName;
+            }
+
+            profile.ChatDeploymentName = legacyRealtimeDeploymentName;
         }
 
         if (templateMetadata.TitleType.HasValue)

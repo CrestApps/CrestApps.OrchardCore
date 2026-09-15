@@ -251,10 +251,10 @@ internal static class AIProfileRecipeSchemaBuilder
                     .Type(SchemaValueType.String)
                     .Enum("Chat", "Utility", "TemplatePrompt", "Agent")
                     .Description("Profile type created from this template.")),
-                ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Chat deployment name used when the generated profile needs a chat-capable model.")),
+                ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment the generated profile converses with. Naming one whose model declares the 'realtime' feature makes it a speech-to-speech profile.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment name used when the generated profile needs a utility or background model.")),
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Orchestrator name applied to generated profiles.")),
-                ("RealtimeDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Realtime (speech-to-speech) deployment applied to generated profiles when the chat mode is Realtime. Must reference a deployment whose model declares the 'realtime' feature.")),
+                ("RealtimeDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Legacy. Realtime is a model capability rather than a separate deployment, so set ChatDeploymentName to the realtime deployment instead. Still honored for existing templates: when set, it supplies the chat deployment.")),
                 ("InitialResponseHandlerName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional response handler that runs before the main orchestrator.")),
                 ("TitleType", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)

@@ -45,7 +45,6 @@ internal sealed class AIDeploymentDeploymentSource : DeploymentSourceBase<AIDepl
                 { "ClientName", deployment.Source },
                 { "ProviderName" , deployment.Source },
                 { "ConnectionName", deployment.ConnectionName },
-                { "Purpose", deployment.Purpose.ToString() },
                 { "Author", deployment.Author },
                 { "OwnerId", deployment.OwnerId },
                 { "CreatedUtc" , deployment.CreatedUtc },

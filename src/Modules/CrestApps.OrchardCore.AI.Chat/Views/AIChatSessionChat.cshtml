@@ -1,4 +1,4 @@
-@using System.Text.Json
+﻿@using System.Text.Json
 @using CrestApps.Core
 @using CrestApps.Core.AI
 @using CrestApps.Core.AI.Capabilities
@@ -42,7 +42,7 @@
     var sessionDocumentMetadata = Model.Profile?.GetOrCreate<AIProfileSessionDocumentsMetadata>();
     var allowSessionDocuments = sessionDocumentMetadata?.AllowSessionDocuments == true;
 
-    var visionDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision);
+    var visionDeployment = await AIDeploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Vision);
     var visionEnabled = visionDeployment != null;
     var allowSessionImageUploads = sessionDocumentMetadata?.AllowSessionImageUploads == true && visionEnabled;
     var sessionDocumentsEnabled = sessionDocumentsFeatureEnabled && (allowSessionDocuments || allowSessionImageUploads);
@@ -74,8 +74,8 @@
 
         : ChatMode.TextInput;
 
-    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText);
-    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.TextToSpeech);
+    var speechToTextDeployment = await AIDeploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText);
+    var textToSpeechDeployment = await AIDeploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.TextToSpeech);
     var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
         && speechToTextDeployment != null;
     var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true)
@@ -83,27 +83,27 @@
 
     var ttsVoiceName = chatModeSettings?.VoiceName;
 
-    // Realtime (speech-to-speech): enabled when the profile's chat mode is Realtime and either the profile's
-    // deployment declares the realtime capability or a default realtime deployment is available. Realtime is
+    // Realtime (speech-to-speech): the profile's own chat deployment decides whether this is a voice
+    // conversation, which keeps the client's realtime UI in step with the hub's capability gate. Realtime is
     // audio-only and reuses the conversation button as the "Start speaking" toggle (see ai-chat.js).
-    var selectedDeploymentName = Model.Profile?.ChatDeploymentName;
-    var selectedDeploymentIsRealtime = !string.IsNullOrWhiteSpace(selectedDeploymentName)
-        && (await CapabilityService.GetCapabilitiesAsync(selectedDeploymentName)).SupportsFeature(AIDeploymentFeatureNames.Realtime);
-    var hasRealtime = selectedDeploymentIsRealtime
-        || await CapabilityService.ResolveDeploymentWithFeatureAsync(AIDeploymentFeatureNames.Realtime) is not null;
+    var realtimeEnabled = await CapabilityService.IsRealtimeDeploymentAsync(Model.Profile?.ChatDeploymentName);
 
-    var effectiveChatMode = chatMode switch
-    {
-        ChatMode.Realtime when hasRealtime => ChatMode.Realtime,
-        ChatMode.Realtime when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
-        ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
-        ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
-        ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
-        _ => ChatMode.TextInput,
-    };
+    // The chat mode layers speech-to-text and text-to-speech over a text model, so it does not apply to a
+    // realtime deployment, which speaks natively.
+    var effectiveChatMode = realtimeEnabled
+        ? ChatMode.TextInput
+        : chatMode switch
+        {
+            ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
+            ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
+            ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
+            _ => ChatMode.TextInput,
+        };
 
-    var realtimeEnabled = effectiveChatMode == ChatMode.Realtime;
-    var realtimeWebRtcEnabled = realtimeEnabled && RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
+    // Whether the server can offer WebRTC is a capability of the host, not of this page's current mode. The
+    // client turns realtime on by itself when a realtime-capable deployment is picked after the page loaded, and
+    // gating this on realtimeEnabled left those sessions permanently on the WebSocket transport.
+    var realtimeWebRtcEnabled = RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
     var realtimeVoiceName = chatModeSettings?.VoiceName;
 
     // The conversation button doubles as the realtime "Start speaking" toggle, so render it for both modes.
@@ -163,7 +163,11 @@
                 <div id="@documentBarHtmlId" class="d-none"></div>
             }
 
-            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Profile?.ItemId ?? Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
+            @* Realtime is audio-only. The element stays in the DOM because the chat app reads the session
+               and profile ids from it, but it is hidden: there is nothing to type into during a spoken
+               conversation. Hidden here rather than by the realtime controller, which only owns the
+               elements this app hands it -- and this app hands it only the button. *@
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Profile?.ItemId ?? Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId" hidden="@realtimeEnabled"></textarea>
 
             @* Single flex row so the realtime "Start speaking" button (flex-grow-1) can span the full input
                width when the client hides the text controls (audio-only). The shared realtime-audio
@@ -211,7 +215,7 @@
                         </button>
                     }
 
-                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled hidden="@realtimeEnabled" data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>

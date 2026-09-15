@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -16,9 +17,14 @@ internal sealed class AIDeploymentModelCapabilitiesDisplayDriver : DisplayDriver
 {
     private readonly IAIDeploymentCapabilityService _capabilityService;
 
-    public AIDeploymentModelCapabilitiesDisplayDriver(IAIDeploymentCapabilityService capabilityService)
+    internal readonly IStringLocalizer S;
+
+    public AIDeploymentModelCapabilitiesDisplayDriver(
+        IAIDeploymentCapabilityService capabilityService,
+        IStringLocalizer<AIDeploymentModelCapabilitiesDisplayDriver> stringLocalizer)
     {
         _capabilityService = capabilityService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIDeployment deployment, BuildEditorContext context)
@@ -35,13 +41,14 @@ internal sealed class AIDeploymentModelCapabilitiesDisplayDriver : DisplayDriver
         {
             deployment.TryGet<AIDeploymentMetadata>(out var metadata);
 
-            // A deployment that has never been configured defaults to the features flagged as enabled by
-            // default so existing chat deployments keep working without an explicit declaration.
+            // A deployment that has never declared capabilities is offered the defaults, new or not. It is
+            // unconstrained at run time, so the defaults are what it already behaves like -- and showing an
+            // empty list instead used to save Features = [] the moment anything unrelated was edited,
+            // quietly turning "unconstrained" into "declares nothing". Now that at least one capability is
+            // required, that same empty list would simply block the save.
             var selectedFeatures = metadata?.Features is { Length: > 0 }
                 ? new HashSet<string>(metadata.Features, StringComparer.OrdinalIgnoreCase)
-                : context.IsNew
-                    ? new HashSet<string>(registeredFeatures.Where(feature => feature.EnabledByDefault).Select(feature => feature.Name), StringComparer.OrdinalIgnoreCase)
-                    : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                : new HashSet<string>(registeredFeatures.Where(feature => feature.EnabledByDefault).Select(feature => feature.Name), StringComparer.OrdinalIgnoreCase);
 
             model.AvailableFeatures = registeredFeatures;
             model.SelectedFeatures = [.. selectedFeatures];
@@ -93,6 +100,13 @@ internal sealed class AIDeploymentModelCapabilitiesDisplayDriver : DisplayDriver
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray(),
         };
+
+        // Capabilities are the only thing a deployment says about itself now that the purpose is gone, so a
+        // deployment that declares none describes nothing and cannot be resolved for any slot.
+        if (registeredFeatures.Count > 0 && metadata.Features.Length == 0)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SelectedFeatures), S["At least one model capability is required."]);
+        }
 
         foreach (var parameter in model.ModelParameters ?? [])
         {

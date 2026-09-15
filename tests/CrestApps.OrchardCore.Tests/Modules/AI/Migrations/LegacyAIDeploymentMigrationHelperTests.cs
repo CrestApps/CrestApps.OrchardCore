@@ -1,5 +1,3 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Tests cover legacy migration logic
-
 using System.Reflection;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI;
@@ -23,8 +21,7 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
                 Source = "Azure",
                 ConnectionName = "winnerware",
                 IsReadOnly = true,
-                Type = AIDeploymentType.Utility,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextGeneration),
             new AIDeployment
             {
                 ItemId = "db-id",
@@ -32,8 +29,7 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
                 ModelName = "gpt-4.1-mini",
                 Source = "Azure",
                 ConnectionName = "winnerware",
-                Type = AIDeploymentType.Chat,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextGeneration),
         };
 
         // Act
@@ -68,13 +64,13 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
     }
 
     [Theory]
-    [InlineData(AIDeploymentType.Chat, AIDeploymentType.Chat | AIDeploymentType.Utility)]
-    [InlineData(AIDeploymentType.Utility, AIDeploymentType.Chat | AIDeploymentType.Utility)]
-    [InlineData(AIDeploymentType.Chat | AIDeploymentType.Utility, AIDeploymentType.Chat | AIDeploymentType.Utility)]
-    [InlineData(AIDeploymentType.Embedding, AIDeploymentType.Embedding)]
+    [InlineData(LegacyDeploymentPurposes.Chat, LegacyDeploymentPurposes.Chat | LegacyDeploymentPurposes.Utility)]
+    [InlineData(LegacyDeploymentPurposes.Utility, LegacyDeploymentPurposes.Chat | LegacyDeploymentPurposes.Utility)]
+    [InlineData(LegacyDeploymentPurposes.Chat | LegacyDeploymentPurposes.Utility, LegacyDeploymentPurposes.Chat | LegacyDeploymentPurposes.Utility)]
+    [InlineData(LegacyDeploymentPurposes.Embedding, LegacyDeploymentPurposes.Embedding)]
     public void NormalizeInteractiveTypes_ShouldMirrorChatAndUtilitySupport(
-        AIDeploymentType input,
-        AIDeploymentType expected)
+        int input,
+        int expected)
     {
         // Act
         var deploymentType = InvokeNormalizeInteractiveTypes(input);
@@ -110,8 +106,7 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
                 ModelName = "gpt-4.1-mini",
                 Source = "Azure",
                 ConnectionName = "winnerware",
-                Type = AIDeploymentType.Chat | AIDeploymentType.Utility,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextGeneration),
             new AIDeployment
             {
                 ItemId = "embedding-id",
@@ -119,8 +114,7 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
                 ModelName = "text-embedding-3-small",
                 Source = "Azure",
                 ConnectionName = "winnerware",
-                Type = AIDeploymentType.Embedding,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextEmbedding),
             new AIDeployment
             {
                 ItemId = "stt-id",
@@ -128,8 +122,7 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
                 ModelName = "whisper",
                 Source = "Azure",
                 ConnectionName = "winnerware",
-                Type = AIDeploymentType.SpeechToText,
-            },
+            }.Declaring(AIDeploymentFeatureNames.SpeechToText),
             new AIDeployment
             {
                 ItemId = "tts-id",
@@ -137,8 +130,7 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
                 ModelName = "AzureTextToSpeech",
                 Source = "Azure",
                 ConnectionName = "winnerware",
-                Type = AIDeploymentType.TextToSpeech,
-            },
+            }.Declaring(AIDeploymentFeatureNames.TextToSpeech),
         };
 
         // Act
@@ -177,13 +169,13 @@ public sealed class LegacyAIDeploymentMigrationHelperTests
         return (string)method.Invoke(null, [deployments, deploymentName])!;
     }
 
-    private static AIDeploymentType InvokeNormalizeInteractiveTypes(AIDeploymentType deploymentType)
+    private static int InvokeNormalizeInteractiveTypes(int deploymentType)
     {
         var method = GetHelperType().GetMethod(
             "NormalizeInteractiveTypes",
             BindingFlags.Public | BindingFlags.Static)!;
 
-        return (AIDeploymentType)method.Invoke(null, [deploymentType])!;
+        return LegacyDeploymentPurposes.Unbox(method.Invoke(null, [LegacyDeploymentPurposes.Box(deploymentType)])!);
     }
 
     private static bool InvokeTryPopulateDefaultDeploymentSettings(

@@ -414,7 +414,7 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
             return await _orchestrator.StartAsync(new RealtimeOrchestrationRequest
             {
                 Resource = context.Profile,
-                RealtimeDeploymentName = context.Profile.RealtimeDeploymentName,
+                RealtimeDeploymentName = context.RealtimeDeploymentName,
                 ChatSession = context.Session,
 
                 // The voice the activity was loaded with, so a realtime call sounds like the campaign it belongs

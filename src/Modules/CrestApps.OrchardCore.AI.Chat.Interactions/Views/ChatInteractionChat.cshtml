@@ -1,8 +1,9 @@
-@using System.Text.Json
+﻿@using System.Text.Json
 @using CrestApps.Core.AI.Capabilities
 @using CrestApps.Core.AI.Chat.Realtime
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.Chat.Interactions.Core
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Hubs
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Settings
 @using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels
@@ -27,37 +28,33 @@
     var site = await SiteService.GetSiteSettingsAsync();
     var chatModeSettings = site.GetOrCreate<ChatInteractionChatModeSettings>();
     var chatMode = chatModeSettings.ChatMode;
-    var speechToTextDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.SpeechToText);
-    var textToSpeechDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.TextToSpeech);
-    var visionDeployment = await AIDeploymentManager.ResolveOrDefaultAsync(AIDeploymentPurpose.Vision);
+    var speechToTextDeployment = await AIDeploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText);
+    var textToSpeechDeployment = await AIDeploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.TextToSpeech);
+    var visionDeployment = await AIDeploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Vision);
 
-    // Realtime (speech-to-speech): the interaction runs a realtime session when its selected deployment
-    // declares the realtime capability, or when the site chat mode is Realtime and a realtime deployment
-    // is available. Realtime is audio-only and takes precedence over the STT/TTS conversation pipeline.
+    // Realtime (speech-to-speech): the interaction's own chat deployment decides this. A site can no longer
+    // force realtime globally through the chat mode. Realtime is audio-only and takes precedence over the
+    // STT/TTS conversation pipeline.
     var realtimeDeployments = await CapabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.Realtime);
+
+    // The client watches the settings panel's deployment picker and switches into realtime the moment a
+    // realtime-capable deployment is chosen, so it needs the whole set, not just this interaction's answer.
     var realtimeCapableDeploymentNames = realtimeDeployments
         .Where(d => !string.IsNullOrWhiteSpace(d.Name))
         .Select(d => d.Name)
         .ToArray();
-    var selectedDeploymentName = Model.Interaction.ChatDeploymentName;
-    var selectedDeploymentIsRealtime = !string.IsNullOrWhiteSpace(selectedDeploymentName)
-        && realtimeCapableDeploymentNames.Contains(selectedDeploymentName, StringComparer.OrdinalIgnoreCase);
-    var hasRealtime = selectedDeploymentIsRealtime
-        || await CapabilityService.ResolveDeploymentWithFeatureAsync(AIDeploymentFeatureNames.Realtime) is not null;
 
-    var effectiveChatMode = selectedDeploymentIsRealtime
-        ? ChatMode.Realtime
-        : chatMode switch
-        {
-            ChatMode.Realtime when hasRealtime => ChatMode.Realtime,
-            // Realtime configured but no realtime deployment: fall back to STT/TTS conversation when possible.
-            ChatMode.Realtime when speechToTextDeployment != null && textToSpeechDeployment != null => ChatMode.Conversation,
-            ChatMode.Realtime => ChatMode.TextInput,
-            _ => chatMode,
-        };
+    var realtimeEnabled = await CapabilityService.IsRealtimeDeploymentAsync(Model.Interaction.ChatDeploymentName);
 
-    var realtimeEnabled = effectiveChatMode == ChatMode.Realtime;
-    var realtimeWebRtcEnabled = realtimeEnabled && RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
+    // The chat mode layers speech-to-text and text-to-speech over a text model, so it does not apply to a
+    // realtime deployment, which speaks natively.
+    var effectiveChatMode = realtimeEnabled
+        ? ChatMode.TextInput
+        : chatMode;
+    // Whether the server can offer WebRTC is a capability of the host, not of this page's current mode. The
+    // client turns realtime on by itself when a realtime-capable deployment is picked after the page loaded, and
+    // gating this on realtimeEnabled left those sessions permanently on the WebSocket transport.
+    var realtimeWebRtcEnabled = RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
 
     var speechToTextEnabled = !realtimeEnabled
         && (effectiveChatMode == ChatMode.AudioInput || effectiveChatMode == ChatMode.Conversation)
@@ -69,8 +66,9 @@
     var conversationModeEnabled = speechToTextEnabled && textToSpeechEnabled;
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
     var realtimeBtnHtmlId = $"{baseId}_RealtimeBtn";
-    var realtimeVoiceGroupHtmlId = $"{baseId}_RealtimeVoiceGroup";
-    var realtimeVoiceSelectHtmlId = $"{baseId}_RealtimeVoice";
+    // Rendered by the settings panel rather than this shape, so the ids are shared constants.
+    var realtimeVoiceGroupHtmlId = ChatInteractionsConstants.ElementIds.RealtimeVoiceGroup;
+    var realtimeVoiceSelectHtmlId = ChatInteractionsConstants.ElementIds.RealtimeVoiceSelect;
     var realtimeVoicesUrl = Url.Action("Voices", "Realtime", new { area = "CrestApps.OrchardCore.AI.Chat" });
 }
 
@@ -88,14 +86,8 @@
     </div>
 
     <div class="flex-shrink-0">
-        @* Realtime voice picker. Hidden until the client detects a realtime-capable deployment. Populated
-           from the selected realtime model via the voices endpoint. *@
-        <div class="mb-2 d-none" id="@realtimeVoiceGroupHtmlId">
-            <label class="form-label small mb-1" for="@realtimeVoiceSelectHtmlId">@T["Voice"]</label>
-            <select class="form-select form-select-sm" id="@realtimeVoiceSelectHtmlId">
-                <option value="">@T["Default voice"]</option>
-            </select>
-        </div>
+        @* The realtime voice picker lives in the settings panel, beside the chat deployment it applies to.
+           See ChatInteractionRealtimeVoice.Edit.cshtml. *@
         <div class="ai-chat-prompt-container bg-body text-body rounded border w-100">
             <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-interaction-id="@Model.Interaction.ItemId" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 

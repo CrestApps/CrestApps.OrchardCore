@@ -1,0 +1,64 @@
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.DataSources.ViewModels
+
+@model DataSourceSearchToolInstanceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DataSourceId" class="ocat-label">@T["Data source"]</label>
+    <div class="ocat-end">
+        <select asp-for="DataSourceId" class="form-select">
+            <option value="">@T["Select a data source"]</option>
+            @foreach (var source in Model.DataSources.OrderBy(x => x.DisplayText))
+            {
+                @if (source.ItemId == Model.DataSourceId)
+                {
+                    <option value="@source.ItemId" selected="selected">@source.DisplayText</option>
+                    continue;
+                }
+
+                <option value="@source.ItemId">@source.DisplayText</option>
+            }
+        </select>
+        <span asp-validation-for="DataSourceId" class="text-danger"></span>
+        <span class="hint">@T["The knowledge base this tool searches. The model's search phrases are embedded with the same embedding deployment the data source was indexed with."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RetrievalMode" class="ocat-label">@T["Retrieval mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="RetrievalMode" class="form-select">
+            <option value="@DataSourceRetrievalMode.Chunk">@T["Chunk"]</option>
+            <option value="@DataSourceRetrievalMode.Hierarchical">@T["Hierarchical"]</option>
+        </select>
+        <span asp-validation-for="RetrievalMode" class="text-danger"></span>
+        <span class="hint">@T["<strong>Chunk</strong> returns only the matching chunks. <strong>Hierarchical</strong> returns the full source documents those chunks belong to, which gives the model complete context at a much larger payload."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Strictness" class="ocat-label">@T["Strictness"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="Strictness" step="1" min="@AIDataSourceSettings.MinStrictness" max="@AIDataSourceSettings.MaxStrictness" />
+        <span asp-validation-for="Strictness" class="text-danger"></span>
+        <span class="hint">@T["Strictness sets the threshold to categorize documents as relevant to the search. Raising strictness filters out more of the less relevant documents. Leave it blank to use the site default."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TopNDocuments" class="ocat-label">@T["Retrieved documents"]</label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" asp-for="TopNDocuments" step="1" min="@AIDataSourceSettings.MinTopNDocuments" max="@AIDataSourceSettings.MaxTopNDocuments" />
+        <span asp-validation-for="TopNDocuments" class="text-danger"></span>
+        <span class="hint">@T["The number of top-scoring documents returned for a single search. Increase it for short documents or to provide more context. Leave it blank to use the site default."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Filter" class="ocat-label">@T["Filter"]</label>
+    <div class="ocat-end">
+        <input asp-for="Filter" class="form-control font-monospace" placeholder="status eq 'published'" />
+        <span asp-validation-for="Filter" class="text-danger"></span>
+        <span class="hint">@T["Optional OData filter expression that narrows the search to a subset of the indexed data. It is translated to the index provider's own filter syntax before the search runs."]</span>
+    </div>
+</div>

@@ -183,11 +183,11 @@ public sealed class AICompletionWithConfigDocumentsDisplayDriver : DisplayDriver
 
             if (model.Files != null && model.Files.Length > 0)
             {
-                var chatDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-                    AIDeploymentPurpose.Chat,
+                var chatDeployment = await _deploymentManager.ResolveSlotAsync(
+                    AIDeploymentSlotNames.Chat,
                     deploymentName: interaction.ChatDeploymentName);
-                var embeddingDeployment = await _deploymentManager.ResolveOrDefaultAsync(
-                    AIDeploymentPurpose.Embedding,
+                var embeddingDeployment = await _deploymentManager.ResolveSlotAsync(
+                    AIDeploymentSlotNames.Embedding,
                     clientName: chatDeployment?.ClientName);
                 var embeddingGenerator = embeddingDeployment == null
                     ? null

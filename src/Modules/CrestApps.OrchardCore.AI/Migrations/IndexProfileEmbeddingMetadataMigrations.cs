@@ -1,5 +1,4 @@
-#pragma warning disable CS0618 // Type or member is obsolete - Migration code uses legacy AIDeploymentType for backward compatibility
-
+using CrestApps.Core;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
@@ -212,7 +211,7 @@ internal sealed class IndexProfileEmbeddingMetadataMigrations : DataMigration
 
             var deploymentById = await deploymentManager.FindByIdAsync(legacyMetadata.EmbeddingDeploymentId);
 
-            if (deploymentById?.SupportsType(AIDeploymentType.Embedding) == true)
+            if (deploymentById is not null && LegacyAIDeploymentPurpose.Embedding.IsSupportedBy(deploymentById))
             {
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
@@ -229,11 +228,11 @@ internal sealed class IndexProfileEmbeddingMetadataMigrations : DataMigration
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug(
-                    "Legacy embedding deployment id '{EmbeddingDeploymentId}' did not resolve to a valid embedding deployment for index profile '{IndexProfileName}'. Resolved deployment name: '{ResolvedDeploymentName}', type: '{ResolvedDeploymentType}'.",
+                    "Legacy embedding deployment id '{EmbeddingDeploymentId}' did not resolve to a valid embedding deployment for index profile '{IndexProfileName}'. Resolved deployment name: '{ResolvedDeploymentName}', capabilities: '{ResolvedDeploymentCapabilities}'.",
                     legacyMetadata.EmbeddingDeploymentId,
                     indexProfile.Name,
                     deploymentById?.Name,
-                    deploymentById?.Type);
+                    DescribeCapabilities(deploymentById));
             }
         }
 
@@ -251,7 +250,7 @@ internal sealed class IndexProfileEmbeddingMetadataMigrations : DataMigration
 
         var deployment = await deploymentManager.FindByNameAsync(legacyMetadata.EmbeddingDeploymentName);
 
-        if (deployment?.SupportsType(AIDeploymentType.Embedding) == true &&
+        if (deployment is not null && LegacyAIDeploymentPurpose.Embedding.IsSupportedBy(deployment) &&
             MatchesLegacyDeploymentSelector(deployment, legacyMetadata, logger))
         {
             if (logger.IsEnabled(LogLevel.Debug))
@@ -266,7 +265,7 @@ internal sealed class IndexProfileEmbeddingMetadataMigrations : DataMigration
             return deployment.Name;
         }
 
-        var deployments = ((await deploymentManager.GetByTypeAsync(AIDeploymentType.Embedding)) ?? [])
+        var deployments = ((await deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding)) ?? [])
             .Where(candidate => MatchesLegacyDeploymentSelector(candidate, legacyMetadata, logger))
             .ToArray();
 
@@ -467,14 +466,14 @@ internal sealed class IndexProfileEmbeddingMetadataMigrations : DataMigration
             return false;
         }
 
-        if (!deployment.SupportsType(AIDeploymentType.Embedding))
+        if (!LegacyAIDeploymentPurpose.Embedding.IsSupportedBy(deployment))
         {
             if (logger.IsEnabled(LogLevel.Debug))
             {
                 logger.LogDebug(
-                    "Legacy embedding selector comparison failed for deployment '{DeploymentName}' because its type '{DeploymentType}' does not support embeddings.",
+                    "Legacy embedding selector comparison failed for deployment '{DeploymentName}' because its capabilities '{DeploymentCapabilities}' do not include text embedding.",
                     deployment.Name,
-                    deployment.Type);
+                    DescribeCapabilities(deployment));
             }
 
             return false;
@@ -592,5 +591,20 @@ internal sealed class IndexProfileEmbeddingMetadataMigrations : DataMigration
         public string EmbeddingConnectionName { get; set; }
 
         public string EmbeddingDeploymentName { get; set; }
+    }
+
+    /// <summary>
+    /// Renders a deployment's declared capabilities for a log message, replacing the removed purpose flags.
+    /// </summary>
+    private static string DescribeCapabilities(AIDeployment deployment)
+    {
+        if (deployment is null)
+        {
+            return null;
+        }
+
+        return deployment.TryGet<AIDeploymentMetadata>(out var metadata) && metadata.Features is { Length: > 0 }
+            ? string.Join(", ", metadata.Features)
+            : "(none)";
     }
 }

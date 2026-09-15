@@ -106,6 +106,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public CrestApps.Core.AI.Models.AIProfile Profile { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
+        public string RealtimeDeploymentName { get; set; }
         public CrestApps.Core.AI.Models.AIChatSession Session { get; set; }
         public bool UseCallAmbience { get; set; }
     }
@@ -125,6 +126,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn endCallTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner completionRunner,
                     CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
+                    CrestApps.Core.AI.Capabilities.IAIDeploymentCapabilityService capabilityService,
                     CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,
                     CrestApps.Core.AI.Profiles.IAIProfileManager profileManager,
                     CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService,

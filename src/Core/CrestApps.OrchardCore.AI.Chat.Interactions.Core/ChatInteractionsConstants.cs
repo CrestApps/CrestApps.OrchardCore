@@ -16,6 +16,27 @@ public static class ChatInteractionsConstants
 
         public const string ChatInteractionDocuments = "CrestApps.OrchardCore.AI.Documents.ChatInteractions";
     }
+
+    /// <summary>
+    /// Element ids shared between the chat interaction editor shapes and the chat app that drives them.
+    /// </summary>
+    /// <remarks>
+    /// The realtime voice picker is rendered by the settings panel, beside the deployment it applies to,
+    /// while the chat app that populates and reads it is configured from the chat shape. A page shows one
+    /// interaction, so fixed ids let the two shapes agree without one having to derive the other's prefix.
+    /// </remarks>
+    public static class ElementIds
+    {
+        /// <summary>
+        /// The container that is revealed once a realtime-capable deployment is selected.
+        /// </summary>
+        public const string RealtimeVoiceGroup = "realtime-voice-group";
+
+        /// <summary>
+        /// The realtime voice picker itself.
+        /// </summary>
+        public const string RealtimeVoiceSelect = "realtime-voice-select";
+    }
 }
 
 /// <summary>

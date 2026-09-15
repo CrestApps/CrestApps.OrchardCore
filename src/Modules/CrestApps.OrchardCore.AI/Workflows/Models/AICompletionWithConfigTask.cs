@@ -106,8 +106,8 @@ public sealed class AICompletionWithConfigTask : TaskActivity<AICompletionWithCo
 
             var context = await _completionContextBuilder.BuildAsync(interaction);
 
-            var deployment = await _deploymentManager.ResolveOrDefaultAsync(
-                AIDeploymentPurpose.Chat,
+            var deployment = await _deploymentManager.ResolveSlotAsync(
+                AIDeploymentSlotNames.Chat,
                 deploymentName: context.ChatDeploymentName);
 
             if (deployment == null || string.IsNullOrEmpty(deployment.ConnectionName))
