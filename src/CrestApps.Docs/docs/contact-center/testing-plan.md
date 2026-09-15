@@ -30,7 +30,10 @@ defect crossed a seam, the test has to cross it too.
 | Automated voice conversation | `Modules/Omnichannel/Voice/VoiceAgentConversationLoopTests` | Greeting once, listening, replying, escalating, ending; realtime and turn-based both write the same transcript |
 | The handoff journey | `VoiceAgentConversationLoopTests` (journey cases) | A caller asking for a person reaches the queue **with the request token already cancelled** — which is how an abandoned provider webhook actually arrives — and is not hung up on instead |
 | Live session teardown | `RealtimeVoiceConversationRunnerTests` | A transferred call and a caller who hangs up both let the session return, so the work after it runs; the closing line is never clipped, and a customer who speaks after goodbye is not hung up on |
-| Session tooling | `RealtimeVoiceConversationRunnerTests` | The live session is given the end-call tool, and the transfer tool only when the call has a queue behind it |
+| Session tooling | `RealtimeVoiceConversationRunnerTests` | The live session is given the end-call tool, and the transfer tool only when the call has a queue behind it, and is started inside the invocation scope those tools need |
+| Which way a call runs | `VoiceAgentConversationLoopTests` | A profile whose model declares the realtime capability holds the call as a live session. The harness resolves it the way the framework does — the chat slot refuses realtime deployments — so a call cannot pass here and fall back to turn-based live |
+| Disposition guidance | `Modules/Omnichannel/SubjectDispositionGuidanceTests` | The model is given the subject's own wording for a disposition when there is one, the disposition's general description when there is not, and never another subject's wording |
+| Contact preferences | `Modules/Omnichannel/Managements/DefaultSubjectActionExecutorTests` | A disposition that sets do-not-call actually writes the contact, and publishes it, because the lists that decide who gets dialled query published contacts |
 | Call outcome | `VoiceCallConclusionPolicyTests` | Dispositions come from the subject's own actions; a disposition the model invented is refused; a silent call is never given an invented summary; an escalated call is left for the agent |
 | Voicemail access | `VoicemailMediaEndpointTests` | An agent can play and delete a voicemail addressed by the soft phone's own row id, and cannot reach one belonging to somebody else |
 
@@ -45,16 +48,24 @@ defect crossed a seam, the test has to cross it too.
 | Predictive dial | Out of scope | deliberately refused |
 | Automated voice call | Verified | dial → greeting → conversation → summary and disposition written |
 | AI-to-agent handoff | Verified | transfer → enqueue → hold music → offer accepted → both legs bridged |
+| Realtime (speech-to-speech) voice call | Verified | the call leg carried `streaming_start`/`streaming_stop` and no `speak` at all, the model interrupted and was interrupted, and the platform hung up when the model finished |
+| The assistant ending its own call | Verified | `endCall` invoked from the live session, closing line spoken in full, platform-issued hangup |
 
 ## Still to be proven on a live call
 
-- **Compliance request.** The caller asks not to be called again. What it is meant to establish: the model picks
-  the disposition wired to the subject's do-not-call action, the contact's Do Not Call preference is actually
-  set, and the contact is then excluded from the next inventory load. The wiring is configured and the disposition
-  rules are unit-tested; what a live call adds is the model's judgement on a real refusal.
-- **Automated voice after the realtime-capability migration.** Realtime is now a capability of the chat deployment
-  rather than a deployment of its own. The decision "does this call run live" changed shape, and although it is
-  covered by tests, it is the same path four live calls were spent on — worth one call before it is trusted.
+- **Compliance request, end to end.** Half of this is proven: on three live refusals the model chose the
+  do-not-call disposition every time, including one where the refusal was brief. The other half never worked —
+  the contact's Do Not Call preference was applied in memory and never saved, so the customer stayed dialable.
+  That is fixed and unit-tested; what is still owed is one live call showing the disposition and the account flag
+  land together, and the contact then missing from the next inventory load.
+- **The disposition descriptions.** Every disposition now describes when to choose it, and a subject workflow can
+  override that wording for its own work. The rule that decides which description the model sees is unit-tested,
+  and the descriptions themselves have not yet been judged by a model on a live call. The useful test is not
+  another refusal — it is a call that should land on a *different* disposition, to show the guidance separates
+  outcomes rather than pulling everything towards the one it describes most forcefully.
+- **The turn-based fallback's hangup.** A call that cannot run as a live session is now told that hanging up is
+  its job, and is given the tool to do it. Both are unit-tested. No live call has taken that path since, because
+  the realtime path stopped falling back — so it is proven by test and unproven by phone.
 - **Signaling region.** Whether moving the signaling edge moves the media edge with it. Only the round-trip figure
   on a call can answer that; the provider does not document it.
 
