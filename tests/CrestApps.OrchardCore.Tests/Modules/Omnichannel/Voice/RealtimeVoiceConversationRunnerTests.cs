@@ -374,6 +374,64 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task TheAssistantOpensTheCall_RatherThanWaitingToBeSpokenTo()
+    {
+        // Arrange
+        // We placed this call, so the silence after the customer picks up is ours to fill. Without this the
+        // session waits for voice detection, and every live transcript began with the customer saying "Hello?"
+        // into dead air before the assistant introduced itself.
+        var harness = new RealtimeHarness();
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Equal(1, harness.Conversation.ResponsesRequested);
+    }
+
+    [Fact]
+    public async Task TheClosingLine_IsNotSaidTwice()
+    {
+        // Arrange
+        // The model says goodbye, calls the end-call tool, reads the tool's reply, and — with the line still open
+        // while the customer is given their moment — says the very same goodbye again. Heard live, twice.
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+
+        await endCall.CancelAsync();
+
+        // The goodbye, spoken and finished.
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Understood, you won't be contacted again. Take care." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+        var spokenAfterGoodbye = harness.Media.WrittenAudio.Count;
+
+        // Act
+        // The model says it again.
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Understood, you won't be contacted again. Take care." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+
+        // Assert
+        // The customer hears the goodbye once.
+        Assert.Equal(spokenAfterGoodbye, harness.Media.WrittenAudio.Count);
+
+        harness.Conversation.KeepAlive = false;
+        harness.Media.KeepAlive = false;
+
+        await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task ACustomerWhoStartsSpeakingAfterTheGoodbye_IsNotHungUpOn()
     {
         // Arrange
@@ -949,8 +1007,17 @@ public sealed class RealtimeVoiceConversationRunnerTests
             return Task.FromResult(true);
         }
 
+        /// <summary>
+        /// How many times the host asked the model to speak without being spoken to first.
+        /// </summary>
+        public int ResponsesRequested { get; private set; }
+
         public Task RequestResponseAsync(CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        {
+            ResponsesRequested++;
+
+            return Task.CompletedTask;
+        }
 
         public Task RequestAcknowledgementAsync(string instructions, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
