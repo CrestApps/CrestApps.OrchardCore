@@ -247,6 +247,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     HandoffInstructions = realtimeHandoffService is null
                         ? null
                         : OmnichannelHandoffHelper.BuildHandoffInstructions(realtimeFlowSettings),
+
+                    // The deployment the live session is held on, resolved above by capability.
+                    RealtimeDeploymentName = realtimeDeploymentName,
+
+                    // So the assistant addresses the person it actually called, rather than a name it invented.
+                    ContactName = await ResolveContactNameAsync(activity, cancellationToken),
                 }, cancellationToken);
 
                 // The session is over. Said plainly on the record, because the failure this instrumentation was
@@ -304,6 +310,23 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     /// </remarks>
     /// <param name="profile">The profile driving the conversation.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <summary>
+    /// The name of the person being called, or <see langword="null"/> when the contact has none.
+    /// </summary>
+    /// <param name="activity">The call's activity.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task<string> ResolveContactNameAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(activity?.ContactContentItemId))
+        {
+            return null;
+        }
+
+        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+        return string.IsNullOrWhiteSpace(contact?.DisplayText) ? null : contact.DisplayText.Trim();
+    }
+
     private async Task<string> ResolveRealtimeDeploymentNameAsync(AIProfile profile, CancellationToken cancellationToken)
     {
         if (!string.IsNullOrWhiteSpace(profile.ChatDeploymentName))

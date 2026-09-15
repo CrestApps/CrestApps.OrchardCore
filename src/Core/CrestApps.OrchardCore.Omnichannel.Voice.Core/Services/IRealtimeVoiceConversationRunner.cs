@@ -105,4 +105,16 @@ public sealed class RealtimeVoiceConversationContext
     /// the same answer decides whether there is a live session at all.
     /// </remarks>
     public string RealtimeDeploymentName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the person being called, when the contact has one.
+    /// </summary>
+    /// <remarks>
+    /// The turn-based greeting is rendered from a template that has the contact in scope, so it can open with
+    /// their name. A live session is configured from the profile and never sees that template — and a model asked
+    /// to open a sales call with no name does not decline to use one, it invents a plausible one. Observed live:
+    /// the assistant opened "is this Marcus?" to a contact named Amani, who reasonably asked who it was looking
+    /// for, which the assistant then read as a request for a human and transferred the call.
+    /// </remarks>
+    public string ContactName { get; set; }
 }

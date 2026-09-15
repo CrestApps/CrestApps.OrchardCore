@@ -264,6 +264,21 @@ public sealed class RealtimeVoiceConversationRunner : IRealtimeVoiceConversation
             orchestration.SystemMessageBuilder.AppendLine(call.HandoffInstructions);
         }
 
+        // Who picked up. A model opening a sales call with no name does not decline to use one — it invents a
+        // plausible one, and the person who answers knows immediately that nobody actually knows them. Observed
+        // live: "is this Marcus?" to a contact named Amani, who asked who it was looking for, which the assistant
+        // then read as a request for a human and transferred the call.
+        orchestration.SystemMessageBuilder.AppendLine();
+        orchestration.SystemMessageBuilder.AppendLine("## Who you are calling");
+        orchestration.SystemMessageBuilder.AppendLine();
+        orchestration.SystemMessageBuilder.AppendLine(
+            string.IsNullOrWhiteSpace(call?.ContactName)
+                ? "You do not know the name of the person you are calling. Do not use a name, and never guess or " +
+                  "invent one; ask who you are speaking with if you need it."
+                : $"You are calling {call.ContactName}. That is the only name you may use for them. Never use any " +
+                  "other name, and never guess or invent one — if the person says they are somebody else, believe " +
+                  "them and adjust.");
+
         // Said plainly, because the model is speaking rather than writing and cannot see the call state: on a
         // phone call somebody has to hang up, and if it does not, the customer is left holding a dead line.
         orchestration.SystemMessageBuilder.AppendLine();

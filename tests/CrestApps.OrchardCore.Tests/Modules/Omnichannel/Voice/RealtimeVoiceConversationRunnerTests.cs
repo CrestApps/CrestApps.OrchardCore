@@ -436,6 +436,46 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task TheSessionIsToldWhoItIsCalling()
+    {
+        // Arrange
+        // A live session is configured from the profile and never sees the greeting template that has the contact
+        // in scope. Told no name, a model does not open a sales call without one — it invents a plausible one.
+        // Observed live: "is this Marcus?" to a contact named Amani, who asked who it was looking for, which the
+        // assistant read as a request for a human and transferred the call. One invented word cost the call.
+        var harness = new RealtimeHarness();
+        harness.ContactName = "Amani";
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var systemMessage = harness.Orchestrator.Contexts.Single().SystemMessageBuilder.ToString();
+
+        Assert.Contains("Amani", systemMessage);
+        Assert.Contains("never guess or invent one", systemMessage);
+    }
+
+    [Fact]
+    public async Task ACallToSomebodyWithNoName_IsToldToUseNoneRatherThanInventOne()
+    {
+        // Arrange
+        // The dangerous half: with no name available the model must be told to use none. Silence on the subject is
+        // what produced the invented name in the first place.
+        var harness = new RealtimeHarness();
+        harness.ContactName = null;
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var systemMessage = harness.Orchestrator.Contexts.Single().SystemMessageBuilder.ToString();
+
+        Assert.Contains("Do not use a name", systemMessage);
+        Assert.Contains("never guess or invent one", systemMessage);
+    }
+
+    [Fact]
     public async Task ACallWithNowhereToEscalate_IsNotOfferedTheTransferTool()
     {
         // Arrange
@@ -706,6 +746,11 @@ public sealed class RealtimeVoiceConversationRunnerTests
         /// </summary>
         public string HandoffInstructions { get; set; }
 
+        /// <summary>
+        /// Who the call is to, as the loop resolves it from the contact.
+        /// </summary>
+        public string ContactName { get; set; }
+
         public List<AIChatSessionPrompt> StoredPrompts => _prompts;
 
         public Task<bool> RunAsync()
@@ -719,6 +764,7 @@ public sealed class RealtimeVoiceConversationRunnerTests
                 HandoffRequested = HandoffRequested,
                 EndCallRequested = EndCallRequested,
                 HandoffInstructions = HandoffInstructions,
+                ContactName = ContactName,
 
                 // The loop decides this now, by asking whether the profile's chat deployment can hold a live call.
                 RealtimeDeploymentName = "realtime-deployment",

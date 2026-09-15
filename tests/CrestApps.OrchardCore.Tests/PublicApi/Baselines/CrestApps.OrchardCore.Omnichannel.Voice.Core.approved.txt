@@ -99,6 +99,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         public RealtimeVoiceConversationContext() { }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public string ContactName { get; set; }
         public System.Threading.CancellationToken EndCallRequested { get; set; }
         public string HandoffInstructions { get; set; }
         public System.Threading.CancellationToken HandoffRequested { get; set; }

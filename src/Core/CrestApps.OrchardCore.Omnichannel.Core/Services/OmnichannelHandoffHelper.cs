@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -81,6 +81,12 @@ public static class OmnichannelHandoffHelper
             $"To hand off, call the {TransferToAgentToolName} tool with a short reason. After calling it, reply with one warm " +
             "message telling the customer you are connecting them with a specialist who will continue the conversation; " +
             "do not promise a specific time. Only hand off when one of the conditions above is genuinely met.");
+        builder.AppendLine();
+        builder.AppendLine(
+            "A question is not a request for a person. \"Who is this?\", \"who are you looking for?\", \"what is this " +
+            "about?\" and similar are asking you to explain yourself — answer them. Hand off only when the customer " +
+            "asks for a human in terms that leave no doubt, and when you are unsure, ask whether they would like to " +
+            "be put through rather than transferring them on a guess.");
 
         return builder.ToString().TrimEnd();
     }
