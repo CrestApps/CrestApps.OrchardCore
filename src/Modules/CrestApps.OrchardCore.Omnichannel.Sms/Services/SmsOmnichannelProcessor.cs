@@ -188,6 +188,10 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.Assistant,
                 Content = initialPrompt,
+                // Stamp the opening message so it orders before the customer's first reply. Without a time it
+                // defaults to DateTime.MinValue and sorts ahead of every later message, corrupting the owed-reply
+                // scan and the transcript for the rest of the conversation.
+                CreatedUtc = _clock.UtcNow,
             }, cancellationToken);
 
             chatSession.LastActivityUtc = _clock.UtcNow;

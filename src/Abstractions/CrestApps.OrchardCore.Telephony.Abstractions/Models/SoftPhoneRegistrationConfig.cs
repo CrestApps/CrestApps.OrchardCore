@@ -34,4 +34,25 @@ public sealed class SoftPhoneRegistrationConfig
     /// Gets or sets the soft-phone session metadata.
     /// </summary>
     public SoftPhoneSessionConfig Session { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the browser places outbound calls itself (by sending the SIP
+    /// INVITE from the registered client) rather than the server originating a leg to the browser. Providers
+    /// whose platform will not accept a server-originated call to a registered WebRTC credential (Telnyx) set
+    /// this so the soft phone dials directly from the browser.
+    /// </summary>
+    public bool ClientOriginatesCalls { get; set; }
+
+    /// <summary>
+    /// Gets or sets the caller id the browser presents on client-originated outbound calls. Required by
+    /// platforms that reject a call whose origination number is not an owned number (sent as the SIP
+    /// P-Asserted-Identity). Ignored when <see cref="ClientOriginatesCalls"/> is <see langword="false"/>.
+    /// </summary>
+    public string OutboundCallerId { get; set; }
+
+    /// <summary>
+    /// Gets or sets an optional echo/loopback destination the diagnostics "Run audio test" action dials to
+    /// verify round-trip audio without a second person. When empty, the audio test is unavailable.
+    /// </summary>
+    public string EchoTestDestination { get; set; }
 }

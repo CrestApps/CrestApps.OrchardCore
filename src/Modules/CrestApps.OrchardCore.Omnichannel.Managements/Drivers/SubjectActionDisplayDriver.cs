@@ -39,6 +39,9 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
 
 
         action.DispositionId = model.DispositionId;
+        action.DispositionGuidance = string.IsNullOrWhiteSpace(model.DispositionGuidance)
+            ? null
+            : model.DispositionGuidance.Trim();
 
         if (model.ShowCommunicationPreferences)
         {
@@ -61,6 +64,7 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
     private async Task PopulateAsync(SubjectActionViewModel model, SubjectAction action)
     {
         model.DispositionId = action.DispositionId;
+        model.DispositionGuidance = action.DispositionGuidance;
         model.ShowCommunicationPreferences =
             action.SetDoNotCall.HasValue ||
             action.SetDoNotSms.HasValue ||
@@ -72,6 +76,10 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
         model.SetDoNotChat = action.SetDoNotChat;
 
         var dispositions = await _dispositionsCatalog.GetAllAsync();
+
+        model.DispositionDescriptions = dispositions
+            .Where(d => !string.IsNullOrWhiteSpace(d.Description))
+            .ToDictionary(d => d.ItemId, d => d.Description, StringComparer.OrdinalIgnoreCase);
 
         model.Dispositions = dispositions
             .Select(d => new SelectListItem

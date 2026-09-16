@@ -37,7 +37,7 @@ public sealed class DisplayNameProvider : IDisplayNameProvider
         _liquidTemplateManager = liquidTemplateManager;
         _logger = logger;
     }
-
+
     /// <inheritdoc />
     public async Task<string> GetAsync(IUser user, CancellationToken cancellationToken = default)
     {

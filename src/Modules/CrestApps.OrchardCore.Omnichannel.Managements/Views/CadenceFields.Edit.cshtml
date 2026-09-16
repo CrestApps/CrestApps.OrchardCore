@@ -1,0 +1,192 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model CadenceViewModel
+
+@{
+    // The base name the model binder expects for the step collection, e.g. "Cadence.Steps".
+    var stepsName = Html.NameFor(m => m.Steps).ToString();
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Enabled"]</label>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Enabled"]</label>
+        </div>
+        <span class="hint dashed">@T["A disabled cadence never sends follow-ups."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Follow-up steps"]</label>
+    <div class="ocat-end">
+        <span class="hint">
+            @T["Each step sends one follow-up after its own quiet period, measured from our previous message — the opening message for step 1, or the previous step after that. The clock restarts every time we send, so the delays add up. For example, two steps of 60 send the first follow-up 60 minutes after the opening and the second 60 minutes after that (about two hours in) — two follow-ups in total, not one. Follow-ups stop after the last step, and every one respects the campaign's business hours."]
+        </span>
+        <span asp-validation-for="Steps" class="text-danger d-block"></span>
+
+        <div id="cadence-steps" class="mt-2" data-steps-name="@stepsName">
+            @for (var i = 0; i < Model.Steps.Count; i++)
+            {
+                var step = Model.Steps[i];
+                <div class="cadence-step card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold cadence-step-title">@T["Step {0}", i + 1]</span>
+                            <button type="button" class="btn btn-outline-danger btn-sm cadence-step-remove">@T["Remove"]</button>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 col-lg-4">
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label">@T["After (minutes)"]</label>
+                                    <div class="ocat-end">
+                                        <input type="number" min="1" class="form-control cadence-step-delay" name="@(stepsName)[@i].DelayMinutes" value="@step.DelayMinutes" />
+                                        <span class="hint dashed">@T["Minutes of silence since our previous message before this follow-up is sent."]</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-lg-8">
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label">@T["Message source"]</label>
+                                    <div class="ocat-end">
+                                        <select class="form-select cadence-step-type" name="@(stepsName)[@i].IsAiGenerated">
+                                            <option value="false" selected="@(!step.IsAiGenerated)">@T["Defined message"]</option>
+                                            <option value="true" selected="@(step.IsAiGenerated)">@T["AI-generated"]</option>
+                                        </select>
+                                        <span class="hint dashed">@T["Defined sends your exact text; AI-generated composes it from the conversation."]</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="ocat-wrapper">
+                            <label class="ocat-label cadence-step-message-label">@(step.IsAiGenerated ? T["AI guidance (optional)"] : T["Message text"])</label>
+                            <div class="ocat-end">
+                                <textarea class="form-control cadence-step-message" name="@(stepsName)[@i].Message" rows="2">@step.Message</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <button type="button" id="cadence-step-add" class="btn btn-secondary btn-sm mt-1">@T["Add step"]</button>
+    </div>
+</div>
+
+<template id="cadence-step-template">
+    <div class="cadence-step card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-semibold cadence-step-title"></span>
+                <button type="button" class="btn btn-outline-danger btn-sm cadence-step-remove">@T["Remove"]</button>
+            </div>
+
+            <div class="row">
+                <div class="col-12 col-lg-4">
+                    <div class="ocat-wrapper">
+                        <label class="ocat-label">@T["After (minutes)"]</label>
+                        <div class="ocat-end">
+                            <input type="number" min="1" class="form-control cadence-step-delay" value="60" />
+                            <span class="hint dashed">@T["Minutes of silence since our previous message before this follow-up is sent."]</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-8">
+                    <div class="ocat-wrapper">
+                        <label class="ocat-label">@T["Message source"]</label>
+                        <div class="ocat-end">
+                            <select class="form-select cadence-step-type">
+                                <option value="false" selected>@T["Defined message"]</option>
+                                <option value="true">@T["AI-generated"]</option>
+                            </select>
+                            <span class="hint dashed">@T["Defined sends your exact text; AI-generated composes it from the conversation."]</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label class="ocat-label cadence-step-message-label">@T["Message text"]</label>
+                <div class="ocat-end">
+                    <textarea class="form-control cadence-step-message" rows="2"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script at="Foot">
+(function () {
+    var container = document.getElementById('cadence-steps');
+    var addButton = document.getElementById('cadence-step-add');
+    var template = document.getElementById('cadence-step-template');
+    if (!container || !addButton || !template) { return; }
+
+    var stepsName = container.getAttribute('data-steps-name');
+    var aiLabel = '@T["AI guidance (optional)"]';
+    var definedLabel = '@T["Message text"]';
+    var stepWord = '@T["Step"]';
+
+    function reindex() {
+        var rows = container.querySelectorAll('.cadence-step');
+        rows.forEach(function (row, i) {
+            var delay = row.querySelector('.cadence-step-delay');
+            var type = row.querySelector('.cadence-step-type');
+            var msg = row.querySelector('.cadence-step-message');
+            var title = row.querySelector('.cadence-step-title');
+            if (delay) { delay.name = stepsName + '[' + i + '].DelayMinutes'; }
+            if (type) { type.name = stepsName + '[' + i + '].IsAiGenerated'; }
+            if (msg) { msg.name = stepsName + '[' + i + '].Message'; }
+            if (title) { title.textContent = stepWord + ' ' + (i + 1); }
+        });
+    }
+
+    function syncLabel(row) {
+        var type = row.querySelector('.cadence-step-type');
+        var label = row.querySelector('.cadence-step-message-label');
+        if (type && label) { label.textContent = type.value === 'true' ? aiLabel : definedLabel; }
+    }
+
+    container.addEventListener('click', function (e) {
+        var remove = e.target.closest('.cadence-step-remove');
+        if (remove) {
+            var row = remove.closest('.cadence-step');
+            if (row) { row.remove(); reindex(); }
+        }
+    });
+
+    container.addEventListener('change', function (e) {
+        if (e.target.classList.contains('cadence-step-type')) {
+            syncLabel(e.target.closest('.cadence-step'));
+        }
+    });
+
+    addButton.addEventListener('click', function () {
+        var clone = template.content.firstElementChild.cloneNode(true);
+        container.appendChild(clone);
+        reindex();
+        syncLabel(clone);
+    });
+
+    reindex();
+})();
+</script>

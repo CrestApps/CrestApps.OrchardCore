@@ -25,6 +25,7 @@
   <ItemGroup>
     <!-- Serve the real soft phone client locally so the test is hermetic. -->
     <Content Include="../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone.js" Link="assets/soft-phone.js" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/telephony-client.js" Link="assets/telephony-client.js" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

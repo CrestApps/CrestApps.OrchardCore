@@ -1,0 +1,16 @@
+# Secret scanning configuration.
+#
+# The bundled rule set is extended rather than replaced, so new detectors arrive with gitleaks upgrades.
+# Allowlist entries must stay as narrow as possible: prefer an exact literal over a path, and a path over
+# a rule. Never allowlist a rule wholesale.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fixture values that are not credentials."
+regexTarget = "match"
+regexes = [
+  # Literal used by the API key authentication handler tests. It authenticates nothing: the tests
+  # construct the handler with this value as both the configured and the presented key.
+  '''test-api-key-12345''',
+]

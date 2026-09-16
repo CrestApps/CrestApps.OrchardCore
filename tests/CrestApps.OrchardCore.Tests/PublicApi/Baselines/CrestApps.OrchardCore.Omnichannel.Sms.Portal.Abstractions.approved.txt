@@ -1,0 +1,142 @@
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models
+{
+    public enum SmsBroadcastStatus
+    {
+        Draft = 0,
+        Queued = 1,
+        Running = 2,
+        Completed = 3,
+        Failed = 4,
+    }
+    public enum SmsConversationAssignmentStatus
+    {
+        Unassigned = 0,
+        Assigned = 1,
+        Pooled = 2,
+    }
+    public enum SmsConversationOwnerType
+    {
+        Personal = 0,
+        Queue = 1,
+    }
+    public enum SmsConversationStatus
+    {
+        Open = 0,
+        Snoozed = 1,
+        Closed = 2,
+        Spam = 3,
+    }
+    public enum SmsDeliveryStatus
+    {
+        Queued = 0,
+        Sent = 1,
+        Delivered = 2,
+        Failed = 3,
+        Undelivered = 4,
+    }
+    public enum SmsInboxFilter
+    {
+        All = 0,
+        Mine = 1,
+        Unassigned = 2,
+    }
+    public enum SmsNumberRouteDistributionMode
+    {
+        Routed = 0,
+        SharedPool = 1,
+    }
+    public enum SmsNumberRouteTargetType
+    {
+        Agent = 0,
+        Queue = 1,
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications
+{
+    public interface ISmsRealTimeNotifier
+    {
+        System.Threading.Tasks.Task ConversationAssignedAsync(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.SmsAssignmentNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task FirstResponseBreachedAsync(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.SmsFirstResponseBreachNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task MessageDeliveryUpdatedAsync(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.SmsDeliveryNotification notification, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NewInboundMessageAsync(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.SmsInboundNotification notification, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class SmsAssignmentNotification
+    {
+        public SmsAssignmentNotification() { }
+        public string AssignedAgentId { get; set; }
+        public string ConversationId { get; set; }
+        public string OwnerQueueId { get; set; }
+    }
+    public sealed class SmsDeliveryNotification
+    {
+        public SmsDeliveryNotification() { }
+        public string AssignedAgentId { get; set; }
+        public string ConversationId { get; set; }
+        public string ErrorCode { get; set; }
+        public string MessageId { get; set; }
+        public string OwnerQueueId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models.SmsDeliveryStatus Status { get; set; }
+    }
+    public sealed class SmsFirstResponseBreachNotification
+    {
+        public SmsFirstResponseBreachNotification() { }
+        public string AssignedAgentId { get; set; }
+        public System.DateTime BreachedUtc { get; set; }
+        public string ConversationId { get; set; }
+        public System.DateTime DueUtc { get; set; }
+        public string OwnerQueueId { get; set; }
+    }
+    public sealed class SmsInboundNotification
+    {
+        public SmsInboundNotification() { }
+        public string AssignedAgentId { get; set; }
+        public string ContactAddress { get; set; }
+        public string ConversationId { get; set; }
+        public string OwnerQueueId { get; set; }
+        public string Preview { get; set; }
+        public System.DateTime ReceivedUtc { get; set; }
+        public string ServiceAddress { get; set; }
+        public int UnreadCount { get; set; }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services
+{
+    public interface ISmsDispatchProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult> DispatchAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISmsDispatcher
+    {
+        System.Threading.Tasks.ValueTask<string> ResolveProviderNameAsync(string fromNumber, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult> SendAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class SmsDispatchResult
+    {
+        public SmsDispatchResult() { }
+        public System.Collections.Generic.IList<Microsoft.Extensions.Localization.LocalizedString> Errors { get; set; }
+        public string ProviderMessageId { get; set; }
+        public bool Succeeded { get; set; }
+        public string GetErrorText() { }
+        public static CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult Failed(params Microsoft.Extensions.Localization.LocalizedString[] errors) { }
+        public static CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult Failed(string error) { }
+        public static CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult Success(string providerMessageId = null) { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal
+{
+    public static class SmsPortalConstants
+    {
+        public const string Channel = "SMS";
+        public static class Feature
+        {
+            public const string Portal = "CrestApps.OrchardCore.Omnichannel.Sms.Portal";
+            public const string RoutedDistribution = "CrestApps.OrchardCore.Omnichannel.Sms.Portal.RoutedDistribution";
+        }
+        public static class Providers
+        {
+            public const string AzureCommunicationServices = "AzureCommunicationServices";
+            public const string Telnyx = "Telnyx";
+            public const string Twilio = "Twilio";
+        }
+    }
+}

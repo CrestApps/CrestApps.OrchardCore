@@ -12,6 +12,7 @@ internal sealed class TelephonyPermissionProvider : IPermissionProvider
     [
         TelephonyPermissions.ManageTelephonySettings,
         TelephonyPermissions.UseSoftPhone,
+        TelephonyPermissions.ManageExtensions,
     ];
 
     /// <inheritdoc/>

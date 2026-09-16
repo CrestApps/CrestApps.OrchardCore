@@ -1,0 +1,17 @@
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<Cadence>
+
+<a asp-action="Edit"
+   asp-controller="Cadences"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-primary btn-sm">@T["Edit"]</a>
+
+<a asp-action="Delete"
+   asp-controller="Cadences"
+   asp-route-id="@Model.Value.ItemId"
+   class="btn btn-danger btn-sm"
+   data-url-af="RemoveUrl UnsafeUrl"
+   data-title="@T["Delete"]"
+   data-message="@T["Are you sure you want to delete this cadence?"]">@T["Delete"]</a>

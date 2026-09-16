@@ -27,6 +27,17 @@ public sealed class SubjectAction : SourceCatalogEntry, IDisplayTextAwareModel, 
     public string DispositionId { get; set; }
 
     /// <summary>
+    /// Gets or sets what this disposition means for this subject, for the model that has to choose one.
+    /// </summary>
+    /// <remarks>
+    /// The disposition's own description says what it means in general. This says what it means here, because the
+    /// same disposition can mean different things on different kinds of work, and an automated call or message
+    /// chooses one from a list it is given. When this is set it replaces the general description; the editor
+    /// starts it off as a copy of that description so the difference is an edit rather than a blank page.
+    /// </remarks>
+    public string DispositionGuidance { get; set; }
+
+    /// <summary>
     /// Gets or sets whether to set the contact's "Do Not Call" preference when this action executes.
     /// </summary>
     public bool? SetDoNotCall { get; set; }
@@ -73,6 +84,7 @@ public sealed class SubjectAction : SourceCatalogEntry, IDisplayTextAwareModel, 
             DisplayText = DisplayText,
             SubjectContentType = SubjectContentType,
             DispositionId = DispositionId,
+            DispositionGuidance = DispositionGuidance,
             SetDoNotCall = SetDoNotCall,
             SetDoNotSms = SetDoNotSms,
             SetDoNotEmail = SetDoNotEmail,

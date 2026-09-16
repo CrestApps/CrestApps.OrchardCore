@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Compliance.Redaction" />
     <PackageReference Include="OrchardCore.Module.Targets" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
@@ -25,9 +29,12 @@
     <PackageReference Include="OrchardCore.ResourceManagement" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Data.Abstractions" />
+    <PackageReference Include="OrchardCore.FileStorage.FileSystem" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
+    <PackageReference Include="OrchardCore.Users.Core" />
     <PackageReference Include="OrchardCore.SignalR" />
     <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="CrestApps.Core.Data.YesSql" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,6 +42,8 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
     <ProjectReference Include="../../Core/CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.Telephony.Core/CrestApps.OrchardCore.Telephony.Core.csproj" />
+    <ProjectReference Include="../../Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
   </ItemGroup>
 
 </Project>

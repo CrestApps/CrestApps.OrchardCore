@@ -12,6 +12,7 @@ public sealed class OmnichannelContactPartSettingsTests
 
         // Assert
         Assert.True(settings.RequireTimeZone);
+        Assert.True(settings.AutoDetectTimeZone);
         Assert.True(settings.UseDoNotCall);
         Assert.False(settings.UseDoNotSms);
         Assert.False(settings.UseDoNotChat);

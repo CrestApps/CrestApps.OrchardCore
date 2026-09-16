@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
@@ -314,17 +313,93 @@ public sealed class DefaultSubjectActionExecutorTests
         Assert.Null(savedActivity.Instructions);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenAPreferenceIsSet_SavesTheContact()
+    {
+        // Arrange
+        // The preference was applied to the content item in memory and nothing wrote it back, so a customer who
+        // asked not to be called was dispositioned correctly and dialled again on the next load.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner);
+        action.SetDoNotCall = true;
+
+        var session = new Mock<ISession>();
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(action, session, contentManager: contentManager);
+
+        var contact = new ContentItem();
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        contentManager.Verify(x => x.UpdateAsync(contact), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenThePublishedContactChanges_ThatChangeIsPublished()
+    {
+        // Arrange
+        // The lists that decide who gets dialled query published contacts, so a preference left on the draft
+        // suppresses nothing.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner);
+        action.SetDoNotSms = true;
+
+        var session = new Mock<ISession>();
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(action, session, contentManager: contentManager);
+
+        var contact = new ContentItem { Published = true };
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        contentManager.Verify(x => x.PublishAsync(contact), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenNoPreferenceIsSet_LeavesTheContactAlone()
+    {
+        // Arrange
+        // Most dispositions say nothing about how the customer may be contacted, and those must not write a new
+        // version of the contact every time an activity is completed.
+        var action = CreateAction(OmnichannelConstants.ActionTypes.Finish, SubjectActionOwnerAssignmentType.SameOwner);
+
+        var session = new Mock<ISession>();
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(action, session, contentManager: contentManager);
+
+        var contact = new ContentItem { Published = true };
+        var context = CreateContext();
+        context.Contact = contact;
+        context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        // Act
+        await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        contentManager.Verify(x => x.UpdateAsync(It.IsAny<ContentItem>()), Times.Never);
+        contentManager.Verify(x => x.PublishAsync(It.IsAny<ContentItem>()), Times.Never);
+    }
+
     private static DefaultSubjectActionExecutor CreateExecutor(
         SubjectAction action,
         Mock<ISession> session,
-        ILocalClock localClock = null)
+        ILocalClock localClock = null,
+        Mock<IContentManager> contentManager = null)
     {
         var actionCatalog = new Mock<ISourceCatalog<SubjectAction>>();
         actionCatalog
             .Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(new[] { action });
 
-        var contentManager = new Mock<IContentManager>();
+        contentManager ??= new Mock<IContentManager>();
         contentManager
             .Setup(x => x.NewAsync(It.IsAny<string>()))
             .ReturnsAsync((string contentType) => new ContentItem { ContentType = contentType });

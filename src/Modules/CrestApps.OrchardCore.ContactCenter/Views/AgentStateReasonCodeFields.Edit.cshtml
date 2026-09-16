@@ -1,0 +1,46 @@
+@model AgentStateReasonCodeViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["A clear reason agents pick when they go not ready, such as Lunch, Team meeting, or Training."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="AppliesTo">
+    <label asp-for="AppliesTo" class="ocat-label">@T["Applies to state"]</label>
+    <div class="ocat-limited">
+        <select asp-for="AppliesTo" asp-items="Model.AppliesToOptions" class="form-select"></select>
+        <span asp-validation-for="AppliesTo" class="text-danger"></span>
+        <span class="hint">@T["The presence state the agent enters when they choose this reason."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="SortOrder">
+    <label asp-for="SortOrder" class="ocat-label">@T["Sort order"]</label>
+    <div class="ocat-limited">
+        <input asp-for="SortOrder" type="number" class="form-control" />
+        <span asp-validation-for="SortOrder" class="text-danger"></span>
+        <span class="hint">@T["Lower values are listed first in the agent presence menu."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Enabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+        <span class="hint dashed">@T["Disabled reason codes are hidden from the agent presence menu."]</span>
+    </div>
+</div>

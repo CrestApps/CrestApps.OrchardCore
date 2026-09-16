@@ -78,7 +78,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
     private async Task ExecuteActionAsync(SubjectAction action, SubjectActionExecutionContext context)
     {
-        ApplyCommunicationPreferences(action, context.Contact);
+        await ApplyCommunicationPreferencesAsync(action, context.Contact);
 
         switch (action.Source)
         {
@@ -233,7 +233,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType);
     }
 
-    private void ApplyCommunicationPreferences(SubjectAction action, ContentItem contact)
+    private async Task ApplyCommunicationPreferencesAsync(SubjectAction action, ContentItem contact)
     {
         if (contact is null)
         {
@@ -272,6 +272,17 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
                 part.SetDoNotChat(action.SetDoNotChat.Value, now);
             }
         });
+
+        // Altering the content item only changes the copy in memory. Nothing downstream reads that copy: the
+        // preference is read back from the contact's own record, and the lists that decide who gets dialled or
+        // messaged query the published one. Without these two lines a customer could ask not to be called, be
+        // dispositioned exactly right, and be dialled again on the next load -- which is what happened.
+        await _contentManager.UpdateAsync(contact);
+
+        if (contact.Published)
+        {
+            await _contentManager.PublishAsync(contact);
+        }
     }
 
     private async Task<DateTime> ResolveScheduleDateAsync(

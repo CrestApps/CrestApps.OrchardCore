@@ -1,0 +1,11 @@
+{
+  "description": "A delivery without a call identifier cannot be correlated and must be ignored rather than routed.",
+  "payload": {
+    "state": "ringing",
+    "direction": "inbound",
+    "external_number": "+15125550188"
+  },
+  "expected": {
+    "result": "Ignored"
+  }
+}

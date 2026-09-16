@@ -19,10 +19,58 @@ public sealed class ReportManagerTests
         ];
 
         // Act
-        var exception = Assert.Throws<InvalidOperationException>(() => new ReportManager(reports));
+        var exception = Assert.Throws<InvalidOperationException>(() => new ReportManager(reports, []));
 
         // Assert
         Assert.Contains("sample", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ListReports_WhenReportsComeFromProviders_ShouldIncludeThem()
+    {
+        // Arrange
+        IReport[] reports = [new TestReport("individual")];
+
+        IReportProvider[] providers =
+        [
+            new TestReportProvider(new TestReport("from-provider-a"), new TestReport("from-provider-b")),
+        ];
+
+        // Act
+        var manager = new ReportManager(reports, providers);
+
+        // Assert
+        Assert.NotNull(manager.FindByName("individual"));
+        Assert.NotNull(manager.FindByName("from-provider-a"));
+        Assert.NotNull(manager.FindByName("from-provider-b"));
+        Assert.Equal(3, manager.GetReports().Count);
+    }
+
+    [Fact]
+    public void Constructor_WhenProviderReportCollidesWithIndividualReport_ShouldThrow()
+    {
+        // Arrange
+        IReport[] reports = [new TestReport("shared")];
+
+        IReportProvider[] providers = [new TestReportProvider(new TestReport("shared"))];
+
+        // Act & Assert
+        Assert.Throws<InvalidOperationException>(() => new ReportManager(reports, providers));
+    }
+
+    private sealed class TestReportProvider : IReportProvider
+    {
+        private readonly IReport[] _reports;
+
+        public TestReportProvider(params IReport[] reports)
+        {
+            _reports = reports;
+        }
+
+        public IEnumerable<IReport> GetReports()
+        {
+            return _reports;
+        }
     }
 
     private sealed class TestReport : IReport

@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<BusinessHoursCalendar>
+
+<h5>@Model.Value.Name</h5>
+
+@if (!string.IsNullOrWhiteSpace(Model.Value.Description))
+{
+    <div class="text-muted">@Model.Value.Description</div>
+}
+
+<div class="text-muted small">
+    @if (!string.IsNullOrWhiteSpace(Model.Value.TimeZoneId))
+    {
+        <span class="me-2">@T["Time zone: {0}", Model.Value.TimeZoneId]</span>
+    }
+    else
+    {
+        <span class="me-2">@T["Time zone: UTC"]</span>
+    }
+
+    @{
+        var openDays = Model.Value.WeeklySchedule?.Count(day => day.IsOpen && day.CloseMinute > day.OpenMinute) ?? 0;
+    }
+    <span class="me-2">@(openDays == 1 ? T["1 open day"] : T["{0} open days", openDays])</span>
+
+    @if (Model.Value.Holidays is { Count: > 0 })
+    {
+        <span>@(Model.Value.Holidays.Count == 1 ? T["1 holiday"] : T["{0} holidays", Model.Value.Holidays.Count])</span>
+    }
+</div>
+
+@if (!Model.Value.Enabled)
+{
+    <div class="mt-1">
+        <span class="badge text-bg-warning">@T["Disabled"]</span>
+    </div>
+}

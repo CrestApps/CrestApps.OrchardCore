@@ -105,6 +105,24 @@ public interface ITelephonyService
     Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Places a call to an internal extension using the default provider. The extension is resolved to an
+    /// on-platform user before the provider is invoked; a missing or disabled extension fails closed.
+    /// </summary>
+    /// <param name="request">The extension dial request describing the dialed number and caller.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the placed call or the failure reason.</returns>
+    Task<TelephonyResult> DialExtensionAsync(ExtensionDialRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Adds an internal extension into an active call as a conference participant using the default provider.
+    /// The extension is resolved to an on-platform user before the provider is invoked.
+    /// </summary>
+    /// <param name="request">The extension conference request describing the active call and dialed number.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
+    Task<TelephonyResult> AddExtensionToConferenceAsync(ExtensionConferenceRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Issues the bootstrap configuration a soft phone client needs to connect to the default provider.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>

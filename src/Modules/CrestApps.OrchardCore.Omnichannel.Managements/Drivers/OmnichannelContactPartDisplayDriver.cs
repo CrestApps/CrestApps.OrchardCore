@@ -19,6 +19,7 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactPartDisplayDriver"/> class.
     /// </summary>
+    /// <param name="timeZoneSelectListProvider">The time zone select list provider.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelContactPartDisplayDriver(
@@ -38,6 +39,7 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             var settings = context.TypePartDefinition.GetSettings<OmnichannelContactPartSettings>();
 
             model.RequireTimeZone = settings.RequireTimeZone;
+            model.AutoDetectTimeZone = settings.AutoDetectTimeZone;
             model.UseDoNotCall = settings.UseDoNotCall;
             model.UseDoNotSms = settings.UseDoNotSms;
             model.UseDoNotChat = settings.UseDoNotChat;
@@ -65,7 +67,10 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
 
         part.TimeZoneId = NormalizeTimeZoneId(model.TimeZoneId);
 
-        if (settings.RequireTimeZone && string.IsNullOrEmpty(part.TimeZoneId))
+        // When auto detect is enabled, the time zone is derived from the contact's phone number on
+        // save by OmnichannelContactTimeZoneHandler, so it is never required here. It is only enforced
+        // as a required field when auto detect is disabled.
+        if (!settings.AutoDetectTimeZone && settings.RequireTimeZone && string.IsNullOrEmpty(part.TimeZoneId))
         {
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.TimeZoneId), S["The contact time zone is required."]);
         }

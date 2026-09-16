@@ -19,7 +19,7 @@ public sealed class UsageAnalyticsController : Controller
     private readonly IAICompletionUsageService _usageService;
     private readonly IAuthorizationService _authorizationService;
     private readonly ILocalClock _localClock;
-    private readonly GeneralAIOptions _generalAIOptions;
+    private readonly IOptionsMonitor<GeneralAIOptions> _generalAIOptions;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UsageAnalyticsController"/> class.
@@ -32,12 +32,12 @@ public sealed class UsageAnalyticsController : Controller
         IAICompletionUsageService usageService,
         IAuthorizationService authorizationService,
         ILocalClock localClock,
-        IOptions<GeneralAIOptions> generalAIOptions)
+        IOptionsMonitor<GeneralAIOptions> generalAIOptions)
     {
         _usageService = usageService;
         _authorizationService = authorizationService;
         _localClock = localClock;
-        _generalAIOptions = generalAIOptions.Value;
+        _generalAIOptions = generalAIOptions;
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public sealed class UsageAnalyticsController : Controller
 
         return View(new UsageAnalyticsIndexViewModel
         {
-            IsAIUsageTrackingEnabled = _generalAIOptions.EnableAIUsageTracking,
+            IsAIUsageTrackingEnabled = _generalAIOptions.CurrentValue.EnableAIUsageTracking,
         });
     }
 
@@ -70,7 +70,7 @@ public sealed class UsageAnalyticsController : Controller
             return Forbid();
         }
 
-        model.IsAIUsageTrackingEnabled = _generalAIOptions.EnableAIUsageTracking;
+        model.IsAIUsageTrackingEnabled = _generalAIOptions.CurrentValue.EnableAIUsageTracking;
 
         // Convert local dates to UTC before querying.
         DateTime? startDateUtc = model.StartDate.HasValue
