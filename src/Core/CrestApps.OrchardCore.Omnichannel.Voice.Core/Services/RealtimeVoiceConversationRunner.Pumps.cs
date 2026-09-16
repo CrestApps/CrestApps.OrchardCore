@@ -100,9 +100,28 @@ public sealed partial class RealtimeVoiceConversationRunner
     {
         var assistantText = new System.Text.StringBuilder();
 
-        // Set once the goodbye has been said in full, and cleared the moment the customer speaks again. While it
-        // is set the assistant is finished talking, whatever else the model decides to produce.
+        // Set once the assistant is finished talking for good, and cleared the moment the customer speaks again.
         var goodbyeSaid = false;
+
+        // The model finishes speaking its closing line and calls the end-call tool after it, so by the time the
+        // request arrives the goodbye has usually already been said. Watching the request rather than reading it
+        // when a line ends is what tells the two apart: the line in flight when it arrives is the goodbye and is
+        // allowed to finish; anything the model starts afterwards is the repeat.
+        var closingRequested = false;
+        var utteranceInFlight = false;
+
+        using var closingRegistration = context.EndCallRequested.CanBeCanceled
+            ? context.EndCallRequested.Register(() =>
+            {
+                closingRequested = true;
+
+                // Nothing was being said when the call was closed, so the goodbye is already behind us.
+                if (!Volatile.Read(ref utteranceInFlight))
+                {
+                    goodbyeSaid = true;
+                }
+            })
+            : default;
 
         try
         {
@@ -121,6 +140,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                         {
                             break;
                         }
+
+                        utteranceInFlight = true;
 
                         if (!speech.IsEmpty)
                         {
@@ -151,6 +172,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                     case RealtimeConversationEventType.UserSpeechStarted:
                         // They are talking, so the call is not over after all and the assistant may answer.
                         goodbyeSaid = false;
+                        closingRequested = false;
 
                         // The first syllable, not the finished sentence. A transcript only exists once the caller
                         // has stopped talking and the provider has transcribed them, which is seconds later --
@@ -175,6 +197,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.AssistantTranscriptDelta:
+                        utteranceInFlight = true;
                         assistantText.Append(conversationEvent.Text);
 
                         break;
@@ -192,9 +215,11 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                         await StorePromptAsync(context, ChatRole.Assistant, spoken, cancellationToken);
 
-                        // Only once the call is already closing: at any other time the assistant finishing a
-                        // sentence is just a turn ending.
-                        goodbyeSaid = context.EndCallRequested.IsCancellationRequested;
+                        utteranceInFlight = false;
+
+                        // The line that was in flight when the call was closed is the goodbye. It has now been
+                        // said, so the assistant is done talking.
+                        goodbyeSaid = closingRequested;
 
                         break;
 

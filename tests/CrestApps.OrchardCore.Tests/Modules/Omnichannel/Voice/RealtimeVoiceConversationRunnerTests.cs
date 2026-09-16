@@ -403,12 +403,15 @@ public sealed class RealtimeVoiceConversationRunnerTests
 
         var run = harness.RunAsync();
 
-        await endCall.CancelAsync();
-
-        // The goodbye, spoken and finished.
+        // The order a live call actually produces: the model finishes saying the goodbye, and only then calls the
+        // tool. Cancelling first was the easy ordering, and it hid the bug.
         harness.Conversation.Queue(
             new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
             new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Understood, you won't be contacted again. Take care." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+
+        await endCall.CancelAsync();
 
         await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
         var spokenAfterGoodbye = harness.Media.WrittenAudio.Count;
@@ -422,8 +425,9 @@ public sealed class RealtimeVoiceConversationRunnerTests
         await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
 
         // Assert
-        // The customer hears the goodbye once.
+        // The customer hears the goodbye once, and the record says it was said once.
         Assert.Equal(spokenAfterGoodbye, harness.Media.WrittenAudio.Count);
+        Assert.Single(harness.StoredPrompts.Where(prompt => prompt.Role == ChatRole.Assistant));
 
         harness.Conversation.KeepAlive = false;
         harness.Media.KeepAlive = false;
