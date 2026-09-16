@@ -374,19 +374,36 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
-    public async Task TheAssistantOpensTheCall_RatherThanWaitingToBeSpokenTo()
+    public async Task TheAssistantIsAskedToOpenTheCall_WhenTheSessionDoesNotAnswerByItself()
     {
         // Arrange
-        // We placed this call, so the silence after the customer picks up is ours to fill. Without this the
-        // session waits for voice detection, and every live transcript began with the customer saying "Hello?"
-        // into dead air before the assistant introduced itself.
+        // We placed this call, so the silence after the customer picks up is ours to fill.
         var harness = new RealtimeHarness();
+        harness.Conversation.RespondsAutomatically = false;
 
         // Act
         await harness.RunAsync();
 
         // Assert
         Assert.Equal(1, harness.Conversation.ResponsesRequested);
+    }
+
+    [Fact]
+    public async Task ASessionThatAnswersByItself_CannotBeAskedToOpenTheCall()
+    {
+        // Arrange
+        // Recorded because it is the live case and it does not work. A session with no grounding answers on its
+        // own, and the provider-neutral conversation refuses to create a response for one -- so nothing here can
+        // make the assistant speak first, and every live call opened with the customer saying "Hello?" into
+        // silence. Fixing it needs a way to open a turn on such a session, which is not ours to add here.
+        var harness = new RealtimeHarness();
+        harness.Conversation.RespondsAutomatically = true;
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        Assert.Equal(0, harness.Conversation.ResponsesRequested);
     }
 
     [Fact]
@@ -1018,6 +1035,14 @@ public sealed class RealtimeVoiceConversationRunnerTests
 
         public Task RequestResponseAsync(CancellationToken cancellationToken = default)
         {
+            // Exactly what the real conversation does. A session the provider already answers for refuses this,
+            // because on a turn it has answered itself the extra response would be a duplicate. Counting the call
+            // regardless is what let a fix that cannot work on such a session pass here.
+            if (RespondsAutomatically)
+            {
+                return Task.CompletedTask;
+            }
+
             ResponsesRequested++;
 
             return Task.CompletedTask;

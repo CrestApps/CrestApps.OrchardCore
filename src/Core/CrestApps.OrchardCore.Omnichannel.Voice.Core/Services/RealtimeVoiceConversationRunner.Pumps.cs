@@ -123,10 +123,27 @@ public sealed partial class RealtimeVoiceConversationRunner
             })
             : default;
 
+        // Every conversation-level fault found on this platform so far -- a transfer nobody asked for, a reply the
+        // model never heard, a goodbye said twice -- was diagnosed from the stored transcript after the call,
+        // because the turns themselves left no trace. Recorded at debug so a call can be followed as it happened:
+        // when the caller started talking, what came back as their words, and when nothing did.
+        var logTurns = _logger.IsEnabled(LogLevel.Debug);
+        var activityId = context.Activity?.ItemId.SanitizeLogValue();
+
         try
         {
             await foreach (var conversationEvent in conversation.GetEventsAsync(cancellationToken))
             {
+                if (logTurns && conversationEvent.Type is not RealtimeConversationEventType.AssistantAudioDelta
+                                                       and not RealtimeConversationEventType.AssistantTranscriptDelta)
+                {
+                    _logger.LogDebug(
+                        "Realtime turn on activity '{ActivityId}': {EventType} '{Text}'.",
+                        activityId,
+                        conversationEvent.Type,
+                        conversationEvent.Text.SanitizeLogValue());
+                }
+
                 switch (conversationEvent.Type)
                 {
                     case RealtimeConversationEventType.AssistantAudioDelta:
@@ -183,6 +200,16 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.UserTranscript:
+                        // The caller spoke and the provider returned nothing for it. Heard live as an assistant
+                        // that ignores a short "yes" and waits for it to be said again, which reads to the person
+                        // on the phone as not being listened to.
+                        if (string.IsNullOrWhiteSpace(conversationEvent.Text) && _logger.IsEnabled(LogLevel.Information))
+                        {
+                            _logger.LogInformation(
+                                "A caller utterance on activity '{ActivityId}' came back with no transcript, so the model never saw it.",
+                                activityId);
+                        }
+
                         // The caller said something. Stamped before the store so a closing call counts it even if
                         // persisting the turn takes a moment.
                         if (!string.IsNullOrWhiteSpace(conversationEvent.Text))
@@ -193,6 +220,19 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // Recorded so the call is concluded, summarized and dispositioned exactly the way a
                         // turn-based one is: everything downstream reads the transcript, not the audio.
                         await StorePromptAsync(context, ChatRole.User, conversationEvent.Text, cancellationToken);
+
+                        break;
+
+                    case RealtimeConversationEventType.UserTranscriptFailed:
+                        // The provider took an utterance and could not transcribe it. Said at information level
+                        // rather than debug because it is not a detail: a turn the caller took has been lost, the
+                        // model is still waiting for them, and the caller believes they have already answered.
+                        if (_logger.IsEnabled(LogLevel.Information))
+                        {
+                            _logger.LogInformation(
+                                "A caller utterance on activity '{ActivityId}' could not be transcribed, so the model never saw it.",
+                                activityId);
+                        }
 
                         break;
 
