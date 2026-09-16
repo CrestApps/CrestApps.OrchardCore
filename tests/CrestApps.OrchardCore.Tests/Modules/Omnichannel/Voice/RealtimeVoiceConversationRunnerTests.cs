@@ -374,28 +374,13 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
-    public async Task TheAssistantIsAskedToOpenTheCall_WhenTheSessionDoesNotAnswerByItself()
+    public async Task TheAssistantOpensTheCall_EvenOnASessionThatAnswersByItself()
     {
         // Arrange
-        // We placed this call, so the silence after the customer picks up is ours to fill.
-        var harness = new RealtimeHarness();
-        harness.Conversation.RespondsAutomatically = false;
-
-        // Act
-        await harness.RunAsync();
-
-        // Assert
-        Assert.Equal(1, harness.Conversation.ResponsesRequested);
-    }
-
-    [Fact]
-    public async Task ASessionThatAnswersByItself_CannotBeAskedToOpenTheCall()
-    {
-        // Arrange
-        // Recorded because it is the live case and it does not work. A session with no grounding answers on its
-        // own, and the provider-neutral conversation refuses to create a response for one -- so nothing here can
-        // make the assistant speak first, and every live call opened with the customer saying "Hello?" into
-        // silence. Fixing it needs a way to open a turn on such a session, which is not ours to add here.
+        // We placed this call, so the silence after the customer picks up is ours to fill. It has to be the
+        // unprompted request rather than the ordinary one: a session with no grounding answers by itself, and
+        // the ordinary request is refused for those -- which is why every live call opened with the customer
+        // saying "Hello?" into silence.
         var harness = new RealtimeHarness();
         harness.Conversation.RespondsAutomatically = true;
 
@@ -403,7 +388,35 @@ public sealed class RealtimeVoiceConversationRunnerTests
         await harness.RunAsync();
 
         // Assert
-        Assert.Equal(0, harness.Conversation.ResponsesRequested);
+        Assert.Single(harness.Conversation.Unprompted);
+    }
+
+    [Fact]
+    public async Task WhenNobodyHasSpokenForTooLong_TheAssistantAsksWhetherTheCallerIsStillThere()
+    {
+        // Arrange
+        // The live case this exists for: a customer answers "yes", the provider returns no transcript for it, and
+        // both sides then wait -- the assistant for a turn it never saw, the customer for an answer to something
+        // they believe they already gave. Somebody has to speak, and it is not going to be the customer.
+        var harness = new RealtimeHarness();
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+
+        // Act
+        // Nothing is said by anybody, for longer than a pause for thought.
+        await Task.Delay(TimeSpan.FromSeconds(14), TestContext.Current.CancellationToken);
+
+        // Assert
+        // The opening line, and then the prompt that breaks the silence.
+        Assert.Equal(2, harness.Conversation.Unprompted.Count);
+        Assert.Contains("still there", harness.Conversation.Unprompted[^1], StringComparison.OrdinalIgnoreCase);
+
+        harness.Conversation.KeepAlive = false;
+        harness.Media.KeepAlive = false;
+
+        await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -1044,6 +1057,18 @@ public sealed class RealtimeVoiceConversationRunnerTests
             }
 
             ResponsesRequested++;
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// What the session asked the model to say without being prompted by the caller, in order.
+        /// </summary>
+        public List<string> Unprompted { get; } = [];
+
+        public Task RequestUnpromptedResponseAsync(string instructions = null, CancellationToken cancellationToken = default)
+        {
+            Unprompted.Add(instructions ?? string.Empty);
 
             return Task.CompletedTask;
         }

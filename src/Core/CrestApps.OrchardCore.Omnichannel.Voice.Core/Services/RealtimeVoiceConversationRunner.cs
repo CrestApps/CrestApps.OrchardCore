@@ -91,6 +91,25 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private static readonly TimeSpan ClosingPollInterval = TimeSpan.FromMilliseconds(150);
 
     /// <summary>
+    /// How long the line may be quiet on both sides before the assistant speaks up.
+    /// </summary>
+    /// <remarks>
+    /// Long enough to be a silence rather than a pause for thought: people take a few seconds to answer a
+    /// question about their budget, and being chivvied for it is worse than the wait.
+    /// </remarks>
+    private static readonly TimeSpan IdleBeforeSpeakingUp = TimeSpan.FromSeconds(12);
+
+    /// <summary>
+    /// How often the idle watchdog looks.
+    /// </summary>
+    private static readonly TimeSpan IdlePollInterval = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// How many times a silence is worth breaking before accepting that the caller has gone.
+    /// </summary>
+    private const int MaximumIdlePrompts = 2;
+
+    /// <summary>
     /// How long the caller must be quiet before the session treats their turn as finished. Longer than the
     /// provider default, because a person on the phone pauses mid-sentence and a call carries noise through those
     /// pauses; cutting in on them is what makes an assistant feel like it is not listening.
@@ -193,7 +212,14 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // session waits to be spoken to -- voice detection is how a turn begins -- and every live transcript
         // opened with the customer saying "Hello?" into dead air before the assistant introduced itself. A
         // session that creates its own responses ignores this, so it is safe to ask either way.
-        await conversation.RequestResponseAsync(cancellationToken);
+        await conversation.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
+
+        // Both silence clocks start now rather than at zero. Left unset, "quiet since the beginning of time" is a
+        // very long silence indeed, and the watchdog below would speak up a second into the call -- over the top
+        // of the opening line it was asked to wait for.
+        var startedTicks = DateTime.UtcNow.Ticks;
+        Interlocked.Exchange(ref _lastAssistantAudioTicks, startedTicks);
+        Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
 
         using var callScope = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -215,6 +241,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         var closing = context.EndCallRequested.CanBeCanceled
             ? CloseWhenConversationEndsAsync(callScope, context.EndCallRequested)
             : Task.CompletedTask;
+
+        // Nobody has said anything for a while, and on a phone call somebody has to. Usually it is the caller's
+        // turn that went missing -- a short "yes" the provider returned no transcript for -- which leaves the
+        // assistant waiting for a turn it never saw while the caller waits for an answer they think they already
+        // gave. Neither side will break that on its own.
+        var idle = SpeakUpWhenNobodyHasAsync(callScope.Token, conversation, context);
 
         // One generator drives both paths, at the rate the model speaks: the bed is mixed under the assistant's
         // own audio while it talks, and written on its own while it does not, so the room never cuts in and out.
@@ -372,6 +404,81 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// </remarks>
     /// <param name="callScope">The scope whose cancellation ends the call.</param>
     /// <param name="endCallRequested">Cancelled when the model reports the conversation finished.</param>
+    /// <summary>
+    /// Speaks again when the line has gone quiet on both sides for too long.
+    /// </summary>
+    /// <remarks>
+    /// The turn-based loop has always done this -- "are you still there?" -- and the live session never did, so a
+    /// caller whose reply was lost sat in silence until they gave up and spoke again. It stops after a couple of
+    /// attempts: a caller who has genuinely gone is not brought back by asking a third time, and the call's own
+    /// ending handles the rest.
+    /// </remarks>
+    private async Task SpeakUpWhenNobodyHasAsync(
+        CancellationToken callToken,
+        IRealtimeConversation conversation,
+        RealtimeVoiceConversationContext context)
+    {
+        var attempts = 0;
+
+        try
+        {
+            while (!callToken.IsCancellationRequested && attempts < MaximumIdlePrompts)
+            {
+                await Task.Delay(IdlePollInterval, callToken);
+
+                // The call is closing, and the silence at the end of it is deliberate.
+                if (context.EndCallRequested.IsCancellationRequested || context.HandoffRequested.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var now = DateTime.UtcNow.Ticks;
+                var quietFor = now - Math.Max(
+                    Interlocked.Read(ref _lastAssistantAudioTicks),
+                    Interlocked.Read(ref _lastCallerSpeechTicks));
+
+                if (quietFor < IdleBeforeSpeakingUp.Ticks)
+                {
+                    continue;
+                }
+
+                attempts++;
+
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Nobody has spoken on activity '{ActivityId}' for {Seconds} seconds, so the assistant is asking whether the caller is still there (attempt {Attempt}).",
+                        context.Activity?.ItemId.SanitizeLogValue(),
+                        (int)TimeSpan.FromTicks(quietFor).TotalSeconds,
+                        attempts);
+                }
+
+                // Stamped before asking rather than after, so the next check measures from this prompt instead of
+                // firing again while the model is still deciding what to say.
+                Interlocked.Exchange(ref _lastAssistantAudioTicks, now);
+
+                // Worded tightly because the first attempt was not. Asked only to "check whether they are still
+                // there", the model filled the silence by moving the sale along -- a new question the customer
+                // had even less chance of answering than the one they had just missed. What a person does here
+                // is ask again, so that is what this asks for, and it forbids the alternative outright.
+                await conversation.RequestUnpromptedResponseAsync(
+                    "The line has gone quiet and the customer has not answered. Say one short sentence only: " +
+                    "either ask whether they are still there, or repeat the question you just asked them. Do not " +
+                    "ask anything new, do not move on to another topic, and do not continue the previous sentence.",
+                    callToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The call ended, which is the ordinary way this stops.
+        }
+        catch (Exception ex)
+        {
+            // A prompt that cannot be sent must not take the call down with it.
+            _logger.LogWarning(ex, "Could not ask whether the caller is still there during a realtime voice session.");
+        }
+    }
+
     private async Task CloseWhenConversationEndsAsync(CancellationTokenSource callScope, CancellationToken endCallRequested)
     {
         // Watched together, because a call ends for all sorts of reasons that are nothing to do with this: the
