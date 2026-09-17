@@ -39,13 +39,11 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         var doNotCallColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.DoNotCall));
         var doNotSmsColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.DoNotSms));
         var doNotEmailColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.DoNotEmail));
-        var doNotChatColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.DoNotChat));
         var timeZoneColumn = Assert.Single(columns, column => column.Name == nameof(OmnichannelContactPart.TimeZoneId));
 
         Assert.Equal(["true", "false"], doNotCallColumn.ValidValues);
         Assert.Equal(["true", "false"], doNotSmsColumn.ValidValues);
         Assert.Equal(["true", "false"], doNotEmailColumn.ValidValues);
-        Assert.Equal(["true", "false"], doNotChatColumn.ValidValues);
         Assert.Contains("true or false", doNotCallColumn.Description, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("IANA time zone", timeZoneColumn.Description, StringComparison.OrdinalIgnoreCase);
     }
@@ -218,76 +216,6 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     }
 
     [Fact]
-    public async Task ImportAsync_ShouldOverrideExistingDoNotChatWhenColumnIsPresent()
-    {
-        var handler = new OmnichannelContactPartContentImportHandler(
-            Mock.Of<IClock>(),
-            new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
-        var dataTable = new DataTable();
-        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotChat));
-
-        var row = dataTable.NewRow();
-        row[nameof(OmnichannelContactPart.DoNotChat)] = "TRUE";
-        dataTable.Rows.Add(row);
-
-        var contentItem = new ContentItem();
-        contentItem.Apply(new OmnichannelContactPart
-        {
-            DoNotChat = false,
-        });
-
-        var context = new ContentPartImportMapContext
-        {
-            ContentItem = contentItem,
-            Entry = new ContentTransferEntry(),
-            Columns = dataTable.Columns,
-            Row = row,
-        };
-
-        await handler.ImportAsync(context);
-
-        Assert.True(contentItem.TryGet<OmnichannelContactPart>(out var updatedPart));
-        Assert.True(updatedPart.DoNotChat);
-    }
-
-    [Fact]
-    public async Task ImportAsync_ShouldClearExistingDoNotChatWhenColumnContainsFalse()
-    {
-        var handler = new OmnichannelContactPartContentImportHandler(
-            Mock.Of<IClock>(),
-            new DefaultPhoneNumberService(),
-            new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
-        var dataTable = new DataTable();
-        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotChat));
-
-        var row = dataTable.NewRow();
-        row[nameof(OmnichannelContactPart.DoNotChat)] = "FALSE";
-        dataTable.Rows.Add(row);
-
-        var contentItem = new ContentItem();
-        contentItem.Apply(new OmnichannelContactPart
-        {
-            DoNotChat = true,
-            DoNotChatUtc = new DateTime(2026, 6, 5, 20, 0, 0, DateTimeKind.Utc),
-        });
-
-        var context = new ContentPartImportMapContext
-        {
-            ContentItem = contentItem,
-            Entry = new ContentTransferEntry(),
-            Columns = dataTable.Columns,
-            Row = row,
-        };
-
-        await handler.ImportAsync(context);
-
-        Assert.True(contentItem.TryGet<OmnichannelContactPart>(out var updatedPart));
-        Assert.False(updatedPart.DoNotChat);
-        Assert.Null(updatedPart.DoNotChatUtc);
-    }
-
-    [Fact]
     public async Task ImportAsync_ShouldPreserveExistingTimeZoneWhenColumnIsMissing()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
@@ -372,7 +300,6 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         dataTable.Columns.Add(nameof(OmnichannelContactPart.TimeZoneId));
         dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotCall));
         dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotSms));
-        dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotChat));
         dataTable.Columns.Add(nameof(OmnichannelContactPart.DoNotEmail));
         var row = dataTable.NewRow();
         dataTable.Rows.Add(row);

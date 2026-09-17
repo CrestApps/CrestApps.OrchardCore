@@ -21,12 +21,6 @@ public static class OmnichannelContactPreferences
     /// Deliberately separate from whether an address can be found for them: somebody with no number on file is
     /// unreachable, which is not the same as somebody who has told us to stop, and the two call for different
     /// handling.
-    /// <para>
-    /// There is no chat channel on this platform, so <c>DoNotChat</c> is not consulted. It is stored on the
-    /// contact, projected into the index, importable and settable by a subject action, and read by nothing --
-    /// a gap in the product rather than in this method, left visible instead of being answered with a channel
-    /// constant invented to make it look handled.
-    /// </para>
     /// </remarks>
     /// <param name="contact">The contact, or <see langword="null"/> when there is none to ask.</param>
     /// <param name="channel">The channel they would be reached on.</param>

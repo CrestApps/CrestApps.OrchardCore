@@ -48,14 +48,12 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
             action.SetDoNotCall = model.SetDoNotCall;
             action.SetDoNotSms = model.SetDoNotSms;
             action.SetDoNotEmail = model.SetDoNotEmail;
-            action.SetDoNotChat = model.SetDoNotChat;
         }
         else
         {
             action.SetDoNotCall = null;
             action.SetDoNotSms = null;
             action.SetDoNotEmail = null;
-            action.SetDoNotChat = null;
         }
 
         return await EditAsync(action, context);
@@ -68,12 +66,10 @@ internal sealed class SubjectActionDisplayDriver : DisplayDriver<SubjectAction>
         model.ShowCommunicationPreferences =
             action.SetDoNotCall.HasValue ||
             action.SetDoNotSms.HasValue ||
-            action.SetDoNotEmail.HasValue ||
-            action.SetDoNotChat.HasValue;
+            action.SetDoNotEmail.HasValue;
         model.SetDoNotCall = action.SetDoNotCall;
         model.SetDoNotSms = action.SetDoNotSms;
         model.SetDoNotEmail = action.SetDoNotEmail;
-        model.SetDoNotChat = action.SetDoNotChat;
 
         var dispositions = await _dispositionsCatalog.GetAllAsync();
 

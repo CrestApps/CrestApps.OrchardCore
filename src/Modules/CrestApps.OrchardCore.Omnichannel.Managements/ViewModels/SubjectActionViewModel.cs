@@ -40,11 +40,6 @@ public class SubjectActionViewModel
     public bool? SetDoNotEmail { get; set; }
 
     /// <summary>
-    /// Gets or sets whether to set the contact's "Do Not Chat" preference.
-    /// </summary>
-    public bool? SetDoNotChat { get; set; }
-
-    /// <summary>
     /// Gets or sets the available dispositions.
     /// </summary>
     [BindNever]

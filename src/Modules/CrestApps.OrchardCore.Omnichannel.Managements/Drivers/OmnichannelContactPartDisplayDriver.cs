@@ -42,7 +42,6 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             model.AutoDetectTimeZone = settings.AutoDetectTimeZone;
             model.UseDoNotCall = settings.UseDoNotCall;
             model.UseDoNotSms = settings.UseDoNotSms;
-            model.UseDoNotChat = settings.UseDoNotChat;
             model.UseDoNotEmail = settings.UseDoNotEmail;
             model.TimeZoneId = NormalizeTimeZoneId(part.TimeZoneId);
             model.AvailableTimeZones = await GetTimeZoneOptionsAsync(model.TimeZoneId);
@@ -50,8 +49,6 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             model.DoNotCallUtc = part.DoNotCallUtc;
             model.DoNotSms = part.DoNotSms;
             model.DoNotSmsUtc = part.DoNotSmsUtc;
-            model.DoNotChat = part.DoNotChat;
-            model.DoNotChatUtc = part.DoNotChatUtc;
             model.DoNotEmail = part.DoNotEmail;
             model.DoNotEmailUtc = part.DoNotEmailUtc;
         }).Location("Parts:2");
@@ -85,11 +82,6 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
         if (settings.UseDoNotSms)
         {
             part.SetDoNotSms(model.DoNotSms, utcNow);
-        }
-
-        if (settings.UseDoNotChat)
-        {
-            part.SetDoNotChat(model.DoNotChat, utcNow);
         }
 
         if (settings.UseDoNotEmail)

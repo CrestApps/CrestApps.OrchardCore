@@ -53,11 +53,6 @@ public sealed class SubjectAction : SourceCatalogEntry, IDisplayTextAwareModel, 
     public bool? SetDoNotEmail { get; set; }
 
     /// <summary>
-    /// Gets or sets whether to set the contact's "Do Not Chat" preference when this action executes.
-    /// </summary>
-    public bool? SetDoNotChat { get; set; }
-
-    /// <summary>
     /// Gets or sets the date and time the action was created.
     /// </summary>
     public DateTime CreatedUtc { get; set; }
@@ -88,7 +83,6 @@ public sealed class SubjectAction : SourceCatalogEntry, IDisplayTextAwareModel, 
             SetDoNotCall = SetDoNotCall,
             SetDoNotSms = SetDoNotSms,
             SetDoNotEmail = SetDoNotEmail,
-            SetDoNotChat = SetDoNotChat,
             CreatedUtc = CreatedUtc,
             Author = Author,
             OwnerId = OwnerId,

@@ -242,8 +242,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
         if (!action.SetDoNotCall.HasValue &&
             !action.SetDoNotEmail.HasValue &&
-            !action.SetDoNotSms.HasValue &&
-            !action.SetDoNotChat.HasValue)
+            !action.SetDoNotSms.HasValue)
         {
             return;
         }
@@ -265,11 +264,6 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             if (action.SetDoNotSms.HasValue)
             {
                 part.SetDoNotSms(action.SetDoNotSms.Value, now);
-            }
-
-            if (action.SetDoNotChat.HasValue)
-            {
-                part.SetDoNotChat(action.SetDoNotChat.Value, now);
             }
         });
 

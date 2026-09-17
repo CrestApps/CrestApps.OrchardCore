@@ -19,7 +19,6 @@ internal sealed class OmnichannelContactPartSettingsDisplayDriver : ContentTypeP
             model.AutoDetectTimeZone = settings.AutoDetectTimeZone;
             model.UseDoNotCall = settings.UseDoNotCall;
             model.UseDoNotSms = settings.UseDoNotSms;
-            model.UseDoNotChat = settings.UseDoNotChat;
             model.UseDoNotEmail = settings.UseDoNotEmail;
         }).Location("Content:5");
     }
@@ -36,7 +35,6 @@ internal sealed class OmnichannelContactPartSettingsDisplayDriver : ContentTypeP
             AutoDetectTimeZone = model.AutoDetectTimeZone,
             UseDoNotCall = model.UseDoNotCall,
             UseDoNotSms = model.UseDoNotSms,
-            UseDoNotChat = model.UseDoNotChat,
             UseDoNotEmail = model.UseDoNotEmail,
         });
 

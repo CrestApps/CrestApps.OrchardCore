@@ -1204,7 +1204,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public bool AutoDetectTimeZone { get; set; }
         public bool RequireTimeZone { get; set; }
         public bool UseDoNotCall { get; set; }
-        public bool UseDoNotChat { get; set; }
         public bool UseDoNotEmail { get; set; }
         public bool UseDoNotSms { get; set; }
     }
@@ -1217,8 +1216,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> AvailableTimeZones { get; set; }
         public bool DoNotCall { get; set; }
         public System.DateTime? DoNotCallUtc { get; set; }
-        public bool DoNotChat { get; set; }
-        public System.DateTime? DoNotChatUtc { get; set; }
         public bool DoNotEmail { get; set; }
         public System.DateTime? DoNotEmailUtc { get; set; }
         public bool DoNotSms { get; set; }
@@ -1228,8 +1225,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         public string TimeZoneId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool UseDoNotCall { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public bool UseDoNotChat { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public bool UseDoNotEmail { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
@@ -1332,7 +1327,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> Dispositions { get; set; }
         public bool? SetDoNotCall { get; set; }
-        public bool? SetDoNotChat { get; set; }
         public bool? SetDoNotEmail { get; set; }
         public bool? SetDoNotSms { get; set; }
         public bool ShowCommunicationPreferences { get; set; }

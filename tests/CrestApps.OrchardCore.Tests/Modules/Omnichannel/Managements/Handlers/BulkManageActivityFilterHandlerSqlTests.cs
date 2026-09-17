@@ -782,9 +782,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
             .Column<bool>("DoNotSms", column => column.NotNull().WithDefault(false))
             .Column<DateTime>("DoNotSmsUtc")
             .Column<bool>("DoNotEmail", column => column.NotNull().WithDefault(false))
-            .Column<DateTime>("DoNotEmailUtc")
-            .Column<bool>("DoNotChat", column => column.NotNull().WithDefault(false))
-            .Column<DateTime>("DoNotChatUtc"));
+            .Column<DateTime>("DoNotEmailUtc"));
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 

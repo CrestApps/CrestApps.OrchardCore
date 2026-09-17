@@ -494,6 +494,26 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "2.0.0",
             null,
             "Superseded collection-contact index table that shipped in stable 2.0.0 and is dropped in 3.0.0 only after it holds no rows, so a customer upgrading from 2.0.0 loses no contact records."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel/Migrations/OmnichannelContactCommunicationPreferenceIndexMigrations.cs",
+            "OmnichannelContactCommunicationPreferenceIndexMigrations",
+            "UpdateFrom2Async",
+            "DropColumn",
+            "DoNotChat",
+            MigrationContractJustification.ContractPhase,
+            "2.0.0",
+            null,
+            "Chat opt-out column that shipped in stable 2.0.0 and is dropped in 3.0.0. It holds a preference no channel can honour: there is no chat channel, no processor for one, and no path that creates chat work, so no released version ever read this column to decide whether to contact anybody. A customer upgrading from 2.0.0 therefore loses no behaviour, and the recorded value itself survives in the contact's own document because only the projection is dropped."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Omnichannel/Migrations/OmnichannelContactCommunicationPreferenceIndexMigrations.cs",
+            "OmnichannelContactCommunicationPreferenceIndexMigrations",
+            "UpdateFrom2Async",
+            "DropColumn",
+            "DoNotChatUtc",
+            MigrationContractJustification.ContractPhase,
+            "2.0.0",
+            null,
+            "Timestamp of the chat opt-out, shipped in stable 2.0.0 and dropped in 3.0.0 alongside the column it dates. It records when a preference no channel can act on was taken, and no released version read it, so a customer upgrading from 2.0.0 loses nothing; the original timestamp survives in the contact's own document because only the projection is dropped."),
     ];
 
     private static readonly ReviewedDynamicSqlEntry[] _reviewedDynamicSqlSites =

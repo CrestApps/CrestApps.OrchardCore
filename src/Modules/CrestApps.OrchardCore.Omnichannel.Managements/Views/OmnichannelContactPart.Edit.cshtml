@@ -31,7 +31,7 @@
     </div>
 </div>
 
-@if (Model.UseDoNotCall || Model.UseDoNotSms || Model.UseDoNotChat || Model.UseDoNotEmail)
+@if (Model.UseDoNotCall || Model.UseDoNotSms || Model.UseDoNotEmail)
 {
     <div class="ocat-wrapper">
         <div class="ocat-label">@T["Communication preferences"]</div>
@@ -64,23 +64,6 @@
                             <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.DoNotSmsUtc.Value, Format: "g"))">
                                 <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
                                 <time datetime="@Model.DoNotSmsUtc.Value.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: Model.DoNotSmsUtc.Value))</time>
-                            </span>
-                        }
-                    </label>
-                </div>
-            }
-
-            @if (Model.UseDoNotChat)
-            {
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" asp-for="DoNotChat">
-                    <label class="form-check-label" asp-for="DoNotChat">
-                        @T["Do not chat"]
-                        @if (Model.DoNotChatUtc.HasValue)
-                        {
-                            <span class="badge ta-badge font-weight-normal" data-bs-toggle="tooltip" title="@await DisplayAsync(await New.DateTime(Utc: Model.DoNotChatUtc.Value, Format: "g"))">
-                                <i class="fa-solid fa-calendar text-secondary" aria-hidden="true"></i>
-                                <time datetime="@Model.DoNotChatUtc.Value.ToString(DateTimeFormatConstants.HtmlDateTimeOffset, CultureInfo.InvariantCulture)">@await DisplayAsync(await New.Timespan(Utc: Model.DoNotChatUtc.Value))</time>
                             </span>
                         }
                     </label>

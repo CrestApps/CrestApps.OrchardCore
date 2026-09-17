@@ -147,8 +147,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes
         public string ContentItemId { get; set; }
         public bool DoNotCall { get; set; }
         public System.DateTime? DoNotCallUtc { get; set; }
-        public bool DoNotChat { get; set; }
-        public System.DateTime? DoNotChatUtc { get; set; }
         public bool DoNotEmail { get; set; }
         public System.DateTime? DoNotEmailUtc { get; set; }
         public bool DoNotSms { get; set; }
@@ -666,15 +664,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public OmnichannelContactPart() { }
         public bool DoNotCall { get; set; }
         public System.DateTime? DoNotCallUtc { get; set; }
-        public bool DoNotChat { get; set; }
-        public System.DateTime? DoNotChatUtc { get; set; }
         public bool DoNotEmail { get; set; }
         public System.DateTime? DoNotEmailUtc { get; set; }
         public bool DoNotSms { get; set; }
         public System.DateTime? DoNotSmsUtc { get; set; }
         public string TimeZoneId { get; set; }
         public void SetDoNotCall(bool value, System.DateTime utcNow) { }
-        public void SetDoNotChat(bool value, System.DateTime utcNow) { }
         public void SetDoNotEmail(bool value, System.DateTime utcNow) { }
         public void SetDoNotSms(bool value, System.DateTime utcNow) { }
     }
@@ -684,7 +679,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public bool AutoDetectTimeZone { get; set; }
         public bool RequireTimeZone { get; set; }
         public bool UseDoNotCall { get; set; }
-        public bool UseDoNotChat { get; set; }
         public bool UseDoNotEmail { get; set; }
         public bool UseDoNotSms { get; set; }
     }
@@ -827,7 +821,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string DispositionId { get; set; }
         public string OwnerId { get; set; }
         public bool? SetDoNotCall { get; set; }
-        public bool? SetDoNotChat { get; set; }
         public bool? SetDoNotEmail { get; set; }
         public bool? SetDoNotSms { get; set; }
         public string SubjectContentType { get; set; }

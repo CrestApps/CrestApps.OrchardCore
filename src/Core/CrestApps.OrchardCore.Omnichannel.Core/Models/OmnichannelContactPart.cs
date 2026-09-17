@@ -43,16 +43,6 @@ public sealed class OmnichannelContactPart : ContentPart
     public DateTime? DoNotSmsUtc { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether chat is blocked for this contact.
-    /// </summary>
-    public bool DoNotChat { get; set; }
-
-    /// <summary>
-    /// Gets or sets the UTC timestamp when chat was blocked for this contact.
-    /// </summary>
-    public DateTime? DoNotChatUtc { get; set; }
-
-    /// <summary>
     /// Updates the phone-call preference while preserving the original opt-out timestamp.
     /// </summary>
     /// <param name="value">The value to apply.</param>
@@ -107,24 +97,5 @@ public sealed class OmnichannelContactPart : ContentPart
 
         DoNotSms = false;
         DoNotSmsUtc = null;
-    }
-
-    /// <summary>
-    /// Updates the chat preference while preserving the original opt-out timestamp.
-    /// </summary>
-    /// <param name="value">The value to apply.</param>
-    /// <param name="utcNow">The current UTC time.</param>
-    public void SetDoNotChat(bool value, DateTime utcNow)
-    {
-        if (value)
-        {
-            DoNotChat = true;
-            DoNotChatUtc ??= utcNow;
-
-            return;
-        }
-
-        DoNotChat = false;
-        DoNotChatUtc = null;
     }
 }
