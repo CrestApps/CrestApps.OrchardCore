@@ -192,7 +192,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
 {
     public sealed class DistributedCacheSmsAgentPresenceTracker : CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsAgentPresenceTracker
     {
-        public DistributedCacheSmsAgentPresenceTracker(Microsoft.Extensions.Caching.Distributed.IDistributedCache cache, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailabilityOptions> availabilityOptions, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
+        public DistributedCacheSmsAgentPresenceTracker(Microsoft.Extensions.Caching.Distributed.IDistributedCache cache, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailabilityOptions> availabilityOptions, CrestApps.Core.Hosting.ITenantAccessor tenantAccessor) { }
         public System.Threading.Tasks.Task<bool> IsPresentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task TouchAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
     }

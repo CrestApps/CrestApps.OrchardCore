@@ -1,6 +1,6 @@
+using CrestApps.Core.Hosting;
 using CrestApps.OrchardCore.Telnyx.Indexes;
 using CrestApps.OrchardCore.Telnyx.Models;
-using OrchardCore.Environment.Shell;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
@@ -11,17 +11,17 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
 {
     private readonly ISession _session;
-    private readonly ShellSettings _shellSettings;
+    private readonly ITenantAccessor _tenantAccessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxAgentCredentialStore"/> class.
     /// </summary>
     /// <param name="session">The YesSql session.</param>
-    /// <param name="shellSettings">The current tenant shell settings.</param>
-    public TelnyxAgentCredentialStore(ISession session, ShellSettings shellSettings)
+    /// <param name="tenantAccessor">The current tenant.</param>
+    public TelnyxAgentCredentialStore(ISession session, ITenantAccessor tenantAccessor)
     {
         _session = session;
-        _shellSettings = shellSettings;
+        _tenantAccessor = tenantAccessor;
     }
 
     /// <inheritdoc/>
@@ -124,5 +124,5 @@ public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
     }
 
     private string GetTenantName()
-        => string.IsNullOrWhiteSpace(_shellSettings.Name) ? "Default" : _shellSettings.Name.Trim();
+        => string.IsNullOrWhiteSpace(_tenantAccessor.TenantName) ? "Default" : _tenantAccessor.TenantName.Trim();
 }

@@ -1,7 +1,7 @@
+using CrestApps.Core.Hosting;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 
@@ -27,15 +27,15 @@ public sealed class DistributedCacheSmsAgentPresenceTracker : ISmsAgentPresenceT
     /// The agent availability options. The same heartbeat timeout voice presence uses, so an operator tuning
     /// how long a silent agent stays reachable tunes it once for every channel.
     /// </param>
-    /// <param name="shellSettings">The current tenant, which keys the entries so tenants never see each other's agents.</param>
+    /// <param name="tenantAccessor">The current tenant, which keys the entries so tenants never see each other's agents.</param>
     public DistributedCacheSmsAgentPresenceTracker(
         IDistributedCache cache,
         IOptions<AgentAvailabilityOptions> availabilityOptions,
-        ShellSettings shellSettings)
+        ITenantAccessor tenantAccessor)
     {
         _cache = cache;
         _timeout = availabilityOptions.Value.HeartbeatTimeout;
-        _tenantName = shellSettings.Name;
+        _tenantName = tenantAccessor.TenantName;
     }
 
     /// <inheritdoc/>

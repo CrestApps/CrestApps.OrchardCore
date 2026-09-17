@@ -1,8 +1,8 @@
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 
@@ -97,7 +97,7 @@ public sealed class DistributedCacheSmsAgentPresenceTrackerTests
             Tracker = new DistributedCacheSmsAgentPresenceTracker(
                 cache,
                 new OptionsWrapper<AgentAvailabilityOptions>(new AgentAvailabilityOptions { HeartbeatTimeout = TimeSpan.FromSeconds(90) }),
-                new ShellSettings { Name = tenantName });
+                new FakeTenantAccessor(tenantName));
         }
 
         public void Advance(TimeSpan duration)

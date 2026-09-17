@@ -8,7 +8,7 @@ using OrchardCore.Environment.Shell;
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 
 /// <summary>
-/// Finishes a live call on a shell scope of its own, off the request thread.
+/// Finishes a live call on a scope of its own, off the request thread.
 /// </summary>
 /// <remarks>
 /// The same shape the SMS webhook endpoint uses, and for the same reason: a provider gives a webhook seconds to

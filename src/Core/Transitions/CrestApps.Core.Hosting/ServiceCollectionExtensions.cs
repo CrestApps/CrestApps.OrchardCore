@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<IDistributedLockProvider, LocalDistributedLockProvider>();
         services.TryAddSingleton<ITenantAccessor, SingleTenantAccessor>();
         services.TryAddSingleton<IScopedWorkExecutor, ServiceProviderScopedWorkExecutor>();
+        services.TryAddSingleton<IDetachedWorkExecutor, ServiceProviderDetachedWorkExecutor>();
         services.TryAddScoped<IAfterCommitTaskQueue, AfterCommitTaskQueue>();
 
         return services;
