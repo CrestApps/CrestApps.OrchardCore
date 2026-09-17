@@ -1,10 +1,10 @@
+using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Locking.Distributed;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -22,7 +22,7 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
     private readonly IInteractionManager _interactionManager;
     private readonly IDialerProfileReader _dialerProfileReader;
     private readonly IAgentWorkSelector _workSelector;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ISession _session;
     private readonly ILogger _logger;
@@ -54,7 +54,7 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
         IInteractionManager interactionManager,
         IDialerProfileReader dialerProfileReader,
         IAgentWorkSelector workSelector,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ISession session,
         ILogger<QueuedVoiceWorkOfferService> logger)
@@ -104,7 +104,8 @@ public sealed class QueuedVoiceWorkOfferService : IQueuedVoiceWorkOfferService
             var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
                 $"ContactCenterQueuedWorkSync:{agent.ItemId}",
                 TimeSpan.Zero,
-                _coordinationOptions.QueuedWorkSyncLease);
+                _coordinationOptions.QueuedWorkSyncLease,
+                cancellationToken);
 
             if (!locked)
             {

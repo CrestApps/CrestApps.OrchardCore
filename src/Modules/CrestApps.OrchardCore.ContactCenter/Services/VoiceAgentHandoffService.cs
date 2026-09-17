@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -9,7 +10,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -33,7 +33,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
     private readonly TimeProvider _timeProvider;
     private readonly IBusinessHoursGate _businessHoursGate;
     private readonly ICallbackService _callbackService;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly IQueueTreatmentService _treatmentService;
     private readonly ISession _session;
@@ -52,7 +52,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         TimeProvider timeProvider,
         IBusinessHoursGate businessHoursGate,
         ICallbackService callbackService,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         IQueueTreatmentService treatmentService,
         ISession session,
@@ -98,7 +98,8 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             lockKey,
             _coordinationOptions.InboundLockTimeout,
-            _coordinationOptions.InboundLockExpiration);
+            _coordinationOptions.InboundLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

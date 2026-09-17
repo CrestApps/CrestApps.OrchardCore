@@ -1,5 +1,6 @@
 #nullable enable annotations
 
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -12,8 +13,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -28,14 +27,15 @@ public sealed class ProviderVoiceEventServiceTests
     {
         // Arrange
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
                 It.Is<string>(key =>
                     key.StartsWith("ContactCenterProviderVoiceEvent:", StringComparison.Ordinal) &&
                     !key.Contains("call-1", StringComparison.Ordinal)),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, false));
         var service = CreateService(
             interactionManager.Object,
@@ -104,12 +104,13 @@ public sealed class ProviderVoiceEventServiceTests
             .Callback(() => saveCompleted = true)
             .Returns(Task.CompletedTask);
         var locker = new TestLocker(() => Assert.True(saveCompleted));
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
                 It.IsAny<string>(),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((locker, true));
         var service = CreateService(
             interactionManager.Object,
@@ -1385,12 +1386,13 @@ public sealed class ProviderVoiceEventServiceTests
             .Callback(() => saveCompleted = true)
             .Returns(Task.CompletedTask);
         var locker = new TestLocker(() => Assert.True(saveCompleted));
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
                 It.IsAny<string>(),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((locker, true));
         var service = CreateService(
             interactionManager.Object,
@@ -2524,7 +2526,7 @@ public sealed class ProviderVoiceEventServiceTests
         IProviderCommandStateService? providerCommandStateService = null,
         IContactCenterScopeExecutor? scopeExecutor = null,
         ISession? session = null,
-        IDistributedLock? distributedLock = null,
+        IDistributedLockProvider? distributedLock = null,
         IAgentProfileManager? agentManager = null)
     {
         providerCommandStateService ??= new Mock<IProviderCommandStateService>(MockBehavior.Strict).Object;
@@ -2564,14 +2566,15 @@ public sealed class ProviderVoiceEventServiceTests
         return agentManager.Object;
     }
 
-    private static IDistributedLock CreateDistributedLock()
+    private static IDistributedLockProvider CreateDistributedLock()
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
                 It.IsAny<string>(),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         return distributedLock.Object;
@@ -2607,32 +2610,33 @@ public sealed class ProviderVoiceEventServiceTests
         }
     }
 
-    private sealed class TestDistributedLock : IDistributedLock
+    private sealed class TestDistributedLock : IDistributedLockProvider
     {
         private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
 
-        public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+        public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
         {
             var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
-            await semaphore.WaitAsync();
+            await semaphore.WaitAsync(cancellationToken);
 
             return new TestLocker(() => semaphore.Release());
         }
 
-        public async Task<(ILocker locker, bool locked)> TryAcquireLockAsync(
+        public async Task<(ILocker Locker, bool Locked)> TryAcquireLockAsync(
             string key,
             TimeSpan timeout,
-            TimeSpan? expiration = null)
+            TimeSpan? expiration = null,
+            CancellationToken cancellationToken = default)
         {
             var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
-            var locked = await semaphore.WaitAsync(timeout);
+            var locked = await semaphore.WaitAsync(timeout, cancellationToken);
 
             return locked
                 ? (new TestLocker(() => semaphore.Release()), true)
                 : (null, false);
         }
 
-        public Task<bool> IsLockAcquiredAsync(string key)
+        public Task<bool> IsLockAcquiredAsync(string key, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(
                 _locks.TryGetValue(key, out var semaphore) &&

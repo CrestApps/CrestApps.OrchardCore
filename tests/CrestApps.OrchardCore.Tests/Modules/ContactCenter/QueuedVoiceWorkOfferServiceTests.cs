@@ -486,7 +486,7 @@ public sealed class QueuedVoiceWorkOfferServiceTests
             // The real selector over the real store, so these tests exercise the cross-queue choice rather
             // than a stub of it.
             new AgentWorkSelector(resolvedQueueItemStore.Object, selectorQueueManager.Object, Mock.Of<TimeProvider>()),
-            new FakeDistributedLock(),
+            new FakeDistributedLockProvider(),
             CoordinationOptions(),
             session.Object,
             Mock.Of<ILogger<QueuedVoiceWorkOfferService>>());

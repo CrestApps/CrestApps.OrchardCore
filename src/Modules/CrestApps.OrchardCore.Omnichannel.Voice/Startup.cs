@@ -25,7 +25,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreTimeProvider();
+        services.AddCoreHostSeams();
 
         // Registered as itself as well as behind the interface: when a live session ends, the call is finished
         // in a child scope that resolves a fresh loop of its own, because the scope the session ran in belongs to

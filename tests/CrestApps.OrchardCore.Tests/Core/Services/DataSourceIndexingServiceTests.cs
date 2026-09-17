@@ -1,4 +1,3 @@
-using System.Reflection;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
@@ -9,10 +8,11 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using OrchardCore.Locking.Distributed;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Models;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Reflection;
 
 using CrestApps.OrchardCore.Tests.Modules.AI.Migrations;
 

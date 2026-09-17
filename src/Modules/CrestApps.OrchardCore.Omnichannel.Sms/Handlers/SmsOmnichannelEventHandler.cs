@@ -11,6 +11,7 @@ using CrestApps.Core.AI.Handlers;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Resilience;
+using CrestApps.Core.Locking;
 using CrestApps.Core.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
@@ -28,10 +29,10 @@ using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
-using OrchardCore.Entities;
-using OrchardCore.Flows.Models;
 using OrchardCore.Locking;
+using OrchardCore.Entities;
 using OrchardCore.Environment.Shell.Scope;
+using OrchardCore.Flows.Models;
 using OrchardCore.Json;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
@@ -322,7 +323,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         // A later message will cancel us in turn. `generationToken` threads that cancellation through the settle,
         // the should-respond check, the AI call and the "typing" pause, so a superseded turn stops promptly and only
         // the newest turn goes on to send. The lock below still serializes the send itself so two responses can never
-        // be dispatched at once. (ILocalLock is a real in-process lock; IDistributedLock is a no-op here — no Redis.)
+        // be dispatched at once. (ILocalLock is a real in-process lock; IDistributedLockProvider is a no-op here — no Redis.)
         using var generation = _conversationGate.Begin(chatSession.SessionId, cancellationToken);
         var generationToken = generation.Token;
 

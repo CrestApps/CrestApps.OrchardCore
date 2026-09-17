@@ -1,11 +1,11 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -26,7 +26,7 @@ internal sealed class ContactCenterTopologyValidator : ModularTenantEvents
     private readonly ContactCenterTopologyOptions _options;
     private readonly ShellSettings _shellSettings;
     private readonly IShellFeaturesManager _shellFeaturesManager;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly ILogger _logger;
 
@@ -45,7 +45,7 @@ internal sealed class ContactCenterTopologyValidator : ModularTenantEvents
         IOptions<ContactCenterTopologyOptions> options,
         ShellSettings shellSettings,
         IShellFeaturesManager shellFeaturesManager,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         IHostEnvironment hostEnvironment,
         ILogger<ContactCenterTopologyValidator> logger)
     {

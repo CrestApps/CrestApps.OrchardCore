@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -10,7 +11,6 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -242,7 +242,7 @@ public sealed class InboundVoiceVoicemailDispatchTests
                 new EntryPointResolverChain([]),
                 commandStateService.Object,
                 new Mock<IVoiceQueueOfferService>().Object,
-                new Mock<IDistributedLock>().Object,
+                new Mock<IDistributedLockProvider>().Object,
                 scopeExecutor.Object,
                 new Mock<IContactCenterFeatureWorkManager>().Object,
                 clock,

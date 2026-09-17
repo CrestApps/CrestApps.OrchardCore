@@ -173,7 +173,7 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
         return new AsteriskPjsipCredentialIssuer(
             cache ?? new FakeDistributedCache(),
             tagCache.Object,
-            new FakeDistributedLock(),
+            new FakeDistributedLockProvider(),
             clock,
             new ShellSettings { Name = tenantName },
             realtimeStore,

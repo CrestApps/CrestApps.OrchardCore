@@ -1,5 +1,4 @@
-using System.Collections.Concurrent;
-using System.Text.Json;
+using CrestApps.Core.Locking;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
@@ -18,8 +17,9 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Collections.Concurrent;
+using System.Text.Json;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -354,7 +354,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton(Mock.Of<ITelephonyProviderResolver>());
         services.AddSingleton(CreateEmptyInteractionEventStore());
         services.AddSingleton<IProviderIdentityResolver>(new ProviderIdentityResolver([]));
-        services.AddSingleton<IVoiceIngressGate>(sp => new VoiceIngressGate(sp.GetRequiredService<IDistributedLock>()));
+        services.AddSingleton<IVoiceIngressGate>(sp => new VoiceIngressGate(sp.GetRequiredService<IDistributedLockProvider>()));
 
         // Real agent-state pipeline. Entitlements are not enforced in the harness, so agents may sign in to any
         // queue or campaign (the permissive default policy).
@@ -410,11 +410,11 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         return mock.Object;
     }
 
-    private static IDistributedLock CreateAlwaysGrantingLock()
+    private static IDistributedLockProvider CreateAlwaysGrantingLock()
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(service => service.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(service => service.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         return distributedLock.Object;

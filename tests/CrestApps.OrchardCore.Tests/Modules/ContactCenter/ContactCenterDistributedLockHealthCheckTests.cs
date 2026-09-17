@@ -1,8 +1,7 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -20,7 +19,7 @@ public sealed class ContactCenterDistributedLockHealthCheckTests
     public async Task CheckHealthAsync_ReportsHealthy_WhenTheLockIsAcquiredAndReleased()
     {
         // Arrange
-        var distributedLock = new FakeDistributedLock(acquired: true);
+        var distributedLock = new FakeDistributedLockProvider(acquired: true);
         var check = new ContactCenterDistributedLockHealthCheck(distributedLock);
 
         // Act
@@ -35,7 +34,7 @@ public sealed class ContactCenterDistributedLockHealthCheckTests
     public async Task CheckHealthAsync_ReportsFailureStatus_WhenTheLockCannotBeAcquired()
     {
         // Arrange
-        var distributedLock = new FakeDistributedLock(acquired: false);
+        var distributedLock = new FakeDistributedLockProvider(acquired: false);
         var check = new ContactCenterDistributedLockHealthCheck(distributedLock);
 
         // Act
@@ -49,7 +48,7 @@ public sealed class ContactCenterDistributedLockHealthCheckTests
     public async Task CheckHealthAsync_ReportsFailureStatus_WhenTheLockBackendThrows()
     {
         // Arrange
-        var distributedLock = new FakeDistributedLock(acquired: true, throwOnAcquire: true);
+        var distributedLock = new FakeDistributedLockProvider(acquired: true, throwOnAcquire: true);
         var check = new ContactCenterDistributedLockHealthCheck(distributedLock);
 
         // Act
@@ -70,12 +69,12 @@ public sealed class ContactCenterDistributedLockHealthCheckTests
                 tags: null),
         };
 
-    private sealed class FakeDistributedLock : IDistributedLock
+    private sealed class FakeDistributedLockProvider : IDistributedLockProvider
     {
         private readonly bool _acquired;
         private readonly bool _throwOnAcquire;
 
-        public FakeDistributedLock(bool acquired, bool throwOnAcquire = false)
+        public FakeDistributedLockProvider(bool acquired, bool throwOnAcquire = false)
         {
             _acquired = acquired;
             _throwOnAcquire = throwOnAcquire;
@@ -83,7 +82,7 @@ public sealed class ContactCenterDistributedLockHealthCheckTests
 
         public bool Released { get; private set; }
 
-        public Task<(ILocker locker, bool locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null)
+        public Task<(ILocker Locker, bool Locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
         {
             if (_throwOnAcquire)
             {
@@ -93,17 +92,17 @@ public sealed class ContactCenterDistributedLockHealthCheckTests
             return Task.FromResult<(ILocker, bool)>((new FakeLocker(this), _acquired));
         }
 
-        public Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+        public Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
             => Task.FromResult<ILocker>(new FakeLocker(this));
 
-        public Task<bool> IsLockAcquiredAsync(string key)
+        public Task<bool> IsLockAcquiredAsync(string key, CancellationToken cancellationToken = default)
             => Task.FromResult(false);
 
         private sealed class FakeLocker : ILocker
         {
-            private readonly FakeDistributedLock _owner;
+            private readonly FakeDistributedLockProvider _owner;
 
-            public FakeLocker(FakeDistributedLock owner)
+            public FakeLocker(FakeDistributedLockProvider owner)
             {
                 _owner = owner;
             }

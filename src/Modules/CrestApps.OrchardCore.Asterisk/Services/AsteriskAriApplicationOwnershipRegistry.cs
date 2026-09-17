@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using CrestApps.Core.Locking;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 /// <summary>
 /// Process-wide registry that tracks which tenant owns each Asterisk ARI (BaseUrl, ApplicationName)
 /// pair on this node. The backing store is a static <see cref="ConcurrentDictionary{TKey, TValue}"/>
-/// so ownership is shared across all per-tenant DI containers without requiring <c>IDistributedLock</c>
+/// so ownership is shared across all per-tenant DI containers without requiring <c>IDistributedLockProvider</c>
 /// or <c>IDistributedCache</c>, which are tenant-scoped in Orchard Core. Each claim is reference-counted
 /// by a per-shell-generation token so a pair is only released after every generation holding it releases,
 /// which keeps ownership stable across an Orchard shell reload where a retiring and an activating

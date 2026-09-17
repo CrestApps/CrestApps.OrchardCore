@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -8,7 +9,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.ContentManagement;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -44,7 +44,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     private readonly EntryPointResolverChain _entryPointResolver;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IVoiceQueueOfferService _offerService;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly TimeProvider _timeProvider;
@@ -90,7 +90,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         EntryPointResolverChain entryPointResolver,
         IProviderCommandStateService providerCommandStateService,
         IVoiceQueueOfferService offerService,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
         TimeProvider timeProvider,
@@ -142,7 +142,8 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetInboundLockKey(inboundEvent),
             _inboundLockTimeout,
-            _inboundLockExpiration);
+            _inboundLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

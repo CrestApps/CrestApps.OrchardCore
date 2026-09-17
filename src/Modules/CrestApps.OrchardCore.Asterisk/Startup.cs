@@ -44,7 +44,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreTimeProvider();
+        services.AddCoreHostSeams();
 
         // The resilience pipeline is constructed before any tenant request, so its timings are read here rather
         // than resolved per call. The same section backs AsteriskCoordinationOptions below, so the validated

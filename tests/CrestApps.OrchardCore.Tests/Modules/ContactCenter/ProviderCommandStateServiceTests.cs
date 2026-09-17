@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
@@ -9,7 +10,6 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using System.Text.Json.Nodes;
 using YesSql;
@@ -148,7 +148,7 @@ public sealed class ProviderCommandStateServiceTests
         var service = new ProviderCommandStateService(
             manager.Object,
             session.Object,
-            new Mock<IDistributedLock>().Object,
+            new Mock<IDistributedLockProvider>().Object,
             clock);
 
         // Act
@@ -860,12 +860,13 @@ public sealed class ProviderCommandStateServiceTests
             [],
             NullLogger<CatalogManager<ProviderCommand>>.Instance);
 
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(value => value.TryAcquireLockAsync(
                 It.IsAny<string>(),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         return new ProviderCommandStateService(manager, session, distributedLock.Object, clock);

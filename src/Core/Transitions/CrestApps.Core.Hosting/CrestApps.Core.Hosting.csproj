@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core</RootNamespace>
+    <Title>CrestApps Core Hosting</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      Framework defaults for the host seams: an in-process distributed lock, a single-tenant
+      accessor, a service-provider scope executor with an after-commit queue, and an empty user
+      directory. A real host replaces the ones it can do better.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Hosting.Abstractions\CrestApps.Core.Hosting.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

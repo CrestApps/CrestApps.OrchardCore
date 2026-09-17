@@ -317,7 +317,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
             },
         };
 
-        var distributedLock = new FakeDistributedLock();
+        var distributedLock = new FakeDistributedLockProvider();
         var service = CreateService(
             provider,
             new TelephonySettings { DefaultProviderName = "Dialpad" },
@@ -349,13 +349,13 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         ITelephonyProvider provider,
         TelephonySettings settings,
         ITelephonyUserTokenStore tokenStore)
-        => CreateService(provider, settings, tokenStore, new FakeDistributedLock());
+        => CreateService(provider, settings, tokenStore, new FakeDistributedLockProvider());
 
     private static DefaultTelephonyAuthenticationService CreateService(
         ITelephonyProvider provider,
         TelephonySettings settings,
         ITelephonyUserTokenStore tokenStore,
-        FakeDistributedLock distributedLock)
+        FakeDistributedLockProvider distributedLock)
     {
         var siteService = SiteServiceFactory.Create(settings);
         var resolver = new StubTelephonyProviderResolver(provider);

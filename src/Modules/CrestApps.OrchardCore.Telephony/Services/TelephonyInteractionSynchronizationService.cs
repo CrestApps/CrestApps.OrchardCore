@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -6,7 +7,6 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
@@ -21,7 +21,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     private readonly ITelephonyInteractionStore _interactionStore;
     private readonly ITelephonyProviderResolver _providerResolver;
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly string _tenantName;
@@ -45,7 +45,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         ITelephonyInteractionStore interactionStore,
         ITelephonyProviderResolver providerResolver,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         TimeProvider timeProvider,
         ILogger<TelephonyInteractionSynchronizationService> logger,
         ShellSettings shellSettings,
@@ -152,7 +152,8 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             ReconciliationLockKey,
             _lockTimeout,
-            _lockExpiration);
+            _lockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

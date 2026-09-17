@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -5,7 +6,6 @@ using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using System.Text.Json.Nodes;
 using YesSql;
@@ -526,7 +526,7 @@ public sealed class AgentSessionServiceTests
 
         // Assert
         distributedLock.Verify(
-            l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()),
+            l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -534,7 +534,7 @@ public sealed class AgentSessionServiceTests
         Mock<IAgentSessionManager> sessionManager,
         Mock<IAgentProfileManager> agentManager,
         Mock<IAgentPresenceManager> presenceManager = null,
-        Mock<IDistributedLock> distributedLock = null,
+        Mock<IDistributedLockProvider> distributedLock = null,
         IContactCenterScopeExecutor scopeExecutor = null,
         IEnumerable<ISoftPhoneCredentialRevoker> credentialRevokers = null)
     {
@@ -552,11 +552,11 @@ public sealed class AgentSessionServiceTests
             NullLogger<AgentSessionService>.Instance);
     }
 
-    private static Mock<IDistributedLock> CreateDistributedLock()
+    private static Mock<IDistributedLockProvider> CreateDistributedLock()
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         return distributedLock;

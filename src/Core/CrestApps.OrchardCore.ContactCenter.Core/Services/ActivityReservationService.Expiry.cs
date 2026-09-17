@@ -81,7 +81,8 @@ public sealed partial class ActivityReservationService
                 (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
                     GetReservationLockKey(candidate.ItemId),
                     lockWait,
-                    _coordinationOptions.ReservationLockExpiration);
+                    _coordinationOptions.ReservationLockExpiration,
+                    cancellationToken);
 
                 if (!locked)
                 {

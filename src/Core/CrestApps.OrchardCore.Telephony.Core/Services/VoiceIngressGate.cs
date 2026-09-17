@@ -1,5 +1,5 @@
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
+using CrestApps.Core.Locking;
+
 
 namespace CrestApps.OrchardCore.Telephony.Core.Services;
 
@@ -18,13 +18,13 @@ public sealed class VoiceIngressGate : IVoiceIngressGate
     // the acquisition timed out.
     private static readonly AsyncLocal<HashSet<string>> _heldKeys = new();
 
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="VoiceIngressGate"/> class.
     /// </summary>
     /// <param name="distributedLock">The tenant-scoped distributed lock used to serialize each provider call stream.</param>
-    public VoiceIngressGate(IDistributedLock distributedLock)
+    public VoiceIngressGate(IDistributedLockProvider distributedLock)
     {
         _distributedLock = distributedLock;
     }

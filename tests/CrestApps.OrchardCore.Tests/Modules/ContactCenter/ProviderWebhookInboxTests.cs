@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -7,7 +8,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -590,12 +590,13 @@ public sealed class ProviderWebhookInboxTests
         bool locked = true,
         ContactCenterRetentionOptions retentionOptions = null)
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
                 It.IsAny<string>(),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, locked));
         var clock = new FakeTimeProvider();
         clock.SetUtcNow(_now);

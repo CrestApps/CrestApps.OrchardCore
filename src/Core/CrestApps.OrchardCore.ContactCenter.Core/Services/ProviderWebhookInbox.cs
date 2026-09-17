@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -7,7 +8,6 @@ using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -59,7 +59,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private readonly ContactCenterRetentionOptions _retentionOptions;
     private readonly IProviderWebhookInboxStore _store;
     private readonly ISession _session;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly TimeProvider _timeProvider;
@@ -80,7 +80,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         IEnumerable<IProviderWebhookInboxHandler> handlers,
         IProviderWebhookInboxStore store,
         ISession session,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         IProviderIdentityResolver providerIdentityResolver,
         IContactCenterScopeExecutor scopeExecutor,
         TimeProvider timeProvider,
@@ -156,7 +156,8 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetDeliveryLockKey(providerName, delivery.DeliveryId),
             _acceptanceLockTimeout,
-            _acceptanceLockExpiration);
+            _acceptanceLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -213,7 +214,8 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetDispatchLockKey(messageId),
             _dispatchLockTimeout,
-            _dispatchLockExpiration);
+            _dispatchLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

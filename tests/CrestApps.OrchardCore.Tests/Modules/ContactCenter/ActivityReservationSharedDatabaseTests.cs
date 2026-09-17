@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Time.Testing;
+using CrestApps.Core.Locking;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
@@ -12,8 +12,8 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -423,7 +423,7 @@ public sealed class ActivityReservationSharedDatabaseTests
     private static ServiceProvider CreateServiceProvider(
         ISession session,
         AsyncGate readGate,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         (QueueItem QueueItem, AgentProfile Agent) seed)
     {
         var queueItemManager = CreateQueueItemManager(session);
@@ -542,7 +542,7 @@ public sealed class ActivityReservationSharedDatabaseTests
     private static ServiceProvider CreateAcceptServiceProvider(
         ISession session,
         AsyncGate readGate,
-        IDistributedLock distributedLock)
+        IDistributedLockProvider distributedLock)
     {
         var reservationManager = CreateReservationManager(session);
         var reservationManagerProxy = new Mock<IActivityReservationManager>();
@@ -604,29 +604,31 @@ public sealed class ActivityReservationSharedDatabaseTests
         return services.BuildServiceProvider();
     }
 
-    private static IDistributedLock CreateAlwaysGrantingLock()
+    private static IDistributedLockProvider CreateAlwaysGrantingLock()
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
                 It.IsAny<string>(),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         return distributedLock.Object;
     }
 
-    private static IDistributedLock CreateOverlappingLock(Action onAcquired)
+    private static IDistributedLockProvider CreateOverlappingLock(Action onAcquired)
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
                 It.Is<string>(key =>
                     key == "ContactCenterActivityReservation:activity-1" ||
                     key == "ContactCenterAgentReservation:agent-1"),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .Callback(onAcquired)
             .ReturnsAsync((null, true));
 

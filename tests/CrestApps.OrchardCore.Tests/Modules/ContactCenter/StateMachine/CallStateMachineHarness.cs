@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -7,7 +8,6 @@ using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using System.Text.Json.Nodes;
 using YesSql;
@@ -119,9 +119,9 @@ public sealed class CallStateMachineHarness
             clock,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
 
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         var agentManager = new Mock<IAgentProfileManager>();

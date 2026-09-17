@@ -27,6 +27,9 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions.csproj" />
   </Folder>
+  <Folder Name="/src/Abstractions/Transitions/">
+    <Project Path="src/Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions/CrestApps.Core.Hosting.Abstractions.csproj" />
+  </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core/CrestApps.OrchardCore.AI.Chat.Interactions.Core.csproj" />
@@ -46,6 +49,9 @@
     <Project Path="src/Core/CrestApps.OrchardCore.Telnyx.Core/CrestApps.OrchardCore.Telnyx.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.Users.Core/CrestApps.OrchardCore.Users.Core.csproj" />
     <Project Path="src/Core/CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
+  </Folder>
+  <Folder Name="/src/Core/Transitions/">
+    <Project Path="src/Core/Transitions/CrestApps.Core.Hosting/CrestApps.Core.Hosting.csproj" />
   </Folder>
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />

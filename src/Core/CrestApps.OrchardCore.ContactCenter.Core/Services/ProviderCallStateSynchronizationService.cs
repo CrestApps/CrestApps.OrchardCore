@@ -1,10 +1,10 @@
+using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -25,7 +25,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
     private readonly IProviderVoiceEventService _providerVoiceEventService;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly ITelephonyProviderResolver _telephonyProviderResolver;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
@@ -46,7 +46,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         IProviderVoiceEventService providerVoiceEventService,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         ITelephonyProviderResolver telephonyProviderResolver,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         TimeProvider timeProvider,
         ILogger<ProviderCallStateSynchronizationService> logger)
     {
@@ -174,7 +174,8 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             ReconciliationLockKey,
             _lockTimeout,
-            _lockExpiration);
+            _lockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

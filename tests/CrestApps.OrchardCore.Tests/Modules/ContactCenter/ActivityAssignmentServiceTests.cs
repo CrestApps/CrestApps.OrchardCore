@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -5,7 +6,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -296,7 +296,7 @@ public sealed class ActivityAssignmentServiceTests
         Mock<IAgentProfileManager> agentManager,
         Mock<IActivityQueueManager> queueManager,
         Mock<IActivityReservationService> reservationService,
-        Mock<IDistributedLock> distributedLock,
+        Mock<IDistributedLockProvider> distributedLock,
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null)
     {
@@ -336,11 +336,11 @@ public sealed class ActivityAssignmentServiceTests
             NullLogger<ActivityAssignmentService>.Instance);
     }
 
-    private static Mock<IDistributedLock> CreateDistributedLock(bool locked)
+    private static Mock<IDistributedLockProvider> CreateDistributedLock(bool locked)
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, locked));
 
         return distributedLock;

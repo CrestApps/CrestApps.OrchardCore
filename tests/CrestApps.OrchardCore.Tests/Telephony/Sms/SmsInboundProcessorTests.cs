@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
@@ -13,8 +14,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
 using YesSql;
@@ -225,7 +224,7 @@ public class SmsInboundProcessorTests
     {
         public Mock<ISmsRealTimeNotifier> Notifier { get; } = new();
 
-        public FakeDistributedLock DistributedLock { get; } = new();
+        public FakeDistributedLockProvider DistributedLock { get; } = new();
 
         public SmsConversation CreatedConversation { get; private set; }
 
@@ -320,7 +319,7 @@ public class SmsInboundProcessorTests
             var clock = new FakeTimeProvider();
             clock.SetUtcNow(DateTime.UtcNow);
 
-            IDistributedLock distributedLock = lockAcquired
+            IDistributedLockProvider distributedLock = lockAcquired
                 ? DistributedLock
                 : new RefusingDistributedLock();
 
@@ -356,15 +355,15 @@ public class SmsInboundProcessorTests
     }
 
     // Never grants the lock, standing in for a node that is already processing this thread.
-    private sealed class RefusingDistributedLock : IDistributedLock
+    private sealed class RefusingDistributedLock : IDistributedLockProvider
     {
-        public Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+        public Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
             => Task.FromResult<ILocker>(null);
 
-        public Task<(ILocker locker, bool locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null)
+        public Task<(ILocker Locker, bool Locked)> TryAcquireLockAsync(string key, TimeSpan timeout, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
             => Task.FromResult<(ILocker, bool)>((null, false));
 
-        public Task<bool> IsLockAcquiredAsync(string key)
+        public Task<bool> IsLockAcquiredAsync(string key, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
     }
 }

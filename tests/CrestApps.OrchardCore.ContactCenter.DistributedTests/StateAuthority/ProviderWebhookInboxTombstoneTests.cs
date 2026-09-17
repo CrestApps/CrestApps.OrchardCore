@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
@@ -8,7 +9,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -74,14 +74,15 @@ public sealed class ProviderWebhookInboxTombstoneTests
             NullLogger<ProviderWebhookInbox>.Instance);
     }
 
-    private static IDistributedLock CreateDistributedLock()
+    private static IDistributedLockProvider CreateDistributedLock()
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
             .Setup(service => service.TryAcquireLockAsync(
                 It.IsAny<string>(),
                 It.IsAny<TimeSpan>(),
-                It.IsAny<TimeSpan?>()))
+                It.IsAny<TimeSpan?>(),
+                It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         return distributedLock.Object;

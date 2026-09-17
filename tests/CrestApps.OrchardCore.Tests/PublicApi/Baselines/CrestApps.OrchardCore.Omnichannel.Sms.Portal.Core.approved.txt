@@ -423,7 +423,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
                     CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher dispatcher,
                     Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsKeywordReplySettings> keywordReplySettings,
                     OrchardCore.ContentManagement.IContentManager contentManager,
-                    OrchardCore.Locking.Distributed.IDistributedLock distributedLock,
+                    CrestApps.Core.Locking.IDistributedLockProvider distributedLock,
                     Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsPortalOptions> options,
                     YesSql.ISession session,
                     System.TimeProvider timeProvider,

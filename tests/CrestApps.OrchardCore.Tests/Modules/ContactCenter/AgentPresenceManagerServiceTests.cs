@@ -1,11 +1,11 @@
-﻿using CrestApps.OrchardCore.ContactCenter;
+﻿using CrestApps.Core.Locking;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -934,11 +934,11 @@ public sealed class AgentPresenceManagerServiceTests
         Assert.Equal(AgentPresenceStatus.Available, profile.RequestedPresenceStatus);
     }
 
-    private static Mock<IDistributedLock> CreateDistributedLock()
+    private static Mock<IDistributedLockProvider> CreateDistributedLock()
     {
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         return distributedLock;

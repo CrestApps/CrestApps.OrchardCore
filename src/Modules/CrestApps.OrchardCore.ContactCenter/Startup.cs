@@ -55,7 +55,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreTimeProvider();
+        services.AddCoreHostSeams();
 
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterStorage.CollectionName));
 

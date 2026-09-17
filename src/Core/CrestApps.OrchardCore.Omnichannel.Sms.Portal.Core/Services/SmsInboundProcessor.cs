@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -12,7 +13,6 @@ using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
 using YesSql;
@@ -38,7 +38,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
     private readonly ISmsDispatcher _dispatcher;
     private readonly SmsKeywordReplySettings _keywordReplySettings;
     private readonly IContentManager _contentManager;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly SmsPortalOptions _options;
     private readonly ISession _session;
     private readonly TimeProvider _timeProvider;
@@ -59,7 +59,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         ISmsDispatcher dispatcher,
         IOptions<SmsKeywordReplySettings> keywordReplySettings,
         IContentManager contentManager,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         IOptions<SmsPortalOptions> options,
         ISession session,
         TimeProvider timeProvider,
@@ -120,7 +120,8 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         var (locker, locked) = await _distributedLock.TryAcquireLockAsync(
             $"SmsConversation:{serviceAddress}:{contactAddress}",
             _options.ConversationLockTimeout,
-            _options.ConversationLockExpiration);
+            _options.ConversationLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

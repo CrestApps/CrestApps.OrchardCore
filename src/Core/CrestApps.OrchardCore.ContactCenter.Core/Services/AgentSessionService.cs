@@ -1,9 +1,9 @@
-﻿using CrestApps.Core.Support;
+﻿using CrestApps.Core.Locking;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -33,7 +33,7 @@ public sealed class AgentSessionService : IAgentSessionService
     private readonly IAgentSessionManager _sessionManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentPresenceManager _presenceManager;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly TimeProvider _timeProvider;
     private readonly IEnumerable<ISoftPhoneCredentialRevoker> _credentialRevokers;
@@ -54,7 +54,7 @@ public sealed class AgentSessionService : IAgentSessionService
         IAgentSessionManager sessionManager,
         IAgentProfileManager agentManager,
         IAgentPresenceManager presenceManager,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
         TimeProvider timeProvider,
         IEnumerable<ISoftPhoneCredentialRevoker> credentialRevokers,
@@ -76,7 +76,7 @@ public sealed class AgentSessionService : IAgentSessionService
         ArgumentException.ThrowIfNullOrEmpty(userId);
         ArgumentException.ThrowIfNullOrEmpty(connectionId);
 
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(userId), _lockTimeout, _lockExpiration);
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(userId), _lockTimeout, _lockExpiration, cancellationToken);
 
         if (!locked)
         {
@@ -329,7 +329,7 @@ public sealed class AgentSessionService : IAgentSessionService
                 continue;
             }
 
-            (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(candidate.UserId), _lockTimeout, _lockExpiration);
+            (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(GetLockKey(candidate.UserId), _lockTimeout, _lockExpiration, cancellationToken);
 
             if (!locked)
             {

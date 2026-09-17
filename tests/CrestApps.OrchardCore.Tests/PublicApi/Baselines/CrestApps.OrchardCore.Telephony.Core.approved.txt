@@ -129,7 +129,7 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
     }
     public sealed class VoiceIngressGate : CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate
     {
-        public VoiceIngressGate(OrchardCore.Locking.Distributed.IDistributedLock distributedLock) { }
+        public VoiceIngressGate(CrestApps.Core.Locking.IDistributedLockProvider distributedLock) { }
         public System.Threading.Tasks.Task<System.IAsyncDisposable> AcquireAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
         public bool IsHeld(string providerName, string providerCallId) { }
     }

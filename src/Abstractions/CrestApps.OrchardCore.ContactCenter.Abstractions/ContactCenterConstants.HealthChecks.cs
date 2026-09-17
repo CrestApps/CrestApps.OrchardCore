@@ -112,7 +112,7 @@ public static partial class ContactCenterConstants
         /// The registration name of the distributed-lock acquire/release probe.
         /// </summary>
         /// <remarks>
-        /// A dependency probe that proves the resolved <c>IDistributedLock</c> can be taken and released within a
+        /// A dependency probe that proves the resolved <c>IDistributedLockProvider</c> can be taken and released within a
         /// bounded time. In a production topology this exercises the Redis-backed lock end to end; in a
         /// development topology it exercises the process-local lock and is trivially satisfied.
         /// </remarks>

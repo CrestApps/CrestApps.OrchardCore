@@ -58,7 +58,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddCoreTimeProvider();
+        services.AddCoreHostSeams();
 
         // Portal tunables (thread lock waits, inbox page size). The configuration section is deliberately still
         // "CrestApps:Sms:Workspace" so an existing appsettings entry keeps binding; renaming it would fail silently.

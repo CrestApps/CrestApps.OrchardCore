@@ -346,7 +346,7 @@ public sealed class AsteriskPjsipCredentialIssuerTests
             new AsteriskPjsipCredentialIssuer(
                 cache,
                 tagCache.Object,
-                new FakeDistributedLock(),
+                new FakeDistributedLockProvider(),
                 clock,
                 new ShellSettings { Name = tenantName },
                 store,

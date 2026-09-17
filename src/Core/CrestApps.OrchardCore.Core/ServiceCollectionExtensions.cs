@@ -1,4 +1,7 @@
-﻿using CrestApps.Core.Services;
+﻿using CrestApps.Core.Hosting;
+using CrestApps.Core.Locking;
+using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Core.Hosting;
 using CrestApps.OrchardCore.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -31,6 +34,20 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCoreTimeProvider(this IServiceCollection services)
     {
         services.TryAddSingleton<TimeProvider, ClockTimeProviderAdapter>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Binds the framework host seams to their Orchard Core implementations, so framework services
+    /// get the tenant's distributed lock and tenant name rather than the single-node defaults.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddCoreHostSeams(this IServiceCollection services)
+    {
+        services.AddCoreTimeProvider();
+        services.TryAddSingleton<IDistributedLockProvider, OrchardCoreDistributedLockProvider>();
+        services.TryAddSingleton<ITenantAccessor, ShellSettingsTenantAccessor>();
 
         return services;
     }

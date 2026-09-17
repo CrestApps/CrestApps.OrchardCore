@@ -1,7 +1,7 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 
@@ -17,7 +17,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     private readonly ITelephonyProviderResolver _providerResolver;
     private readonly ITelephonyUserTokenStore _tokenStore;
     private readonly ITelephonyUserAccessor _userAccessor;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly TimeSpan _tokenRefreshLockTimeout;
@@ -39,7 +39,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         ITelephonyProviderResolver providerResolver,
         ITelephonyUserTokenStore tokenStore,
         ITelephonyUserAccessor userAccessor,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         TimeProvider timeProvider,
         IOptions<TelephonyCoordinationOptions> coordinationOptions,
         ILogger<DefaultTelephonyAuthenticationService> logger)
@@ -295,7 +295,8 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             lockKey,
             _tokenRefreshLockTimeout,
-            _tokenRefreshLockExpiration);
+            _tokenRefreshLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

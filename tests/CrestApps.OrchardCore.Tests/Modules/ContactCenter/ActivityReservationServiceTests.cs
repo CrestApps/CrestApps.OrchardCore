@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 #nullable enable annotations
 
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -13,7 +14,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -290,12 +290,12 @@ public sealed class ActivityReservationServiceTests
         var reservationManager = new Mock<IActivityReservationManager>();
         var queueItemManager = new Mock<IQueueItemManager>();
         var agentManager = new Mock<IAgentProfileManager>();
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync("ContactCenterActivityReservation:act-2", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync("ContactCenterActivityReservation:act-2", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync("ContactCenterAgentReservation:a1", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync("ContactCenterAgentReservation:a1", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, false));
         var service = CreateService(
             reservationManager,
@@ -458,13 +458,13 @@ public sealed class ActivityReservationServiceTests
         var reservationManager = new Mock<IActivityReservationManager>();
         reservationManager.Setup(m => m.GetExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([first, second], null, 0));
 
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r1", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r1", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .Callback(() => cts.Cancel())
             .ReturnsAsync((null, false));
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r2", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r2", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, false));
 
         var service = CreateService(
@@ -483,7 +483,7 @@ public sealed class ActivityReservationServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.ExpireDueAsync(cts.Token));
 
         distributedLock.Verify(
-            l => l.TryAcquireLockAsync("ContactCenterReservation:r2", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()),
+            l => l.TryAcquireLockAsync("ContactCenterReservation:r2", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -616,12 +616,12 @@ public sealed class ActivityReservationServiceTests
             .ReturnsAsync(new OmnichannelActivity { ItemId = "act" });
 
         // Every candidate in the oldest page is locked by another node; only the reservation behind them is free.
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, false));
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r-drainable", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync("ContactCenterReservation:r-drainable", It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
         var service = CreateService(
@@ -1820,7 +1820,7 @@ public sealed class ActivityReservationServiceTests
         Mock<IOmnichannelActivityManager> activityManager,
         Mock<IContactCenterEventPublisher> publisher,
         Mock<ITelephonyService> telephonyService,
-        Mock<IDistributedLock> distributedLock = null,
+        Mock<IDistributedLockProvider> distributedLock = null,
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null)
     {
@@ -1851,7 +1851,7 @@ public sealed class ActivityReservationServiceTests
         Mock<IContactCenterEventPublisher> publisher,
         Mock<IProviderCommandStateService>? providerCommandStateService,
         Mock<IContactCenterScopeExecutor>? scopeExecutor,
-        Mock<IDistributedLock> distributedLock = null,
+        Mock<IDistributedLockProvider> distributedLock = null,
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null)
     {
@@ -1860,9 +1860,9 @@ public sealed class ActivityReservationServiceTests
 
         if (distributedLock is null)
         {
-            distributedLock = new Mock<IDistributedLock>();
+            distributedLock = new Mock<IDistributedLockProvider>();
             distributedLock
-                .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+                .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((null, true));
         }
 

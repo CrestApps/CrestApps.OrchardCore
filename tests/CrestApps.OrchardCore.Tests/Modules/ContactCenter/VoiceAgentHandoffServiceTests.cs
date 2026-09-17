@@ -551,7 +551,7 @@ public class VoiceAgentHandoffServiceTests
 
         public Mock<ICallbackService> CallbackService { get; } = new();
 
-        public FakeDistributedLock DistributedLock { get; } = new();
+        public FakeDistributedLockProvider DistributedLock { get; } = new();
 
         public VoiceAgentHandoffService Service { get; }
 

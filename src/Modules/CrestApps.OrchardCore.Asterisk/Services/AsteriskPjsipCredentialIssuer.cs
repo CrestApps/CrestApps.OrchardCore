@@ -1,14 +1,13 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.Asterisk.Models;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
@@ -30,7 +29,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
     private readonly IDistributedCache _cache;
     private readonly ITagCache _tagCache;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
     private readonly ShellSettings _shellSettings;
     private readonly IAsteriskPjsipRealtimeCredentialStore _realtimeStore;
@@ -42,7 +41,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
     public AsteriskPjsipCredentialIssuer(
         IDistributedCache cache,
         ITagCache tagCache,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         TimeProvider timeProvider,
         ShellSettings shellSettings,
         IAsteriskPjsipRealtimeCredentialStore realtimeStore,
@@ -159,7 +158,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
     public async Task<int> CleanupExpiredAsync(CancellationToken cancellationToken = default)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration);
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(CreateLockKey(), _lockTimeout, _lockExpiration, cancellationToken);
 
         if (!locked)
         {

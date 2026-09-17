@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions/CrestApps.Core.Hosting.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />

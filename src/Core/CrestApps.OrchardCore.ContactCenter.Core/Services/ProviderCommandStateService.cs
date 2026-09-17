@@ -1,6 +1,6 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using OrchardCore;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -33,7 +33,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
 
     private readonly IProviderCommandManager _manager;
     private readonly ISession _session;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -46,7 +46,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     public ProviderCommandStateService(
         IProviderCommandManager manager,
         ISession session,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         TimeProvider timeProvider)
     {
         _manager = manager;
@@ -65,7 +65,8 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             $"ContactCenterProviderCommand:Register:{registration.CommandId}",
             _registrationLockTimeout,
-            _registrationLockExpiration);
+            _registrationLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

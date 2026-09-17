@@ -1,10 +1,9 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -182,9 +181,9 @@ public sealed class AgentEntitlementNormalizationTests
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager.Setup(m => m.FindByIdAsync(existing.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
 
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Mock.Of<ILocker>(), true));
 
         var clock = new FakeTimeProvider();

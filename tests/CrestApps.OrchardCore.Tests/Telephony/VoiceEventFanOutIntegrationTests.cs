@@ -297,7 +297,7 @@ public sealed class VoiceEventFanOutIntegrationTests
             var clock = new FakeTimeProvider();
             clock.SetUtcNow(_startedUtc);
 
-            DistributedLock = new FakeDistributedLock();
+            DistributedLock = new FakeDistributedLockProvider();
 
             var ingressGate = new VoiceIngressGate(DistributedLock);
 
@@ -355,7 +355,7 @@ public sealed class VoiceEventFanOutIntegrationTests
                 NullLogger<AsteriskRealtimeVoiceEventDispatcher>.Instance);
         }
 
-        public FakeDistributedLock DistributedLock { get; }
+        public FakeDistributedLockProvider DistributedLock { get; }
 
         public TelephonyInteraction TelephonyInteraction { get; }
 

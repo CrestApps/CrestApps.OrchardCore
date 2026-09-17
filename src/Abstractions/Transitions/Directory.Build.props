@@ -1,0 +1,17 @@
+<Project>
+
+  <!--
+    Projects under a 'Transitions' folder are the Contact Center Suite as it will exist in the
+    CrestApps.Core repository. They already carry that repository's package metadata so the Phase 2
+    move is a copy, and they are never packed from this repository.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RepositoryUrl>https://github.com/CrestApps/CrestApps.Core</RepositoryUrl>
+    <PackageTags>CrestApps-Core ContactCenter</PackageTags>
+    <CrestAppsDescription>Part of the CrestApps Contact Center Suite.</CrestAppsDescription>
+  </PropertyGroup>
+
+</Project>

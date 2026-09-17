@@ -1,14 +1,13 @@
 using System.Collections.Concurrent;
-using OrchardCore.Locking;
-using OrchardCore.Locking.Distributed;
+using CrestApps.Core.Locking;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 /// <summary>
-/// A deterministic in-memory <see cref="IDistributedLock"/> that serializes callers per key using a
+/// A deterministic in-memory <see cref="IDistributedLockProvider"/> that serializes callers per key using a
 /// real semaphore, so concurrency tests can prove that locked critical sections cannot interleave.
 /// </summary>
-internal sealed class FakeDistributedLock : IDistributedLock
+internal sealed class FakeDistributedLockProvider : IDistributedLockProvider
 {
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new(StringComparer.Ordinal);
     private readonly ConcurrentQueue<string> _acquiredKeys = new();
@@ -56,32 +55,33 @@ internal sealed class FakeDistributedLock : IDistributedLock
         }
     }
 
-    public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null)
+    public async Task<ILocker> AcquireLockAsync(string key, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
     {
         RecordAttempt(key);
 
         var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
-        await semaphore.WaitAsync();
+        await semaphore.WaitAsync(cancellationToken);
 
         return new FakeLocker(() => semaphore.Release());
     }
 
-    public async Task<(ILocker locker, bool locked)> TryAcquireLockAsync(
+    public async Task<(ILocker Locker, bool Locked)> TryAcquireLockAsync(
         string key,
         TimeSpan timeout,
-        TimeSpan? expiration = null)
+        TimeSpan? expiration = null,
+        CancellationToken cancellationToken = default)
     {
         RecordAttempt(key);
 
         var semaphore = _locks.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
-        var locked = await semaphore.WaitAsync(timeout);
+        var locked = await semaphore.WaitAsync(timeout, cancellationToken);
 
         return locked
             ? (new FakeLocker(() => semaphore.Release()), true)
             : (null, false);
     }
 
-    public Task<bool> IsLockAcquiredAsync(string key)
+    public Task<bool> IsLockAcquiredAsync(string key, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(
             _locks.TryGetValue(key, out var semaphore) &&

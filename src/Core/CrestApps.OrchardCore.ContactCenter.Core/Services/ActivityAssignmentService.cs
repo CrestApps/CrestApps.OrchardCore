@@ -1,9 +1,9 @@
+using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
 
@@ -25,7 +25,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly IActivityReservationService _reservationService;
     private readonly IBusinessHoursService _businessHours;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly ISession _session;
     private readonly TimeProvider _timeProvider;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
@@ -53,7 +53,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IActivityReservationService reservationService,
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         ISession session,
         TimeProvider timeProvider,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
@@ -81,7 +81,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
             _coordinationOptions.AssignmentLockTimeout,
-            _coordinationOptions.AssignmentLockExpiration);
+            _coordinationOptions.AssignmentLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -108,7 +109,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
             _coordinationOptions.AssignmentLockTimeout,
-            _coordinationOptions.AssignmentLockExpiration);
+            _coordinationOptions.AssignmentLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -150,7 +152,8 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             GetQueueLockKey(queueId),
             _coordinationOptions.AssignmentLockTimeout,
-            _coordinationOptions.AssignmentLockExpiration);
+            _coordinationOptions.AssignmentLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

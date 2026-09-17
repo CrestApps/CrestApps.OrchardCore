@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -12,7 +13,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using System.Text.Json.Nodes;
 
@@ -1328,7 +1328,7 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IProviderCommandProcessor> ProviderCommandProcessor { get; } = new();
 
-        public Mock<IDistributedLock> DistributedLock { get; } = new();
+        public Mock<IDistributedLockProvider> DistributedLock { get; } = new();
 
         public TestContactCenterScopeExecutor ScopeExecutor { get; }
 
@@ -1342,7 +1342,7 @@ public sealed class InboundVoiceServiceTests
             };
 
             DistributedLock
-                .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+                .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((null, true));
 
             // Queues admit everybody unless a test says otherwise; a size limit is the exception, not the rule.

@@ -1,8 +1,8 @@
-﻿using CrestApps.Core.Support;
+﻿using CrestApps.Core.Locking;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -20,7 +20,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     private readonly IAgentWorkStateHealingService _agentWorkStateHealingService;
     private readonly IAgentEntitlementPolicy _entitlementPolicy;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly IDistributedLock _distributedLock;
+    private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
@@ -42,7 +42,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         IAgentWorkStateHealingService agentWorkStateHealingService,
         IAgentEntitlementPolicy entitlementPolicy,
         IContactCenterEventPublisher publisher,
-        IDistributedLock distributedLock,
+        IDistributedLockProvider distributedLock,
         TimeProvider timeProvider,
         ILogger<AgentPresenceManagerService> logger)
     {
@@ -82,7 +82,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -145,7 +146,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -246,7 +248,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -308,7 +311,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -375,7 +379,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(userId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -440,7 +445,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(profile.UserId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -493,7 +499,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(profile.UserId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {
@@ -600,7 +607,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
             AgentProfileLock.GetKey(profile.UserId),
             _signInLockTimeout,
-            _signInLockExpiration);
+            _signInLockExpiration,
+            cancellationToken);
 
         if (!locked)
         {

@@ -1,3 +1,4 @@
+using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
@@ -13,7 +14,6 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Environment.Shell;
-using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -451,9 +451,9 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
             resolver.Setup(value => value.GetAsync("provider-1")).ReturnsAsync((ITelephonyProvider)null);
         }
 
-        var distributedLock = new Mock<IDistributedLock>();
+        var distributedLock = new Mock<IDistributedLockProvider>();
         distributedLock
-            .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
+            .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, lockAcquired));
         var clock = new FakeTimeProvider();
         clock.SetUtcNow(_now);
