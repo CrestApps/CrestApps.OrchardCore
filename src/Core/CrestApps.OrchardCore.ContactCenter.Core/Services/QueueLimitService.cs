@@ -14,7 +14,7 @@ public sealed class QueueLimitService : IQueueLimitService
     private readonly IActivityQueueManager _queueManager;
     private readonly IActivityQueueService _queueService;
     private readonly IWaitingCallVoicemailSink _voicemailSink;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -24,21 +24,21 @@ public sealed class QueueLimitService : IQueueLimitService
     /// <param name="queueManager">The queue manager, used to validate overflow targets.</param>
     /// <param name="queueService">The queue service that moves a caller between queues.</param>
     /// <param name="voicemailSink">The sink that moves a waiting caller into voicemail.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public QueueLimitService(
         IQueueItemManager queueItemManager,
         IActivityQueueManager queueManager,
         IActivityQueueService queueService,
         IWaitingCallVoicemailSink voicemailSink,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<QueueLimitService> logger)
     {
         _queueItemManager = queueItemManager;
         _queueManager = queueManager;
         _queueService = queueService;
         _voicemailSink = voicemailSink;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -108,7 +108,7 @@ public sealed class QueueLimitService : IQueueLimitService
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var applied = 0;
 
         foreach (var item in waiting)

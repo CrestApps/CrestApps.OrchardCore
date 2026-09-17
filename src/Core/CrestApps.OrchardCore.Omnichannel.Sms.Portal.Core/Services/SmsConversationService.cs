@@ -34,7 +34,7 @@ public sealed class SmsConversationService : ISmsConversationService
     private readonly ISmsConversationAuthorizationService _conversationAuthorizationService;
     private readonly ISession _session;
     private readonly ISmsFirstResponseSlaService _slaService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly Redactor _addressRedactor;
     private readonly ILogger _logger;
 
@@ -50,7 +50,7 @@ public sealed class SmsConversationService : ISmsConversationService
         ISmsConversationAuthorizationService conversationAuthorizationService,
         ISession session,
         ISmsFirstResponseSlaService slaService,
-        IClock clock,
+        TimeProvider timeProvider,
         IRedactorProvider redactorProvider,
         ILogger<SmsConversationService> logger)
     {
@@ -62,7 +62,7 @@ public sealed class SmsConversationService : ISmsConversationService
         _conversationAuthorizationService = conversationAuthorizationService;
         _session = session;
         _slaService = slaService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
         _logger = logger;
     }
@@ -102,7 +102,7 @@ public sealed class SmsConversationService : ISmsConversationService
             CustomerAddress = conversation.ContactAddress,
             ServiceAddress = conversation.ServiceAddress,
             Content = request.Body,
-            CreatedUtc = _clock.UtcNow,
+            CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             IsInbound = false,
             ConversationId = conversation.ItemId,
             SentByAgentId = request.ActingAgentId,
@@ -130,7 +130,7 @@ public sealed class SmsConversationService : ISmsConversationService
         // customer is no longer waiting for a first reply.
         conversation.AssignedUtc = null;
         conversation.ReassignmentAttempts = 0;
-        conversation.ModifiedUtc = _clock.UtcNow;
+        conversation.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         _slaService.MarkResponded(conversation);
 
         if (!string.IsNullOrEmpty(request.ActingAgentId) &&
@@ -188,7 +188,7 @@ public sealed class SmsConversationService : ISmsConversationService
                 AssignmentStatus = string.IsNullOrEmpty(actingAgentId)
                     ? SmsConversationAssignmentStatus.Unassigned
                     : SmsConversationAssignmentStatus.Assigned,
-                CreatedUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 ContactContentItemId = await _contactResolver.ResolveContactContentItemIdAsync(contactAddress, cancellationToken),
             };
         }
@@ -205,7 +205,7 @@ public sealed class SmsConversationService : ISmsConversationService
             CustomerAddress = conversation.ContactAddress,
             ServiceAddress = conversation.ServiceAddress,
             Content = body,
-            CreatedUtc = _clock.UtcNow,
+            CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             IsInbound = false,
             ConversationId = conversation.ItemId,
             SentByAgentId = actingAgentId,
@@ -226,7 +226,7 @@ public sealed class SmsConversationService : ISmsConversationService
         conversation.LastMessageUtc = message.CreatedUtc;
         conversation.LastMessagePreview = SmsConversationRollup.BuildPreview(body);
         conversation.IsRead = true;
-        conversation.ModifiedUtc = _clock.UtcNow;
+        conversation.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         _slaService.MarkResponded(conversation);
 
         // Reopen a closed/snoozed thread when the agent messages the contact again.
@@ -397,7 +397,7 @@ public sealed class SmsConversationService : ISmsConversationService
         }
 
         conversation.Status = status;
-        conversation.ModifiedUtc = _clock.UtcNow;
+        conversation.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
 
@@ -416,7 +416,7 @@ public sealed class SmsConversationService : ISmsConversationService
             conversation.OwnerId = agentId;
         }
 
-        conversation.ModifiedUtc = _clock.UtcNow;
+        conversation.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
 
@@ -485,7 +485,7 @@ public sealed class SmsConversationService : ISmsConversationService
 
         if (SmsOutboundDeliveryState.CanRetry(state.Attempts))
         {
-            state.NextAttemptUtc = _clock.UtcNow.Add(SmsOutboundDeliveryState.GetDelay(state.Attempts));
+            state.NextAttemptUtc = _timeProvider.GetUtcNow().UtcDateTime.Add(SmsOutboundDeliveryState.GetDelay(state.Attempts));
 
             message.DeliveryStatus = SmsDeliveryStatus.Queued.ToString();
         }

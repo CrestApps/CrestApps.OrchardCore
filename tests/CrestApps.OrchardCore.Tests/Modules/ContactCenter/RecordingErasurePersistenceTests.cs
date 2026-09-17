@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using YesSql;
 using YesSql.Provider.Sqlite;
@@ -155,7 +156,7 @@ public sealed class RecordingErasurePersistenceTests
             eventStore,
             outbox,
             scopeExecutor.Object,
-            new StubClock(_erasedUtc),
+            new FakeTimeProvider(_erasedUtc),
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
 
         return CreateService(session, publisher);
@@ -178,7 +179,7 @@ public sealed class RecordingErasurePersistenceTests
             interactionManager,
             callSessionManager,
             publisher,
-            new StubClock(_erasedUtc));
+            new FakeTimeProvider(_erasedUtc));
     }
 
     private static DefaultContactCenterEventPublisher CreatePublisher(ISession session)
@@ -192,14 +193,14 @@ public sealed class RecordingErasurePersistenceTests
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
             session,
-            new StubClock(_erasedUtc),
+            new FakeTimeProvider(_erasedUtc),
             NullLogger<ContactCenterOutbox>.Instance);
 
         return new DefaultContactCenterEventPublisher(
             eventStore,
             outbox,
             scopeExecutor.Object,
-            new StubClock(_erasedUtc),
+            new FakeTimeProvider(_erasedUtc),
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
     }
 
@@ -270,7 +271,7 @@ public sealed class RecordingErasurePersistenceTests
         };
         var outboxMigration = new ContactCenterOutboxMessageIndexMigrations(
             store,
-            new StubClock(_erasedUtc))
+            new FakeTimeProvider(_erasedUtc))
         {
             SchemaBuilder = schemaBuilder,
         };

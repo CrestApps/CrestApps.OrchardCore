@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
 {
     private readonly IStore _store;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
 
     /// <summary>
@@ -25,10 +25,10 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
     public ProviderWebhookInboxMessageIndexMigrations(
         IStore store,
         IProviderIdentityResolver providerIdentityResolver,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _store = store;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _providerIdentityResolver = providerIdentityResolver;
     }
 
@@ -95,7 +95,7 @@ internal sealed class ProviderWebhookInboxMessageIndexMigrations : DataMigration
             _store,
             typeof(ProviderWebhookInboxMessageIndex),
             "ProcessedUtc",
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             settledRowsFilter: $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({(int)ProviderWebhookInboxStatus.Completed}, {(int)ProviderWebhookInboxStatus.DeadLettered})");
 
         await SchemaBuilder.AlterIndexTableAsync<ProviderWebhookInboxMessageIndex>(table => table

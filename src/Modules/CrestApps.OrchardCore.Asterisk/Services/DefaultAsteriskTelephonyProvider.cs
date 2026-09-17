@@ -23,7 +23,7 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
     /// <param name="options">The configuration-backed default Asterisk options.</param>
     /// <param name="shellSettings">The current tenant shell settings used to scope the ARI application name.</param>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -31,11 +31,11 @@ internal sealed class DefaultAsteriskTelephonyProvider : AsteriskTelephonyProvid
         IOptions<DefaultAsteriskOptions> options,
         ShellSettings shellSettings,
         IHttpClientFactory httpClientFactory,
-        IClock clock,
+        TimeProvider timeProvider,
         IRedactorProvider redactorProvider,
         ILogger<DefaultAsteriskTelephonyProvider> logger,
         IStringLocalizer<DefaultAsteriskTelephonyProvider> stringLocalizer)
-        : base(httpClientFactory, clock, redactorProvider, logger, stringLocalizer)
+        : base(httpClientFactory, timeProvider, redactorProvider, logger, stringLocalizer)
     {
         _options = options.Value;
         _shellSettings = shellSettings;

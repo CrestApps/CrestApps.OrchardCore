@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking;
@@ -220,8 +221,8 @@ public sealed class InboundVoiceVoicemailDispatchTests
                 })
                 .Returns(true);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 9, 6, 21, 34, 8, DateTimeKind.Utc));
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(new DateTime(2026, 9, 6, 21, 34, 8, DateTimeKind.Utc));
 
             QueueService = new Mock<IActivityQueueService>();
 
@@ -244,7 +245,7 @@ public sealed class InboundVoiceVoicemailDispatchTests
                 new Mock<IDistributedLock>().Object,
                 scopeExecutor.Object,
                 new Mock<IContactCenterFeatureWorkManager>().Object,
-                clock.Object,
+                clock,
                 Options.Create(new ContactCenterCoordinationOptions()));
         }
 

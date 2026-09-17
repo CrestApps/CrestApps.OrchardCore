@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -115,15 +116,15 @@ public sealed class VoiceRoutingRoundTripBudgetTests
                 .ReturnsAsync((IReadOnlyCollection<string> ids, CancellationToken _) =>
                     ids.ToDictionary(id => id, _ => 0, StringComparer.Ordinal));
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(x => x.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             Service = new AgentAvailabilityService(
                 AgentManager.Object,
                 SessionManager.Object,
                 InteractionManager.Object,
                 new OptionsWrapper<AgentAvailabilityOptions>(new AgentAvailabilityOptions()),
-                clock.Object);
+                clock);
         }
 
         public AgentAvailabilityService Service { get; }

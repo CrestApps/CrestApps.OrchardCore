@@ -16,7 +16,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly IRecordingGovernancePolicy _governancePolicy;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRecordingService"/> class.
@@ -26,21 +26,21 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="governancePolicy">The recording governance policy that gates recording and resolves retention metadata.</param>
-    /// <param name="clock">The clock used to stamp the secure-pause timestamp read by the auto-resume guard.</param>
+    /// <param name="timeProvider">The time provider used to stamp the secure-pause timestamp read by the auto-resume guard.</param>
     public ContactCenterRecordingService(
         IInteractionManager interactionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
         IRecordingGovernancePolicy governancePolicy,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _interactionManager = interactionManager;
         _voiceProviderResolver = voiceProviderResolver;
         _publisher = publisher;
         _commandExecutor = commandExecutor;
         _governancePolicy = governancePolicy;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -185,7 +185,7 @@ public sealed class ContactCenterRecordingService : IContactCenterRecordingServi
         // recording is never mistaken for a pause that has outlived its window.
         if (state == RecordingState.Paused)
         {
-            interaction.RecordingPausedUtc = _clock.UtcNow;
+            interaction.RecordingPausedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         }
         else
         {

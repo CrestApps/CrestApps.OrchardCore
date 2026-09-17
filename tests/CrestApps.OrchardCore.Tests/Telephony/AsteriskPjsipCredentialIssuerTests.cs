@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
@@ -55,15 +56,15 @@ public sealed class AsteriskPjsipCredentialIssuerTests
     {
         // Arrange
         var cache = new FakeDistributedCache();
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var now = new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc);
-        clock.SetupGet(value => value.UtcNow).Returns(now);
+        clock.SetUtcNow(now);
         var tenantAStore = new TestRealtimeCredentialStore();
         var tenantAIssuer = CreateIssuer("TenantA", cache, clock, tenantAStore);
         var tenantBIssuer = CreateIssuer("TenantB", cache, clock, new TestRealtimeCredentialStore());
         var expired = await tenantAIssuer.IssueAsync(CreateRequest(lifetime: TimeSpan.FromMinutes(1)), TestContext.Current.CancellationToken);
         await tenantBIssuer.IssueAsync(CreateRequest(lifetime: TimeSpan.FromMinutes(1)), TestContext.Current.CancellationToken);
-        clock.SetupGet(value => value.UtcNow).Returns(now.AddMinutes(2));
+        clock.SetUtcNow(now.AddMinutes(2));
 
         // Act
         var removed = await tenantAIssuer.CleanupExpiredAsync(TestContext.Current.CancellationToken);
@@ -100,16 +101,16 @@ public sealed class AsteriskPjsipCredentialIssuerTests
     {
         // Arrange
         var cache = new FakeDistributedCache();
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var now = new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc);
-        clock.SetupGet(value => value.UtcNow).Returns(now);
+        clock.SetUtcNow(now);
         var store = new TestRealtimeCredentialStore();
         var issuer = CreateIssuer("TenantA", cache, clock, store);
         var credential = await issuer.IssueAsync(CreateRequest(lifetime: TimeSpan.FromMinutes(1)), TestContext.Current.CancellationToken);
 
         // Evict the cache so the only remaining source of expiry is the durable lease.
         cache.Clear();
-        clock.SetupGet(value => value.UtcNow).Returns(now.AddMinutes(2));
+        clock.SetUtcNow(now.AddMinutes(2));
 
         // Act
         var removed = await issuer.CleanupExpiredAsync(TestContext.Current.CancellationToken);
@@ -126,9 +127,9 @@ public sealed class AsteriskPjsipCredentialIssuerTests
         // Arrange: two tenants whose sanitized prefixes collide ("cc-acme-" is a prefix of
         // "cc-acme-east-...") share ONE realtime store but have separate, tenant-isolated lease stores.
         var cache = new FakeDistributedCache();
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var now = new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc);
-        clock.SetupGet(value => value.UtcNow).Returns(now);
+        clock.SetUtcNow(now);
         var sharedRealtimeStore = new TestRealtimeCredentialStore();
         var acmeIssuer = CreateIssuer("acme", cache, clock, sharedRealtimeStore, leaseStore: new FakeCredentialLeaseStore());
         var acmeEastIssuer = CreateIssuer("acme-east", cache, clock, sharedRealtimeStore, leaseStore: new FakeCredentialLeaseStore());
@@ -136,7 +137,7 @@ public sealed class AsteriskPjsipCredentialIssuerTests
         var acmeEastCredential = await acmeEastIssuer.IssueAsync(CreateRequest(lifetime: TimeSpan.FromMinutes(1)), TestContext.Current.CancellationToken);
 
         // Both credentials are now expired, but tenant "acme" must only ever reclaim its own rows.
-        clock.SetupGet(value => value.UtcNow).Returns(now.AddMinutes(2));
+        clock.SetUtcNow(now.AddMinutes(2));
 
         // Act
         var removed = await acmeIssuer.CleanupExpiredAsync(TestContext.Current.CancellationToken);
@@ -315,7 +316,7 @@ public sealed class AsteriskPjsipCredentialIssuerTests
     private static TestIssuer CreateIssuer(
         string tenantName,
         IDistributedCache cache = null,
-        Mock<IClock> clock = null,
+        FakeTimeProvider clock = null,
         TestRealtimeCredentialStore store = null,
         TestDialogTerminator terminator = null,
         FakeCredentialLeaseStore leaseStore = null)
@@ -324,14 +325,14 @@ public sealed class AsteriskPjsipCredentialIssuerTests
     private static TestIssuer CreateIssuer(
         string tenantName,
         IDistributedCache cache,
-        Mock<IClock> clock,
+        FakeTimeProvider clock,
         IAsteriskPjsipRealtimeCredentialStore store,
         TestDialogTerminator terminator = null,
         FakeCredentialLeaseStore leaseStore = null)
     {
         cache ??= new FakeDistributedCache();
-        clock ??= new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
+        clock ??= new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
         store ??= new TestRealtimeCredentialStore();
         terminator ??= new TestDialogTerminator();
         leaseStore ??= new FakeCredentialLeaseStore();
@@ -346,7 +347,7 @@ public sealed class AsteriskPjsipCredentialIssuerTests
                 cache,
                 tagCache.Object,
                 new FakeDistributedLock(),
-                clock.Object,
+                clock,
                 new ShellSettings { Name = tenantName },
                 store,
                 leaseStore,

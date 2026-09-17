@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -58,8 +59,8 @@ public sealed class ProviderWebhookInboxTombstoneTests
         SameScopeExecutor scopeExecutor,
         CountingWebhookHandler handler)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new ProviderWebhookInbox(
             [handler],
@@ -68,7 +69,7 @@ public sealed class ProviderWebhookInboxTombstoneTests
             CreateDistributedLock(),
             new ProviderIdentityResolver([]),
             scopeExecutor,
-            clock.Object,
+            clock,
             Options.Create(new ContactCenterRetentionOptions()),
             NullLogger<ProviderWebhookInbox>.Instance);
     }

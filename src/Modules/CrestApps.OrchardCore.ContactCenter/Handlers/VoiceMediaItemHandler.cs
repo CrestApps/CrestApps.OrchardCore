@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 internal sealed class VoiceMediaItemHandler : CatalogEntryHandlerBase<VoiceMediaItem>
 {
     private readonly IVoiceMediaItemStore _store;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -28,22 +28,22 @@ internal sealed class VoiceMediaItemHandler : CatalogEntryHandlerBase<VoiceMedia
     /// Initializes a new instance of the <see cref="VoiceMediaItemHandler"/> class.
     /// </summary>
     /// <param name="store">The media library store used to check name uniqueness.</param>
-    /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="timeProvider">The time provider used to stamp audit times.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public VoiceMediaItemHandler(
         IVoiceMediaItemStore store,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<VoiceMediaItemHandler> stringLocalizer)
     {
         _store = store;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<VoiceMediaItem> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }
@@ -51,7 +51,7 @@ internal sealed class VoiceMediaItemHandler : CatalogEntryHandlerBase<VoiceMedia
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<VoiceMediaItem> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }

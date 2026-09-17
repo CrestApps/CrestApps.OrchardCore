@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -163,7 +164,7 @@ public sealed class BusinessHoursServiceTests
             .Setup(m => m.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(calendar);
 
-        return new DefaultBusinessHoursService(manager.Object, new StubClock());
+        return new DefaultBusinessHoursService(manager.Object, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
     }
 
     private static BusinessHoursCalendar WeekdayCalendar(DayOfWeek day, int openMinute, int closeMinute)

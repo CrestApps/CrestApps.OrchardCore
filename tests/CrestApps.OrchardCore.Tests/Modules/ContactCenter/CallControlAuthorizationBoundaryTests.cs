@@ -1,11 +1,12 @@
-using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -131,8 +132,8 @@ public sealed class CallControlAuthorizationBoundaryTests
         ICallControlAuthorizationService authorization,
         Mock<ITelephonyService> telephonyService = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new RejectProviderCommandTypeExecutor(
             [(telephonyService ?? new Mock<ITelephonyService>(MockBehavior.Loose)).Object],
@@ -142,7 +143,7 @@ public sealed class CallControlAuthorizationBoundaryTests
             new FakeContactCenterWorkStateService(),
             Mock.Of<IContactCenterActivityWriter>(),
             Mock.Of<IContactCenterEventPublisher>(),
-            clock.Object,
+            clock,
             authorization);
     }
 
@@ -281,8 +282,8 @@ public sealed class CallControlAuthorizationBoundaryTests
         ICallControlAuthorizationService authorization,
         Mock<IInteractionManager> interactionManager = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         interactionManager ??= new Mock<IInteractionManager>(MockBehavior.Loose);
 
         return commandType switch
@@ -295,7 +296,7 @@ public sealed class CallControlAuthorizationBoundaryTests
                 new FakeContactCenterWorkStateService(),
                 Mock.Of<IContactCenterActivityWriter>(),
                 Mock.Of<IContactCenterEventPublisher>(),
-                clock.Object,
+                clock,
                 authorization),
             ProviderCommandType.SendToVoicemail => new SendToVoicemailProviderCommandTypeExecutor(
                 [telephonyService.Object],
@@ -305,7 +306,7 @@ public sealed class CallControlAuthorizationBoundaryTests
                 new FakeContactCenterWorkStateService(),
                 Mock.Of<IContactCenterActivityWriter>(),
                 Mock.Of<IContactCenterEventPublisher>(),
-                clock.Object,
+                clock,
                 authorization),
             _ => throw new ArgumentOutOfRangeException(nameof(commandType)),
         };

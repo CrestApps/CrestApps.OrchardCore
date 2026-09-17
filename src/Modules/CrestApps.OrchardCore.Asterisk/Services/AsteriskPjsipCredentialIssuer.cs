@@ -31,7 +31,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
     private readonly IDistributedCache _cache;
     private readonly ITagCache _tagCache;
     private readonly IDistributedLock _distributedLock;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ShellSettings _shellSettings;
     private readonly IAsteriskPjsipRealtimeCredentialStore _realtimeStore;
     private readonly IAsteriskPjsipCredentialLeaseStore _leaseStore;
@@ -43,7 +43,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
         IDistributedCache cache,
         ITagCache tagCache,
         IDistributedLock distributedLock,
-        IClock clock,
+        TimeProvider timeProvider,
         ShellSettings shellSettings,
         IAsteriskPjsipRealtimeCredentialStore realtimeStore,
         IAsteriskPjsipCredentialLeaseStore leaseStore,
@@ -53,7 +53,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
         _cache = cache;
         _tagCache = tagCache;
         _distributedLock = distributedLock;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _shellSettings = shellSettings;
         _realtimeStore = realtimeStore;
         _leaseStore = leaseStore;
@@ -181,7 +181,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
         AsteriskPjsipCredentialIssueRequest request,
         CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var expiresAtUtc = now.Add(request.CredentialLifetime);
         var tenantName = GetTenantName();
         var userId = request.UserId.Trim();
@@ -323,7 +323,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
         string reason,
         CancellationToken cancellationToken)
     {
-        var leases = await _leaseStore.ListLiveBySessionAsync(sessionId, _clock.UtcNow, cancellationToken);
+        var leases = await _leaseStore.ListLiveBySessionAsync(sessionId, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
         foreach (var lease in leases)
         {
@@ -333,7 +333,7 @@ internal sealed class AsteriskPjsipCredentialIssuer : IAsteriskPjsipCredentialIs
 
     private async Task<int> CleanupCoreAsync(CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Cleanup queries ONLY the current tenant's durable leases (never a LIKE prefix scan over the
         // shared PJSIP Realtime table) and deletes each corresponding realtime row by EXACT authorization

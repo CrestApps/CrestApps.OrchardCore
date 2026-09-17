@@ -1,10 +1,11 @@
-using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -60,9 +61,9 @@ public sealed class InteractionHandlerTests
 
     private static InteractionHandler CreateHandler()
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
-        return new InteractionHandler(Mock.Of<IHttpContextAccessor>(), clock.Object);
+        return new InteractionHandler(Mock.Of<IHttpContextAccessor>(), clock);
     }
 }

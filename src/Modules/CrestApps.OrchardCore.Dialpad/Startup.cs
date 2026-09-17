@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Dialpad.Drivers;
 using CrestApps.OrchardCore.Dialpad.Endpoints;
 using CrestApps.OrchardCore.Dialpad.Services;
@@ -21,6 +22,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         services.AddHttpClient(DialpadConstants.ProviderTechnicalName)
             .AddStandardResilienceHandler(options =>
             {

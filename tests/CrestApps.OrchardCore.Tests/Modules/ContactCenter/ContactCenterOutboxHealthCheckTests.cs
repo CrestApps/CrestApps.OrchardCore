@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -120,13 +121,13 @@ public sealed class ContactCenterOutboxHealthCheckTests
 
     private static ContactCenterOutboxHealthCheck CreateCheck(ISession session)
     {
-        var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new ContactCenterOutboxHealthCheck(
             new ContactCenterOutboxStore(session),
             Options.Create(new ContactCenterHealthCheckOptions()),
-            clock.Object);
+            clock);
     }
 
     private static async Task<IStore> CreateStoreAsync(string databasePath)

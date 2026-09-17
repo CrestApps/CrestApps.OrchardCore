@@ -20,7 +20,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
 
@@ -29,7 +29,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILocalClock localClock,
         ILogger<DefaultSubjectActionExecutor> logger)
     {
@@ -37,7 +37,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _localClock = localClock;
         _logger = logger;
     }
@@ -113,7 +113,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var nextAttempt = new OmnichannelActivity
         {
             ItemId = IdGenerator.GenerateId(),
@@ -171,7 +171,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
         var flowSettings = await FindFlowSettingsForSubjectAsync(targetSubjectContentType);
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var newActivity = new OmnichannelActivity
         {
             ItemId = IdGenerator.GenerateId(),
@@ -247,7 +247,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         contact.Alter<OmnichannelContactPart>(part =>
         {
@@ -296,10 +296,10 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
         if (defaultScheduleHours.HasValue)
         {
-            return _clock.UtcNow.AddHours(defaultScheduleHours.Value);
+            return _timeProvider.GetUtcNow().UtcDateTime.AddHours(defaultScheduleHours.Value);
         }
 
-        return _clock.UtcNow.AddDays(1);
+        return _timeProvider.GetUtcNow().UtcDateTime.AddDays(1);
     }
 
     private static string ResolvePreparationNotes(

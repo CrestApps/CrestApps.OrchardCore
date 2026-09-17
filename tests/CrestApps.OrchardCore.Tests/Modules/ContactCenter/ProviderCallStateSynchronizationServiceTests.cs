@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -325,8 +326,8 @@ public sealed class ProviderCallStateSynchronizationServiceTests
         distributedLock
             .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((null, true));
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new ProviderCallStateSynchronizationService(
             interactionManager.Object,
@@ -335,7 +336,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             new Mock<IProviderVoiceOfferSynchronizationService>().Object,
             resolver.Object,
             distributedLock.Object,
-            clock.Object,
+            clock,
             NullLogger<ProviderCallStateSynchronizationService>.Instance);
     }
 
@@ -350,8 +351,8 @@ public sealed class ProviderCallStateSynchronizationServiceTests
         distributedLock
             .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((null, true));
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new ProviderCallStateSynchronizationService(
             interactionManager.Object,
@@ -360,7 +361,7 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             offerSynchronizationService.Object,
             resolver.Object,
             distributedLock.Object,
-            clock.Object,
+            clock,
             NullLogger<ProviderCallStateSynchronizationService>.Instance);
     }
 

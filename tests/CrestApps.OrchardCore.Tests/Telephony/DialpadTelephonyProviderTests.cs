@@ -1,5 +1,3 @@
-using System.Net;
-using System.Text.Json;
 using CrestApps.OrchardCore.Dialpad;
 using CrestApps.OrchardCore.Dialpad.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
@@ -8,7 +6,10 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
+using System.Net;
+using System.Text.Json;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -179,7 +180,7 @@ public sealed class DialpadTelephonyProviderTests
         var provider = new DialpadTelephonyProvider(
             new StubHttpClientFactory(handler),
             Mock.Of<ITelephonyAuthenticationService>(),
-            new StubClock(),
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
             NullLogger<DialpadTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<DialpadTelephonyProvider>(),
             CreateResolvedOptions(settings, new EphemeralDataProtectionProvider()));
@@ -354,7 +355,7 @@ public sealed class DialpadTelephonyProviderTests
         return new DialpadTelephonyProvider(
             new StubHttpClientFactory(handler),
             Mock.Of<ITelephonyAuthenticationService>(),
-            new StubClock(),
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
             NullLogger<DialpadTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<DialpadTelephonyProvider>(),
             CreateResolvedOptions(settings, dataProtectionProvider));
@@ -695,7 +696,7 @@ public sealed class DialpadTelephonyProviderTests
         var provider = new DialpadTelephonyProvider(
             new StubHttpClientFactory(new StubHttpMessageHandler(HttpStatusCode.OK)),
             Mock.Of<ITelephonyAuthenticationService>(),
-            new StubClock(),
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
             NullLogger<DialpadTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<DialpadTelephonyProvider>(),
             CreateResolvedOptions(settings, dataProtectionProvider));
@@ -749,7 +750,7 @@ public sealed class DialpadTelephonyProviderTests
         return new DialpadTelephonyProvider(
             new StubHttpClientFactory(handler),
             authenticationService ?? Mock.Of<ITelephonyAuthenticationService>(),
-            new StubClock(),
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
             NullLogger<DialpadTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<DialpadTelephonyProvider>(),
             CreateResolvedOptions(settings, dataProtectionProvider));

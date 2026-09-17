@@ -13,22 +13,22 @@ public sealed class ContactCenterOutboxHealthCheck : IHealthCheck
 {
     private readonly IContactCenterOutboxStore _outboxStore;
     private readonly ContactCenterHealthCheckOptions _options;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterOutboxHealthCheck"/> class.
     /// </summary>
     /// <param name="outboxStore">The durable outbox message store.</param>
     /// <param name="options">The configured health-check thresholds.</param>
-    /// <param name="clock">The clock used to select overdue messages.</param>
+    /// <param name="timeProvider">The time provider used to select overdue messages.</param>
     public ContactCenterOutboxHealthCheck(
         IContactCenterOutboxStore outboxStore,
         IOptions<ContactCenterHealthCheckOptions> options,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _outboxStore = outboxStore;
         _options = options.Value;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -39,7 +39,7 @@ public sealed class ContactCenterOutboxHealthCheck : IHealthCheck
         try
         {
             var deadLettered = await _outboxStore.CountByStatusAsync(OutboxMessageStatus.DeadLettered, cancellationToken);
-            var overdue = await _outboxStore.CountOverdueAsync(_clock.UtcNow, cancellationToken);
+            var overdue = await _outboxStore.CountOverdueAsync(_timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
             return BacklogHealthEvaluator.Evaluate("Contact Center event outbox", deadLettered, overdue, _options);
         }

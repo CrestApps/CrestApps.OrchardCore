@@ -1,14 +1,15 @@
-using System.Data.Common;
-using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Npgsql;
 using OrchardCore.Modules;
+using System.Data.Common;
+using System.Text.Json;
 using YesSql;
 using YesSql.Provider.PostgreSql;
 using YesSql.Sql;
@@ -201,12 +202,12 @@ public sealed class QueueItemPostgresQueryPlanBudgetTests
         await migration.UpdateFrom3Async();
     }
 
-    private static IClock CreateClock()
+    private static FakeTimeProvider CreateClock()
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
 
-        return clock.Object;
+        return clock;
     }
 
     private static async Task SeedAsync(IConfiguration configuration, DbTransaction transaction, CancellationToken cancellationToken)

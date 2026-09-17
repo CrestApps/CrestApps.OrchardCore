@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using System.Data.Common;
 using System.Globalization;
 using System.Reflection;
@@ -671,9 +672,9 @@ public sealed class ContactCenterRollingUpgradeTests
                     {
                         arguments.Add(recipeMigrator.Object);
                     }
-                    else if (parameter.ParameterType == typeof(IClock))
+                    else if (parameter.ParameterType == typeof(TimeProvider))
                     {
-                        arguments.Add(new StubClock());
+                        arguments.Add(new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
                     }
                     else
                     {

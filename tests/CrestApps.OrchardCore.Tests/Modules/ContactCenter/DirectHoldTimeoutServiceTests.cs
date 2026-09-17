@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -187,8 +188,8 @@ public sealed class DirectHoldTimeoutServiceTests
 
         public DirectHoldTimeoutService CreateService()
         {
-            var clock = new Mock<IClock>();
-            clock.SetupGet(x => x.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             return new DirectHoldTimeoutService(
                 QueueItemManager.Object,
@@ -196,7 +197,7 @@ public sealed class DirectHoldTimeoutServiceTests
                 Processor.Object,
                 InboundVoiceService.Object,
                 Session.Object,
-                clock.Object,
+                clock,
                 NullLogger<DirectHoldTimeoutService>.Instance);
         }
     }

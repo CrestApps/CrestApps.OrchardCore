@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -26,8 +27,8 @@ public sealed class AsteriskSoftPhoneRegistrationConfigContributorTests
         // Arrange
         var expiresAtUtc = new DateTime(2026, 7, 16, 12, 15, 0, DateTimeKind.Utc);
         var issuer = new TestCredentialIssuer(expiresAtUtc);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
         var contributor = CreateContributor(
             new DefaultAsteriskOptions
             {
@@ -44,7 +45,7 @@ public sealed class AsteriskSoftPhoneRegistrationConfigContributorTests
                 PjsipRealtimeConnectionString = "Data Source=asterisk.db",
             },
             issuer,
-            clock.Object);
+            clock);
 
         // Act
         var config = await contributor.BuildAsync(new SoftPhoneRegistrationConfigContext
@@ -84,7 +85,7 @@ public sealed class AsteriskSoftPhoneRegistrationConfigContributorTests
         var contributor = CreateContributor(
             new DefaultAsteriskOptions { IsEnabled = true },
             new TestCredentialIssuer(new DateTime(2026, 7, 16, 12, 15, 0, DateTimeKind.Utc)),
-            Mock.Of<IClock>());
+            Mock.Of<TimeProvider>());
 
         // Act
         var config = await contributor.BuildAsync(new SoftPhoneRegistrationConfigContext
@@ -104,13 +105,13 @@ public sealed class AsteriskSoftPhoneRegistrationConfigContributorTests
     {
         // Arrange
         var expiresAtUtc = new DateTime(2026, 7, 16, 12, 15, 0, DateTimeKind.Utc);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
 
         var contributor = CreateContributor(
             CreateWebRtcOptions(PublishedDevelopmentTurnSecret),
             new TestCredentialIssuer(expiresAtUtc),
-            clock.Object,
+            clock,
             Environments.Production);
 
         // Act
@@ -137,13 +138,13 @@ public sealed class AsteriskSoftPhoneRegistrationConfigContributorTests
     {
         // Arrange
         var expiresAtUtc = new DateTime(2026, 7, 16, 12, 15, 0, DateTimeKind.Utc);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
 
         var contributor = CreateContributor(
             CreateWebRtcOptions(PublishedDevelopmentTurnSecret),
             new TestCredentialIssuer(expiresAtUtc),
-            clock.Object,
+            clock,
             Environments.Development);
 
         // Act
@@ -181,7 +182,7 @@ public sealed class AsteriskSoftPhoneRegistrationConfigContributorTests
 
     private static AsteriskSoftPhoneRegistrationConfigContributor CreateContributor(DefaultAsteriskOptions options,
         IAsteriskPjsipCredentialIssuer issuer,
-        IClock clock,
+        TimeProvider clock,
         string environmentName = null)
         => new(
             SiteServiceFactory.Create(new AsteriskSettings()),

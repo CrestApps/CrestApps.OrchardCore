@@ -15,7 +15,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
     private readonly IContactCenterMetricStore _metricStore;
     private readonly IContactCenterMetricDeltaStore _deltaStore;
     private readonly IContactCenterProjectionCheckpointStore _checkpointStore;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMetricsProjectionMaintenanceService"/> class.
@@ -24,19 +24,19 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
     /// <param name="metricStore">The daily metric projection store.</param>
     /// <param name="deltaStore">The store holding contributions that have not been folded into the totals yet.</param>
     /// <param name="checkpointStore">The projection replay checkpoint store.</param>
-    /// <param name="clock">The clock used to stamp metric and checkpoint times.</param>
+    /// <param name="timeProvider">The time provider used to stamp metric and checkpoint times.</param>
     public ContactCenterMetricsProjectionMaintenanceService(
         IInteractionEventStore eventStore,
         IContactCenterMetricStore metricStore,
         IContactCenterMetricDeltaStore deltaStore,
         IContactCenterProjectionCheckpointStore checkpointStore,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _eventStore = eventStore;
         _metricStore = metricStore;
         _deltaStore = deltaStore;
         _checkpointStore = checkpointStore;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -69,7 +69,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceService : IContactC
         var remaining = stored.ToDictionary(metric => (metric.DateKey, metric.EventType));
 
         var changes = 0;
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         foreach (var bucket in recomputed.Counts)
         {

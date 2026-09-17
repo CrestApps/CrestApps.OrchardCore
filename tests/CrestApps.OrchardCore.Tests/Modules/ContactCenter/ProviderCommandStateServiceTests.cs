@@ -1,15 +1,17 @@
-using System.Text.Json.Nodes;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -141,13 +143,13 @@ public sealed class ProviderCommandStateServiceTests
         session
             .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new ConcurrencyException(new Document()));
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         var service = new ProviderCommandStateService(
             manager.Object,
             session.Object,
             new Mock<IDistributedLock>().Object,
-            clock.Object);
+            clock);
 
         // Act
         var claim = await service.TryClaimAsync(
@@ -850,8 +852,7 @@ public sealed class ProviderCommandStateServiceTests
 
     private static ProviderCommandStateService CreateService(ISession session, Func<DateTime> nowProvider)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(nowProvider);
+        var clock = new DelegateTimeProvider(nowProvider);
 
         var store = new ProviderCommandStore(session);
         var manager = new ProviderCommandManager(
@@ -867,7 +868,7 @@ public sealed class ProviderCommandStateServiceTests
                 It.IsAny<TimeSpan?>()))
             .ReturnsAsync((null, true));
 
-        return new ProviderCommandStateService(manager, session, distributedLock.Object, clock.Object);
+        return new ProviderCommandStateService(manager, session, distributedLock.Object, clock);
     }
 
     private static ProviderCommandRegistration CreateRegistration(string commandId = "command-1")

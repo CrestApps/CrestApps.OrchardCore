@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -32,8 +33,8 @@ public sealed class AsteriskCallCoordinationRaceTests
         var providerAri = new BarrierProviderAriClient();
         var teardownAri = new BarrierTeardownAriClient();
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(clock => clock.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var provider = new AsteriskContactCenterVoiceProvider(
             Mock.Of<ITelephonyProviderResolver>(),
@@ -43,7 +44,7 @@ public sealed class AsteriskCallCoordinationRaceTests
             new FakeAsteriskPjsipCredentialLeaseStore(),
             new FakeAsteriskAgentChannelReadySignal(),
             new FakeAsteriskRecordingIngestJobStore(),
-            clock.Object,
+            clock,
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             new TestStringLocalizer());
 
@@ -133,8 +134,8 @@ public sealed class AsteriskCallCoordinationRaceTests
             State = AsteriskChannelBindingState.Connected,
         });
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(clock => clock.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var provider = new AsteriskContactCenterVoiceProvider(
             Mock.Of<ITelephonyProviderResolver>(),
@@ -144,7 +145,7 @@ public sealed class AsteriskCallCoordinationRaceTests
             new FakeAsteriskPjsipCredentialLeaseStore(),
             new FakeAsteriskAgentChannelReadySignal(),
             new FakeAsteriskRecordingIngestJobStore(),
-            clock.Object,
+            clock,
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             new TestStringLocalizer());
 
@@ -199,8 +200,8 @@ public sealed class AsteriskCallCoordinationRaceTests
         var bindingStore = new SharedBindingStore();
         var ariClient = new RecordingAriClient(echoOriginateChannelId: true);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(clock => clock.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var provider = new AsteriskContactCenterVoiceProvider(
             Mock.Of<ITelephonyProviderResolver>(),
@@ -210,7 +211,7 @@ public sealed class AsteriskCallCoordinationRaceTests
             new FakeAsteriskPjsipCredentialLeaseStore(),
             new FakeAsteriskAgentChannelReadySignal(),
             new FakeAsteriskRecordingIngestJobStore(),
-            clock.Object,
+            clock,
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             new TestStringLocalizer());
 

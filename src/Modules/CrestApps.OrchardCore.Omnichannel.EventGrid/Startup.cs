@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
+﻿using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Omnichannel.EventGrid.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +26,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         services.Configure<EventGridOptions>(_shellConfiguration.GetSection("CrestApps:Omnichannel:EventGrid"));
     }
 

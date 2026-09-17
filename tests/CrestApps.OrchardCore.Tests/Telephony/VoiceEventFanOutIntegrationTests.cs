@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -13,9 +12,11 @@ using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -293,8 +294,8 @@ public sealed class VoiceEventFanOutIntegrationTests
             IAsteriskRealtimeVoiceEventBridge bridge = null,
             IAsteriskCallTeardownService teardownService = null)
         {
-            var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(_startedUtc);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_startedUtc);
 
             DistributedLock = new FakeDistributedLock();
 
@@ -333,12 +334,12 @@ public sealed class VoiceEventFanOutIntegrationTests
             var telephonyProjection = new TelephonyCallHistoryVoiceEventHandler(
                 telephonyInteractionStore.Object,
                 hubContext.Object,
-                clock.Object,
+                clock,
                 NullLogger<TelephonyCallHistoryVoiceEventHandler>.Instance,
                 _shellSettings);
 
             var contactCenterProjection = new ContactCenterVoiceProjection(
-                new ProviderVoiceEventSink(BuildProviderVoiceEventService(clock.Object, ingressGate)),
+                new ProviderVoiceEventSink(BuildProviderVoiceEventService(clock, ingressGate)),
                 NullLogger<ContactCenterVoiceProjection>.Instance);
 
             var ingestor = new NormalizedVoiceEventIngestor(
@@ -372,7 +373,7 @@ public sealed class VoiceEventFanOutIntegrationTests
             }
         }
 
-        private ProviderVoiceEventService BuildProviderVoiceEventService(IClock clock, IVoiceIngressGate ingressGate)
+        private ProviderVoiceEventService BuildProviderVoiceEventService(TimeProvider clock, IVoiceIngressGate ingressGate)
         {
             var interaction = new Interaction
             {

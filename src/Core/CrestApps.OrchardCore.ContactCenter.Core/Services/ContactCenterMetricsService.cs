@@ -11,22 +11,22 @@ public sealed class ContactCenterMetricsService : IContactCenterMetricsService
 {
     private readonly IContactCenterMetricStore _store;
     private readonly IContactCenterMetricDeltaStore _deltaStore;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMetricsService"/> class.
     /// </summary>
     /// <param name="store">The metric store holding the rolled-up daily totals.</param>
     /// <param name="deltaStore">The store the individual contributions are appended to.</param>
-    /// <param name="clock">The clock used to stamp metric times.</param>
+    /// <param name="timeProvider">The time provider used to stamp metric times.</param>
     public ContactCenterMetricsService(
         IContactCenterMetricStore store,
         IContactCenterMetricDeltaStore deltaStore,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _store = store;
         _deltaStore = deltaStore;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -37,7 +37,7 @@ public sealed class ContactCenterMetricsService : IContactCenterMetricsService
             return;
         }
 
-        var effectiveUtc = occurredUtc == default ? _clock.UtcNow : occurredUtc;
+        var effectiveUtc = occurredUtc == default ? _timeProvider.GetUtcNow().UtcDateTime : occurredUtc;
         var date = effectiveUtc.Date;
 
         // The contribution is appended rather than added to the day's total in place. Reading the total,
@@ -53,7 +53,7 @@ public sealed class ContactCenterMetricsService : IContactCenterMetricsService
                 Date = date,
                 EventType = eventType,
                 Count = 1,
-                CreatedUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             },
             cancellationToken);
     }

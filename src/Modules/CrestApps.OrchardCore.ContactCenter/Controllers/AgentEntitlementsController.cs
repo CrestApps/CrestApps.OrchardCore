@@ -30,7 +30,7 @@ public sealed class AgentEntitlementsController : Controller
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -45,7 +45,7 @@ public sealed class AgentEntitlementsController : Controller
     /// <param name="displayNameProvider">The Orchard user display name provider.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The admin notifier.</param>
-    /// <param name="clock">The clock used to stamp new agent profiles.</param>
+    /// <param name="timeProvider">The time provider used to stamp new agent profiles.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AgentEntitlementsController(
@@ -56,7 +56,7 @@ public sealed class AgentEntitlementsController : Controller
         IDisplayNameProvider displayNameProvider,
         IAuthorizationService authorizationService,
         INotifier notifier,
-        IClock clock,
+        TimeProvider timeProvider,
         IHtmlLocalizer<AgentEntitlementsController> htmlLocalizer,
         IStringLocalizer<AgentEntitlementsController> stringLocalizer)
     {
@@ -67,7 +67,7 @@ public sealed class AgentEntitlementsController : Controller
         _displayNameProvider = displayNameProvider;
         _authorizationService = authorizationService;
         _notifier = notifier;
-        _clock = clock;
+        _timeProvider = timeProvider;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -160,7 +160,7 @@ public sealed class AgentEntitlementsController : Controller
             agent.AllowedCampaignIds = model.AllowedCampaignIds;
             AgentEntitlementUtilities.ApplySkills(agent, skills: null, entitlements.SkillProficiencies);
             agent.QueueMemberships = AgentEntitlementUtilities.NormalizeQueueMemberships(entitlements.QueueMemberships);
-            agent.CreatedUtc = _clock.UtcNow;
+            agent.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             await _agentManager.CreateAsync(agent);
             await _notifier.SuccessAsync(H["Agent entitlements have been created successfully."]);

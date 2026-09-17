@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Telephony.Azure.Services;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.DataProtection;
@@ -39,6 +40,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         services.AddTransient<IConfigureOptions<TelephonyRecordingBlobStorageOptions>, TelephonyRecordingBlobStorageOptionsConfiguration>();
 
         var section = _configuration.GetSection(TelephonyRecordingBlobStorageOptionsConfiguration.ConfigurationSectionName);

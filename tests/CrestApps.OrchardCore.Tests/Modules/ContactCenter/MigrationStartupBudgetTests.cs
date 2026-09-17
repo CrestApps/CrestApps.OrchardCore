@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.Time.Testing;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -117,7 +118,7 @@ public sealed class MigrationStartupBudgetTests
                     $"delivery-{index}");
             }
 
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };

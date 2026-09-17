@@ -33,7 +33,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly ISession _session;
     private readonly IVoiceIngressGate _ingressGate;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -52,7 +52,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
     /// <param name="session">The YesSql session used to commit provider truth before releasing the ingestion lock.</param>
     /// <param name="ingressGate">The provider-neutral gate that serializes each provider call stream.</param>
-    /// <param name="clock">The clock used to stamp times.</param>
+    /// <param name="timeProvider">The time provider used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderVoiceEventService(
         IInteractionManager interactionManager,
@@ -68,7 +68,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         IContactCenterScopeExecutor scopeExecutor,
         ISession session,
         IVoiceIngressGate ingressGate,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ProviderVoiceEventService> logger)
     {
         _interactionManager = interactionManager;
@@ -84,7 +84,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         _scopeExecutor = scopeExecutor;
         _session = session;
         _ingressGate = ingressGate;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -244,7 +244,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                 ?? await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
         }
 
-        var now = providerEvent.OccurredUtc ?? _clock.UtcNow;
+        var now = providerEvent.OccurredUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
         var session = await EnsureSessionAsync(interaction, providerEvent, now, cancellationToken);
 
         if (session is null)

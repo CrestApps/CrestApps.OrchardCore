@@ -16,7 +16,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterOutbox _outbox;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -25,19 +25,19 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
     /// <param name="eventStore">The durable interaction event store.</param>
     /// <param name="outbox">The outbox that dispatches events to handlers with durable retry.</param>
     /// <param name="scopeExecutor">The executor used to schedule post-commit dispatch.</param>
-    /// <param name="clock">The clock used to stamp events.</param>
+    /// <param name="timeProvider">The time provider used to stamp events.</param>
     /// <param name="logger">The logger instance.</param>
     public DefaultContactCenterEventPublisher(
         IInteractionEventStore eventStore,
         IContactCenterOutbox outbox,
         IContactCenterScopeExecutor scopeExecutor,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<DefaultContactCenterEventPublisher> logger)
     {
         _eventStore = eventStore;
         _outbox = outbox;
         _scopeExecutor = scopeExecutor;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -48,7 +48,7 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
 
         if (interactionEvent.OccurredUtc == default)
         {
-            interactionEvent.OccurredUtc = _clock.UtcNow;
+            interactionEvent.OccurredUtc = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         if (string.IsNullOrEmpty(interactionEvent.ItemId))

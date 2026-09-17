@@ -21,19 +21,19 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
         ((int)CallbackRequestStatus.Failed).ToString(CultureInfo.InvariantCulture));
 
     private readonly IStore _store;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CallbackRequestIndexMigrations"/> class.
     /// </summary>
     /// <param name="store">The document store, used to resolve the physical table name.</param>
-    /// <param name="clock">The clock used to date the retention backfill.</param>
+    /// <param name="timeProvider">The time provider used to date the retention backfill.</param>
     public CallbackRequestIndexMigrations(
         IStore store,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _store = store;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
             _store,
             typeof(CallbackRequestIndex),
             "ModifiedUtc",
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({_terminalStatusValues})");
 
         await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table
@@ -107,7 +107,7 @@ internal sealed class CallbackRequestIndexMigrations : DataMigration
             _store,
             typeof(CallbackRequestIndex),
             "ModifiedUtc",
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({_terminalStatusValues})");
 
         await SchemaBuilder.AlterIndexTableAsync<CallbackRequestIndex>(table => table

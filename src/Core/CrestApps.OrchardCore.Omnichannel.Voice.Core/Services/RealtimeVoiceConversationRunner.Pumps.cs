@@ -349,7 +349,7 @@ public sealed partial class RealtimeVoiceConversationRunner
             return;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _promptStore.CreateAsync(new AIChatSessionPrompt
         {

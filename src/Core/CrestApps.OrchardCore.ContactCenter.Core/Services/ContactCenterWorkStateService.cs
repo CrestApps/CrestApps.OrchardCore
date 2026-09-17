@@ -11,7 +11,7 @@ public sealed class ContactCenterWorkStateService : IContactCenterWorkStateServi
     private readonly IContactCenterWorkStateManager _workStateManager;
     private readonly IContactCenterWorkStateActivityProjection _activityProjection;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterWorkStateService"/> class.
@@ -19,17 +19,17 @@ public sealed class ContactCenterWorkStateService : IContactCenterWorkStateServi
     /// <param name="workStateManager">The work state manager.</param>
     /// <param name="activityProjections">The optional CRM projection, which is absent when CRM activity management is not enabled.</param>
     /// <param name="scopeExecutor">The executor used to project work state to the CRM after commit.</param>
-    /// <param name="clock">The clock used to stamp work state times.</param>
+    /// <param name="timeProvider">The time provider used to stamp work state times.</param>
     public ContactCenterWorkStateService(
         IContactCenterWorkStateManager workStateManager,
         IEnumerable<IContactCenterWorkStateActivityProjection> activityProjections,
         IContactCenterScopeExecutor scopeExecutor,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _workStateManager = workStateManager;
         _activityProjection = activityProjections.FirstOrDefault();
         _scopeExecutor = scopeExecutor;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -88,7 +88,7 @@ public sealed class ContactCenterWorkStateService : IContactCenterWorkStateServi
         {
             workState = await _workStateManager.NewAsync(cancellationToken: cancellationToken);
             workState.ActivityItemId = activityItemId;
-            workState.CreatedUtc = _clock.UtcNow;
+            workState.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             if (_activityProjection is not null)
             {
@@ -97,7 +97,7 @@ public sealed class ContactCenterWorkStateService : IContactCenterWorkStateServi
         }
 
         mutate(workState);
-        workState.ModifiedUtc = _clock.UtcNow;
+        workState.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (isNew)
         {

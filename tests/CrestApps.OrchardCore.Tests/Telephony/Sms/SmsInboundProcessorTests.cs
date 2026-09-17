@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking;
@@ -316,8 +317,8 @@ public class SmsInboundProcessorTests
             session.Setup(s => s.SaveAsync(It.IsAny<OmnichannelMessage>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(DateTime.UtcNow);
 
             IDistributedLock distributedLock = lockAcquired
                 ? DistributedLock
@@ -337,7 +338,7 @@ public class SmsInboundProcessorTests
                 distributedLock,
                 new OptionsWrapper<SmsPortalOptions>(new SmsPortalOptions()),
                 session.Object,
-                clock.Object,
+                clock,
                 RedactorProviderFactory.Create(),
                 NullLogger<SmsInboundProcessor>.Instance);
         }

@@ -42,7 +42,7 @@ internal static class AzureEventGridEndpoint
         HttpContext context,
         IEnumerable<IOmnichannelEventHandler> handlers,
         YesSql.ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<EventGridOptions> options,
         ILogger<Startup> logger)
     {
@@ -136,7 +136,7 @@ internal static class AzureEventGridEndpoint
             var omnichannelMessage = new OmnichannelMessage
             {
                 Channel = "Unknown",
-                CreatedUtc = clock.UtcNow,
+                CreatedUtc = timeProvider.GetUtcNow().UtcDateTime,
                 IsInbound = true,
             };
 

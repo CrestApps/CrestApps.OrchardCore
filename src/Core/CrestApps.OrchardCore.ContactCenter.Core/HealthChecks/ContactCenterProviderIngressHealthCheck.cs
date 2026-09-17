@@ -13,22 +13,22 @@ public sealed class ContactCenterProviderIngressHealthCheck : IHealthCheck
 {
     private readonly IProviderWebhookInboxStore _inboxStore;
     private readonly ContactCenterHealthCheckOptions _options;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterProviderIngressHealthCheck"/> class.
     /// </summary>
     /// <param name="inboxStore">The durable provider webhook inbox store.</param>
     /// <param name="options">The configured health-check thresholds.</param>
-    /// <param name="clock">The clock used to select overdue messages.</param>
+    /// <param name="timeProvider">The time provider used to select overdue messages.</param>
     public ContactCenterProviderIngressHealthCheck(
         IProviderWebhookInboxStore inboxStore,
         IOptions<ContactCenterHealthCheckOptions> options,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _inboxStore = inboxStore;
         _options = options.Value;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -39,7 +39,7 @@ public sealed class ContactCenterProviderIngressHealthCheck : IHealthCheck
         try
         {
             var deadLettered = await _inboxStore.CountByStatusAsync(ProviderWebhookInboxStatus.DeadLettered, cancellationToken);
-            var overdue = await _inboxStore.CountOverdueAsync(_clock.UtcNow, cancellationToken);
+            var overdue = await _inboxStore.CountOverdueAsync(_timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
             return BacklogHealthEvaluator.Evaluate("Contact Center provider ingress", deadLettered, overdue, _options);
         }

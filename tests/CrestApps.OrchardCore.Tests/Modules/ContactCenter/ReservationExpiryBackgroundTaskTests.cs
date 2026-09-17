@@ -1,4 +1,3 @@
-using System.Reflection;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -7,11 +6,14 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
 using YesSql;
+using System.Reflection;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -64,8 +66,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
             .SetupSequence(service => service.OfferNextAsync("queue-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync("user-1")
             .ReturnsAsync((string)null);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(utcNow);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(utcNow);
         var session = new Mock<ISession>();
 
         await using var serviceProvider = CreateServiceProvider(
@@ -115,7 +117,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         var activityManager = new Mock<IOmnichannelActivityManager>();
 
         var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var session = new Mock<ISession>();
 
         await using var serviceProvider = CreateServiceProvider(
@@ -170,7 +172,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
                 Source = activitySource,
             });
         var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var session = new Mock<ISession>();
 
         await using var serviceProvider = CreateServiceProvider(
@@ -227,7 +229,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         inboundVoiceService
             .Setup(service => service.OfferNextAsync("queue-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync("user-1");
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var session = new Mock<ISession>();
 
         await using var serviceProvider = CreateServiceProvider(
@@ -292,8 +294,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
                 Source = activitySource,
             });
         var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
         var session = new Mock<ISession>();
 
         await using var serviceProvider = CreateServiceProvider(
@@ -352,8 +354,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
                 Source = activitySource,
             });
         var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
         var session = new Mock<ISession>();
 
         await using var serviceProvider = CreateServiceProvider(
@@ -396,7 +398,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         var activityManager = new Mock<IOmnichannelActivityManager>(MockBehavior.Strict);
         var inboundVoiceService = new Mock<IInboundVoiceService>(MockBehavior.Strict);
-        var clock = new Mock<IClock>(MockBehavior.Strict);
+        var clock = new FakeTimeProvider();
         var session = new Mock<ISession>(MockBehavior.Strict);
 
         await using var serviceProvider = CreateServiceProvider(
@@ -462,8 +464,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         // budget while processing the first queue and assert the second queue is not touched, proving a run
         // cannot grow without bound (and therefore cannot outlive its lock and self-overlap).
         var current = new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(() => current);
+        var clock = new DelegateTimeProvider(() => current);
 
         var queue1 = new ActivityQueue { ItemId = "queue-1" };
         var queue2 = new ActivityQueue { ItemId = "queue-2" };
@@ -538,8 +539,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
         var interactionManager = new Mock<IInteractionManager>();
         var activityManager = new Mock<IOmnichannelActivityManager>();
         var inboundVoiceService = new Mock<IInboundVoiceService>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
         var session = new Mock<ISession>();
 
         await using var serviceProvider = CreateServiceProvider(
@@ -576,7 +577,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         Mock<IInteractionManager> interactionManager,
         Mock<IOmnichannelActivityManager> activityManager,
         Mock<IInboundVoiceService> inboundVoiceService,
-        Mock<IClock> clock,
+        TimeProvider clock,
         Mock<ISession> session,
         IContactCenterFeatureWorkManager workManager = null,
         Mock<IQueueItemStore> queueItemStore = null)
@@ -602,7 +603,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         services.AddSingleton(interactionManager.Object);
         services.AddSingleton(activityManager.Object);
         services.AddSingleton(inboundVoiceService.Object);
-        services.AddSingleton(clock.Object);
+        services.AddSingleton<TimeProvider>(clock);
         services.AddSingleton(session.Object);
         services.AddSingleton<IContactCenterFeatureWorkManager>(workManager ?? new TestContactCenterFeatureWorkManager());
         services.AddLogging();

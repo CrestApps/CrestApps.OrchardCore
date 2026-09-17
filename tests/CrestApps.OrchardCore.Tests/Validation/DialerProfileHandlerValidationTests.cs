@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Environment.Extensions.Features;
 using OrchardCore.Environment.Shell;
@@ -238,7 +239,7 @@ public class DialerProfileHandlerValidationTests
             .ReturnsAsync(features);
 
         return new DialerProfileHandler(
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             featuresManager.Object,
             new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<DialerProfileHandler>());

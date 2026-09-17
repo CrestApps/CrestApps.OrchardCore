@@ -868,7 +868,7 @@ public sealed class VoiceAgentConversationLoopTests
                 Realtime,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
-                Mock.Of<IClock>(),
+                Mock.Of<TimeProvider>(),
                 NullLogger<VoiceAgentConversationLoop>.Instance);
         }
 

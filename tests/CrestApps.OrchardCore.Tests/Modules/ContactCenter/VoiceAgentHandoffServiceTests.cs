@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -8,8 +7,10 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -573,8 +574,8 @@ public class VoiceAgentHandoffServiceTests
             CallbackService.Setup(c => c.ScheduleAsync(It.IsAny<CallbackRequest>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((CallbackRequest r, CancellationToken _) => r);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(DateTime.UtcNow);
 
             var interactionManager = new Mock<IInteractionManager>();
             interactionManager.Setup(m => m.FindByActivityIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -600,7 +601,7 @@ public class VoiceAgentHandoffServiceTests
                 QueueService.Object,
                 OfferService.Object,
                 queueManager.Object,
-                clock.Object,
+                clock,
                 businessHoursGate.Object,
                 CallbackService.Object,
                 DistributedLock,

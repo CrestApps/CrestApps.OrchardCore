@@ -21,19 +21,19 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
         ((int)ProviderCommandStatus.Failed).ToString(CultureInfo.InvariantCulture));
 
     private readonly IStore _store;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderCommandIndexMigrations"/> class.
     /// </summary>
     /// <param name="store">The document store, used to resolve the physical table name.</param>
-    /// <param name="clock">The clock used to date the retention backfill.</param>
+    /// <param name="timeProvider">The time provider used to date the retention backfill.</param>
     public ProviderCommandIndexMigrations(
         IStore store,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _store = store;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -95,7 +95,7 @@ internal sealed class ProviderCommandIndexMigrations : DataMigration
             _store,
             typeof(ProviderCommandIndex),
             "CompletedUtc",
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({_terminalStatusValues})");
 
         await SchemaBuilder.AlterIndexTableAsync<ProviderCommandIndex>(table => table

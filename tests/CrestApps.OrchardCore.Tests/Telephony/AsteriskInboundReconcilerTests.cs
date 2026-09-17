@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -724,15 +725,15 @@ public sealed class AsteriskInboundReconcilerTests
         IProviderVoiceEventSink sink,
         IInboundVoiceInteractionProbe interactionProbe = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new AsteriskInboundReconciler(
             bindingStore,
             ariClient,
             sink,
             interactionProbe ?? new TestInteractionProbe(),
-            clock.Object,
+            clock,
             NullLogger<AsteriskInboundReconciler>.Instance,
             Options.Create(new AsteriskCoordinationOptions()));
     }

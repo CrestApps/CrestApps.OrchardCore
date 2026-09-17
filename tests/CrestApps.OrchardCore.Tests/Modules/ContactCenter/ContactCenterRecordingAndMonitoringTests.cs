@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -31,7 +32,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -68,7 +69,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -102,7 +103,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateCommandExecutor(),
             CreateGovernancePolicy(RecordingGovernanceDecision.Deny(
                 ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled)),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -147,7 +148,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateGovernancePolicy(RecordingGovernanceDecision.Allow(
                 new DateTime(2035, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 legalHold: true)),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -186,7 +187,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             CreateGovernancePolicy(RecordingGovernanceDecision.Allow(
                 new DateTime(2035, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                 legalHold: true)),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.ResumeAsync("int1", TestContext.Current.CancellationToken);
@@ -220,7 +221,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(RecordingGovernanceDecision.Allow(retainUntil, legalHold: true)),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -279,7 +280,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", callerCancellation.Token);
@@ -314,7 +315,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -347,7 +348,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             new TimeoutTelephonyCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -385,7 +386,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             new NotAdmittedTelephonyCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -417,7 +418,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             new ShutdownInterruptedTelephonyCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -462,7 +463,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -494,7 +495,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             CreateGovernancePolicy(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var changed = await service.StartAsync("int1", TestContext.Current.CancellationToken);
@@ -526,7 +527,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Whisper, TestContext.Current.CancellationToken);
@@ -565,7 +566,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -618,7 +619,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
                 AgentId = "agent-profile-1",
                 ProviderCallId = context.ProviderCallId,
             }),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -672,7 +673,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.EngageAsync(
@@ -704,7 +705,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             new TimeoutTelephonyCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.EngageAsync(
@@ -748,7 +749,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Monitor, TestContext.Current.CancellationToken);
@@ -778,7 +779,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new Mock<IContactCenterEventPublisher>().Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -805,7 +806,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new Mock<IContactCenterEventPublisher>().Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var modes = await service.GetAvailableModesAsync("int1", TestContext.Current.CancellationToken);
@@ -832,7 +833,7 @@ public sealed class ContactCenterRecordingAndMonitoringTests
             new Mock<IContactCenterEventPublisher>().Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var modes = await service.GetAvailableModesAsync(interaction, TestContext.Current.CancellationToken);

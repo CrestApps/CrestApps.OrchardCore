@@ -68,7 +68,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         var interactionManager = serviceProvider.GetRequiredService<IInteractionManager>();
         var activityManager = serviceProvider.GetRequiredService<IOmnichannelActivityManager>();
         var inboundVoiceService = serviceProvider.GetServices<IInboundVoiceService>().FirstOrDefault();
-        var clock = serviceProvider.GetRequiredService<IClock>();
+        var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         var session = serviceProvider.GetRequiredService<ISession>();
         var logger = serviceProvider.GetRequiredService<ILogger<ReservationExpiryBackgroundTask>>();
 
@@ -76,7 +76,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
         runCts.CancelAfter(MaxRunDurationMilliseconds);
         var runToken = runCts.Token;
 
-        var runDeadlineUtc = clock.UtcNow.AddMilliseconds(MaxRunDurationMilliseconds);
+        var runDeadlineUtc = timeProvider.GetUtcNow().UtcDateTime.AddMilliseconds(MaxRunDurationMilliseconds);
 
         IReadOnlyCollection<ActivityQueue> queues;
 
@@ -111,7 +111,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
 
         foreach (var queue in queues)
         {
-            if (clock.UtcNow >= runDeadlineUtc)
+            if (timeProvider.GetUtcNow().UtcDateTime >= runDeadlineUtc)
             {
                 if (logger.IsEnabled(LogLevel.Debug))
                 {
@@ -133,14 +133,14 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                 {
                     for (var attempt = 0; attempt < MaxVoiceOffersPerQueue; attempt++)
                     {
-                        if (clock.UtcNow >= runDeadlineUtc)
+                        if (timeProvider.GetUtcNow().UtcDateTime >= runDeadlineUtc)
                         {
                             voiceWorkBlockedGenericAssignment = true;
 
                             break;
                         }
 
-                        var nextItem = await queueItemManager.FindNextWaitingAsync(queue, clock.UtcNow, runToken);
+                        var nextItem = await queueItemManager.FindNextWaitingAsync(queue, timeProvider.GetUtcNow().UtcDateTime, runToken);
 
                         if (nextItem is null)
                         {
@@ -173,7 +173,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
                     continue;
                 }
 
-                var nextGenericItem = await queueItemManager.FindNextWaitingAsync(queue, clock.UtcNow, runToken);
+                var nextGenericItem = await queueItemManager.FindNextWaitingAsync(queue, timeProvider.GetUtcNow().UtcDateTime, runToken);
 
                 if (nextGenericItem is not null)
                 {
@@ -261,7 +261,7 @@ public sealed class ReservationExpiryBackgroundTask : IBackgroundTask
 
         foreach (var queueId in waitingCampaignQueueIds)
         {
-            if (clock.UtcNow >= runDeadlineUtc)
+            if (timeProvider.GetUtcNow().UtcDateTime >= runDeadlineUtc)
             {
                 if (logger.IsEnabled(LogLevel.Debug))
                 {

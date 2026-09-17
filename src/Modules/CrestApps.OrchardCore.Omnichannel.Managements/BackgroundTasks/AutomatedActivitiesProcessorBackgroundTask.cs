@@ -58,9 +58,9 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         }
 
         var session = serviceProvider.GetRequiredService<ISession>();
-        var clock = serviceProvider.GetRequiredService<IClock>();
+        var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
 
-        var now = clock.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         // Stop the run comfortably before the distributed-lock lease can expire. OrchardCore does not cancel a task
         // when its lease elapses, so a run that outlived the lease while still alive could otherwise keep sending
@@ -70,7 +70,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         // slow send or expiry cannot overrun it by more than one item.
         var deadline = now.AddMilliseconds(_leaseMilliseconds * 0.6);
 
-        await ExpireNoResponseActivitiesAsync(serviceProvider, session, clock, now, deadline, batchSize, maxActivitiesPerInvocation, logger, cancellationToken);
+        await ExpireNoResponseActivitiesAsync(serviceProvider, session, timeProvider, now, deadline, batchSize, maxActivitiesPerInvocation, logger, cancellationToken);
 
         // Commit the expiry pass on its own so its changes are durable regardless of what the processing loop does.
         await session.SaveChangesAsync(cancellationToken);
@@ -78,7 +78,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         long documentId = 0;
         var processedCount = 0;
 
-        while (processedCount < maxActivitiesPerInvocation && clock.UtcNow < deadline)
+        while (processedCount < maxActivitiesPerInvocation && timeProvider.GetUtcNow().UtcDateTime < deadline)
         {
             // Keyset pagination on the monotonically increasing document id. Combining an OFFSET skip with this
             // cursor (as an earlier revision did) advanced the window twice per batch and silently skipped every
@@ -103,7 +103,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
             {
                 // Enforce the wall-clock budget per item, not just per batch. A batch that starts just under the
                 // deadline must not run a full page of additional sends past it, or the run could outlive its lease.
-                if (clock.UtcNow >= deadline)
+                if (timeProvider.GetUtcNow().UtcDateTime >= deadline)
                 {
                     break;
                 }
@@ -189,7 +189,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
     private static async Task ExpireNoResponseActivitiesAsync(
         IServiceProvider serviceProvider,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         DateTime now,
         DateTime deadline,
         int batchSize,
@@ -219,7 +219,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         long documentId = 0;
         var processedCount = 0;
 
-        while (processedCount < maxActivitiesPerInvocation && clock.UtcNow < deadline)
+        while (processedCount < maxActivitiesPerInvocation && timeProvider.GetUtcNow().UtcDateTime < deadline)
         {
             // Keyset pagination so a large expiry backlog drains over successive batches without an OFFSET skip.
             var expiredActivities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(x =>
@@ -241,7 +241,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
             foreach (var activity in expiredActivities)
             {
                 // Share the run's wall-clock budget with the send loop so the expiry pass cannot consume it all.
-                if (clock.UtcNow >= deadline)
+                if (timeProvider.GetUtcNow().UtcDateTime >= deadline)
                 {
                     break;
                 }

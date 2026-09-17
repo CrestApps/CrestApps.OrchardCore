@@ -1,14 +1,15 @@
-using System.Net;
-using System.Text;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
+using System.Net;
+using System.Text;
 
 namespace CrestApps.OrchardCore.Tests.Modules.PhoneNumbers.Verifications;
 
@@ -121,15 +122,15 @@ public sealed class PhoneNumberVerificationProviderRequestTests
             .ReturnsAsync(site.Object);
 
         var dataProtectionProvider = new FakeDataProtectionProvider();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(clock => clock.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new AbstractApiPhoneNumberVerificationProvider(
             httpClientFactory.Object,
             siteService.Object,
             dataProtectionProvider,
             new DefaultPhoneNumberService(),
-            clock.Object,
+            clock,
             NullLogger<AbstractApiPhoneNumberVerificationProvider>.Instance);
     }
 

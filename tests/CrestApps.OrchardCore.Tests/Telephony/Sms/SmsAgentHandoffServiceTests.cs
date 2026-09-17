@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -350,8 +351,8 @@ public class SmsAgentHandoffServiceTests
                 .Returns(Task.CompletedTask)
                 .Callback<object, bool, string, CancellationToken>((m, _, _, _) => SavedMessages.Add((OmnichannelMessage)m));
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(DateTime.UtcNow);
 
             var queuePolicyReader = new Mock<ISmsQueuePolicyReader>();
             queuePolicyReader.Setup(reader => reader.ReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -381,7 +382,7 @@ public class SmsAgentHandoffServiceTests
                 .ReturnsAsync(selectedAgentId);
 
             var router = new SmsConversationRouter(
-                [new HandoffQueueRouter(RoutingStrategy.Object, clock.Object)],
+                [new HandoffQueueRouter(RoutingStrategy.Object, clock)],
                 NullLogger<SmsConversationRouter>.Instance);
 
             Service = new SmsAgentHandoffService(
@@ -391,7 +392,7 @@ public class SmsAgentHandoffServiceTests
                 endpointManager.Object,
                 router,
                 session.Object,
-                clock.Object,
+                clock,
                 NullLogger<SmsAgentHandoffService>.Instance);
         }
     }

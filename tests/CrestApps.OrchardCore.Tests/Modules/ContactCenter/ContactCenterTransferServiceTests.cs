@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -328,8 +329,8 @@ public sealed class ContactCenterTransferServiceTests
         ITransferDestinationResolver transferDestinationResolver = null,
         CallSession callSession = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var callSessionManager = new Mock<ICallSessionManager>();
         callSessionManager
@@ -345,7 +346,7 @@ public sealed class ContactCenterTransferServiceTests
             commandExecutor ?? new DefaultTelephonyCommandExecutor(
                 Options.Create(new TelephonyCommandOptions()),
                 Mock.Of<IHostApplicationLifetime>()),
-            clock.Object,
+            clock,
             callControlAuthorizationService ?? FakeCallControlAuthorizationService.Resolving("call-1"),
             transferDestinationResolver ?? new FakeTransferDestinationResolver());
     }

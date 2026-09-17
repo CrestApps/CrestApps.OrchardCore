@@ -58,7 +58,7 @@ public sealed class AdminController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IOmnichannelContactTypeProvider _contactTypeProvider;
     private readonly SmsPortalOptions _options;
 
@@ -82,7 +82,7 @@ public sealed class AdminController : Controller
         IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         IOmnichannelContactTypeProvider contactTypeProvider,
         IOptions<SmsPortalOptions> options,
         IHtmlLocalizer<AdminController> htmlLocalizer,
@@ -104,7 +104,7 @@ public sealed class AdminController : Controller
         _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _contactTypeProvider = contactTypeProvider;
         _options = options.Value;
         H = htmlLocalizer;
@@ -946,7 +946,7 @@ public sealed class AdminController : Controller
         agent.UserName = userName;
         agent.DisplayName = userName;
         agent.Name = userId;
-        agent.CreatedUtc = _clock.UtcNow;
+        agent.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _agentProfileManager.CreateAsync(agent);
 

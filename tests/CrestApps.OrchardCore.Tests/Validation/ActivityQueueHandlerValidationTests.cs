@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -115,7 +116,7 @@ public class ActivityQueueHandlerValidationTests
         services.AddSingleton(groupManager);
 
         return new ActivityQueueHandler(
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             services.BuildServiceProvider(),
             new PassThroughStringLocalizer<ActivityQueueHandler>());
     }

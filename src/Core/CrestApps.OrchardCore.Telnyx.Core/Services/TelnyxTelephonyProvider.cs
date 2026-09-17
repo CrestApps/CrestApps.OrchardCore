@@ -38,7 +38,7 @@ public sealed partial class TelnyxTelephonyProvider :
     private readonly TelnyxApiClient _apiClient;
     private readonly ITelnyxAgentCredentialStore _credentialStore;
     private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly TelnyxOptions _options;
 
@@ -49,7 +49,7 @@ public sealed partial class TelnyxTelephonyProvider :
     /// </summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="credentialStore">The store that maps a user to their live browser SIP registration.</param>
-    /// <param name="clock">The clock used to stamp call times.</param>
+    /// <param name="timeProvider">The time provider used to stamp call times.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="telnyxOptions">The active Telnyx settings resolved for the tenant shell.</param>
@@ -57,7 +57,7 @@ public sealed partial class TelnyxTelephonyProvider :
         TelnyxApiClient apiClient,
         ITelnyxAgentCredentialStore credentialStore,
         ITelnyxAgentEndpointResolver agentEndpointResolver,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelnyxTelephonyProvider> logger,
         IStringLocalizer<TelnyxTelephonyProvider> stringLocalizer,
         IOptionsMonitor<TelnyxOptions> telnyxOptions)
@@ -65,7 +65,7 @@ public sealed partial class TelnyxTelephonyProvider :
         _apiClient = apiClient;
         _credentialStore = credentialStore;
         _agentEndpointResolver = agentEndpointResolver;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
         S = stringLocalizer;
@@ -215,7 +215,7 @@ public sealed partial class TelnyxTelephonyProvider :
                 State = CallState.Connecting,
                 Direction = CallDirection.Outbound,
                 ProviderName = TelnyxConstants.ProviderTechnicalName,
-                StartedUtc = _clock.UtcNow,
+                StartedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             };
 
             return TelephonyResult.Success(call);
@@ -247,7 +247,7 @@ public sealed partial class TelnyxTelephonyProvider :
             return null;
         }
 
-        var live = await _credentialStore.ListLiveByUserAsync(userId.Trim(), _clock.UtcNow, cancellationToken);
+        var live = await _credentialStore.ListLiveByUserAsync(userId.Trim(), _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
         var credential = live.Count > 0 ? live[0] : null;
 
         if (credential is null || string.IsNullOrWhiteSpace(credential.SipUsername))
@@ -343,7 +343,7 @@ public sealed partial class TelnyxTelephonyProvider :
                 State = CallState.Connecting,
                 Direction = CallDirection.Outbound,
                 ProviderName = TelnyxConstants.ProviderTechnicalName,
-                StartedUtc = _clock.UtcNow,
+                StartedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             };
 
             return TelephonyResult.Success(call);

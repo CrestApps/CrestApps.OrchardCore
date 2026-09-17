@@ -14,25 +14,25 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 internal sealed class InteractionHandler : CatalogEntryHandlerBase<Interaction>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InteractionHandler"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor used to resolve the current user.</param>
-    /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="timeProvider">The time provider used to stamp audit times.</param>
     public InteractionHandler(
         IHttpContextAccessor httpContextAccessor,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<Interaction> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (string.IsNullOrEmpty(context.Model.CorrelationId))
         {
@@ -53,7 +53,7 @@ internal sealed class InteractionHandler : CatalogEntryHandlerBase<Interaction>
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<Interaction> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }

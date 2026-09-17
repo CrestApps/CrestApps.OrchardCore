@@ -77,7 +77,7 @@ public sealed class SmsOutboundOutboxTests
             Mock.Of<ISmsConversationStore>(),
             new OptionsWrapper<SmsPortalOptions>(new SmsPortalOptions()),
             Mock.Of<ISession>(),
-            Mock.Of<IClock>(),
+            Mock.Of<TimeProvider>(),
             NullLogger<SmsOutboundOutbox>.Instance);
 
         Assert.NotNull(outbox);

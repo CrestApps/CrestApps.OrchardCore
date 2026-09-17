@@ -76,7 +76,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         var logger = serviceProvider.GetRequiredService<ILogger<SmsReEngagementBackgroundTask>>();
 
         var session = serviceProvider.GetRequiredService<ISession>();
-        var clock = serviceProvider.GetRequiredService<IClock>();
+        var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
         var chatSessionManager = serviceProvider.GetRequiredService<IAIChatSessionManager>();
         var profileManager = serviceProvider.GetRequiredService<IAIProfileManager>();
@@ -96,12 +96,12 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         var businessHoursGate = serviceProvider.GetRequiredService<IBusinessHoursGate>();
         var conversationGate = serviceProvider.GetRequiredService<IAutomatedConversationGate>();
 
-        var deadline = clock.UtcNow.AddMilliseconds(_leaseMilliseconds * 0.6);
+        var deadline = timeProvider.GetUtcNow().UtcDateTime.AddMilliseconds(_leaseMilliseconds * 0.6);
 
         long documentId = 0;
         var processedCount = 0;
 
-        while (processedCount < _maxConversationsPerInvocation && clock.UtcNow < deadline)
+        while (processedCount < _maxConversationsPerInvocation && timeProvider.GetUtcNow().UtcDateTime < deadline)
         {
             var activities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(x =>
                     x.Status == ActivityStatus.AwaitingCustomerAnswer &&
@@ -120,7 +120,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
             foreach (var activity in activities)
             {
-                if (clock.UtcNow >= deadline)
+                if (timeProvider.GetUtcNow().UtcDateTime >= deadline)
                 {
                     return;
                 }
@@ -132,7 +132,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                 {
                     await TryReEngageAsync(
                         activity,
-                        clock,
+                        timeProvider,
                         chatSessionManager,
                         promptStore,
                         profileManager,
@@ -161,7 +161,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
     private static async Task TryReEngageAsync(
         OmnichannelActivity activity,
-        IClock clock,
+        TimeProvider timeProvider,
         IAIChatSessionManager chatSessionManager,
         IAIChatSessionPromptStore promptStore,
         IAIProfileManager profileManager,
@@ -226,7 +226,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             return;
         }
 
-        var now = clock.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         // The silence threshold for THIS nudge is the current step's DelayMinutes. Because our last message time
         // (session LastActivityUtc) is updated on every send — the opening and each nudge — this measures the gap since

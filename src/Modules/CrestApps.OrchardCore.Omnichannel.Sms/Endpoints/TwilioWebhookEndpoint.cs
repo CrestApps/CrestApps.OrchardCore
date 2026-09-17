@@ -38,7 +38,7 @@ internal static class TwilioWebhookEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpContext context,
-        IClock clock,
+        TimeProvider timeProvider,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IShellHost shellHost,
@@ -99,7 +99,7 @@ internal static class TwilioWebhookEndpoint
             ServiceAddress = to,
             Content = body,
             Channel = channel,
-            CreatedUtc = clock.UtcNow,
+            CreatedUtc = timeProvider.GetUtcNow().UtcDateTime,
             IsInbound = true,
         };
 

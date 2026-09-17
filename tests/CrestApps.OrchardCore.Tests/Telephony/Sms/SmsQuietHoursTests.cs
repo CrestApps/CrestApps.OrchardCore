@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -118,9 +119,9 @@ public sealed class SmsQuietHoursTests
         timeZoneResolver.Setup(resolver => resolver.ResolveAsync(It.IsAny<SmsConversation>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(contactTimeZoneId);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
-        return new SmsQuietHoursGuard(gate.Object, queuePolicyReader.Object, timeZoneResolver.Object, clock.Object);
+        return new SmsQuietHoursGuard(gate.Object, queuePolicyReader.Object, timeZoneResolver.Object, clock);
     }
 }

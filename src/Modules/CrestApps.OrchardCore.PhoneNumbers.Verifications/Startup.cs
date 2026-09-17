@@ -1,7 +1,8 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
+using CrestApps.OrchardCore.PhoneNumbers.Core;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.BackgroundTasks;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Drivers;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Handlers;
@@ -11,16 +12,16 @@ using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Reports;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using CrestApps.OrchardCore.Reports;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
-using OrchardCore.Data;
+using OrchardCore.ContentManagement;
 using OrchardCore.Data.Migration;
+using OrchardCore.Data;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -35,6 +36,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         services.AddScoped<IPhoneNumberVerificationManager, DefaultPhoneNumberVerificationManager>();
 
         services.AddSiteDisplayDriver<PhoneNumberVerificationsSettingsDisplayDriver>();

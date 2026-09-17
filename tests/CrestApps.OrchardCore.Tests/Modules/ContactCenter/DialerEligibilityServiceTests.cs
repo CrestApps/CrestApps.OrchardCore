@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -436,8 +437,8 @@ public sealed class DialerEligibilityServiceTests
             OmnichannelActivity activity,
             bool attemptAlreadyCounted = false)
         {
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             var workStateService = new FakeContactCenterWorkStateService();
             workStateService.SeedFrom(activity);
@@ -450,7 +451,7 @@ public sealed class DialerEligibilityServiceTests
                 BusinessHoursService.Object,
                 AbandonmentPolicyService.Object,
                 Registries,
-                clock.Object,
+                clock,
                 NullLogger<DefaultDialerEligibilityService>.Instance);
 
             return service.EvaluateAsync(new DialerEligibilityContext

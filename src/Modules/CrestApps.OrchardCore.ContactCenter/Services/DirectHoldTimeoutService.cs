@@ -20,7 +20,7 @@ public sealed class DirectHoldTimeoutService : IDirectHoldTimeoutService
     private readonly IInboundVoiceCallProcessor _processor;
     private readonly IInboundVoiceService _inboundVoiceService;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -31,7 +31,7 @@ public sealed class DirectHoldTimeoutService : IDirectHoldTimeoutService
     /// <param name="processor">The inbound processor used to time a held call out to voicemail.</param>
     /// <param name="inboundVoiceService">The inbound voice service used to re-offer a held call whose entry point disabled voicemail.</param>
     /// <param name="session">The YesSql session used to commit each handled call.</param>
-    /// <param name="clock">The clock used to evaluate ring windows.</param>
+    /// <param name="timeProvider">The time provider used to evaluate ring windows.</param>
     /// <param name="logger">The logger.</param>
     public DirectHoldTimeoutService(
         IQueueItemManager queueItemManager,
@@ -39,7 +39,7 @@ public sealed class DirectHoldTimeoutService : IDirectHoldTimeoutService
         IInboundVoiceCallProcessor processor,
         IInboundVoiceService inboundVoiceService,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<DirectHoldTimeoutService> logger)
     {
         _queueItemManager = queueItemManager;
@@ -47,7 +47,7 @@ public sealed class DirectHoldTimeoutService : IDirectHoldTimeoutService
         _processor = processor;
         _inboundVoiceService = inboundVoiceService;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -61,7 +61,7 @@ public sealed class DirectHoldTimeoutService : IDirectHoldTimeoutService
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var handled = 0;
 
         foreach (var item in waiting)

@@ -1,6 +1,5 @@
 #nullable enable annotations
 
-using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -9,8 +8,10 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -646,10 +647,10 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         };
     }
 
-    private static Mock<IClock> CreateClock()
+    private static FakeTimeProvider CreateClock()
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return clock;
     }
@@ -687,7 +688,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Mock<ITelephonyService> telephonyService,
         Mock<IInteractionManager> interactionManager,
         Mock<IContactCenterEventPublisher> publisher,
-        Mock<IClock> clock,
+        FakeTimeProvider clock,
         Mock<IActivityQueueService>? queueService = null,
         Mock<IOmnichannelActivityManager>? activityManager = null,
         ICallControlAuthorizationService? callControlAuthorizationService = null,
@@ -710,7 +711,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
                 workStateService,
                 activityWriter,
                 publisher.Object,
-                clock.Object,
+                clock,
                 callControlAuthorizationService),
             ProviderCommandType.SendToVoicemail => new SendToVoicemailProviderCommandTypeExecutor(
                 [telephonyService.Object],
@@ -720,7 +721,7 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
                 workStateService,
                 activityWriter,
                 publisher.Object,
-                clock.Object,
+                clock,
                 callControlAuthorizationService),
             _ => throw new ArgumentOutOfRangeException(nameof(commandType)),
         };

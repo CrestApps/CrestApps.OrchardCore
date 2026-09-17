@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -178,9 +179,9 @@ public sealed class RecordingGovernancePolicyTests
     private static RecordingGovernancePolicy CreatePolicy(ContactCenterRecordingSettings settings, DateTime utcNow)
     {
         var siteService = SiteServiceFactory.Create(settings);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(utcNow);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(utcNow);
 
-        return new RecordingGovernancePolicy(siteService, clock.Object);
+        return new RecordingGovernancePolicy(siteService, clock);
     }
 }

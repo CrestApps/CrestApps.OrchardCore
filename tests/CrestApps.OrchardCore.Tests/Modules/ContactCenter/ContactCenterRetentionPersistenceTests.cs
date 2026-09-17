@@ -1,4 +1,3 @@
-using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
@@ -13,8 +12,10 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Globalization;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -410,8 +411,8 @@ public sealed class ContactCenterRetentionPersistenceTests
         int batchSize = 100,
         int maxBatches = 10_000)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_nowUtc);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_nowUtc);
 
         var options = new ContactCenterRetentionOptions
         {
@@ -438,7 +439,7 @@ public sealed class ContactCenterRetentionPersistenceTests
         return new ContactCenterRetentionService(
             policies,
             session,
-            clock.Object,
+            clock,
             Options.Create(options),
             NullLogger<ContactCenterRetentionService>.Instance);
     }
@@ -590,17 +591,17 @@ public sealed class ContactCenterRetentionPersistenceTests
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
 
-        var queueItemMigration = new QueueItemIndexMigrations(store, new StubClock())
+        var queueItemMigration = new QueueItemIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
         {
             SchemaBuilder = schemaBuilder,
         };
 
-        var providerCommandMigration = new ProviderCommandIndexMigrations(store, new StubClock())
+        var providerCommandMigration = new ProviderCommandIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
         {
             SchemaBuilder = schemaBuilder,
         };
 
-        var reservationMigration = new ActivityReservationIndexMigrations(store, new StubClock())
+        var reservationMigration = new ActivityReservationIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
         {
             SchemaBuilder = schemaBuilder,
         };

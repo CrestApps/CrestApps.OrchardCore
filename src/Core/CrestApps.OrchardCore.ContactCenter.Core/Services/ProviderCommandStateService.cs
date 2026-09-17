@@ -34,7 +34,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     private readonly IProviderCommandManager _manager;
     private readonly ISession _session;
     private readonly IDistributedLock _distributedLock;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderCommandStateService"/> class.
@@ -42,17 +42,17 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     /// <param name="manager">The provider command manager used to read and persist commands.</param>
     /// <param name="session">The tenant YesSql session used to commit each transition.</param>
     /// <param name="distributedLock">The distributed lock used to serialize command registration by idempotency key.</param>
-    /// <param name="clock">The clock used to stamp transition times.</param>
+    /// <param name="timeProvider">The time provider used to stamp transition times.</param>
     public ProviderCommandStateService(
         IProviderCommandManager manager,
         ISession session,
         IDistributedLock distributedLock,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _manager = manager;
         _session = session;
         _distributedLock = distributedLock;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -81,7 +81,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
             return existing;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var command = await _manager.NewAsync(cancellationToken: cancellationToken);
         command.CommandId = registration.CommandId;
         command.ProviderName = registration.ProviderName;
@@ -117,7 +117,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         }
 
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var claimable = command.Status == ProviderCommandStatus.Pending ||
             (command.Status == ProviderCommandStatus.Claimed && command.LeaseExpiresUtc <= now);
 
@@ -149,7 +149,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     public async Task<ProviderCommand> MarkSentAsync(string commandId, ProviderCommandClaim claim, string providerReference = null, CancellationToken cancellationToken = default)
     {
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Sent);
         EnsureClaim(command, claim, now);
@@ -174,7 +174,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         ArgumentException.ThrowIfNullOrEmpty(reason);
 
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Pending);
         EnsureClaim(command, claim, now);
@@ -205,7 +205,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     public async Task<ProviderCommand> StageConfirmSentAsync(string commandId, ProviderCommandClaim claim, string providerReference = null, CancellationToken cancellationToken = default)
     {
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Confirmed);
         EnsureClaim(command, claim, now);
@@ -230,7 +230,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     public async Task<ProviderCommand> StageOutcomeUnknownAsync(string commandId, ProviderCommandClaim claim, string reason = null, CancellationToken cancellationToken = default)
     {
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.OutcomeUnknown);
         EnsureClaim(command, claim, now);
@@ -249,7 +249,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     public async Task<ProviderCommand> EscalateExpiredLeaseAsync(string commandId, CancellationToken cancellationToken = default)
     {
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (command.LeaseExpiresUtc > now)
         {
@@ -294,7 +294,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         }
 
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (command.Status != ProviderCommandStatus.OutcomeUnknown || command.LeaseExpiresUtc > now)
         {
@@ -340,7 +340,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         CancellationToken cancellationToken = default)
     {
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Confirmed);
         EnsureClaim(command, claim, now);
@@ -367,7 +367,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Compensating);
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         ApplyCompensating(command, reason, now);
 
         await PersistAsync(command, cancellationToken);
@@ -383,7 +383,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         CancellationToken cancellationToken = default)
     {
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Compensating);
         EnsureClaim(command, claim, now);
@@ -408,7 +408,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         }
 
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (command.Status != ProviderCommandStatus.Compensating || command.LeaseExpiresUtc > now)
         {
@@ -440,7 +440,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         CancellationToken cancellationToken = default)
     {
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Compensated);
         EnsureClaim(command, claim, now);
@@ -464,7 +464,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         CancellationToken cancellationToken = default)
     {
         var command = await LoadRequiredAsync(commandId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Paused);
         EnsureClaim(command, claim, now);
@@ -482,7 +482,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
 
         EnsureTransitionAllowed(command, ProviderCommandStatus.Failed);
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         command.Status = ProviderCommandStatus.Failed;
         command.LastError = reason;
         command.CompletedUtc = now;

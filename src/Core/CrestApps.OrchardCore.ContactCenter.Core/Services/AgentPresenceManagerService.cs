@@ -21,7 +21,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     private readonly IAgentEntitlementPolicy _entitlementPolicy;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IDistributedLock _distributedLock;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -34,7 +34,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     /// permissive default imposes no restriction; the Agent Entitlements feature replaces it with an enforcing one.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="distributedLock">The distributed lock used to serialize sign-in updates.</param>
-    /// <param name="clock">The clock used to stamp presence changes.</param>
+    /// <param name="timeProvider">The time provider used to stamp presence changes.</param>
     /// <param name="logger">The logger.</param>
     public AgentPresenceManagerService(
         IAgentProfileManager agentManager,
@@ -43,7 +43,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         IAgentEntitlementPolicy entitlementPolicy,
         IContactCenterEventPublisher publisher,
         IDistributedLock distributedLock,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<AgentPresenceManagerService> logger)
     {
         _agentManager = agentManager;
@@ -52,7 +52,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         _entitlementPolicy = entitlementPolicy;
         _publisher = publisher;
         _distributedLock = distributedLock;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -113,9 +113,9 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.CampaignIds = entitledCampaignIds;
         profile.PresenceStatus = AgentPresenceStatus.Available;
         profile.RequestedPresenceStatus = null;
-        profile.PresenceChangedUtc = _clock.UtcNow;
+        profile.PresenceChangedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         profile.ActiveReservationId = null;
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
+        AgentPresenceUtilities.ApplyIdleState(profile, _timeProvider.GetUtcNow().UtcDateTime);
 
         await SaveAsync(profile, cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
@@ -267,8 +267,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.PresenceStatus = AgentPresenceStatus.Offline;
         profile.PresenceReason = null;
         profile.RequestedPresenceStatus = null;
-        profile.PresenceChangedUtc = _clock.UtcNow;
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
+        profile.PresenceChangedUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        AgentPresenceUtilities.ApplyIdleState(profile, _timeProvider.GetUtcNow().UtcDateTime);
         profile.QueueIds = [];
         profile.CampaignIds = [];
 
@@ -340,8 +340,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.PresenceStatus = AgentPresenceStatus.Offline;
         profile.PresenceReason = reason;
         profile.RequestedPresenceStatus = null;
-        profile.PresenceChangedUtc = _clock.UtcNow;
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
+        profile.PresenceChangedUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        AgentPresenceUtilities.ApplyIdleState(profile, _timeProvider.GetUtcNow().UtcDateTime);
 
         await SaveAsync(profile, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
@@ -416,8 +416,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         }
 
         profile.PresenceReason = reason;
-        profile.PresenceChangedUtc = _clock.UtcNow;
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
+        profile.PresenceChangedUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        AgentPresenceUtilities.ApplyIdleState(profile, _timeProvider.GetUtcNow().UtcDateTime);
 
         await SaveAsync(profile, cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
@@ -469,8 +469,8 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         profile.PresenceStatus = AgentPresenceStatus.WrapUp;
         profile.ActiveReservationId = null;
-        profile.PresenceChangedUtc = _clock.UtcNow;
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
+        profile.PresenceChangedUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        AgentPresenceUtilities.ApplyIdleState(profile, _timeProvider.GetUtcNow().UtcDateTime);
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
@@ -520,12 +520,12 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
         profile.PresenceStatus = profile.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(profile);
         profile.RequestedPresenceStatus = null;
         profile.ActiveReservationId = null;
-        profile.PresenceChangedUtc = _clock.UtcNow;
+        profile.PresenceChangedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Round-robin fairness turns on who least recently finished work, so the stamp is taken here - at the end
         // of the work - rather than when an offer was pushed at the agent, which they may never have accepted.
-        profile.LastWorkCompletedUtc = _clock.UtcNow;
-        AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
+        profile.LastWorkCompletedUtc = _timeProvider.GetUtcNow().UtcDateTime;
+        AgentPresenceUtilities.ApplyIdleState(profile, _timeProvider.GetUtcNow().UtcDateTime);
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
@@ -715,7 +715,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
 
         session.QueueIds = queueIds?.Distinct().ToList() ?? [];
         session.CampaignIds = campaignIds?.Distinct().ToList() ?? [];
-        session.ModifiedUtc = _clock.UtcNow;
+        session.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _sessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 
@@ -753,7 +753,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
             Reason = profile.PresenceReason,
             QueueIds = profile.QueueIds.ToList(),
             CampaignIds = profile.CampaignIds.ToList(),
-            ChangedUtc = profile.PresenceChangedUtc ?? _clock.UtcNow,
+            ChangedUtc = profile.PresenceChangedUtc ?? _timeProvider.GetUtcNow().UtcDateTime,
         });
 
         return _publisher.PublishAsync(interactionEvent, cancellationToken);

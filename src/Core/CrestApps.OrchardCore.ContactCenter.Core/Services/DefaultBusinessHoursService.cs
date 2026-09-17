@@ -9,25 +9,25 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class DefaultBusinessHoursService : IBusinessHoursService
 {
     private readonly IBusinessHoursCalendarManager _calendarManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultBusinessHoursService"/> class.
     /// </summary>
     /// <param name="calendarManager">The business-hours calendar manager.</param>
-    /// <param name="clock">The clock used to resolve the current instant.</param>
+    /// <param name="timeProvider">The time provider used to resolve the current instant.</param>
     public DefaultBusinessHoursService(
         IBusinessHoursCalendarManager calendarManager,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _calendarManager = calendarManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
     public Task<bool> IsOpenAsync(string calendarId, CancellationToken cancellationToken = default)
     {
-        return IsOpenAsync(calendarId, _clock.UtcNow, cancellationToken);
+        return IsOpenAsync(calendarId, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
     }
 
     /// <inheritdoc/>

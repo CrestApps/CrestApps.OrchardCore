@@ -51,7 +51,7 @@ internal static class SupervisorDashboardEndpoints
         IEnumerable<IContactCenterMonitoringService> monitoringServices,
         ISession session,
         IDisplayNameProvider displayNameProvider,
-        IClock clock,
+        TimeProvider timeProvider,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.MonitorContactCenter))
@@ -59,7 +59,7 @@ internal static class SupervisorDashboardEndpoints
             return TypedResults.Forbid();
         }
 
-        var now = clock.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var model = new SupervisorDashboardStateViewModel
         {
             ServerTimeUtc = now,

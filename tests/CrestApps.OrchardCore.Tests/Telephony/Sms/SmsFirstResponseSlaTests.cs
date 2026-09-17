@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -180,14 +181,14 @@ public sealed class SmsFirstResponseSlaTests
         queuePolicyReader.Setup(reader => reader.ReadAsync("queue-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SmsQueuePolicy(true, firstResponseTargetSeconds, null));
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new SmsFirstResponseSlaService(
             (store ?? new Mock<ISmsConversationStore>()).Object,
             queuePolicyReader.Object,
             (notifier ?? new Mock<ISmsRealTimeNotifier>()).Object,
-            clock.Object,
+            clock,
             NullLogger<SmsFirstResponseSlaService>.Instance);
     }
 }

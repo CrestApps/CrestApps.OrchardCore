@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Locking.Distributed;
@@ -454,15 +455,15 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         distributedLock
             .Setup(value => value.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((null, lockAcquired));
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new TelephonyInteractionSynchronizationService(
             store.Object,
             resolver.Object,
             hubContext.Object,
             distributedLock.Object,
-            clock.Object,
+            clock,
             NullLogger<TelephonyInteractionSynchronizationService>.Instance,
             new ShellSettings
             {

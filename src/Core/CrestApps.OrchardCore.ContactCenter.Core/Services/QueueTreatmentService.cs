@@ -17,7 +17,7 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
     private readonly IInteractionManager _interactionManager;
     private readonly IQueueTreatmentProvider _treatmentProvider;
     private readonly IAgentAvailabilityService _availabilityService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -27,21 +27,21 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
     /// <param name="interactionManager">The interaction manager, which knows the caller's provider leg.</param>
     /// <param name="treatmentProvider">The provider that makes the caller hear it.</param>
     /// <param name="availabilityService">The availability service, for the estimate's divisor.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public QueueTreatmentService(
         IQueueItemManager queueItemManager,
         IInteractionManager interactionManager,
         IQueueTreatmentProvider treatmentProvider,
         IAgentAvailabilityService availabilityService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<QueueTreatmentService> logger)
     {
         _queueItemManager = queueItemManager;
         _interactionManager = interactionManager;
         _treatmentProvider = treatmentProvider;
         _availabilityService = availabilityService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -66,7 +66,7 @@ public sealed class QueueTreatmentService : IQueueTreatmentService
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var availableAgents = settings.AnnounceEstimatedWait
             ? (await _availabilityService.GetForQueueAsync(queue.ItemId, cancellationToken)).Count
             : 0;

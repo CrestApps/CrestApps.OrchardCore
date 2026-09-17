@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using CrestApps.Core.AI;
+﻿using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
@@ -13,8 +12,10 @@ using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Runtime.CompilerServices;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
@@ -853,8 +854,8 @@ public sealed class RealtimeVoiceConversationRunnerTests
                 .Callback<CancellationToken>(_ => _flushedPromptCounts.Add(_prompts.Count))
                 .Returns(Task.CompletedTask);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(x => x.UtcNow).Returns(Now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(Now);
 
             Runner = new RealtimeVoiceConversationRunner(
                 Orchestrator,
@@ -862,7 +863,7 @@ public sealed class RealtimeVoiceConversationRunnerTests
                 promptStore.Object,
                 sessionManager.Object,
                 DocumentSession.Object,
-                clock.Object,
+                clock,
                 NullLogger<RealtimeVoiceConversationRunner>.Instance);
         }
 

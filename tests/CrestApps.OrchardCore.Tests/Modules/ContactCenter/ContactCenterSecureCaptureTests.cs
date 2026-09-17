@@ -1,12 +1,13 @@
-using System.Security.Claims;
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
+using System.Security.Claims;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -677,7 +678,7 @@ public sealed class ContactCenterSecureCaptureTests
             ISecureCaptureTokenSink tokenSink = null)
         {
             Now = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            Clock = new StubClock(Now);
+            Clock = new FakeTimeProvider(Now);
             InteractionManager = new Mock<IInteractionManager>();
             SessionManager = new Mock<ISecureCaptureSessionManager>();
             RecordingService = new Mock<IContactCenterRecordingService>();
@@ -706,7 +707,7 @@ public sealed class ContactCenterSecureCaptureTests
 
         public DateTime Now { get; }
 
-        public StubClock Clock { get; }
+        public FakeTimeProvider Clock { get; }
 
         public Mock<IInteractionManager> InteractionManager { get; }
 

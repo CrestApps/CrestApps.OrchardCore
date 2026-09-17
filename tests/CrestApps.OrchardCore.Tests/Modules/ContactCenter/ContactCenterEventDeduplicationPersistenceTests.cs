@@ -1,4 +1,3 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -7,8 +6,10 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Data.Common;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -130,12 +131,12 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         }
     }
 
-    private static IClock CreateClock()
+    private static FakeTimeProvider CreateClock()
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
-        return clock.Object;
+        return clock;
     }
 
     private static string DatabasePath(string suffix)
@@ -163,7 +164,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
-        var processedEventMigration = new ContactCenterProcessedEventIndexMigrations(store, new StubClock())
+        var processedEventMigration = new ContactCenterProcessedEventIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
         {
             SchemaBuilder = schemaBuilder,
         };

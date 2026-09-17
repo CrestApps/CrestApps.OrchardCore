@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -260,12 +261,12 @@ public sealed class RecordingAccessGovernanceServiceTests
         return callSessionManager;
     }
 
-    private static IClock CreateClock(DateTime? utcNow = null)
+    private static FakeTimeProvider CreateClock(DateTime? utcNow = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(utcNow ?? new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(utcNow ?? new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
-        return clock.Object;
+        return clock;
     }
 
     private static Interaction CreateInteraction(string recordingReference)

@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -10,10 +9,12 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -1387,8 +1388,8 @@ public sealed class InboundVoiceServiceTests
 
         public VoiceContactCenterCallRouter CreateService()
         {
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             var workManager = new TestContactCenterFeatureWorkManager();
 
@@ -1424,7 +1425,7 @@ public sealed class InboundVoiceServiceTests
                 DistributedLock.Object,
                 ScopeExecutor,
                 workManager,
-                clock.Object,
+                clock,
                 Options.Create(new ContactCenterCoordinationOptions()));
 
             return new VoiceContactCenterCallRouter(

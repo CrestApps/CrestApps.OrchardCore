@@ -14,7 +14,7 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
     private readonly IAgentSessionManager _sessionManager;
     private readonly IInteractionManager _interactionManager;
     private readonly AgentAvailabilityOptions _options;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentAvailabilityService"/> class.
@@ -23,19 +23,19 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
     /// <param name="sessionManager">The live agent session manager.</param>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="options">The availability policy.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     public AgentAvailabilityService(
         IAgentProfileManager agentManager,
         IAgentSessionManager sessionManager,
         IInteractionManager interactionManager,
         IOptions<AgentAvailabilityOptions> options,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _agentManager = agentManager;
         _sessionManager = sessionManager;
         _interactionManager = interactionManager;
         _options = options.Value;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -57,7 +57,7 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
         }
 
         var session = await _sessionManager.FindByUserIdAsync(agent.UserId, cancellationToken);
-        var liveAfter = _clock.UtcNow - _options.HeartbeatTimeout;
+        var liveAfter = _timeProvider.GetUtcNow().UtcDateTime - _options.HeartbeatTimeout;
 
         if (session is null ||
             !session.IsOnline ||
@@ -103,7 +103,7 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
         }
 
         var session = await _sessionManager.FindByUserIdAsync(agent.UserId, cancellationToken);
-        var liveAfter = _clock.UtcNow - _options.HeartbeatTimeout;
+        var liveAfter = _timeProvider.GetUtcNow().UtcDateTime - _options.HeartbeatTimeout;
 
         if (session is null ||
             !session.IsOnline ||
@@ -150,7 +150,7 @@ public sealed class AgentAvailabilityService : IAgentAvailabilityService
         var activeCounts = await _interactionManager.CountActiveByAgentIdsAsync(
             agents.Select(agent => agent.ItemId).ToArray(),
             cancellationToken);
-        var liveAfter = _clock.UtcNow - _options.HeartbeatTimeout;
+        var liveAfter = _timeProvider.GetUtcNow().UtcDateTime - _options.HeartbeatTimeout;
         var available = new List<AgentAvailability>(agents.Count);
 
         foreach (var session in sessions)

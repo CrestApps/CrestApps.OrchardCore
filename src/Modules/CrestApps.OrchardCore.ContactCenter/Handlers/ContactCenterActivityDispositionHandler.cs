@@ -19,7 +19,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IQueuedVoiceWorkOfferService _queuedVoiceWorkOfferService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -30,7 +30,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="queuedVoiceWorkOfferService">The queued voice work offer service.</param>
-    /// <param name="clock">The clock used to complete wrap-up timing.</param>
+    /// <param name="timeProvider">The time provider used to complete wrap-up timing.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterActivityDispositionHandler(
         IAgentProfileManager agentManager,
@@ -38,7 +38,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
         IInteractionManager interactionManager,
         IContactCenterWorkStateService workStateService,
         IQueuedVoiceWorkOfferService queuedVoiceWorkOfferService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ContactCenterActivityDispositionHandler> logger)
     {
         _agentManager = agentManager;
@@ -46,7 +46,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
         _interactionManager = interactionManager;
         _workStateService = workStateService;
         _queuedVoiceWorkOfferService = queuedVoiceWorkOfferService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -76,7 +76,7 @@ public sealed class ContactCenterActivityDispositionHandler : IActivityDispositi
 
         if (interaction?.WrapUpStartedUtc is not null && interaction.WrapUpCompletedUtc is null)
         {
-            interaction.WrapUpCompletedUtc = _clock.UtcNow;
+            interaction.WrapUpCompletedUtc = _timeProvider.GetUtcNow().UtcDateTime;
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
 

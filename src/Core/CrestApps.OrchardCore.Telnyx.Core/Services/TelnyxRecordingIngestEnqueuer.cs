@@ -22,7 +22,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IContactCenterEventPublisher _eventPublisher;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<TelnyxRecordingIngestEnqueuer> _logger;
 
     // The agent profile manager is owned by the Agents feature. Voicemail requires agents, but the recording
@@ -35,7 +35,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
     /// <param name="interactionManager">The interaction manager used to stamp the recording retrieval handle.</param>
     /// <param name="agentProfileManager">The agent profile manager used to resolve a voicemail's recipient agent.</param>
     /// <param name="eventPublisher">The Contact Center event publisher used to surface a saved voicemail to its recipient.</param>
-    /// <param name="clock">The clock used to stamp the job's creation and first-due time.</param>
+    /// <param name="timeProvider">The time provider used to stamp the job's creation and first-due time.</param>
     /// <param name="logger">The logger instance.</param>
     public TelnyxRecordingIngestEnqueuer(
         ITelnyxRecordingIngestJobStore jobStore,
@@ -43,7 +43,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         IEnumerable<IAgentProfileManager> agentProfileManagers,
         IContactCenterEventPublisher eventPublisher,
         IContactCenterScopeExecutor scopeExecutor,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelnyxRecordingIngestEnqueuer> logger)
     {
         _jobStore = jobStore;
@@ -51,7 +51,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
         _agentProfileManager = agentProfileManagers.FirstOrDefault();
         _eventPublisher = eventPublisher;
         _scopeExecutor = scopeExecutor;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -123,7 +123,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
                 recordingState.InteractionId,
                 callEvent.RecordingId,
                 TelnyxConstants.Recording.Format,
-                _clock.UtcNow,
+                _timeProvider.GetUtcNow().UtcDateTime,
                 cancellationToken);
 
             // Download the recording into the encrypted media store immediately rather than waiting for the next
@@ -188,7 +188,7 @@ public sealed class TelnyxRecordingIngestEnqueuer : ITelnyxRecordingSavedHandler
             CorrelationId = interaction.CorrelationId,
             ActorId = ContactCenterConstants.SystemActor,
             SourceComponent = ContactCenterConstants.Components.Voice,
-            OccurredUtc = _clock.UtcNow,
+            OccurredUtc = _timeProvider.GetUtcNow().UtcDateTime,
             IdempotencyKey = $"voicemail-recording-{recordingId}",
         };
     }

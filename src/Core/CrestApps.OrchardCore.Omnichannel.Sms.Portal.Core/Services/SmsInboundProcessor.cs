@@ -41,7 +41,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
     private readonly IDistributedLock _distributedLock;
     private readonly SmsPortalOptions _options;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly Redactor _addressRedactor;
     private readonly ILogger _logger;
 
@@ -62,7 +62,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         IDistributedLock distributedLock,
         IOptions<SmsPortalOptions> options,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         IRedactorProvider redactorProvider,
         ILogger<SmsInboundProcessor> logger)
     {
@@ -79,7 +79,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         _distributedLock = distributedLock;
         _options = options.Value;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
         _logger = logger;
     }
@@ -171,7 +171,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
                 ContactAddress = contactAddress,
                 Status = SmsConversationStatus.Open,
                 AssignmentStatus = SmsConversationAssignmentStatus.Unassigned,
-                CreatedUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 ContactContentItemId = await _contactResolver.ResolveContactContentItemIdAsync(contactAddress, cancellationToken),
             };
         }
@@ -198,7 +198,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         await ApplyKeywordAsync(conversation, message, cancellationToken);
 
         // Roll up the thread and link the message to it.
-        SmsConversationRollup.ApplyInbound(conversation, message.Content, message.CreatedUtc, _clock.UtcNow);
+        SmsConversationRollup.ApplyInbound(conversation, message.Content, message.CreatedUtc, _timeProvider.GetUtcNow().UtcDateTime);
 
         if (isNew)
         {
@@ -220,7 +220,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
             ContactAddress = conversation.ContactAddress,
             Preview = conversation.LastMessagePreview,
             UnreadCount = conversation.UnreadCount,
-            ReceivedUtc = conversation.LastMessageUtc ?? _clock.UtcNow,
+            ReceivedUtc = conversation.LastMessageUtc ?? _timeProvider.GetUtcNow().UtcDateTime,
             AssignedAgentId = conversation.AssignedAgentId,
             OwnerQueueId = conversation.OwnerType == SmsConversationOwnerType.Queue ? conversation.OwnerId : null,
         }, cancellationToken);
@@ -382,7 +382,7 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
             return;
         }
 
-        contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(doNotSms, _clock.UtcNow));
+        contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(doNotSms, _timeProvider.GetUtcNow().UtcDateTime));
 
         await _contentManager.UpdateAsync(contact);
     }

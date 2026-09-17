@@ -1,5 +1,3 @@
-using System.Text.Encodings.Web;
-using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -16,12 +14,15 @@ using Fluid.Values;
 using Microsoft.AspNetCore.Html;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Infrastructure;
 using OrchardCore.Liquid;
 using OrchardCore.Sms;
+using System.Text.Encodings.Web;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms;
 
@@ -615,7 +616,7 @@ public sealed class SmsOmnichannelProcessorTests
                 Sms,
                 Liquid,
                 contentManager.Object,
-                new StubClock(_now),
+                new FakeTimeProvider(_now),
                 new PassThroughStringLocalizer<SmsOmnichannelProcessor>());
         }
     }

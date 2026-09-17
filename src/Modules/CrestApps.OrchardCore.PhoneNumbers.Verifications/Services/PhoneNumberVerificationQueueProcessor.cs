@@ -13,7 +13,7 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
 {
     private readonly IPhoneNumberVerificationManager _verificationManager;
     private readonly IPhoneNumberVerificationRequestDelayer _requestDelayer;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -21,17 +21,17 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
     /// </summary>
     /// <param name="verificationManager">The verification manager.</param>
     /// <param name="requestDelayer">The provider-request delayer.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public PhoneNumberVerificationQueueProcessor(
         IPhoneNumberVerificationManager verificationManager,
         IPhoneNumberVerificationRequestDelayer requestDelayer,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<PhoneNumberVerificationQueueProcessor> logger)
     {
         _verificationManager = verificationManager;
         _requestDelayer = requestDelayer;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -127,7 +127,7 @@ internal sealed class PhoneNumberVerificationQueueProcessor : IPhoneNumberVerifi
             {
                 PhoneNumber = phoneNumber,
                 NormalizedPhoneNumber = phoneNumber,
-                VerificationDateUtc = _clock.UtcNow,
+                VerificationDateUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 Status = PhoneNumberVerificationStatus.Failed,
                 LineType = PhoneNumberLineType.Unknown,
                 ErrorMessage = ex.Message,

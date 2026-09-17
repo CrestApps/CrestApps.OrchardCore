@@ -23,7 +23,7 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
 {
     private readonly ITelephonyInteractionStore _telephonyInteractionStore;
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly string _tenantName;
 
@@ -32,19 +32,19 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
     /// </summary>
     /// <param name="telephonyInteractionStore">The telephony interaction store that owns call history.</param>
     /// <param name="hubContext">The soft-phone hub context.</param>
-    /// <param name="clock">The clock used to stamp call history times.</param>
+    /// <param name="timeProvider">The time provider used to stamp call history times.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="shellSettings">The tenant shell settings used to scope hub groups.</param>
     public TelephonyCallHistoryVoiceEventHandler(
         ITelephonyInteractionStore telephonyInteractionStore,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelephonyCallHistoryVoiceEventHandler> logger,
         ShellSettings shellSettings)
     {
         _telephonyInteractionStore = telephonyInteractionStore;
         _hubContext = hubContext;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _tenantName = shellSettings.Name;
     }
@@ -135,7 +135,7 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
 
     private void ApplyInteractionState(TelephonyInteraction interaction, ProviderVoiceEvent providerEvent)
     {
-        var now = providerEvent.OccurredUtc ?? _clock.UtcNow;
+        var now = providerEvent.OccurredUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
         var state = VoiceCallStateProjection.ToTelephonyCallState(providerEvent.State);
 
         interaction.ProviderName = providerEvent.ProviderName;

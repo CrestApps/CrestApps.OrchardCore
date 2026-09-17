@@ -24,7 +24,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
     private readonly IContactCenterRecordingService _recordingService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ISiteService _siteService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<SecureCaptureService> _logger;
 
     /// <summary>
@@ -37,7 +37,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
     /// <param name="recordingService">The recording service used to resume recording a capture had paused.</param>
     /// <param name="publisher">The event publisher used to record the capture lifecycle in the audit history.</param>
     /// <param name="siteService">The site service used to read the tenant secure capture settings.</param>
-    /// <param name="clock">The clock used to stamp capture times.</param>
+    /// <param name="timeProvider">The time provider used to stamp capture times.</param>
     /// <param name="logger">The logger instance.</param>
     public SecureCaptureService(
         IInteractionManager interactionManager,
@@ -47,7 +47,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
         IContactCenterRecordingService recordingService,
         IContactCenterEventPublisher publisher,
         ISiteService siteService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<SecureCaptureService> logger)
     {
         _interactionManager = interactionManager;
@@ -57,7 +57,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
         _recordingService = recordingService;
         _publisher = publisher;
         _siteService = siteService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -118,7 +118,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
         }
 
         var (rawToken, tokenHash) = SecureCaptureAccessToken.Create();
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var ttlSeconds = Math.Clamp(
             settings.LinkTimeToLiveSeconds,
             SecureCaptureSettings.MinLinkTimeToLiveSeconds,
@@ -184,7 +184,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
 
         var session = await _sessionManager.FindByAccessTokenHashAsync(hash, cancellationToken);
 
-        if (session is null || session.State != SecureCaptureState.Collecting || session.ExpiresUtc <= _clock.UtcNow)
+        if (session is null || session.State != SecureCaptureState.Collecting || session.ExpiresUtc <= _timeProvider.GetUtcNow().UtcDateTime)
         {
             return null;
         }
@@ -217,7 +217,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
             return SecureCaptureActionResult.Failure("The secure link is no longer available.");
         }
 
-        if (session.ExpiresUtc <= _clock.UtcNow)
+        if (session.ExpiresUtc <= _timeProvider.GetUtcNow().UtcDateTime)
         {
             return SecureCaptureActionResult.Failure("The secure link has expired.");
         }
@@ -258,7 +258,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
             tokenReferences[field] = tokenResult.Token;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         session.MaskedValues = maskedValues;
         session.TokenReferences = tokenReferences;
         session.State = SecureCaptureState.Completed;
@@ -311,7 +311,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
             return SecureCaptureActionResult.Failure(authorization.FailureReason);
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         session.State = SecureCaptureState.Cancelled;
         session.CancelledUtc = now;
         session.ModifiedUtc = now;
@@ -336,7 +336,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
     public async Task<int> ExpireDueAsync(int maxCount, CancellationToken cancellationToken = default)
     {
         var take = maxCount <= 0 ? ExpiryBatchLimit : Math.Min(maxCount, ExpiryBatchLimit);
-        var sessions = await _sessionManager.GetExpiredAsync(_clock.UtcNow, take, cancellationToken);
+        var sessions = await _sessionManager.GetExpiredAsync(_timeProvider.GetUtcNow().UtcDateTime, take, cancellationToken);
 
         var expired = 0;
 
@@ -349,7 +349,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
                 continue;
             }
 
-            var now = _clock.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
             session.State = SecureCaptureState.Expired;
             session.ModifiedUtc = now;
 

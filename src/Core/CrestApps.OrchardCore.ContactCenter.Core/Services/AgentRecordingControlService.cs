@@ -21,7 +21,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
     private readonly ISiteService _siteService;
     private readonly IEnumerable<IContactCenterRealTimeNotifier> _realTimeNotifiers;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentRecordingControlService"/> class.
@@ -33,7 +33,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
     /// <param name="voiceProviderResolver">The voice provider resolver used to check pause capability.</param>
     /// <param name="siteService">The site service used to read the tenant recording governance settings.</param>
     /// <param name="realTimeNotifiers">The optional real-time notifiers used to broadcast the recording state change.</param>
-    /// <param name="clock">The clock used to stamp the real-time notification.</param>
+    /// <param name="timeProvider">The time provider used to stamp the real-time notification.</param>
     public AgentRecordingControlService(
         IInteractionManager interactionManager,
         ICallControlAuthorizationService callControlAuthorizationService,
@@ -42,7 +42,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ISiteService siteService,
         IEnumerable<IContactCenterRealTimeNotifier> realTimeNotifiers,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _interactionManager = interactionManager;
         _callControlAuthorizationService = callControlAuthorizationService;
@@ -51,7 +51,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
         _voiceProviderResolver = voiceProviderResolver;
         _siteService = siteService;
         _realTimeNotifiers = realTimeNotifiers;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -246,7 +246,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
             AgentId = agentId,
             RecordingState = state.ToString(),
             IsSecurePauseActive = state == RecordingState.Paused,
-            ServerTimeUtc = _clock.UtcNow,
+            ServerTimeUtc = _timeProvider.GetUtcNow().UtcDateTime,
         }, cancellationToken);
     }
 }

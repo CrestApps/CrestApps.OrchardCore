@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Time.Testing;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -99,7 +100,7 @@ public sealed class ContactCenterQueueBacklogHealthCheckTests
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
-        var migration = new QueueItemIndexMigrations(store, new StubClock())
+        var migration = new QueueItemIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
         {
             SchemaBuilder = new SchemaBuilder(store.Configuration, transaction),
         };

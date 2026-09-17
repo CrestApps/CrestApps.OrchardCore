@@ -38,7 +38,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IActivityQueueService _queueService;
     private readonly IQueueItemManager _queueItemManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -51,7 +51,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
     /// <param name="workStateService">The work-state service used to clear the routing projection.</param>
     /// <param name="queueService">The queue service used to re-enqueue a recovered activity.</param>
     /// <param name="queueItemManager">The queue item manager used to drop any lingering queue item.</param>
-    /// <param name="clock">The clock used to evaluate staleness and stamp completion.</param>
+    /// <param name="timeProvider">The time provider used to evaluate staleness and stamp completion.</param>
     /// <param name="logger">The logger.</param>
     public OrphanedActivityRecoveryService(
         ISession session,
@@ -61,7 +61,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         IContactCenterWorkStateService workStateService,
         IActivityQueueService queueService,
         IQueueItemManager queueItemManager,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<OrphanedActivityRecoveryService> logger)
     {
         _session = session;
@@ -71,7 +71,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
         _workStateService = workStateService;
         _queueService = queueService;
         _queueItemManager = queueItemManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -83,7 +83,7 @@ public sealed class OrphanedActivityRecoveryService : IOrphanedActivityRecoveryS
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var cutoff = now - gracePeriod;
 
         // Bound the scan to records that have not been reserved recently. The interaction and reservation checks

@@ -10,15 +10,15 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed class TelnyxSoftPhoneCredentialRegistrar : ISoftPhoneCredentialRegistrar
 {
     private readonly ITelnyxAgentCredentialStore _credentialStore;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelnyxSoftPhoneCredentialRegistrar"/> class.
     /// </summary>
-    public TelnyxSoftPhoneCredentialRegistrar(ITelnyxAgentCredentialStore credentialStore, IClock clock)
+    public TelnyxSoftPhoneCredentialRegistrar(ITelnyxAgentCredentialStore credentialStore, TimeProvider timeProvider)
     {
         _credentialStore = credentialStore;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -26,5 +26,5 @@ public sealed class TelnyxSoftPhoneCredentialRegistrar : ISoftPhoneCredentialReg
 
     /// <inheritdoc/>
     public Task<bool> ReportRegisteredAsync(string userId, string credentialId, CancellationToken cancellationToken = default)
-        => _credentialStore.MarkRegisteredAsync(userId, credentialId, _clock.UtcNow, cancellationToken);
+        => _credentialStore.MarkRegisteredAsync(userId, credentialId, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 }

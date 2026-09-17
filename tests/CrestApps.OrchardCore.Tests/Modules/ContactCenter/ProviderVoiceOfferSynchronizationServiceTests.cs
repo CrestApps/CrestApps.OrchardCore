@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -75,8 +76,8 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.FindByIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(activity);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
 
         var logger = new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>();
         var service = new ProviderVoiceOfferSynchronizationService(
@@ -88,7 +89,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(),
-            clock.Object,
+            clock,
             logger.Object);
 
         // Act
@@ -159,8 +160,8 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         reservationManager.Setup(m => m.GetActiveByActivityAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync([]);
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.FindByIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(activity);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
         var service = new ProviderVoiceOfferSynchronizationService(
             interactionManager.Object,
             callSessionManager.Object,
@@ -170,7 +171,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(),
-            clock.Object,
+            clock,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
         // Act
@@ -226,8 +227,8 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
 
         var reservationManager = new Mock<IActivityReservationManager>();
         reservationManager.Setup(m => m.GetActiveByActivityAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync([]);
@@ -243,7 +244,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(presenceManager.Object),
-            clock.Object,
+            clock,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
         // Act
@@ -319,8 +320,8 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
                 Status = ActivityStatus.Completed,
             });
         var presenceManager = new Mock<IAgentPresenceManager>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
         var service = new ProviderVoiceOfferSynchronizationService(
             interactionManager.Object,
             callSessionManager.Object,
@@ -330,7 +331,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(presenceManager.Object),
-            clock.Object,
+            clock,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
         // Act
@@ -381,8 +382,8 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         var queueItemManager = new Mock<IQueueItemManager>();
         queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
 
         var reservationManager = new Mock<IActivityReservationManager>();
         reservationManager.Setup(m => m.GetActiveByActivityAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync([]);
@@ -396,7 +397,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             new Mock<IOmnichannelActivityManager>().Object,
             new FakeContactCenterWorkStateService(),
             CreateServiceProvider(),
-            clock.Object,
+            clock,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
         // Act
@@ -466,8 +467,8 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         var activityManager = new Mock<IOmnichannelActivityManager>();
         activityManager.Setup(m => m.FindByIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(activity);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
 
         var service = new ProviderVoiceOfferSynchronizationService(
             interactionManager.Object,
@@ -478,7 +479,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(),
-            clock.Object,
+            clock,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
         // Act
@@ -546,8 +547,8 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         agentManager.Setup(m => m.FindByIdAsync("agent-1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
         var presenceManager = new Mock<IAgentPresenceManager>();
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
 
         var service = new ProviderVoiceOfferSynchronizationService(
             interactionManager.Object,
@@ -558,7 +559,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             new Mock<IOmnichannelActivityManager>().Object,
             new FakeContactCenterWorkStateService(),
             CreateServiceProvider(presenceManager.Object),
-            clock.Object,
+            clock,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
         // Act

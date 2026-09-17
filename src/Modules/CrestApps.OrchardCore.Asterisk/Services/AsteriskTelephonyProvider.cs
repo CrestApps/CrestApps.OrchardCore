@@ -26,7 +26,7 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
     /// <param name="dataProtectionProvider">The data protection provider used to unprotect the stored password.</param>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="applicationGate">The gate that enforces single-tenant ownership of each ARI application.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="redactorProvider">The redactor provider used to redact sensitive values before logging.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
@@ -35,11 +35,11 @@ internal sealed class AsteriskTelephonyProvider : AsteriskTelephonyProviderBase
         IDataProtectionProvider dataProtectionProvider,
         IHttpClientFactory httpClientFactory,
         IAsteriskAriApplicationGate applicationGate,
-        IClock clock,
+        TimeProvider timeProvider,
         IRedactorProvider redactorProvider,
         ILogger<AsteriskTelephonyProvider> logger,
         IStringLocalizer<AsteriskTelephonyProvider> stringLocalizer)
-        : base(httpClientFactory, clock, redactorProvider, logger, stringLocalizer)
+        : base(httpClientFactory, timeProvider, redactorProvider, logger, stringLocalizer)
     {
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;

@@ -485,7 +485,7 @@ public sealed class QueuedVoiceWorkOfferServiceTests
             dialerProfileReader?.Object ?? new NullDialerProfileReader(),
             // The real selector over the real store, so these tests exercise the cross-queue choice rather
             // than a stub of it.
-            new AgentWorkSelector(resolvedQueueItemStore.Object, selectorQueueManager.Object, Mock.Of<IClock>()),
+            new AgentWorkSelector(resolvedQueueItemStore.Object, selectorQueueManager.Object, Mock.Of<TimeProvider>()),
             new FakeDistributedLock(),
             CoordinationOptions(),
             session.Object,

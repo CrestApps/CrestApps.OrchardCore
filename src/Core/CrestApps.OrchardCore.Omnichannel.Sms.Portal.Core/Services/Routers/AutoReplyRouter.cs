@@ -22,19 +22,19 @@ public sealed class AutoReplyRouter : ISmsInboundRouter
 
     private readonly ISmsDispatcher _dispatcher;
     private readonly IContentManager _contentManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AutoReplyRouter"/> class.
     /// </summary>
     /// <param name="dispatcher">The dispatcher that sends the reply.</param>
     /// <param name="contentManager">The content manager, used to read the contact's opt-out state.</param>
-    /// <param name="clock">The clock.</param>
-    public AutoReplyRouter(ISmsDispatcher dispatcher, IContentManager contentManager, IClock clock)
+    /// <param name="timeProvider">The time provider.</param>
+    public AutoReplyRouter(ISmsDispatcher dispatcher, IContentManager contentManager, TimeProvider timeProvider)
     {
         _dispatcher = dispatcher;
         _contentManager = contentManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -65,7 +65,7 @@ public sealed class AutoReplyRouter : ISmsInboundRouter
         }
 
         var conversation = context.Conversation;
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Once a day per thread. A contact who sends three messages in a row should not get three
         // acknowledgements; that is a machine talking over someone trying to reach a person.

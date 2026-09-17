@@ -1,4 +1,3 @@
-using System.Text;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telnyx;
@@ -9,12 +8,14 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
 using Org.BouncyCastle.Security;
+using System.Text;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -155,9 +156,9 @@ public sealed class TelnyxWebhookInboxDurabilityTests
             .CreateProtector(TelnyxConstants.WebhookProtectorName)
             .Protect(key.PublicKeyBase64);
 
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var now = new DateTime(2026, 9, 6, 21, 34, 8, DateTimeKind.Utc);
-        clock.SetupGet(x => x.UtcNow).Returns(now);
+        clock.SetUtcNow(now);
 
         var timestamp = new DateTimeOffset(now).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
 
@@ -197,7 +198,7 @@ public sealed class TelnyxWebhookInboxDurabilityTests
             siteService.Object,
             dataProtectionProvider,
             new Mock<ITelnyxWebhookService>().Object,
-            clock.Object,
+            clock,
             NullLogger<CrestApps.OrchardCore.Telnyx.Startup>.Instance,
             httpContext);
 

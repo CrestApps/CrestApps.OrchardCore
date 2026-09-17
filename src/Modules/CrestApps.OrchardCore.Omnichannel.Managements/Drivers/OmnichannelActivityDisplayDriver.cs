@@ -34,7 +34,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly OmnichannelContentTypeProvider _contentTypeProvider;
     private readonly IDisplayNameProvider _displayNameProvider;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILocalClock _localClock;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly UserManager<IUser> _userManager;
@@ -52,8 +52,8 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
     /// <param name="actionCatalog">The subject action catalog.</param>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="displayNameProvider">The display name provider.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="localClock">The local clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
+    /// <param name="localClock">The local time provider.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="contentManager">The content manager.</param>
     /// <param name="session">The YesSql session.</param>
@@ -67,7 +67,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         IContentDefinitionManager contentDefinitionManager,
         OmnichannelContentTypeProvider contentTypeProvider,
         IDisplayNameProvider displayNameProvider,
-        IClock clock,
+        TimeProvider timeProvider,
         ILocalClock localClock,
         UserManager<IUser> userManager,
         IContentManager contentManager,
@@ -82,7 +82,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
         _contentDefinitionManager = contentDefinitionManager;
         _contentTypeProvider = contentTypeProvider;
         _displayNameProvider = displayNameProvider;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _localClock = localClock;
         _userManager = userManager;
         _contentManager = contentManager;
@@ -300,7 +300,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                             contact,
                             _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier),
                             _httpContextAccessor.HttpContext?.User?.Identity?.Name,
-                            _clock.UtcNow))
+                            _timeProvider.GetUtcNow().UtcDateTime))
                     {
                         context.Updater.ModelState.AddModelError(
                             Prefix,
@@ -418,7 +418,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
                 string.IsNullOrEmpty(activity.AssignedToId) ||
                     !activity.AssignedToUtc.HasValue)
             {
-                activity.AssignedToUtc = _clock.UtcNow;
+                activity.AssignedToUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 activity.AssignedToUsername = (await _userManager.FindByIdAsync(model.UserId))?.UserName;
                 activity.AssignedToId = model.UserId;
             }

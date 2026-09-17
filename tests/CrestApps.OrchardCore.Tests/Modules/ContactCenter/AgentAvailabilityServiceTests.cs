@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -243,15 +244,15 @@ public sealed class AgentAvailabilityServiceTests
             .ReturnsAsync((string agentId, CancellationToken _) =>
                 activeCounts is not null && activeCounts.TryGetValue(agentId, out var count) ? count : 0);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new AgentAvailabilityService(
             agentManager.Object,
             sessionManager.Object,
             interactionManager.Object,
             Options.Create(new AgentAvailabilityOptions()),
-            clock.Object);
+            clock);
     }
 
     private static AgentProfile CreateAgent()

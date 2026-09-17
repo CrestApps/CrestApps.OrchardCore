@@ -1,10 +1,11 @@
-using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.Time.Testing;
+using System.Globalization;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -42,7 +43,7 @@ public sealed class ContactCenterClaimMigrationTests
                 "activity-2",
                 "agent-1",
                 ReservationStatus.Accepted);
-            var migration = new ActivityReservationIndexMigrations(store, new StubClock())
+            var migration = new ActivityReservationIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -98,7 +99,7 @@ public sealed class ContactCenterClaimMigrationTests
                 "activity-1",
                 "agent-2",
                 ReservationStatus.Accepted);
-            var migration = new ActivityReservationIndexMigrations(store, new StubClock())
+            var migration = new ActivityReservationIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -141,7 +142,7 @@ public sealed class ContactCenterClaimMigrationTests
                 "queue-item-2",
                 "activity-1",
                 QueueItemStatus.Completed);
-            var migration = new QueueItemIndexMigrations(store, new StubClock())
+            var migration = new QueueItemIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -189,7 +190,7 @@ public sealed class ContactCenterClaimMigrationTests
                 "queue-item-2",
                 "activity-1",
                 QueueItemStatus.Reserved);
-            var migration = new QueueItemIndexMigrations(store, new StubClock())
+            var migration = new QueueItemIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };

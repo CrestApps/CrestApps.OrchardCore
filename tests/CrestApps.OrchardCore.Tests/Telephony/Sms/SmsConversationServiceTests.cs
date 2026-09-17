@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
@@ -8,12 +7,14 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
+using System.Security.Claims;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
@@ -226,8 +227,8 @@ public class SmsConversationServiceTests
             .Returns(Task.CompletedTask)
             .Callback(new InvocationAction(inv => onSave((OmnichannelMessage)inv.Arguments[0])));
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(DateTime.UtcNow);
 
         var contactResolver = new Mock<ISmsContactResolver>();
         contactResolver.Setup(r => r.ResolveContactContentItemIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -242,7 +243,7 @@ public class SmsConversationServiceTests
             CreateConversationAuthorizationService(conversationAuthorized),
             session.Object,
             new NoOpSmsFirstResponseSlaService(),
-            clock.Object,
+            clock,
             RedactorProviderFactory.Create(),
             NullLogger<SmsConversationService>.Instance);
 

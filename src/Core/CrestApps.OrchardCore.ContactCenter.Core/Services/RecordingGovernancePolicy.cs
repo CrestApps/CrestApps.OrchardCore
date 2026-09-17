@@ -11,19 +11,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
 {
     private readonly ISiteService _siteService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecordingGovernancePolicy"/> class.
     /// </summary>
     /// <param name="siteService">The site service used to read the tenant recording governance settings.</param>
-    /// <param name="clock">The clock used to resolve the recording retention window.</param>
+    /// <param name="timeProvider">The time provider used to resolve the recording retention window.</param>
     public RecordingGovernancePolicy(
         ISiteService siteService,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _siteService = siteService;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -51,7 +51,7 @@ public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
         var retentionDays = Math.Clamp(settings.RetentionDays, 0, ContactCenterRecordingSettings.MaxRetentionDays);
 
         var retainUntilUtc = retentionDays > 0
-            ? _clock.UtcNow.AddDays(retentionDays)
+            ? _timeProvider.GetUtcNow().UtcDateTime.AddDays(retentionDays)
             : (DateTime?)null;
 
         return RecordingGovernanceDecision.Allow(retainUntilUtc, settings.LegalHoldByDefault);

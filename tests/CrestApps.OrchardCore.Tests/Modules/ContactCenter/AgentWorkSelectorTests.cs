@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -252,10 +253,10 @@ public sealed class AgentWorkSelectorTests
                 .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string queueId, CancellationToken _) => _queues.GetValueOrDefault(queueId));
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
-            Selector = new AgentWorkSelector(queueItemStore.Object, queueManager.Object, clock.Object);
+            Selector = new AgentWorkSelector(queueItemStore.Object, queueManager.Object, clock);
         }
 
         public AgentWorkSelector Selector { get; }

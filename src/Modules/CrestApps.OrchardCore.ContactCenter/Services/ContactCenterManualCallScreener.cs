@@ -30,7 +30,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
     private readonly IContentManager _contentManager;
     private readonly IBusinessHoursService _businessHoursService;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -45,7 +45,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
     /// <param name="contentManager">The content manager used to load the resolved contact.</param>
     /// <param name="businessHoursService">The business-hours service used to evaluate the calling window.</param>
     /// <param name="publisher">The event publisher used to record an auditable suppression event.</param>
-    /// <param name="clock">The clock used to evaluate the calling window.</param>
+    /// <param name="timeProvider">The time provider used to evaluate the calling window.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="logger">The logger used to record why a call could not be screened.</param>
     public ContactCenterManualCallScreener(
@@ -56,7 +56,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
         IContentManager contentManager,
         IBusinessHoursService businessHoursService,
         IContactCenterEventPublisher publisher,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<ContactCenterManualCallScreener> stringLocalizer,
         ILogger<ContactCenterManualCallScreener> logger)
     {
@@ -67,7 +67,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
         _contentManager = contentManager;
         _businessHoursService = businessHoursService;
         _publisher = publisher;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
         _logger = logger;
     }
@@ -163,7 +163,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
         {
             var isOpen = await _businessHoursService.EvaluateAsync(
                 options.CallingCalendarId,
-                _clock.UtcNow,
+                _timeProvider.GetUtcNow().UtcDateTime,
                 contactPart?.TimeZoneId,
                 cancellationToken);
 

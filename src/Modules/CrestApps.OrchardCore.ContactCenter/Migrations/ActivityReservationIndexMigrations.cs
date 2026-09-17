@@ -28,7 +28,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
         ((int)ReservationStatus.Canceled).ToString(CultureInfo.InvariantCulture));
 
     private readonly IStore _store;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityReservationIndexMigrations"/> class.
@@ -36,10 +36,10 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
     /// <param name="store">The YesSql store.</param>
     public ActivityReservationIndexMigrations(
         IStore store,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _store = store;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -106,7 +106,7 @@ internal sealed class ActivityReservationIndexMigrations : DataMigration
             _store,
             typeof(ActivityReservationIndex),
             "ModifiedUtc",
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({_terminalStatusValues})");
 
         await SchemaBuilder.AlterIndexTableAsync<ActivityReservationIndex>(table => table

@@ -19,7 +19,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     private readonly IInboundVoiceDigitsSink _digitsSink;
     private readonly ITelnyxOutboundBridgeOrchestrator _outboundBridgeOrchestrator;
     private readonly IEnumerable<ITelnyxRecordingSavedHandler> _recordingSavedHandlers;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -32,7 +32,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     /// The optional handlers for finished recordings. When Contact Center Voice is enabled a handler ingests the
     /// recording into the encrypted media store; when none are registered, saved-recording events are ignored.
     /// </param>
-    /// <param name="clock">The clock used to stamp event times.</param>
+    /// <param name="timeProvider">The time provider used to stamp event times.</param>
     /// <param name="logger">The logger.</param>
     public TelnyxWebhookService(
         INormalizedVoiceEventIngestor normalizedVoiceEventIngestor,
@@ -40,7 +40,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
         IInboundVoiceDigitsSink digitsSink,
         ITelnyxOutboundBridgeOrchestrator outboundBridgeOrchestrator,
         IEnumerable<ITelnyxRecordingSavedHandler> recordingSavedHandlers,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelnyxWebhookService> logger)
     {
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
@@ -48,7 +48,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
         _digitsSink = digitsSink;
         _outboundBridgeOrchestrator = outboundBridgeOrchestrator;
         _recordingSavedHandlers = recordingSavedHandlers;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -106,7 +106,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
             return TelnyxWebhookResult.Ignored;
         }
 
-        var occurredUtc = callEvent.OccurredUtc ?? _clock.UtcNow;
+        var occurredUtc = callEvent.OccurredUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
 
         var providerEvent = new ProviderVoiceEvent
         {

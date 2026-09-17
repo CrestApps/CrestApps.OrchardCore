@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// </remarks>
 internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQueue>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IServiceProvider _serviceProvider;
 
     internal readonly IStringLocalizer S;
@@ -24,15 +24,15 @@ internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQue
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityQueueHandler"/> class.
     /// </summary>
-    /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="timeProvider">The time provider used to stamp audit times.</param>
     /// <param name="serviceProvider">The service provider used to resolve the queue group manager when a queue is validated.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityQueueHandler(
-        IClock clock,
+        TimeProvider timeProvider,
         IServiceProvider serviceProvider,
         IStringLocalizer<ActivityQueueHandler> stringLocalizer)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
         _serviceProvider = serviceProvider;
         S = stringLocalizer;
     }
@@ -48,7 +48,7 @@ internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQue
     /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<ActivityQueue> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }
@@ -58,7 +58,7 @@ internal sealed class ActivityQueueHandler : CatalogEntryHandlerBase<ActivityQue
     {
         ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
 
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }

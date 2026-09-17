@@ -19,7 +19,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
     private readonly IEnumerable<IIncomingCallContextProvider> _contextProviders;
     private readonly ITelephonyInteractionStore _interactionStore;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly string _tenantName;
 
@@ -29,21 +29,21 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
     /// <param name="hubContext">The telephony hub context used to push events to connected clients.</param>
     /// <param name="contextProviders">The registered incoming-call context providers.</param>
     /// <param name="interactionStore">The telephony interaction store.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
     public DefaultIncomingCallDispatcher(
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         IEnumerable<IIncomingCallContextProvider> contextProviders,
         ITelephonyInteractionStore interactionStore,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<DefaultIncomingCallDispatcher> logger,
         ShellSettings shellSettings)
     {
         _hubContext = hubContext;
         _contextProviders = contextProviders;
         _interactionStore = interactionStore;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _tenantName = shellSettings.Name;
     }
@@ -102,7 +102,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
                 To = call.To,
                 Direction = call.Direction,
                 Outcome = CallOutcome.InProgress,
-                StartedUtc = call.StartedUtc?.UtcDateTime ?? _clock.UtcNow,
+                StartedUtc = call.StartedUtc?.UtcDateTime ?? _timeProvider.GetUtcNow().UtcDateTime,
             };
 
             await _interactionStore.CreateAsync(interaction, cancellationToken);

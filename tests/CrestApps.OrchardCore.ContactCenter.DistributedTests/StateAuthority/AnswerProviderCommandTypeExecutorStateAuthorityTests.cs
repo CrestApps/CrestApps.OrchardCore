@@ -1,11 +1,12 @@
-using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.StateAuthority;
 
@@ -43,15 +44,15 @@ public sealed class AnswerProviderCommandTypeExecutorStateAuthorityTests
             .Setup(service => service.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(callSession);
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         var executor = new AnswerProviderCommandTypeExecutor(
             Mock.Of<IContactCenterVoiceProviderResolver>(),
             Mock.Of<ITelephonyService>(),
             interactionManager.Object,
             callSessionManager.Object,
             publisher.Object,
-            clock.Object,
+            clock,
             Mock.Of<ICallControlAuthorizationService>());
         var command = CreateCommand();
         var result = new ContactCenterVoiceProviderResult

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -210,7 +211,7 @@ public sealed class ConsultTransferTests
             Service = new ConsultTransferService(
                 callSessionManager.Object,
                 voiceProviderResolver.Object,
-                new StubClock(_now),
+                new FakeTimeProvider(_now),
                 NullLogger<ConsultTransferService>.Instance);
         }
     }

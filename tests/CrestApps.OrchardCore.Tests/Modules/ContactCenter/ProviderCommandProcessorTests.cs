@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -1001,8 +1002,8 @@ public sealed class ProviderCommandProcessorTests
         session
             .Setup(value => value.SaveChangesAsync(It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
         var actualExecutors = executorsOverride ?? [executor.Object];
         var processor = new ProviderCommandProcessor(
@@ -1017,7 +1018,7 @@ public sealed class ProviderCommandProcessorTests
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
             session.Object,
-            clock.Object,
+            clock,
             NullLogger<ProviderCommandProcessor>.Instance);
         scopeExecutor
             .Setup(value => value.ExecuteAsync<IProviderCommandStateService>(

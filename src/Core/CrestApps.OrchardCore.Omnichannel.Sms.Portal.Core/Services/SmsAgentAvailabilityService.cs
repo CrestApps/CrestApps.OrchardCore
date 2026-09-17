@@ -15,22 +15,22 @@ public sealed class SmsAgentAvailabilityService : ISmsAgentAvailabilityService
 {
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly ISmsAgentPresenceTracker _presenceTracker;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsAgentAvailabilityService"/> class.
     /// </summary>
     /// <param name="agentProfileManager">The agent profile manager.</param>
     /// <param name="presenceTracker">The tracker that knows whose portal is open.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     public SmsAgentAvailabilityService(
         IAgentProfileManager agentProfileManager,
         ISmsAgentPresenceTracker presenceTracker,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _agentProfileManager = agentProfileManager;
         _presenceTracker = presenceTracker;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -66,7 +66,7 @@ public sealed class SmsAgentAvailabilityService : ISmsAgentAvailabilityService
 
         var availability = Get(agent);
         availability.Available = available;
-        availability.UpdatedUtc = _clock.UtcNow;
+        availability.UpdatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         agent.Put(availability);
 

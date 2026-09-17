@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -66,14 +67,14 @@ public sealed class ContactCenterAgentLegFailureTests
             .Setup(service => service.HangupAsync(It.IsAny<CallReference>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(TelephonyResult.Success(new TelephonyCall { CallId = "call-1" }));
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var service = new ContactCenterAgentLegFailureService(
             interactionManager.Object,
             callSessionManager.Object,
             telephonyService.Object,
-            clock.Object,
+            clock,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
         // Act
@@ -113,14 +114,14 @@ public sealed class ContactCenterAgentLegFailureTests
             .ReturnsAsync(interaction);
 
         var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var service = new ContactCenterAgentLegFailureService(
             interactionManager.Object,
             new Mock<ICallSessionManager>(MockBehavior.Strict).Object,
             telephonyService.Object,
-            clock.Object,
+            clock,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
         // Act
@@ -277,14 +278,14 @@ public sealed class ContactCenterAgentLegFailureTests
             .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(session);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var service = new ContactCenterAgentLegFailureService(
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<ITelephonyService>(MockBehavior.Strict).Object,
-            clock.Object,
+            clock,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
         // Act

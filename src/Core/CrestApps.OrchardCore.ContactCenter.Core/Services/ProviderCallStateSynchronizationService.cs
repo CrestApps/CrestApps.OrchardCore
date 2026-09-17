@@ -26,7 +26,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly ITelephonyProviderResolver _telephonyProviderResolver;
     private readonly IDistributedLock _distributedLock;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -38,7 +38,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
     /// <param name="offerSynchronizationService">The provider-ended offer synchronization service.</param>
     /// <param name="telephonyProviderResolver">The telephony provider resolver.</param>
     /// <param name="distributedLock">The distributed lock used to prevent overlapping reconciliation sweeps.</param>
-    /// <param name="clock">The clock used to stamp reconciliation events.</param>
+    /// <param name="timeProvider">The time provider used to stamp reconciliation events.</param>
     /// <param name="logger">The logger.</param>
     public ProviderCallStateSynchronizationService(
         IInteractionManager interactionManager,
@@ -47,7 +47,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         ITelephonyProviderResolver telephonyProviderResolver,
         IDistributedLock distributedLock,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ProviderCallStateSynchronizationService> logger)
     {
         _interactionManager = interactionManager;
@@ -56,7 +56,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         _offerSynchronizationService = offerSynchronizationService;
         _telephonyProviderResolver = telephonyProviderResolver;
         _distributedLock = distributedLock;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -81,7 +81,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
                 interaction.TransitionTo(terminalStatus);
                 interaction.StartedUtc ??= currentSession.StartedUtc;
                 interaction.AnsweredUtc ??= currentSession.AnsweredUtc;
-                interaction.EndedUtc ??= currentSession.EndedUtc ?? _clock.UtcNow;
+                interaction.EndedUtc ??= currentSession.EndedUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
 
                 await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
@@ -214,7 +214,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
                 ProviderName = providerName,
                 ProviderCallId = interaction.ProviderInteractionId,
                 State = VoiceCallState.Ended,
-                OccurredUtc = _clock.UtcNow,
+                OccurredUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 IdempotencyKey = $"reconcile-missing:{providerName}:{interaction.ProviderInteractionId}:ended",
             };
         }
@@ -229,7 +229,7 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             State = state,
             FromAddress = call.From,
             ToAddress = call.To,
-            OccurredUtc = _clock.UtcNow,
+            OccurredUtc = _timeProvider.GetUtcNow().UtcDateTime,
             IdempotencyKey = $"reconcile:{providerName}:{interaction.ProviderInteractionId}:{state}:{call.IsMuted}:{call.IsOnHold}",
             IsMuted = call.IsMuted,
             Metadata = call.Metadata?

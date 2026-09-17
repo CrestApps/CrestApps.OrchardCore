@@ -25,7 +25,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
 {
     internal readonly IStringLocalizer S;
 
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IPhoneNumberService _phoneNumberService;
 
     private ImportColumn _emailColumn;
@@ -42,15 +42,15 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactPartContentImportHandler"/> class.
     /// </summary>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelContactPartContentImportHandler(
-        IClock clock,
+        TimeProvider timeProvider,
         IPhoneNumberService phoneNumberService,
         IStringLocalizer<OmnichannelContactPartContentImportHandler> stringLocalizer)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
         _phoneNumberService = phoneNumberService;
         S = stringLocalizer;
     }
@@ -225,7 +225,7 @@ public sealed class OmnichannelContactPartContentImportHandler : ContentImportHa
         }
 
         var contactPart = context.ContentItem.GetOrCreate<OmnichannelContactPart>();
-        var utcNow = _clock.UtcNow;
+        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (hasDoNotCall)
         {

@@ -22,7 +22,7 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
     private readonly IAsteriskAriClient _ariClient;
     private readonly IInboundVoiceEventSink _inboundVoiceEventSink;
     private readonly IAsteriskPendingCallerTerminationRegistry _pendingCallerTerminationRegistry;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<AsteriskInboundCallOfferBridge> _logger;
 
     /// <summary>
@@ -32,21 +32,21 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
     /// <param name="ariClient">The tenant-scoped Asterisk ARI client.</param>
     /// <param name="inboundVoiceEventSink">The Contact Center inbound voice event sink.</param>
     /// <param name="pendingCallerTerminationRegistry">The registry that tracks callers awaiting a retried hang up.</param>
-    /// <param name="clock">The clock used to stamp tenant-owned state.</param>
+    /// <param name="timeProvider">The time provider used to stamp tenant-owned state.</param>
     /// <param name="logger">The logger instance.</param>
     public AsteriskInboundCallOfferBridge(
         IAsteriskChannelTenantBindingStore bindingStore,
         IAsteriskAriClient ariClient,
         IInboundVoiceEventSink inboundVoiceEventSink,
         IAsteriskPendingCallerTerminationRegistry pendingCallerTerminationRegistry,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<AsteriskInboundCallOfferBridge> logger)
     {
         _bindingStore = bindingStore;
         _ariClient = ariClient;
         _inboundVoiceEventSink = inboundVoiceEventSink;
         _pendingCallerTerminationRegistry = pendingCallerTerminationRegistry;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -104,7 +104,7 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
                 InteractionId = voiceEvent.InteractionCorrelationId,
                 ProviderCallId = voiceEvent.CallId,
                 State = AsteriskChannelBindingState.Offering,
-                CreatedUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             });
         }
         catch (AsteriskChannelBindingCreateTimeoutException ex)
@@ -211,7 +211,7 @@ internal sealed class AsteriskInboundCallOfferBridge : IAsteriskRealtimeVoiceEve
                 FromAddress = voiceEvent.CallerNumber ?? voiceEvent.FromAddress,
                 ToAddress = voiceEvent.DialedNumber ?? voiceEvent.ToAddress,
                 CallerName = voiceEvent.CallerNumber,
-                ReceivedUtc = voiceEvent.OccurredUtc ?? _clock.UtcNow,
+                ReceivedUtc = voiceEvent.OccurredUtc ?? _timeProvider.GetUtcNow().UtcDateTime,
                 Metadata = metadata,
             }, cancellationToken);
         }

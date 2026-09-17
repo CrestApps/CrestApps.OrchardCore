@@ -13,7 +13,7 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
 {
     private readonly IQueueItemStore _queueItemStore;
     private readonly IActivityQueueManager _queueManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentWorkSelector"/> class.
@@ -21,11 +21,11 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
     public AgentWorkSelector(
         IQueueItemStore queueItemStore,
         IActivityQueueManager queueManager,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _queueItemStore = queueItemStore;
         _queueManager = queueManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -51,7 +51,7 @@ public sealed class AgentWorkSelector : IAgentWorkSelector
             return null;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         string bestQueueId = null;
         var bestMembershipPriority = int.MaxValue;

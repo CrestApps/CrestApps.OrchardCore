@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Time.Testing;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -24,7 +25,7 @@ public sealed class SkillRoutingTests
         var fluent = Agent("a2", ("spanish", 4));
 
         // Act
-        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new StubClock(_now)), queue, Item(_now), novice, fluent);
+        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new FakeTimeProvider(_now)), queue, Item(_now), novice, fluent);
 
         // Assert
         Assert.False(context.Candidates[0].IsEligible);
@@ -38,7 +39,7 @@ public sealed class SkillRoutingTests
         var queue = Queue(new QueueSkillRequirement { SkillId = "spanish", MinimumProficiency = 3, Required = true });
 
         // Act
-        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new StubClock(_now)), queue, Item(_now), Agent("a1", ("spanish", 3)));
+        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new FakeTimeProvider(_now)), queue, Item(_now), Agent("a1", ("spanish", 3)));
 
         // Assert
         Assert.True(context.Candidates[0].IsEligible);
@@ -61,7 +62,7 @@ public sealed class SkillRoutingTests
         var novice = Agent("a1", ("spanish", 1));
 
         // Act
-        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new StubClock(_now)), queue, Item(_now.AddSeconds(-121)), novice);
+        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new FakeTimeProvider(_now)), queue, Item(_now.AddSeconds(-121)), novice);
 
         // Assert
         Assert.True(context.Candidates[0].IsEligible);
@@ -81,7 +82,7 @@ public sealed class SkillRoutingTests
         });
 
         // Act
-        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new StubClock(_now)), queue, Item(_now.AddSeconds(-60)), Agent("a1", ("spanish", 1)));
+        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new FakeTimeProvider(_now)), queue, Item(_now.AddSeconds(-60)), Agent("a1", ("spanish", 1)));
 
         // Assert
         Assert.False(context.Candidates[0].IsEligible);
@@ -96,7 +97,7 @@ public sealed class SkillRoutingTests
         var queue = Queue(new QueueSkillRequirement { SkillId = "spanish", MinimumProficiency = 3, Required = true });
 
         // Act
-        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new StubClock(_now)), queue, Item(_now.AddHours(-5)), Agent("a1", ("spanish", 1)));
+        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new FakeTimeProvider(_now)), queue, Item(_now.AddHours(-5)), Agent("a1", ("spanish", 1)));
 
         // Assert
         Assert.False(context.Candidates[0].IsEligible);
@@ -113,7 +114,7 @@ public sealed class SkillRoutingTests
         var untagged = new AgentProfile { ItemId = "a2" };
 
         // Act
-        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new StubClock(_now)), queue, Item(_now), tagged, untagged);
+        var context = await ApplyAsync(new RequiredSkillsRoutingStrategy(new FakeTimeProvider(_now)), queue, Item(_now), tagged, untagged);
 
         // Assert
         Assert.True(context.Candidates[0].IsEligible);

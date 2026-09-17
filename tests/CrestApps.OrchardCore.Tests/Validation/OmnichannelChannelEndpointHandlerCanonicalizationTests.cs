@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Email;
 using OrchardCore.Modules;
@@ -115,7 +116,7 @@ public class OmnichannelChannelEndpointHandlerCanonicalizationTests
 
         return new OmnichannelChannelEndpointHandler(
             new Mock<IHttpContextAccessor>().Object,
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             phoneNumberService.Object,
             new Mock<IEmailAddressValidator>().Object,
             new PassThroughStringLocalizer<OmnichannelCampaignHandler>());

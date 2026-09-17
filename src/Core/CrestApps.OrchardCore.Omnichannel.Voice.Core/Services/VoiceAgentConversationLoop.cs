@@ -65,7 +65,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     public VoiceAgentConversationLoop(
@@ -87,7 +87,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IRealtimeVoiceConversationRunner realtimeRunner,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<VoiceAgentConversationLoop> logger)
     {
         _activityStore = activityStore;
@@ -108,7 +108,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _realtimeRunner = realtimeRunner;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -584,8 +584,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         {
             SessionId = UniqueId.GenerateId(),
             ProfileId = profile.ItemId,
-            CreatedUtc = _clock.UtcNow,
-            LastActivityUtc = _clock.UtcNow,
+            CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
+            LastActivityUtc = _timeProvider.GetUtcNow().UtcDateTime,
             Title = "Automated AI Voice Call",
         };
 
@@ -749,7 +749,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             Content = content,
         }, cancellationToken);
 
-        session.LastActivityUtc = _clock.UtcNow;
+        session.LastActivityUtc = _timeProvider.GetUtcNow().UtcDateTime;
         await _chatSessionManager.SaveAsync(session, cancellationToken);
     }
 }

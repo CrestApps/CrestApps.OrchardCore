@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Handlers;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore;
 using OrchardCore.ContentFields.Fields;
@@ -173,13 +174,13 @@ public sealed class PhoneNumberVerificationQueueProcessorTests
         IPhoneNumberVerificationManager manager,
         IPhoneNumberVerificationRequestDelayer delayer)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new PhoneNumberVerificationQueueProcessor(
             manager,
             delayer,
-            clock.Object,
+            clock,
             NullLogger<PhoneNumberVerificationQueueProcessor>.Instance);
     }
 

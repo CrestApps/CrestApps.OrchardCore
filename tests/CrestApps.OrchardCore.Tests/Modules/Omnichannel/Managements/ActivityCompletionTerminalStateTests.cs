@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Controllers;
+using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display;
@@ -18,7 +20,6 @@ using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Users;
-using CrestApps.OrchardCore.Users;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
@@ -168,7 +169,7 @@ public sealed class ActivityCompletionTerminalStateTests
                 new Mock<IContentItemDisplayManager>().Object,
                 DispositionService.Object,
                 new Mock<ISubjectFlowSettingsService>().Object,
-                new Mock<IClock>().Object,
+                new FakeTimeProvider(),
                 new Mock<ILocalClock>().Object,
                 Notifier.Object,
                 new UserManager<IUser>(new Mock<IUserStore<IUser>>().Object, null, null, null, null, null, null, null, null),

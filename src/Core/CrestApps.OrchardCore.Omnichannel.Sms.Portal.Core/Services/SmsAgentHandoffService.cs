@@ -29,7 +29,7 @@ public sealed class SmsAgentHandoffService : IOmnichannelHandoffService
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly ISmsConversationRouter _router;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -42,7 +42,7 @@ public sealed class SmsAgentHandoffService : IOmnichannelHandoffService
         IOmnichannelChannelEndpointManager endpointManager,
         ISmsConversationRouter router,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<SmsAgentHandoffService> logger)
     {
         _conversationStore = conversationStore;
@@ -51,7 +51,7 @@ public sealed class SmsAgentHandoffService : IOmnichannelHandoffService
         _endpointManager = endpointManager;
         _router = router;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -96,7 +96,7 @@ public sealed class SmsAgentHandoffService : IOmnichannelHandoffService
             return OmnichannelHandoffResult.Failure($"The handoff queue '{queueId}' does not exist.");
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var conversation = await _conversationStore.FindByAddressesAsync(serviceAddress, contactAddress, cancellationToken);
         var isNew = conversation is null;
@@ -218,7 +218,7 @@ public sealed class SmsAgentHandoffService : IOmnichannelHandoffService
                 ServiceAddress = serviceAddress,
                 Content = entry.Content,
                 IsInbound = entry.IsInbound,
-                CreatedUtc = entry.CreatedUtc == default ? _clock.UtcNow : entry.CreatedUtc,
+                CreatedUtc = entry.CreatedUtc == default ? _timeProvider.GetUtcNow().UtcDateTime : entry.CreatedUtc,
                 ConversationId = conversation.ItemId,
             };
 

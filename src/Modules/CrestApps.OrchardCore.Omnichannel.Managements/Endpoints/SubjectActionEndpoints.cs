@@ -35,7 +35,7 @@ internal static class SubjectActionEndpoints
         IOptions<SubjectActionOptions> actionOptions,
         IContentDefinitionManager contentDefinitionManager,
         IStringLocalizer<SubjectActionEndpointsMarker> S,
-        IClock clock,
+        TimeProvider timeProvider,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, OmnichannelConstants.Permissions.CompleteActivity))
@@ -56,7 +56,7 @@ internal static class SubjectActionEndpoints
             .ToArray();
 
         var options = actionOptions.Value;
-        var now = clock.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         var responses = await Task.WhenAll(actions.Select(async action =>
         {

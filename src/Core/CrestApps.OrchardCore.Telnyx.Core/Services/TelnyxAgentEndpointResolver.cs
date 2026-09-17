@@ -20,7 +20,7 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
 {
     private readonly ITelnyxAgentCredentialStore _credentialStore;
     private readonly TelnyxOptions _options;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -29,12 +29,12 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
     public TelnyxAgentEndpointResolver(
         ITelnyxAgentCredentialStore credentialStore,
         IOptions<TelnyxOptions> options,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelnyxAgentEndpointResolver> logger)
     {
         _credentialStore = credentialStore;
         _options = options.Value;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -46,7 +46,7 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
             return null;
         }
 
-        var live = await _credentialStore.ListLiveByUserAsync(userId.Trim(), _clock.UtcNow, cancellationToken);
+        var live = await _credentialStore.ListLiveByUserAsync(userId.Trim(), _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
         // Registered first, then most recently registered, then newest issued: the last of those only matters
         // when nothing has registered at all, where the newest is the one the browser is most likely registering

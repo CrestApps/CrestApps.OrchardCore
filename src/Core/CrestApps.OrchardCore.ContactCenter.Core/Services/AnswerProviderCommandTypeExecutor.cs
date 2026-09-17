@@ -29,7 +29,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     private readonly ICallSessionManager _callSessionManager;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AnswerProviderCommandTypeExecutor"/> class.
@@ -39,7 +39,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     /// <param name="interactionManager">The manager used to load and update the interaction projection.</param>
     /// <param name="callSessionManager">The manager used to load and update the call session projection.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="clock">The clock used to stamp UTC projections.</param>
+    /// <param name="timeProvider">The time provider used to stamp UTC projections.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     public AnswerProviderCommandTypeExecutor(
         IContactCenterVoiceProviderResolver voiceProviderResolver,
@@ -47,7 +47,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         IContactCenterEventPublisher publisher,
-        IClock clock,
+        TimeProvider timeProvider,
         ICallControlAuthorizationService callControlAuthorizationService)
     {
         _voiceProviderResolver = voiceProviderResolver;
@@ -56,7 +56,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         _callSessionManager = callSessionManager;
         _callControlAuthorizationService = callControlAuthorizationService;
         _publisher = publisher;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -236,7 +236,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             // whole accept rather than the one late join that caused it.
             if (!string.IsNullOrEmpty(result.ProviderLegId) && !IsTerminal(session.State))
             {
-                var now = _clock.UtcNow;
+                var now = _timeProvider.GetUtcNow().UtcDateTime;
 
                 // Record the leg in the state the provider actually observed. Connecting an agent on a provider
                 // that rings a registered soft phone only originates the leg -- the invite is accepted for
@@ -279,7 +279,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             throw new JsonException("The provider command request payload could not be deserialized.");
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
 
         if (interaction is not null)

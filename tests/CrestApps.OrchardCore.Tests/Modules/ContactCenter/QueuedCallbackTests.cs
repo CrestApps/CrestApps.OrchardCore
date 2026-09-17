@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -123,13 +124,13 @@ public sealed class QueuedCallbackTests
                 .Setup(manager => manager.UpdateAsync(It.IsAny<QueueItem>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
                 .Returns(ValueTask.CompletedTask);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             Service = new QueuedCallbackService(
                 CallbackService.Object,
                 queueItemManager.Object,
-                clock.Object,
+                clock,
                 NullLogger<QueuedCallbackService>.Instance);
         }
     }

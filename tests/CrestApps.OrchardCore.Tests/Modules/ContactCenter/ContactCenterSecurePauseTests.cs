@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -9,7 +8,9 @@ using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
+using System.Security.Claims;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -30,7 +31,7 @@ public sealed class ContactCenterSecurePauseTests
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
         var provider = CreateRecordingProvider(RecordingState.Paused);
-        var service = CreateRecordingService(interactionManager, provider, new StubClock(pausedAt));
+        var service = CreateRecordingService(interactionManager, provider, new FakeTimeProvider(pausedAt));
 
         // Act
         var result = await service.PauseAsync("int1", TestContext.Current.CancellationToken);
@@ -52,7 +53,7 @@ public sealed class ContactCenterSecurePauseTests
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
         var provider = CreateRecordingProvider(RecordingState.Recording);
-        var service = CreateRecordingService(interactionManager, provider, new StubClock());
+        var service = CreateRecordingService(interactionManager, provider, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.ResumeAsync("int1", TestContext.Current.CancellationToken);
@@ -76,7 +77,7 @@ public sealed class ContactCenterSecurePauseTests
         interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
         var provider = CreateRecordingProvider(RecordingState.Recording);
         var publisher = new Mock<IContactCenterEventPublisher>();
-        var service = CreateRecordingService(interactionManager, provider, new StubClock(), publisher);
+        var service = CreateRecordingService(interactionManager, provider, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)), publisher);
 
         // Act
         var result = await service.AutoResumeAsync("int1", TestContext.Current.CancellationToken);
@@ -268,7 +269,7 @@ public sealed class ContactCenterSecurePauseTests
             interactionManager.Object,
             recordingService.Object,
             [],
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var resumed = await service.ResumeExpiredAsync(TestContext.Current.CancellationToken);
@@ -300,7 +301,7 @@ public sealed class ContactCenterSecurePauseTests
             interactionManager.Object,
             recordingService.Object,
             [notifier],
-            new StubClock(now));
+            new FakeTimeProvider(now));
 
         // Act
         var resumed = await service.ResumeExpiredAsync(TestContext.Current.CancellationToken);
@@ -339,7 +340,7 @@ public sealed class ContactCenterSecurePauseTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.EngageAsync("int1", "sup1", MonitorMode.Barge, TestContext.Current.CancellationToken);
@@ -362,7 +363,7 @@ public sealed class ContactCenterSecurePauseTests
         interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
         var provider = CreateRecordingProvider(RecordingState.Recording);
         var recordingProvider = provider.As<IContactCenterVoiceRecordingProvider>();
-        var service = CreateRecordingService(interactionManager, provider, new StubClock());
+        var service = CreateRecordingService(interactionManager, provider, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.ResumeAsync("int1", TestContext.Current.CancellationToken);
@@ -385,7 +386,7 @@ public sealed class ContactCenterSecurePauseTests
         interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
         var provider = CreateRecordingProvider(RecordingState.Paused);
         var recordingProvider = provider.As<IContactCenterVoiceRecordingProvider>();
-        var service = CreateRecordingService(interactionManager, provider, new StubClock());
+        var service = CreateRecordingService(interactionManager, provider, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var result = await service.PauseAsync("int1", TestContext.Current.CancellationToken);
@@ -492,7 +493,7 @@ public sealed class ContactCenterSecurePauseTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var stopped = await service.ForceDisengageAllAsync("int1", TestContext.Current.CancellationToken);
@@ -522,7 +523,7 @@ public sealed class ContactCenterSecurePauseTests
             interactionManager.Object,
             recordingService.Object,
             [],
-            new StubClock(now));
+            new FakeTimeProvider(now));
 
         // Act
         await service.ResumeExpiredAsync(TestContext.Current.CancellationToken);
@@ -567,7 +568,7 @@ public sealed class ContactCenterSecurePauseTests
             publisher.Object,
             CreateCommandExecutor(),
             new FakeCallControlAuthorizationService(),
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var stopped = await service.ForceDisengageAllAsync("int1", TestContext.Current.CancellationToken);
@@ -629,7 +630,7 @@ public sealed class ContactCenterSecurePauseTests
             interactionManager.Object,
             recordingService.Object,
             [],
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
 
         // Act
         var resumed = await service.ResumeExpiredAsync(TestContext.Current.CancellationToken);
@@ -689,7 +690,7 @@ public sealed class ContactCenterSecurePauseTests
     private static ContactCenterRecordingService CreateRecordingService(
         Mock<IInteractionManager> interactionManager,
         Mock<IContactCenterVoiceProvider> provider,
-        StubClock clock,
+        FakeTimeProvider clock,
         Mock<IContactCenterEventPublisher> publisher = null)
     {
         var resolver = new Mock<IContactCenterVoiceProviderResolver>();
@@ -737,7 +738,7 @@ public sealed class ContactCenterSecurePauseTests
             resolver.Object,
             SiteServiceFactory.Create(settings),
             notifier is null ? [] : [notifier],
-            new StubClock());
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
     }
 
     private static DefaultTelephonyCommandExecutor CreateCommandExecutor()

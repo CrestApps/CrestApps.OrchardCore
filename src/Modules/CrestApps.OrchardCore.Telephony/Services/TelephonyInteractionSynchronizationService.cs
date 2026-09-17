@@ -22,7 +22,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     private readonly ITelephonyProviderResolver _providerResolver;
     private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
     private readonly IDistributedLock _distributedLock;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly string _tenantName;
     private readonly TimeSpan _lockTimeout;
@@ -37,7 +37,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     /// <param name="providerResolver">The telephony provider resolver.</param>
     /// <param name="hubContext">The soft-phone hub context.</param>
     /// <param name="distributedLock">The distributed lock used to prevent overlapping reconciliation sweeps.</param>
-    /// <param name="clock">The clock used to stamp terminal interactions.</param>
+    /// <param name="timeProvider">The time provider used to stamp terminal interactions.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="shellSettings">The current Orchard shell settings.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
@@ -46,7 +46,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         ITelephonyProviderResolver providerResolver,
         IHubContext<TelephonyHub, ITelephonyClient> hubContext,
         IDistributedLock distributedLock,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelephonyInteractionSynchronizationService> logger,
         ShellSettings shellSettings,
         IOptions<TelephonyCoordinationOptions> coordinationOptions)
@@ -55,7 +55,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         _providerResolver = providerResolver;
         _hubContext = hubContext;
         _distributedLock = distributedLock;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _tenantName = shellSettings.Name;
         _lockTimeout = coordinationOptions.Value.InteractionLockTimeout;
@@ -215,7 +215,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         if (string.IsNullOrWhiteSpace(interaction.ProviderName))
         {
             if (interaction.StartedUtc != default &&
-                _clock.UtcNow - interaction.StartedUtc > _clientRecordedCallMaxAge)
+                _timeProvider.GetUtcNow().UtcDateTime - interaction.StartedUtc > _clientRecordedCallMaxAge)
             {
                 await RemoveOrphanAsync(
                     interaction,
@@ -297,7 +297,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
         if (!lookup.Found)
         {
             if (interaction.StartedUtc != default &&
-                _clock.UtcNow - interaction.StartedUtc < _newInteractionGracePeriod)
+                _timeProvider.GetUtcNow().UtcDateTime - interaction.StartedUtc < _newInteractionGracePeriod)
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
@@ -404,7 +404,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
 
         if (call.State is CallState.Disconnected or CallState.Failed)
         {
-            var endedUtc = _clock.UtcNow;
+            var endedUtc = _timeProvider.GetUtcNow().UtcDateTime;
             var outcome = call.State == CallState.Failed
                 ? CallOutcome.Failed
                 : CallOutcome.Completed;

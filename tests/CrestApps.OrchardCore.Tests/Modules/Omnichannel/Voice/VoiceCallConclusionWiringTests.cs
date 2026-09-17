@@ -1,5 +1,3 @@
-using System.Reflection;
-using System.Text.Json;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Chat;
@@ -21,12 +19,15 @@ using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.Json;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
+using System.Reflection;
+using System.Text.Json;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
@@ -433,7 +434,7 @@ public sealed class VoiceCallConclusionWiringTests
                 .AddSingleton(templateService.Object)
                 .AddSingleton<ISubjectActionExecutor>(Executor)
                 .AddSingleton(Options.Create(_documentJsonOptions))
-                .AddSingleton<IClock>(new StubClock(_now))
+                .AddSingleton<TimeProvider>(new FakeTimeProvider(_now))
                 .AddSingleton(Mock.Of<ISession>())
 
                 // Only read when the activity allows the subject to be updated, which these tests turn off; a
@@ -461,7 +462,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IRealtimeVoiceConversationRunner>(),
                 Mock.Of<ILiquidTemplateManager>(),
                 ContentManager.Object,
-                new StubClock(_now),
+                new FakeTimeProvider(_now),
                 NullLogger<VoiceAgentConversationLoop>.Instance);
         }
 

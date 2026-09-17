@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
 {
     private readonly IStore _store;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterOutboxMessageIndexMigrations"/> class.
@@ -21,10 +21,10 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
     /// <param name="store">The YesSql store.</param>
     public ContactCenterOutboxMessageIndexMigrations(
         IStore store,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _store = store;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
             _store,
             typeof(ContactCenterOutboxMessageIndex),
             "CreatedUtc",
-            _clock.UtcNow);
+            _timeProvider.GetUtcNow().UtcDateTime);
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
             .CreateIndex("IDX_ContactCenterOutboxMessageIndex_Retention",

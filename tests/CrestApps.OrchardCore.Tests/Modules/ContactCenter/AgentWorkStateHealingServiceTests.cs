@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -597,8 +598,8 @@ public sealed class AgentWorkStateHealingServiceTests
         Mock<IProviderCallStateSynchronizationService> synchronizationService = null,
         bool registerSynchronizationService = true)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         // Without the Voice feature the default implementation stands in: it returns the interaction untouched,
         // so nothing is healed on state nothing can confirm.
@@ -617,7 +618,7 @@ public sealed class AgentWorkStateHealingServiceTests
             resolvedActivityManager,
             new FakeContactCenterWorkStateService(resolvedActivityManager),
             new Lazy<IProviderCallStateSynchronizationService>(resolvedSynchronizationService),
-            clock.Object,
+            clock,
             NullLogger<AgentWorkStateHealingService>.Instance);
     }
 }

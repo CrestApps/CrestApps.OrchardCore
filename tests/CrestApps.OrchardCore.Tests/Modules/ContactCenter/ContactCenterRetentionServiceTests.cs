@@ -1,11 +1,12 @@
-using System.Linq.Expressions;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Linq.Expressions;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -217,13 +218,13 @@ public sealed class ContactCenterRetentionServiceTests
         ContactCenterRetentionOptions options,
         Mock<ISession> session = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_nowUtc);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_nowUtc);
 
         return new ContactCenterRetentionService(
             policies,
             (session ?? new Mock<ISession>()).Object,
-            clock.Object,
+            clock,
             Options.Create(options),
             NullLogger<ContactCenterRetentionService>.Instance);
     }

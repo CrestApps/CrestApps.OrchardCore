@@ -15,7 +15,7 @@ public sealed class SmsBroadcastService : ISmsBroadcastService
 {
     private readonly ISmsBroadcastStore _broadcastStore;
     private readonly ISmsConversationService _conversationService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -24,12 +24,12 @@ public sealed class SmsBroadcastService : ISmsBroadcastService
     public SmsBroadcastService(
         ISmsBroadcastStore broadcastStore,
         ISmsConversationService conversationService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<SmsBroadcastService> logger)
     {
         _broadcastStore = broadcastStore;
         _conversationService = conversationService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -54,7 +54,7 @@ public sealed class SmsBroadcastService : ISmsBroadcastService
         if (string.IsNullOrWhiteSpace(broadcast.FromNumber) || string.IsNullOrWhiteSpace(broadcast.Body))
         {
             broadcast.Status = SmsBroadcastStatus.Failed;
-            broadcast.CompletedUtc = _clock.UtcNow;
+            broadcast.CompletedUtc = _timeProvider.GetUtcNow().UtcDateTime;
             await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
 
             _logger.LogWarning("Broadcast {BroadcastId} failed: a sending number and body are required.", broadcast.ItemId.SanitizeLogValue());
@@ -105,7 +105,7 @@ public sealed class SmsBroadcastService : ISmsBroadcastService
         }
 
         broadcast.Status = SmsBroadcastStatus.Completed;
-        broadcast.CompletedUtc = _clock.UtcNow;
+        broadcast.CompletedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         await _broadcastStore.UpdateAsync(broadcast, cancellationToken);
     }
 }

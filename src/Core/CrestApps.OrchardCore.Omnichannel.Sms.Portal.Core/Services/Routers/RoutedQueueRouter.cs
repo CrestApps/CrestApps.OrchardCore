@@ -16,15 +16,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 public sealed class RoutedQueueRouter : ISmsInboundRouter
 {
     private readonly ISmsRoutingStrategy _routingStrategy;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RoutedQueueRouter"/> class.
     /// </summary>
-    public RoutedQueueRouter(ISmsRoutingStrategy routingStrategy, IClock clock)
+    public RoutedQueueRouter(ISmsRoutingStrategy routingStrategy, TimeProvider timeProvider)
     {
         _routingStrategy = routingStrategy;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -64,7 +64,7 @@ public sealed class RoutedQueueRouter : ISmsInboundRouter
         conversation.OwnerId = routing.TargetId;
         conversation.AssignedAgentId = agentId;
         conversation.AssignmentStatus = SmsConversationAssignmentStatus.Assigned;
-        conversation.AssignedUtc = _clock.UtcNow;
+        conversation.AssignedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return true;
     }

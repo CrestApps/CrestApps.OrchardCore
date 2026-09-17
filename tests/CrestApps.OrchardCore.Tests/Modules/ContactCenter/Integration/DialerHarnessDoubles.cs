@@ -13,21 +13,15 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 /// <summary>
 /// An advanceable clock so tests can drive retry-delay and expiry windows deterministically.
 /// </summary>
-internal sealed class TestClock : IClock
+internal sealed class TestClock : TimeProvider
 {
     private DateTime _utcNow = new(2026, 8, 26, 12, 0, 0, DateTimeKind.Utc);
 
     public DateTime UtcNow => _utcNow;
 
+    public override DateTimeOffset GetUtcNow() => new(_utcNow);
+
     public void Advance(TimeSpan by) => _utcNow = _utcNow.Add(by);
-
-    public DateTimeOffset ConvertToTimeZone(DateTimeOffset dateTimeOffset, ITimeZone timeZone) => dateTimeOffset;
-
-    public ITimeZone GetTimeZone(string timeZoneId) => throw new NotSupportedException();
-
-    public ITimeZone GetSystemTimeZone() => throw new NotSupportedException();
-
-    public ITimeZone[] GetTimeZones() => [];
 }
 
 /// <summary>
@@ -172,12 +166,12 @@ internal sealed class HarnessProviderCommandProcessor : IProviderCommandProcesso
 {
     private readonly InMemoryProviderCommandStateService _stateService;
     private readonly DialProviderCommandTypeExecutor _executor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _clock;
 
     public HarnessProviderCommandProcessor(
         InMemoryProviderCommandStateService stateService,
         DialProviderCommandTypeExecutor executor,
-        IClock clock)
+        TimeProvider clock)
     {
         _stateService = stateService;
         _executor = executor;
@@ -198,7 +192,7 @@ internal sealed class HarnessProviderCommandProcessor : IProviderCommandProcesso
             CommandId = commandId,
             FenceToken = 1,
             OwnerToken = "harness",
-            LeaseExpiresUtc = _clock.UtcNow.AddMinutes(5),
+            LeaseExpiresUtc = _clock.GetUtcNow().UtcDateTime.AddMinutes(5),
         };
 
         var result = await _executor.ExecuteAsync(command, claim, cancellationToken);

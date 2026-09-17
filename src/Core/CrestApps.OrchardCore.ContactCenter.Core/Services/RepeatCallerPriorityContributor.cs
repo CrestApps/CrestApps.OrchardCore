@@ -17,15 +17,15 @@ public sealed class RepeatCallerPriorityContributor : IInboundPriorityContributo
     /// </summary>
     public static readonly TimeSpan RepeatWindow = TimeSpan.FromHours(4);
 
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RepeatCallerPriorityContributor"/> class.
     /// </summary>
-    /// <param name="clock">The clock.</param>
-    public RepeatCallerPriorityContributor(IClock clock)
+    /// <param name="timeProvider">The time provider.</param>
+    public RepeatCallerPriorityContributor(TimeProvider timeProvider)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -41,7 +41,7 @@ public sealed class RepeatCallerPriorityContributor : IInboundPriorityContributo
             return Task.FromResult<InteractionPriority?>(null);
         }
 
-        return Task.FromResult<InteractionPriority?>(_clock.UtcNow - context.LastInboundUtc.Value <= RepeatWindow
+        return Task.FromResult<InteractionPriority?>(_timeProvider.GetUtcNow().UtcDateTime - context.LastInboundUtc.Value <= RepeatWindow
             ? InteractionPriority.High
             : null);
     }

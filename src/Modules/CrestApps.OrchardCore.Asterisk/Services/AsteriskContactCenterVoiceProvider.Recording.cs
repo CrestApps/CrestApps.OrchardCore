@@ -138,7 +138,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
     {
         try
         {
-            await _recordingIngestJobStore.EnqueueAsync(interactionId, recordingName, format, _clock.UtcNow, cancellationToken);
+            await _recordingIngestJobStore.EnqueueAsync(interactionId, recordingName, format, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
         }
         catch (Exception ex)
         {

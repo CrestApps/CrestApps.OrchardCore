@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -6,9 +5,11 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.StateMachine;
@@ -51,8 +52,8 @@ public sealed class CallStateMachineHarness
             AgentId = agentId,
         }.RestorePersistedStatus(InteractionStatus.Created);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(clockUtc);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(clockUtc);
 
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -115,7 +116,7 @@ public sealed class CallStateMachineHarness
             eventStore.Object,
             new Mock<IContactCenterOutbox>().Object,
             scopeExecutor.Object,
-            clock.Object,
+            clock,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
 
         var distributedLock = new Mock<IDistributedLock>();
@@ -142,7 +143,7 @@ public sealed class CallStateMachineHarness
             scopeExecutor.Object,
             new Mock<ISession>().Object,
             new VoiceIngressGate(distributedLock.Object),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
     }
 

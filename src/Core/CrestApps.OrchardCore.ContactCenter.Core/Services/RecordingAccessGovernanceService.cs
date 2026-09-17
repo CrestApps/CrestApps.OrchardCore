@@ -20,7 +20,7 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecordingAccessGovernanceService"/> class.
@@ -28,17 +28,17 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="callSessionManager">The call session manager used to clear the mirrored recording reference.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="clock">The clock used to stamp erasure instants.</param>
+    /// <param name="timeProvider">The time provider used to stamp erasure instants.</param>
     public RecordingAccessGovernanceService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         IContactCenterEventPublisher publisher,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
         _publisher = publisher;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -126,7 +126,7 @@ public sealed class RecordingAccessGovernanceService : IRecordingAccessGovernanc
         // RecordingErasedUtc), and the outbox media-deletion enqueue all share the ambient unit of work, so they
         // commit together or not at all.
         interaction.RecordingReference = null;
-        interaction.RecordingErasedUtc = _clock.UtcNow;
+        interaction.RecordingErasedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (interaction.TechnicalMetadata is not null)
         {

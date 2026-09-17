@@ -2,6 +2,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -198,8 +199,8 @@ public sealed class DefaultActivityDispositionServiceTests
         Mock<ISubjectFlowSettingsService> flowSettingsService = null,
         IEnumerable<IActivityDispositionHandler> handlers = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new DefaultActivityDispositionService(
             activityManager.Object,
@@ -208,6 +209,6 @@ public sealed class DefaultActivityDispositionServiceTests
             executor.Object,
             (flowSettingsService ?? new Mock<ISubjectFlowSettingsService>()).Object,
             handlers ?? [],
-            clock.Object);
+            clock);
     }
 }

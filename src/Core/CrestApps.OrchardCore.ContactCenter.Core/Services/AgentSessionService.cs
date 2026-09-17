@@ -35,7 +35,7 @@ public sealed class AgentSessionService : IAgentSessionService
     private readonly IAgentPresenceManager _presenceManager;
     private readonly IDistributedLock _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IEnumerable<ISoftPhoneCredentialRevoker> _credentialRevokers;
     private readonly ILogger _logger;
 
@@ -47,7 +47,7 @@ public sealed class AgentSessionService : IAgentSessionService
     /// <param name="presenceManager">The agent presence manager used to sign out abandoned sessions.</param>
     /// <param name="distributedLock">The distributed lock used to serialize per-user session writes.</param>
     /// <param name="scopeExecutor">The scope executor used to commit heartbeat stamps in their own unit of work.</param>
-    /// <param name="clock">The clock used to stamp session activity.</param>
+    /// <param name="timeProvider">The time provider used to stamp session activity.</param>
     /// <param name="credentialRevokers">The soft-phone credential revokers invoked when an abandoned session is cleaned up.</param>
     /// <param name="logger">The logger used to record stale-session cleanup diagnostics.</param>
     public AgentSessionService(
@@ -56,7 +56,7 @@ public sealed class AgentSessionService : IAgentSessionService
         IAgentPresenceManager presenceManager,
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
-        IClock clock,
+        TimeProvider timeProvider,
         IEnumerable<ISoftPhoneCredentialRevoker> credentialRevokers,
         ILogger<AgentSessionService> logger)
     {
@@ -65,7 +65,7 @@ public sealed class AgentSessionService : IAgentSessionService
         _presenceManager = presenceManager;
         _distributedLock = distributedLock;
         _scopeExecutor = scopeExecutor;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _credentialRevokers = credentialRevokers;
         _logger = logger;
     }
@@ -85,7 +85,7 @@ public sealed class AgentSessionService : IAgentSessionService
 
         await using var acquiredLock = locker;
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var session = await _sessionManager.FindByUserIdAsync(userId, cancellationToken);
         var isNew = session is null;
 
@@ -174,11 +174,11 @@ public sealed class AgentSessionService : IAgentSessionService
 
                     session.ConnectionIds.Remove(connectionId);
                     session.IsOnline = session.ConnectionIds.Count > 0;
-                    session.ModifiedUtc = _clock.UtcNow;
+                    session.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
                     if (!session.IsOnline)
                     {
-                        session.LastDisconnectedUtc = _clock.UtcNow;
+                        session.LastDisconnectedUtc = _timeProvider.GetUtcNow().UtcDateTime;
                     }
 
                     await manager.UpdateAsync(session, cancellationToken: cancellationToken);
@@ -230,7 +230,7 @@ public sealed class AgentSessionService : IAgentSessionService
         // The stamp is applied in its own unit of work instead. A child scope has its own session, so the read
         // genuinely reflects what is committed and the connection list written back is the current one, and it
         // commits before returning, so a lost version check is raised here rather than thrown at the agent.
-        var stampedUtc = _clock.UtcNow;
+        var stampedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         AgentSession stamped = null;
 
         try
@@ -281,7 +281,7 @@ public sealed class AgentSessionService : IAgentSessionService
         var snapshot = new AgentDesktopSnapshot
         {
             UserId = userId,
-            ServerTimeUtc = _clock.UtcNow,
+            ServerTimeUtc = _timeProvider.GetUtcNow().UtcDateTime,
         };
 
         if (session is not null)
@@ -318,7 +318,7 @@ public sealed class AgentSessionService : IAgentSessionService
     /// <inheritdoc/>
     public async Task<int> ExpireStaleAsync(CancellationToken cancellationToken = default)
     {
-        var cutoff = _clock.UtcNow.AddSeconds(-StaleThresholdSeconds);
+        var cutoff = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(-StaleThresholdSeconds);
         var stale = await _sessionManager.GetStaleAsync(cutoff, cancellationToken);
         var count = 0;
 

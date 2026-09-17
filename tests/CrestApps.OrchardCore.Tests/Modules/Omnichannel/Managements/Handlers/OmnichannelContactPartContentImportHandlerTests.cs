@@ -1,5 +1,3 @@
-using System.Data;
-using System.Globalization;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -8,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;
@@ -15,6 +14,8 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Entities;
 using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
+using System.Data;
+using System.Globalization;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Handlers;
 
@@ -52,7 +53,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     public async Task ImportAsync_ShouldNormalizePhoneNumbersUsingSelectedCountry()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
-            Mock.Of<IClock>(),
+            Mock.Of<TimeProvider>(),
             new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
         var dataTable = new DataTable();
@@ -100,7 +101,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     public async Task ImportAsync_ShouldInferTimeZoneIdFromImportedPhoneNumber()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
-            CreateClock("America/Los_Angeles"),
+            CreateClock(),
             new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
         var dataTable = new DataTable();
@@ -135,7 +136,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     public async Task ImportAsync_ShouldReplaceManagedContactMethodEntriesOnUpdate()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
-            Mock.Of<IClock>(),
+            Mock.Of<TimeProvider>(),
             new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
         var dataTable = new DataTable();
@@ -183,7 +184,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     public async Task ImportAsync_ShouldPreserveExistingE164NumbersWhenCountryDiffers()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
-            Mock.Of<IClock>(),
+            Mock.Of<TimeProvider>(),
             new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
         var dataTable = new DataTable();
@@ -219,7 +220,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     public async Task ImportAsync_ShouldPreserveExistingTimeZoneWhenColumnIsMissing()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
-            CreateClock("America/Los_Angeles"),
+            CreateClock(),
             new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
         var dataTable = new DataTable();
@@ -259,7 +260,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     public async Task ImportAsync_ShouldClearExistingTimeZoneWhenColumnIsBlank()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
-            CreateClock("America/Los_Angeles"),
+            CreateClock(),
             new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
         var dataTable = new DataTable();
@@ -293,7 +294,7 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
     public async Task ExportAsync_ShouldWriteTimeZoneId()
     {
         var handler = new OmnichannelContactPartContentImportHandler(
-            CreateClock("America/Los_Angeles"),
+            CreateClock(),
             new DefaultPhoneNumberService(),
             new PassThroughStringLocalizer<OmnichannelContactPartContentImportHandler>());
         var dataTable = new DataTable();
@@ -354,17 +355,13 @@ public sealed class OmnichannelContactPartContentImportHandlerTests
         return contentItem;
     }
 
-    private static IClock CreateClock(params string[] timeZoneIds)
+    private static FakeTimeProvider CreateClock()
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(x => x.UtcNow).Returns(new DateTime(2026, 6, 6, 12, 0, 0, DateTimeKind.Utc));
-        clock.Setup(x => x.GetTimeZones()).Returns(timeZoneIds.Select(CreateTimeZone).ToArray());
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 6, 6, 12, 0, 0, DateTimeKind.Utc));
 
-        return clock.Object;
+        return clock;
     }
-
-    private static ITimeZone CreateTimeZone(string timeZoneId)
-        => Mock.Of<ITimeZone>(timeZone => timeZone.TimeZoneId == timeZoneId);
 
     private sealed class PassThroughStringLocalizer<T> : IStringLocalizer<T>
     {

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -392,12 +393,12 @@ public sealed class ContactCenterMetricRollupPersistenceTests
             session,
             CreateClock());
 
-    private static IClock CreateClock()
+    private static FakeTimeProvider CreateClock()
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
-        return clock.Object;
+        return clock;
     }
 
     private static string DatabasePath(string suffix)

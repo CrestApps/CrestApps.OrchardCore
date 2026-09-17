@@ -12,27 +12,27 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
 internal sealed class AgentStateReasonCodeHandler : CatalogEntryHandlerBase<AgentStateReasonCode>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentStateReasonCodeHandler"/> class.
     /// </summary>
-    /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="timeProvider">The time provider used to stamp audit times.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AgentStateReasonCodeHandler(
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<AgentStateReasonCodeHandler> stringLocalizer)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
     public override Task InitializingAsync(InitializingContext<AgentStateReasonCode> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return PopulateAsync(context.Model, context.Data);
     }
@@ -40,7 +40,7 @@ internal sealed class AgentStateReasonCodeHandler : CatalogEntryHandlerBase<Agen
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<AgentStateReasonCode> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return PopulateAsync(context.Model, context.Data);
     }

@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -15,9 +14,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Users;
+using System.Security.Claims;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -242,7 +243,7 @@ public sealed class AgentWorkspaceRoundTripBudgetTests
                 MockUserManager(),
                 _displayNameProvider.Object,
                 Mock.Of<IContactCenterVoiceProviderResolver>(),
-                new StubClock(ClockNow),
+                new FakeTimeProvider(ClockNow),
                 Options.Create(new AgentAvailabilityOptions()),
                 CreateLinkGenerator(),
                 CreateHttpContext());

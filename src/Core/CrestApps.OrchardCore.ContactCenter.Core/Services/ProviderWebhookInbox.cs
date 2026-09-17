@@ -62,7 +62,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private readonly IDistributedLock _distributedLock;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -74,7 +74,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     /// <param name="distributedLock">The distributed lock used for idempotent acceptance and single-message dispatch.</param>
     /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases before keying deliveries.</param>
     /// <param name="scopeExecutor">The executor used to isolate each due message in a fresh child scope.</param>
-    /// <param name="clock">The clock used to stamp acceptance and retry times.</param>
+    /// <param name="timeProvider">The time provider used to stamp acceptance and retry times.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderWebhookInbox(
         IEnumerable<IProviderWebhookInboxHandler> handlers,
@@ -83,7 +83,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         IDistributedLock distributedLock,
         IProviderIdentityResolver providerIdentityResolver,
         IContactCenterScopeExecutor scopeExecutor,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<ContactCenterRetentionOptions> retentionOptions,
         ILogger<ProviderWebhookInbox> logger)
     {
@@ -93,7 +93,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         _distributedLock = distributedLock;
         _providerIdentityResolver = providerIdentityResolver;
         _scopeExecutor = scopeExecutor;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _retentionOptions = retentionOptions.Value;
         _logger = logger;
     }
@@ -181,7 +181,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             };
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var message = new ProviderWebhookInboxMessage
         {
             ItemId = IdGenerator.GenerateId(),
@@ -228,7 +228,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             return false;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if ((message.Status != ProviderWebhookInboxStatus.Pending &&
                 message.Status != ProviderWebhookInboxStatus.Claimed) ||
@@ -255,8 +255,8 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             message.Status = ProviderWebhookInboxStatus.Pending;
             message.OwnerToken = null;
             message.LastError = "HandlerUnavailable";
-            message.NextAttemptUtc = _clock.UtcNow.Add(_missingHandlerDelay);
-            message.ModifiedUtc = _clock.UtcNow;
+            message.NextAttemptUtc = _timeProvider.GetUtcNow().UtcDateTime.Add(_missingHandlerDelay);
+            message.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
             await _store.UpdateAsync(message, cancellationToken);
             await _session.SaveChangesAsync(cancellationToken);
 
@@ -367,7 +367,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         message.OwnerToken = null;
         message.Payload = null;
         message.LastError = null;
-        message.ProcessedUtc = _clock.UtcNow;
+        message.ProcessedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         message.NextAttemptUtc = message.ProcessedUtc.Value;
         message.ModifiedUtc = message.ProcessedUtc;
         await _store.UpdateAsync(message, cancellationToken);
@@ -381,7 +381,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     {
         await PurgeExpiredTombstonesAsync(cancellationToken);
 
-        var due = await _store.GetDueAsync(_clock.UtcNow, MaxBatchSize, cancellationToken);
+        var due = await _store.GetDueAsync(_timeProvider.GetUtcNow().UtcDateTime, MaxBatchSize, cancellationToken);
         var completed = 0;
 
         foreach (var message in due)
@@ -433,7 +433,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         // decide the table's real window. Taking the longer keeps the configured retention window meaningful
         // while never letting the duplicate-detection horizon be shortened below what the inbox guarantees.
         var retentionDays = Math.Max(TombstoneRetentionDays, _retentionOptions.WebhookInboxMessageRetentionDays);
-        var cutoff = _clock.UtcNow.Subtract(TimeSpan.FromDays(retentionDays));
+        var cutoff = _timeProvider.GetUtcNow().UtcDateTime.Subtract(TimeSpan.FromDays(retentionDays));
         var tombstones = await _store.GetProcessedBeforeAsync(
             cutoff,
             MaxTombstoneCleanupBatchSize,
@@ -485,7 +485,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     {
         message.AttemptCount++;
         message.LastError = errorType;
-        message.ModifiedUtc = _clock.UtcNow;
+        message.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         message.OwnerToken = null;
 
         if (message.AttemptCount >= MaxAttempts)
@@ -493,12 +493,12 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             message.Status = ProviderWebhookInboxStatus.DeadLettered;
 
             // This is the age settled deliveries are purged by. Without it a dead letter is never selected.
-            message.ProcessedUtc = _clock.UtcNow;
+            message.ProcessedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         }
         else
         {
             message.Status = ProviderWebhookInboxStatus.Pending;
-            message.NextAttemptUtc = _clock.UtcNow.Add(GetBackoff(message.AttemptCount));
+            message.NextAttemptUtc = _timeProvider.GetUtcNow().UtcDateTime.Add(GetBackoff(message.AttemptCount));
         }
 
         await _store.UpdateAsync(message, cancellationToken);

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -200,10 +201,10 @@ public sealed class SmsAutoReplyRouterTests
                 .Setup(manager => manager.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
                 .ReturnsAsync((string contentItemId, VersionOptions _) => _contacts.TryGetValue(contentItemId, out var contact) ? contact : null);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
-            _router = new AutoReplyRouter(Dispatcher.Object, ContentManager.Object, clock.Object);
+            _router = new AutoReplyRouter(Dispatcher.Object, ContentManager.Object, clock);
         }
 
         public void AddContact(string contentItemId, bool doNotSms)

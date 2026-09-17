@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
@@ -467,8 +468,8 @@ public sealed class ActivityReservationSharedDatabaseTests
         activityManager
             .Setup(manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new OmnichannelActivity { ItemId = "activity-1" });
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var services = new ServiceCollection();
         services.AddSingleton(reservationManager);
@@ -487,7 +488,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);
         services.AddSingleton(distributedLock);
         services.AddSingleton(session);
-        services.AddSingleton(clock.Object);
+        services.AddSingleton<TimeProvider>(clock);
         services.AddLogging();
         services.AddSingleton<IContactCenterWorkStateStore>(new ContactCenterWorkStateStore(session));
         services.AddSingleton<IContactCenterWorkStateManager>(provider => new ContactCenterWorkStateManager(
@@ -571,8 +572,8 @@ public sealed class ActivityReservationSharedDatabaseTests
         activityManager
             .Setup(manager => manager.FindByIdAsync("activity-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new OmnichannelActivity { ItemId = "activity-1" });
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var services = new ServiceCollection();
         services.AddSingleton<IActivityReservationManager>(reservationManagerProxy.Object);
@@ -588,7 +589,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);
         services.AddSingleton(distributedLock);
         services.AddSingleton(session);
-        services.AddSingleton(clock.Object);
+        services.AddSingleton<TimeProvider>(clock);
         services.AddLogging();
         services.AddSingleton<IContactCenterWorkStateStore>(new ContactCenterWorkStateStore(session));
         services.AddSingleton<IContactCenterWorkStateManager>(provider => new ContactCenterWorkStateManager(

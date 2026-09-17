@@ -20,7 +20,7 @@ public sealed class QueuedCallerAbandonmentHandler : IQueuedCallerAbandonmentHan
 {
     private readonly IInteractionManager _interactionManager;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -29,12 +29,12 @@ public sealed class QueuedCallerAbandonmentHandler : IQueuedCallerAbandonmentHan
     public QueuedCallerAbandonmentHandler(
         IInteractionManager interactionManager,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<QueuedCallerAbandonmentHandler> logger)
     {
         _interactionManager = interactionManager;
         _offerSynchronizationService = offerSynchronizationService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -59,7 +59,7 @@ public sealed class QueuedCallerAbandonmentHandler : IQueuedCallerAbandonmentHan
         if (interaction.CanTransitionTo(InteractionStatus.Ended))
         {
             interaction.TransitionTo(InteractionStatus.Ended);
-            interaction.EndedUtc ??= _clock.UtcNow;
+            interaction.EndedUtc ??= _timeProvider.GetUtcNow().UtcDateTime;
 
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }

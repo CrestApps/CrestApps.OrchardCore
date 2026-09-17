@@ -14,20 +14,20 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 /// </summary>
 internal sealed class CadenceHandler : CatalogEntryHandlerBase<Cadence>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CadenceHandler"/> class.
     /// </summary>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CadenceHandler(
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<CadenceHandler> stringLocalizer)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
@@ -36,7 +36,7 @@ internal sealed class CadenceHandler : CatalogEntryHandlerBase<Cadence>
     {
         if (context.Model.CreatedUtc == default)
         {
-            context.Model.CreatedUtc = _clock.UtcNow;
+            context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         return Task.CompletedTask;
@@ -45,7 +45,7 @@ internal sealed class CadenceHandler : CatalogEntryHandlerBase<Cadence>
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<Cadence> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }

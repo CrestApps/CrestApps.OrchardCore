@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
@@ -186,8 +187,8 @@ public sealed class AgentEntitlementNormalizationTests
             .Setup(l => l.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((Mock.Of<ILocker>(), true));
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new AgentPresenceManagerService(
             agentManager.Object,
@@ -196,7 +197,7 @@ public sealed class AgentEntitlementNormalizationTests
             new EnforcingAgentEntitlementPolicy(),
             new Mock<IContactCenterEventPublisher>().Object,
             distributedLock.Object,
-            clock.Object,
+            clock,
             new Mock<ILogger<AgentPresenceManagerService>>().Object);
     }
 }

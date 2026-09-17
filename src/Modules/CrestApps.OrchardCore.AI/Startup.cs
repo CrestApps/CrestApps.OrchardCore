@@ -71,7 +71,7 @@ public sealed class Startup : StartupBase
             .AddCatalogManagers()
             .TryAddScoped<IStoreCommitter, YesSqlStoreCommitter>();
 
-        services.AddSingleton<TimeProvider, ClockTimeProviderAdapter>();
+        services.AddCoreTimeProvider();
 
         // Register embedded templates from this module so they are always
         // available, even when the Templating feature is not enabled.

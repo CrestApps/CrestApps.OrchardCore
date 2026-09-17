@@ -1,9 +1,10 @@
 using CrestApps.Core.AI;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
-using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContentTransfer.Models;
+using CrestApps.OrchardCore.ContentTransfer;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
@@ -13,20 +14,20 @@ using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Tools;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.PhoneNumbers.Core;
-using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
-using Microsoft.Extensions.DependencyInjection;
+using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Handlers;
+using OrchardCore.ContentManagement;
+using OrchardCore.ContentTypes.Editors;
 using OrchardCore.Contents.Services;
 using OrchardCore.Contents.ViewModels;
-using OrchardCore.ContentTypes.Editors;
-using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -47,6 +48,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
 
         services.AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>();

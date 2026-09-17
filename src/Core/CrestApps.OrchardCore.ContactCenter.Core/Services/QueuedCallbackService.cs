@@ -16,7 +16,7 @@ public sealed class QueuedCallbackService : IQueuedCallbackService
 {
     private readonly ICallbackService _callbackService;
     private readonly IQueueItemManager _queueItemManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -25,12 +25,12 @@ public sealed class QueuedCallbackService : IQueuedCallbackService
     public QueuedCallbackService(
         ICallbackService callbackService,
         IQueueItemManager queueItemManager,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<QueuedCallbackService> logger)
     {
         _callbackService = callbackService;
         _queueItemManager = queueItemManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -52,7 +52,7 @@ public sealed class QueuedCallbackService : IQueuedCallbackService
             return false;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _callbackService.ScheduleAsync(
             new CallbackRequest

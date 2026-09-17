@@ -29,19 +29,19 @@ public sealed class SmsEndpointRoutingDisplayDriver : DisplayDriver<OmnichannelC
 {
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly IShellFeaturesManager _shellFeaturesManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
     public SmsEndpointRoutingDisplayDriver(
         IAgentProfileManager agentProfileManager,
         IShellFeaturesManager shellFeaturesManager,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<SmsEndpointRoutingDisplayDriver> stringLocalizer)
     {
         _agentProfileManager = agentProfileManager;
         _shellFeaturesManager = shellFeaturesManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
@@ -161,7 +161,7 @@ public sealed class SmsEndpointRoutingDisplayDriver : DisplayDriver<OmnichannelC
             profile = await _agentProfileManager.NewAsync();
             profile.UserId = userId;
             profile.Name = userId;
-            profile.CreatedUtc = _clock.UtcNow;
+            profile.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             await _agentProfileManager.CreateAsync(profile);
         }

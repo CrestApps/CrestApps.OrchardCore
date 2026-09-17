@@ -22,7 +22,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
         ((int)QueueItemStatus.Removed).ToString(CultureInfo.InvariantCulture);
 
     private readonly IStore _store;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="QueueItemIndexMigrations"/> class.
@@ -30,10 +30,10 @@ internal sealed class QueueItemIndexMigrations : DataMigration
     /// <param name="store">The YesSql store.</param>
     public QueueItemIndexMigrations(
         IStore store,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _store = store;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ internal sealed class QueueItemIndexMigrations : DataMigration
             _store,
             typeof(QueueItemIndex),
             "DequeuedUtc",
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             $"{SchemaBuilder.Dialect.QuoteForColumnName("Status")} IN ({CompletedStatusValue}, {RemovedStatusValue})");
 
         await SchemaBuilder.AlterIndexTableAsync<QueueItemIndex>(table => table

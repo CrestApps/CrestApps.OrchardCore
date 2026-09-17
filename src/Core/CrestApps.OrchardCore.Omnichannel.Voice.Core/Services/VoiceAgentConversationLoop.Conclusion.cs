@@ -50,7 +50,7 @@ public sealed partial class VoiceAgentConversationLoop
         var actionCatalog = services.GetRequiredService<ISourceCatalog<SubjectAction>>();
         var executor = services.GetRequiredService<ISubjectActionExecutor>();
         var jsonOptions = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<DocumentJsonSerializerOptions>>().Value;
-        var clock = services.GetRequiredService<IClock>();
+        var timeProvider = services.GetRequiredService<TimeProvider>();
         var session = services.GetRequiredService<ISession>();
 
         var profile = await profileManager.FindByIdAsync(activity.AIProfileId ?? string.Empty);
@@ -202,7 +202,7 @@ public sealed partial class VoiceAgentConversationLoop
         }
 
         concluded.Status = ActivityStatus.Completed;
-        concluded.CompletedUtc = clock.UtcNow;
+        concluded.CompletedUtc = timeProvider.GetUtcNow().UtcDateTime;
 
         // Notes and disposition are written together in this single terminal update, so a concluded call is never
         // dispositioned without notes: the notes fall back to a default line when the model returns no summary.

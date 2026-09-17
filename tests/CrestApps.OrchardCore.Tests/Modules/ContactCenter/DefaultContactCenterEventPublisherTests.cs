@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -230,14 +231,14 @@ public sealed class DefaultContactCenterEventPublisherTests
         IContactCenterOutbox outbox,
         IContactCenterScopeExecutor scopeExecutor = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new DefaultContactCenterEventPublisher(
             store,
             outbox,
             scopeExecutor ?? new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider()),
-            clock.Object,
+            clock,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
     }
 

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -142,18 +143,18 @@ public class SmsRoutedReassignmentServiceTests
             Strategy.Setup(s => s.SelectAgentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(() => NextAgentId);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(now);
 
             var router = new SmsConversationRouter(
-                [new ReassignmentRouter(Strategy.Object, clock.Object)],
+                [new ReassignmentRouter(Strategy.Object, clock)],
                 NullLogger<SmsConversationRouter>.Instance);
 
             Service = new SmsRoutedReassignmentService(
                 Store.Object,
                 router,
                 Notifier.Object,
-                clock.Object,
+                clock,
                 Microsoft.Extensions.Options.Options.Create(new SmsRoutedDistributionOptions()),
                 NullLogger<SmsRoutedReassignmentService>.Instance);
         }

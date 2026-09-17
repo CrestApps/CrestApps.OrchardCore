@@ -21,22 +21,22 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
 {
     private readonly IContactCenterRealTimeNotifier _notifier;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterRealTimeEventHandler"/> class.
     /// </summary>
     /// <param name="notifier">The real-time notifier used to broadcast updates.</param>
     /// <param name="scopeExecutor">The executor used to isolate projections from the outbox persistence scope.</param>
-    /// <param name="clock">The clock used to stamp notifications.</param>
+    /// <param name="timeProvider">The time provider used to stamp notifications.</param>
     public ContactCenterRealTimeEventHandler(
         IContactCenterRealTimeNotifier notifier,
         IContactCenterScopeExecutor scopeExecutor,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _notifier = notifier;
         _scopeExecutor = scopeExecutor;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -208,10 +208,10 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             QueueItemId = reservation.QueueItemId,
             QueueId = reservation.QueueId,
             ExpiresUtc = reservation.ExpiresUtc,
-            ServerTimeUtc = _clock.UtcNow,
+            ServerTimeUtc = _timeProvider.GetUtcNow().UtcDateTime,
         }, cancellationToken);
 
-        await DispatchSoftPhoneRingAsync(reservation, agent, interactionManager, incomingCallDispatcher, _clock.UtcNow, cancellationToken);
+        await DispatchSoftPhoneRingAsync(reservation, agent, interactionManager, incomingCallDispatcher, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
         await BroadcastQueueStatsAsync(reservation.QueueId, queueItemStore, cancellationToken);
     }
@@ -367,7 +367,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         {
             QueueId = queueId,
             WaitingCount = waitingCount,
-            ChangedUtc = _clock.UtcNow,
+            ChangedUtc = _timeProvider.GetUtcNow().UtcDateTime,
         }, cancellationToken);
     }
 }

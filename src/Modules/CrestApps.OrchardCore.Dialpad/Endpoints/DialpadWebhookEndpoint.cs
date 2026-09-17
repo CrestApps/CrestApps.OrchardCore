@@ -39,7 +39,7 @@ internal static class DialpadWebhookEndpoint
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IDialpadWebhookService webhookService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<Startup> logger,
         HttpContext httpContext)
     {
@@ -212,7 +212,7 @@ internal static class DialpadWebhookEndpoint
 
                 if (!callEvent.EventTimestamp.HasValue ||
                     !TryGetOccurredUtc(callEvent.EventTimestamp.Value, out var occurredUtc) ||
-                    !IsFresh(ingressLimiter, occurredUtc, clock.UtcNow))
+                    !IsFresh(ingressLimiter, occurredUtc, timeProvider.GetUtcNow().UtcDateTime))
                 {
                     logger.LogWarning("Rejected a Dialpad webhook because its signed event timestamp was missing, stale, or too far in the future.");
 

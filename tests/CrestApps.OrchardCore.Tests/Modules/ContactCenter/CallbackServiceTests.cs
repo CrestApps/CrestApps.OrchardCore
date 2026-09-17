@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -158,8 +159,8 @@ public sealed class CallbackServiceTests
         Mock<IActivityQueueService> queueService,
         Mock<IContactCenterEventPublisher> publisher)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new CallbackService(
             callbackManager.Object,
@@ -167,6 +168,6 @@ public sealed class CallbackServiceTests
             new FakeContactCenterWorkStateService(activityManager.Object),
             queueService.Object,
             publisher.Object,
-            clock.Object);
+            clock);
     }
 }

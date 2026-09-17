@@ -28,7 +28,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IRecordingMediaStore _mediaStore;
     private readonly IRecordingErasureGuard _erasureGuard;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<TelnyxRecordingIngestService> _logger;
     private readonly TelnyxOptions _options;
 
@@ -43,7 +43,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
     /// first guard is consulted to refuse ingesting a recording that has already been erased; when absent, ingest
     /// proceeds unchanged.
     /// </param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="telnyxOptions">The Telnyx options carrying the API base address and API key.</param>
     /// <param name="logger">The logger instance.</param>
     public TelnyxRecordingIngestService(
@@ -51,7 +51,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
         IHttpClientFactory httpClientFactory,
         IRecordingMediaStore mediaStore,
         IEnumerable<IRecordingErasureGuard> erasureGuards,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
         ILogger<TelnyxRecordingIngestService> logger)
     {
@@ -59,7 +59,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
         _httpClientFactory = httpClientFactory;
         _mediaStore = mediaStore;
         _erasureGuard = erasureGuards.FirstOrDefault();
-        _clock = clock;
+        _timeProvider = timeProvider;
         _options = telnyxOptions.CurrentValue;
         _logger = logger;
     }
@@ -72,7 +72,7 @@ internal sealed class TelnyxRecordingIngestService : ITelnyxRecordingIngestServi
             return 0;
         }
 
-        var nowUtc = _clock.UtcNow;
+        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var dueJobs = await _jobStore.GetDueAsync(nowUtc, TelnyxConstants.Recording.IngestBatchSize, cancellationToken);
         var ingested = 0;
 

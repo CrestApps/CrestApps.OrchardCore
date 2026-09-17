@@ -16,7 +16,7 @@ public sealed class ContactCenterMetricRollupService : IContactCenterMetricRollu
     private readonly IContactCenterMetricDeltaStore _deltaStore;
     private readonly IContactCenterMetricStore _metricStore;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMetricRollupService"/> class.
@@ -24,17 +24,17 @@ public sealed class ContactCenterMetricRollupService : IContactCenterMetricRollu
     /// <param name="deltaStore">The store holding the appended contributions.</param>
     /// <param name="metricStore">The store holding the daily totals.</param>
     /// <param name="session">The YesSql session, used to commit each batch on its own.</param>
-    /// <param name="clock">The clock used to stamp the totals.</param>
+    /// <param name="timeProvider">The time provider used to stamp the totals.</param>
     public ContactCenterMetricRollupService(
         IContactCenterMetricDeltaStore deltaStore,
         IContactCenterMetricStore metricStore,
         ISession session,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _deltaStore = deltaStore;
         _metricStore = metricStore;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -92,7 +92,7 @@ public sealed class ContactCenterMetricRollupService : IContactCenterMetricRollu
                     Date = ContactCenterMetricDateKey.Parse(dateKey),
                     EventType = eventType,
                     Count = count,
-                    CreatedUtc = _clock.UtcNow,
+                    CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 },
                 cancellationToken);
 
@@ -100,7 +100,7 @@ public sealed class ContactCenterMetricRollupService : IContactCenterMetricRollu
         }
 
         metric.Count += count;
-        metric.ModifiedUtc = _clock.UtcNow;
+        metric.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _metricStore.UpdateAsync(metric, cancellationToken);
     }

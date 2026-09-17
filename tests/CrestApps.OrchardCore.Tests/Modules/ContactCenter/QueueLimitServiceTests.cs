@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -244,15 +245,15 @@ public sealed class QueueLimitServiceTests
                 .Setup(manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string queueId, CancellationToken _) => _queues.TryGetValue(queueId, out var queue) ? queue : null);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             Service = new QueueLimitService(
                 QueueItemManager.Object,
                 QueueManager.Object,
                 QueueService.Object,
                 VoicemailSink.Object,
-                clock.Object,
+                clock,
                 NullLogger<QueueLimitService>.Instance);
         }
 

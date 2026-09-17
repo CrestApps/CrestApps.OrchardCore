@@ -23,4 +23,15 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Registers the <see cref="TimeProvider"/> used by the CrestApps services, backed by the Orchard Core clock.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddCoreTimeProvider(this IServiceCollection services)
+    {
+        services.TryAddSingleton<TimeProvider, ClockTimeProviderAdapter>();
+
+        return services;
+    }
 }

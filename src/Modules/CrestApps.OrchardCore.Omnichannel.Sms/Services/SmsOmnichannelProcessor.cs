@@ -33,7 +33,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     private readonly ISmsService _smsService;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -49,7 +49,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
     /// <param name="smsService">The sms service.</param>
     /// <param name="liquidTemplateManager">The liquid template manager.</param>
     /// <param name="contentManager">The content manager.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SmsOmnichannelProcessor(
         IAIChatSessionManager aIChatSessionManager,
@@ -61,7 +61,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         ISmsService smsService,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<SmsOmnichannelProcessor> stringLocalizer)
     {
         _aIChatSessionManager = aIChatSessionManager;
@@ -73,7 +73,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         _smsService = smsService;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
@@ -129,8 +129,8 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             {
                 SessionId = UniqueId.GenerateId(),
                 ProfileId = profile.ItemId,
-                CreatedUtc = _clock.UtcNow,
-                LastActivityUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
+                LastActivityUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 Title = S["Automated SMS Activity"],
             };
         }
@@ -202,10 +202,10 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
                 // Stamp the opening message so it orders before the customer's first reply. Without a time it
                 // defaults to DateTime.MinValue and sorts ahead of every later message, corrupting the owed-reply
                 // scan and the transcript for the rest of the conversation.
-                CreatedUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             }, cancellationToken);
 
-            chatSession.LastActivityUtc = _clock.UtcNow;
+            chatSession.LastActivityUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             await _aIChatSessionManager.SaveAsync(chatSession, cancellationToken);
 
@@ -217,7 +217,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             {
                 activity.ScheduledUtc = OmnichannelAutomationHelper.ResolveNoResponseDeadline(
                     flowSettings,
-                    _clock.UtcNow);
+                    _timeProvider.GetUtcNow().UtcDateTime);
             }
         }
         else

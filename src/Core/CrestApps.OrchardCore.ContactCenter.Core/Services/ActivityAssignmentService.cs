@@ -27,7 +27,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IDistributedLock _distributedLock;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ILogger _logger;
 
@@ -43,7 +43,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="distributedLock">The distributed lock used to serialize assignment per queue.</param>
     /// <param name="session">The YesSql session used to persist each reservation before assigning more queue work.</param>
-    /// <param name="clock">The clock used to evaluate SLA aging and business hours.</param>
+    /// <param name="timeProvider">The time provider used to evaluate SLA aging and business hours.</param>
     /// <param name="logger">The logger.</param>
     public ActivityAssignmentService(
         IQueueItemManager queueItemManager,
@@ -55,7 +55,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IContactCenterEventPublisher publisher,
         IDistributedLock distributedLock,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<ActivityAssignmentService> logger)
     {
@@ -68,7 +68,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         _publisher = publisher;
         _distributedLock = distributedLock;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
     }
@@ -252,7 +252,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (!await _businessHours.IsOpenAsync(queue.BusinessHoursCalendarId, now, cancellationToken))
         {

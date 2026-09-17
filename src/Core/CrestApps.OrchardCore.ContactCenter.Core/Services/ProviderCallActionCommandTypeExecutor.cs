@@ -29,7 +29,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderCallActionCommandTypeExecutor"/> class.
@@ -40,7 +40,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="clock">The clock used to stamp projections.</param>
+    /// <param name="timeProvider">The time provider used to stamp projections.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     protected ProviderCallActionCommandTypeExecutor(
         IEnumerable<ITelephonyService> telephonyServices,
@@ -50,7 +50,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
         IContactCenterEventPublisher publisher,
-        IClock clock,
+        TimeProvider timeProvider,
         ICallControlAuthorizationService callControlAuthorizationService)
     {
         _telephonyService = telephonyServices.FirstOrDefault();
@@ -61,7 +61,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         _workStateService = workStateService;
         _activityWriter = activityWriter;
         _publisher = publisher;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -268,7 +268,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
                 ? ContactCenterConstants.SystemActor
                 : command.ProviderName,
             SourceComponent = ContactCenterConstants.Components.CallSessions,
-            OccurredUtc = _clock.UtcNow,
+            OccurredUtc = _timeProvider.GetUtcNow().UtcDateTime,
             IdempotencyKey = ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(
                 command.CommandId,
                 ContactCenterConstants.Events.CallSentToVoicemail),
@@ -298,7 +298,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             return;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // A hangup that succeeds at the provider can land after the call had already been recorded as failed,
         // and a settled interaction keeps whichever ending it recorded first.
@@ -349,7 +349,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
                 "FailedRequeued",
                 GetErrorCodePrefix("failed"),
                 "The provider action failed and the live call was returned to routing.",
-                _clock.UtcNow);
+                _timeProvider.GetUtcNow().UtcDateTime);
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
             await _publisher.PublishAsync(CreateOfferRequeuedEvent(command, request), cancellationToken);
 
@@ -423,7 +423,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             return;
         }
 
-        ApplyProjectionMetadata(interaction, command, request, outcome, errorCode, errorMessage, _clock.UtcNow);
+        ApplyProjectionMetadata(interaction, command, request, outcome, errorCode, errorMessage, _timeProvider.GetUtcNow().UtcDateTime);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
     }
 

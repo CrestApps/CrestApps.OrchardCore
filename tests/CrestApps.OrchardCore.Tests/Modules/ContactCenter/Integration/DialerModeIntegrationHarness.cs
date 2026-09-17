@@ -302,7 +302,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
 
         services.AddSingleton(session);
         services.AddSingleton(clock);
-        services.AddSingleton<IClock>(clock);
+        services.AddSingleton<TimeProvider>(clock);
         services.AddSingleton(CreateAlwaysGrantingLock());
 
         // Stores + catalog managers over the shared session.

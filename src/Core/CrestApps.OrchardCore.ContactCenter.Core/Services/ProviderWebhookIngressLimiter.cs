@@ -22,19 +22,19 @@ public sealed class ProviderWebhookIngressLimiter : IProviderWebhookIngressLimit
     private readonly ConcurrentDictionary<string, TokenBucketRateLimiter> _providerRateLimiters = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrencyLimiter _concurrencyLimiter;
     private readonly ProviderWebhookIngressOptions _options;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ProviderWebhookIngressLimiter"/> class.
     /// </summary>
     /// <param name="options">The webhook ingress limit options.</param>
-    /// <param name="clock">The clock used to evaluate signed delivery timestamps.</param>
+    /// <param name="timeProvider">The time provider used to evaluate signed delivery timestamps.</param>
     public ProviderWebhookIngressLimiter(
         IOptions<ProviderWebhookIngressOptions> options,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _options = options.Value;
-        _clock = clock;
+        _timeProvider = timeProvider;
 
         if (!AreOptionsValid(_options))
         {
@@ -81,7 +81,7 @@ public sealed class ProviderWebhookIngressLimiter : IProviderWebhookIngressLimit
             return false;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         return occurredUtc.Value >= now.AddSeconds(-_options.MaximumDeliveryAgeSeconds) &&
             occurredUtc.Value <= now.AddSeconds(_options.MaximumFutureSkewSeconds);

@@ -43,7 +43,7 @@ internal static class TelnyxSmsWebhookEndpoint
         IOptionsMonitor<TelnyxSmsOptions> optionsMonitor,
         IEnumerable<IOmnichannelEventHandler> handlers,
         YesSqlSession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelnyxSmsProvider> logger)
     {
         var options = optionsMonitor.CurrentValue;
@@ -96,7 +96,7 @@ internal static class TelnyxSmsWebhookEndpoint
 
         if (messagingEvent.IsInbound)
         {
-            await HandleInboundAsync(httpContext, messagingEvent, handlers, session, clock, logger, httpContext.RequestAborted);
+            await HandleInboundAsync(httpContext, messagingEvent, handlers, session, timeProvider, logger, httpContext.RequestAborted);
         }
         else
         {
@@ -137,7 +137,7 @@ internal static class TelnyxSmsWebhookEndpoint
         TelnyxSmsWebhookEvent messagingEvent,
         IEnumerable<IOmnichannelEventHandler> handlers,
         YesSqlSession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger logger,
         CancellationToken cancellationToken)
     {
@@ -147,7 +147,7 @@ internal static class TelnyxSmsWebhookEndpoint
             ServiceAddress = messagingEvent.To,
             Content = messagingEvent.Text,
             Channel = OmnichannelConstants.Channels.Sms,
-            CreatedUtc = clock.UtcNow,
+            CreatedUtc = timeProvider.GetUtcNow().UtcDateTime,
             IsInbound = true,
             ProviderMessageId = messagingEvent.ProviderMessageId,
             MediaReferences = messagingEvent.MediaUrls.ToList(),

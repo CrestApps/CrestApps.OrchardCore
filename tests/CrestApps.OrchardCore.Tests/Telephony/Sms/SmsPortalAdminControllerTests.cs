@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -15,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement;
@@ -23,6 +23,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Security;
 using OrchardCore.Users;
+using System.Security.Claims;
 using YesSqlSession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
@@ -158,8 +159,8 @@ public sealed class SmsPortalAdminControllerTests
             .Setup(manager => manager.FindByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AgentProfile { ItemId = "agent-1", UserId = "user-1" });
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(instance => instance.UtcNow).Returns(DateTime.UtcNow);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(DateTime.UtcNow);
 
         var controller = new AdminController(
             conversationStore.Object,
@@ -177,12 +178,12 @@ public sealed class SmsPortalAdminControllerTests
                 Mock.Of<IBusinessHoursGate>(),
                 Mock.Of<ISmsQueuePolicyReader>(),
                 Mock.Of<ISmsContactTimeZoneResolver>(),
-                clock.Object),
+                clock),
             Mock.Of<IDisplayManager<SmsConversation>>(),
             Mock.Of<IUpdateModelAccessor>(),
             Mock.Of<INotifier>(),
             Mock.Of<YesSqlSession>(),
-            clock.Object,
+            clock,
             Mock.Of<IOmnichannelContactTypeProvider>(),
             new OptionsWrapper<SmsPortalOptions>(new SmsPortalOptions()),
             new NullHtmlLocalizer(),

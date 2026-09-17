@@ -51,7 +51,7 @@ public sealed class ActivitiesController : Controller
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
     private readonly IActivityDispositionService _activityDispositionService;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
     private readonly UserManager<IUser> _userManager;
@@ -75,8 +75,8 @@ public sealed class ActivitiesController : Controller
     /// <param name="contentItemDisplayManager">The content item display manager.</param>
     /// <param name="activityDispositionService">The activity disposition service.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
-    /// <param name="clock">The clock.</param>
-    /// <param name="localClock">The local clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
+    /// <param name="localClock">The local time provider.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="displayNameProvider">The user display name provider.</param>
@@ -95,7 +95,7 @@ public sealed class ActivitiesController : Controller
         IContentItemDisplayManager contentItemDisplayManager,
         IActivityDispositionService activityDispositionService,
         ISubjectFlowSettingsService subjectFlowSettingsService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILocalClock localClock,
         INotifier notifier,
         UserManager<IUser> userManager,
@@ -115,7 +115,7 @@ public sealed class ActivitiesController : Controller
         _contentItemDisplayManager = contentItemDisplayManager;
         _activityDispositionService = activityDispositionService;
         _subjectFlowSettingsService = subjectFlowSettingsService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _localClock = localClock;
         _notifier = notifier;
         _userManager = userManager;
@@ -342,7 +342,7 @@ public sealed class ActivitiesController : Controller
             Status = ActivityStatus.NotStated,
             CreatedById = User.FindFirstValue(ClaimTypes.NameIdentifier),
             CreatedByUsername = User.Identity?.Name,
-            CreatedUtc = _clock.UtcNow,
+            CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
         };
 
         ViewData["Contact"] = contact;
@@ -390,7 +390,7 @@ public sealed class ActivitiesController : Controller
         activity.Status = ActivityStatus.NotStated;
         activity.CreatedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
         activity.CreatedByUsername = User.Identity?.Name;
-        activity.CreatedUtc = _clock.UtcNow;
+        activity.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         var model = await _activityDisplayManager.UpdateEditorAsync(activity, _updateModelAccessor.ModelUpdater, isNew: true);
 
@@ -589,7 +589,7 @@ public sealed class ActivitiesController : Controller
 
     private async Task<OmnichannelActivity> BuildInboundActivityAsync(ContentItem contact, string subjectContentType)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var username = User.Identity?.Name;
 
@@ -941,7 +941,7 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var purgedAtUtc = _clock.UtcNow;
+        var purgedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var purgedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var purgedByUsername = User.Identity?.Name;
 
@@ -1178,7 +1178,7 @@ public sealed class ActivitiesController : Controller
                 break;
 
             case BulkActivityAction.Purge:
-                var purgedAtUtc = _clock.UtcNow;
+                var purgedAtUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 var purgedById = User.FindFirstValue(ClaimTypes.NameIdentifier);
                 var purgedByUsername = User.Identity?.Name;
 
@@ -1251,7 +1251,7 @@ public sealed class ActivitiesController : Controller
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var processedCount = 0;
 
         for (var i = 0; i < activities.Count; i++)

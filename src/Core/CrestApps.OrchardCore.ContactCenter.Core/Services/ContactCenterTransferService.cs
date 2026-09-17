@@ -19,7 +19,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     private readonly ITransferDestinationResolver _transferDestinationResolver;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterTransferService"/> class.
@@ -30,7 +30,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     /// <param name="voiceProviderResolver">The voice provider resolver.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
-    /// <param name="clock">The clock used to stamp transfer times.</param>
+    /// <param name="timeProvider">The time provider used to stamp transfer times.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     /// <param name="transferDestinationResolver">The typed transfer destination resolver.</param>
     public ContactCenterTransferService(
@@ -40,7 +40,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
-        IClock clock,
+        TimeProvider timeProvider,
         ICallControlAuthorizationService callControlAuthorizationService,
         ITransferDestinationResolver transferDestinationResolver)
     {
@@ -52,7 +52,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         _transferDestinationResolver = transferDestinationResolver;
         _publisher = publisher;
         _commandExecutor = commandExecutor;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -142,7 +142,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
                     providerResult?.ErrorMessage ?? "The voice provider did not confirm the call transfer.");
             }
 
-            var now = _clock.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             await RecordTransferTopologyAsync(
                 interaction,

@@ -20,7 +20,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
     private readonly ISubjectActionExecutor _subjectActionExecutor;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IEnumerable<IActivityDispositionHandler> _handlers;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultActivityDispositionService"/> class.
@@ -31,7 +31,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
     /// <param name="subjectActionExecutor">The subject action executor that runs the subject flow.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service used to resolve the required-disposition policy.</param>
     /// <param name="handlers">The handlers notified after a successful disposition.</param>
-    /// <param name="clock">The clock used to stamp completion times.</param>
+    /// <param name="timeProvider">The time provider used to stamp completion times.</param>
     public DefaultActivityDispositionService(
         IOmnichannelActivityManager activityManager,
         INamedCatalog<OmnichannelDisposition> dispositionsCatalog,
@@ -39,7 +39,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
         ISubjectActionExecutor subjectActionExecutor,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IEnumerable<IActivityDispositionHandler> handlers,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _activityManager = activityManager;
         _dispositionsCatalog = dispositionsCatalog;
@@ -47,7 +47,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
         _subjectActionExecutor = subjectActionExecutor;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _handlers = handlers;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -92,7 +92,7 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
         activity.Status = ActivityStatus.Completed;
         activity.CompletedById = request.ActorId;
         activity.CompletedByUsername = request.ActorDisplayName;
-        activity.CompletedUtc = _clock.UtcNow;
+        activity.CompletedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         await _activityManager.UpdateAsync(activity, cancellationToken: cancellationToken);
 

@@ -23,7 +23,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly Lazy<IProviderCallStateSynchronizationService> _synchronizationService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -42,7 +42,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     /// <see cref="IAgentPresenceManager"/> to this service to synchronization to the provider event service and
     /// back to presence.
     /// </param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public AgentWorkStateHealingService(
         IAgentProfileManager agentManager,
@@ -53,7 +53,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         IOmnichannelActivityManager activityManager,
         IContactCenterWorkStateService workStateService,
         Lazy<IProviderCallStateSynchronizationService> synchronizationService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<AgentWorkStateHealingService> logger)
     {
         _agentManager = agentManager;
@@ -64,7 +64,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         _activityManager = activityManager;
         _workStateService = workStateService;
         _synchronizationService = synchronizationService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -155,7 +155,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         var queueItem = await _queueItemManager.FindByIdAsync(pendingReservation.QueueItemId, cancellationToken);
         var activity = await _activityManager.FindByIdAsync(pendingReservation.ActivityItemId, cancellationToken);
         var interaction = await _interactionManager.FindByActivityIdAsync(pendingReservation.ActivityItemId, cancellationToken);
-        var reservationExpired = pendingReservation.ExpiresUtc <= _clock.UtcNow;
+        var reservationExpired = pendingReservation.ExpiresUtc <= _timeProvider.GetUtcNow().UtcDateTime;
         var queueItemInvalid = queueItem is null ||
             queueItem.Status != QueueItemStatus.Reserved ||
             !string.Equals(queueItem.ReservationId, pendingReservation.ItemId, StringComparison.Ordinal) ||

@@ -1,11 +1,12 @@
-using System.Net;
 using CrestApps.OrchardCore.Telnyx.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Net;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -168,8 +169,8 @@ public sealed class TelnyxTelephonyCredentialIssuerTests
             };
 
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             // The issuer refuses to mint unless the provider is fully configured, which is the behaviour a
             // tenant that has not finished setting Telnyx up depends on.
@@ -197,7 +198,7 @@ public sealed class TelnyxTelephonyCredentialIssuerTests
             Issuer = new TelnyxTelephonyCredentialIssuer(
                 apiClient,
                 Store,
-                clock.Object,
+                clock,
                 NullLogger<TelnyxTelephonyCredentialIssuer>.Instance,
                 new Mock<ISoftPhoneHealthMetrics>().Object,
                 monitor.Object);

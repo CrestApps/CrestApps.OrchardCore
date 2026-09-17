@@ -1,6 +1,3 @@
-using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -11,14 +8,18 @@ using CrestApps.OrchardCore.Dialpad.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using DialpadStartup = CrestApps.OrchardCore.Dialpad.Startup;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
-using DialpadStartup = CrestApps.OrchardCore.Dialpad.Startup;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Dialpad;
 
@@ -501,12 +502,12 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
         return httpContext;
     }
 
-    private static IClock CreateClock()
+    private static FakeTimeProvider CreateClock()
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
-        return clock.Object;
+        return clock;
     }
 
     private static string CreateJwt(string payloadJson, string secret)
@@ -526,15 +527,15 @@ public sealed class DialpadWebhookEndpointTests : IDisposable
 
     private static ProviderWebhookIngressLimiter CreateIngressLimiter(int ratePermitLimit = 120)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new ProviderWebhookIngressLimiter(
             Options.Create(new ProviderWebhookIngressOptions
             {
                 RatePermitLimit = ratePermitLimit,
             }),
-            clock.Object);
+            clock);
     }
 
     private static Mock<IProviderWebhookInbox> CreateInbox()

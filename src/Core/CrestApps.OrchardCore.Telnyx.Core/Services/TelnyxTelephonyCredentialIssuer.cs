@@ -27,7 +27,7 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
 
     private readonly TelnyxApiClient _apiClient;
     private readonly ITelnyxAgentCredentialStore _credentialStore;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly ISoftPhoneHealthMetrics _healthMetrics;
     private readonly TelnyxOptions _options;
@@ -38,14 +38,14 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
     public TelnyxTelephonyCredentialIssuer(
         TelnyxApiClient apiClient,
         ITelnyxAgentCredentialStore credentialStore,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelnyxTelephonyCredentialIssuer> logger,
         ISoftPhoneHealthMetrics healthMetrics,
         IOptionsMonitor<TelnyxOptions> telnyxOptions)
     {
         _apiClient = apiClient;
         _credentialStore = credentialStore;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _healthMetrics = healthMetrics;
         _options = telnyxOptions.CurrentValue;
@@ -63,7 +63,7 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
             return null;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var expiresAt = now.AddMinutes(_options.CredentialLifetimeMinutes);
 
         try
@@ -150,7 +150,7 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
         foreach (var credential in credentials.Where(credential => !credential.RevokedUtc.HasValue))
         {
             await DeleteAtTelnyxAsync(credential.CredentialId, cancellationToken);
-            await _credentialStore.MarkRevokedAsync(credential, _clock.UtcNow, cancellationToken);
+            await _credentialStore.MarkRevokedAsync(credential, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
             revoked++;
         }
 
@@ -178,7 +178,7 @@ public sealed class TelnyxTelephonyCredentialIssuer : ITelnyxTelephonyCredential
         }
 
         await DeleteAtTelnyxAsync(credential.CredentialId, cancellationToken);
-        await _credentialStore.MarkRevokedAsync(credential, _clock.UtcNow, cancellationToken);
+        await _credentialStore.MarkRevokedAsync(credential, _timeProvider.GetUtcNow().UtcDateTime, cancellationToken);
 
         return true;
     }

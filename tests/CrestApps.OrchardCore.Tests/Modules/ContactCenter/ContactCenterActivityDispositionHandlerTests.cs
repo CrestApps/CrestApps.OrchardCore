@@ -52,7 +52,7 @@ public sealed class ContactCenterActivityDispositionHandlerTests
             interactionManager.Object,
             workStateService,
             offerService.Object,
-            Mock.Of<IClock>(),
+            Mock.Of<TimeProvider>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 
         var request = new ActivityDispositionRequest
@@ -108,7 +108,7 @@ public sealed class ContactCenterActivityDispositionHandlerTests
             interactionManager.Object,
             workStateService,
             offerService.Object,
-            Mock.Of<IClock>(),
+            Mock.Of<TimeProvider>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 
         var request = new ActivityDispositionRequest
@@ -173,7 +173,7 @@ public sealed class ContactCenterActivityDispositionHandlerTests
             interactionManager.Object,
             workStateService,
             offerService.Object,
-            Mock.Of<IClock>(),
+            Mock.Of<TimeProvider>(),
             Mock.Of<ILogger<ContactCenterActivityDispositionHandler>>());
 
         var request = new ActivityDispositionRequest

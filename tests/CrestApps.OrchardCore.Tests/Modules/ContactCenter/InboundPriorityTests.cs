@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Time.Testing;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -112,7 +113,7 @@ public sealed class InboundPriorityTests
         // Arrange
         // Somebody calling back the same afternoon did not get what they needed the first time, and making them
         // queue from scratch is how a small problem becomes a complaint.
-        var contributor = new RepeatCallerPriorityContributor(new StubClock(_now));
+        var contributor = new RepeatCallerPriorityContributor(new FakeTimeProvider(_now));
         var context = Context(InteractionPriority.Normal);
         context.LastInboundUtc = _now.AddHours(-2);
 
@@ -127,7 +128,7 @@ public sealed class InboundPriorityTests
     public async Task RepeatCaller_IsNotRaised_ForACallLongAgo()
     {
         // Arrange
-        var contributor = new RepeatCallerPriorityContributor(new StubClock(_now));
+        var contributor = new RepeatCallerPriorityContributor(new FakeTimeProvider(_now));
         var context = Context(InteractionPriority.Normal);
         context.LastInboundUtc = _now.AddDays(-3);
 
@@ -142,7 +143,7 @@ public sealed class InboundPriorityTests
     public async Task RepeatCaller_IsNotRaised_ForAFirstTimeCaller()
     {
         // Arrange
-        var contributor = new RepeatCallerPriorityContributor(new StubClock(_now));
+        var contributor = new RepeatCallerPriorityContributor(new FakeTimeProvider(_now));
 
         // Act
         var contribution = await contributor.ContributeAsync(Context(InteractionPriority.Normal), TestContext.Current.CancellationToken);

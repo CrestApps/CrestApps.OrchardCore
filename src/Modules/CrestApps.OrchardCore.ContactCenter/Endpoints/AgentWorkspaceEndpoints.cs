@@ -82,7 +82,7 @@ internal static partial class AgentWorkspaceEndpoints
         UserManager<IUser> userManager,
         IDisplayNameProvider displayNameProvider,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<AgentAvailabilityOptions> availabilityOptions,
         LinkGenerator linkGenerator,
         HttpContext httpContext)
@@ -93,7 +93,7 @@ internal static partial class AgentWorkspaceEndpoints
         }
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
-        var now = clock.UtcNow;
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var displayName = await GetCurrentUserDisplayNameAsync(httpContext.User, userManager, displayNameProvider, httpContext.RequestAborted);
 
         var model = new AgentWorkspaceStateViewModel

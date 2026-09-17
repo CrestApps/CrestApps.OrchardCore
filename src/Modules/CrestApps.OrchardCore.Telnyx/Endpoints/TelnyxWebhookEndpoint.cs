@@ -36,7 +36,7 @@ internal static class TelnyxWebhookEndpoint
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         ITelnyxWebhookService webhookService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<Startup> logger,
         HttpContext httpContext)
     {
@@ -120,9 +120,9 @@ internal static class TelnyxWebhookEndpoint
                 return TypedResults.BadRequest();
             }
 
-            var occurredUtc = ResolveOccurredUtc(timestamp, callEvent, clock.UtcNow);
+            var occurredUtc = ResolveOccurredUtc(timestamp, callEvent, timeProvider.GetUtcNow().UtcDateTime);
 
-            if (!IsFresh(ingressLimiter, occurredUtc, clock.UtcNow))
+            if (!IsFresh(ingressLimiter, occurredUtc, timeProvider.GetUtcNow().UtcDateTime))
             {
                 logger.LogWarning("Rejected a Telnyx webhook because its signed timestamp was stale or too far in the future.");
 

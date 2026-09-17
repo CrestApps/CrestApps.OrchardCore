@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Diagnostics;
+﻿using CrestApps.OrchardCore.Core;
+using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
@@ -9,11 +10,11 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Data;
 using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms;
@@ -25,6 +26,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOmnichannelProcessor, SmsOmnichannelProcessor>());
 
         services.AddScoped<IOmnichannelEventHandler, SmsOmnichannelEventHandler>();

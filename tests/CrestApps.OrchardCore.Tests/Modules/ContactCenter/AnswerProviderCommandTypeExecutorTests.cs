@@ -1,14 +1,15 @@
 #nullable enable annotations
 
-using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -465,8 +466,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
         public AnswerProviderCommandTypeExecutor CreateExecutor()
         {
-            var clock = new Mock<IClock>(MockBehavior.Strict);
-            clock.SetupGet(value => value.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             return new AnswerProviderCommandTypeExecutor(
                 VoiceProviderResolver.Object,
@@ -474,7 +475,7 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 InteractionManager.Object,
                 CallSessionManager.Object,
                 Publisher.Object,
-                clock.Object,
+                clock,
                 CallControlAuthorization);
         }
 

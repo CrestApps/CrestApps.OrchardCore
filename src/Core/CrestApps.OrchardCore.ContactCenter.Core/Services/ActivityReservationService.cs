@@ -31,7 +31,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IDistributedLock _distributedLock;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ILogger _logger;
 
@@ -52,7 +52,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
     /// <param name="distributedLock">The distributed lock used to serialize agent and reservation transitions.</param>
     /// <param name="session">The YesSql session used to commit reservation state atomically.</param>
-    /// <param name="clock">The clock used to stamp reservation times.</param>
+    /// <param name="timeProvider">The time provider used to stamp reservation times.</param>
     /// <param name="logger">The logger.</param>
     public ActivityReservationService(
         IActivityReservationManager reservationManager,
@@ -69,7 +69,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         IContactCenterScopeExecutor scopeExecutor,
         IDistributedLock distributedLock,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<ActivityReservationService> logger)
     {
@@ -87,7 +87,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         _scopeExecutor = scopeExecutor;
         _distributedLock = distributedLock;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
     }
@@ -157,7 +157,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             return null;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var reservation = await _reservationManager.NewAsync(cancellationToken: cancellationToken);
         reservation.ActivityItemId = queueItem.ActivityItemId;
         reservation.QueueId = queueItem.QueueId;
@@ -275,7 +275,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         {
             agent.PresenceStatus = AgentPresenceStatus.Busy;
             agent.ActiveReservationId = null;
-            agent.PresenceChangedUtc = _clock.UtcNow;
+            agent.PresenceChangedUtc = _timeProvider.GetUtcNow().UtcDateTime;
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
         }
 
@@ -284,7 +284,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             workState.TransitionTo(ActivityAssignmentStatus.Assigned);
             workState.AssignedToId = agent?.UserId;
             workState.AssignedToUsername = agent?.UserName;
-            workState.AssignedToUtc = _clock.UtcNow;
+            workState.AssignedToUtc = _timeProvider.GetUtcNow().UtcDateTime;
         }, cancellationToken);
 
         await PublishAsync(ContactCenterConstants.Events.QueueItemAssigned, reservation, cancellationToken);
@@ -411,7 +411,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             cancellationToken);
         var hasNewerAgentWork = activeAgentReservations.Any(candidate =>
             !string.Equals(candidate.ItemId, reservation.ItemId, StringComparison.Ordinal));
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var wasAccepted = reservation.Status == ReservationStatus.Accepted;
         reservation.TransitionTo(ReservationStatus.Canceled);
 

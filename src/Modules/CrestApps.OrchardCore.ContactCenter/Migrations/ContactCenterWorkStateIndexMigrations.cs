@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
 {
     private readonly IStore _store;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterWorkStateIndexMigrations"/> class.
@@ -21,10 +21,10 @@ internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
     /// <param name="store">The YesSql store.</param>
     public ContactCenterWorkStateIndexMigrations(
         IStore store,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _store = store;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ internal sealed class ContactCenterWorkStateIndexMigrations : DataMigration
             _store,
             typeof(ContactCenterWorkStateIndex),
             "ModifiedUtc",
-            _clock.UtcNow);
+            _timeProvider.GetUtcNow().UtcDateTime);
 
         await SchemaBuilder.AlterIndexTableAsync<ContactCenterWorkStateIndex>(table => table
             .CreateIndex("IDX_ContactCenterWorkStateIndex_Retention", "ModifiedUtc", "DocumentId"),

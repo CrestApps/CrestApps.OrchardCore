@@ -18,7 +18,7 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly DefaultAsteriskOptions _defaultOptions;
     private readonly IAsteriskPjsipCredentialIssuer _credentialIssuer;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly ILogger _logger;
 
@@ -27,7 +27,7 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
         IDataProtectionProvider dataProtectionProvider,
         IOptions<DefaultAsteriskOptions> defaultOptions,
         IAsteriskPjsipCredentialIssuer credentialIssuer,
-        IClock clock,
+        TimeProvider timeProvider,
         IHostEnvironment hostEnvironment,
         ILogger<AsteriskSoftPhoneRegistrationConfigContributor> logger)
     {
@@ -35,7 +35,7 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
         _dataProtectionProvider = dataProtectionProvider;
         _defaultOptions = defaultOptions.Value;
         _credentialIssuer = credentialIssuer;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _hostEnvironment = hostEnvironment;
         _logger = logger;
     }
@@ -196,7 +196,7 @@ internal sealed class AsteriskSoftPhoneRegistrationConfigContributor : ISoftPhon
     private string CreateTurnUserName(AsteriskPjsipCredential credential)
     {
         var expires = new DateTimeOffset(credential.ExpiresAtUtc, TimeSpan.Zero).ToUnixTimeSeconds();
-        var now = new DateTimeOffset(_clock.UtcNow, TimeSpan.Zero).ToUnixTimeSeconds();
+        var now = new DateTimeOffset(_timeProvider.GetUtcNow().UtcDateTime, TimeSpan.Zero).ToUnixTimeSeconds();
         var effectiveExpires = Math.Max(expires, now + 60);
 
         return $"{effectiveExpires}:{credential.TenantName}:{credential.SessionId}";

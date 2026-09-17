@@ -24,7 +24,7 @@ public sealed class CallbackService : ICallbackService
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CallbackService"/> class.
@@ -34,21 +34,21 @@ public sealed class CallbackService : ICallbackService
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="queueService">The queue service used to enqueue promoted callbacks.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="clock">The clock used to stamp callback times.</param>
+    /// <param name="timeProvider">The time provider used to stamp callback times.</param>
     public CallbackService(
         ICallbackRequestManager callbackManager,
         IOmnichannelActivityManager activityManager,
         IContactCenterWorkStateService workStateService,
         IActivityQueueService queueService,
         IContactCenterEventPublisher publisher,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _callbackManager = callbackManager;
         _activityManager = activityManager;
         _workStateService = workStateService;
         _queueService = queueService;
         _publisher = publisher;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -56,7 +56,7 @@ public sealed class CallbackService : ICallbackService
     {
         ArgumentNullException.ThrowIfNull(callback);
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (callback.RequestedUtc == default)
         {
@@ -80,7 +80,7 @@ public sealed class CallbackService : ICallbackService
     /// <inheritdoc/>
     public async Task<int> PromoteDueAsync(CancellationToken cancellationToken = default)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var due = await _callbackManager.GetDueAsync(now, MaxBatchSize, cancellationToken);
         var count = 0;
 
@@ -121,7 +121,7 @@ public sealed class CallbackService : ICallbackService
 
     private async Task<bool> TryClaimAsync(CallbackRequest callback, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (callback.Status != CallbackRequestStatus.Pending ||
             (callback.LeaseExpiresUtc.HasValue && callback.LeaseExpiresUtc.Value > now))
@@ -147,7 +147,7 @@ public sealed class CallbackService : ICallbackService
 
     private async Task<OmnichannelActivity> CreateActivityAsync(CallbackRequest callback, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var activity = await _activityManager.NewAsync(cancellationToken: cancellationToken);
         activity.Kind = ActivityKind.Call;
         activity.Source = ActivitySources.Callback;

@@ -1,8 +1,9 @@
-using Microsoft.Extensions.Options;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -304,8 +305,8 @@ public sealed class ActivityAssignmentServiceTests
             .Setup(b => b.IsOpenAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
 
         if (availabilityService is null)
         {
@@ -330,7 +331,7 @@ public sealed class ActivityAssignmentServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             distributedLock.Object,
             (session ?? new Mock<ISession>()).Object,
-            clock.Object,
+            clock,
             CoordinationOptions(),
             NullLogger<ActivityAssignmentService>.Instance);
     }
@@ -349,7 +350,7 @@ public sealed class ActivityAssignmentServiceTests
     {
         return new ActivityRoutingService(
         [
-            new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
+            new RequiredSkillsRoutingStrategy(Mock.Of<TimeProvider>()),
             new LongestIdleRoutingStrategy(),
         ]);
     }

@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -6,8 +5,10 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -420,8 +421,8 @@ public sealed class ActivityQueueServiceTests
         Mock<ISession> session = null,
         Mock<IContactCenterEventPublisher> publisher = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         session ??= new Mock<ISession>();
         publisher ??= new Mock<IContactCenterEventPublisher>();
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
@@ -443,6 +444,6 @@ public sealed class ActivityQueueServiceTests
             scopeExecutor.Object,
             TreatmentProvider.Object,
             InteractionManagerForDequeue.Object,
-            clock.Object);
+            clock);
     }
 }

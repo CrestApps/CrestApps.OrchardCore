@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -396,8 +397,8 @@ public sealed class SmsConclusionDispositionTests
             .Setup(x => x.NewAsync(It.IsAny<string>()))
             .ReturnsAsync((string contentType) => new ContentItem { ContentType = contentType });
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(x => x.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var localClock = new Mock<ILocalClock>();
         localClock
@@ -409,7 +410,7 @@ public sealed class SmsConclusionDispositionTests
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
             session.Object,
-            clock.Object,
+            clock,
             localClock.Object,
             NullLogger<DefaultSubjectActionExecutor>.Instance);
     }

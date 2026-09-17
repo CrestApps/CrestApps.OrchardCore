@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -229,8 +230,8 @@ public sealed class AsteriskContactCenterVoiceProviderConnectSuccessTests
         IAsteriskPjsipCredentialLeaseStore pjsipCredentialLeaseStore = null,
         IAsteriskAgentChannelReadySignal agentChannelReadySignal = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new AsteriskContactCenterVoiceProvider(
             Mock.Of<ITelephonyProviderResolver>(),
@@ -240,7 +241,7 @@ public sealed class AsteriskContactCenterVoiceProviderConnectSuccessTests
             pjsipCredentialLeaseStore ?? new FakeAsteriskPjsipCredentialLeaseStore(),
             agentChannelReadySignal ?? new FakeAsteriskAgentChannelReadySignal(),
             new FakeAsteriskRecordingIngestJobStore(),
-            clock.Object,
+            clock,
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             new TestStringLocalizer());
     }

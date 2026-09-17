@@ -29,7 +29,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
     private readonly ITelnyxAgentCredentialStore _credentialStore;
     private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
     private readonly TelnyxApiClient _apiClient;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<TelnyxContactCenterVoiceProvider> _logger;
     private readonly TelnyxOptions _options;
 
@@ -42,7 +42,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         ITelnyxAgentCredentialStore credentialStore,
         ITelnyxAgentEndpointResolver agentEndpointResolver,
         TelnyxApiClient apiClient,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TelnyxContactCenterVoiceProvider> logger,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
         IStringLocalizer<TelnyxContactCenterVoiceProvider> stringLocalizer)
@@ -52,7 +52,7 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         _credentialStore = credentialStore;
         _agentEndpointResolver = agentEndpointResolver;
         _apiClient = apiClient;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
         Name = stringLocalizer["Telnyx"];

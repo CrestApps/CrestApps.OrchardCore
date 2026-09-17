@@ -16,7 +16,7 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
 {
     private readonly IEnumerable<IContactCenterRetentionPolicy> _policies;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ContactCenterRetentionOptions _options;
     private readonly ILogger _logger;
 
@@ -25,19 +25,19 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
     /// </summary>
     /// <param name="policies">The registered retention policies, one per high-volume table.</param>
     /// <param name="session">The tenant YesSql session, committed between batches to bound transaction size.</param>
-    /// <param name="clock">The clock used to compute cutoffs.</param>
+    /// <param name="timeProvider">The time provider used to compute cutoffs.</param>
     /// <param name="options">The configured retention options.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterRetentionService(
         IEnumerable<IContactCenterRetentionPolicy> policies,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<ContactCenterRetentionOptions> options,
         ILogger<ContactCenterRetentionService> logger)
     {
         _policies = policies;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _options = options.Value;
         _logger = logger;
     }
@@ -45,7 +45,7 @@ public sealed class ContactCenterRetentionService : IContactCenterRetentionServi
     /// <inheritdoc/>
     public async Task<ContactCenterRetentionReport> PurgeAsync(CancellationToken cancellationToken = default)
     {
-        var nowUtc = _clock.UtcNow;
+        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var batchSize = _options.PurgeBatchSize > 0 ? _options.PurgeBatchSize : ContactCenterRetentionOptions.DefaultPurgeBatchSize;
         var batchBudget = _options.MaxPurgeBatchesPerCycle > 0
             ? _options.MaxPurgeBatchesPerCycle

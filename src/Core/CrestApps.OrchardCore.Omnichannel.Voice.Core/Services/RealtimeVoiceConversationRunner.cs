@@ -29,7 +29,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private readonly IAIChatSessionPromptStore _promptStore;
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -140,7 +140,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// <param name="promptStore">The transcript store.</param>
     /// <param name="chatSessionManager">The chat session manager.</param>
     /// <param name="session">The document session, flushed after each turn so the call does not hold a write transaction open.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public RealtimeVoiceConversationRunner(
         IRealtimeOrchestrator orchestrator,
@@ -148,7 +148,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         IAIChatSessionPromptStore promptStore,
         IAIChatSessionManager chatSessionManager,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<RealtimeVoiceConversationRunner> logger)
     {
         _orchestrator = orchestrator;
@@ -156,7 +156,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         _promptStore = promptStore;
         _chatSessionManager = chatSessionManager;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 

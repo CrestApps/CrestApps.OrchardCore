@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -24,7 +25,7 @@ public sealed class DefaultIncomingCallDispatcherTests
         var clients = new Mock<IHubClients<ITelephonyClient>>();
         var client = new Mock<ITelephonyClient>();
         var store = new Mock<ITelephonyInteractionStore>();
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var logger = new Mock<ILogger<DefaultIncomingCallDispatcher>>();
         var shellSettings = new ShellSettings
         {
@@ -33,7 +34,7 @@ public sealed class DefaultIncomingCallDispatcherTests
 
         hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
         clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(shellSettings.Name, "user-1"))).Returns(client.Object);
-        clock.SetupGet(value => value.UtcNow).Returns(_now.UtcDateTime);
+        clock.SetUtcNow(_now.UtcDateTime);
         store.Setup(value => value.FindByCallIdAsync("user-1", "call-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync((TelephonyInteraction)null);
 
@@ -46,7 +47,7 @@ public sealed class DefaultIncomingCallDispatcherTests
             hubContext.Object,
             [],
             store.Object,
-            clock.Object,
+            clock,
             logger.Object,
             shellSettings);
         var call = new TelephonyCall
@@ -84,7 +85,7 @@ public sealed class DefaultIncomingCallDispatcherTests
         var clients = new Mock<IHubClients<ITelephonyClient>>();
         var client = new Mock<ITelephonyClient>();
         var store = new Mock<ITelephonyInteractionStore>();
-        var clock = new Mock<IClock>();
+        var clock = new FakeTimeProvider();
         var logger = new Mock<ILogger<DefaultIncomingCallDispatcher>>();
         var shellSettings = new ShellSettings
         {
@@ -103,7 +104,7 @@ public sealed class DefaultIncomingCallDispatcherTests
 
         hubContext.SetupGet(context => context.Clients).Returns(clients.Object);
         clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser(shellSettings.Name, "user-1"))).Returns(client.Object);
-        clock.SetupGet(value => value.UtcNow).Returns(_now.UtcDateTime);
+        clock.SetUtcNow(_now.UtcDateTime);
         store.Setup(value => value.FindByCallIdAsync("user-1", "call-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
         store.SetupRetryingUpdates(existing);
@@ -112,7 +113,7 @@ public sealed class DefaultIncomingCallDispatcherTests
             hubContext.Object,
             [],
             store.Object,
-            clock.Object,
+            clock,
             logger.Object,
             shellSettings);
         var call = new TelephonyCall

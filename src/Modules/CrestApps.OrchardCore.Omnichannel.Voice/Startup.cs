@@ -1,9 +1,10 @@
 ﻿using CrestApps.Core.AI;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 
@@ -24,6 +25,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         // Registered as itself as well as behind the interface: when a live session ends, the call is finished
         // in a child scope that resolves a fresh loop of its own, because the scope the session ran in belongs to
         // a webhook request the provider has long since abandoned.

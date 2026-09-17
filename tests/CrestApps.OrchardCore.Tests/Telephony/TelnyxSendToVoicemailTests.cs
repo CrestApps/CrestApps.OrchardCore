@@ -1,12 +1,13 @@
-using System.Net;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telnyx.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Net;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -113,14 +114,14 @@ public sealed class TelnyxSendToVoicemailTests
         var optionsMonitor = new Mock<IOptionsMonitor<TelnyxOptions>>();
         optionsMonitor.SetupGet(x => x.CurrentValue).Returns(options);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(x => x.UtcNow).Returns(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
 
         return new TelnyxTelephonyProvider(
             apiClient,
             new Mock<ITelnyxAgentCredentialStore>().Object,
             new Mock<ITelnyxAgentEndpointResolver>().Object,
-            clock.Object,
+            clock,
             NullLogger<TelnyxTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<TelnyxTelephonyProvider>(),
             optionsMonitor.Object);

@@ -13,22 +13,22 @@ public sealed class DialpadWebhookService : IDialpadWebhookService
 {
     private readonly INormalizedVoiceEventIngestor _normalizedVoiceEventIngestor;
     private readonly IDialpadInboundCallRouter _inboundCallRouter;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DialpadWebhookService"/> class.
     /// </summary>
     /// <param name="normalizedVoiceEventIngestor">The shared voice-event ingestor.</param>
     /// <param name="inboundCallRouter">The optional inbound-call router.</param>
-    /// <param name="clock">The clock used to stamp event times.</param>
+    /// <param name="timeProvider">The time provider used to stamp event times.</param>
     public DialpadWebhookService(
         INormalizedVoiceEventIngestor normalizedVoiceEventIngestor,
         IDialpadInboundCallRouter inboundCallRouter,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _normalizedVoiceEventIngestor = normalizedVoiceEventIngestor;
         _inboundCallRouter = inboundCallRouter;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -43,7 +43,7 @@ public sealed class DialpadWebhookService : IDialpadWebhookService
 
         var occurredUtc = callEvent.EventTimestamp.HasValue
             ? DateTimeOffset.FromUnixTimeMilliseconds(callEvent.EventTimestamp.Value).UtcDateTime
-            : _clock.UtcNow;
+            : _timeProvider.GetUtcNow().UtcDateTime;
 
         var answerClassification = TryMapAnswerClassification(callEvent.State, out var amdClassification)
             ? amdClassification

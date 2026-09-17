@@ -1,4 +1,3 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -7,6 +6,8 @@ using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.Time.Testing;
+using System.Data.Common;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -325,7 +326,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             var tableName = GetIndexTableName<ProviderWebhookInboxMessageIndex>(store);
             await InsertInboxAsync(schemaBuilder, tableName, 1, "message-1", "Asterisk", "delivery-1");
             await InsertInboxAsync(schemaBuilder, tableName, 2, "message-2", "Asterisk", "delivery-1");
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -353,7 +354,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
             await CreateLegacyInboxIndexAsync(schemaBuilder);
             var tableName = GetIndexTableName<ProviderWebhookInboxMessageIndex>(store);
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -384,7 +385,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             await CreateLegacyInboxIndexAsync(schemaBuilder);
             var tableName = GetIndexTableName<ProviderWebhookInboxMessageIndex>(store);
             await InsertInboxAsync(schemaBuilder, tableName, 1, "message-1", "Default Asterisk", "delivery-1");
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -418,7 +419,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             var tableName = GetIndexTableName<ProviderWebhookInboxMessageIndex>(store);
             await InsertInboxAsync(schemaBuilder, tableName, 1, "message-1", "Default Asterisk", "delivery-1");
             await InsertInboxAsync(schemaBuilder, tableName, 2, "message-2", "Asterisk", "delivery-1");
-            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new StubClock())
+            var migration = new ProviderWebhookInboxMessageIndexMigrations(store, CreateAsteriskResolver(), new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };
@@ -503,7 +504,7 @@ public sealed class ContactCenterUniquenessMigrationTests
             await using var session = store.CreateSession();
             var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
             var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
-            var migration = new ContactCenterProcessedEventIndexMigrations(store, new StubClock())
+            var migration = new ContactCenterProcessedEventIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
             {
                 SchemaBuilder = schemaBuilder,
             };

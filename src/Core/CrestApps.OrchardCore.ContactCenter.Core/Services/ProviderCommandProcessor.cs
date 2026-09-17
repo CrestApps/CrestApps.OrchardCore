@@ -29,7 +29,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -44,7 +44,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     /// <param name="scopeExecutor">The executor used to isolate each recovery transition in a fresh shell scope.</param>
     /// <param name="workManager">The feature work manager used to fence dispatch during Voice quiescence.</param>
     /// <param name="session">The tenant YesSql session used to commit outcome projections.</param>
-    /// <param name="clock">The clock used to determine recovery windows.</param>
+    /// <param name="timeProvider">The time provider used to determine recovery windows.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderCommandProcessor(
         IProviderCommandManager commandManager,
@@ -56,7 +56,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ProviderCommandProcessor> logger)
     {
         _commandManager = commandManager;
@@ -68,7 +68,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -110,7 +110,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var candidateIds = new HashSet<string>(StringComparer.Ordinal);
         var reclaimable = await _commandManager.GetReclaimableAsync(
             now,

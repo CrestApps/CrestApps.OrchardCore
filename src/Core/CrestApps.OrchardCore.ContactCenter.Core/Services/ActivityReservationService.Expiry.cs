@@ -39,7 +39,7 @@ public sealed partial class ActivityReservationService
 
     private async Task<int> ExpireDueCoreAsync(int? maxReservations, TimeSpan lockWait, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var count = 0;
         var examined = 0;
         DateTime? afterExpiresUtc = null;
@@ -126,7 +126,7 @@ public sealed partial class ActivityReservationService
 
     private async Task ReleaseAsync(ActivityReservation reservation, ReservationStatus status, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         reservation.TransitionTo(status);
 
         // This is the age settled reservations are purged by. Without it the row is never selected by retention.

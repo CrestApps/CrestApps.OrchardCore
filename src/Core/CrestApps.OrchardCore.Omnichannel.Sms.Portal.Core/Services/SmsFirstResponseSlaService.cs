@@ -15,7 +15,7 @@ public sealed class SmsFirstResponseSlaService : ISmsFirstResponseSlaService
     private readonly ISmsConversationStore _conversationStore;
     private readonly ISmsQueuePolicyReader _queuePolicyReader;
     private readonly ISmsRealTimeNotifier _notifier;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -25,13 +25,13 @@ public sealed class SmsFirstResponseSlaService : ISmsFirstResponseSlaService
         ISmsConversationStore conversationStore,
         ISmsQueuePolicyReader queuePolicyReader,
         ISmsRealTimeNotifier notifier,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<SmsFirstResponseSlaService> logger)
     {
         _conversationStore = conversationStore;
         _queuePolicyReader = queuePolicyReader;
         _notifier = notifier;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -54,7 +54,7 @@ public sealed class SmsFirstResponseSlaService : ISmsFirstResponseSlaService
             return;
         }
 
-        conversation.FirstResponseDueUtc = _clock.UtcNow.AddSeconds(policy.FirstResponseTargetSeconds);
+        conversation.FirstResponseDueUtc = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(policy.FirstResponseTargetSeconds);
     }
 
     /// <inheritdoc/>
@@ -62,14 +62,14 @@ public sealed class SmsFirstResponseSlaService : ISmsFirstResponseSlaService
     {
         ArgumentNullException.ThrowIfNull(conversation);
 
-        conversation.FirstRespondedUtc ??= _clock.UtcNow;
+        conversation.FirstRespondedUtc ??= _timeProvider.GetUtcNow().UtcDateTime;
         conversation.FirstResponseDueUtc = null;
     }
 
     /// <inheritdoc/>
     public async Task<int> EscalateOverdueAsync(CancellationToken cancellationToken = default)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var overdue = await _conversationStore.GetFirstResponseOverdueAsync(now, cancellationToken);
 
         if (overdue.Count == 0)

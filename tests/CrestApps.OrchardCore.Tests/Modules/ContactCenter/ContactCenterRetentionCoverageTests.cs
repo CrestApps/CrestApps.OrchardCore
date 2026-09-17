@@ -170,11 +170,11 @@ public sealed class ContactCenterRetentionCoverageTests
         ],
         ["ContactCenterEventMetricDelta"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterMetricsService.cs", "RecordAsync", "CreatedUtc = _clock.UtcNow,"),
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterMetricsService.cs", "RecordAsync", "CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,"),
         ],
         ["ContactCenterProcessedEvent"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterEventDeduplicationService.cs", "TryBeginAsync", "ProcessedUtc = _clock.UtcNow,"),
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterEventDeduplicationService.cs", "TryBeginAsync", "ProcessedUtc = _timeProvider.GetUtcNow().UtcDateTime,"),
         ],
         ["ContactCenterWorkState"] =
         [

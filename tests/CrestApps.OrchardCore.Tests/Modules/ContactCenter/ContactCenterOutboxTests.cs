@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -643,8 +644,8 @@ public sealed class ContactCenterOutboxTests
         Mock<IInteractionEventStore> eventStore,
         IEnumerable<IContactCenterEventHandler> handlers)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         ContactCenterOutbox outbox = null;
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
         scopeExecutor
@@ -662,7 +663,7 @@ public sealed class ContactCenterOutboxTests
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
             session.Object,
-            clock.Object,
+            clock,
             NullLogger<ContactCenterOutbox>.Instance);
 
         return outbox;

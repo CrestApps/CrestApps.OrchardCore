@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -6,12 +5,14 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Users.Indexes;
 using OrchardCore.Users.Models;
+using System.Linq.Expressions;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
@@ -404,15 +405,15 @@ public sealed class DefaultSubjectActionExecutorTests
             .Setup(x => x.NewAsync(It.IsAny<string>()))
             .ReturnsAsync((string contentType) => new ContentItem { ContentType = contentType });
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(x => x.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new DefaultSubjectActionExecutor(
             actionCatalog.Object,
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
             session.Object,
-            clock.Object,
+            clock,
             localClock ?? Mock.Of<ILocalClock>(),
             NullLogger<DefaultSubjectActionExecutor>.Instance);
     }

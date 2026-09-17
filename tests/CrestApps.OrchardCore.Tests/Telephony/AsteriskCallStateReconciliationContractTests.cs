@@ -1,5 +1,3 @@
-using System.Net;
-using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
@@ -9,7 +7,10 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using OrchardCore.Environment.Shell;
+using System.Net;
+using System.Text.Json;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -148,7 +149,7 @@ public sealed class AsteriskCallStateReconciliationContractTests
             dataProtectionProvider,
             new StubHttpClientFactory(handler),
             gate,
-            new StubClock(),
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
             RedactorProviderFactory.Create(),
             NullLogger<AsteriskTelephonyProvider>.Instance,
             new PassThroughStringLocalizer<AsteriskTelephonyProvider>());

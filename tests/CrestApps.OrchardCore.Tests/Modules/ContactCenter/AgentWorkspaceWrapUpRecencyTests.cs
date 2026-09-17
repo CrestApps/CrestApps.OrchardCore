@@ -1,9 +1,8 @@
-using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -15,9 +14,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Users;
+using System.Security.Claims;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -143,7 +144,7 @@ public sealed class AgentWorkspaceWrapUpRecencyTests
                 MockUserManager(),
                 _displayNameProvider.Object,
                 Mock.Of<IContactCenterVoiceProviderResolver>(),
-                new StubClock(ClockNow),
+                new FakeTimeProvider(ClockNow),
                 Options.Create(new AgentAvailabilityOptions()),
                 CreateLinkGenerator(),
                 CreateHttpContext());

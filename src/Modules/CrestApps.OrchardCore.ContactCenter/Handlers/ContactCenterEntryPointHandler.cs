@@ -12,20 +12,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
 internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<ContactCenterEntryPoint>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEntryPointHandler"/> class.
     /// </summary>
-    /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="timeProvider">The time provider used to stamp audit times.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterEntryPointHandler(
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<ContactCenterEntryPointHandler> stringLocalizer)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
@@ -40,7 +40,7 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
     /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<ContactCenterEntryPoint> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }
@@ -50,7 +50,7 @@ internal sealed class ContactCenterEntryPointHandler : CatalogEntryHandlerBase<C
     {
         ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
 
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }

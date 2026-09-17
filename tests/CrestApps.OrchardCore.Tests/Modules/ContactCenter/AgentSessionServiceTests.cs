@@ -1,12 +1,13 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -537,8 +538,8 @@ public sealed class AgentSessionServiceTests
         IContactCenterScopeExecutor scopeExecutor = null,
         IEnumerable<ISoftPhoneCredentialRevoker> credentialRevokers = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new AgentSessionService(
             sessionManager.Object,
@@ -546,7 +547,7 @@ public sealed class AgentSessionServiceTests
             (presenceManager ?? new Mock<IAgentPresenceManager>()).Object,
             (distributedLock ?? CreateDistributedLock()).Object,
             scopeExecutor ?? new StubScopeExecutor(sessionManager.Object),
-            clock.Object,
+            clock,
             credentialRevokers ?? [],
             NullLogger<AgentSessionService>.Instance);
     }

@@ -1,4 +1,3 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -8,9 +7,11 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore;
 using OrchardCore.Modules;
+using System.Data.Common;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -182,8 +183,8 @@ public sealed class ContactCenterEventOutboxPersistenceTests
 
     private static DefaultContactCenterEventPublisher CreatePublisher(ISession session)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
         var eventStore = new InteractionEventStore(session, new DefaultInteractionEventUpcastService([]));
         var outbox = new ContactCenterOutbox(
@@ -193,14 +194,14 @@ public sealed class ContactCenterEventOutboxPersistenceTests
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
             session,
-            clock.Object,
+            clock,
             NullLogger<ContactCenterOutbox>.Instance);
 
         return new DefaultContactCenterEventPublisher(
             eventStore,
             outbox,
             scopeExecutor.Object,
-            clock.Object,
+            clock,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
     }
 
@@ -259,7 +260,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
         {
             SchemaBuilder = schemaBuilder,
         };
-        var outboxMigration = new ContactCenterOutboxMessageIndexMigrations(store, new StubClock())
+        var outboxMigration = new ContactCenterOutboxMessageIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
         {
             SchemaBuilder = schemaBuilder,
         };

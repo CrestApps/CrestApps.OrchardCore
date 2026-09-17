@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -11,8 +10,10 @@ using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -262,8 +263,8 @@ public sealed class ManualCallScreenerTests
 
         public ContactCenterManualCallScreener BuildScreener()
         {
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             var publisher = new Mock<IContactCenterEventPublisher>();
             publisher
@@ -279,7 +280,7 @@ public sealed class ManualCallScreenerTests
                 ContentManager.Object,
                 BusinessHoursService.Object,
                 publisher.Object,
-                clock.Object,
+                clock,
                 new PassThroughStringLocalizer<ContactCenterManualCallScreener>(),
                 NullLogger<ContactCenterManualCallScreener>.Instance);
         }

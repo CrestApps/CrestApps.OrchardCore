@@ -33,19 +33,19 @@ internal abstract class AsteriskTelephonyProviderBase :
     ITelephonyDirectoryProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly Redactor _addressRedactor;
     private readonly ILogger _logger;
 
     protected AsteriskTelephonyProviderBase(
         IHttpClientFactory httpClientFactory,
-        IClock clock,
+        TimeProvider timeProvider,
         IRedactorProvider redactorProvider,
         ILogger logger,
         IStringLocalizer stringLocalizer)
     {
         _httpClientFactory = httpClientFactory;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _addressRedactor = redactorProvider.GetRedactor(LogDataClassifications.AddressSet);
         _logger = logger;
         S = stringLocalizer;
@@ -159,7 +159,7 @@ internal abstract class AsteriskTelephonyProviderBase :
                 State = CallState.Connecting,
                 Direction = CallDirection.Outbound,
                 ProviderName = ProviderName,
-                StartedUtc = _clock.UtcNow,
+                StartedUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 Metadata = request.Metadata?.ToDictionary(
                     entry => entry.Key,
                     entry => (object)entry.Value,
@@ -329,7 +329,7 @@ internal abstract class AsteriskTelephonyProviderBase :
 
             call.From = ReadNestedString(root, "caller", "number");
             call.To = ReadNestedString(root, "connected", "number") ?? ReadNestedString(root, "dialplan", "exten");
-            call.StartedUtc = _clock.UtcNow;
+            call.StartedUtc = _timeProvider.GetUtcNow().UtcDateTime;
             call.Metadata["asteriskState"] = stateText ?? string.Empty;
 
             if (holdState.HasValue)

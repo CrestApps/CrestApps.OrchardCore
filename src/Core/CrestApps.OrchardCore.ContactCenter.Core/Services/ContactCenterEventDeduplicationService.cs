@@ -15,19 +15,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ContactCenterEventDeduplicationService : IContactCenterEventDeduplicationService
 {
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterEventDeduplicationService"/> class.
     /// </summary>
     /// <param name="session">The tenant YesSql session used to read and stage reservation markers.</param>
-    /// <param name="clock">The clock used to stamp the processed time.</param>
+    /// <param name="timeProvider">The time provider used to stamp the processed time.</param>
     public ContactCenterEventDeduplicationService(
         ISession session,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -52,7 +52,7 @@ public sealed class ContactCenterEventDeduplicationService : IContactCenterEvent
             ItemId = IdGenerator.GenerateId(),
             HandlerId = handlerId,
             EventId = eventId,
-            ProcessedUtc = _clock.UtcNow,
+            ProcessedUtc = _timeProvider.GetUtcNow().UtcDateTime,
         };
 
         await _session.SaveAsync(

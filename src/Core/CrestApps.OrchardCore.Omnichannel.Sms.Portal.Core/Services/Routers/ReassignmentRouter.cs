@@ -12,15 +12,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 public sealed class ReassignmentRouter : ISmsInboundRouter
 {
     private readonly ISmsRoutingStrategy _routingStrategy;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReassignmentRouter"/> class.
     /// </summary>
-    public ReassignmentRouter(ISmsRoutingStrategy routingStrategy, IClock clock)
+    public ReassignmentRouter(ISmsRoutingStrategy routingStrategy, TimeProvider timeProvider)
     {
         _routingStrategy = routingStrategy;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -37,7 +37,7 @@ public sealed class ReassignmentRouter : ISmsInboundRouter
         }
 
         var conversation = context.Conversation;
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var nextAgentId = conversation.ReassignmentAttempts < context.MaxReassignmentAttempts
             ? await _routingStrategy.SelectAgentAsync(conversation.OwnerId, excludeAgentId: context.ExcludeAgentId, cancellationToken)

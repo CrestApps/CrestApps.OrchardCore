@@ -1148,8 +1148,8 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
                 return;
             }
 
-            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
-            var endedUtc = clock.UtcNow;
+            var timeProvider = scope.ServiceProvider.GetRequiredService<TimeProvider>();
+            var endedUtc = timeProvider.GetUtcNow().UtcDateTime;
 
             interaction.Outcome = connected ? CallOutcome.Completed : CallOutcome.Canceled;
             interaction.EndedUtc = endedUtc;
@@ -1246,8 +1246,8 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
             return;
         }
 
-        var clock = services.GetRequiredService<IClock>();
-        var now = clock.UtcNow;
+        var timeProvider = services.GetRequiredService<TimeProvider>();
+        var now = timeProvider.GetUtcNow().UtcDateTime;
         var userName = Context.GetHttpContext()?.User?.Identity?.Name;
 
         var existing = await store.FindByCallIdAsync(userId, call.CallId, cancellationToken);

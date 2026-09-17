@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver<ListOmnichannelActivityFilter>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
 
@@ -23,17 +23,17 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
     /// Initializes a new instance of the <see cref="ListOmnichannelActivityFilterDisplayDriver"/> class.
     /// </summary>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ListOmnichannelActivityFilterDisplayDriver(
         ISubjectFlowSettingsService subjectFlowSettingsService,
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<ListOmnichannelActivityFilterDisplayDriver> stringLocalizer)
     {
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 

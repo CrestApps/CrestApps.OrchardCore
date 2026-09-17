@@ -32,7 +32,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
     private readonly IAsteriskAriClient _ariClient;
     private readonly IProviderVoiceEventSink _providerVoiceEventSink;
     private readonly IInboundVoiceInteractionProbe _interactionProbe;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<AsteriskInboundReconciler> _logger;
 
     /// <summary>
@@ -42,7 +42,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
     /// <param name="ariClient">The tenant-scoped Asterisk ARI client.</param>
     /// <param name="providerVoiceEventSink">The provider-agnostic Contact Center voice event sink.</param>
     /// <param name="interactionProbe">The probe used to recover an aged offering leg that is still a routed call.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="coordinationOptions">The reconciliation timings this deployment coordinates with.</param>
     public AsteriskInboundReconciler(
@@ -50,7 +50,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         IAsteriskAriClient ariClient,
         IProviderVoiceEventSink providerVoiceEventSink,
         IInboundVoiceInteractionProbe interactionProbe,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<AsteriskInboundReconciler> logger,
         IOptions<AsteriskCoordinationOptions> coordinationOptions)
     {
@@ -58,7 +58,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
         _ariClient = ariClient;
         _providerVoiceEventSink = providerVoiceEventSink;
         _interactionProbe = interactionProbe;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _pendingReclamationThreshold = coordinationOptions.Value.PendingReclamationThreshold;
     }
@@ -161,7 +161,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
 
     private bool HasProvisioningLeaseElapsed(AsteriskChannelTenantBinding binding)
     {
-        return _clock.UtcNow - binding.CreatedUtc >= _pendingReclamationThreshold;
+        return _timeProvider.GetUtcNow().UtcDateTime - binding.CreatedUtc >= _pendingReclamationThreshold;
     }
 
     private async Task ResolveClaimedBindingAsync(AsteriskChannelTenantBinding binding, CancellationToken cancellationToken)
@@ -413,7 +413,7 @@ internal sealed class AsteriskInboundReconciler : IAsteriskProviderStateReconcil
             ProviderName = binding.ProviderName,
             ProviderCallId = binding.ProviderCallId,
             State = VoiceCallState.Ended,
-            OccurredUtc = _clock.UtcNow,
+            OccurredUtc = _timeProvider.GetUtcNow().UtcDateTime,
             IdempotencyKey = "asterisk-reconcile-hangup-" + binding.ProviderCallId,
         }, cancellationToken);
     }

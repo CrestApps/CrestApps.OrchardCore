@@ -50,16 +50,16 @@ public sealed class DirectRingTimeoutBackgroundTask : IBackgroundTask
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
         var scopeExecutor = serviceProvider.GetRequiredService<IContactCenterScopeExecutor>();
-        var clock = serviceProvider.GetRequiredService<IClock>();
+        var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         var logger = serviceProvider.GetRequiredService<ILogger<DirectRingTimeoutBackgroundTask>>();
 
         // The direct-to-agent hold timeout is only registered when the Voice feature is enabled; without it there
         // is still value in expiring due reservations promptly, so the sweep runs either way.
         var hasDirectHoldTimeout = serviceProvider.GetService<IDirectHoldTimeoutService>() is not null;
 
-        var deadlineUtc = clock.UtcNow.AddMilliseconds(MaxRunDurationMilliseconds);
+        var deadlineUtc = timeProvider.GetUtcNow().UtcDateTime.AddMilliseconds(MaxRunDurationMilliseconds);
 
-        while (!cancellationToken.IsCancellationRequested && clock.UtcNow < deadlineUtc)
+        while (!cancellationToken.IsCancellationRequested && timeProvider.GetUtcNow().UtcDateTime < deadlineUtc)
         {
             // Acquire the drain lease per tick (and release it before the delay) so a feature disable can still
             // drain without waiting out the whole invocation.

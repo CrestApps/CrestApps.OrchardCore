@@ -1,9 +1,10 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using Microsoft.Extensions.Time.Testing;
+using System.Data.Common;
 using YesSql;
 using YesSql.Sql;
 
@@ -47,7 +48,7 @@ internal static class QueueItemQueryPlanFixture
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentNullException.ThrowIfNull(transaction);
 
-        var migration = new QueueItemIndexMigrations(store, new StubClock())
+        var migration = new QueueItemIndexMigrations(store, new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)))
         {
             SchemaBuilder = new SchemaBuilder(configuration, transaction),
         };

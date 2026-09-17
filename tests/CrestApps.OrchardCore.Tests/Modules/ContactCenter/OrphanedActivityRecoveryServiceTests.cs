@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -215,8 +216,8 @@ public sealed class OrphanedActivityRecoveryServiceTests
                 .Setup(q => q.EnqueueAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((QueueItem)null);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             Service = new OrphanedActivityRecoveryService(
                 Mock.Of<ISession>(),
@@ -226,7 +227,7 @@ public sealed class OrphanedActivityRecoveryServiceTests
                 WorkState.Object,
                 Queues.Object,
                 QueueItems.Object,
-                clock.Object,
+                clock,
                 NullLogger<OrphanedActivityRecoveryService>.Instance);
         }
 

@@ -47,7 +47,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     private readonly IDistributedLock _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly TimeSpan _inboundLockTimeout;
     private readonly TimeSpan _inboundLockExpiration;
 
@@ -72,7 +72,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
     /// <param name="scopeExecutor">The executor used to release inbound routing locks after commit.</param>
     /// <param name="workManager">The feature work manager used to reject routing while Voice is quiescing.</param>
-    /// <param name="clock">The clock used to stamp times.</param>
+    /// <param name="timeProvider">The time provider used to stamp times.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates inbound routing with.</param>
     public InboundVoiceCallProcessor(
         IOmnichannelChannelEndpointManager channelEndpointManager,
@@ -93,7 +93,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions)
     {
         _channelEndpointManager = channelEndpointManager;
@@ -114,7 +114,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         _distributedLock = distributedLock;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _inboundLockTimeout = coordinationOptions.Value.InboundLockTimeout;
         _inboundLockExpiration = coordinationOptions.Value.InboundLockExpiration;
     }
@@ -208,7 +208,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             return result;
         }
 
-        var now = inboundEvent.ReceivedUtc ?? _clock.UtcNow;
+        var now = inboundEvent.ReceivedUtc ?? _timeProvider.GetUtcNow().UtcDateTime;
         var fromAddress = inboundEvent.FromAddress?.GetCleanedPhoneNumber();
         var serviceAddress = inboundEvent.ToAddress?.GetCleanedPhoneNumber();
 
@@ -485,7 +485,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
             InteractionStatus.Ended,
             reasonCode,
             ProviderCommandType.SendToVoicemail,
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             cancellationToken);
 
         return true;

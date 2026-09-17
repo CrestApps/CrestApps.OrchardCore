@@ -51,14 +51,14 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
         var dialerManager = serviceProvider.GetRequiredService<IDialerProfileManager>();
         var dialerService = serviceProvider.GetRequiredService<IDialerService>();
         var queueItemStore = serviceProvider.GetRequiredService<IQueueItemStore>();
-        var clock = serviceProvider.GetRequiredService<IClock>();
+        var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         var logger = serviceProvider.GetRequiredService<ILogger<DialerPacingBackgroundTask>>();
 
         using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         runCts.CancelAfter(MaxRunDurationMilliseconds);
         var runToken = runCts.Token;
 
-        var runDeadlineUtc = clock.UtcNow.AddMilliseconds(MaxRunDurationMilliseconds);
+        var runDeadlineUtc = timeProvider.GetUtcNow().UtcDateTime.AddMilliseconds(MaxRunDurationMilliseconds);
 
         // Pacing is work-driven: a dialer profile is now reusable settings chosen when inventory is loaded, and
         // each loaded activity carries its profile on the queue item. So instead of iterating profiles, find the
@@ -92,7 +92,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
 
         foreach (var queueId in campaignQueueIds)
         {
-            if (clock.UtcNow >= runDeadlineUtc)
+            if (timeProvider.GetUtcNow().UtcDateTime >= runDeadlineUtc)
             {
                 if (logger.IsEnabled(LogLevel.Debug))
                 {

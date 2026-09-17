@@ -18,7 +18,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     private readonly IEnumerable<IPhoneNumberVerificationProviderConfiguration> _providerConfigurations;
     private readonly IEnumerable<IPhoneNumberVerificationHandler> _handlers;
     private readonly IPhoneNumberService _phoneNumberService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -30,7 +30,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     /// <param name="providerConfigurations">The provider enabled-state configurations.</param>
     /// <param name="handlers">The verification lifecycle handlers.</param>
     /// <param name="phoneNumberService">The phone number formatting service.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public DefaultPhoneNumberVerificationManager(
         IServiceProvider serviceProvider,
@@ -39,7 +39,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
         IEnumerable<IPhoneNumberVerificationProviderConfiguration> providerConfigurations,
         IEnumerable<IPhoneNumberVerificationHandler> handlers,
         IPhoneNumberService phoneNumberService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<DefaultPhoneNumberVerificationManager> logger)
     {
         _serviceProvider = serviceProvider;
@@ -48,7 +48,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
         _providerConfigurations = providerConfigurations;
         _handlers = handlers;
         _phoneNumberService = phoneNumberService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -187,7 +187,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
 
         if (result.VerificationDateUtc == default)
         {
-            result.VerificationDateUtc = _clock.UtcNow;
+            result.VerificationDateUtc = _timeProvider.GetUtcNow().UtcDateTime;
         }
 
         context.Result = result;
@@ -214,7 +214,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
             PhoneNumber = phoneNumber,
             NormalizedPhoneNumber = normalizedPhoneNumber,
             VerificationProvider = providerKey,
-            VerificationDateUtc = _clock.UtcNow,
+            VerificationDateUtc = _timeProvider.GetUtcNow().UtcDateTime,
             Status = PhoneNumberVerificationStatus.Failed,
             LineType = PhoneNumberLineType.Unknown,
             ErrorMessage = errorMessage,

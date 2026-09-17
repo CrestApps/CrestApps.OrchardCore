@@ -16,7 +16,7 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentPresenceManager _presenceManager;
     private readonly AgentAvailabilityOptions _options;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -26,21 +26,21 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="presenceManager">The agent presence manager.</param>
     /// <param name="options">The availability policy.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public AgentAvailabilityRecoveryService(
         IAgentProfileManager agentManager,
         IInteractionManager interactionManager,
         IAgentPresenceManager presenceManager,
         IOptions<AgentAvailabilityOptions> options,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<AgentAvailabilityRecoveryService> logger)
     {
         _agentManager = agentManager;
         _interactionManager = interactionManager;
         _presenceManager = presenceManager;
         _options = options.Value;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -58,14 +58,14 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
 
             if (interactions.Any(interaction =>
                 interaction.WrapUpStartedUtc.HasValue &&
-                interaction.WrapUpStartedUtc.Value + _options.MaximumWrapUpDuration > _clock.UtcNow))
+                interaction.WrapUpStartedUtc.Value + _options.MaximumWrapUpDuration > _timeProvider.GetUtcNow().UtcDateTime))
             {
                 continue;
             }
 
             foreach (var interaction in interactions)
             {
-                interaction.WrapUpCompletedUtc = _clock.UtcNow;
+                interaction.WrapUpCompletedUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
             }
 

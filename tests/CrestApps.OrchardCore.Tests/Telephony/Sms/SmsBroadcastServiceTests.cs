@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -111,9 +112,9 @@ public class SmsBroadcastServiceTests
         var store = new Mock<ISmsBroadcastStore>();
         store.Setup(s => s.UpdateAsync(It.IsAny<SmsBroadcast>(), It.IsAny<CancellationToken>())).Returns(ValueTask.CompletedTask);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(DateTime.UtcNow);
 
-        return new SmsBroadcastService(store.Object, conversationService, clock.Object, NullLogger<SmsBroadcastService>.Instance);
+        return new SmsBroadcastService(store.Object, conversationService, clock, NullLogger<SmsBroadcastService>.Instance);
     }
 }

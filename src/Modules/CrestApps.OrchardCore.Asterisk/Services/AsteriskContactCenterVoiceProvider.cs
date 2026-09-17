@@ -30,7 +30,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
     private readonly IAsteriskPjsipCredentialLeaseStore _pjsipCredentialLeaseStore;
     private readonly IAsteriskAgentChannelReadySignal _agentChannelReadySignal;
     private readonly IAsteriskRecordingIngestJobStore _recordingIngestJobStore;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<AsteriskContactCenterVoiceProvider> _logger;
 
     /// <summary>
@@ -43,7 +43,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
     /// <param name="pjsipCredentialLeaseStore">The tenant-scoped store used to resolve an agent's live browser softphone endpoint.</param>
     /// <param name="agentChannelReadySignal">The tenant-scoped signal used to wait for an originated agent channel to enter Stasis.</param>
     /// <param name="recordingIngestJobStore">The tenant-scoped store used to durably queue completed recordings for secure ingestion.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AsteriskContactCenterVoiceProvider(
@@ -54,7 +54,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
         IAsteriskPjsipCredentialLeaseStore pjsipCredentialLeaseStore,
         IAsteriskAgentChannelReadySignal agentChannelReadySignal,
         IAsteriskRecordingIngestJobStore recordingIngestJobStore,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<AsteriskContactCenterVoiceProvider> logger,
         IStringLocalizer<AsteriskContactCenterVoiceProvider> stringLocalizer)
     {
@@ -65,7 +65,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
         _pjsipCredentialLeaseStore = pjsipCredentialLeaseStore;
         _agentChannelReadySignal = agentChannelReadySignal;
         _recordingIngestJobStore = recordingIngestJobStore;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         Name = stringLocalizer["Asterisk"];
     }
@@ -231,7 +231,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
                 BridgeId = bridgeId,
                 PeerChannelId = callerChannelId,
                 State = AsteriskChannelBindingState.Pending,
-                CreatedUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             });
             bindingPersisted = true;
 
@@ -454,7 +454,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
         // registered and the caller fails closed.
         var liveLeases = await _pjsipCredentialLeaseStore.ListLiveByUserAsync(
             userId.Trim(),
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             cancellationToken);
 
         var activeLease = liveLeases
@@ -727,7 +727,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider :
         // registration; when none exists the agent is not registered and the connect fails closed.
         var liveLeases = await _pjsipCredentialLeaseStore.ListLiveByUserAsync(
             request.AgentUserId.Trim(),
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             cancellationToken);
 
         var activeLease = liveLeases

@@ -40,7 +40,7 @@ public sealed class DialpadTelephonyProvider :
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ITelephonyAuthenticationService _authenticationService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly DialpadOptions _dialpadOptions;
 
@@ -51,21 +51,21 @@ public sealed class DialpadTelephonyProvider :
     /// </summary>
     /// <param name="httpClientFactory">The HTTP client factory.</param>
     /// <param name="authenticationService">The telephony authentication service used to resolve user tokens.</param>
-    /// <param name="clock">The clock used to compute token expiration.</param>
+    /// <param name="timeProvider">The time provider used to compute token expiration.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="dialpadOptions">The active Dialpad settings resolved for the tenant shell.</param>
     public DialpadTelephonyProvider(
         IHttpClientFactory httpClientFactory,
         ITelephonyAuthenticationService authenticationService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<DialpadTelephonyProvider> logger,
         IStringLocalizer<DialpadTelephonyProvider> stringLocalizer,
         IOptionsMonitor<DialpadOptions> dialpadOptions)
     {
         _httpClientFactory = httpClientFactory;
         _authenticationService = authenticationService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _dialpadOptions = dialpadOptions.CurrentValue;
         S = stringLocalizer;
@@ -221,7 +221,7 @@ public sealed class DialpadTelephonyProvider :
                 State = CallState.Connecting,
                 Direction = CallDirection.Outbound,
                 ProviderName = DialpadConstants.ProviderTechnicalName,
-                StartedUtc = _clock.UtcNow,
+                StartedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             };
             call.Metadata["dialpadInitiationMode"] = "RingAllDevices";
             call.Metadata["requiresActiveDialpadDevice"] = true;
@@ -925,7 +925,7 @@ public sealed class DialpadTelephonyProvider :
 
         if (root.TryGetProperty("expires_in", out var expiresInElement) && expiresInElement.TryGetInt32(out var seconds))
         {
-            tokens.ExpiresUtc = _clock.UtcNow.AddSeconds(seconds);
+            tokens.ExpiresUtc = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(seconds);
         }
 
         return tokens;

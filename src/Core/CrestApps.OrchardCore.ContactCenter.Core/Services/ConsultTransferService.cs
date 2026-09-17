@@ -22,7 +22,7 @@ public sealed class ConsultTransferService : IConsultTransferService
 {
     private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -31,12 +31,12 @@ public sealed class ConsultTransferService : IConsultTransferService
     public ConsultTransferService(
         ICallSessionManager callSessionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ConsultTransferService> logger)
     {
         _callSessionManager = callSessionManager;
         _voiceProviderResolver = voiceProviderResolver;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -70,7 +70,7 @@ public sealed class ConsultTransferService : IConsultTransferService
             return null;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var consultId = IdGenerator.GenerateId();
 
         var result = await transferProvider.BeginConsultAsync(
@@ -118,7 +118,7 @@ public sealed class ConsultTransferService : IConsultTransferService
             return false;
         }
 
-        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Connected, _clock.UtcNow);
+        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Connected, _timeProvider.GetUtcNow().UtcDateTime);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 
@@ -154,7 +154,7 @@ public sealed class ConsultTransferService : IConsultTransferService
             return false;
         }
 
-        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Completed, _clock.UtcNow);
+        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Completed, _timeProvider.GetUtcNow().UtcDateTime);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 
@@ -189,7 +189,7 @@ public sealed class ConsultTransferService : IConsultTransferService
 
         // Cancelling must leave the customer with the agent they already had rather than in limbo; that is the
         // whole reason for consulting before committing.
-        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Cancelled, _clock.UtcNow);
+        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Cancelled, _timeProvider.GetUtcNow().UtcDateTime);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 

@@ -26,7 +26,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IQueueTreatmentProvider _treatmentProvider;
     private readonly IInteractionManager _interactionManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityQueueService"/> class.
@@ -39,7 +39,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="session">The YesSql session used to make newly queued work visible to immediate routing queries.</param>
     /// <param name="scopeExecutor">The executor used to retry idempotent enqueue conflicts in a fresh scope.</param>
-    /// <param name="clock">The clock used to stamp queue times.</param>
+    /// <param name="timeProvider">The time provider used to stamp queue times.</param>
     public ActivityQueueService(
         IQueueItemManager queueItemManager,
         IActivityQueueManager queueManager,
@@ -51,7 +51,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         IContactCenterScopeExecutor scopeExecutor,
         IQueueTreatmentProvider treatmentProvider,
         IInteractionManager interactionManager,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _queueItemManager = queueItemManager;
         _queueManager = queueManager;
@@ -63,7 +63,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         _scopeExecutor = scopeExecutor;
         _treatmentProvider = treatmentProvider;
         _interactionManager = interactionManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -112,7 +112,7 @@ public sealed class ActivityQueueService : IActivityQueueService
             ? null
             : await _workStateService.GetAsync(activity.ItemId, cancellationToken);
         item.StickyAgentUserId = existingWorkState?.AssignedToId;
-        item.EnqueuedUtc = _clock.UtcNow;
+        item.EnqueuedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         item.QueueEnteredUtc = item.EnqueuedUtc;
 
         await _queueItemManager.CreateAsync(item, cancellationToken: cancellationToken);
@@ -189,7 +189,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         var wasWaiting = queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved;
 
         queueItem.TransitionTo(status);
-        queueItem.DequeuedUtc = _clock.UtcNow;
+        queueItem.DequeuedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
 
         if (wasWaiting)
@@ -264,7 +264,7 @@ public sealed class ActivityQueueService : IActivityQueueService
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var closed = !string.IsNullOrEmpty(queue.BusinessHoursCalendarId)
             && queue.AfterHoursAction == QueueAfterHoursAction.Overflow
@@ -313,7 +313,7 @@ public sealed class ActivityQueueService : IActivityQueueService
 
         queueItem.OverflowedFromQueueId = fromQueue.ItemId;
         queueItem.QueueId = targetQueueId;
-        queueItem.QueueEnteredUtc = _clock.UtcNow;
+        queueItem.QueueEnteredUtc = _timeProvider.GetUtcNow().UtcDateTime;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
 
         await _publisher.PublishAsync(new InteractionEvent

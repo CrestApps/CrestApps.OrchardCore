@@ -218,7 +218,7 @@ public sealed class AsteriskContactCenterVoiceProviderTests
             new FakeAsteriskPjsipCredentialLeaseStore(),
             new FakeAsteriskAgentChannelReadySignal(),
             new FakeAsteriskRecordingIngestJobStore(),
-            Mock.Of<IClock>(),
+            Mock.Of<TimeProvider>(),
             NullLogger<AsteriskContactCenterVoiceProvider>.Instance,
             localizer.Object);
     }

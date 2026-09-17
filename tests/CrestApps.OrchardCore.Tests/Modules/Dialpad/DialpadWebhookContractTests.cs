@@ -1,15 +1,16 @@
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Dialpad;
 
@@ -329,13 +330,13 @@ public sealed class DialpadWebhookContractTests
             .Callback<InboundVoiceEvent, CancellationToken>((captured, _) => inboundEvent = captured)
             .ReturnsAsync(new InboundVoiceRouteOutcome());
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(instance => instance.UtcNow).Returns(_fallbackNow);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_fallbackNow);
 
         var service = new DialpadWebhookService(
             ingestor.Object,
             new ContactCenterDialpadInboundCallRouter(inboundSink.Object),
-            clock.Object);
+            clock);
         var result = await service.ProcessAsync(callEvent, TestContext.Current.CancellationToken);
 
         return new CapturedDelivery(result, providerEvent, inboundEvent);

@@ -22,7 +22,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -36,7 +36,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     /// <param name="activityManager">The activity manager.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="serviceProvider">The service provider used to lazily resolve presence management without an event-publisher cycle.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public ProviderVoiceOfferSynchronizationService(
         IInteractionManager interactionManager,
@@ -47,7 +47,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         IOmnichannelActivityManager activityManager,
         IContactCenterWorkStateService workStateService,
         IServiceProvider serviceProvider,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ProviderVoiceOfferSynchronizationService> logger)
     {
         _interactionManager = interactionManager;
@@ -58,7 +58,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         _activityManager = activityManager;
         _workStateService = workStateService;
         _serviceProvider = serviceProvider;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -102,7 +102,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             reservation.TransitionTo(ReservationStatus.Canceled);
 
             // This is the age settled reservations are purged by.
-            reservation.ModifiedUtc = _clock.UtcNow;
+            reservation.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
             canceledReservationIds.Add(reservation.ItemId);
@@ -113,7 +113,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             if (queueItem?.Status == QueueItemStatus.Assigned)
             {
                 queueItem.TransitionTo(QueueItemStatus.Completed);
-                queueItem.DequeuedUtc = _clock.UtcNow;
+                queueItem.DequeuedUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
             }
 
@@ -159,7 +159,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
             queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned)
         {
             queueItem.TransitionTo(QueueItemStatus.Removed);
-            queueItem.DequeuedUtc = _clock.UtcNow;
+            queueItem.DequeuedUtc = _timeProvider.GetUtcNow().UtcDateTime;
             await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
         }
 
@@ -185,7 +185,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
                 }
 
                 agent.RequestedPresenceStatus = null;
-                agent.PresenceChangedUtc = _clock.UtcNow;
+                agent.PresenceChangedUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
             }
         }

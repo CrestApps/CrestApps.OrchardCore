@@ -23,7 +23,7 @@ internal sealed class ContactCenterAgentEntitlementStep : NamedRecipeStepHandler
     private readonly IAgentPresenceManager _presenceManager;
     private readonly ContactCenterAdminFormOptionsProvider _optionsProvider;
     private readonly UserManager<IUser> _userManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -34,14 +34,14 @@ internal sealed class ContactCenterAgentEntitlementStep : NamedRecipeStepHandler
     /// <param name="presenceManager">The agent presence manager that promotes configuration.</param>
     /// <param name="optionsProvider">The Contact Center form options provider used to filter dangling references.</param>
     /// <param name="userManager">The Orchard user manager used to resolve users by name.</param>
-    /// <param name="clock">The clock used to stamp new agent profiles.</param>
+    /// <param name="timeProvider">The time provider used to stamp new agent profiles.</param>
     /// <param name="stringLocalizer">The string localizer for error messages.</param>
     public ContactCenterAgentEntitlementStep(
         IAgentProfileManager agentManager,
         IAgentPresenceManager presenceManager,
         ContactCenterAdminFormOptionsProvider optionsProvider,
         UserManager<IUser> userManager,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<ContactCenterAgentEntitlementStep> stringLocalizer)
         : base(ContactCenterDeploymentSteps.AgentEntitlement)
     {
@@ -49,7 +49,7 @@ internal sealed class ContactCenterAgentEntitlementStep : NamedRecipeStepHandler
         _presenceManager = presenceManager;
         _optionsProvider = optionsProvider;
         _userManager = userManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
@@ -114,7 +114,7 @@ internal sealed class ContactCenterAgentEntitlementStep : NamedRecipeStepHandler
             agent.AllowedCampaignIds = AgentEntitlementUtilities.NormalizeIds(allowedCampaignIds);
             AgentEntitlementUtilities.ApplySkills(agent, entry.Skills, entry.SkillProficiencies);
             agent.QueueMemberships = AgentEntitlementUtilities.NormalizeQueueMemberships(entry.QueueMemberships);
-            agent.CreatedUtc = _clock.UtcNow;
+            agent.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
             var validationResult = await _agentManager.ValidateAsync(agent);
 

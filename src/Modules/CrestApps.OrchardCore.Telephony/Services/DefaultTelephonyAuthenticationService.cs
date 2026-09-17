@@ -18,7 +18,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     private readonly ITelephonyUserTokenStore _tokenStore;
     private readonly ITelephonyUserAccessor _userAccessor;
     private readonly IDistributedLock _distributedLock;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly TimeSpan _tokenRefreshLockTimeout;
     private readonly TimeSpan _tokenRefreshLockExpiration;
@@ -31,7 +31,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <param name="tokenStore">The user token store.</param>
     /// <param name="userAccessor">The accessor used to identify the current user when serializing token refreshes.</param>
     /// <param name="distributedLock">The distributed lock used to serialize concurrent token refreshes per user and provider.</param>
-    /// <param name="clock">The clock used to evaluate token expiration.</param>
+    /// <param name="timeProvider">The time provider used to evaluate token expiration.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
     /// <param name="logger">The logger used to record incomplete remote revocations.</param>
     public DefaultTelephonyAuthenticationService(
@@ -40,7 +40,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         ITelephonyUserTokenStore tokenStore,
         ITelephonyUserAccessor userAccessor,
         IDistributedLock distributedLock,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<TelephonyCoordinationOptions> coordinationOptions,
         ILogger<DefaultTelephonyAuthenticationService> logger)
     {
@@ -49,7 +49,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         _tokenStore = tokenStore;
         _userAccessor = userAccessor;
         _distributedLock = distributedLock;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _tokenRefreshLockTimeout = coordinationOptions.Value.TokenRefreshLockTimeout;
         _tokenRefreshLockExpiration = coordinationOptions.Value.TokenRefreshLockExpiration;
@@ -411,7 +411,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         }
 
         // Treat tokens that expire within the next 30 seconds as expired to avoid race conditions.
-        return _clock.UtcNow >= tokens.ExpiresUtc.Value.UtcDateTime.AddSeconds(-30);
+        return _timeProvider.GetUtcNow().UtcDateTime >= tokens.ExpiresUtc.Value.UtcDateTime.AddSeconds(-30);
     }
 
     private async Task<string> GetDefaultProviderNameAsync()

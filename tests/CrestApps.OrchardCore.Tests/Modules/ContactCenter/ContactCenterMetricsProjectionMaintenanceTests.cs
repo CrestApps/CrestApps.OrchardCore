@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -186,8 +187,8 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
 
         try
         {
-            var clock = new Mock<IClock>();
-            clock.Setup(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             await using (var seedSession = store.CreateSession())
             {
@@ -198,7 +199,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                 var metrics = new ContactCenterMetricsService(
                     new ContactCenterMetricStore(seedSession),
                     new ContactCenterMetricDeltaStore(seedSession),
-                    clock.Object);
+                    clock);
 
                 await metrics.RecordAsync(CreatedEvent, _dayA, TestContext.Current.CancellationToken);
                 await metrics.RecordAsync(CreatedEvent, _dayA.AddMinutes(5), TestContext.Current.CancellationToken);
@@ -284,8 +285,8 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
 
         try
         {
-            var clock = new Mock<IClock>();
-            clock.Setup(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             await using (var seedSession = store.CreateSession())
             {
@@ -295,7 +296,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                 var metrics = new ContactCenterMetricsService(
                     new ContactCenterMetricStore(seedSession),
                     new ContactCenterMetricDeltaStore(seedSession),
-                    clock.Object);
+                    clock);
 
                 await metrics.RecordAsync(CreatedEvent, _dayA, TestContext.Current.CancellationToken);
                 await metrics.RecordAsync(CreatedEvent, _dayA.AddMinutes(5), TestContext.Current.CancellationToken);
@@ -316,7 +317,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                     new ContactCenterMetricDeltaStore(rollupSession),
                     new ContactCenterMetricStore(rollupSession),
                     rollupSession,
-                    clock.Object).RollupAsync(TestContext.Current.CancellationToken);
+                    clock).RollupAsync(TestContext.Current.CancellationToken);
             }
 
             // Assert
@@ -359,8 +360,8 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
 
         try
         {
-            var clock = new Mock<IClock>();
-            clock.Setup(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             await using (var seedSession = store.CreateSession())
             {
@@ -382,7 +383,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                 var metrics = new ContactCenterMetricsService(
                     new ContactCenterMetricStore(dispatchSession),
                     new ContactCenterMetricDeltaStore(dispatchSession),
-                    clock.Object);
+                    clock);
 
                 await metrics.RecordAsync(CreatedEvent, _dayA, TestContext.Current.CancellationToken);
                 await metrics.RecordAsync(CreatedEvent, _dayA.AddMinutes(5), TestContext.Current.CancellationToken);
@@ -396,7 +397,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                     new ContactCenterMetricDeltaStore(rollupSession),
                     new ContactCenterMetricStore(rollupSession),
                     rollupSession,
-                    clock.Object).RollupAsync(TestContext.Current.CancellationToken);
+                    clock).RollupAsync(TestContext.Current.CancellationToken);
             }
 
             // Assert
@@ -450,15 +451,15 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
 
         try
         {
-            var clock = new Mock<IClock>();
-            clock.Setup(c => c.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             await using (var seedSession = store.CreateSession())
             {
                 var metrics = new ContactCenterMetricsService(
                     new ContactCenterMetricStore(seedSession),
                     new ContactCenterMetricDeltaStore(seedSession),
-                    clock.Object);
+                    clock);
 
                 for (var i = 0; i < 6; i++)
                 {
@@ -532,15 +533,15 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
 
     private static ContactCenterMetricsProjectionMaintenanceService CreateService(ISession session)
     {
-        var clock = new Mock<IClock>();
-        clock.Setup(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new ContactCenterMetricsProjectionMaintenanceService(
             new InteractionEventStore(session, new DefaultInteractionEventUpcastService([])),
             new ContactCenterMetricStore(session),
             new ContactCenterMetricDeltaStore(session),
             new ContactCenterProjectionCheckpointStore(session),
-            clock.Object);
+            clock);
     }
 
     private static async Task<IStore> CreateStoreAsync(string databasePath)

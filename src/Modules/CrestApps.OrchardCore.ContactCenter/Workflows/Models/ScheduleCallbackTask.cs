@@ -18,7 +18,7 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
 {
     private readonly ICallbackService _callbackService;
     private readonly IWorkflowExpressionEvaluator _expressionEvaluator;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
@@ -28,19 +28,19 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
     /// </summary>
     /// <param name="callbackService">The callback service used to schedule the callback.</param>
     /// <param name="expressionEvaluator">The workflow expression evaluator used to resolve Liquid fields.</param>
-    /// <param name="clock">The clock used to compute the scheduled time.</param>
+    /// <param name="timeProvider">The time provider used to compute the scheduled time.</param>
     /// <param name="logger">The logger instance.</param>
     /// <param name="stringLocalizer">The string localizer for this task.</param>
     public ScheduleCallbackTask(
         ICallbackService callbackService,
         IWorkflowExpressionEvaluator expressionEvaluator,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ScheduleCallbackTask> logger,
         IStringLocalizer<ScheduleCallbackTask> stringLocalizer)
     {
         _callbackService = callbackService;
         _expressionEvaluator = expressionEvaluator;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         S = stringLocalizer;
     }
@@ -128,7 +128,7 @@ public sealed class ScheduleCallbackTask : TaskActivity<ScheduleCallbackTask>
 
         if (DelayMinutes > 0)
         {
-            callback.ScheduledUtc = _clock.UtcNow.AddMinutes(DelayMinutes);
+            callback.ScheduledUtc = _timeProvider.GetUtcNow().UtcDateTime.AddMinutes(DelayMinutes);
         }
 
         try

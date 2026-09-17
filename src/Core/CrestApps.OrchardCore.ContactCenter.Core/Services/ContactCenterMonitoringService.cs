@@ -26,7 +26,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly ITelephonyCommandExecutor _commandExecutor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterMonitoringService"/> class.
@@ -37,7 +37,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
-    /// <param name="clock">The clock used to stamp engagement times.</param>
+    /// <param name="timeProvider">The time provider used to stamp engagement times.</param>
     public ContactCenterMonitoringService(
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
@@ -45,7 +45,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
         IContactCenterEventPublisher publisher,
         ITelephonyCommandExecutor commandExecutor,
         ICallControlAuthorizationService callControlAuthorizationService,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
@@ -53,7 +53,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
         _callControlAuthorizationService = callControlAuthorizationService;
         _publisher = publisher;
         _commandExecutor = commandExecutor;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -470,7 +470,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
             supervisorUserId,
             supervisorAgentId,
             mode,
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             providerLegId);
 
         await _callSessionManager.UpdateAsync(callSession, cancellationToken: cancellationToken);
@@ -483,7 +483,7 @@ public sealed class ContactCenterMonitoringService : IContactCenterMonitoringSer
     {
         var callSession = await _callSessionManager.FindByInteractionIdAsync(interactionId, cancellationToken);
 
-        if (callSession is null || !CallTopologyProjector.EndMonitorSession(callSession, supervisorUserId, _clock.UtcNow))
+        if (callSession is null || !CallTopologyProjector.EndMonitorSession(callSession, supervisorUserId, _timeProvider.GetUtcNow().UtcDateTime))
         {
             return;
         }

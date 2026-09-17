@@ -31,7 +31,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IDialDestinationPolicy _destinationPolicy;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -41,7 +41,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     /// <param name="voiceCallRouter">The router used to execute outbound voice commands.</param>
     /// <param name="interactionManager">The manager used to project interaction outcomes.</param>
     /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
-    /// <param name="clock">The clock used to stamp UTC timestamps on projections.</param>
+    /// <param name="timeProvider">The time provider used to stamp UTC timestamps on projections.</param>
     /// <param name="callSessionManager">The call session manager used to persist first-command ownership.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the dialing user.</param>
     /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
@@ -51,7 +51,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         IVoiceContactCenterCallRouter voiceCallRouter,
         IInteractionManager interactionManager,
         IContactCenterActivityWriter activityWriter,
-        IClock clock,
+        TimeProvider timeProvider,
         ICallSessionManager callSessionManager,
         IAgentProfileManager agentManager,
         IDialDestinationPolicy destinationPolicy,
@@ -64,7 +64,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         _agentManager = agentManager;
         _activityWriter = activityWriter;
         _destinationPolicy = destinationPolicy;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -196,7 +196,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
                     ? command.ProviderName
                     : result.ProviderName;
                 interaction.ProviderInteractionId = result.ProviderCallId;
-                interaction.StartedUtc = _clock.UtcNow;
+                interaction.StartedUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
             }
         }
@@ -238,7 +238,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
             if (interaction is not null && !interaction.IsSettled)
             {
                 interaction.TransitionTo(InteractionStatus.Failed);
-                interaction.EndedUtc = _clock.UtcNow;
+                interaction.EndedUtc = _timeProvider.GetUtcNow().UtcDateTime;
                 await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
             }
         }
@@ -336,7 +336,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
             return;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         session = await _callSessionManager.NewAsync(cancellationToken: cancellationToken);
         session.InteractionId = request.InteractionId;
         session.ActivityItemId = request.ActivityId;

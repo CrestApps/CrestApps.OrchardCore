@@ -1,8 +1,9 @@
-using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Services;
-using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Telephony.Extensions;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx.BackgroundTasks;
 using CrestApps.OrchardCore.Telnyx.Drivers;
 using CrestApps.OrchardCore.Telnyx.Endpoints;
@@ -11,13 +12,13 @@ using CrestApps.OrchardCore.Telnyx.Migrations;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Data;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using Polly;
@@ -32,6 +33,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         services.AddHttpClient(TelnyxConstants.ProviderTechnicalName)
             .AddStandardResilienceHandler(options =>
             {

@@ -17,7 +17,7 @@ public sealed class SecurePauseAutoResumeService : ISecurePauseAutoResumeService
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterRecordingService _recordingService;
     private readonly IEnumerable<IContactCenterRealTimeNotifier> _realTimeNotifiers;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SecurePauseAutoResumeService"/> class.
@@ -26,19 +26,19 @@ public sealed class SecurePauseAutoResumeService : ISecurePauseAutoResumeService
     /// <param name="interactionManager">The interaction manager used to list expired pauses.</param>
     /// <param name="recordingService">The recording orchestration service that resumes recording.</param>
     /// <param name="realTimeNotifiers">The optional real-time notifiers used to broadcast the resume.</param>
-    /// <param name="clock">The clock used to compute the pause-expiry cutoff.</param>
+    /// <param name="timeProvider">The time provider used to compute the pause-expiry cutoff.</param>
     public SecurePauseAutoResumeService(
         ISiteService siteService,
         IInteractionManager interactionManager,
         IContactCenterRecordingService recordingService,
         IEnumerable<IContactCenterRealTimeNotifier> realTimeNotifiers,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _siteService = siteService;
         _interactionManager = interactionManager;
         _recordingService = recordingService;
         _realTimeNotifiers = realTimeNotifiers;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -58,7 +58,7 @@ public sealed class SecurePauseAutoResumeService : ISecurePauseAutoResumeService
             return 0;
         }
 
-        var cutoffUtc = _clock.UtcNow.AddSeconds(-maxSecurePauseSeconds);
+        var cutoffUtc = _timeProvider.GetUtcNow().UtcDateTime.AddSeconds(-maxSecurePauseSeconds);
 
         var expired = await _interactionManager.GetPausedRecordingsOlderThanAsync(cutoffUtc, MaxResumeBatchSize, cancellationToken);
 
@@ -103,7 +103,7 @@ public sealed class SecurePauseAutoResumeService : ISecurePauseAutoResumeService
             AgentId = interaction.AgentId,
             RecordingState = RecordingState.Recording.ToString(),
             IsSecurePauseActive = false,
-            ServerTimeUtc = _clock.UtcNow,
+            ServerTimeUtc = _timeProvider.GetUtcNow().UtcDateTime,
         }, cancellationToken);
     }
 }

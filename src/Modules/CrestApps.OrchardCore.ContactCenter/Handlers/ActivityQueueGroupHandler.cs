@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
 internal sealed class ActivityQueueGroupHandler : CatalogEntryHandlerBase<ActivityQueueGroup>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IActivityQueueManager _queueManager;
 
     internal readonly IStringLocalizer S;
@@ -19,15 +19,15 @@ internal sealed class ActivityQueueGroupHandler : CatalogEntryHandlerBase<Activi
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityQueueGroupHandler"/> class.
     /// </summary>
-    /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="timeProvider">The time provider used to stamp audit times.</param>
     /// <param name="queueManager">The queue manager used to clear deleted group memberships.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ActivityQueueGroupHandler(
-        IClock clock,
+        TimeProvider timeProvider,
         IActivityQueueManager queueManager,
         IStringLocalizer<ActivityQueueGroupHandler> stringLocalizer)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
         _queueManager = queueManager;
         S = stringLocalizer;
     }
@@ -43,7 +43,7 @@ internal sealed class ActivityQueueGroupHandler : CatalogEntryHandlerBase<Activi
     /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<ActivityQueueGroup> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }
@@ -53,7 +53,7 @@ internal sealed class ActivityQueueGroupHandler : CatalogEntryHandlerBase<Activi
     {
         ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
 
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }

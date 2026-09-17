@@ -19,7 +19,7 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="activityWriter">The writer used to apply CRM activity changes outside the routing transaction.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="clock">The clock used to stamp projections.</param>
+    /// <param name="timeProvider">The time provider used to stamp projections.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     public SendToVoicemailProviderCommandTypeExecutor(
         IEnumerable<ITelephonyService> telephonyServices,
@@ -29,7 +29,7 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
         IContactCenterEventPublisher publisher,
-        IClock clock,
+        TimeProvider timeProvider,
         ICallControlAuthorizationService callControlAuthorizationService)
         : base(
             telephonyServices,
@@ -39,7 +39,7 @@ public sealed class SendToVoicemailProviderCommandTypeExecutor : ProviderCallAct
             workStateService,
             activityWriter,
             publisher,
-            clock,
+            timeProvider,
             callControlAuthorizationService)
     {
     }

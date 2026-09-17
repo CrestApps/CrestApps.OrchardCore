@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
@@ -85,8 +86,8 @@ public class SmsConversationAssignmentTests
 
         var notifier = new Mock<ISmsRealTimeNotifier>();
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(DateTime.UtcNow);
 
         var service = new SmsConversationService(
             store.Object,
@@ -97,7 +98,7 @@ public class SmsConversationAssignmentTests
             Mock.Of<ISmsConversationAuthorizationService>(),
             new Mock<ISession>().Object,
             new NoOpSmsFirstResponseSlaService(),
-            clock.Object,
+            clock,
             RedactorProviderFactory.Create(),
             NullLogger<SmsConversationService>.Instance);
 

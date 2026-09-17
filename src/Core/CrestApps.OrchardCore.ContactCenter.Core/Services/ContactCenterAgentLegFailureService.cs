@@ -14,7 +14,7 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly ITelephonyService _telephonyService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -24,12 +24,12 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         ITelephonyService telephonyService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ContactCenterAgentLegFailureService> logger)
     {
         _interactionManager = interactionManager;
         _callSessionManager = callSessionManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
         _telephonyService = telephonyService;
     }
@@ -58,7 +58,7 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
             return false;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
 
         if (session is not null && !CallSessionLifecycle.IsTerminal(session.State))
@@ -141,7 +141,7 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
             return false;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         // Advance the agent leg the connect command already recorded (at dialing) to answered, and place it on
         // the call's bridge, so the topology reports that the agent was connected and its talk time is measured.

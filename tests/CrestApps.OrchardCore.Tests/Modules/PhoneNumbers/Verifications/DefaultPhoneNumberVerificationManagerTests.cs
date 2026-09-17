@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
@@ -202,8 +203,8 @@ public sealed class DefaultPhoneNumberVerificationManagerTests
         siteService.Setup(s => s.GetSiteSettingsAsync())
             .ReturnsAsync(site.Object);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new DefaultPhoneNumberVerificationManager(
             serviceProvider,
@@ -212,7 +213,7 @@ public sealed class DefaultPhoneNumberVerificationManagerTests
             [],
             handlers ?? [],
             new DefaultPhoneNumberService(),
-            clock.Object,
+            clock,
             NullLogger<DefaultPhoneNumberVerificationManager>.Instance);
     }
 

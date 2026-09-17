@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -151,14 +152,14 @@ public sealed class PendingIncomingCallOfferServiceTests
         Mock<IInteractionManager> interactionManager,
         IEnumerable<IIncomingCallContextProvider> providers)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new PendingIncomingCallOfferService(
             agentManager.Object,
             reservationManager.Object,
             interactionManager.Object,
             providers,
-            clock.Object);
+            clock);
     }
 }

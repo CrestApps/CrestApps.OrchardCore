@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
@@ -75,8 +76,8 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
         {
             var leaseStore = new AsteriskPjsipCredentialLeaseStore(store);
             var realtimeStore = new LeaseAssertingRealtimeStore(store, throwOnUpsert: false);
-            var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
             var issuer = CreateIssuer("TenantA", store, leaseStore, realtimeStore, clock);
 
             var credentials = new List<AsteriskPjsipCredential>();
@@ -85,7 +86,7 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
             {
                 // Advance the clock so the oldest lease is deterministic and each IssueAsync fully returns
                 // (releasing the tenant lock) before the next issue.
-                clock.SetupGet(value => value.UtcNow).Returns(_now.AddMinutes(index));
+                clock.SetUtcNow(_now.AddMinutes(index));
                 credentials.Add(await issuer.IssueAsync(CreateRequest(userId: "user-capped"), cancellationToken));
             }
 
@@ -96,7 +97,7 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
             Assert.Equal(3, liveBeforeCap.Count);
 
             // Act: the fourth issue must see the committed leases and revoke the oldest.
-            clock.SetupGet(value => value.UtcNow).Returns(_now.AddMinutes(3));
+            clock.SetUtcNow(_now.AddMinutes(3));
             credentials.Add(await issuer.IssueAsync(CreateRequest(userId: "user-capped"), cancellationToken));
 
             // Assert
@@ -160,11 +161,11 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
         IStore store,
         IAsteriskPjsipCredentialLeaseStore leaseStore,
         IAsteriskPjsipRealtimeCredentialStore realtimeStore,
-        Mock<IClock> clock = null,
+        FakeTimeProvider clock = null,
         IDistributedCache cache = null)
     {
-        clock ??= new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        clock ??= new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var tagCache = new Mock<ITagCache>();
         tagCache.Setup(cache => cache.RemoveTagAsync(It.IsAny<string>())).Returns(Task.CompletedTask);
@@ -173,7 +174,7 @@ public sealed class AsteriskPjsipCredentialIssuerDurabilityTests
             cache ?? new FakeDistributedCache(),
             tagCache.Object,
             new FakeDistributedLock(),
-            clock.Object,
+            clock,
             new ShellSettings { Name = tenantName },
             realtimeStore,
             leaseStore,

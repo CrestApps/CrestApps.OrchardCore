@@ -1,4 +1,3 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -9,9 +8,11 @@ using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Data.Common;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -292,12 +293,12 @@ public sealed class MessageClaimFencingPersistenceTests
             $"contact-center-{prefix}-{Guid.NewGuid():N}.db");
     }
 
-    private static IClock CreateClock()
+    private static FakeTimeProvider CreateClock()
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
-        return clock.Object;
+        return clock;
     }
 
     private static async Task CreateOutboxSchemaAsync(IStore store)

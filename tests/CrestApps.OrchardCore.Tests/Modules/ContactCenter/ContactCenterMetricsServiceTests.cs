@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -158,9 +159,9 @@ public sealed class ContactCenterMetricsServiceTests
         Mock<IContactCenterMetricStore> store,
         Mock<IContactCenterMetricDeltaStore> deltaStore = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
-        return new ContactCenterMetricsService(store.Object, (deltaStore ?? new Mock<IContactCenterMetricDeltaStore>()).Object, clock.Object);
+        return new ContactCenterMetricsService(store.Object, (deltaStore ?? new Mock<IContactCenterMetricDeltaStore>()).Object, clock);
     }
 }

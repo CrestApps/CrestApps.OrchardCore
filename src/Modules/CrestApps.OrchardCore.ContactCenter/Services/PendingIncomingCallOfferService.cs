@@ -17,7 +17,7 @@ public sealed class PendingIncomingCallOfferService : IPendingIncomingCallOfferS
     private readonly IActivityReservationManager _reservationManager;
     private readonly IInteractionManager _interactionManager;
     private readonly IEnumerable<IIncomingCallContextProvider> _contextProviders;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PendingIncomingCallOfferService"/> class.
@@ -26,19 +26,19 @@ public sealed class PendingIncomingCallOfferService : IPendingIncomingCallOfferS
     /// <param name="reservationManager">The reservation manager.</param>
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="contextProviders">The incoming-call context providers.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     public PendingIncomingCallOfferService(
         IAgentProfileManager agentManager,
         IActivityReservationManager reservationManager,
         IInteractionManager interactionManager,
         IEnumerable<IIncomingCallContextProvider> contextProviders,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _agentManager = agentManager;
         _reservationManager = reservationManager;
         _interactionManager = interactionManager;
         _contextProviders = contextProviders;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -54,7 +54,7 @@ public sealed class PendingIncomingCallOfferService : IPendingIncomingCallOfferS
         }
 
         var reservation = await _reservationManager.FindPendingByAgentAsync(agent.ItemId, cancellationToken);
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (reservation is null ||
             reservation.ExpiresUtc <= now)

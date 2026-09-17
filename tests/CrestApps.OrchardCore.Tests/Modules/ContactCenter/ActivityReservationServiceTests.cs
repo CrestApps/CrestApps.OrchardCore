@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -1751,15 +1752,15 @@ public sealed class ActivityReservationServiceTests
                 LastHeartbeatUtc = _now,
             });
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var realAvailability = new AgentAvailabilityService(
             agentManager.Object,
             sessionManager.Object,
             interactionManager.Object,
             Options.Create(new AgentAvailabilityOptions()),
-            clock.Object);
+            clock);
         var availabilityService = new Mock<IAgentAvailabilityService>();
         availabilityService
             .Setup(service => service.GetAsync(
@@ -1854,8 +1855,8 @@ public sealed class ActivityReservationServiceTests
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         if (distributedLock is null)
         {
@@ -1926,7 +1927,7 @@ public sealed class ActivityReservationServiceTests
             (scopeExecutor ?? new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict)).Object,
             distributedLock.Object,
             session.Object,
-            clock.Object,
+            clock,
             CoordinationOptions(),
             new Mock<ILogger<ActivityReservationService>>().Object);
     }

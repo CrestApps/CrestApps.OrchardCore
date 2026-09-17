@@ -6,18 +6,19 @@ using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Extensions;
+using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
+using OrchardCore.Data;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
@@ -43,6 +44,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         // The resilience pipeline is constructed before any tenant request, so its timings are read here rather
         // than resolved per call. The same section backs AsteriskCoordinationOptions below, so the validated
         // values and the values the pipeline uses cannot diverge.

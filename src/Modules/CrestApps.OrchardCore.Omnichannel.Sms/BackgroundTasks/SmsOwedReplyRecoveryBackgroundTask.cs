@@ -60,7 +60,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
         var logger = serviceProvider.GetRequiredService<ILogger<SmsOwedReplyRecoveryBackgroundTask>>();
 
         var session = serviceProvider.GetRequiredService<ISession>();
-        var clock = serviceProvider.GetRequiredService<IClock>();
+        var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
         var promptStore = serviceProvider.GetRequiredService<IAIChatSessionPromptStore>();
         var chatSessionManager = serviceProvider.GetRequiredService<IAIChatSessionManager>();
         var endpointCatalog = serviceProvider.GetRequiredService<ICatalog<OmnichannelChannelEndpoint>>();
@@ -80,15 +80,15 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
 
         // Stop before the lock lease can expire; the remainder is picked up on the next scheduled run. Each recovered
         // conversation runs a full reply generation (settle + AI + "typing"), so the budget is charged per item.
-        var deadline = clock.UtcNow.AddMilliseconds(_leaseMilliseconds * 0.6);
+        var deadline = timeProvider.GetUtcNow().UtcDateTime.AddMilliseconds(_leaseMilliseconds * 0.6);
 
         // Only conversations whose unanswered customer message arrived after this moment are eligible.
-        var owedReplyCutoff = clock.UtcNow.AddMinutes(-_maxOwedReplyAgeMinutes);
+        var owedReplyCutoff = timeProvider.GetUtcNow().UtcDateTime.AddMinutes(-_maxOwedReplyAgeMinutes);
 
         long documentId = 0;
         var processedCount = 0;
 
-        while (processedCount < _maxConversationsPerInvocation && clock.UtcNow < deadline)
+        while (processedCount < _maxConversationsPerInvocation && timeProvider.GetUtcNow().UtcDateTime < deadline)
         {
             var activities = await session.Query<OmnichannelActivity, OmnichannelActivityIndex>(x =>
                     x.Status == ActivityStatus.AwaitingCustomerAnswer &&
@@ -107,7 +107,7 @@ public sealed class SmsOwedReplyRecoveryBackgroundTask : IBackgroundTask
 
             foreach (var activity in activities)
             {
-                if (clock.UtcNow >= deadline)
+                if (timeProvider.GetUtcNow().UtcDateTime >= deadline)
                 {
                     return;
                 }

@@ -1,13 +1,15 @@
-using System.Reflection;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
+using System.Reflection;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -32,8 +34,8 @@ public sealed class DialerPacingBackgroundTaskTests
             (_queue2, "dp2"));
 
         var dialerService = new Mock<IDialerService>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
         await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
 
@@ -53,8 +55,8 @@ public sealed class DialerPacingBackgroundTaskTests
         var dialerManager = new Mock<IDialerProfileManager>();
         var queueItemStore = CreateQueueItemStore((_queue1, null));
         var dialerService = new Mock<IDialerService>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
         await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
 
@@ -74,8 +76,8 @@ public sealed class DialerPacingBackgroundTaskTests
         var dialerManager = new Mock<IDialerProfileManager>();
         var queueItemStore = CreateQueueItemStore(("inbound-queue", "dp1"));
         var dialerService = new Mock<IDialerService>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
         await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
 
@@ -95,8 +97,8 @@ public sealed class DialerPacingBackgroundTaskTests
         var dialerManager = new Mock<IDialerProfileManager>();
         var queueItemStore = new Mock<IQueueItemStore>();
         var dialerService = new Mock<IDialerService>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
         var workManager = new TestContactCenterFeatureWorkManager();
         workManager.Quiesce(ContactCenterConstants.Feature.DialerPaced);
@@ -123,8 +125,7 @@ public sealed class DialerPacingBackgroundTaskTests
         // budget while pacing the first queue and assert the second queue is not paced, proving a run cannot
         // grow without bound (and therefore cannot outlive its lock and self-overlap on another node).
         var current = new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(() => current);
+        var clock = new DelegateTimeProvider(() => current);
 
         var profile1 = new DialerProfile { ItemId = "dp1", Name = "profile-1" };
         var profile2 = new DialerProfile { ItemId = "dp2", Name = "profile-2" };
@@ -170,8 +171,8 @@ public sealed class DialerPacingBackgroundTaskTests
         dialerService
             .Setup(service => service.RunCycleAsync(It.IsAny<DialerProfile>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new OperationCanceledException(cancellationSource.Token));
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
         await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock);
 
@@ -242,14 +243,14 @@ public sealed class DialerPacingBackgroundTaskTests
         Mock<IDialerProfileManager> dialerManager,
         Mock<IDialerService> dialerService,
         Mock<IQueueItemStore> queueItemStore,
-        Mock<IClock> clock,
+        TimeProvider clock,
         IContactCenterFeatureWorkManager workManager = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(dialerManager.Object);
         services.AddSingleton(dialerService.Object);
         services.AddSingleton(queueItemStore.Object);
-        services.AddSingleton(clock.Object);
+        services.AddSingleton<TimeProvider>(clock);
         services.AddSingleton(workManager ?? new TestContactCenterFeatureWorkManager());
         services.AddLogging();
 

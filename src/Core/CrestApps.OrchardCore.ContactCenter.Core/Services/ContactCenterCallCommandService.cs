@@ -28,7 +28,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterCallCommandService"/> class.
@@ -45,7 +45,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// <param name="providerCommandStateService">The service used to persist server-side answer intent.</param>
     /// <param name="scopeExecutor">The executor used for post-commit command processing and isolated compensation.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="clock">The clock used to stamp times.</param>
+    /// <param name="timeProvider">The time provider used to stamp times.</param>
     public ContactCenterCallCommandService(
         IActivityReservationService reservationService,
         IActivityReservationManager reservationManager,
@@ -59,7 +59,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         IProviderCommandStateService providerCommandStateService,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterEventPublisher publisher,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _reservationService = reservationService;
         _reservationManager = reservationManager;
@@ -73,7 +73,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _providerCommandStateService = providerCommandStateService;
         _scopeExecutor = scopeExecutor;
         _publisher = publisher;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -138,7 +138,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return CallCommandResult.Failure("The offer is no longer available.");
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         interaction.AgentId = reservation.AgentId;
         interaction.QueueId ??= reservation.QueueId;

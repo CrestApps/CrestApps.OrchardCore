@@ -26,7 +26,7 @@ public sealed class SmsOutboundOutbox : ISmsOutboundOutbox
     private readonly ISmsConversationStore _conversationStore;
     private readonly SmsPortalOptions _options;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -37,7 +37,7 @@ public sealed class SmsOutboundOutbox : ISmsOutboundOutbox
     /// <param name="conversationStore">The conversation store used to address the notification.</param>
     /// <param name="options">The workspace options carrying the batch size and per-endpoint budget.</param>
     /// <param name="session">The session the messages are read from and saved to.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public SmsOutboundOutbox(
         ISmsDispatcher dispatcher,
@@ -45,7 +45,7 @@ public sealed class SmsOutboundOutbox : ISmsOutboundOutbox
         ISmsConversationStore conversationStore,
         IOptions<SmsPortalOptions> options,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<SmsOutboundOutbox> logger)
     {
         _dispatcher = dispatcher;
@@ -53,7 +53,7 @@ public sealed class SmsOutboundOutbox : ISmsOutboundOutbox
         _conversationStore = conversationStore;
         _options = options.Value;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -61,7 +61,7 @@ public sealed class SmsOutboundOutbox : ISmsOutboundOutbox
     public async Task<int> DispatchDueAsync(CancellationToken cancellationToken = default)
     {
         var queued = SmsDeliveryStatus.Queued.ToString();
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var candidates = await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
                 index => index.Channel == OmnichannelConstants.Channels.Sms && !index.IsInbound,

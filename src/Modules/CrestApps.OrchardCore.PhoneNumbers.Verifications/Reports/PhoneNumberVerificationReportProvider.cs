@@ -19,7 +19,7 @@ public sealed class PhoneNumberVerificationReportProvider : IReport
 {
     private readonly ISession _session;
     private readonly PhoneNumberVerificationProviderOptions _providerOptions;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -28,17 +28,17 @@ public sealed class PhoneNumberVerificationReportProvider : IReport
     /// </summary>
     /// <param name="session">The YesSql session used to query the verification index.</param>
     /// <param name="providerOptions">The registered verification providers.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PhoneNumberVerificationReportProvider(
         ISession session,
         IOptions<PhoneNumberVerificationProviderOptions> providerOptions,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<PhoneNumberVerificationReportProvider> stringLocalizer)
     {
         _session = session;
         _providerOptions = providerOptions.Value;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
@@ -60,7 +60,7 @@ public sealed class PhoneNumberVerificationReportProvider : IReport
     /// <inheritdoc/>
     public async Task<ReportDocument> RunAsync(ReportContext context, CancellationToken cancellationToken = default)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var total = await CountAsync(_ => true);
         var verified = await CountAsync(index => index.IsVerified);

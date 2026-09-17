@@ -91,7 +91,7 @@ public sealed class ActivityRoutingServiceTests
     {
         return new ActivityRoutingService(
         [
-            new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
+            new RequiredSkillsRoutingStrategy(Mock.Of<TimeProvider>()),
             new LongestIdleRoutingStrategy(),
         ]);
     }
@@ -100,7 +100,7 @@ public sealed class ActivityRoutingServiceTests
     {
         return new ActivityRoutingService(
         [
-            new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()),
+            new RequiredSkillsRoutingStrategy(Mock.Of<TimeProvider>()),
             new CapacityRoutingStrategy(),
             new LongestIdleRoutingStrategy(),
         ]);

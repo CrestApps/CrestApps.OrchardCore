@@ -378,8 +378,8 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         {
             var cancellationToken = TestContext.Current.CancellationToken;
             var session = serviceProvider.GetRequiredService<ISession>();
-            var clock = serviceProvider.GetRequiredService<IClock>();
-            var now = clock.UtcNow;
+            var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
             var queue = await queueManager.NewAsync(cancellationToken: cancellationToken);

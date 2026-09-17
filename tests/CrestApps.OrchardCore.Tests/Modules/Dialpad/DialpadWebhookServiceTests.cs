@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -281,12 +282,12 @@ public sealed class DialpadWebhookServiceTests
         Mock<INormalizedVoiceEventIngestor> ingestor,
         Mock<IInboundVoiceEventSink> inboundSink)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new DialpadWebhookService(
             ingestor.Object,
             new ContactCenterDialpadInboundCallRouter(inboundSink.Object),
-            clock.Object);
+            clock);
     }
 }

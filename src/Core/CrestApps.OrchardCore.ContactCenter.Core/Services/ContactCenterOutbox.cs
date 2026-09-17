@@ -36,7 +36,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
     private readonly ISession _session;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -48,7 +48,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     /// <param name="scopeExecutor">The executor used to isolate each due message in a fresh child scope.</param>
     /// <param name="workManager">The feature work manager used to fence dispatch during feature quiescence.</param>
     /// <param name="session">The tenant session used to commit claims before handler execution.</param>
-    /// <param name="clock">The clock used to schedule retries.</param>
+    /// <param name="timeProvider">The time provider used to schedule retries.</param>
     /// <param name="logger">The logger instance.</param>
     public ContactCenterOutbox(
         IEnumerable<IContactCenterEventHandler> handlers,
@@ -57,7 +57,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
         ISession session,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<ContactCenterOutbox> logger)
     {
         _handlers = ValidateHandlers(handlers);
@@ -66,7 +66,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
         _session = session;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -155,7 +155,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var due = await _outboxStore.GetDueAsync(now, MaxBatchSize, cancellationToken);
         var redelivered = 0;
 
@@ -317,7 +317,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
             return existing;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var message = new ContactCenterOutboxMessage
         {
             ItemId = IdGenerator.GenerateId(),
@@ -339,7 +339,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         ContactCenterOutboxMessage message,
         CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if ((message.Status != OutboxMessageStatus.Pending &&
                 message.Status != OutboxMessageStatus.Claimed) ||
@@ -506,7 +506,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         }
 
         message.LastError = error;
-        message.ModifiedUtc = _clock.UtcNow;
+        message.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         message.OwnerToken = null;
 
         if (message.AttemptCount >= MaxAttempts)
@@ -524,7 +524,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         else
         {
             message.Status = OutboxMessageStatus.Pending;
-            message.NextAttemptUtc = _clock.UtcNow.Add(GetBackoff(Math.Max(1, message.AttemptCount)));
+            message.NextAttemptUtc = _timeProvider.GetUtcNow().UtcDateTime.Add(GetBackoff(Math.Max(1, message.AttemptCount)));
         }
 
         await _outboxStore.UpdateAsync(message, cancellationToken);
@@ -549,7 +549,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     {
         message.Status = OutboxMessageStatus.DeadLettered;
         message.LastError = reason;
-        message.ModifiedUtc = _clock.UtcNow;
+        message.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         message.OwnerToken = null;
         ContactCenterDiagnostics.RecordOutboxDeadLettered("unrecoverable");
 

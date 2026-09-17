@@ -5,7 +5,7 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 
 /// <summary>
 /// A deterministic in-memory <see cref="IDistributedCache"/> that stores entries without wall-clock
-/// expiration, so cache-backed logic can be verified against a mocked <see cref="OrchardCore.Modules.IClock"/>
+/// expiration, so cache-backed logic can be verified against a mocked <see cref="TimeProvider"/>
 /// instead of real time. This keeps tests hermetic regardless of the host clock.
 /// </summary>
 internal sealed class FakeDistributedCache : IDistributedCache

@@ -1,7 +1,5 @@
 #nullable enable annotations
 
-using System.Collections.Concurrent;
-using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -12,10 +10,13 @@ using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Collections.Concurrent;
+using System.Text.Json;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -45,7 +46,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>(MockBehavior.Strict).Object,
             new Mock<IAgentPresenceManager>(MockBehavior.Strict).Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance,
             session: new Mock<ISession>(MockBehavior.Strict).Object,
             distributedLock: distributedLock.Object);
@@ -119,7 +120,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance,
             session: yesSqlSession.Object,
             distributedLock: distributedLock.Object);
@@ -187,7 +188,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance,
             session: new Mock<ISession>().Object,
             distributedLock: distributedLock);
@@ -200,7 +201,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance,
             session: new Mock<ISession>().Object,
             distributedLock: distributedLock);
@@ -279,8 +280,8 @@ public sealed class ProviderVoiceEventServiceTests
             .ReturnsAsync(false);
 
         var presenceManager = new Mock<IAgentPresenceManager>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -291,7 +292,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             presenceManager.Object,
             new ProviderIdentityResolver([new TestProviderIdentityProvider(new ProviderIdentity("Asterisk", "Default Asterisk"))]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -356,8 +357,8 @@ public sealed class ProviderVoiceEventServiceTests
             .ReturnsAsync(false);
 
         var presenceManager = new Mock<IAgentPresenceManager>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -368,7 +369,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             presenceManager.Object,
             new ProviderIdentityResolver([new TestProviderIdentityProvider(new ProviderIdentity("Asterisk", "Default Asterisk"))]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -424,7 +425,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -496,8 +497,8 @@ public sealed class ProviderVoiceEventServiceTests
         var voiceProviderResolver = new Mock<IContactCenterVoiceProviderResolver>();
         var providerCommandStateService = new Mock<IProviderCommandStateService>(MockBehavior.Strict);
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -508,7 +509,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             presenceManager.Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance,
             providerCommandStateService.Object,
             scopeExecutor.Object);
@@ -598,8 +599,8 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -610,7 +611,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -678,8 +679,8 @@ public sealed class ProviderVoiceEventServiceTests
 
         var presenceManager = new Mock<IAgentPresenceManager>();
         var voiceProviderResolver = new Mock<IContactCenterVoiceProviderResolver>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -690,7 +691,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             presenceManager.Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -758,13 +759,13 @@ public sealed class ProviderVoiceEventServiceTests
             })
             .Returns(ValueTask.CompletedTask);
         var outbox = new Mock<IContactCenterOutbox>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
         var publisher = new DefaultContactCenterEventPublisher(
             eventStore.Object,
             outbox.Object,
             new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider()),
-            clock.Object,
+            clock,
             NullLogger<DefaultContactCenterEventPublisher>.Instance);
         var service = CreateService(
             interactionManager.Object,
@@ -775,7 +776,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
         var providerEvent = new ProviderVoiceEvent
         {
@@ -850,7 +851,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -918,7 +919,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -975,8 +976,8 @@ public sealed class ProviderVoiceEventServiceTests
         eventStore
             .Setup(store => store.ExistsByIdempotencyKeyAsync("late-ringing", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(connectedUtc.AddMinutes(1));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(connectedUtc.AddMinutes(1));
         var publisher = new Mock<IContactCenterEventPublisher>();
         var service = CreateService(
             interactionManager.Object,
@@ -987,7 +988,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1063,7 +1064,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1140,7 +1141,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1198,8 +1199,8 @@ public sealed class ProviderVoiceEventServiceTests
         eventStore
             .Setup(store => store.ExistsByIdempotencyKeyAsync("connected", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(startedUtc.AddSeconds(3));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(startedUtc.AddSeconds(3));
         var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
@@ -1209,7 +1210,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1269,7 +1270,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1330,7 +1331,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1400,7 +1401,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance,
             session: yesSqlSession.Object,
             distributedLock: distributedLock.Object);
@@ -1472,7 +1473,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            new Mock<IClock>().Object,
+            new FakeTimeProvider(),
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1563,8 +1564,8 @@ public sealed class ProviderVoiceEventServiceTests
                 }
             })
             .Returns(Task.CompletedTask);
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(connectedUtc.AddSeconds(1));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(connectedUtc.AddSeconds(1));
         var service = CreateService(
             interactionManager.Object,
             callSessionManager.Object,
@@ -1574,7 +1575,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([new TestProviderIdentityProvider(new ProviderIdentity("Asterisk", "Default Asterisk"))]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1652,8 +1653,8 @@ public sealed class ProviderVoiceEventServiceTests
             .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvents.Add(interactionEvent))
             .Returns(Task.CompletedTask);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -1664,7 +1665,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1733,8 +1734,8 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(now);
 
         var service = CreateService(
             interactionManager.Object,
@@ -1745,7 +1746,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1816,8 +1817,8 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(now);
 
         var service = CreateService(
             interactionManager.Object,
@@ -1828,7 +1829,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -1908,8 +1909,8 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(now);
 
         var service = CreateService(
             interactionManager.Object,
@@ -1920,7 +1921,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -2056,8 +2057,8 @@ public sealed class ProviderVoiceEventServiceTests
             })
             .Returns(true);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(now);
 
         var service = CreateService(
             interactionManager.Object,
@@ -2068,7 +2069,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance,
             providerCommandStateService.Object,
             scopeExecutor.Object);
@@ -2276,8 +2277,8 @@ public sealed class ProviderVoiceEventServiceTests
             })
             .Returns(true);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -2288,7 +2289,7 @@ public sealed class ProviderVoiceEventServiceTests
             publisher.Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance,
             providerCommandStateService.Object,
             scopeExecutor.Object);
@@ -2391,8 +2392,8 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(s => s.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -2403,7 +2404,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act
@@ -2470,8 +2471,8 @@ public sealed class ProviderVoiceEventServiceTests
             .Setup(s => s.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc));
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc));
 
         var service = CreateService(
             interactionManager.Object,
@@ -2482,7 +2483,7 @@ public sealed class ProviderVoiceEventServiceTests
             new Mock<IContactCenterEventPublisher>().Object,
             new Mock<IAgentPresenceManager>().Object,
             new ProviderIdentityResolver([]),
-            clock.Object,
+            clock,
             NullLogger<ProviderVoiceEventService>.Instance);
 
         // Act — event for "call-new" finds session bound to "call-existing"
@@ -2518,7 +2519,7 @@ public sealed class ProviderVoiceEventServiceTests
         IContactCenterEventPublisher publisher,
         IAgentPresenceManager presenceManager,
         IProviderIdentityResolver providerIdentityResolver,
-        IClock clock,
+        TimeProvider clock,
         ILogger<ProviderVoiceEventService> logger,
         IProviderCommandStateService? providerCommandStateService = null,
         IContactCenterScopeExecutor? scopeExecutor = null,

@@ -111,7 +111,7 @@ public sealed class SkillTagTests
         var context = new ActivityRoutingContext(queue, new QueueItem { ItemId = "i1", QueueId = "q1" }, [new ActivityRoutingCandidate(agent)]);
 
         // Act
-        await new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()).ApplyAsync(context, TestContext.Current.CancellationToken);
+        await new RequiredSkillsRoutingStrategy(Mock.Of<TimeProvider>()).ApplyAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         var candidate = Assert.Single(context.Candidates);
@@ -137,7 +137,7 @@ public sealed class SkillTagTests
         var context = new ActivityRoutingContext(queue, new QueueItem { ItemId = "i1", QueueId = "q1" }, [new ActivityRoutingCandidate(agent)]);
 
         // Act
-        await new RequiredSkillsRoutingStrategy(Mock.Of<IClock>()).ApplyAsync(context, TestContext.Current.CancellationToken);
+        await new RequiredSkillsRoutingStrategy(Mock.Of<TimeProvider>()).ApplyAsync(context, TestContext.Current.CancellationToken);
 
         // Assert
         var candidate = Assert.Single(context.Candidates);

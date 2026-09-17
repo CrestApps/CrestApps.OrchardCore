@@ -20,7 +20,7 @@ public sealed class SmsQuietHoursGuard
     private readonly IBusinessHoursGate _businessHoursGate;
     private readonly ISmsQueuePolicyReader _queuePolicyReader;
     private readonly ISmsContactTimeZoneResolver _timeZoneResolver;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsQuietHoursGuard"/> class.
@@ -29,12 +29,12 @@ public sealed class SmsQuietHoursGuard
         IBusinessHoursGate businessHoursGate,
         ISmsQueuePolicyReader queuePolicyReader,
         ISmsContactTimeZoneResolver timeZoneResolver,
-        IClock clock)
+        TimeProvider timeProvider)
     {
         _businessHoursGate = businessHoursGate;
         _queuePolicyReader = queuePolicyReader;
         _timeZoneResolver = timeZoneResolver;
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public sealed class SmsQuietHoursGuard
 
         var open = await _businessHoursGate.IsOpenAsync(
             policy.BusinessHoursCalendarId,
-            _clock.UtcNow,
+            _timeProvider.GetUtcNow().UtcDateTime,
             timeZoneId,
             cancellationToken);
 

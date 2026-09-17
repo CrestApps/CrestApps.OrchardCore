@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using System.Collections.Concurrent;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
@@ -668,7 +669,7 @@ public sealed class SmsReEngagementBackgroundTaskTests
         var services = new ServiceCollection();
 
         services.AddSingleton(session);
-        services.AddSingleton<IClock>(new StubClock(_now));
+        services.AddSingleton<TimeProvider>(new FakeTimeProvider(_now));
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
 
         services.AddSingleton<ISmsService>(scenario.Sms);

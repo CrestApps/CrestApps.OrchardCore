@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Time.Testing;
 using System.Collections.Concurrent;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
@@ -261,7 +262,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(session);
-        services.AddSingleton<IClock>(new StubClock(_now));
+        services.AddSingleton<TimeProvider>(new FakeTimeProvider(_now));
         services.AddSingleton(processor);
         services.AddSingleton(subjectFlowSettingsService);
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));

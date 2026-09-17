@@ -1,7 +1,5 @@
 #nullable enable annotations
 
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -9,8 +7,11 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -721,8 +722,8 @@ public sealed class ContactCenterCallCommandServiceTests
 
         public ContactCenterCallCommandService CreateService()
         {
-            var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             return new ContactCenterCallCommandService(
                 ReservationService.Object,
@@ -737,7 +738,7 @@ public sealed class ContactCenterCallCommandServiceTests
                 ProviderCommandStateService.Object,
                 ScopeExecutor.Object,
                 Publisher.Object,
-                clock.Object);
+                clock);
         }
     }
 

@@ -30,7 +30,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
     private readonly IActivityQueueService _queueService;
     private readonly IVoiceQueueOfferService _offerService;
     private readonly IActivityQueueManager _queueManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IBusinessHoursGate _businessHoursGate;
     private readonly ICallbackService _callbackService;
     private readonly IDistributedLock _distributedLock;
@@ -49,7 +49,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         IActivityQueueService queueService,
         IVoiceQueueOfferService offerService,
         IActivityQueueManager queueManager,
-        IClock clock,
+        TimeProvider timeProvider,
         IBusinessHoursGate businessHoursGate,
         ICallbackService callbackService,
         IDistributedLock distributedLock,
@@ -64,7 +64,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         _queueService = queueService;
         _offerService = offerService;
         _queueManager = queueManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _businessHoursGate = businessHoursGate;
         _callbackService = callbackService;
         _distributedLock = distributedLock;
@@ -153,7 +153,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
 
         if (queue is not null && !string.IsNullOrWhiteSpace(queue.BusinessHoursCalendarId))
         {
-            var open = await _businessHoursGate.IsOpenAsync(queue.BusinessHoursCalendarId, _clock.UtcNow, timeZoneId: null, cancellationToken);
+            var open = await _businessHoursGate.IsOpenAsync(queue.BusinessHoursCalendarId, _timeProvider.GetUtcNow().UtcDateTime, timeZoneId: null, cancellationToken);
 
             if (!open)
             {
@@ -336,7 +336,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
 
     private async Task ScheduleAfterHoursCallbackAsync(OmnichannelActivity activity, string queueId, CancellationToken cancellationToken)
     {
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (!string.IsNullOrWhiteSpace(activity.PreferredDestination))
         {

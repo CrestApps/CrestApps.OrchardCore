@@ -12,22 +12,22 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Handlers;
 /// </summary>
 internal sealed class SmsTemplateHandler : CatalogEntryHandlerBase<SmsTemplate>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
     public SmsTemplateHandler(
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<SmsTemplateHandler> stringLocalizer)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
     /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<SmsTemplate> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }
@@ -35,7 +35,7 @@ internal sealed class SmsTemplateHandler : CatalogEntryHandlerBase<SmsTemplate>
     /// <inheritdoc/>
     public override Task UpdatingAsync(UpdatingContext<SmsTemplate> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }

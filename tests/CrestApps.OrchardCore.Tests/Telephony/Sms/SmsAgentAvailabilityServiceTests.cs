@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -48,13 +49,13 @@ public class SmsAgentAvailabilityServiceTests
             AgentManager.Setup(m => m.UpdateAsync(It.IsAny<AgentProfile>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
                 .Returns(ValueTask.CompletedTask);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(DateTime.UtcNow);
 
             Service = new SmsAgentAvailabilityService(
                 AgentManager.Object,
                 new Mock<ISmsAgentPresenceTracker>().Object,
-                clock.Object);
+                clock);
         }
     }
 
@@ -127,13 +128,13 @@ public class SmsAgentAvailabilityServiceTests
                 .Setup(tracker => tracker.IsPresentAsync(agent.ItemId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(portalOpen);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(Now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(Now);
 
             Service = new SmsAgentAvailabilityService(
                 agentManager.Object,
                 presenceTracker.Object,
-                clock.Object);
+                clock);
         }
     }
 

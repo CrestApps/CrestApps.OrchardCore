@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Configuration;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Core.Models;
@@ -16,19 +17,19 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
-using OrchardCore.Data;
+using OrchardCore.ContentManagement;
 using OrchardCore.Data.Migration;
-using OrchardCore.DisplayManagement;
+using OrchardCore.Data;
 using OrchardCore.DisplayManagement.Handlers;
-using OrchardCore.Environment.Shell;
+using OrchardCore.DisplayManagement;
 using OrchardCore.Environment.Shell.Configuration;
+using OrchardCore.Environment.Shell;
 using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -54,6 +55,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         services.ValidateTenantOptionsOnActivation();
 
         services

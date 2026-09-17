@@ -23,7 +23,7 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
     private readonly IAsteriskAriClient _ariClient;
     private readonly IRecordingMediaStore _mediaStore;
     private readonly IRecordingErasureGuard _erasureGuard;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger<AsteriskRecordingIngestService> _logger;
 
     /// <summary>
@@ -37,28 +37,28 @@ internal sealed class AsteriskRecordingIngestService : IAsteriskRecordingIngestS
     /// first guard is consulted to refuse ingesting a recording that has already been erased; when absent, ingest
     /// proceeds unchanged.
     /// </param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger instance.</param>
     public AsteriskRecordingIngestService(
         IAsteriskRecordingIngestJobStore jobStore,
         IAsteriskAriClient ariClient,
         IRecordingMediaStore mediaStore,
         IEnumerable<IRecordingErasureGuard> erasureGuards,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<AsteriskRecordingIngestService> logger)
     {
         _jobStore = jobStore;
         _ariClient = ariClient;
         _mediaStore = mediaStore;
         _erasureGuard = erasureGuards.FirstOrDefault();
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
     /// <inheritdoc/>
     public async Task<int> ProcessDueAsync(CancellationToken cancellationToken = default)
     {
-        var nowUtc = _clock.UtcNow;
+        var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
         var dueJobs = await _jobStore.GetDueAsync(nowUtc, AsteriskAriConstants.RecordingIngestBatchSize, cancellationToken);
         var ingested = 0;
 

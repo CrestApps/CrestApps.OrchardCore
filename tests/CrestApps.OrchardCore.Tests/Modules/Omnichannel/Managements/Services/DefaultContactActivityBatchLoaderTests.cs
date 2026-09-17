@@ -1,5 +1,3 @@
-using System.Data.Common;
-using System.Text.Json.Nodes;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -14,6 +12,7 @@ using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore;
 using OrchardCore.ContentFields.Fields;
@@ -23,6 +22,8 @@ using OrchardCore.ContentManagement.Records;
 using OrchardCore.Data;
 using OrchardCore.Flows.Models;
 using OrchardCore.Modules;
+using System.Data.Common;
+using System.Text.Json.Nodes;
 using YesSql;
 using YesSql.Indexes;
 using YesSql.Provider.Sqlite;
@@ -716,7 +717,7 @@ public sealed class DefaultContactActivityBatchLoaderTests
             CreateBatchCatalog(),
             session,
             new UtcLocalClock(),
-            new StubClock(_now),
+            new FakeTimeProvider(_now),
             new StubSubjectFlowSettingsService(new SubjectFlowSettings
             {
                 SubjectContentType = SubjectContentType,

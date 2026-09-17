@@ -77,7 +77,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     private readonly IOmnichannelChannelEndpointManager _channelEndpointsManager;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ISession _session;
 
     private readonly ISmsService _smsService;
@@ -104,7 +104,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
     /// <param name="channelEndpointsManager">The channel endpoints manager.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="contentManager">The content manager.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="session">The session.</param>
     /// <param name="smsService">The sms service.</param>
     /// <param name="omnichannelActivityStore">The omnichannel activity store.</param>
@@ -126,7 +126,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         IOmnichannelChannelEndpointManager channelEndpointsManager,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
-        IClock clock,
+        TimeProvider timeProvider,
         ISession session,
         ISmsService smsService,
         IOmnichannelActivityStore omnichannelActivityStore,
@@ -150,7 +150,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         _channelEndpointsManager = channelEndpointsManager;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _session = session;
         _smsService = smsService;
         _omnichannelActivityStore = omnichannelActivityStore;
@@ -313,7 +313,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                 SessionId = chatSession.SessionId,
                 Role = ChatRole.User,
                 Content = omnichannelEvent.Message.Content,
-                CreatedUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
             }, cancellationToken);
         }
 
@@ -565,7 +565,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         // by time: the owed-reply scan then sees every customer message as still unanswered (the
                         // count only ever grows) and the model is handed a scrambled history, so it re-asks
                         // questions the customer already answered and fires repeat replies.
-                        CreatedUtc = _clock.UtcNow,
+                        CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
                     }, cancellationToken);
 
                     // Commit the reply to the store NOW, while we still hold the conversation lock. Otherwise the
@@ -576,7 +576,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     // messages seen in a burst. Flushing inside the lock makes the reply visible to the next turn.
                     await _session.SaveChangesAsync(cancellationToken);
 
-                    chatSession.LastActivityUtc = _clock.UtcNow;
+                    chatSession.LastActivityUtc = _timeProvider.GetUtcNow().UtcDateTime;
                     handledTurn = true;
 
                     if (_logger.IsEnabled(LogLevel.Information))
@@ -605,7 +605,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                     {
                         activity.ScheduledUtc = OmnichannelAutomationHelper.ResolveNoResponseDeadline(
                             flowSettings,
-                            _clock.UtcNow);
+                            _timeProvider.GetUtcNow().UtcDateTime);
                     }
 
                     await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
@@ -689,7 +689,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         var userPrompt = $"""
 
-                        Current UTC time: {_clock.UtcNow:O}
+                        Current UTC time: {_timeProvider.GetUtcNow().UtcDateTime:O}
                         Chat Summary: {JsonSerializer.Serialize(sessionPrompts)}
                         Subject Goal: {flowSettings.SubjectGoal}
                         List of Dispositions: {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
@@ -766,7 +766,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                                 }
                                 else
                                 {
-                                    var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+                                    var timeProvider = scope.ServiceProvider.GetRequiredService<TimeProvider>();
                                     var executor = scope.ServiceProvider.GetRequiredService<ISubjectActionExecutor>();
 
                                     omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
@@ -789,7 +789,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                                         _logger.LogInformation("Concluding automated SMS conversation for Activity {ActivityId} with disposition {DispositionId}.", activity.ItemId.SanitizeLogValue(), (result.Result.DispositionId ?? "(none)").SanitizeLogValue());
                                     }
 
-                                    omnichannelActivity.CompletedUtc = clock.UtcNow;
+                                    omnichannelActivity.CompletedUtc = timeProvider.GetUtcNow().UtcDateTime;
 
                                     omnichannelActivity.DispositionId = result.Result.DispositionId;
 
@@ -951,7 +951,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
             if (OmnichannelAutomationHelper.HasNoResponseTimeout(flowSettings))
             {
-                activity.ScheduledUtc = OmnichannelAutomationHelper.ResolveNoResponseDeadline(flowSettings, _clock.UtcNow);
+                activity.ScheduledUtc = OmnichannelAutomationHelper.ResolveNoResponseDeadline(flowSettings, _timeProvider.GetUtcNow().UtcDateTime);
             }
 
             await _omnichannelActivityStore.UpdateAsync(activity, cancellationToken);
@@ -963,7 +963,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         // no disposition executor runs, and the terminal reason lets reporting separate escalations from bot-contained
         // conversations.
         activity.Status = ActivityStatus.Completed;
-        activity.CompletedUtc = _clock.UtcNow;
+        activity.CompletedUtc = _timeProvider.GetUtcNow().UtcDateTime;
         activity.TerminalReasonCode = OmnichannelConstants.TerminalReasons.HandedOffToAgent;
         activity.AiEscalated = true;
         activity.CompletedById = activity.AssignedToId;
@@ -1079,7 +1079,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
         {
             contact.Alter<OmnichannelContactPart>(part =>
             {
-                part.SetDoNotSms(true, _clock.UtcNow);
+                part.SetDoNotSms(true, _timeProvider.GetUtcNow().UtcDateTime);
             });
 
             await _contentManager.UpdateAsync(contact);

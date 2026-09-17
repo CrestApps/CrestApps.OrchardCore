@@ -31,7 +31,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly ICatalog<OmnichannelActivityBatch> _catalog;
     private readonly ISession _session;
     private readonly ILocalClock _localClock;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IStore _store;
@@ -45,8 +45,8 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     /// </summary>
     /// <param name="catalog">The activity batch catalog.</param>
     /// <param name="session">The session used to persist activities.</param>
-    /// <param name="localClock">The local clock.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="localClock">The local time provider.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="subjectFlowSettingsService">The subject flow settings service.</param>
     /// <param name="activityManager">The activity manager.</param>
     /// <param name="store">The store.</param>
@@ -58,7 +58,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         ICatalog<OmnichannelActivityBatch> catalog,
         ISession session,
         ILocalClock localClock,
-        IClock clock,
+        TimeProvider timeProvider,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IOmnichannelActivityManager activityManager,
         IStore store,
@@ -70,7 +70,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _catalog = catalog;
         _session = session;
         _localClock = localClock;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _activityManager = activityManager;
         _store = store;
@@ -375,7 +375,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 .ToHashSet();
             }
 
-            var now = _clock.UtcNow;
+            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             var scheduledUtc = await _localClock.ConvertToUtcAsync(batch.ScheduleAt);
 

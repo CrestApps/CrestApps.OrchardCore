@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -367,7 +368,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
             tokenStore,
             userAccessor,
             distributedLock,
-            new StubClock(),
+            new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
             options,
             NullLogger<DefaultTelephonyAuthenticationService>.Instance);
     }

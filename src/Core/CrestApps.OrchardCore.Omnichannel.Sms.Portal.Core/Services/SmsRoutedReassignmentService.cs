@@ -31,7 +31,7 @@ public sealed class SmsRoutedReassignmentService : ISmsRoutedReassignmentService
     private readonly ISmsConversationStore _conversationStore;
     private readonly ISmsConversationRouter _router;
     private readonly ISmsRealTimeNotifier _notifier;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
     private readonly TimeSpan _pickupGraceWindow;
     private readonly int _maxReassignmentAttempts;
@@ -43,14 +43,14 @@ public sealed class SmsRoutedReassignmentService : ISmsRoutedReassignmentService
         ISmsConversationStore conversationStore,
         ISmsConversationRouter router,
         ISmsRealTimeNotifier notifier,
-        IClock clock,
+        TimeProvider timeProvider,
         IOptions<SmsRoutedDistributionOptions> options,
         ILogger<SmsRoutedReassignmentService> logger)
     {
         _conversationStore = conversationStore;
         _router = router;
         _notifier = notifier;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
 
         var value = options.Value;
@@ -68,7 +68,7 @@ public sealed class SmsRoutedReassignmentService : ISmsRoutedReassignmentService
             return 0;
         }
 
-        var now = _clock.UtcNow;
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
         var cutoff = now - _pickupGraceWindow;
         var moved = 0;
 

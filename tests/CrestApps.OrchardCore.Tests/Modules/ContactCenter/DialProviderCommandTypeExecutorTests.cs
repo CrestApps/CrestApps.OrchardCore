@@ -1,4 +1,3 @@
-using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -11,8 +10,10 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -621,8 +622,8 @@ public sealed class DialProviderCommandTypeExecutorTests
             .Setup(v => v.CanDispatchAsync(It.IsAny<ProviderCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(canDispatch);
         var router = new Mock<IVoiceContactCenterCallRouter>();
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         var actualValidators = validators ?? [validator.Object];
 
         // The container always supplies these, so the harness must too. Constructing the executor without them
@@ -651,7 +652,7 @@ public sealed class DialProviderCommandTypeExecutorTests
             router.Object,
             interactionManager.Object,
             new FakeContactCenterActivityWriter(activityManager.Object),
-            clock.Object,
+            clock,
             callSessionManager.Object,
             dialAgentManager.Object,
             CreateDialDestinationPolicy(),

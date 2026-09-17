@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -381,8 +382,8 @@ public sealed class ContactCenterRealTimeEventHandlerTests
         Mock<IInteractionManager> interactionManager = null,
         Mock<IIncomingCallDispatcher> incomingCallDispatcher = null)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(c => c.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var services = new ServiceCollection()
             .AddSingleton((agentManager ?? new Mock<IAgentProfileManager>()).Object)
@@ -407,7 +408,7 @@ public sealed class ContactCenterRealTimeEventHandlerTests
         return new ContactCenterRealTimeEventHandler(
             notifier.Object,
             new TestContactCenterScopeExecutor(provider),
-            clock.Object);
+            clock);
     }
 
     private static Mock<IDisplayNameProvider> MockDisplayNameProvider()

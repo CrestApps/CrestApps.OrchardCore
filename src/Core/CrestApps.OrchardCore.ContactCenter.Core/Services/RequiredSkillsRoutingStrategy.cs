@@ -15,15 +15,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class RequiredSkillsRoutingStrategy : IActivityRoutingStrategy
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RequiredSkillsRoutingStrategy"/> class.
     /// </summary>
-    /// <param name="clock">The clock used to measure how long the contact has waited.</param>
-    public RequiredSkillsRoutingStrategy(IClock clock)
+    /// <param name="timeProvider">The time provider used to measure how long the contact has waited.</param>
+    public RequiredSkillsRoutingStrategy(TimeProvider timeProvider)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
@@ -50,7 +50,7 @@ public sealed class RequiredSkillsRoutingStrategy : IActivityRoutingStrategy
 
         var waited = context.QueueItem is null
             ? TimeSpan.Zero
-            : _clock.UtcNow - context.QueueItem.EnqueuedUtc;
+            : _timeProvider.GetUtcNow().UtcDateTime - context.QueueItem.EnqueuedUtc;
 
         var relaxed = required.Where(requirement => SkillMatching.IsRelaxed(requirement, waited)).ToArray();
         var enforced = required.Except(relaxed).ToArray();

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -135,14 +136,14 @@ public sealed class AgentAvailabilityRecoveryServiceTests
 
                 return agent;
             });
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         var service = new AgentAvailabilityRecoveryService(
             agentManager.Object,
             interactionManager.Object,
             presenceManager.Object,
             Options.Create(new AgentAvailabilityOptions()),
-            clock.Object,
+            clock,
             new Mock<ILogger<AgentAvailabilityRecoveryService>>().Object);
 
         // Act
@@ -185,14 +186,14 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         presenceManager
             .Setup(manager => manager.CompleteWorkAsync("a2", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AgentProfile { ItemId = "a2", PresenceStatus = AgentPresenceStatus.Available });
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
         var service = new AgentAvailabilityRecoveryService(
             agentManager.Object,
             interactionManager.Object,
             presenceManager.Object,
             Options.Create(new AgentAvailabilityOptions()),
-            clock.Object,
+            clock,
             new Mock<ILogger<AgentAvailabilityRecoveryService>>().Object);
 
         // Act
@@ -224,15 +225,15 @@ public sealed class AgentAvailabilityRecoveryServiceTests
                 .ReturnsAsync(interaction is null ? [] : [interaction]);
         }
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return new AgentAvailabilityRecoveryService(
             agentManager.Object,
             interactionManager.Object,
             presenceManager.Object,
             Options.Create(new AgentAvailabilityOptions()),
-            clock.Object,
+            clock,
             new Mock<ILogger<AgentAvailabilityRecoveryService>>().Object);
     }
 

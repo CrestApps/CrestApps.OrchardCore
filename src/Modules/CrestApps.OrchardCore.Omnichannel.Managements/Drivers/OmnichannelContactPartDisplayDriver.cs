@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers;
 
 internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDriver<OmnichannelContactPart>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
 
     internal readonly IStringLocalizer S;
@@ -20,15 +20,15 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
     /// Initializes a new instance of the <see cref="OmnichannelContactPartDisplayDriver"/> class.
     /// </summary>
     /// <param name="timeZoneSelectListProvider">The time zone select list provider.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelContactPartDisplayDriver(
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<OmnichannelContactPartDisplayDriver> stringLocalizer)
     {
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
@@ -72,7 +72,7 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.TimeZoneId), S["The contact time zone is required."]);
         }
 
-        var utcNow = _clock.UtcNow;
+        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
         if (settings.UseDoNotCall)
         {

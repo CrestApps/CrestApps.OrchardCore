@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -322,7 +323,7 @@ public sealed class AsteriskRecordingIngestServiceTests
             ariClient,
             mediaStore,
             erasureGuard is null ? [] : [erasureGuard],
-            new StubClock(nowUtc),
+            new FakeTimeProvider(nowUtc),
             NullLogger<AsteriskRecordingIngestService>.Instance);
     }
 

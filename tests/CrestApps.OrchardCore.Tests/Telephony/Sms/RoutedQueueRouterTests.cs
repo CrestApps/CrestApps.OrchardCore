@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -86,10 +87,10 @@ public class RoutedQueueRouterTests
             Strategy.Setup(s => s.SelectAgentAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(selectedAgentId);
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(c => c.UtcNow).Returns(DateTime.UtcNow);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(DateTime.UtcNow);
 
-            Router = new RoutedQueueRouter(Strategy.Object, clock.Object);
+            Router = new RoutedQueueRouter(Strategy.Object, clock);
         }
 
         public static SmsRoutingContext Context(

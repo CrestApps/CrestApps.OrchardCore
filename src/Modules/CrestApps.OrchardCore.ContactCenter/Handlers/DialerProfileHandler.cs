@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 
 internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfile>
 {
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IShellFeaturesManager _shellFeaturesManager;
     private readonly IPhoneNumberService _phoneNumberService;
 
@@ -23,17 +23,17 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     /// <summary>
     /// Initializes a new instance of the <see cref="DialerProfileHandler"/> class.
     /// </summary>
-    /// <param name="clock">The clock used to stamp audit times.</param>
+    /// <param name="timeProvider">The time provider used to stamp audit times.</param>
     /// <param name="shellFeaturesManager">The shell features manager used to detect the Automated Dialer feature.</param>
     /// <param name="phoneNumberService">The phone number service used to validate the outbound caller id.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public DialerProfileHandler(
-        IClock clock,
+        TimeProvider timeProvider,
         IShellFeaturesManager shellFeaturesManager,
         IPhoneNumberService phoneNumberService,
         IStringLocalizer<DialerProfileHandler> stringLocalizer)
     {
-        _clock = clock;
+        _timeProvider = timeProvider;
         _shellFeaturesManager = shellFeaturesManager;
         _phoneNumberService = phoneNumberService;
         S = stringLocalizer;
@@ -50,7 +50,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     /// <inheritdoc/>
     public override Task InitializedAsync(InitializedContext<DialerProfile> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }
@@ -60,7 +60,7 @@ internal sealed class DialerProfileHandler : CatalogEntryHandlerBase<DialerProfi
     {
         ContactCenterDeploymentSerializer.Populate(context.Model, context.Data);
 
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return Task.CompletedTask;
     }

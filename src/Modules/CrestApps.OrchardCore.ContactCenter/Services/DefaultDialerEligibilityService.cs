@@ -26,7 +26,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     private readonly IBusinessHoursService _businessHoursService;
     private readonly IDialerAbandonmentPolicyService _abandonmentPolicyService;
     private readonly IEnumerable<INationalDoNotCallRegistry> _doNotCallRegistries;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -39,7 +39,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     /// <param name="businessHoursService">The business-hours service used to evaluate calling calendars.</param>
     /// <param name="abandonmentPolicyService">The policy service used to evaluate the rolling abandonment-rate cap.</param>
     /// <param name="doNotCallRegistries">The registered national do-not-call registries, if any.</param>
-    /// <param name="clock">The clock used to evaluate cool-down and calling-window timing.</param>
+    /// <param name="timeProvider">The time provider used to evaluate cool-down and calling-window timing.</param>
     /// <param name="logger">The logger used to record why an attempt could not be screened.</param>
     public DefaultDialerEligibilityService(
         IInteractionManager interactionManager,
@@ -49,7 +49,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         IBusinessHoursService businessHoursService,
         IDialerAbandonmentPolicyService abandonmentPolicyService,
         IEnumerable<INationalDoNotCallRegistry> doNotCallRegistries,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<DefaultDialerEligibilityService> logger)
     {
         _interactionManager = interactionManager;
@@ -59,7 +59,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         _businessHoursService = businessHoursService;
         _abandonmentPolicyService = abandonmentPolicyService;
         _doNotCallRegistries = doNotCallRegistries;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -131,7 +131,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
             var calendarId = ResolveCallingCalendarId(profile, regionCode);
             var isOpen = await _businessHoursService.EvaluateAsync(
                 calendarId,
-                _clock.UtcNow,
+                _timeProvider.GetUtcNow().UtcDateTime,
                 contactPart?.TimeZoneId,
                 cancellationToken);
 
@@ -208,7 +208,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
 
         var nextEligibleUtc = lastInteraction.EndedUtc.Value.AddMinutes(profile.RetryDelayMinutes);
 
-        if (nextEligibleUtc > _clock.UtcNow)
+        if (nextEligibleUtc > _timeProvider.GetUtcNow().UtcDateTime)
         {
             return DialerEligibilityResult.Suppressed(
                 DialerSuppressionReason.RetryCoolDown,

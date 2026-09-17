@@ -21,20 +21,20 @@ public sealed class VoiceOmnichannelProcessor : IOmnichannelProcessor
     private readonly ITelnyxVoiceAgentClient _voiceClient;
     private readonly ICatalog<OmnichannelChannelEndpoint> _channelEndpointCatalog;
     private readonly IAIChatSessionManager _chatSessionManager;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     public VoiceOmnichannelProcessor(
         ITelnyxVoiceAgentClient voiceClient,
         ICatalog<OmnichannelChannelEndpoint> channelEndpointCatalog,
         IAIChatSessionManager chatSessionManager,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<VoiceOmnichannelProcessor> logger)
     {
         _voiceClient = voiceClient;
         _channelEndpointCatalog = channelEndpointCatalog;
         _chatSessionManager = chatSessionManager;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -69,8 +69,8 @@ public sealed class VoiceOmnichannelProcessor : IOmnichannelProcessor
             {
                 SessionId = UniqueId.GenerateId(),
                 ProfileId = activity.AIProfileId,
-                CreatedUtc = _clock.UtcNow,
-                LastActivityUtc = _clock.UtcNow,
+                CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
+                LastActivityUtc = _timeProvider.GetUtcNow().UtcDateTime,
                 Title = "Automated AI Voice Call",
             };
 

@@ -51,14 +51,14 @@ public sealed class PhoneNumberRevalidationBackgroundTask : IBackgroundTask
             }
 
             var session = scope.ServiceProvider.GetRequiredService<ISession>();
-            var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+            var timeProvider = scope.ServiceProvider.GetRequiredService<TimeProvider>();
             var siteService = scope.ServiceProvider.GetRequiredService<ISiteService>();
             var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
             var maxAttempts = settings.MaxVerificationAttempts > 0
                 ? settings.MaxVerificationAttempts
                 : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
             var maxItemsPerRun = GetMaxItemsPerRun(settings.RequestDelayMilliseconds);
-            var now = clock.UtcNow;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             var dueIndexes = await session.QueryIndex<PhoneNumberVerificationPartIndex>(index =>
                     (index.PhoneNumber != null || index.NormalizedPhoneNumber != null)

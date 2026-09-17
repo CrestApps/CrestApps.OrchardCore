@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 
@@ -302,15 +303,15 @@ public sealed class QueueTreatmentServiceTests
                     .Select(i => new AgentAvailability { Agent = new AgentProfile { ItemId = $"agent-{i}" } })
                     .ToArray());
 
-            var clock = new Mock<IClock>();
-            clock.SetupGet(x => x.UtcNow).Returns(_now);
+            var clock = new FakeTimeProvider();
+            clock.SetUtcNow(_now);
 
             Service = new QueueTreatmentService(
                 _queueItemManager.Object,
                 interactionManager.Object,
                 Provider,
                 availability.Object,
-                clock.Object,
+                clock,
                 NullLogger<QueueTreatmentService>.Instance);
         }
 

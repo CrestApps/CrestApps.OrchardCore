@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
@@ -16,9 +15,11 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
+using System.Runtime.InteropServices;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
@@ -605,8 +606,8 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Setup(manager => manager.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ContactCenterWorkState { ItemId = "work-state-new" });
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         scopeExecutor = new TestContactCenterScopeExecutor(new ServiceCollection().BuildServiceProvider());
 
@@ -620,7 +621,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
             workStateManager.Object,
             [projection],
             scopeExecutor,
-            clock.Object);
+            clock);
     }
 
     private static ServiceProvider CreateRoutingServiceProvider(
@@ -671,8 +672,8 @@ public sealed class ContactCenterWorkStateAuthorityTests
             .Setup(service => service.TryAcquireLockAsync(It.IsAny<string>(), It.IsAny<TimeSpan>(), It.IsAny<TimeSpan?>()))
             .ReturnsAsync((null, true));
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(service => service.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         var services = new ServiceCollection();
         services.AddSingleton(reservationManager);
@@ -698,7 +699,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);
         services.AddSingleton(distributedLock.Object);
         services.AddSingleton(session);
-        services.AddSingleton(clock.Object);
+        services.AddSingleton<TimeProvider>(clock);
         services.AddLogging();
         services.AddSingleton<IContactCenterWorkStateStore>(new ContactCenterWorkStateStore(session));
         services.AddSingleton<IContactCenterWorkStateManager>(provider => new ContactCenterWorkStateManager(

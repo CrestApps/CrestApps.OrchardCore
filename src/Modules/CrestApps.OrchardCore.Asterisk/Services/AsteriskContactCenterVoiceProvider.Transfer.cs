@@ -104,7 +104,7 @@ internal sealed partial class AsteriskContactCenterVoiceProvider
             BridgeId = bridgeId,
             PeerChannelId = callerChannelId,
             State = AsteriskChannelBindingState.Joining,
-            CreatedUtc = _clock.UtcNow,
+            CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,
         });
 
         if (!claimedNewLeg)

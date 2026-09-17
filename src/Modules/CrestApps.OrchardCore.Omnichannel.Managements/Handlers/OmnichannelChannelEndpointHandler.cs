@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBase<OmnichannelChannelEndpoint>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly IPhoneNumberService _phoneNumberService;
     private readonly IEmailAddressValidator _emailAddressValidator;
 
@@ -27,19 +27,19 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
     /// Initializes a new instance of the <see cref="OmnichannelChannelEndpointHandler"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="phoneNumberService">The phone number service for E.164 formatting.</param>
     /// <param name="emailAddressValidator">The email address validator.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelChannelEndpointHandler(
         IHttpContextAccessor httpContextAccessor,
-        IClock clock,
+        TimeProvider timeProvider,
         IPhoneNumberService phoneNumberService,
         IEmailAddressValidator emailAddressValidator,
         IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _phoneNumberService = phoneNumberService;
         _emailAddressValidator = emailAddressValidator;
         S = stringLocalizer;
@@ -54,7 +54,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
     public override async Task UpdatingAsync(UpdatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         await PopulateAsync(context.Model, context.Data);
 
@@ -136,7 +136,7 @@ internal sealed class OmnichannelChannelEndpointHandler : CatalogEntryHandlerBas
 
     public override Task InitializedAsync(InitializedContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         var user = _httpContextAccessor.HttpContext?.User;
 

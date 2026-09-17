@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<OmnichannelCampaign>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
 
     internal readonly IStringLocalizer S;
 
@@ -22,15 +22,15 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
     /// Initializes a new instance of the <see cref="OmnichannelCampaignHandler"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelCampaignHandler(
         IHttpContextAccessor httpContextAccessor,
-        IClock clock,
+        TimeProvider timeProvider,
         IStringLocalizer<OmnichannelCampaignHandler> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
-        _clock = clock;
+        _timeProvider = timeProvider;
         S = stringLocalizer;
     }
 
@@ -39,7 +39,7 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
 
     public override Task UpdatingAsync(UpdatingContext<OmnichannelCampaign> context, CancellationToken cancellationToken = default)
     {
-        context.Model.ModifiedUtc = _clock.UtcNow;
+        context.Model.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         return PopulateAsync(context.Model, context.Data);
     }
@@ -56,7 +56,7 @@ internal sealed class OmnichannelCampaignHandler : CatalogEntryHandlerBase<Omnic
 
     public override Task InitializedAsync(InitializedContext<OmnichannelCampaign> context, CancellationToken cancellationToken = default)
     {
-        context.Model.CreatedUtc = _clock.UtcNow;
+        context.Model.CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
         var user = _httpContextAccessor.HttpContext?.User;
 

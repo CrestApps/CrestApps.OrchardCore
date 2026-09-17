@@ -1,11 +1,12 @@
-using System.Text;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
+using System.Text;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -41,7 +42,7 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
             [agentManager.Object],
             publisher.Object,
             Mock.Of<IContactCenterScopeExecutor>(),
-            clock.Object,
+            clock,
             NullLogger<TelnyxRecordingIngestEnqueuer>.Instance);
 
         InteractionEvent publishedEvent = null;
@@ -87,7 +88,7 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
             [agentManager.Object],
             publisher.Object,
             Mock.Of<IContactCenterScopeExecutor>(),
-            clock.Object,
+            clock,
             NullLogger<TelnyxRecordingIngestEnqueuer>.Instance);
 
         var handled = await handler.HandleAsync(callEvent, TestContext.Current.CancellationToken);
@@ -132,7 +133,7 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
             [agentManager.Object],
             publisher.Object,
             Mock.Of<IContactCenterScopeExecutor>(),
-            clock.Object,
+            clock,
             NullLogger<TelnyxRecordingIngestEnqueuer>.Instance);
 
         await Assert.ThrowsAsync<ConcurrencyException>(
@@ -144,7 +145,7 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
         Mock<IInteractionManager>,
         Mock<IAgentProfileManager>,
         Mock<IContactCenterEventPublisher>,
-        Mock<IClock>) CreateMocks(Interaction interaction)
+        FakeTimeProvider) CreateMocks(Interaction interaction)
     {
         var jobStore = new Mock<ITelnyxRecordingIngestJobStore>();
         jobStore
@@ -177,8 +178,8 @@ public sealed class TelnyxRecordingIngestEnqueuerTests
             .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        var clock = new Mock<IClock>();
-        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(_now);
 
         return (jobStore, interactionManager, agentManager, publisher, clock);
     }

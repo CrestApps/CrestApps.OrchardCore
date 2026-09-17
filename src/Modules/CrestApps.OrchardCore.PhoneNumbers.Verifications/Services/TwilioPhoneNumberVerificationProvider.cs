@@ -24,7 +24,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
     private readonly ISiteService _siteService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IPhoneNumberService _phoneNumberService;
-    private readonly IClock _clock;
+    private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -34,21 +34,21 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
     /// <param name="siteService">The site service used to read provider settings.</param>
     /// <param name="dataProtectionProvider">The data protection provider used to decrypt secrets.</param>
     /// <param name="phoneNumberService">The phone number service used to resolve time zones.</param>
-    /// <param name="clock">The clock.</param>
+    /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
     public TwilioPhoneNumberVerificationProvider(
         IHttpClientFactory httpClientFactory,
         ISiteService siteService,
         IDataProtectionProvider dataProtectionProvider,
         IPhoneNumberService phoneNumberService,
-        IClock clock,
+        TimeProvider timeProvider,
         ILogger<TwilioPhoneNumberVerificationProvider> logger)
     {
         _httpClientFactory = httpClientFactory;
         _siteService = siteService;
         _dataProtectionProvider = dataProtectionProvider;
         _phoneNumberService = phoneNumberService;
-        _clock = clock;
+        _timeProvider = timeProvider;
         _logger = logger;
     }
 
@@ -124,7 +124,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
             return CreateFailedResult(phoneNumber, payload, "The Twilio Lookup response was empty.");
         }
 
-        var result = MapResponse(phoneNumber, settings.CountryCode, parsed, payload, _clock.UtcNow, _phoneNumberService);
+        var result = MapResponse(phoneNumber, settings.CountryCode, parsed, payload, _timeProvider.GetUtcNow().UtcDateTime, _phoneNumberService);
 
         PhoneNumberVerificationProviderLogMessages.Completed(_logger, "Twilio Lookup", result);
 
@@ -193,7 +193,7 @@ public sealed class TwilioPhoneNumberVerificationProvider : IPhoneNumberVerifica
         {
             PhoneNumber = phoneNumber,
             VerificationProvider = PhoneNumberVerificationsConstants.Providers.Twilio,
-            VerificationDateUtc = _clock.UtcNow,
+            VerificationDateUtc = _timeProvider.GetUtcNow().UtcDateTime,
             RawProviderResponse = payload,
             Status = PhoneNumberVerificationStatus.Failed,
             LineType = PhoneNumberLineType.Unknown,

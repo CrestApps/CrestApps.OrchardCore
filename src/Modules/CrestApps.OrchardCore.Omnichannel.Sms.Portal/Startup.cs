@@ -1,15 +1,16 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.BackgroundTasks;
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Drivers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Handlers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Hubs;
@@ -22,14 +23,14 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
-using OrchardCore.DisplayManagement;
+using OrchardCore.Data;
 using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -57,6 +58,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreTimeProvider();
+
         // Portal tunables (thread lock waits, inbox page size). The configuration section is deliberately still
         // "CrestApps:Sms:Workspace" so an existing appsettings entry keeps binding; renaming it would fail silently.
         services.Configure<SmsPortalOptions>(_shellConfiguration.GetSection("CrestApps:Sms:Workspace"));

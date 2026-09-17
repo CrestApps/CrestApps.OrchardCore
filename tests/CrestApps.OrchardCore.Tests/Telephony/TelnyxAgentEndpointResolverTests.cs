@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
@@ -130,7 +131,7 @@ public sealed class TelnyxAgentEndpointResolverTests
         return new TelnyxAgentEndpointResolver(
             store.Object,
             new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { SipDomain = "sip.example.com" }),
-            new StubClock(_now),
+            new FakeTimeProvider(_now),
             NullLogger<TelnyxAgentEndpointResolver>.Instance);
     }
 }
