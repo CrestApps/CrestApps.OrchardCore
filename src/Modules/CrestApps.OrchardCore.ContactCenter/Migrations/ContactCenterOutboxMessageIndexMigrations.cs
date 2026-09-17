@@ -1,9 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using OrchardCore.Data.Migration;
-using OrchardCore.Modules;
 using YesSql;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -12,8 +10,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
 {
-    private readonly IStore _store;
-    private readonly TimeProvider _timeProvider;
+    private readonly ContactCenterOutboxMessageIndexMigrationsSchemaMigration _step;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterOutboxMessageIndexMigrations"/> class.
@@ -23,69 +20,21 @@ internal sealed class ContactCenterOutboxMessageIndexMigrations : DataMigration
         IStore store,
         TimeProvider timeProvider)
     {
-        _store = store;
-        _timeProvider = timeProvider;
+        _step = new ContactCenterOutboxMessageIndexMigrationsSchemaMigration(store, timeProvider);
     }
 
     /// <summary>
     /// Creates the outbox message index table and its supporting index.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("EventId", column => column.WithLength(26))
-            .Column<OutboxMessageStatus>("Status")
-            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
-            .Column<DateTime>("CreatedUtc"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
-            .CreateIndex("IDX_ContactCenterOutboxMessageIndex_Due",
-                "DocumentId",
-                "Status",
-                "NextAttemptUtc"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
-            .CreateIndex("IDX_ContactCenterOutboxMessageIndex_Retention",
-                "Status",
-                "CreatedUtc",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        return 2;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 
     /// <summary>
     /// Adds the creation time settled messages are purged by. The retry time cannot serve: a settled message
     /// keeps whatever retry time it last held, so it is not an age.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom1Async()
-    {
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
-            .AddColumn<DateTime>("CreatedUtc"),
-            collection: ContactCenterStorage.CollectionName);
-
-        await ContactCenterMigrationSql.AddRetentionColumnAsync(
-            SchemaBuilder,
-            _store,
-            typeof(ContactCenterOutboxMessageIndex),
-            "CreatedUtc",
-            _timeProvider.GetUtcNow().UtcDateTime);
-
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterOutboxMessageIndex>(table => table
-            .CreateIndex("IDX_ContactCenterOutboxMessageIndex_Retention",
-                "Status",
-                "CreatedUtc",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
-
-        return 2;
-    }
+    public Task<int> UpdateFrom1Async()
+        => _step.UpdateFromAsync(1, SchemaBuilder);
 }

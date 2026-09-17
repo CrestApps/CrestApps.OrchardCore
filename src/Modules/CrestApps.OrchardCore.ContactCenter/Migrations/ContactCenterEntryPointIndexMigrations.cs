@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -9,24 +9,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class ContactCenterEntryPointIndexMigrations : DataMigration
 {
+    private readonly ContactCenterEntryPointIndexMigrationsSchemaMigration _step;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactCenterEntryPointIndexMigrations"/> class.
+    /// </summary>
+    public ContactCenterEntryPointIndexMigrations()
+    {
+        _step = new ContactCenterEntryPointIndexMigrationsSchemaMigration();
+    }
+
     /// <summary>
     /// Creates the entry point index table.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<ContactCenterEntryPointIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.WithLength(255))
-            .Column<bool>("Enabled"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterEntryPointIndex>(table => table
-            .CreateIndex("IDX_ContactCenterEntryPointIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 }

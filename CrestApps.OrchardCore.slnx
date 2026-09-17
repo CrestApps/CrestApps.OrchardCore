@@ -53,6 +53,7 @@
   </Folder>
   <Folder Name="/src/Core/Transitions/">
     <Project Path="src/Core/Transitions/CrestApps.Core.Hosting/CrestApps.Core.Hosting.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/CrestApps.Core.Data.YesSql.ContactCenter.csproj" />
   </Folder>
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />

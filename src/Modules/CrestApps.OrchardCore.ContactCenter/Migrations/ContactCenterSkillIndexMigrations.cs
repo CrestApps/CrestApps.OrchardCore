@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -9,24 +9,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class ContactCenterSkillIndexMigrations : DataMigration
 {
+    private readonly ContactCenterSkillIndexMigrationsSchemaMigration _step;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactCenterSkillIndexMigrations"/> class.
+    /// </summary>
+    public ContactCenterSkillIndexMigrations()
+    {
+        _step = new ContactCenterSkillIndexMigrationsSchemaMigration();
+    }
+
     /// <summary>
     /// Creates the skill index table.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<ContactCenterSkillIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.WithLength(255))
-            .Column<bool>("Enabled"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterSkillIndex>(table => table
-            .CreateIndex("IDX_ContactCenterSkillIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 }

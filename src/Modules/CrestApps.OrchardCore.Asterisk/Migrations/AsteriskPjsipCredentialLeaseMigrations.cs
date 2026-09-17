@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Asterisk.Indexes;
+using CrestApps.OrchardCore.Asterisk.Migrations.Steps;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Asterisk.Migrations;
 
@@ -9,51 +9,19 @@ namespace CrestApps.OrchardCore.Asterisk.Migrations;
 /// SIP credential ownership, expiry, and revocation per tenant. This is a schema migration for a new
 /// durable store and is expected; it does not alter any existing data.
 /// </summary>
+/// <remarks>
+/// The schema itself lives in <see cref="AsteriskPjsipCredentialLeaseMigrationsSchemaMigration"/>; this class
+/// only hands Orchard's schema builder to it. The type name is kept because Orchard records the applied version
+/// under this class's full type name, so renaming it would run the create step against existing tables.
+/// </remarks>
 public sealed class AsteriskPjsipCredentialLeaseMigrations : DataMigration
 {
+    private readonly AsteriskPjsipCredentialLeaseMigrationsSchemaMigration _step = new();
+
     /// <summary>
     /// Creates the credential lease index table and its supporting indexes.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<AsteriskPjsipCredentialLeaseIndex>(table => table
-            .Column<string>("AuthorizationUser", column => column.WithLength(128))
-            .Column<string>("TenantName", column => column.WithLength(255))
-            .Column<string>("UserId", column => column.WithLength(26))
-            .Column<string>("SessionId", column => column.WithLength(128))
-            .Column<DateTime>("ExpiresUtc")
-            .Column<bool>("Revoked")
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AsteriskPjsipCredentialLeaseIndex>(table => table
-            .CreateIndex("IDX_AsteriskPjsipCredentialLeaseIndex_AuthorizationUser",
-                "AuthorizationUser",
-                "DocumentId")
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AsteriskPjsipCredentialLeaseIndex>(table => table
-            .CreateIndex("IDX_AsteriskPjsipCredentialLeaseIndex_User",
-                "UserId",
-                "Revoked",
-                "ExpiresUtc",
-                "DocumentId")
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AsteriskPjsipCredentialLeaseIndex>(table => table
-            .CreateIndex("IDX_AsteriskPjsipCredentialLeaseIndex_Cleanup",
-                "Revoked",
-                "ExpiresUtc",
-                "DocumentId")
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AsteriskPjsipCredentialLeaseIndex>(table => table
-            .CreateIndex("IDX_AsteriskPjsipCredentialLeaseIndex_Session",
-                "SessionId",
-                "Revoked",
-                "DocumentId")
-        );
-
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 }

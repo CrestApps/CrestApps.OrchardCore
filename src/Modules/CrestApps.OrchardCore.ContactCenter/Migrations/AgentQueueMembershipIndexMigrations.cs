@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -10,30 +9,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class AgentQueueMembershipIndexMigrations : DataMigration
 {
+    private readonly AgentQueueMembershipIndexMigrationsSchemaMigration _step;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentQueueMembershipIndexMigrations"/> class.
+    /// </summary>
+    public AgentQueueMembershipIndexMigrations()
+    {
+        _step = new AgentQueueMembershipIndexMigrationsSchemaMigration();
+    }
+
     /// <summary>
     /// Creates the agent queue membership index table.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<AgentQueueMembershipIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("QueueId", column => column.WithLength(26))
-            .Column<AgentPresenceStatus>("PresenceStatus")
-            .Column<int>("MaxConcurrentInteractions"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AgentQueueMembershipIndex>(table => table
-            .CreateIndex(
-                "IDX_AgentQueueMembershipIndex_Queue",
-                "DocumentId",
-                "QueueId",
-                "PresenceStatus",
-                "ItemId"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 }

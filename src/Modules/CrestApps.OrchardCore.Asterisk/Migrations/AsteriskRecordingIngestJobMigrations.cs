@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Asterisk.Indexes;
+using CrestApps.OrchardCore.Asterisk.Migrations.Steps;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Asterisk.Migrations;
 
@@ -9,33 +9,19 @@ namespace CrestApps.OrchardCore.Asterisk.Migrations;
 /// recording ingestion progress per tenant. This is a schema migration for a new durable store and is
 /// expected; it does not alter any existing data.
 /// </summary>
+/// <remarks>
+/// The schema itself lives in <see cref="AsteriskRecordingIngestJobMigrationsSchemaMigration"/>; this class
+/// only hands Orchard's schema builder to it. The type name is kept because Orchard records the applied version
+/// under this class's full type name, so renaming it would run the create step against existing tables.
+/// </remarks>
 public sealed class AsteriskRecordingIngestJobMigrations : DataMigration
 {
+    private readonly AsteriskRecordingIngestJobMigrationsSchemaMigration _step = new();
+
     /// <summary>
     /// Creates the recording ingest job index table and its supporting indexes.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<AsteriskRecordingIngestJobIndex>(table => table
-            .Column<string>("RecordingName", column => column.WithLength(128))
-            .Column<int>("Status")
-            .Column<DateTime>("NextAttemptUtc")
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AsteriskRecordingIngestJobIndex>(table => table
-            .CreateIndex("IDX_AsteriskRecordingIngestJobIndex_RecordingName",
-                "RecordingName",
-                "DocumentId")
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<AsteriskRecordingIngestJobIndex>(table => table
-            .CreateIndex("IDX_AsteriskRecordingIngestJobIndex_Due",
-                "Status",
-                "NextAttemptUtc",
-                "DocumentId")
-        );
-
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 }

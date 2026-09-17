@@ -1,4 +1,5 @@
 using System.Data.Common;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using Microsoft.Data.Sqlite;
 using YesSql;

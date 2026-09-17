@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class ContactCenterProjectionCheckpointIndexMigrations : DataMigration
 {
-    private readonly IStore _store;
+    private readonly ContactCenterProjectionCheckpointIndexMigrationsSchemaMigration _step;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterProjectionCheckpointIndexMigrations"/> class.
@@ -19,35 +19,13 @@ internal sealed class ContactCenterProjectionCheckpointIndexMigrations : DataMig
     /// <param name="store">The YesSql store.</param>
     public ContactCenterProjectionCheckpointIndexMigrations(IStore store)
     {
-        _store = store;
+        _step = new ContactCenterProjectionCheckpointIndexMigrationsSchemaMigration(store);
     }
 
     /// <summary>
     /// Creates the projection-checkpoint index table and its per-handler uniqueness constraint.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<ContactCenterProjectionCheckpointIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("HandlerId", column => column.NotNull().WithLength(128))
-            .Column<int>("Version"),
-            collection: ContactCenterStorage.CollectionName);
-
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterProjectionCheckpointIndex>(table => table
-            .CreateIndex(
-                "IDX_ContactCenterProjectionCheckpointIndex_Handler",
-                "HandlerId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
-
-        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
-            SchemaBuilder,
-            _store,
-            typeof(ContactCenterProjectionCheckpointIndex),
-            "UQ_ContactCenterProjectionCheckpointIndex_Handler",
-            "HandlerId");
-
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 }

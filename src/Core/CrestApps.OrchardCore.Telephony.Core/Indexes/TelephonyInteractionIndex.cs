@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.Telephony.Models;
 using YesSql.Indexes;
 
+// The namespace intentionally stays CrestApps.OrchardCore.Telephony.Indexes even though the type now lives in
+// the Core project: the index moved here so the schema migration that creates its table can live beside it,
+// and keeping the namespace means no consumer outside this project has to change.
 namespace CrestApps.OrchardCore.Telephony.Indexes;
 
 /// <summary>
@@ -62,29 +65,4 @@ public sealed class TelephonyInteractionIndex : MapIndex
     /// Gets or sets the time, in UTC, when the voicemail was read. Null while the voicemail is unread.
     /// </summary>
     public DateTime? VoicemailReadUtc { get; set; }
-}
-
-/// <summary>
-/// Maps <see cref="TelephonyInteraction"/> documents to the <see cref="TelephonyInteractionIndex"/>.
-/// </summary>
-public sealed class TelephonyInteractionIndexProvider : IndexProvider<TelephonyInteraction>
-{
-    public override void Describe(DescribeContext<TelephonyInteraction> context)
-    {
-        context.For<TelephonyInteractionIndex>()
-            .Map(interaction => new TelephonyInteractionIndex
-            {
-                InteractionId = interaction.InteractionId,
-                CallId = interaction.CallId,
-                ProviderName = interaction.ProviderName,
-                UserId = interaction.UserId,
-                UserName = interaction.UserName,
-                Direction = interaction.Direction,
-                IsExtension = interaction.IsExtension,
-                Outcome = interaction.Outcome,
-                StartedUtc = interaction.StartedUtc,
-                IsVoicemail = interaction.IsVoicemail,
-                VoicemailReadUtc = interaction.VoicemailReadUtc,
-            });
-    }
 }

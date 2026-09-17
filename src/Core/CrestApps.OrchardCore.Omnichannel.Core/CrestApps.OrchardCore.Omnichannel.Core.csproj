@@ -1,6 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <!-- The schema migration steps are internal, and the module migrations that hand them Orchard's schema
+         builder live in these assemblies. -->
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Omnichannel" />
+    <InternalsVisibleTo Include="CrestApps.OrchardCore.Omnichannel.Managements" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
@@ -14,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../Transitions/CrestApps.Core.Data.YesSql.ContactCenter/CrestApps.Core.Data.YesSql.ContactCenter.csproj" />
     <ProjectReference Include="../../Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions/CrestApps.Core.Hosting.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />

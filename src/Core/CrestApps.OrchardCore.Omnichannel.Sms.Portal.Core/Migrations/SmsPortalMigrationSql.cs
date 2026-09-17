@@ -1,8 +1,7 @@
-using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Migrations;
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Migrations;
 
 /// <summary>
 /// Dialect-portable SQL helpers for the SMS Portal index migrations. YesSql's schema builder can create an

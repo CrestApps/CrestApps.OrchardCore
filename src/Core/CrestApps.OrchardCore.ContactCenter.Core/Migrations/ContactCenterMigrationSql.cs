@@ -2,7 +2,7 @@ using YesSql;
 using YesSql.Sql;
 using YesSql.Utils;
 
-namespace CrestApps.OrchardCore.ContactCenter.Migrations;
+namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 
 /// <summary>
 /// Provides shared, dialect-portable SQL helpers used by Contact Center index migrations to preflight

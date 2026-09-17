@@ -203,35 +203,10 @@ namespace CrestApps.OrchardCore.Telephony.Indexes
         public TelephonyExtensionIndexProvider() { }
         public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension> context) { }
     }
-    public sealed class TelephonyInteractionIndex : YesSql.Indexes.MapIndex
-    {
-        public TelephonyInteractionIndex() { }
-        public string CallId { get; set; }
-        public CrestApps.OrchardCore.Telephony.Models.CallDirection Direction { get; set; }
-        public string InteractionId { get; set; }
-        public bool IsExtension { get; set; }
-        public bool IsVoicemail { get; set; }
-        public CrestApps.OrchardCore.Telephony.Models.CallOutcome Outcome { get; set; }
-        public string ProviderName { get; set; }
-        public System.DateTime StartedUtc { get; set; }
-        public string UserId { get; set; }
-        public string UserName { get; set; }
-        public System.DateTime? VoicemailReadUtc { get; set; }
-    }
     public sealed class TelephonyInteractionIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>
     {
         public TelephonyInteractionIndexProvider() { }
         public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction> context) { }
-    }
-    public sealed class TelephonyUserConnectionIndex : YesSql.Indexes.MapIndex
-    {
-        public TelephonyUserConnectionIndex() { }
-        public bool IsEnabled { get; set; }
-        public string NormalizedRemotePhoneNumber { get; set; }
-        public string NormalizedRemoteUserEmail { get; set; }
-        public string ProviderName { get; set; }
-        public string RemoteUserId { get; set; }
-        public string UserId { get; set; }
     }
     public sealed class TelephonyUserConnectionIndexProvider : YesSql.Indexes.IndexProvider<OrchardCore.Users.Models.User>
     {

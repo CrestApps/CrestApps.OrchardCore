@@ -1,8 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using OrchardCore.Data.Migration;
-using OrchardCore.Modules;
 using YesSql;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -12,8 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
 {
-    private readonly IStore _store;
-    private readonly TimeProvider _timeProvider;
+    private readonly ContactCenterProcessedEventIndexMigrationsSchemaMigration _step;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterProcessedEventIndexMigrations"/> class.
@@ -23,69 +21,21 @@ internal sealed class ContactCenterProcessedEventIndexMigrations : DataMigration
         IStore store,
         TimeProvider timeProvider)
     {
-        _store = store;
-        _timeProvider = timeProvider;
+        _step = new ContactCenterProcessedEventIndexMigrationsSchemaMigration(store, timeProvider);
     }
 
     /// <summary>
     /// Creates the processed-event index table and its per-handler event uniqueness constraint.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<ContactCenterProcessedEventIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("HandlerId", column => column.NotNull().WithLength(128))
-            .Column<string>("EventId", column => column.NotNull().WithLength(26)),
-            collection: ContactCenterStorage.CollectionName);
-
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterProcessedEventIndex>(table => table
-            .CreateIndex(
-                "IDX_ContactCenterProcessedEventIndex_Handler",
-                "HandlerId",
-                "EventId",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
-
-        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
-            SchemaBuilder,
-            _store,
-            typeof(ContactCenterProcessedEventIndex),
-            "UQ_ContactCenterProcessedEventIndex_Handler",
-            "HandlerId",
-            "EventId");
-
-        // The retention column is left to the update step. Declaring it here as well would put this table on
-        // the synthesised upgrade path, where the unique constraint this create step makes with raw SQL cannot
-        // be reproduced, and a fresh installation would then stop enforcing what an upgraded one enforces.
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 
     /// <summary>
     /// Adds the processed time these markers are purged by, and gives rows that predate the column one full
     /// retention window rather than the default instant, which every cutoff is newer than.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom1Async()
-    {
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterProcessedEventIndex>(table => table
-            .AddColumn<DateTime>("ProcessedUtc"),
-            collection: ContactCenterStorage.CollectionName);
-
-        await ContactCenterMigrationSql.AddRetentionColumnAsync(
-            SchemaBuilder,
-            _store,
-            typeof(ContactCenterProcessedEventIndex),
-            "ProcessedUtc",
-            _timeProvider.GetUtcNow().UtcDateTime);
-
-        await SchemaBuilder.AlterIndexTableAsync<ContactCenterProcessedEventIndex>(table => table
-            .CreateIndex(
-                "IDX_ContactCenterProcessedEventIndex_Retention",
-                "ProcessedUtc",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
-
-        return 2;
-    }
+    public Task<int> UpdateFrom1Async()
+        => _step.UpdateFromAsync(1, SchemaBuilder);
 }

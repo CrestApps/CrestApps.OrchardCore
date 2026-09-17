@@ -1,0 +1,145 @@
+using System.Globalization;
+using CrestApps.Core.Data.YesSql.Migrations;
+using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using OrchardCore.Modules;
+using YesSql;
+using YesSql.Sql;
+
+namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+
+/// <summary>
+/// Creates the schema for the <see cref="ProviderCommandIndex"/>, including the unique idempotency key that
+/// guarantees one provider command per key per tenant.
+/// </summary>
+internal sealed class ProviderCommandIndexMigrationsSchemaMigration : ISchemaMigration
+{
+    private static readonly string _terminalStatusValues = string.Join(
+        ", ",
+        ((int)ProviderCommandStatus.Confirmed).ToString(CultureInfo.InvariantCulture),
+        ((int)ProviderCommandStatus.Compensated).ToString(CultureInfo.InvariantCulture),
+        ((int)ProviderCommandStatus.Failed).ToString(CultureInfo.InvariantCulture));
+
+    private readonly IStore _store;
+
+    private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProviderCommandIndexMigrationsSchemaMigration"/> class.
+    /// </summary>
+    /// <param name="store">The document store, used to resolve the physical table name.</param>
+    /// <param name="timeProvider">The time provider used to date the retention backfill.</param>
+    public ProviderCommandIndexMigrationsSchemaMigration(
+        IStore store,
+        TimeProvider timeProvider)
+    {
+        _store = store;
+        _timeProvider = timeProvider;
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>
+    /// The stored name is the Orchard migration class's own name, so a database migrated under either
+    /// host agrees on which version has already been applied.
+    /// </remarks>
+    public string Name => "ProviderCommandIndexMigrations";
+
+    /// <summary>
+    /// Creates the provider command index table and its idempotency, due, and reclaim indexes.
+    /// </summary>
+    /// <param name="builder">The schema builder.</param>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> CreateAsync(ISchemaBuilder builder)
+    {
+        await builder.CreateMapIndexTableAsync<ProviderCommandIndex>(table => table
+            .Column<string>("ItemId", column => column.WithLength(26))
+            .Column<string>("CommandId", column => column.NotNull().Unique().WithLength(26))
+            .Column<string>("ProviderName", column => column.WithLength(ContactCenterStorage.ProviderNameLength))
+            .Column<ProviderCommandStatus>("Status")
+            .Column<long>("FenceToken", column => column.NotNull().WithDefault(0L))
+            .Column<string>("InteractionId", column => column.WithLength(26))
+            .Column<DateTime>("NextAttemptUtc", column => column.NotNull())
+            .Column<DateTime>("LeaseExpiresUtc", column => column.NotNull()),
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        await builder.AlterIndexTableAsync<ProviderCommandIndex>(table =>
+        {
+            table.CreateIndex(
+                "IDX_ProviderCommandIndex_Due",
+                "Status",
+                "NextAttemptUtc",
+                "DocumentId");
+            table.CreateIndex(
+                "IDX_ProviderCommandIndex_Reclaim",
+                "Status",
+                "LeaseExpiresUtc",
+                "DocumentId");
+        },
+            collection: ContactCenterStorage.CollectionName
+        );
+
+        // The retention column is left to the update step so a fresh installation reaches the current schema
+        // through the same step an existing deployment takes, rather than through a second declaration that
+        // could drift from it.
+        return 1;
+    }
+
+    /// <summary>
+    /// Moves the schema forward one step from an already-applied version.
+    /// </summary>
+    /// <param name="version">The version currently applied.</param>
+    /// <param name="builder">The schema builder.</param>
+    /// <returns>The version the schema is now at, or the same version when there is no step from it.</returns>
+    public async Task<int> UpdateFromAsync(int version, ISchemaBuilder builder)
+    {
+        switch (version)
+        {
+            case 1:
+                return await UpdateFrom1Async(builder);
+
+            default:
+                return version;
+        }
+    }
+
+    /// <summary>
+    /// Moves the schema from version 1 to the next version.
+    /// </summary>
+    /// <remarks>
+    /// Kept as its own method, under the name the Orchard migration used, because the additive-only
+    /// guard authorizes destructive steps per method. Folding every version into one switch would let
+    /// a single authorization cover them all.
+    /// </remarks>
+    /// <param name="builder">The schema builder.</param>
+    /// <returns>The version the schema is now at.</returns>
+    private async Task<int> UpdateFrom1Async(ISchemaBuilder builder)
+    {
+                    // Adds the completion time settled commands are purged by. Neither the retry time nor the lease time can
+                    // serve, because neither advances once a command has finished.
+                    await builder.AlterIndexTableAsync<ProviderCommandIndex>(table => table
+                        .AddColumn<DateTime?>("CompletedUtc"),
+                        collection: ContactCenterStorage.CollectionName);
+
+                    // Adding a column does not re-project rows that already exist, and a settled command is never written
+                    // again, so the pre-upgrade backlog would otherwise keep a null completion time and stay forever.
+                    // Legacy settled rows are dated from the upgrade, which is later than the truth and so never purges early.
+                    await ContactCenterMigrationSql.AddRetentionColumnAsync(
+                        builder,
+                        _store,
+                        typeof(ProviderCommandIndex),
+                        "CompletedUtc",
+                        _timeProvider.GetUtcNow().UtcDateTime,
+                        $"{builder.Dialect.QuoteForColumnName("Status")} IN ({_terminalStatusValues})");
+
+                    await builder.AlterIndexTableAsync<ProviderCommandIndex>(table => table
+                        .CreateIndex(
+                            "IDX_ProviderCommandIndex_Retention",
+                            "Status",
+                            "CompletedUtc",
+                            "DocumentId"),
+                        collection: ContactCenterStorage.CollectionName);
+
+                    return 2;
+                }
+}

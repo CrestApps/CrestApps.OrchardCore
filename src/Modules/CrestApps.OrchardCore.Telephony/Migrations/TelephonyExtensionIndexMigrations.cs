@@ -1,35 +1,25 @@
 using CrestApps.OrchardCore.Telephony.Core.Indexes;
+using CrestApps.OrchardCore.Telephony.Core.Migrations;
 using OrchardCore.Data.Migration;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Telephony.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="TelephonyExtensionIndex"/>.
 /// </summary>
+/// <remarks>
+/// The schema work itself lives in <see cref="TelephonyExtensionIndexSchemaMigration"/>. This class stays
+/// only to give Orchard something to discover: Orchard records the applied version under this type's full
+/// name, so renaming or removing it would make the create step run again against existing tables.
+/// </remarks>
 internal sealed class TelephonyExtensionIndexMigrations : DataMigration
 {
+    private readonly TelephonyExtensionIndexSchemaMigration _step = new();
+
     /// <summary>
     /// Creates the telephony extension index table.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<TelephonyExtensionIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.WithLength(255))
-            .Column<string>("Number", column => column.WithLength(64))
-            .Column<string>("UserId", column => column.WithLength(26))
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TelephonyExtensionIndex>(table => table
-            .CreateIndex("IDX_TelephonyExtensionIndex_Number", "Number", "DocumentId")
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<TelephonyExtensionIndex>(table => table
-            .CreateIndex("IDX_TelephonyExtensionIndex_UserId", "UserId", "DocumentId")
-        );
-
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 }

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Time.Testing;
 using System.Data.Common;
 using System.Globalization;
 using System.Reflection;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.Telephony.Core.Services;
@@ -639,7 +640,9 @@ public sealed class ContactCenterRollingUpgradeTests
 
             var migrations = new List<DiscoveredMigration>();
 
-            var candidates = typeof(ContactCenterMigrationSql).Assembly.GetTypes()
+            // Anchored on a migration rather than on the SQL helper: the helper now lives in the Core
+            // project, and scanning that assembly finds no DataMigration at all.
+            var candidates = typeof(CallSessionIndexMigrations).Assembly.GetTypes()
                 .Where(type => !type.IsAbstract && typeof(DataMigration).IsAssignableFrom(type))
                 .Where(type => type.Namespace is not null && type.Namespace.Contains("ContactCenter", StringComparison.Ordinal))
                 .Distinct();

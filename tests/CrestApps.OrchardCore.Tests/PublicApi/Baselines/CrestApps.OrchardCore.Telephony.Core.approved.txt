@@ -9,6 +9,30 @@ namespace CrestApps.OrchardCore.Telephony.Core.Indexes
         public string UserId { get; set; }
     }
 }
+namespace CrestApps.OrchardCore.Telephony.Core.Migrations
+{
+    public sealed class TelephonyExtensionIndexSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public TelephonyExtensionIndexSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class TelephonyInteractionSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public TelephonyInteractionSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class TelephonyUserConnectionIndexSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public TelephonyUserConnectionIndexSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+}
 namespace CrestApps.OrchardCore.Telephony.Core.Models
 {
     public sealed class TelephonyExtension : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
@@ -142,6 +166,34 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
     {
         public static void Advance(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
         public static bool ShouldDiscard(CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamWatermark watermark, CrestApps.OrchardCore.Telephony.Core.Models.VoiceStreamDelivery delivery) { }
+    }
+}
+namespace CrestApps.OrchardCore.Telephony.Indexes
+{
+    public sealed class TelephonyInteractionIndex : YesSql.Indexes.MapIndex
+    {
+        public TelephonyInteractionIndex() { }
+        public string CallId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallDirection Direction { get; set; }
+        public string InteractionId { get; set; }
+        public bool IsExtension { get; set; }
+        public bool IsVoicemail { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallOutcome Outcome { get; set; }
+        public string ProviderName { get; set; }
+        public System.DateTime StartedUtc { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+        public System.DateTime? VoicemailReadUtc { get; set; }
+    }
+    public sealed class TelephonyUserConnectionIndex : YesSql.Indexes.MapIndex
+    {
+        public TelephonyUserConnectionIndex() { }
+        public bool IsEnabled { get; set; }
+        public string NormalizedRemotePhoneNumber { get; set; }
+        public string NormalizedRemoteUserEmail { get; set; }
+        public string ProviderName { get; set; }
+        public string RemoteUserId { get; set; }
+        public string UserId { get; set; }
     }
 }
 namespace CrestApps.OrchardCore.Telephony.Services

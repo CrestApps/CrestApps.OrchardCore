@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Data.YesSql</RootNamespace>
+    <Title>CrestApps Core Contact Center YesSql Stores</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The YesSql persistence for the Contact Center Suite: index classes, stores, and the versioned
+      schema migrations a host runs to bring a database up to date.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="YesSql.Core" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>

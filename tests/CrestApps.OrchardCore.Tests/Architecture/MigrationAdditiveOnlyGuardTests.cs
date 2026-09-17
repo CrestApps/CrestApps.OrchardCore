@@ -336,8 +336,8 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "AddColumn",
             "(anonymous)"),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/CallSessionIndexMigrations.cs",
-            "CallSessionIndexMigrations",
+            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
+            "CallSessionIndexMigrationsSchemaMigration",
             "UpdateFrom3Async",
             "raw SQL",
             "drop",
@@ -348,8 +348,8 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "CreateIndex",
             "UQ_CallSessionIndex_ProviderCallClaimKey;IDX_CallSessionIndex_DocumentId"),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/CallSessionIndexMigrations.cs",
-            "CallSessionIndexMigrations",
+            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
+            "CallSessionIndexMigrationsSchemaMigration",
             "UpdateFrom3Async",
             "DropIndex",
             "UQ_CallSessionIndex_ProviderCallClaimKey",
@@ -359,8 +359,8 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "SQLite refuses to drop a column an index refers to, so the unique claim index comes down before the claim column is widened and is recreated over the widened column in the same step. The claim column is widened, not re-typed, so the uniqueness it enforces is unchanged.",
             "CreateIndex"),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/CallSessionIndexMigrations.cs",
-            "CallSessionIndexMigrations",
+            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
+            "CallSessionIndexMigrationsSchemaMigration",
             "UpdateFrom3Async",
             "DropIndex",
             "IDX_CallSessionIndex_DocumentId",
@@ -370,9 +370,9 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "SQLite refuses to drop a column an index refers to, so this covering index over the widened provider-call column comes down and is recreated over the same columns in the same step.",
             "CreateIndex"),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
-            "OmnichannelActivityIndexMigrations",
-            "UpdateFrom4Async",
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelActivityIndexMigrationsSchemaMigration.cs",
+            "OmnichannelActivityIndexMigrationsSchemaMigration",
+            "RebuildEnumColumnsAsync",
             "raw SQL",
             "drop",
             MigrationContractJustification.InPlaceRebuild,
@@ -382,9 +382,9 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "CreateIndex",
             "IDX_OmnichannelActivityMyActivities_DocumentId;IDX_OmnichannelActivityMyActivities_BatchLoading;IDX_OmnichannelActivity_Assignment"),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
-            "OmnichannelActivityIndexMigrations",
-            "UpdateFrom4Async",
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelActivityIndexMigrationsSchemaMigration.cs",
+            "OmnichannelActivityIndexMigrationsSchemaMigration",
+            "RebuildEnumColumnsAsync",
             "DropIndex",
             "IDX_OmnichannelActivityMyActivities_DocumentId",
             MigrationContractJustification.InPlaceRebuild,
@@ -393,9 +393,9 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "SQLite refuses to drop a column an index refers to, so the indexes over the rebuilt columns come down and are recreated in the same step. The index is recreated with the assignment column a freshly created tenant already has, which is the divergence this step exists to close.",
             "CreateIndex"),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
-            "OmnichannelActivityIndexMigrations",
-            "UpdateFrom4Async",
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelActivityIndexMigrationsSchemaMigration.cs",
+            "OmnichannelActivityIndexMigrationsSchemaMigration",
+            "RebuildEnumColumnsAsync",
             "DropIndex",
             "IDX_OmnichannelActivityMyActivities_BatchLoading",
             MigrationContractJustification.InPlaceRebuild,
@@ -404,9 +404,9 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "SQLite refuses to drop a column an index refers to, so this index over the rebuilt status column comes down and is recreated over the same columns in the same step.",
             "CreateIndex"),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
-            "OmnichannelActivityIndexMigrations",
-            "UpdateFrom4Async",
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelActivityIndexMigrationsSchemaMigration.cs",
+            "OmnichannelActivityIndexMigrationsSchemaMigration",
+            "RebuildEnumColumnsAsync",
             "DropIndex",
             "IDX_OmnichannelActivity_Assignment",
             MigrationContractJustification.InPlaceRebuild,
@@ -415,8 +415,8 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "SQLite refuses to drop a column an index refers to, so this index over the rebuilt assignment column comes down and is recreated over the same columns in the same step.",
             "CreateIndex"),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
-            "OmnichannelActivityIndexMigrations",
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelActivityIndexMigrationsSchemaMigration.cs",
+            "OmnichannelActivityIndexMigrationsSchemaMigration",
             "UpdateFrom3Async",
             "DropColumn",
             "AssignedToUsername",
@@ -425,8 +425,8 @@ public sealed class MigrationAdditiveOnlyGuardTests
             null,
             "Denormalized assignee display column that shipped in stable 2.0.0 and is dropped in 3.0.0; the value is rehydrated from the related user record on read, so a customer upgrading from 2.0.0 keeps every assignment."),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelActivityIndexMigrations.cs",
-            "OmnichannelActivityIndexMigrations",
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelActivityIndexMigrationsSchemaMigration.cs",
+            "OmnichannelActivityIndexMigrationsSchemaMigration",
             "UpdateFrom3Async",
             "DropColumn",
             "CreatedByUsername",
@@ -495,8 +495,8 @@ public sealed class MigrationAdditiveOnlyGuardTests
             null,
             "Superseded collection-contact index table that shipped in stable 2.0.0 and is dropped in 3.0.0 only after it holds no rows, so a customer upgrading from 2.0.0 loses no contact records."),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.Omnichannel/Migrations/OmnichannelContactCommunicationPreferenceIndexMigrations.cs",
-            "OmnichannelContactCommunicationPreferenceIndexMigrations",
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelContactCommunicationPreferenceIndexMigrationsSchemaMigration.cs",
+            "OmnichannelContactCommunicationPreferenceIndexMigrationsSchemaMigration",
             "UpdateFrom2Async",
             "DropColumn",
             "DoNotChat",
@@ -505,8 +505,8 @@ public sealed class MigrationAdditiveOnlyGuardTests
             null,
             "Chat opt-out column that shipped in stable 2.0.0 and is dropped in 3.0.0. It holds a preference no channel can honour: there is no chat channel, no processor for one, and no path that creates chat work, so no released version ever read this column to decide whether to contact anybody. A customer upgrading from 2.0.0 therefore loses no behaviour, and the recorded value itself survives in the contact's own document because only the projection is dropped."),
         new MigrationContractEntry(
-            "src/Modules/CrestApps.OrchardCore.Omnichannel/Migrations/OmnichannelContactCommunicationPreferenceIndexMigrations.cs",
-            "OmnichannelContactCommunicationPreferenceIndexMigrations",
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelContactCommunicationPreferenceIndexMigrationsSchemaMigration.cs",
+            "OmnichannelContactCommunicationPreferenceIndexMigrationsSchemaMigration",
             "UpdateFrom2Async",
             "DropColumn",
             "DoNotChatUtc",
@@ -519,19 +519,19 @@ public sealed class MigrationAdditiveOnlyGuardTests
     private static readonly ReviewedDynamicSqlEntry[] _reviewedDynamicSqlSites =
     [
         new ReviewedDynamicSqlEntry(
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
+            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExistsAsync",
             "4179923c87cc7344",
             "Shared existence probe whose statement arrives as a parameter. Every caller in the scanned surface passes a literal SELECT, and the helper only reads a scalar, so it cannot alter schema regardless of the caller."),
         new ReviewedDynamicSqlEntry(
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
+            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExecuteAsync",
             "4179923c87cc7344",
             "Shared set-based statement runner whose statement arrives as a parameter. The helper adds nothing to the text it is given, so what it executes is decided at its call sites, and each of those is scanned in its own right."),
         new ReviewedDynamicSqlEntry(
-            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/ContactCenterMigrationSql.cs",
+            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "CreateUniqueIndexAsync",
             "4179923c87cc7344",
@@ -542,6 +542,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "ColumnExistsAsync",
             "910e21122df06321",
             "Read-only column existence probe. Both branches only read metadata to test whether a column is present: SQLite runs 'PRAGMA table_info' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS'. Neither statement can create, alter, or drop any object."),
+        new ReviewedDynamicSqlEntry(
+            "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelActivityBatchIndexMigrationsSchemaMigration.cs",
+            "OmnichannelActivityBatchIndexMigrationsSchemaMigration",
+            "ColumnExistsAsync",
+            "9e007b0b420cf9fe",
+            "The same read-only column existence probe as OmnichannelIndexMigration, carried into the framework step because the Orchard base class it used to inherit from stays behind: that base is also inherited by the content migrations, which do not move. Both branches only read metadata: SQLite runs 'PRAGMA table_info' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS'. Neither statement can create, alter, or drop any object."),
     ];
 
     /// <summary>
@@ -1104,7 +1110,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file), cancellationToken: TestContext.Current.CancellationToken);
 
             var model = CSharpCompilation
-                .Create(ResolveOwningAssemblyName(relativePath), [_implicitUsings.Value, tree], _metadataReferences.Value)
+                .Create(CompilationNameFor(relativePath), [_implicitUsings.Value, tree], _metadataReferences.Value)
                 .GetSemanticModel(tree);
 
             foreach (var node in tree.GetRoot(TestContext.Current.CancellationToken).DescendantNodes())
@@ -1607,7 +1613,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
         // trusting the member's name. References come from the test output, so every assembly a migration compiles
         // against is present; a call that still fails to bind is refused by the caller rather than assumed safe.
         var model = CSharpCompilation
-            .Create(ResolveOwningAssemblyName(relativePath), [_implicitUsings.Value, tree], _metadataReferences.Value)
+            .Create(CompilationNameFor(relativePath), [_implicitUsings.Value, tree], _metadataReferences.Value)
             .GetSemanticModel(tree);
         var occurrences = new List<MigrationOccurrence>();
 
@@ -2340,6 +2346,38 @@ public sealed class MigrationAdditiveOnlyGuardTests
         ReviewedAdditive,
         InPlaceRebuild,
     }
+
+
+    /// <summary>
+    /// Gets the assembly identity to compile a migration file under.
+    /// </summary>
+    /// <remarks>
+    /// Normally the owning project's own name, so internal helpers bind exactly as they do in that
+    /// project's real build. That breaks down when the owning project is itself among the metadata
+    /// references, which is now the case for migration bodies that live in a *.Core project: the
+    /// compilation and the reference share an identity, and Roslyn does not grant an assembly friend
+    /// access to a reference that merely has its name, so every internal type in it silently fails to
+    /// bind. Those files compile under a declared friend of those projects instead, which sees the
+    /// same internals for the same reason the real test assembly does.
+    /// </remarks>
+    /// <param name="relativePath">The migration file, relative to the repository root.</param>
+    /// <returns>The assembly name to compile under.</returns>
+    private static string CompilationNameFor(string relativePath)
+    {
+        var owning = ResolveOwningAssemblyName(relativePath);
+
+        return _metadataReferences.Value.Any(reference => string.Equals(
+            Path.GetFileNameWithoutExtension(reference.Display),
+            owning,
+            StringComparison.OrdinalIgnoreCase))
+            ? FriendAssemblyName
+            : owning;
+    }
+
+    /// <summary>
+    /// An assembly the migration-owning projects declare as a friend.
+    /// </summary>
+    private const string FriendAssemblyName = "CrestApps.OrchardCore.Tests";
 
     private static MetadataReference[] LoadMetadataReferences()
     {

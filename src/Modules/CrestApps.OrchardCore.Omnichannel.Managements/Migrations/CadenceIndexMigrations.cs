@@ -1,14 +1,22 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
 using YesSql;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
+/// <summary>
+/// Creates the schema for the cadence index table.
+/// </summary>
+/// <remarks>
+/// The schema itself lives in <see cref="CadenceIndexMigrationsSchemaMigration"/>; this class only hands
+/// Orchard's schema builder to it. The type name is part of the stored data, because Orchard records the
+/// applied version under this class's full name, so it must not be renamed.
+/// </remarks>
 internal sealed class CadenceIndexMigrations : OmnichannelIndexMigration
 {
+    private readonly CadenceIndexMigrationsSchemaMigration _step;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CadenceIndexMigrations"/> class.
     /// </summary>
@@ -21,31 +29,13 @@ internal sealed class CadenceIndexMigrations : OmnichannelIndexMigration
         ILogger<CadenceIndexMigrations> logger)
         : base(store, dbConnectionAccessor, logger)
     {
+        _step = new CadenceIndexMigrationsSchemaMigration();
     }
 
     /// <summary>
     /// Creates the cadence index table.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<CadenceIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("DisplayText", column => column.WithLength(255))
-            .Column<bool>("Enabled")
-            .Column<DateTime>("CreatedUtc"),
-        collection: OmnichannelConstants.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<CadenceIndex>(table => table
-            .CreateIndex("IDX_CadenceIndex_DocumentId",
-                "DocumentId",
-                "DisplayText",
-                "ItemId"
-            ),
-        collection: OmnichannelConstants.CollectionName
-        );
-
-        return 1;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 }

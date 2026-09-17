@@ -1,15 +1,22 @@
-using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Migrations;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
 using YesSql;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 
+/// <summary>
+/// Creates and repairs the schema for the omnichannel activity batch index table.
+/// </summary>
+/// <remarks>
+/// The schema itself lives in <see cref="OmnichannelActivityBatchIndexMigrationsSchemaMigration"/>; this class
+/// only hands Orchard's schema builder to it. The type name is part of the stored data, because Orchard records
+/// the applied version under this class's full name, so it must not be renamed.
+/// </remarks>
 internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndexMigration
 {
+    private readonly OmnichannelActivityBatchIndexMigrationsSchemaMigration _step;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelActivityBatchIndexMigrations"/> class.
     /// </summary>
@@ -22,72 +29,30 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
         ILogger<OmnichannelActivityBatchIndexMigrations> logger)
         : base(store, dbConnectionAccessor, logger)
     {
+        _step = new OmnichannelActivityBatchIndexMigrationsSchemaMigration(store, dbConnectionAccessor, logger);
     }
 
     /// <summary>
     /// Creates the omnichannel activity batch index table with the final set of columns and indexes.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("DisplayText", column => column.WithLength(255))
-            .Column<string>("Source", column => column.WithLength(50))
-            .Column<OmnichannelActivityBatchStatus>("Status")
-            .Column<DateTime>("CreatedUtc"),
-        collection: OmnichannelConstants.CollectionName
-        );
-
-        // This SQL index is for locating incoming message from Omnichannel (Incoming SMS, Email, etc).
-        await SchemaBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table => table
-            .CreateIndex("IDX_OmnichannelActivityBatchIndex_DocumentId",
-        "DocumentId",
-        "DisplayText",
-        "ItemId"
-        ),
-        collection: OmnichannelConstants.CollectionName
-        );
-
-        return 4;
-    }
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 
     /// <summary>
     /// Adds the activity batch source column in an isolated transaction so it survives sibling migration failures.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom1Async()
-    {
-        await using var connection = DbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
-
-        await ApplyIsolatedSchemaChangeAsync(connection,
-            builder => builder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
-                table.AddColumn<string>("Source", column => column.WithLength(50)),
-                collection: OmnichannelConstants.CollectionName),
-            "add the 'Source' column to the omnichannel activity batch index");
-
-        return 2;
-    }
+    public Task<int> UpdateFrom1Async()
+        => _step.UpdateFromAsync(1, SchemaBuilder);
 
     /// <summary>
     /// Adds the activity batch created UTC column, used to order batches by newest first, in an isolated
     /// transaction so it survives sibling migration failures in the same feature.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom2Async()
-    {
-        await using var connection = DbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
-
-        await ApplyIsolatedSchemaChangeAsync(connection,
-            builder => builder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
-                table.AddColumn<DateTime>("CreatedUtc"),
-                collection: OmnichannelConstants.CollectionName),
-            "add the 'CreatedUtc' column to the omnichannel activity batch index");
-
-        return 3;
-    }
+    public Task<int> UpdateFrom2Async()
+        => _step.UpdateFromAsync(2, SchemaBuilder);
 
     /// <summary>
     /// Repairs databases whose migration version was recorded at or above the step that added the
@@ -97,20 +62,6 @@ internal sealed class OmnichannelActivityBatchIndexMigrations : OmnichannelIndex
     /// order by <c>CreatedUtc</c> again.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom3Async()
-    {
-        await EnsureColumnExistsAsync<OmnichannelActivityBatchIndex>(
-            OmnichannelConstants.CollectionName,
-            "Source",
-            table => table.AddColumn<string>("Source", column => column.WithLength(50)),
-            "ensure the 'Source' column exists on the omnichannel activity batch index");
-
-        await EnsureColumnExistsAsync<OmnichannelActivityBatchIndex>(
-            OmnichannelConstants.CollectionName,
-            "CreatedUtc",
-            table => table.AddColumn<DateTime>("CreatedUtc"),
-            "ensure the 'CreatedUtc' column exists on the omnichannel activity batch index");
-
-        return 4;
-    }
+    public Task<int> UpdateFrom3Async()
+        => _step.UpdateFromAsync(3, SchemaBuilder);
 }

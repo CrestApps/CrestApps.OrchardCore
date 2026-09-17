@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql;
-using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 
@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class InteractionEventIndexMigrations : DataMigration
 {
-    private readonly IStore _store;
+    private readonly InteractionEventIndexMigrationsSchemaMigration _step;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="InteractionEventIndexMigrations"/> class.
@@ -19,127 +19,28 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
     /// <param name="store">The YesSql store.</param>
     public InteractionEventIndexMigrations(IStore store)
     {
-        _store = store;
+        _step = new InteractionEventIndexMigrationsSchemaMigration(store);
     }
 
     /// <summary>
     /// Creates the interaction event index table and its supporting indexes.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> CreateAsync()
-    {
-        await SchemaBuilder.CreateMapIndexTableAsync<InteractionEventIndex>(table => table
-            .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("InteractionId", column => column.WithLength(26))
-            .Column<string>("EventType", column => column.WithLength(128))
-            .Column<string>("AggregateType", column => column.WithLength(128))
-            .Column<string>("AggregateId", column => column.WithLength(26))
-            .Column<string>("CorrelationId", column => column.WithLength(26))
-            .Column<string>("IdempotencyKey", column => column.WithLength(128))
-            .Column<string>("IdempotencyClaimKey", column => column.NotNull().WithDefault(string.Empty).WithLength(128))
-            .Column<DateTime>("OccurredUtc", column => column.NotNull()),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
-            .CreateIndex("IDX_InteractionEventIndex_Interaction",
-                "InteractionId",
-                "OccurredUtc",
-                "EventType"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
-            .CreateIndex("IDX_InteractionEventIndex_Idempotency",
-                "IdempotencyKey"),
-            collection: ContactCenterStorage.CollectionName
-        );
-
-        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
-            SchemaBuilder,
-            _store,
-            typeof(InteractionEventIndex),
-            "UQ_InteractionEventIndex_IdempotencyClaimKey",
-            "IdempotencyClaimKey");
-
-        return 2;
-    }
-    /// <summary>
-    /// Adds the covering index the retention purge scans. Without it every terminating batch of the drain loop
-    /// is a full scan of a table that grows with traffic, which is exactly the table size retention exists for.
-    /// </summary>
-    /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom2Async()
-    {
-        await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
-            .CreateIndex(
-                "IDX_InteractionEventIndex_Retention",
-                "OccurredUtc",
-                "DocumentId"),
-            collection: ContactCenterStorage.CollectionName);
-
-        return 3;
-    }
-
+    public Task<int> CreateAsync()
+        => _step.CreateAsync(SchemaBuilder);
 
     /// <summary>
     /// Adds the portable idempotency claim column and unique constraint to existing interaction event indexes.
     /// </summary>
     /// <returns>The migration version number.</returns>
-    public async Task<int> UpdateFrom1Async()
-    {
-        var quotedTableName = ContactCenterMigrationSql.GetQuotedTableName(SchemaBuilder, _store, typeof(InteractionEventIndex));
-        var claimColumn = SchemaBuilder.Dialect.QuoteForColumnName("IdempotencyClaimKey");
-        var idempotencyColumn = SchemaBuilder.Dialect.QuoteForColumnName("IdempotencyKey");
-        var itemIdColumn = SchemaBuilder.Dialect.QuoteForColumnName("ItemId");
+    public Task<int> UpdateFrom1Async()
+        => _step.UpdateFromAsync(1, SchemaBuilder);
 
-        await EnsureLegacyRowsCanBeConstrainedAsync(quotedTableName, idempotencyColumn);
-
-        await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
-            .AddColumn<string>(
-                "IdempotencyClaimKey",
-                column => column.NotNull().WithDefault(string.Empty).WithLength(128)),
-            collection: ContactCenterStorage.CollectionName);
-
-        await using (var command = SchemaBuilder.Connection.CreateCommand())
-        {
-            command.Transaction = SchemaBuilder.Transaction;
-            command.CommandText = $"""
-                UPDATE {quotedTableName}
-                SET {claimColumn} = CASE
-                        WHEN {idempotencyColumn} IS NULL OR {idempotencyColumn} = '' THEN {itemIdColumn}
-                        ELSE {idempotencyColumn}
-                    END
-                """;
-            await command.ExecuteNonQueryAsync();
-        }
-
-        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
-            SchemaBuilder,
-            _store,
-            typeof(InteractionEventIndex),
-            "UQ_InteractionEventIndex_IdempotencyClaimKey",
-            "IdempotencyClaimKey");
-
-        return 2;
-    }
-
-    private async Task EnsureLegacyRowsCanBeConstrainedAsync(string quotedTableName, string idempotencyColumn)
-    {
-        var hasDuplicateKeys = await ContactCenterMigrationSql.ExistsAsync(
-            SchemaBuilder,
-            $"""
-            SELECT 1
-            FROM {quotedTableName}
-            WHERE {idempotencyColumn} IS NOT NULL AND {idempotencyColumn} <> ''
-            GROUP BY {idempotencyColumn}
-            HAVING COUNT(*) > 1
-            """);
-
-        if (hasDuplicateKeys)
-        {
-            throw new InvalidOperationException(
-                "The Contact Center interaction event index contains multiple events with the same idempotency key. Resolve the duplicate legacy events before enabling the idempotency uniqueness constraint.");
-        }
-    }
+    /// <summary>
+    /// Adds the covering index the retention purge scans. Without it every terminating batch of the drain loop
+    /// is a full scan of a table that grows with traffic, which is exactly the table size retention exists for.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public Task<int> UpdateFrom2Async()
+        => _step.UpdateFromAsync(2, SchemaBuilder);
 }
