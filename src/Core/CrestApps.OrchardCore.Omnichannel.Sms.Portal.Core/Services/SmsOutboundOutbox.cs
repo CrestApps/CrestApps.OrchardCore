@@ -8,7 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
-using OrchardCore.Sms;
+using CrestApps.Core.Sms;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;

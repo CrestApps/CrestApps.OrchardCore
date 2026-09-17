@@ -12,7 +12,7 @@ using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
-using OrchardCore.Sms;
+using CrestApps.Core.Sms;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;

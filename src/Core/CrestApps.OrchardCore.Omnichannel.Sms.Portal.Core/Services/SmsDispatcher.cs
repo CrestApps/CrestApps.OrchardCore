@@ -4,8 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Infrastructure;
-using OrchardCore.Settings;
-using OrchardCore.Sms;
+using CrestApps.Core.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 
@@ -17,7 +16,6 @@ public sealed class SmsDispatcher : ISmsDispatcher
 {
     private readonly IOmnichannelChannelEndpointManager _endpointManager;
     private readonly ISmsProviderResolver _providerResolver;
-    private readonly ISiteService _siteService;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -25,17 +23,14 @@ public sealed class SmsDispatcher : ISmsDispatcher
     /// </summary>
     /// <param name="endpointManager">The channel endpoint manager used to look up the number's pinned provider.</param>
     /// <param name="providerResolver">The SMS provider resolver used to obtain a provider by technical name.</param>
-    /// <param name="siteService">The site service used to read the portal and built-in SMS settings.</param>
     /// <param name="logger">The logger instance.</param>
     public SmsDispatcher(
         IOmnichannelChannelEndpointManager endpointManager,
         ISmsProviderResolver providerResolver,
-        ISiteService siteService,
         ILogger<SmsDispatcher> logger)
     {
         _endpointManager = endpointManager;
         _providerResolver = providerResolver;
-        _siteService = siteService;
         _logger = logger;
     }
 
@@ -56,7 +51,7 @@ public sealed class SmsDispatcher : ISmsDispatcher
             return SmsDispatchResult.Failed("No SMS provider could be resolved for the sending number, the portal default, or the tenant default.");
         }
 
-        var provider = await _providerResolver.GetAsync(providerName);
+        var provider = await _providerResolver.GetAsync(providerName, cancellationToken);
 
         if (provider is null)
         {
@@ -75,8 +70,8 @@ public sealed class SmsDispatcher : ISmsDispatcher
         var result = await provider.SendAsync(message, cancellationToken);
 
         return result.Succeeded
-            ? SmsDispatchResult.Success()
-            : SmsDispatchResult.Failed((result.Errors ?? []).Select(error => error.Message).ToArray());
+            ? SmsDispatchResult.Success(result.ProviderMessageId)
+            : SmsDispatchResult.Failed([.. result.Errors.Select(error => new LocalizedString(error, error))]);
     }
 
     /// <inheritdoc/>
@@ -95,10 +90,8 @@ public sealed class SmsDispatcher : ISmsDispatcher
             }
         }
 
-        // Fall back to OrchardCore's tenant-default SMS provider (Configuration -> Settings -> SMS).
-        var smsSettings = await _siteService.GetSettingsAsync<SmsSettings>();
-
-        return smsSettings.DefaultProviderName;
+        // Fall back to the host's default provider.
+        return await _providerResolver.GetDefaultProviderNameAsync(cancellationToken);
     }
 
     private static Result Failed(string message)

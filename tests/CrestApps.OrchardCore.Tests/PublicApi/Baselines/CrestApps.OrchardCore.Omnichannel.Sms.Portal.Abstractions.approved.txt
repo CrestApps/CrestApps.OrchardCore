@@ -103,12 +103,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services
 {
     public interface ISmsDispatchProvider
     {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult> DispatchAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult> DispatchAsync(CrestApps.Core.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISmsDispatcher
     {
         System.Threading.Tasks.ValueTask<string> ResolveProviderNameAsync(string fromNumber, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult> SendAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.SmsDispatchResult> SendAsync(CrestApps.Core.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default);
     }
     public sealed class SmsDispatchResult
     {

@@ -9,7 +9,7 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
-using OrchardCore.Sms;
+using CrestApps.Core.Sms;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 

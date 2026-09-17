@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
-using OrchardCore.Sms;
+using CrestApps.Core.Sms;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 

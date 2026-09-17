@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Sms</RootNamespace>
+    <Title>CrestApps Core SMS Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The SMS contracts the Contact Center Suite sends and receives through: a provider, a resolver
+      that picks one, and a parser for an inbound provider webhook.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+</Project>

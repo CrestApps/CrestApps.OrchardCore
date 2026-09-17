@@ -33,7 +33,8 @@ public sealed class SmsStartup : StartupBase
 
         // Register the provider under its technical name, then gate its enabled state on the resolved options
         // (registered after AddSmsProvider so the gate's IsEnabled wins).
-        services.AddSmsProvider<TelnyxSmsProvider>(TelnyxConstants.ProviderTechnicalName);
+        services.AddScoped<TelnyxSmsProvider>();
+        services.AddSmsProvider<OrchardCoreTelnyxSmsProvider>(TelnyxConstants.ProviderTechnicalName);
         services.AddSmsProviderOptionsConfiguration<TelnyxSmsProviderOptionsConfiguration>();
 
         // The UI-driven settings on the SMS settings screen.

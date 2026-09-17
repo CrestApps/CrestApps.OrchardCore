@@ -5,8 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Infrastructure;
-using OrchardCore.Sms;
+using CrestApps.Core.Sms;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -40,16 +39,23 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
     }
 
     /// <inheritdoc/>
-    public LocalizedString Name => S["Telnyx"];
+    public string Name => TelnyxConstants.ProviderTechnicalName;
+
+    /// <summary>
+    /// Gets the display name shown wherever a provider is chosen.
+    /// </summary>
+    public LocalizedString DisplayName => S["Telnyx"];
 
     /// <inheritdoc/>
-    public async Task<Result> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
+    public async Task<SmsResult> SendAsync(SmsMessage message, CancellationToken cancellationToken = default)
     {
         var dispatch = await DispatchAsync(message, cancellationToken);
 
+        // The provider message id is carried through rather than dropped: it is what a later delivery
+        // receipt matches on.
         return dispatch.Succeeded
-            ? Result.Success()
-            : Result.Failed((dispatch.Errors ?? []).Select(error => new ResultError { Message = error }).ToArray());
+            ? SmsResult.Success(dispatch.ProviderMessageId)
+            : SmsResult.Failed([.. (dispatch.Errors ?? []).Select(error => error.ToString())]);
     }
 
     /// <inheritdoc/>

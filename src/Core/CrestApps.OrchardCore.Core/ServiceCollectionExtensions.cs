@@ -1,7 +1,9 @@
 ﻿using CrestApps.Core.Hosting;
 using CrestApps.Core.Locking;
+using CrestApps.Core.Sms;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Hosting;
+using CrestApps.OrchardCore.Core.Sms;
 using CrestApps.OrchardCore.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -50,6 +52,17 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton<ITenantAccessor, ShellSettingsTenantAccessor>();
         services.TryAddScoped<IDetachedWorkExecutor, ShellDetachedWorkExecutor>();
         services.TryAddScoped<IAfterCommitTaskQueue, ShellScopeAfterCommitTaskQueue>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Binds the framework SMS provider seam to the providers Orchard Core has registered.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddCoreSmsProviderSeam(this IServiceCollection services)
+    {
+        services.TryAddScoped<ISmsProviderResolver, OrchardCoreSmsProviderResolver>();
 
         return services;
     }

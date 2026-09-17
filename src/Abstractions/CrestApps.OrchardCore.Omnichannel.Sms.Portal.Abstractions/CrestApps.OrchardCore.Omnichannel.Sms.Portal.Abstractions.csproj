@@ -16,6 +16,7 @@
   <ItemGroup>
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
+    <ProjectReference Include="../Transitions/CrestApps.Core.Sms.Abstractions/CrestApps.Core.Sms.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

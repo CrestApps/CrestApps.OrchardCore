@@ -20,7 +20,7 @@ internal sealed class TelnyxSmsProviderOptionsConfiguration : IConfigureOptions<
     /// <inheritdoc/>
     public void Configure(SmsProviderOptions options)
     {
-        options.ReplaceProvider(TelnyxConstants.ProviderTechnicalName, new SmsProviderTypeOptions(typeof(TelnyxSmsProvider))
+        options.ReplaceProvider(TelnyxConstants.ProviderTechnicalName, new SmsProviderTypeOptions(typeof(OrchardCoreTelnyxSmsProvider))
         {
             IsEnabled = _options.CurrentValue.IsEnabled,
         });

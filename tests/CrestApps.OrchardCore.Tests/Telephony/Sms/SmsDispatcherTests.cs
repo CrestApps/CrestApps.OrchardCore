@@ -5,8 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Infrastructure;
-using OrchardCore.Settings;
-using OrchardCore.Sms;
+using CrestApps.Core.Sms;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Sms;
 
@@ -41,7 +40,7 @@ public class SmsDispatcherTests
     {
         var provider = new Mock<ISmsProvider>();
         provider.Setup(p => p.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success());
+            .ReturnsAsync(SmsResult.Success());
 
         var dispatcher = CreateDispatcher(
             endpointProvider: "Telnyx",
@@ -74,15 +73,13 @@ public class SmsDispatcherTests
             .ReturnsAsync(new OmnichannelChannelEndpoint { Channel = "SMS", Value = "+15553334444", ProviderName = endpointProvider });
 
         var providerResolver = new Mock<ISmsProviderResolver>();
-        providerResolver.Setup(r => r.GetAsync(It.IsAny<string>()))
-            .ReturnsAsync((string name) => resolver?.Invoke(name));
+        providerResolver.Setup(r => r.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string name, CancellationToken _) => resolver?.Invoke(name));
 
-        var site = new Mock<ISite>();
-        site.Setup(s => s.GetOrCreate<SmsSettings>()).Returns(new SmsSettings { DefaultProviderName = smsDefault });
+        // The tenant default now comes from the resolver rather than from Orchard's site settings.
+        providerResolver.Setup(r => r.GetDefaultProviderNameAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(smsDefault);
 
-        var siteService = new Mock<ISiteService>();
-        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
-
-        return new SmsDispatcher(endpointManager.Object, providerResolver.Object, siteService.Object, NullLogger<SmsDispatcher>.Instance);
+        return new SmsDispatcher(endpointManager.Object, providerResolver.Object, NullLogger<SmsDispatcher>.Instance);
     }
 }

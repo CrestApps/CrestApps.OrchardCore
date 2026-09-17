@@ -13,7 +13,7 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
-using OrchardCore.Sms;
+using CrestApps.Core.Sms;
 using System.Security.Claims;
 using YesSql;
 
