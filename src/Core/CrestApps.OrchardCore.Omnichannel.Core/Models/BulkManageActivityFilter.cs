@@ -1,14 +1,21 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
-using OrchardCore.Entities;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
 /// Represents the filter criteria for bulk-managing omnichannel activities.
 /// </summary>
-public sealed class BulkManageActivityFilter : Entity
+public sealed class BulkManageActivityFilter
 {
+    /// <summary>
+    /// Gets or sets the extensible metadata carried alongside the strongly typed properties. The
+    /// property name and shape match what Orchard's entity base serialized, so stored documents
+    /// round-trip unchanged.
+    /// </summary>
+    public JsonObject Properties { get; set; } = [];
+
     /// <summary>
     /// Gets or sets whether to filter by published contacts.
     /// When <see langword="true"/>, only activities for published contacts are returned.

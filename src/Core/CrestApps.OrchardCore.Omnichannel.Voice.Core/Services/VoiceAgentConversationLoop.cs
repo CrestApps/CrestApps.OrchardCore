@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.Core.Hosting;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Chat;
@@ -21,7 +22,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Liquid;
 using OrchardCore.Modules;
 
@@ -45,6 +45,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private const string HangupMarker = "[[HANGUP]]";
 
 
+    private readonly IAfterCommitTaskQueue _afterCommitTaskQueue;
     private readonly IOmnichannelActivityStore _activityStore;
     private readonly IAIChatSessionManager _chatSessionManager;
     private readonly IAIChatSessionPromptStore _promptStore;
@@ -87,9 +88,11 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IRealtimeVoiceConversationRunner realtimeRunner,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
+        IAfterCommitTaskQueue afterCommitTaskQueue,
         TimeProvider timeProvider,
         ILogger<VoiceAgentConversationLoop> logger)
     {
+        _afterCommitTaskQueue = afterCommitTaskQueue;
         _activityStore = activityStore;
         _chatSessionManager = chatSessionManager;
         _promptStore = promptStore;
@@ -540,15 +543,15 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // Conclusion analysis (summary + disposition) runs in a deferred task so the webhook returns promptly.
         var activityId = activity.ItemId;
 
-        ShellScope.AddDeferredTask(async scope =>
+        _afterCommitTaskQueue.Enqueue(async serviceProvider =>
         {
             try
             {
-                await ConcludeAsync(scope.ServiceProvider, activityId);
+                await ConcludeAsync(serviceProvider, activityId);
             }
             catch (Exception ex)
             {
-                scope.ServiceProvider.GetRequiredService<ILogger<VoiceAgentConversationLoop>>()
+                serviceProvider.GetRequiredService<ILogger<VoiceAgentConversationLoop>>()
                     .LogError(ex, "Failed to conclude AI voice activity '{ActivityId}'.", activityId.SanitizeLogValue());
             }
         });

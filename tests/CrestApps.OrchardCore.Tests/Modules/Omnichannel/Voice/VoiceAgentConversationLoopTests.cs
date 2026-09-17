@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI;
+﻿using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
@@ -845,6 +846,7 @@ public sealed class VoiceAgentConversationLoopTests
             var handoffTurn = useRealTurns ? RealHandoffTurn : HandoffTurn.Object;
             var endCallTurn = useRealTurns ? (IVoiceCallEndTurn)RealEndCallTurn : EndCallTurn.Object;
 
+            AfterCommitQueue = new RecordingAfterCommitTaskQueue();
             CompletionRunner = new RecordingCompletionRunner();
             AbandonmentHandler = new RecordingAbandonmentHandler();
 
@@ -868,9 +870,12 @@ public sealed class VoiceAgentConversationLoopTests
                 Realtime,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
+                AfterCommitQueue,
                 Mock.Of<TimeProvider>(),
                 NullLogger<VoiceAgentConversationLoop>.Instance);
         }
+
+        public RecordingAfterCommitTaskQueue AfterCommitQueue { get; }
 
         public OmnichannelActivity Activity { get; }
 

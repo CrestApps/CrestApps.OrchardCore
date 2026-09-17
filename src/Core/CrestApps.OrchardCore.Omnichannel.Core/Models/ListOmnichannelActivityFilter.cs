@@ -1,14 +1,21 @@
 ﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
-using OrchardCore.Entities;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
 /// Represents the list omnichannel activity filter.
 /// </summary>
-public sealed class ListOmnichannelActivityFilter : Entity
+public sealed class ListOmnichannelActivityFilter
 {
+    /// <summary>
+    /// Gets or sets the extensible metadata carried alongside the strongly typed properties. The
+    /// property name and shape match what Orchard's entity base serialized, so stored documents
+    /// round-trip unchanged.
+    /// </summary>
+    public JsonObject Properties { get; set; } = [];
+
     /// <summary>
     /// Gets or sets the urgency level.
     /// </summary>

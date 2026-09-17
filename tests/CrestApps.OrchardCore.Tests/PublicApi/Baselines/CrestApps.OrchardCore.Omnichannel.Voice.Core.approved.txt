@@ -141,6 +141,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner realtimeRunner,
                     OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager,
                     OrchardCore.ContentManagement.IContentManager contentManager,
+                    CrestApps.Core.Hosting.IAfterCommitTaskQueue afterCommitTaskQueue,
                     System.TimeProvider timeProvider,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> logger) { }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }

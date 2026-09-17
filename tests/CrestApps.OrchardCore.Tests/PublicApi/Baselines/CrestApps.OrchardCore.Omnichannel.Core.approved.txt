@@ -342,7 +342,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         ChangeSource = 8,
         ChangeDialerProfile = 9,
     }
-    public sealed class BulkManageActivityFilter : OrchardCore.Entities.Entity
+    public sealed class BulkManageActivityFilter
     {
         public BulkManageActivityFilter() { }
         public string[] AssignedToUserIds { get; set; }
@@ -361,6 +361,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public int? Limit { get; set; }
         public string PhoneNumber { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.PhoneNumberMatchType PhoneNumberMatchType { get; set; }
+        public System.Text.Json.Nodes.JsonObject Properties { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public Microsoft.AspNetCore.Routing.RouteValueDictionary RouteValues { get; set; }
         public System.DateTime? ScheduledFrom { get; set; }
@@ -433,11 +434,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         CallbackScheduled = 2,
         Failed = 3,
     }
-    public sealed class ListOmnichannelActivityFilter : OrchardCore.Entities.Entity
+    public sealed class ListOmnichannelActivityFilter
     {
         public ListOmnichannelActivityFilter() { }
         public string AttemptFilter { get; set; }
         public string Channel { get; set; }
+        public System.Text.Json.Nodes.JsonObject Properties { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public Microsoft.AspNetCore.Routing.RouteValueDictionary RouteValues { get; set; }
         public System.DateTime? ScheduledFrom { get; set; }

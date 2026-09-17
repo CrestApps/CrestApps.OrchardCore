@@ -1384,7 +1384,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction RestorePersistedStatus(CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status) { }
         public void TransitionTo(CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status) { }
     }
-    public sealed class InteractionEvent : CrestApps.Core.Models.CatalogItem, OrchardCore.Entities.IEntity
+    public sealed class InteractionEvent : CrestApps.Core.Models.CatalogItem
     {
         public InteractionEvent() { }
         public string ActorId { get; set; }

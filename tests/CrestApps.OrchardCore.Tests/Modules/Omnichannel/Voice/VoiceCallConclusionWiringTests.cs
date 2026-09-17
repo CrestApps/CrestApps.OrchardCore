@@ -462,6 +462,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IRealtimeVoiceConversationRunner>(),
                 Mock.Of<ILiquidTemplateManager>(),
                 ContentManager.Object,
+                new RecordingAfterCommitTaskQueue(),
                 new FakeTimeProvider(_now),
                 NullLogger<VoiceAgentConversationLoop>.Instance);
         }
