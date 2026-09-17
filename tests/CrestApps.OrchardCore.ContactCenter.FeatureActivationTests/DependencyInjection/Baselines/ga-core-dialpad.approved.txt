@@ -73,6 +73,7 @@ CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileStore #0 Scoped -
 CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionManager #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.AgentSessionManager
 CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.AgentSessionService
 CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.AgentSessionStore
+CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSignOutHandler #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.DefaultAgentSignOutHandler
 CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentStateReasonCodeManager #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.AgentStateReasonCodeManager
 CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentStateReasonCodeStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.AgentStateReasonCodeStore
 CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkSelector #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.AgentWorkSelector

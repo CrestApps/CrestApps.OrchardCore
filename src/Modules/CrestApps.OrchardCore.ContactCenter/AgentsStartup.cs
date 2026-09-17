@@ -81,6 +81,7 @@ public sealed class AgentsStartup : StartupBase
 
         services
             .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
+            .AddScoped<IAgentSignOutHandler, DefaultAgentSignOutHandler>()
             .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
             .AddScoped<IAgentSessionStore, AgentSessionStore>()
             .AddScoped<IAgentSessionManager, AgentSessionManager>()

@@ -1,12 +1,9 @@
 using System.Security.Claims;
-using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
@@ -23,8 +20,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 internal sealed class ContactCenterAgentSignOutCookieConfiguration
     : IPostConfigureOptions<CookieAuthenticationOptions>
 {
-    private static readonly TimeSpan _synchronizationTimeout = TimeSpan.FromSeconds(10);
-
     /// <summary>
     /// Chains the agent sign-out synchronization onto the application cookie scheme's <c>OnSigningOut</c> and
     /// <c>OnValidatePrincipal</c> events, preserving any handlers configured earlier so existing behavior is
@@ -75,46 +70,26 @@ internal sealed class ContactCenterAgentSignOutCookieConfiguration
         };
     }
 
-    private static async Task SynchronizeAgentSignOutAsync(HttpContext httpContext, string userId)
+    /// <summary>
+    /// Hands the ended session to the Contact Center, which owns what sign-out means.
+    /// </summary>
+    /// <remarks>
+    /// Resolved rather than required: a host that wires this cookie configuration without the Agents
+    /// feature has no agent state to synchronise, and log off must still work.
+    /// </remarks>
+    /// <param name="httpContext">The request the sign-out is happening on.</param>
+    /// <param name="userId">The user whose session ended.</param>
+    private static Task SynchronizeAgentSignOutAsync(HttpContext httpContext, string userId)
     {
         if (string.IsNullOrEmpty(userId))
         {
-            return;
+            return Task.CompletedTask;
         }
 
-        var services = httpContext.RequestServices;
-        var logger = services.GetRequiredService<ILogger<ContactCenterAgentSignOutCookieConfiguration>>();
+        var handler = httpContext.RequestServices.GetService<IAgentSignOutHandler>();
 
-        // The cookie handler raises these events before it deletes the authentication cookie, so an exception or
-        // cancellation escaping here would abort the sign-out and leave the user logged in. Isolate the
-        // synchronization from the sign-out flow: never propagate, and use a bounded, request-independent token
-        // so a client disconnect cannot cancel it. The agent-session cleanup background task is the backstop.
-        using var timeout = new CancellationTokenSource(_synchronizationTimeout);
-
-        try
-        {
-            if (logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation(
-                    "Synchronizing Contact Center agent sign-out for user '{UserId}'.",
-                    userId.SanitizeLogValue());
-            }
-
-            var presenceManager = services.GetRequiredService<IAgentPresenceManager>();
-            await presenceManager.SignOutAsync(userId, timeout.Token);
-
-            var revokers = services.GetServices<ISoftPhoneCredentialRevoker>();
-            await SoftPhoneCredentialRevocation.RevokeForUserAsync(revokers, userId, "signed-out", logger, timeout.Token);
-        }
-        catch (Exception ex)
-        {
-            if (logger.IsEnabled(LogLevel.Warning))
-            {
-                logger.LogWarning(
-                    "Contact Center agent sign-out synchronization failed for user '{UserId}'. Error type: {ErrorType}. The background cleanup task will reconcile the agent state.",
-                    userId.SanitizeLogValue(),
-                    ex.GetType().Name);
-            }
-        }
+        return handler is null
+            ? Task.CompletedTask
+            : handler.HandleAsync(userId);
     }
 }

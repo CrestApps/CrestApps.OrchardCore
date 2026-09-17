@@ -2773,6 +2773,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState>> GetByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class DefaultAgentSignOutHandler : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSignOutHandler
+    {
+        public DefaultAgentSignOutHandler(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Telephony.ISoftPhoneCredentialRevoker> credentialRevokers, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.DefaultAgentSignOutHandler> logger) { }
+        public System.Threading.Tasks.Task HandleAsync(string userId) { }
+    }
     public sealed class DefaultBusinessHoursService : CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService
     {
         public DefaultBusinessHoursService(CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarManager calendarManager, System.TimeProvider timeProvider) { }
@@ -3045,6 +3050,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>> GetStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAgentSignOutHandler
+    {
+        System.Threading.Tasks.Task HandleAsync(string userId);
     }
     public interface IAgentStateReasonCodeManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateReasonCode>
     {
