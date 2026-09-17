@@ -417,7 +417,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
                     .Query<OmnichannelActivity, OmnichannelActivityIndex>(
                         index => index.ItemId == itemId,
                         collection: OmnichannelConstants.CollectionName)
-                    .FirstOrDefaultAsync();
+                    .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
 
                 // Settled rather than left due, so the next pass does not pick it up and ask the same question.
                 Assert.NotNull(activity);

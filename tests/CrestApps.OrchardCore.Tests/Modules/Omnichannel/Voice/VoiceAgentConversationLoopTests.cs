@@ -356,7 +356,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.Activity.Status = ActivityStatus.InProgress;
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Hangup);
+        await harness.HandleAsync(VoiceAgentEventKind.Hangup, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal([harness.Activity.ItemId], harness.AbandonmentHandler.Released);
@@ -373,7 +373,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.Activity.Status = ActivityStatus.InProgress;
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Hangup);
+        await harness.HandleAsync(VoiceAgentEventKind.Hangup, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Empty(harness.AbandonmentHandler.Released);
@@ -427,7 +427,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.CompletionRunner.FinishOn = harness.Loop;
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(0, harness.Media.Hangups);
@@ -445,7 +445,7 @@ public sealed class VoiceAgentConversationLoopTests
         harness.CompletionRunner.FinishOn = harness.Loop;
 
         // Act
-        await harness.HandleAsync(VoiceAgentEventKind.Answered);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Null(harness.CompletionRunner.Completion);

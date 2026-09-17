@@ -127,21 +127,25 @@ public sealed partial class RealtimeVoiceConversationRunner
         // model never heard, a goodbye said twice -- was diagnosed from the stored transcript after the call,
         // because the turns themselves left no trace. Recorded at debug so a call can be followed as it happened:
         // when the caller started talking, what came back as their words, and when nothing did.
-        var logTurns = _logger.IsEnabled(LogLevel.Debug);
         var activityId = context.Activity?.ItemId.SanitizeLogValue();
 
         try
         {
             await foreach (var conversationEvent in conversation.GetEventsAsync(cancellationToken))
             {
-                if (logTurns && conversationEvent.Type is not RealtimeConversationEventType.AssistantAudioDelta
-                                                       and not RealtimeConversationEventType.AssistantTranscriptDelta)
+                if (conversationEvent.Type is not RealtimeConversationEventType.AssistantAudioDelta
+                                            and not RealtimeConversationEventType.AssistantTranscriptDelta &&
+                    _logger.IsEnabled(LogLevel.Debug))
                 {
+                    // Sanitized into a local first: as an argument it would be evaluated on the way into a call
+                    // that may discard it, and this runs for every event of a live call.
+                    var text = conversationEvent.Text.SanitizeLogValue();
+
                     _logger.LogDebug(
                         "Realtime turn on activity '{ActivityId}': {EventType} '{Text}'.",
                         activityId,
                         conversationEvent.Type,
-                        conversationEvent.Text.SanitizeLogValue());
+                        text);
                 }
 
                 switch (conversationEvent.Type)

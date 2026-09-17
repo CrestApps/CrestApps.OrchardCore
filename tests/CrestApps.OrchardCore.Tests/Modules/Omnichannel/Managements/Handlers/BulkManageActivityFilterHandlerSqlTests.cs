@@ -46,7 +46,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
             Status = ActivityStatus.NotStated,
             Channel = OmnichannelConstants.Channels.Phone,
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -77,7 +77,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
             PhoneNumber = "7024991234",
             TimeZoneIds = ["America/Los_Angeles"],
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -139,7 +139,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
             AssignedToUserIds = [$"agent{Injection}", $"supervisor{Injection}"],
             TimeZoneIds = [$"America/Los_Angeles{Injection}"],
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -183,7 +183,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
             DoNotCallFrom = _now.AddDays(-14),
             DoNotCallTo = _now.AddDays(-1),
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -216,7 +216,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
         {
             AttemptFilter = attemptFilter,
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -242,7 +242,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
         {
             AttemptFilter = attemptFilter,
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -271,7 +271,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
         {
             AttemptFilter = attemptFilter,
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -297,7 +297,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
         {
             AttemptFilter = "1+",
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -323,7 +323,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
         {
             AttemptFilter = attemptFilter,
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -352,7 +352,7 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
         {
             AttemptFilter = attemptFilter,
         };
-        var context = CreateContext(filter);
+        var context = CreateContext(filter, new SqliteDialect());
         var handler = new BulkManageActivityFilterHandler();
 
         // Act
@@ -686,11 +686,12 @@ public sealed class BulkManageActivityFilterHandlerSqlTests
         }
     }
 
-    private static BulkManageActivityFilterContext CreateContext(BulkManageActivityFilter filter, ISqlDialect dialect = null)
+    private static BulkManageActivityFilterContext CreateContext(BulkManageActivityFilter filter, ISqlDialect dialect)
     {
         // A real dialect and a real naming convention, because the assertions are about the text of the statement:
         // a stubbed dialect returns empty strings for every quoted name and would make any text assertion pass.
-        dialect ??= new SqliteDialect();
+        // Each caller names its own dialect rather than leaning on a default, so it is obvious which engine a
+        // given assertion is about -- some of these statements differ between SQLite and PostgreSQL.
 
         var tableNameConvention = new IndexTableNameConvention();
         var sqlBuilder = new SqlBuilder(string.Empty, dialect);

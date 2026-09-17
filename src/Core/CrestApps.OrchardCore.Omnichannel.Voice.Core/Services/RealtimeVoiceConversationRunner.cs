@@ -246,7 +246,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // turn that went missing -- a short "yes" the provider returned no transcript for -- which leaves the
         // assistant waiting for a turn it never saw while the caller waits for an answer they think they already
         // gave. Neither side will break that on its own.
-        var idle = SpeakUpWhenNobodyHasAsync(callScope.Token, conversation, context);
+        var idle = SpeakUpWhenNobodyHasAsync(conversation, context, callScope.Token);
 
         // One generator drives both paths, at the rate the model speaks: the bed is mixed under the assistant's
         // own audio while it talks, and written on its own while it does not, so the room never cuts in and out.
@@ -414,9 +414,9 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// ending handles the rest.
     /// </remarks>
     private async Task SpeakUpWhenNobodyHasAsync(
-        CancellationToken callToken,
         IRealtimeConversation conversation,
-        RealtimeVoiceConversationContext context)
+        RealtimeVoiceConversationContext context,
+        CancellationToken callToken)
     {
         var attempts = 0;
 

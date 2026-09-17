@@ -457,7 +457,7 @@ public sealed class RealtimeVoiceConversationRunnerTests
         // Assert
         // The customer hears the goodbye once, and the record says it was said once.
         Assert.Equal(spokenAfterGoodbye, harness.Media.WrittenAudio.Count);
-        Assert.Single(harness.StoredPrompts.Where(prompt => prompt.Role == ChatRole.Assistant));
+        Assert.Single(harness.StoredPrompts, prompt => prompt.Role == ChatRole.Assistant);
 
         harness.Conversation.KeepAlive = false;
         harness.Media.KeepAlive = false;
