@@ -19,6 +19,8 @@ baseline in [phase-0-baseline.md](phase-0-baseline.md).
 | P0.3 (S4) | `IScopedWorkExecutor`, `IAfterCommitTaskQueue`, `IDetachedWorkExecutor` with framework defaults; `ShellScopeAfterCommitTaskQueue` and `ShellDetachedWorkExecutor` adapters |
 | P0.10 (S7) | `TelephonyInteraction`, `OmnichannelMessage`, `Interaction`, `InteractionEvent` and the two activity filters drop the Orchard entity base for their own `JsonObject`; `JsonPropertyBag` + per-type extensions preserve the stored shape, pinned by a test asserting the JSON text |
 | S6 | `IContactCenterConfigurationChangeNotifier` replaces `ISignal` in the configuration cache |
+| P0.14 | `ConcurrentDocumentCatalog<T, TIndex>` carries what `DocumentCatalog` held; `DocumentCatalog` stays a thin subclass because it is published; the 30 suite stores repoint at the new base |
+| P0.13a | The dependency-injection snapshot: 19 feature/profile baselines plus 4 resolution-order baselines, captured before any registration moves. See the note below on why order is pinned separately |
 | Phase 1 W1 (part) | `src/Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions` and `src/Core/Transitions/CrestApps.Core.Hosting` created with their final names and namespaces, Core-repo package metadata, `IsPackable=false`, and matching solution folders. `grep -rlE "OrchardCore" src/*/Transitions` is empty |
 
 ## Exit-criteria scoreboard
@@ -39,6 +41,23 @@ projects in scope); the Orchard modules are expected to keep these.
 | `ISiteService` | 10 | P0.6 |
 | `OrchardCore.Sms` | 9 | P0.5 |
 | `ContentItem` / `IContentManager` / `IContentDefinitionManager` | 7 / 6 / 3 | P0.4, the largest remaining workstream |
+
+## The execution order
+
+Phase 0's remaining workstreams were scouted against the real code and batched so that each batch is
+a shippable unit that keeps the build green:
+
+1. **Measurement instruments** - P0.13a, P0.1, P0.14. Nothing here changes behaviour, and everything
+   here is what the later batches are measured against. *(P0.13a and P0.14 done; P0.1 outstanding.)*
+2. **Independent seams** - P0.10-S18, P0.3-S9, P0.3-S21, P0.5, P0.11.
+3. **Content boundary, settings, authorization** - P0.4, P0.6, P0.7.
+4. **Background work and routes** - P0.8, P0.12.
+5. **Hub split and client configuration** - P0.9, P0.3-S23.
+6. **Registration collapse** - P0.13, alone, because it rewrites the same 42 startup files every
+   other workstream touches.
+
+The scarce resource is contended files, not time: `ContactCenterHub.cs` is touched by four
+workstreams across three batches, and `AgentWorkspaceEndpoints.cs` by four across four.
 
 ## Not started
 
@@ -65,3 +84,40 @@ All of Phase 1 is ahead, except the two Transitions projects noted above.
    seam rather than staying an Orchard detail.
 4. **Transitions projects created during Phase 0** rather than at the start of Phase 1, so the new
    seam contracts are written once under their final names instead of being renamed later.
+5. **The DI snapshot cannot record registration order.** [04-registration-api.md](04-registration-api.md)
+   and the P0.13 gate assume a snapshot can pin "same order for `IEnumerable<T>` chains". It cannot:
+   Orchard discovers module startups in an order that varies between runs, so three successive runs
+   disagreed on 1152, then 140, then 11 lines as the key was narrowed. The snapshot pins the set
+   (which services, how many, what lifetime, what implementation) and resolution order is pinned
+   directly instead, by asking a real tenant container what it hands back for the chains where first
+   match wins.
+6. **`EnabledByDependencyOnly` features cannot be snapshotted alone.** Six Contact Center features
+   are declared that way, so enabling one on its own is a no-op and records none of its own
+   registrations. The supported feature combinations are snapshotted as well to cover them.
+
+## Errata found in the plan documents
+
+Scouting the remaining workstreams against the real code turned up nine places where
+[00-phase-0-preparation.md](00-phase-0-preparation.md), [03-host-seams.md](03-host-seams.md) and
+[04-registration-api.md](04-registration-api.md) are impossible as written. Each would have compiled
+and passed the existing tests while being wrong. Summarised:
+
+- **The pre-extraction snapshot cannot be built from `main`** - the Contact Center modules do not
+  exist there. The baseline is `ma/add-contact-center` at `a71550af`, and it needs a worktree plus a
+  generator, which the plan does not mention.
+- **`AddCore*` methods cannot all live in the `*.Core` projects** - 70+ registered implementation
+  types live in modules, and a `*.Core` project cannot reference a module. Each method has to go
+  where its implementations are visible.
+- **`IOmnichannelSubjectAccessor` cannot be id-based** - an Orchard subject is a transient
+  `ContentItem` that is never saved and has no addressable id. The contract has to be instance-based.
+- **`IAgentSignOutHandler.HandleAsync(ClaimsPrincipal)` cannot work** - the sign-out hook runs from
+  `OnValidatePrincipal` exactly when the principal has already been nulled. It has to take a user id.
+- **The S18 capability map cannot be one dictionary in the Contact Center module** - an architecture
+  test forbids that module from referencing provider feature ids, so the map has to be
+  DI-contributed by each owning startup, and it is feature to *set of* capabilities.
+- **Appendix C is unusable as a checklist** - it was produced by a line scan that only catches
+  statements beginning with `services.`, so every fluent chain is missing. `ContactCenter/Startup.cs`
+  lists 19 registrations against roughly 109 real ones.
+- Plus: `ContactPreferenceDoNotCallRegistry` cannot be built before P0.4; the tenant
+  `IServiceCollection` has no public mechanism to dump (hence the application-module startup); and
+  P0.1's own gate commands are stale in the way `phase-0-baseline.md` already records.
