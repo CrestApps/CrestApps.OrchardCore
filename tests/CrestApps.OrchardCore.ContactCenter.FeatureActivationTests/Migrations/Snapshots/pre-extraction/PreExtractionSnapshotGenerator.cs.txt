@@ -1,0 +1,160 @@
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Modules;
+using YesSql;
+
+namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
+
+/// <summary>
+/// Produces the pre-extraction tenant snapshot that the upgrade test restores.
+/// </summary>
+/// <remarks>
+/// This file is deliberately NOT committed. It exists only in a throwaway worktree checked out at
+/// the commit the snapshot represents, because the snapshot has to be written by the code as it was
+/// before the framework extraction renamed anything. Running it from a later commit would record the
+/// new type names and prove nothing.
+/// <para>
+/// Run it with the snapshot output directory in CRESTAPPS_SNAPSHOT_OUT.
+/// </para>
+/// </remarks>
+public sealed class PreExtractionSnapshotGenerator
+{
+    [Fact]
+    public async Task Generate()
+    {
+        var outputPath = Environment.GetEnvironmentVariable("CRESTAPPS_SNAPSHOT_OUT");
+
+        Assert.False(string.IsNullOrEmpty(outputPath), "Set CRESTAPPS_SNAPSHOT_OUT to the snapshot output directory.");
+
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = "pre-extraction-snapshot",
+            ProviderProfile = "none",
+            Features =
+            [
+                "CrestApps.OrchardCore.ContactCenter",
+                "CrestApps.OrchardCore.ContactCenter.Agents",
+                "CrestApps.OrchardCore.ContactCenter.Queues",
+                "CrestApps.OrchardCore.ContactCenter.BusinessHours",
+                "CrestApps.OrchardCore.ContactCenter.InboundVoice",
+                "CrestApps.OrchardCore.ContactCenter.Dialer",
+                "CrestApps.OrchardCore.ContactCenter.RealTime",
+            ],
+        });
+
+        var counts = new SortedDictionary<string, int>(StringComparer.Ordinal);
+
+        await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
+        {
+            var session = serviceProvider.GetRequiredService<ISession>();
+            var now = serviceProvider.GetRequiredService<IClock>().UtcNow;
+
+            var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
+            var queue = await queueManager.NewAsync(cancellationToken: cancellationToken);
+            queue.Name = "Pre-extraction snapshot queue";
+            queue.Enabled = true;
+            queue.RoutingStrategy = QueueRoutingStrategy.LongestIdle;
+            queue.ReservationTimeoutSeconds = 30;
+            await queueManager.CreateAsync(queue, cancellationToken: cancellationToken);
+            counts[typeof(ActivityQueue).FullName] = 1;
+
+            var queueItemManager = serviceProvider.GetRequiredService<IQueueItemManager>();
+            var queueItem = await queueItemManager.NewAsync(cancellationToken: cancellationToken);
+            queueItem.QueueId = queue.ItemId;
+            queueItem.ActivityItemId = "activity-pre-extraction-snapshot";
+            queueItem.RestorePersistedStatus(QueueItemStatus.Waiting);
+            queueItem.Priority = InteractionPriority.Normal;
+            queueItem.EnqueuedUtc = now;
+            queueItem.QueueEnteredUtc = now;
+            await queueItemManager.CreateAsync(queueItem, cancellationToken: cancellationToken);
+            counts[typeof(QueueItem).FullName] = 1;
+
+            var agentManager = serviceProvider.GetRequiredService<IAgentProfileManager>();
+            var agent = await agentManager.NewAsync(cancellationToken: cancellationToken);
+            agent.Name = "Pre-extraction snapshot agent";
+            agent.UserId = "user-pre-extraction-snapshot";
+            agent.UserName = "pre-extraction-snapshot";
+            agent.PresenceStatus = AgentPresenceStatus.Available;
+            agent.MaxConcurrentInteractions = 1;
+            agent.QueueIds = [queue.ItemId];
+            agent.AllowedQueueIds = [queue.ItemId];
+            agent.CreatedUtc = now;
+            await agentManager.CreateAsync(agent, cancellationToken: cancellationToken);
+            counts[typeof(AgentProfile).FullName] = 1;
+
+            var sessionManager = serviceProvider.GetRequiredService<IAgentSessionManager>();
+            var agentSession = await sessionManager.NewAsync(cancellationToken: cancellationToken);
+            agentSession.UserId = agent.UserId;
+            agentSession.UserName = agent.UserName;
+            agentSession.IsOnline = true;
+            agentSession.ConnectionIds = ["connection-pre-extraction-snapshot"];
+            agentSession.QueueIds = [queue.ItemId];
+            agentSession.ConnectedUtc = now;
+            agentSession.LastHeartbeatUtc = now;
+            agentSession.CreatedUtc = now;
+            await sessionManager.CreateAsync(agentSession, cancellationToken: cancellationToken);
+            counts[typeof(AgentSession).FullName] = 1;
+
+            await session.SaveChangesAsync(cancellationToken);
+        });
+
+        // Release the pooled SQLite handles so the file on disk is complete and copyable.
+        typeof(ContactCenterFeatureActivationHost)
+            .GetMethod("ClearSqliteConnectionPools", BindingFlags.NonPublic | BindingFlags.Static)
+            .Invoke(null, null);
+
+        var dataPath = (string)typeof(ContactCenterFeatureActivationHost)
+            .GetField("_applicationDataPath", BindingFlags.NonPublic | BindingFlags.Instance)
+            .GetValue(host);
+
+        Directory.CreateDirectory(outputPath);
+
+        var copied = new List<string>();
+
+        CopyInto(Path.Combine(dataPath, "tenants.json"), Path.Combine(outputPath, "tenants.json"), copied);
+
+        var siteSource = Path.Combine(dataPath, "Sites", tenant.Settings.Name);
+        var siteTarget = Path.Combine(outputPath, "Sites", tenant.Settings.Name);
+
+        foreach (var file in Directory.EnumerateFiles(siteSource, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(siteSource, file);
+            CopyInto(file, Path.Combine(siteTarget, relative), copied);
+        }
+
+        var manifest = new
+        {
+            sourceCommit = Environment.GetEnvironmentVariable("CRESTAPPS_SNAPSHOT_COMMIT") ?? "unknown",
+            tenantName = tenant.Settings.Name,
+            documentCounts = counts,
+            files = copied.Order(StringComparer.Ordinal).ToArray(),
+        };
+
+        await File.WriteAllTextAsync(
+            Path.Combine(outputPath, "manifest.json"),
+            JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }),
+            new UTF8Encoding(false),
+            cancellationToken);
+    }
+
+    private static void CopyInto(string source, string target, List<string> copied)
+    {
+        if (!File.Exists(source))
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(target));
+        File.Copy(source, target, overwrite: true);
+        copied.Add(Path.GetFileName(target));
+    }
+}

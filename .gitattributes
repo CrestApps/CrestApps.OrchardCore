@@ -25,3 +25,6 @@ tests/CrestApps.OrchardCore.Tests/Telephony/Cassettes/** -text
 *.woff2 binary
 *.ttf binary
 *.eot binary
+
+# The pre-extraction tenant snapshot is a SQLite database. Git must not touch its line endings.
+tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/Migrations/Snapshots/**/*.db binary

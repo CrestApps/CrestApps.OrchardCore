@@ -66,9 +66,13 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
     /// <returns>The started host.</returns>
     public static async Task<ContactCenterFeatureActivationHost> StartAsync(
         string environmentName = null,
-        IReadOnlyDictionary<string, string> shellConfiguration = null)
+        IReadOnlyDictionary<string, string> shellConfiguration = null,
+        string existingApplicationDataPath = null)
     {
-        var applicationDataPath = Path.Combine(Path.GetTempPath(), $"crestapps-contact-center-{Guid.NewGuid():N}");
+        // An existing path is handed in when a test restores a database written by an earlier build,
+        // so the host opens that tenant instead of setting up a fresh one.
+        var applicationDataPath = existingApplicationDataPath
+            ?? Path.Combine(Path.GetTempPath(), $"crestapps-contact-center-{Guid.NewGuid():N}");
         var webRootPath = Path.Combine(applicationDataPath, "wwwroot");
         Directory.CreateDirectory(webRootPath);
 
@@ -168,6 +172,31 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
     /// refuses a configuration surfaces here rather than during setup.
     /// </summary>
     /// <param name="tenant">The tenant to activate.</param>
+    /// <summary>
+    /// Gets a tenant that already exists in the shells the host was started over.
+    /// </summary>
+    /// <param name="tenantName">The tenant name recorded in the restored snapshot.</param>
+    /// <returns>The tenant.</returns>
+    public async Task<ContactCenterTenant> GetExistingTenantAsync(string tenantName)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(tenantName);
+
+        if (!_shellHost.TryGetSettings(tenantName, out var settings))
+        {
+            settings = (await _shellSettingsManager.LoadSettingsAsync())
+                .FirstOrDefault(candidate => string.Equals(candidate.Name, tenantName, StringComparison.Ordinal));
+        }
+
+        ArgumentNullException.ThrowIfNull(settings, nameof(tenantName));
+
+        return new ContactCenterTenant(settings, new ContactCenterTenantProfile
+        {
+            Id = tenantName,
+            ProviderProfile = "restored",
+            Features = [],
+        });
+    }
+
     public Task ActivateTenantAsync(ContactCenterTenant tenant)
     {
         ArgumentNullException.ThrowIfNull(tenant);

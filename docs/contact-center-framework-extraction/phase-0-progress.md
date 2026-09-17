@@ -20,6 +20,8 @@ baseline in [phase-0-baseline.md](phase-0-baseline.md).
 | P0.10 (S7) | `TelephonyInteraction`, `OmnichannelMessage`, `Interaction`, `InteractionEvent` and the two activity filters drop the Orchard entity base for their own `JsonObject`; `JsonPropertyBag` + per-type extensions preserve the stored shape, pinned by a test asserting the JSON text |
 | S6 | `IContactCenterConfigurationChangeNotifier` replaces `ISignal` in the configuration cache |
 | P0.14 | `ConcurrentDocumentCatalog<T, TIndex>` carries what `DocumentCatalog` held; `DocumentCatalog` stays a thin subclass because it is published; the 30 suite stores repoint at the new base |
+| P0.1 | **Reduced by decision, see below.** The pre-extraction upgrade test landed; the coverage audit and its gate were dropped in favour of a test-count ratchet |
+| P0.1 | Reduced by decision (see below): the pre-extraction upgrade test landed; the coverage audit and its gate were dropped for a test-count ratchet |
 | P0.13a | The dependency-injection snapshot: 19 feature/profile baselines plus 4 resolution-order baselines, captured before any registration moves. See the note below on why order is pinned separately |
 | Phase 1 W1 (part) | `src/Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions` and `src/Core/Transitions/CrestApps.Core.Hosting` created with their final names and namespaces, Core-repo package metadata, `IsPackable=false`, and matching solution folders. `grep -rlE "OrchardCore" src/*/Transitions` is empty |
 
@@ -48,7 +50,7 @@ Phase 0's remaining workstreams were scouted against the real code and batched s
 a shippable unit that keeps the build green:
 
 1. **Measurement instruments** - P0.13a, P0.1, P0.14. Nothing here changes behaviour, and everything
-   here is what the later batches are measured against. *(P0.13a and P0.14 done; P0.1 outstanding.)*
+   here is what the later batches are measured against. *(Done.)*
 2. **Independent seams** - P0.10-S18, P0.3-S9, P0.3-S21, P0.5, P0.11.
 3. **Content boundary, settings, authorization** - P0.4, P0.6, P0.7.
 4. **Background work and routes** - P0.8, P0.12.
@@ -61,13 +63,53 @@ workstreams across three batches, and `AgentWorkspaceEndpoints.cs` by four acros
 
 ## Not started
 
-P0.4 (contacts, subjects, subject flows — the largest and highest risk), P0.5 (SMS provider
-abstraction), P0.6 (settings to options), P0.7 (authorization operations), P0.8 (background tasks to
-cycles), P0.9 (hub base classes), P0.11 (schema migration steps), P0.12 (endpoints as `Map*`
-methods), P0.13 (`AddCore*` registration methods and the DI snapshot test), P0.14 (store base class),
-and the rest of P0.3 (`IUserDirectory`, `IAgentSignOutHandler`, client configuration models).
+**Batches 2 to 6, thirteen workstreams.** P0.4 (contacts, subjects, subject flows — the largest and
+highest risk), P0.5 (SMS provider abstraction), P0.6 (settings to options), P0.7 (authorization
+operations), P0.8 (background tasks to cycles), P0.9 (hub base classes), P0.11 (schema migration
+steps), P0.12 (endpoints as `Map*` methods), P0.13 (`AddCore*` registration methods), and the rest of
+P0.3 (`IUserDirectory`, `IAgentSignOutHandler`, client configuration models).
+
+**Phase 0 is therefore not finished, and Phase 1 must not start.** Batch 1 only built the instruments
+the remaining batches are measured against.
 
 All of Phase 1 is ahead, except the two Transitions projects noted above.
+
+## P0.1: what was kept and what was dropped
+
+Decided 2026-09-17. P0.1 as written bundles two unrelated things, and they were judged separately.
+
+**Dropped: the per-class coverage audit and its architecture gate.** With 5294 test cases in the main
+suite and 81 in the activation suite already green, a 532-row audit table mostly restates what the
+suite proves, and the 80 percent line-coverage bar was never closable inside this effort. Worse, both
+can be satisfied dishonestly: the bar by writing `needsCharacterizationTest` in 356 rows, the audit by
+naming a covering test that does not really cover anything. The standing rule that each workstream
+pins what it touches does the same job with none of the ceremony.
+
+The one thing the audit would genuinely have caught is a relocation silently deleting test files, so
+that is kept as `MovingSetTestCountRatchetTests`: a floor on the number of test methods, which cannot
+be satisfied dishonestly and costs nothing.
+
+**Kept: the pre-extraction upgrade test.** It sits inside P0.1 but it is not a coverage artefact — it
+is the only thing that proves a real tenant's stored data survives. Nothing else covers it:
+`ContactCenterRollingUpgradeTests` answers a different question, and the one stored type-name rewrite
+that already exists here, `AILegacyDocumentTypeNameMigrations`, has no test at all.
+
+It is reclassified as a **Phase 1 prerequisite** rather than a Phase 0 gate. Phase 0 moves nothing, so
+it does not need it; Phase 1 renames every namespace, so it must not start without it. It reads from a
+fixed commit, so it can be regenerated at any time and is never on the critical path.
+
+## Definition of done, per workstream
+
+Because the coverage audit is gone, one rule replaces it:
+
+> Any framework-default type that no Orchard startup registers ships with unit tests in the same
+> commit.
+
+Those types are unreachable from every integration and feature-activation test here, by design: the
+framework defaults exist for a standalone host, and Orchard binds its own implementations instead.
+They would otherwise carry zero coverage into Phase 2, where they become the only implementation.
+This applies to P0.4's default contact and subject model, P0.8's cycles, and P0.13's
+`ContactPreferenceDoNotCallRegistry`.
 
 ## Deviations from the written plan
 
