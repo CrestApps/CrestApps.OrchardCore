@@ -844,15 +844,27 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                                         }
                                     }
 
-                                    await executor.ExecuteAsync(new SubjectActionExecutionContext
+                                    // Only with a disposition in hand. The model can return an id that is not in
+                                    // the offered list, or none at all when it is not required, and a subject with
+                                    // no actions configured offers an empty list to begin with -- all three arrive
+                                    // here as null, and the executor rejects null by throwing. That exception is
+                                    // raised inside a deferred background scope, after the conclusion has written
+                                    // the outcome but before the scope commits, so the conversation is left open
+                                    // with no disposition, no notes and no follow-up, and the only trace is a
+                                    // stack in the log. Both sibling call sites already guard this; this one did
+                                    // not. Nothing to act on is not a failure -- it is a call with no follow-up.
+                                    if (dispositionObj is not null)
                                     {
-                                        Activity = omnichannelActivity,
-                                        Contact = contact,
-                                        Subject = subject,
-                                        Disposition = dispositionObj,
-                                        ActionScheduleDates = actionScheduleDates,
-                                        ActionPreparationNotes = actionPreparationNotes,
-                                    });
+                                        await executor.ExecuteAsync(new SubjectActionExecutionContext
+                                        {
+                                            Activity = omnichannelActivity,
+                                            Contact = contact,
+                                            Subject = subject,
+                                            Disposition = dispositionObj,
+                                            ActionScheduleDates = actionScheduleDates,
+                                            ActionPreparationNotes = actionPreparationNotes,
+                                        });
+                                    }
                                 }
                             }
                         }

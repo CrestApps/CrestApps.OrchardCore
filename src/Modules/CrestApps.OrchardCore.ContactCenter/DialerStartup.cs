@@ -129,7 +129,11 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IProviderCommandDispatchValidator, DialerProviderCommandDispatchValidator>()
             .AddScoped<IDialerAttemptCompensationService, DialerAttemptCompensationService>()
             .AddScoped<IDialerAttemptService, DialerAttemptService>()
-            .AddScoped<IOutboundCallScreener, ContactCenterManualCallScreener>();
+            .AddScoped<IOutboundCallScreener, ContactCenterManualCallScreener>()
+            // The same compliance policy, applied to calls the platform places on its own. Registered here
+            // rather than with the voice feature because this is where that policy is configured: without the
+            // dialer there are no screeners for it to consult and it would have nothing to ask.
+            .AddScoped<IAutomatedActivityScreener, AutomatedVoiceCallScreener>();
     }
 }
 

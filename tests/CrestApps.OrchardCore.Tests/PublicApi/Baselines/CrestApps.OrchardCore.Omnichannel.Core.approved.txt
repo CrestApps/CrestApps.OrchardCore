@@ -921,6 +921,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class AutomatedActivityScreeningResult
+    {
+        public AutomatedActivityScreeningResult() { }
+        public string Description { get; init; }
+        public bool IsAllowed { get; init; }
+        public string Reason { get; init; }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Services.AutomatedActivityScreeningResult Allow() { }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Services.AutomatedActivityScreeningResult Deny(string reason, string description) { }
+    }
     public sealed class BulkManageActivityFilterContext
     {
         public BulkManageActivityFilterContext(CrestApps.OrchardCore.Omnichannel.Core.Models.BulkManageActivityFilter filter, YesSql.ISqlBuilder sqlBuilder, YesSql.ISqlDialect dialect, string tablePrefix, YesSql.ITableNameConvention tableNameConvention, string schema, string activityTableAlias) { }
@@ -979,6 +988,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public interface IAutomatedActivityCompletionService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> CompleteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.AutomatedActivityCompletionRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAutomatedActivityScreener
+    {
+        string Channel { get; }
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Services.AutomatedActivityScreeningResult> ScreenAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAutomatedConversationGate
     {
@@ -1127,6 +1141,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     {
         public OmnichannelChannelEndpointStore(OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Models.DictionaryDocument<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint>> documentManager) { }
         public System.Threading.Tasks.ValueTask<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class OmnichannelContactPreferences
+    {
+        public static bool HasOptedOut(OrchardCore.ContentManagement.ContentItem contact, string channel) { }
     }
     public static class OmnichannelHandoffHelper
     {

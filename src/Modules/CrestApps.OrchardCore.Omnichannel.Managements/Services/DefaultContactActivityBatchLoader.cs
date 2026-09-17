@@ -458,7 +458,21 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 activity.ContactContentItemId = contact.ContentItemId;
                 activity.ContactContentType = batch.ContactContentType;
                 activity.SubjectContentType = batch.SubjectContentType;
-                activity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, activity.Channel);
+                // Asked before a destination is looked for, and asked whatever kind of activity this is. The
+                // check underneath excludes an opted-out contact only from automated work, which left an agent
+                // being handed a call sheet containing people who had asked not to be called -- the obligation is
+                // the same whoever ends up dialling. The batch's own "include" flag is the operator's explicit
+                // override for the cases a preference is not meant to block, such as a recall notice; until now
+                // it was stored, editable and read by nothing at all.
+                if (OmnichannelHelper.HasOptedOut(contact, activity.Channel) && !IncludesOptedOutContacts(batch, activity.Channel))
+                {
+                    continue;
+                }
+
+                // The consent question was settled on the line above, so this only has to find the address. Asking
+                // the version that answers both would refuse an address to exactly the contacts the operator just
+                // said to include, and the override would do nothing.
+                activity.PreferredDestination = OmnichannelHelper.FindDestination(contact, activity.Channel);
 
                 if (activity.InteractionType == ActivityInteractionType.Automated &&
                     string.IsNullOrWhiteSpace(activity.PreferredDestination))
@@ -593,5 +607,33 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         }
 
         return ActivityKind.Task;
+    }
+
+    /// <summary>
+    /// Whether this batch was told to load contacts who have asked not to be reached on this channel.
+    /// </summary>
+    /// <remarks>
+    /// Unticked is the form's way of saying "respect the preference", so the default excludes them. Ticking it is
+    /// a deliberate act by somebody who has decided this particular message is not the kind the preference is
+    /// meant to stop -- and it is per channel, because agreeing to a text is not agreeing to a call.
+    /// </remarks>
+    private static bool IncludesOptedOutContacts(OmnichannelActivityBatch batch, string channel)
+    {
+        if (channel == OmnichannelConstants.Channels.Phone)
+        {
+            return batch.IncludeDoNoCalls;
+        }
+
+        if (channel == OmnichannelConstants.Channels.Sms)
+        {
+            return batch.IncludeDoNoSms;
+        }
+
+        if (channel == OmnichannelConstants.Channels.Email)
+        {
+            return batch.IncludeDoNoEmail;
+        }
+
+        return false;
     }
 }

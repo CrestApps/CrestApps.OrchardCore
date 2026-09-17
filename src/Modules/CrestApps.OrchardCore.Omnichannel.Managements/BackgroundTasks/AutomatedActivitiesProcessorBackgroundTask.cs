@@ -3,6 +3,9 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
+using CrestApps.Core.Support;
+using OrchardCore.ContentManagement;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
@@ -110,6 +113,35 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 try
                 {
                     var processor = processors[activity.Channel];
+
+                    // Asked again here, and not only when the batch was loaded. A batch is loaded once and its
+                    // activities come due later -- often hours later, and later still if they are rescheduled --
+                    // so the preference read at load time is a statement about the past. Somebody who asks to be
+                    // left alone in the meantime is still holding an activity with their number on it, and
+                    // nothing between this line and the provider looks at the contact again.
+                    var refusal = await ScreenAsync(serviceProvider, activity, cancellationToken);
+
+                    if (refusal is not null)
+                    {
+                        activity.Status = ActivityStatus.Cancelled;
+                        activity.CompletedUtc ??= now;
+                        activity.Notes = string.IsNullOrWhiteSpace(activity.Notes)
+                            ? refusal
+                            : activity.Notes + Environment.NewLine + refusal;
+
+                        await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
+
+                        if (logger.IsEnabled(LogLevel.Information))
+                        {
+                            logger.LogInformation(
+                                "Activity '{ActivityId}' was cancelled instead of started on '{Channel}': {Reason}",
+                                activity.ItemId.SanitizeLogValue(),
+                                activity.Channel.SanitizeLogValue(),
+                                refusal.SanitizeLogValue());
+                        }
+
+                        continue;
+                    }
 
                     await processor.StartAsync(activity, cancellationToken);
                 }
@@ -232,5 +264,71 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                 await session.SaveAsync(activity, false, collection: OmnichannelConstants.CollectionName, cancellationToken);
             }
         }
+    }
+
+    /// <summary>
+    /// Whether the contact this activity is for has since asked not to be reached on its channel.
+    /// </summary>
+    /// <remarks>
+    /// An activity with no contact is nobody's preference to state, so it proceeds. A contact that can no longer
+    /// be found proceeds too: a deleted record is not a request to be left alone, and the activity still carries
+    /// the destination it was loaded with.
+    /// </remarks>
+    /// <summary>
+    /// The reason this activity may not be placed, or <see langword="null"/> when it may.
+    /// </summary>
+    /// <remarks>
+    /// Two questions, asked in the cheap order. Whether the person has asked to be left alone is answered from
+    /// the contact we already have to load; whether anything else forbids the call -- a national registry, the
+    /// hour in their region -- is answered by whichever screeners the tenant has registered, and may cost a
+    /// network round trip.
+    /// </remarks>
+    private static async Task<string> ScreenAsync(
+        IServiceProvider serviceProvider,
+        OmnichannelActivity activity,
+        CancellationToken cancellationToken)
+    {
+        if (await HasOptedOutAsync(serviceProvider, activity, cancellationToken))
+        {
+            return "The contact has asked not to be reached on this channel.";
+        }
+
+        var screeners = serviceProvider.GetServices<IAutomatedActivityScreener>()
+            .Where(screener => string.Equals(screener.Channel, activity.Channel, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var screener in screeners)
+        {
+            var result = await screener.ScreenAsync(activity, cancellationToken);
+
+            if (!result.IsAllowed)
+            {
+                // The first refusal settles it. Asking the rest would not change the outcome and each one may
+                // cost a call to somebody else's service.
+                return string.IsNullOrWhiteSpace(result.Description)
+                    ? result.Reason ?? "The call was refused by screening."
+                    : result.Description;
+            }
+        }
+
+        return null;
+    }
+
+    private static async Task<bool> HasOptedOutAsync(
+        IServiceProvider serviceProvider,
+        OmnichannelActivity activity,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(activity.ContactContentItemId))
+        {
+            return false;
+        }
+
+        var contentManager = serviceProvider.GetRequiredService<IContentManager>();
+
+        // Latest rather than published: an opt-out recorded but not yet published is still an opt-out, and the
+        // question here is whether anybody has told us to stop -- not whether the record has been approved.
+        var contact = await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+        return OmnichannelHelper.HasOptedOut(contact, activity.Channel);
     }
 }

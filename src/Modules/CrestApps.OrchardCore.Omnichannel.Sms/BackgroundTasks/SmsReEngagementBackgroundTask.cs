@@ -255,6 +255,14 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
             contactTimeZoneId = contact.Get<OmnichannelContactPart>(nameof(OmnichannelContactPart))?.TimeZoneId;
         }
 
+        // A follow-up is a message like any other, and this task never asked whether it was still welcome. The
+        // conversation it is reviving began when the contact was willing to hear from us; somebody who has since
+        // said stop is exactly the person a cadence would otherwise keep messaging, on a schedule, for days.
+        if (OmnichannelContactPreferences.HasOptedOut(contact, activity.Channel))
+        {
+            return;
+        }
+
         // Every send here is background-initiated, so it must respect business hours. An activity that names a
         // calendar nothing can evaluate — the business-hours feature is off, or the calendar was deleted — is
         // declined rather than nudged, because the alternative is an after-hours message sent on the strength of

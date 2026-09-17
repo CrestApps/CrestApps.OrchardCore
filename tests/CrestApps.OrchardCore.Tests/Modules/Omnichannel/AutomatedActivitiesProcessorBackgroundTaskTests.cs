@@ -7,6 +7,8 @@ using CrestApps.OrchardCore.Omnichannel.Managements.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
+using Moq;
+using OrchardCore.ContentManagement;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -254,7 +256,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
     private static ServiceProvider BuildServiceProvider(
         ISession session,
         IOmnichannelProcessor processor,
-        ISubjectFlowSettingsService subjectFlowSettingsService)
+        ISubjectFlowSettingsService subjectFlowSettingsService,
+        IContentManager contentManager = null)
     {
         var services = new ServiceCollection();
         services.AddSingleton(session);
@@ -264,7 +267,61 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         services.AddOptions<OmnichannelAutomationOptions>();
 
+        // Every due activity names a contact, and the contact is what says whether we are still allowed to reach
+        // them. A harness with no way to answer that question would be testing a pass that cannot run.
+        services.AddSingleton(contentManager ?? ContactsWhoHaveNotOptedOut());
+
         return services.BuildServiceProvider();
+    }
+
+    /// <summary>
+    /// A content manager that answers every lookup with a contact carrying no communication preferences.
+    /// </summary>
+    private static IContentManager ContactsWhoHaveNotOptedOut()
+    {
+        var contentManager = new Mock<IContentManager>();
+
+        contentManager
+            .Setup(x => x.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
+            .ReturnsAsync((string contentItemId, VersionOptions _) => new ContentItem
+            {
+                ContentItemId = contentItemId,
+                ContentType = "Lead",
+            });
+
+        return contentManager.Object;
+    }
+
+    /// <summary>
+    /// A content manager whose one contact has asked not to be contacted on this channel.
+    /// </summary>
+    private static IContentManager ContactWhoOptedOut(string contactContentItemId, string channel)
+    {
+        var contact = new ContentItem
+        {
+            ContentItemId = contactContentItemId,
+            ContentType = "Lead",
+        };
+
+        contact.Alter<OmnichannelContactPart>(part =>
+        {
+            if (channel == OmnichannelConstants.Channels.Phone)
+            {
+                part.SetDoNotCall(true, _now);
+            }
+            else if (channel == OmnichannelConstants.Channels.Sms)
+            {
+                part.SetDoNotSms(true, _now);
+            }
+        });
+
+        var contentManager = new Mock<IContentManager>();
+
+        contentManager
+            .Setup(x => x.GetAsync(contactContentItemId, It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
+
+        return contentManager.Object;
     }
 
     private static async Task<IStore> CreateStoreAsync(string connectionString)
@@ -313,7 +370,70 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
         return store;
     }
 
-    private static async Task<string> SaveAutomatedSmsActivityAsync(ISession session)
+    [Fact]
+    public async Task DoWorkAsync_WhenTheContactHasOptedOutSinceTheBatchWasLoaded_NeitherCallsNorMessagesThem()
+    {
+        // Arrange
+        // The preference is read when a batch is loaded, and a batch can sit for hours before its activities come
+        // due. Somebody who asks to be left alone in between is still holding a loaded activity with their number
+        // on it, and nothing between here and the provider looks at the contact again. This is the pass that has
+        // to notice.
+        var databasePath = DatabasePath("processor-opted-out");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            var contactContentItemId = IdGenerator.GenerateId();
+            string itemId;
+
+            await using (var seedSession = store.CreateSession())
+            {
+                itemId = await SaveAutomatedSmsActivityAsync(seedSession, contactContentItemId);
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var processor = new RecordingSmsProcessor();
+
+            await using (var workSession = store.CreateSession())
+            {
+                var serviceProvider = BuildServiceProvider(
+                    workSession,
+                    processor,
+                    new NoOpSubjectFlowSettingsService(),
+                    ContactWhoOptedOut(contactContentItemId, OmnichannelConstants.Channels.Sms));
+
+                // Act
+                await new AutomatedActivitiesProcessorBackgroundTask()
+                    .DoWorkAsync(serviceProvider, TestContext.Current.CancellationToken);
+            }
+
+            // Assert
+            Assert.Empty(processor.ProcessedItemIds);
+
+            await using (var readSession = store.CreateSession())
+            {
+                var activity = await readSession
+                    .Query<OmnichannelActivity, OmnichannelActivityIndex>(
+                        index => index.ItemId == itemId,
+                        collection: OmnichannelConstants.CollectionName)
+                    .FirstOrDefaultAsync();
+
+                // Settled rather than left due, so the next pass does not pick it up and ask the same question.
+                Assert.NotNull(activity);
+                Assert.Equal(ActivityStatus.Cancelled, activity.Status);
+            }
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    private static Task<string> SaveAutomatedSmsActivityAsync(ISession session)
+        => SaveAutomatedSmsActivityAsync(session, IdGenerator.GenerateId());
+
+    private static async Task<string> SaveAutomatedSmsActivityAsync(ISession session, string contactContentItemId)
     {
         var itemId = IdGenerator.GenerateId();
 
@@ -323,7 +443,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
                 ItemId = itemId,
                 Channel = "SMS",
                 ChannelEndpointId = "endpoint",
-                ContactContentItemId = IdGenerator.GenerateId(),
+                ContactContentItemId = contactContentItemId,
                 ContactContentType = "Lead",
                 SubjectContentType = "LeadFollowUp",
                 PreferredDestination = "+15555550100",

@@ -6,6 +6,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Fluid;
 using Fluid.Values;
@@ -176,6 +177,16 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
             {
                 message.From = endpoint.Value;
             }
+        }
+
+        // Asked here as well as in the pass that schedules this, because this is not the only way in: the
+        // "Place Call or Send Message" workflow task calls StartAsync directly and screens nothing, and a retry
+        // re-enters here too. This method is the last code before the carrier and it has already loaded the
+        // contact for the template, so the question costs nothing and asking it is what makes the guarantee hold
+        // for every caller rather than for one of them.
+        if (OmnichannelContactPreferences.HasOptedOut(contact, activity.Channel))
+        {
+            return;
         }
 
         var smsResult = await _smsService.SendAsync(message, cancellationToken);

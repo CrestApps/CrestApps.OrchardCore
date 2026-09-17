@@ -494,6 +494,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public enum OutboundCallOrigin
     {
         SoftPhone = 0,
+        AutomatedVoice = 1,
     }
     public sealed class OutboundCallScreeningContext
     {
