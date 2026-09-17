@@ -101,7 +101,7 @@ public sealed class DialerPacingBackgroundTaskTests
         clock.SetUtcNow(new DateTime(2026, 7, 12, 0, 0, 0, DateTimeKind.Utc));
 
         var workManager = new TestContactCenterFeatureWorkManager();
-        workManager.Quiesce(ContactCenterConstants.Feature.DialerPaced);
+        workManager.Quiesce(ContactCenterCapabilities.DialerPaced);
 
         await using var serviceProvider = CreateServiceProvider(dialerManager, dialerService, queueItemStore, clock, workManager);
 

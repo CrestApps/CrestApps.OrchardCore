@@ -63,7 +63,7 @@ public sealed class DirectRingTimeoutBackgroundTask : IBackgroundTask
         {
             // Acquire the drain lease per tick (and release it before the delay) so a feature disable can still
             // drain without waiting out the whole invocation.
-            using (var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Queues))
+            using (var workLease = workManager.TryEnter(ContactCenterCapabilities.Queues))
             {
                 if (workLease is null)
                 {

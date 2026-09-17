@@ -57,6 +57,12 @@ CrestApps.OrchardCore.Asterisk.Services.IAsteriskRealtimeVoiceEventBridge #1 Sco
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskRealtimeVoiceListener #0 Singleton -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskRealtimeVoiceListener
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskRecordingIngestJobStore #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskRecordingIngestJobStore
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskRecordingIngestService #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskRecordingIngestService
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #0 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #1 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #2 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #3 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #4 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #5 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
 CrestApps.OrchardCore.ContactCenter.ContactCenterProcessLivenessOptions #0 Singleton -> factory
 CrestApps.OrchardCore.ContactCenter.Core.Services.ActivityReservationService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ActivityReservationService
 CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterEventDispatchContext #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterEventDispatchContext

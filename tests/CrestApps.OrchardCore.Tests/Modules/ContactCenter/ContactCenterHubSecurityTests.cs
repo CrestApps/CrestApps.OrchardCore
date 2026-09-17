@@ -321,7 +321,7 @@ public sealed class ContactCenterHubSecurityTests
 
             var workManager = new Mock<IContactCenterFeatureWorkManager>();
             workManager
-                .Setup(manager => manager.TryEnter(ContactCenterConstants.Feature.RealTime))
+                .Setup(manager => manager.TryEnter(ContactCenterCapabilities.RealTime))
                 .Returns(() => WorkLeaseGranted
                     ? WorkLease
                     : null);

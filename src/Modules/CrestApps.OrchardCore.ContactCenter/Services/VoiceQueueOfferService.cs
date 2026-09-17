@@ -70,7 +70,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
     {
         ArgumentException.ThrowIfNullOrEmpty(queueId);
 
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.Voice);
 
         if (workLease is null)
         {
@@ -160,7 +160,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         ArgumentException.ThrowIfNullOrEmpty(queueId);
         ArgumentException.ThrowIfNullOrEmpty(agentId);
 
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.Voice);
 
         if (workLease is null)
         {

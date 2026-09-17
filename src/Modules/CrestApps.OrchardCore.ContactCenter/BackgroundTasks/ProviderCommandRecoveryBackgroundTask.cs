@@ -21,7 +21,7 @@ public sealed class ProviderCommandRecoveryBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+        using var workLease = workManager.TryEnter(ContactCenterCapabilities.Voice);
 
         if (workLease is null)
         {

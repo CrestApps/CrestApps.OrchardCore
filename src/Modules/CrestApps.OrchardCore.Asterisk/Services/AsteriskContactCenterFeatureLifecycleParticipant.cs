@@ -23,13 +23,13 @@ internal sealed class AsteriskContactCenterFeatureLifecycleParticipant : IContac
         IContactCenterFeatureWorkManager workManager,
         IOptions<ContactCenterFeatureLifecycleOptions> options)
     {
-        FeatureId = featureId;
+        Capability = featureId;
         _partitionKey = partitionKey;
         _workManager = workManager;
         _drainTimeout = TimeSpan.FromSeconds(options.Value.DrainTimeoutSeconds);
     }
 
-    public string FeatureId { get; }
+    public string Capability { get; }
 
     public Task QuiesceAsync(CancellationToken cancellationToken = default)
     {

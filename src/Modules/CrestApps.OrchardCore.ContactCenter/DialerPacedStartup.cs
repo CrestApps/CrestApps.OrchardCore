@@ -30,6 +30,8 @@ public sealed class DialerPacedStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(ContactCenterConstants.Feature.DialerPaced, ContactCenterCapabilities.DialerPaced);
+
         services
             .AddScoped<IDialerStrategy, PowerDialerStrategy>()
             .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
@@ -38,7 +40,7 @@ public sealed class DialerPacedStartup : StartupBase
             .AddScoped<IDialerStrategy, PredictiveDialerStrategy>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
-                    ContactCenterConstants.Feature.DialerPaced,
+                    ContactCenterCapabilities.DialerPaced,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 

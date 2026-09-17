@@ -70,7 +70,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
     /// <inheritdoc/>
     public override async Task OnConnectedAsync()
     {
-        var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.RealTime);
+        var workLease = _workManager.TryEnter(ContactCenterCapabilities.RealTime);
 
         if (workLease is null)
         {

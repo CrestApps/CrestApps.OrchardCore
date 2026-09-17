@@ -55,6 +55,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(ContactCenterConstants.Feature.Area, ContactCenterCapabilities.Core);
+
         services.AddCoreHostSeams();
 
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterStorage.CollectionName));
@@ -160,7 +162,7 @@ public sealed class Startup : StartupBase
             .AddSingleton<IContactCenterFeatureWorkManager, ContactCenterFeatureWorkManager>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
-                    ContactCenterConstants.Feature.Area,
+                    ContactCenterCapabilities.Core,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
             .AddScoped<IInteractionStore, InteractionStore>()

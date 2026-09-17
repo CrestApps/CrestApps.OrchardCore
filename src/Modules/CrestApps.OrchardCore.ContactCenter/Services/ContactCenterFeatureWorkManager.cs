@@ -17,9 +17,9 @@ internal sealed class ContactCenterFeatureWorkManager : IContactCenterFeatureWor
         _topologyState = topologyState;
     }
 
-    public IContactCenterFeatureWorkLease TryEnter(string featureId)
+    public IContactCenterFeatureWorkLease TryEnter(string capability)
     {
-        ArgumentException.ThrowIfNullOrEmpty(featureId);
+        ArgumentException.ThrowIfNullOrEmpty(capability);
 
         // A deployment that does not satisfy the topology it declared is not a supported deployment, so it must
         // not accept work. Refusing here rather than at each call site means a new entry point cannot forget the
@@ -29,7 +29,7 @@ internal sealed class ContactCenterFeatureWorkManager : IContactCenterFeatureWor
             return null;
         }
 
-        var state = _states.GetOrAdd(featureId, static _ => new FeatureWorkState());
+        var state = _states.GetOrAdd(capability, static _ => new FeatureWorkState());
 
         lock (state.SyncRoot)
         {
@@ -49,11 +49,11 @@ internal sealed class ContactCenterFeatureWorkManager : IContactCenterFeatureWor
         }
     }
 
-    public void Quiesce(string featureId)
+    public void Quiesce(string capability)
     {
-        ArgumentException.ThrowIfNullOrEmpty(featureId);
+        ArgumentException.ThrowIfNullOrEmpty(capability);
 
-        var state = _states.GetOrAdd(featureId, static _ => new FeatureWorkState());
+        var state = _states.GetOrAdd(capability, static _ => new FeatureWorkState());
 
         lock (state.SyncRoot)
         {
@@ -67,18 +67,18 @@ internal sealed class ContactCenterFeatureWorkManager : IContactCenterFeatureWor
     }
 
     public async Task DrainAsync(
-        string featureId,
+        string capability,
         TimeSpan timeout,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(featureId);
+        ArgumentException.ThrowIfNullOrEmpty(capability);
 
         if (timeout <= TimeSpan.Zero)
         {
             throw new ArgumentOutOfRangeException(nameof(timeout), "The feature drain timeout must be greater than zero.");
         }
 
-        var state = _states.GetOrAdd(featureId, static _ => new FeatureWorkState());
+        var state = _states.GetOrAdd(capability, static _ => new FeatureWorkState());
         Task drained;
 
         lock (state.SyncRoot)
@@ -91,11 +91,11 @@ internal sealed class ContactCenterFeatureWorkManager : IContactCenterFeatureWor
         await drained.WaitAsync(timeout, cancellationToken);
     }
 
-    public void Activate(string featureId)
+    public void Activate(string capability)
     {
-        ArgumentException.ThrowIfNullOrEmpty(featureId);
+        ArgumentException.ThrowIfNullOrEmpty(capability);
 
-        var state = _states.GetOrAdd(featureId, static _ => new FeatureWorkState());
+        var state = _states.GetOrAdd(capability, static _ => new FeatureWorkState());
 
         lock (state.SyncRoot)
         {
@@ -103,11 +103,11 @@ internal sealed class ContactCenterFeatureWorkManager : IContactCenterFeatureWor
         }
     }
 
-    public bool IsQuiescing(string featureId)
+    public bool IsQuiescing(string capability)
     {
-        ArgumentException.ThrowIfNullOrEmpty(featureId);
+        ArgumentException.ThrowIfNullOrEmpty(capability);
 
-        if (!_states.TryGetValue(featureId, out var state))
+        if (!_states.TryGetValue(capability, out var state))
         {
             return false;
         }

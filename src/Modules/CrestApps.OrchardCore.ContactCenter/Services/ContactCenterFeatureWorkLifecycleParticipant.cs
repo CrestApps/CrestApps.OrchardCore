@@ -8,30 +8,30 @@ internal sealed class ContactCenterFeatureWorkLifecycleParticipant : IContactCen
     private readonly TimeSpan _drainTimeout;
 
     public ContactCenterFeatureWorkLifecycleParticipant(
-        string featureId,
+        string capability,
         IContactCenterFeatureWorkManager workManager,
         IOptions<ContactCenterFeatureLifecycleOptions> options)
     {
-        ArgumentException.ThrowIfNullOrEmpty(featureId);
+        ArgumentException.ThrowIfNullOrEmpty(capability);
         ArgumentNullException.ThrowIfNull(workManager);
         ArgumentNullException.ThrowIfNull(options);
 
-        FeatureId = featureId;
+        Capability = capability;
         _workManager = workManager;
         _drainTimeout = TimeSpan.FromSeconds(options.Value.DrainTimeoutSeconds);
     }
 
-    public string FeatureId { get; }
+    public string Capability { get; }
 
     public Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
-        _workManager.Quiesce(FeatureId);
+        _workManager.Quiesce(Capability);
 
         return Task.CompletedTask;
     }
 
     public Task DrainAsync(CancellationToken cancellationToken = default)
     {
-        return _workManager.DrainAsync(FeatureId, _drainTimeout, cancellationToken);
+        return _workManager.DrainAsync(Capability, _drainTimeout, cancellationToken);
     }
 }

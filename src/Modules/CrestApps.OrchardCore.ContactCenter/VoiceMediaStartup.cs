@@ -12,6 +12,8 @@ public sealed class VoiceMediaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(ContactCenterConstants.Feature.VoiceMedia, ContactCenterCapabilities.VoiceMedia);
+
         services.AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>();
     }
 }

@@ -43,6 +43,8 @@ public sealed class QueuesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(ContactCenterConstants.Feature.Queues, ContactCenterCapabilities.Queues);
+
         services.AddCoreHostSeams();
 
         services
@@ -135,7 +137,7 @@ public sealed class QueuesStartup : StartupBase
 
         services.AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
             new ContactCenterFeatureWorkLifecycleParticipant(
-                ContactCenterConstants.Feature.Queues,
+                ContactCenterCapabilities.Queues,
                 serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                 serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 

@@ -6,9 +6,9 @@ namespace CrestApps.OrchardCore.ContactCenter;
 public interface IContactCenterFeatureLifecycleParticipant
 {
     /// <summary>
-    /// Gets the Orchard feature that owns the participant.
+    /// Gets the capability the participant owns. See <see cref="ContactCenterCapabilities"/>.
     /// </summary>
-    string FeatureId { get; }
+    string Capability { get; }
 
     /// <summary>
     /// Stops the feature component from accepting new work before the owning feature is disabled.

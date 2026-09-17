@@ -23,7 +23,7 @@ public sealed class OutboxDispatchBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Area);
+        using var workLease = workManager.TryEnter(ContactCenterCapabilities.Core);
 
         if (workLease is null)
         {

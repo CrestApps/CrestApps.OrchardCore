@@ -15,12 +15,17 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
         _logger = logger;
     }
 
-    public async Task QuiesceAsync(string featureId, CancellationToken cancellationToken = default)
+    public async Task QuiesceAsync(IReadOnlyCollection<string> capabilities, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrEmpty(featureId);
+        ArgumentNullException.ThrowIfNull(capabilities);
+
+        if (capabilities.Count == 0)
+        {
+            return;
+        }
 
         var participants = _participants
-            .Where(participant => string.Equals(participant.FeatureId, featureId, StringComparison.Ordinal))
+            .Where(participant => capabilities.Contains(participant.Capability, StringComparer.Ordinal))
             .ToList();
 
         await ExecuteRequiredAsync(
@@ -76,9 +81,9 @@ internal sealed class ContactCenterFeatureLifecycleCoordinator
     {
         _logger.LogError(
             exception,
-            "An error occurred while {Operation} Contact Center feature '{FeatureId}' participant '{ParticipantType}'.",
+            "An error occurred while {Operation} Contact Center feature '{Capability}' participant '{ParticipantType}'.",
             operation,
-            participant.FeatureId,
+            participant.Capability,
             participant.GetType().Name);
     }
 }

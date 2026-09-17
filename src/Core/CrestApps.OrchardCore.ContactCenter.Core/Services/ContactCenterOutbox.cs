@@ -117,7 +117,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
         var message = await GetOrCreateMessageAsync(interactionEvent, cancellationToken);
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Area);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.Core);
 
         if (workLease is null || !await TryClaimAsync(message, cancellationToken))
         {
@@ -148,7 +148,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     /// <inheritdoc/>
     public async Task<int> DispatchDueAsync(CancellationToken cancellationToken = default)
     {
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Area);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.Core);
 
         if (workLease is null)
         {

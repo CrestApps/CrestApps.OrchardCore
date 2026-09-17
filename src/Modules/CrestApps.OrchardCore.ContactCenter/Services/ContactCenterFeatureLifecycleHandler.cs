@@ -19,6 +19,24 @@ internal sealed class ContactCenterFeatureLifecycleHandler : FeatureEventHandler
 
         var coordinator = _serviceProvider.GetRequiredService<ContactCenterFeatureLifecycleCoordinator>();
 
-        await coordinator.QuiesceAsync(feature.Id);
+        // A feature may own more than one capability, and a capability may be owned by more than one
+        // feature - a provider contributes voice work that both its own feature and the Contact Center
+        // voice feature are entitled to drain.
+        var capabilities = _serviceProvider
+            .GetServices<ContactCenterFeatureCapabilityMapping>()
+            .Where(mapping => string.Equals(mapping.FeatureId, feature.Id, StringComparison.Ordinal))
+            .Select(mapping => mapping.Capability)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        // A feature nobody mapped keeps the old behaviour of matching participants by its own id, so a
+        // participant added later without a mapping still drains instead of silently surviving the
+        // disable.
+        if (capabilities.Count == 0)
+        {
+            capabilities.Add(feature.Id);
+        }
+
+        await coordinator.QuiesceAsync(capabilities);
     }
 }

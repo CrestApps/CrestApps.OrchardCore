@@ -54,6 +54,8 @@ public sealed class DialerStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(ContactCenterConstants.Feature.Dialer, ContactCenterCapabilities.Dialer);
+
         services
             .AddScoped<IDialerProfileStore, DialerProfileStore>()
             .AddScoped<IDialerProfileManager, DialerProfileManager>()
@@ -65,7 +67,7 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IDialerStrategyResolver, DialerStrategyResolver>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
-                    ContactCenterConstants.Feature.Dialer,
+                    ContactCenterCapabilities.Dialer,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 

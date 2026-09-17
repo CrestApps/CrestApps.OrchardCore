@@ -18,6 +18,8 @@ public sealed class DialerStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(DialpadConstants.Feature.Area, DialpadConstants.ProviderTechnicalName);
+
         services
             .AddScoped<DialpadContactCenterVoiceProvider>()
             .AddScoped<IContactCenterVoiceProvider>(sp => sp.GetRequiredService<DialpadContactCenterVoiceProvider>())
@@ -26,12 +28,12 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IProviderWebhookInboxHandler, DialpadWebhookInboxHandler>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new DialpadContactCenterFeatureLifecycleParticipant(
-                    DialpadConstants.Feature.Area,
+                    DialpadConstants.ProviderTechnicalName,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new DialpadContactCenterFeatureLifecycleParticipant(
-                    ContactCenterConstants.Feature.Voice,
+                    ContactCenterCapabilities.Voice,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
     }

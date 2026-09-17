@@ -34,6 +34,10 @@ CrestApps.Core.Services.INamedSourceCatalogManager<> #0 Scoped -> type:CrestApps
 CrestApps.Core.Services.ISourceCatalog<> #0 Scoped -> type:CrestApps.OrchardCore.Core.Services.SourceCatalog<>
 CrestApps.Core.Services.ISourceCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.SubjectActionCatalog
 CrestApps.Core.Services.ISourceCatalogManager<> #0 Scoped -> type:CrestApps.Core.Services.SourceCatalogManager<>
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #0 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #1 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #2 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
+CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #3 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
 CrestApps.OrchardCore.ContactCenter.ContactCenterProcessLivenessOptions #0 Singleton -> factory
 CrestApps.OrchardCore.ContactCenter.Core.Services.ActivityReservationService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ActivityReservationService
 CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterEventDispatchContext #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterEventDispatchContext

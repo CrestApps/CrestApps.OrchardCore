@@ -88,7 +88,7 @@ public sealed class VoiceContactCenterCallRouter : IVoiceContactCenterCallRouter
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.Voice);
 
         if (workLease is null)
         {

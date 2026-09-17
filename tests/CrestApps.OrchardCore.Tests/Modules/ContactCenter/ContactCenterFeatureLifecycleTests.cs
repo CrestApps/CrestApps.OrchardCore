@@ -54,7 +54,7 @@ public sealed class ContactCenterFeatureLifecycleTests
             NullLogger<ContactCenterFeatureLifecycleCoordinator>.Instance);
 
         // Act
-        await coordinator.QuiesceAsync("feature-a", TestContext.Current.CancellationToken);
+        await coordinator.QuiesceAsync(["feature-a"], TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(
@@ -81,7 +81,7 @@ public sealed class ContactCenterFeatureLifecycleTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<AggregateException>(() =>
-            coordinator.QuiesceAsync("feature-a", TestContext.Current.CancellationToken));
+            coordinator.QuiesceAsync(["feature-a"], TestContext.Current.CancellationToken));
 
         Assert.Single(exception.InnerExceptions);
         Assert.Equal(
@@ -211,7 +211,7 @@ public sealed class ContactCenterFeatureLifecycleTests
 
         // Assert
         Assert.False(registered);
-        Assert.Null(manager.TryEnter(ContactCenterConstants.Feature.RealTime));
+        Assert.Null(manager.TryEnter(ContactCenterCapabilities.RealTime));
         activeConnection.Verify(context => context.Abort(), Times.Once);
         rejectedConnection.Verify(context => context.Abort(), Times.Once);
     }
@@ -345,16 +345,16 @@ public sealed class ContactCenterFeatureLifecycleTests
         private readonly List<string> _operations;
 
         public TestFeatureLifecycleParticipant(
-            string featureId,
+            string capability,
             string name,
             List<string> operations)
         {
-            FeatureId = featureId;
+            Capability = capability;
             _name = name;
             _operations = operations;
         }
 
-        public string FeatureId { get; }
+        public string Capability { get; }
 
         public Task QuiesceAsync(CancellationToken cancellationToken = default)
         {
@@ -378,18 +378,18 @@ public sealed class ContactCenterFeatureLifecycleTests
         private readonly bool _throwOnQuiesce;
 
         public ThrowingFeatureLifecycleParticipant(
-            string featureId,
+            string capability,
             string name,
             List<string> operations,
             bool throwOnQuiesce = false)
         {
-            FeatureId = featureId;
+            Capability = capability;
             _name = name;
             _operations = operations;
             _throwOnQuiesce = throwOnQuiesce;
         }
 
-        public string FeatureId { get; }
+        public string Capability { get; }
 
         public Task QuiesceAsync(CancellationToken cancellationToken = default)
         {

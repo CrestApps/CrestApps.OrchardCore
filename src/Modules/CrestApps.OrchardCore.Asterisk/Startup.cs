@@ -44,6 +44,8 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(AsteriskConstants.Feature.Area, AsteriskConstants.ProviderTechnicalName);
+
         services.AddCoreHostSeams();
 
         // The resilience pipeline is constructed before any tenant request, so its timings are read here rather
@@ -174,13 +176,13 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
             .AddScoped<IAsteriskRecordingIngestService, AsteriskRecordingIngestService>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new AsteriskContactCenterFeatureLifecycleParticipant(
-                    AsteriskConstants.Feature.Area,
+                    AsteriskConstants.ProviderTechnicalName,
                     AsteriskConstants.ContactCenterVoiceWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new AsteriskContactCenterFeatureLifecycleParticipant(
-                    ContactCenterConstants.Feature.Voice,
+                    ContactCenterCapabilities.Voice,
                     AsteriskConstants.ContactCenterVoiceWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
@@ -208,13 +210,13 @@ public sealed class AsteriskContactCenterMediaStartup : StartupBase
             .AddScoped<IContactCenterVoiceMediaProvider, AsteriskContactCenterVoiceMediaProvider>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new AsteriskContactCenterFeatureLifecycleParticipant(
-                    AsteriskConstants.Feature.Area,
+                    AsteriskConstants.ProviderTechnicalName,
                     AsteriskConstants.ContactCenterMediaWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new AsteriskContactCenterFeatureLifecycleParticipant(
-                    ContactCenterConstants.Feature.VoiceMedia,
+                    ContactCenterCapabilities.VoiceMedia,
                     AsteriskConstants.ContactCenterMediaWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));

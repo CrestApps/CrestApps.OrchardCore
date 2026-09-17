@@ -124,7 +124,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     {
         ArgumentNullException.ThrowIfNull(inboundEvent);
 
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.Voice);
 
         if (workLease is null)
         {

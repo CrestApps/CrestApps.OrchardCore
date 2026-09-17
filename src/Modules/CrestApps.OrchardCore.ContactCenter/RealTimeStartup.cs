@@ -18,6 +18,8 @@ public sealed class RealTimeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(ContactCenterConstants.Feature.RealTime, ContactCenterCapabilities.RealTime);
+
         services
             .AddScoped<ContactCenterHubScopeContext>()
             .AddScoped<ContactCenterRealTimeEventScopeContext>()

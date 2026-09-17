@@ -18,11 +18,11 @@ internal sealed class ContactCenterRealTimeLifecycleParticipant : IContactCenter
         _drainTimeout = TimeSpan.FromSeconds(options.Value.DrainTimeoutSeconds);
     }
 
-    public string FeatureId => ContactCenterConstants.Feature.RealTime;
+    public string Capability => ContactCenterCapabilities.RealTime;
 
     public Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
-        _workManager.Quiesce(FeatureId);
+        _workManager.Quiesce(Capability);
         _connectionRegistry.Quiesce();
 
         return Task.CompletedTask;
@@ -30,6 +30,6 @@ internal sealed class ContactCenterRealTimeLifecycleParticipant : IContactCenter
 
     public Task DrainAsync(CancellationToken cancellationToken = default)
     {
-        return _workManager.DrainAsync(FeatureId, _drainTimeout, cancellationToken);
+        return _workManager.DrainAsync(Capability, _drainTimeout, cancellationToken);
     }
 }

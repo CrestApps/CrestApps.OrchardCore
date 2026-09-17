@@ -19,12 +19,12 @@ internal sealed class DialpadContactCenterFeatureLifecycleParticipant : IContact
         IContactCenterFeatureWorkManager workManager,
         IOptions<ContactCenterFeatureLifecycleOptions> options)
     {
-        FeatureId = featureId;
+        Capability = featureId;
         _workManager = workManager;
         _drainTimeout = TimeSpan.FromSeconds(options.Value.DrainTimeoutSeconds);
     }
 
-    public string FeatureId { get; }
+    public string Capability { get; }
 
     public Task QuiesceAsync(CancellationToken cancellationToken = default)
     {

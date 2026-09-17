@@ -37,12 +37,12 @@ internal sealed class ContactCenterVoiceLifecycleParticipant : IContactCenterFea
     }
 
     /// <inheritdoc/>
-    public string FeatureId => ContactCenterConstants.Feature.Voice;
+    public string Capability => ContactCenterCapabilities.Voice;
 
     /// <inheritdoc/>
     public Task QuiesceAsync(CancellationToken cancellationToken = default)
     {
-        _workManager.Quiesce(FeatureId);
+        _workManager.Quiesce(Capability);
 
         return Task.CompletedTask;
     }
@@ -50,7 +50,7 @@ internal sealed class ContactCenterVoiceLifecycleParticipant : IContactCenterFea
     /// <inheritdoc/>
     public Task DrainAsync(CancellationToken cancellationToken = default)
     {
-        return _workManager.DrainAsync(FeatureId, _drainTimeout, cancellationToken);
+        return _workManager.DrainAsync(Capability, _drainTimeout, cancellationToken);
     }
 
     /// <summary>

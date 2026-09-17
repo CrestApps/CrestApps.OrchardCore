@@ -84,7 +84,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
             throw new InvalidOperationException($"The provider command '{commandId}' does not exist.");
         }
 
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.Voice);
 
         if (workLease is null)
         {
@@ -103,7 +103,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     /// <inheritdoc/>
     public async Task<int> RecoverDueAsync(CancellationToken cancellationToken = default)
     {
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.Voice);
 
         if (workLease is null)
         {

@@ -33,6 +33,8 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(TelnyxConstants.Feature.Area, TelnyxConstants.ProviderTechnicalName);
+
         services.AddCoreHostSeams();
 
         services.AddHttpClient(TelnyxConstants.ProviderTechnicalName)
@@ -157,13 +159,13 @@ public sealed class DialerStartup : StartupBase
             .AddScoped<IIvrProvider, TelnyxIvrProvider>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new TelnyxContactCenterFeatureLifecycleParticipant(
-                    TelnyxConstants.Feature.Area,
+                    TelnyxConstants.ProviderTechnicalName,
                     TelnyxConstants.ContactCenterVoiceWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new TelnyxContactCenterFeatureLifecycleParticipant(
-                    ContactCenterConstants.Feature.Voice,
+                    ContactCenterCapabilities.Voice,
                     TelnyxConstants.ContactCenterVoiceWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
@@ -197,13 +199,13 @@ public sealed class TelnyxContactCenterMediaStartup : StartupBase
             .AddScoped<IContactCenterVoiceMediaProvider, TelnyxContactCenterVoiceMediaProvider>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new TelnyxContactCenterFeatureLifecycleParticipant(
-                    TelnyxConstants.Feature.Area,
+                    TelnyxConstants.ProviderTechnicalName,
                     TelnyxConstants.ContactCenterMediaWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()))
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new TelnyxContactCenterFeatureLifecycleParticipant(
-                    ContactCenterConstants.Feature.VoiceMedia,
+                    ContactCenterCapabilities.VoiceMedia,
                     TelnyxConstants.ContactCenterMediaWorkPartition,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));

@@ -37,7 +37,7 @@ internal static class VoiceIngressEndpoint
             return TypedResults.BadRequest();
         }
 
-        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.Voice);
+        using var workLease = workManager.TryEnter(ContactCenterCapabilities.Voice);
 
         if (workLease is null)
         {

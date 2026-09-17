@@ -41,7 +41,7 @@ public sealed class DialerPacingBackgroundTask : IBackgroundTask
     public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
     {
         var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterConstants.Feature.DialerPaced);
+        using var workLease = workManager.TryEnter(ContactCenterCapabilities.DialerPaced);
 
         if (workLease is null)
         {

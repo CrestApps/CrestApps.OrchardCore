@@ -388,7 +388,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         // resolves the work manager first and returns immediately when the lease is denied, so no queue, voice, or
         // assignment work runs on a quiescing node.
         var workManager = new TestContactCenterFeatureWorkManager();
-        workManager.Quiesce(ContactCenterConstants.Feature.Queues);
+        workManager.Quiesce(ContactCenterCapabilities.Queues);
 
         var reservationService = new Mock<IActivityReservationService>(MockBehavior.Strict);
         var assignmentService = new Mock<IActivityAssignmentService>(MockBehavior.Strict);

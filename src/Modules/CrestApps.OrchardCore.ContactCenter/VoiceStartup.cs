@@ -48,6 +48,8 @@ public sealed class VoiceStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddContactCenterCapability(ContactCenterConstants.Feature.Voice, ContactCenterCapabilities.Voice);
+
         services
             .AddOptions<ProviderWebhookIngressOptions>()
             .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:WebhookIngress"))

@@ -52,7 +52,7 @@ public sealed class DialerService : IDialerService
             return 0;
         }
 
-        using var workLease = _workManager.TryEnter(ContactCenterConstants.Feature.DialerPaced);
+        using var workLease = _workManager.TryEnter(ContactCenterCapabilities.DialerPaced);
 
         if (workLease is null)
         {
