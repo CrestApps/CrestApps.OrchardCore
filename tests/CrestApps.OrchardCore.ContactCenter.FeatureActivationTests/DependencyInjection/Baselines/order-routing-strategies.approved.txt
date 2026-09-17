@@ -1,0 +1,7 @@
+CrestApps.OrchardCore.ContactCenter.Core.Services.RequiredSkillsRoutingStrategy
+CrestApps.OrchardCore.ContactCenter.Core.Services.PreferredSkillsRoutingStrategy
+CrestApps.OrchardCore.ContactCenter.Core.Services.CapacityRoutingStrategy
+CrestApps.OrchardCore.ContactCenter.Core.Services.StickyAgentRoutingStrategy
+CrestApps.OrchardCore.ContactCenter.Core.Services.LongestIdleRoutingStrategy
+CrestApps.OrchardCore.ContactCenter.Core.Services.RoundRobinRoutingStrategy
+CrestApps.OrchardCore.ContactCenter.Core.Services.LeastBusyRoutingStrategy

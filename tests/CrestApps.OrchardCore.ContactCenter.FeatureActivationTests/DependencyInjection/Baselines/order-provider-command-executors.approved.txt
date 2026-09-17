@@ -1,0 +1,4 @@
+CrestApps.OrchardCore.ContactCenter.Core.Services.DialProviderCommandTypeExecutor
+CrestApps.OrchardCore.ContactCenter.Core.Services.AnswerProviderCommandTypeExecutor
+CrestApps.OrchardCore.ContactCenter.Core.Services.RejectProviderCommandTypeExecutor
+CrestApps.OrchardCore.ContactCenter.Core.Services.SendToVoicemailProviderCommandTypeExecutor
