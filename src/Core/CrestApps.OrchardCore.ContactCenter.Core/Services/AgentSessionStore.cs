@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IAgentSessionStore"/>.
 /// </summary>
-public sealed class AgentSessionStore : DocumentCatalog<AgentSession, AgentSessionIndex>, IAgentSessionStore
+public sealed class AgentSessionStore : ConcurrentDocumentCatalog<AgentSession, AgentSessionIndex>, IAgentSessionStore
 {
     private const int QueryBatchSize = 500;
 

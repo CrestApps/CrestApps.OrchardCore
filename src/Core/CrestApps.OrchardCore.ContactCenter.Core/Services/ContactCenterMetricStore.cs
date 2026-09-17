@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IContactCenterMetricStore"/>.
 /// </summary>
-public sealed class ContactCenterMetricStore : DocumentCatalog<ContactCenterEventMetric, ContactCenterEventMetricIndex>, IContactCenterMetricStore
+public sealed class ContactCenterMetricStore : ConcurrentDocumentCatalog<ContactCenterEventMetric, ContactCenterEventMetricIndex>, IContactCenterMetricStore
 {
     protected override bool CheckConcurrency => true;
 

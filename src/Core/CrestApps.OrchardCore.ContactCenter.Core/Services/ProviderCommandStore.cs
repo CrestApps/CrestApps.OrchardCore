@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// Provides a YesSql-backed provider command store. Updates use document-version optimistic concurrency so
 /// two workers racing on the same command cannot both win a transition.
 /// </summary>
-public sealed class ProviderCommandStore : DocumentCatalog<ProviderCommand, ProviderCommandIndex>, IProviderCommandStore
+public sealed class ProviderCommandStore : ConcurrentDocumentCatalog<ProviderCommand, ProviderCommandIndex>, IProviderCommandStore
 {
     /// <summary>
     /// The default maximum number of commands returned by a batch query.

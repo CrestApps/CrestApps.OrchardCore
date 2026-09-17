@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IActivityQueueStore"/>.
 /// </summary>
-public sealed class ActivityQueueStore : DocumentCatalog<ActivityQueue, ActivityQueueIndex>, IActivityQueueStore
+public sealed class ActivityQueueStore : ConcurrentDocumentCatalog<ActivityQueue, ActivityQueueIndex>, IActivityQueueStore
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ActivityQueueStore"/> class.

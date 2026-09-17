@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-backed provider webhook inbox store.
 /// </summary>
-public sealed class ProviderWebhookInboxStore : DocumentCatalog<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>, IProviderWebhookInboxStore
+public sealed class ProviderWebhookInboxStore : ConcurrentDocumentCatalog<ProviderWebhookInboxMessage, ProviderWebhookInboxMessageIndex>, IProviderWebhookInboxStore
 {
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;

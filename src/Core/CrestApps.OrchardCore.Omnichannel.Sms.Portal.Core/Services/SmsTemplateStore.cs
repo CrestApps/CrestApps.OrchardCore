@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 /// <summary>
 /// A YesSql-based implementation of <see cref="ISmsTemplateStore"/>.
 /// </summary>
-public sealed class SmsTemplateStore : DocumentCatalog<SmsTemplate, SmsTemplateIndex>, ISmsTemplateStore
+public sealed class SmsTemplateStore : ConcurrentDocumentCatalog<SmsTemplate, SmsTemplateIndex>, ISmsTemplateStore
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="SmsTemplateStore"/> class.

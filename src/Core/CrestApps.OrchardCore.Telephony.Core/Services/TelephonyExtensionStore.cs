@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="ITelephonyExtensionStore"/>.
 /// </summary>
-public sealed class TelephonyExtensionStore : DocumentCatalog<TelephonyExtension, TelephonyExtensionIndex>, ITelephonyExtensionStore
+public sealed class TelephonyExtensionStore : ConcurrentDocumentCatalog<TelephonyExtension, TelephonyExtensionIndex>, ITelephonyExtensionStore
 {
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;

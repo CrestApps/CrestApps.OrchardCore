@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IInteractionEventStore"/>.
 /// </summary>
-public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, InteractionEventIndex>, IInteractionEventStore
+public sealed class InteractionEventStore : ConcurrentDocumentCatalog<InteractionEvent, InteractionEventIndex>, IInteractionEventStore
 {
     private readonly IInteractionEventUpcastService _upcastService;
 

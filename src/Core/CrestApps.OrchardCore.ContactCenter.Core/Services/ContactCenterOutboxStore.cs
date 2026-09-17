@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IContactCenterOutboxStore"/>.
 /// </summary>
-public sealed class ContactCenterOutboxStore : DocumentCatalog<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>, IContactCenterOutboxStore
+public sealed class ContactCenterOutboxStore : ConcurrentDocumentCatalog<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>, IContactCenterOutboxStore
 {
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;

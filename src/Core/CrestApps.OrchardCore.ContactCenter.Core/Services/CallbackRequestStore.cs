@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="ICallbackRequestStore"/>.
 /// </summary>
-public sealed class CallbackRequestStore : DocumentCatalog<CallbackRequest, CallbackRequestIndex>, ICallbackRequestStore
+public sealed class CallbackRequestStore : ConcurrentDocumentCatalog<CallbackRequest, CallbackRequestIndex>, ICallbackRequestStore
 {
     private const int DefaultBatchSize = 100;
 

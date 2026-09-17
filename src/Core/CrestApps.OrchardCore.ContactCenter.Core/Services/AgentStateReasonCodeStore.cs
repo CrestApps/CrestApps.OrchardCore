@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IAgentStateReasonCodeStore"/>.
 /// </summary>
-public sealed class AgentStateReasonCodeStore : DocumentCatalog<AgentStateReasonCode, AgentStateReasonCodeIndex>, IAgentStateReasonCodeStore
+public sealed class AgentStateReasonCodeStore : ConcurrentDocumentCatalog<AgentStateReasonCode, AgentStateReasonCodeIndex>, IAgentStateReasonCodeStore
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentStateReasonCodeStore"/> class.

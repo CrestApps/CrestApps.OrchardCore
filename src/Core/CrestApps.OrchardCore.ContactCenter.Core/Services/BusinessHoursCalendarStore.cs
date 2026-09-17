@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IBusinessHoursCalendarStore"/>.
 /// </summary>
-public sealed class BusinessHoursCalendarStore : DocumentCatalog<BusinessHoursCalendar, BusinessHoursCalendarIndex>, IBusinessHoursCalendarStore
+public sealed class BusinessHoursCalendarStore : ConcurrentDocumentCatalog<BusinessHoursCalendar, BusinessHoursCalendarIndex>, IBusinessHoursCalendarStore
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="BusinessHoursCalendarStore"/> class.

@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IDialerProfileStore"/>.
 /// </summary>
-public sealed class DialerProfileStore : DocumentCatalog<DialerProfile, DialerProfileIndex>, IDialerProfileStore
+public sealed class DialerProfileStore : ConcurrentDocumentCatalog<DialerProfile, DialerProfileIndex>, IDialerProfileStore
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DialerProfileStore"/> class.

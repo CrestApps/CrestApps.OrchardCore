@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IContactCenterProcessedEventStore"/>.
 /// </summary>
-public sealed class ContactCenterProcessedEventStore : DocumentCatalog<ContactCenterProcessedEvent, ContactCenterProcessedEventIndex>, IContactCenterProcessedEventStore
+public sealed class ContactCenterProcessedEventStore : ConcurrentDocumentCatalog<ContactCenterProcessedEvent, ContactCenterProcessedEventIndex>, IContactCenterProcessedEventStore
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterProcessedEventStore"/> class.

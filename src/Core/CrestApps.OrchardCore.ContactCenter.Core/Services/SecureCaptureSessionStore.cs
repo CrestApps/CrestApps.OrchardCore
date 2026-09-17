@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="ISecureCaptureSessionStore"/>.
 /// </summary>
-public sealed class SecureCaptureSessionStore : DocumentCatalog<SecureCaptureSession, SecureCaptureSessionIndex>, ISecureCaptureSessionStore
+public sealed class SecureCaptureSessionStore : ConcurrentDocumentCatalog<SecureCaptureSession, SecureCaptureSessionIndex>, ISecureCaptureSessionStore
 {
     private const int DefaultBatchSize = 100;
 

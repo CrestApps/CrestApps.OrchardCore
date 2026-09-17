@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IContactCenterSkillStore"/>.
 /// </summary>
-public sealed class ContactCenterSkillStore : DocumentCatalog<ContactCenterSkill, ContactCenterSkillIndex>, IContactCenterSkillStore
+public sealed class ContactCenterSkillStore : ConcurrentDocumentCatalog<ContactCenterSkill, ContactCenterSkillIndex>, IContactCenterSkillStore
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterSkillStore"/> class.

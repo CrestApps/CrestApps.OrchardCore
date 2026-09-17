@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IQueueItemStore"/>.
 /// </summary>
-public sealed class QueueItemStore : DocumentCatalog<QueueItem, QueueItemIndex>, IQueueItemStore
+public sealed class QueueItemStore : ConcurrentDocumentCatalog<QueueItem, QueueItemIndex>, IQueueItemStore
 {
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;

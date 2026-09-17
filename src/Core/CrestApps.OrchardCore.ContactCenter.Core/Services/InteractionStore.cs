@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IInteractionStore"/>.
 /// </summary>
-public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionIndex>, IInteractionStore
+public sealed class InteractionStore : ConcurrentDocumentCatalog<Interaction, InteractionIndex>, IInteractionStore
 {
     private const int QueryBatchSize = 500;
     private const int DefaultReconciliationBatchSize = 200;

@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IContactCenterMetricDeltaStore"/>.
 /// </summary>
-public sealed class ContactCenterMetricDeltaStore : DocumentCatalog<ContactCenterEventMetricDelta, ContactCenterEventMetricDeltaIndex>, IContactCenterMetricDeltaStore
+public sealed class ContactCenterMetricDeltaStore : ConcurrentDocumentCatalog<ContactCenterEventMetricDelta, ContactCenterEventMetricDeltaIndex>, IContactCenterMetricDeltaStore
 {
     /// <summary>
     /// The maximum number of unfolded contributions a single reader will add to the rolled-up totals.

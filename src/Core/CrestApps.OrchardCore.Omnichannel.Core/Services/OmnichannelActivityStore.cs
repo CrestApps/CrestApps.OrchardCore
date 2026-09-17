@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IOmnichannelActivityStore"/> for persisting and querying omnichannel activities.
 /// </summary>
-public sealed class OmnichannelActivityStore : DocumentCatalog<OmnichannelActivity, OmnichannelActivityIndex>, IOmnichannelActivityStore
+public sealed class OmnichannelActivityStore : ConcurrentDocumentCatalog<OmnichannelActivity, OmnichannelActivityIndex>, IOmnichannelActivityStore
 {
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;

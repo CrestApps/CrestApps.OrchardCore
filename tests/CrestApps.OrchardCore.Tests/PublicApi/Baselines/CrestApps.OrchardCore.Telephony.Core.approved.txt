@@ -120,7 +120,7 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
         public TelephonyExtensionResolver(CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionStore store) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Core.Services.ExtensionResolution> ResolveAsync(string number, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class TelephonyExtensionStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension, CrestApps.OrchardCore.Telephony.Core.Indexes.TelephonyExtensionIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension>, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionStore
+    public sealed class TelephonyExtensionStore : CrestApps.OrchardCore.YesSql.Core.Services.ConcurrentDocumentCatalog<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension, CrestApps.OrchardCore.Telephony.Core.Indexes.TelephonyExtensionIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension>, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionStore
     {
         public TelephonyExtensionStore(YesSql.ISession session) { }
         protected override bool CheckConcurrency { get; }

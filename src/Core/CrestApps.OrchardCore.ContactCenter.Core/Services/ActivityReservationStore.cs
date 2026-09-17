@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IActivityReservationStore"/>.
 /// </summary>
-public sealed class ActivityReservationStore : DocumentCatalog<ActivityReservation, ActivityReservationIndex>, IActivityReservationStore
+public sealed class ActivityReservationStore : ConcurrentDocumentCatalog<ActivityReservation, ActivityReservationIndex>, IActivityReservationStore
 {
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;

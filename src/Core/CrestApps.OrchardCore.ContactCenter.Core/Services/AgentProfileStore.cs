@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IAgentProfileStore"/>.
 /// </summary>
-public sealed class AgentProfileStore : DocumentCatalog<AgentProfile, AgentProfileIndex>, IAgentProfileStore
+public sealed class AgentProfileStore : ConcurrentDocumentCatalog<AgentProfile, AgentProfileIndex>, IAgentProfileStore
 {
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;

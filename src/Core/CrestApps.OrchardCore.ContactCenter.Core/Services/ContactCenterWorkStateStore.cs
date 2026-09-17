@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IContactCenterWorkStateStore"/>.
 /// </summary>
-public sealed class ContactCenterWorkStateStore : DocumentCatalog<ContactCenterWorkState, ContactCenterWorkStateIndex>, IContactCenterWorkStateStore
+public sealed class ContactCenterWorkStateStore : ConcurrentDocumentCatalog<ContactCenterWorkState, ContactCenterWorkStateIndex>, IContactCenterWorkStateStore
 {
     /// <inheritdoc/>
     protected override bool CheckConcurrency => true;

@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="IVoiceMediaItemStore"/>.
 /// </summary>
-public sealed class VoiceMediaItemStore : DocumentCatalog<VoiceMediaItem, VoiceMediaItemIndex>, IVoiceMediaItemStore
+public sealed class VoiceMediaItemStore : ConcurrentDocumentCatalog<VoiceMediaItem, VoiceMediaItemIndex>, IVoiceMediaItemStore
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="VoiceMediaItemStore"/> class.

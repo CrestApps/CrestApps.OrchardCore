@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="ICallSessionStore"/>.
 /// </summary>
-public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionIndex>, ICallSessionStore
+public sealed class CallSessionStore : ConcurrentDocumentCatalog<CallSession, CallSessionIndex>, ICallSessionStore
 {
     /// <summary>
     /// Gets a value indicating that call session updates use YesSql document-version concurrency checks so
