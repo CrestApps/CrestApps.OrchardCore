@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using OrchardCore.Environment.Cache;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -15,11 +16,12 @@ public sealed class ContactCenterConfigurationCacheTests
         public string Name { get; set; }
     }
 
-    private static ContactCenterConfigurationCache CreateCache(out ISignal signal)
+    private static ContactCenterConfigurationCache CreateCache(out IContactCenterConfigurationChangeNotifier changeNotifier)
     {
-        signal = new Signal();
+        // Still driven by an Orchard signal, so the test covers the adapter the module registers.
+        changeNotifier = new SignalContactCenterConfigurationChangeNotifier(new Signal());
 
-        return new ContactCenterConfigurationCache(signal);
+        return new ContactCenterConfigurationCache(changeNotifier);
     }
 
     [Fact]

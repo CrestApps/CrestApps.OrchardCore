@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -42,6 +43,8 @@ public sealed class QueuesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreHostSeams();
+
         services
             .AddScoped<IActivityQueueGroupStore, ActivityQueueGroupStore>()
             .AddScoped<IActivityQueueGroupManager, ActivityQueueGroupManager>()
@@ -88,6 +91,7 @@ public sealed class QueuesStartup : StartupBase
 
         // Shared Contact Center configuration cache. The Business Hours feature also registers it; TryAdd keeps a
         // single instance whichever feature configures services first.
+        services.TryAddSingleton<IContactCenterConfigurationChangeNotifier, SignalContactCenterConfigurationChangeNotifier>();
         services.TryAddSingleton<IContactCenterConfigurationCache, ContactCenterConfigurationCache>();
 
         services

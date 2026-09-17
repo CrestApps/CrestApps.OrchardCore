@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -42,6 +43,8 @@ public sealed class InboundVoiceStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreHostSeams();
+
         // A phone number channel endpoint only has an inbound handler when inbound voice is enabled (it maps a
         // dialed number to a subject flow), so the Phone channel is offered in the channel-endpoint create picker
         // only with this feature. When the channel-endpoint administration is also enabled, Phone appears there.

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -32,6 +33,8 @@ public sealed class BusinessHoursStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddCoreHostSeams();
+
         services
             .AddScoped<IBusinessHoursCalendarStore, BusinessHoursCalendarStore>()
             .AddScoped<IBusinessHoursCalendarManager, BusinessHoursCalendarManager>()
@@ -44,6 +47,7 @@ public sealed class BusinessHoursStartup : StartupBase
         // The calendar manager caches configuration through the shared Contact Center cache, and the invalidation
         // handler keeps it fresh. Both this feature and Work Distribution register the cache, so TryAdd keeps a single
         // instance regardless of which feature is enabled or in what order they configure services.
+        services.TryAddSingleton<IContactCenterConfigurationChangeNotifier, SignalContactCenterConfigurationChangeNotifier>();
         services.TryAddSingleton<IContactCenterConfigurationCache, ContactCenterConfigurationCache>();
 
         services

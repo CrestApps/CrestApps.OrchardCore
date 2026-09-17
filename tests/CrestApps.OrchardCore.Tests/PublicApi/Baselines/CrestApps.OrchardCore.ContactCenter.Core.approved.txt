@@ -2528,14 +2528,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterConfigurationCache : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache
     {
-        public ContactCenterConfigurationCache(OrchardCore.Environment.Cache.ISignal signal) { }
+        public ContactCenterConfigurationCache(CrestApps.OrchardCore.ContactCenter.Services.IContactCenterConfigurationChangeNotifier changeNotifier) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<T>> GetEnabledAsync<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<T>>> factory, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task InvalidateEnabledAsync<T>() { }
     }
     public sealed class ContactCenterConfigurationCacheInvalidationHandler<T> : CrestApps.Core.Handlers.CatalogEntryHandlerBase<T>
         where T :  class
     {
-        public ContactCenterConfigurationCacheInvalidationHandler() { }
+        public ContactCenterConfigurationCacheInvalidationHandler(CrestApps.Core.Hosting.IAfterCommitTaskQueue afterCommitTaskQueue) { }
         public override System.Threading.Tasks.Task CreatedAsync(CrestApps.Core.Models.CreatedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
         public override System.Threading.Tasks.Task DeletedAsync(CrestApps.Core.Models.DeletedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
         public override System.Threading.Tasks.Task UpdatedAsync(CrestApps.Core.Models.UpdatedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
@@ -4147,6 +4147,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public override CrestApps.OrchardCore.ContactCenter.Core.Models.ProviderCommandType CommandType { get; }
         protected override string ErrorCodePrefix { get; }
         protected override System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> ExecuteTelephonyAsync(CrestApps.OrchardCore.Telephony.ITelephonyService telephonyService, CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class SignalContactCenterConfigurationChangeNotifier : CrestApps.OrchardCore.ContactCenter.Services.IContactCenterConfigurationChangeNotifier
+    {
+        public SignalContactCenterConfigurationChangeNotifier(OrchardCore.Environment.Cache.ISignal signal) { }
+        public System.Threading.Tasks.Task NotifyChangedAsync(string key) { }
+        public Microsoft.Extensions.Primitives.IChangeToken Watch(string key) { }
     }
     public static class SkillMatching
     {

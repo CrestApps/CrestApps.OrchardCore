@@ -1,7 +1,7 @@
 using CrestApps.Core.Handlers;
+using CrestApps.Core.Hosting;
 using CrestApps.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
-using OrchardCore.Environment.Shell.Scope;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -14,6 +14,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public sealed class ContactCenterConfigurationCacheInvalidationHandler<T> : CatalogEntryHandlerBase<T>
     where T : class
 {
+    private readonly IAfterCommitTaskQueue _afterCommitTaskQueue;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactCenterConfigurationCacheInvalidationHandler{T}"/> class.
+    /// </summary>
+    /// <param name="afterCommitTaskQueue">The queue that defers the invalidation until the ambient scope commits.</param>
+    public ContactCenterConfigurationCacheInvalidationHandler(IAfterCommitTaskQueue afterCommitTaskQueue)
+    {
+        _afterCommitTaskQueue = afterCommitTaskQueue;
+    }
+
     /// <inheritdoc/>
     public override Task CreatedAsync(CreatedContext<T> context, CancellationToken cancellationToken = default)
         => InvalidateAsync();
@@ -26,15 +37,10 @@ public sealed class ContactCenterConfigurationCacheInvalidationHandler<T> : Cata
     public override Task DeletedAsync(DeletedContext<T> context, CancellationToken cancellationToken = default)
         => InvalidateAsync();
 
-    private static Task InvalidateAsync()
+    private Task InvalidateAsync()
     {
-        if (ShellScope.Current is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        ShellScope.AddDeferredTask(scope =>
-            scope.ServiceProvider.GetRequiredService<IContactCenterConfigurationCache>().InvalidateEnabledAsync<T>());
+        _afterCommitTaskQueue.Enqueue(serviceProvider =>
+            serviceProvider.GetRequiredService<IContactCenterConfigurationCache>().InvalidateEnabledAsync<T>());
 
         return Task.CompletedTask;
     }
