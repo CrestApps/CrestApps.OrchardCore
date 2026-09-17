@@ -766,7 +766,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public string Error { get; set; }
         public bool Succeeded { get; set; }
     }
-    public sealed class TelephonyInteraction : OrchardCore.Entities.Entity
+    public sealed class TelephonyInteraction
     {
         public TelephonyInteraction() { }
         public string CallId { get; set; }
@@ -780,12 +780,20 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public bool IsExtension { get; set; }
         public bool IsVoicemail { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.CallOutcome Outcome { get; set; }
+        public System.Text.Json.Nodes.JsonObject Properties { get; set; }
         public string ProviderName { get; set; }
         public System.DateTime StartedUtc { get; set; }
         public string To { get; set; }
         public string UserId { get; set; }
         public string UserName { get; set; }
         public System.DateTime? VoicemailReadUtc { get; set; }
+    }
+    public static class TelephonyInteractionExtensions
+    {
+        public static T GetOrCreate<T>(this CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction)
+            where T : new() { }
+        public static CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction Put<T>(this CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, T aspect) { }
+        public static bool TryGet<T>(this CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, out T aspect) { }
     }
     public sealed class TelephonyResult
     {

@@ -1,12 +1,19 @@
-using OrchardCore.Entities;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
 /// Represents a message exchanged through an omnichannel communication channel.
 /// </summary>
-public sealed class OmnichannelMessage : Entity
+public sealed class OmnichannelMessage
 {
+    /// <summary>
+    /// Gets or sets the extensible metadata carried alongside the strongly typed properties. The
+    /// property name and shape match what Orchard's entity base serialized, so stored documents
+    /// round-trip unchanged.
+    /// </summary>
+    public JsonObject Properties { get; set; } = [];
+
     /// <summary>
     /// A unique identifier for the message.
     /// Can be generated internally (e.g., GUID) or come from the provider.

@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -23,6 +22,12 @@ public sealed class InteractionEntityTests
         Assert.True(found);
         Assert.NotNull(result);
         Assert.Equal("provider-specific", result.Value);
+
+        // The key and casing are what the Orchard entity base wrote, so documents stored by an
+        // earlier build still read back after the base class was dropped.
+        Assert.Equal(
+            """{"TestInteractionMetadata":{"Value":"provider-specific"}}""",
+            interaction.EntityProperties.ToJsonString());
     }
 
     private sealed class TestInteractionMetadata

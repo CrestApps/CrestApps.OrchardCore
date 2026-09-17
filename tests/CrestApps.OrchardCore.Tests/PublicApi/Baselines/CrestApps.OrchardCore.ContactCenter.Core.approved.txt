@@ -1333,7 +1333,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string ReasonCode { get; set; }
         public bool Routed { get; set; }
     }
-    public sealed class Interaction : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, OrchardCore.Entities.IEntity
+    public sealed class Interaction : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
     {
         public Interaction() { }
         public string ActivityItemId { get; set; }
@@ -1402,6 +1402,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string SourceComponent { get; set; }
         public T GetData<T>() { }
         public void SetData<T>(T payload) { }
+    }
+    public static class InteractionExtensions
+    {
+        public static T GetOrCreate<T>(this CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction)
+            where T : new() { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction Put<T>(this CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, T aspect) { }
+        public static bool TryGet<T>(this CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, out T aspect) { }
     }
     public static class InteractionLifecycle
     {

@@ -17,6 +17,7 @@
     <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
     <PackageReference Include="OrchardCore.Infrastructure.Abstractions" />
+    <ProjectReference Include="../../Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions/CrestApps.Core.Hosting.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

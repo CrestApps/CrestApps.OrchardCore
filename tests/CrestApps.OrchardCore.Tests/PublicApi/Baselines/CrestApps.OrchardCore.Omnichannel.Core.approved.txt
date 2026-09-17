@@ -740,7 +740,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffResult Success(string message = null, string conversationId = null, string offeredToUserId = null) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffResult WaitingInQueue(string message = null, string conversationId = null) { }
     }
-    public sealed class OmnichannelMessage : OrchardCore.Entities.Entity
+    public sealed class OmnichannelMessage
     {
         public OmnichannelMessage() { }
         public string Channel { get; set; }
@@ -753,9 +753,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string Id { get; set; }
         public bool IsInbound { get; set; }
         public System.Collections.Generic.IList<string> MediaReferences { get; set; }
+        public System.Text.Json.Nodes.JsonObject Properties { get; set; }
         public string ProviderMessageId { get; set; }
         public string SentByAgentId { get; set; }
         public string ServiceAddress { get; set; }
+    }
+    public static class OmnichannelMessageExtensions
+    {
+        public static T GetOrCreate<T>(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message)
+            where T : new() { }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage Put<T>(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, T aspect) { }
+        public static bool TryGet<T>(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, out T aspect) { }
     }
     public enum OmnichannelResponseDelayMode
     {

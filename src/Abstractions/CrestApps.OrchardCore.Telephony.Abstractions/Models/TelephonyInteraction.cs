@@ -1,4 +1,4 @@
-using OrchardCore.Entities;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Telephony.Models;
 
@@ -6,8 +6,15 @@ namespace CrestApps.OrchardCore.Telephony.Models;
 /// Represents a persisted telephony interaction (a call) recorded locally for history and reporting,
 /// independently of the provider.
 /// </summary>
-public sealed class TelephonyInteraction : Entity
+public sealed class TelephonyInteraction
 {
+    /// <summary>
+    /// Gets or sets the extensible metadata carried alongside the strongly typed properties. The
+    /// property name and shape match what Orchard's entity base serialized, so stored documents
+    /// round-trip unchanged.
+    /// </summary>
+    public JsonObject Properties { get; set; } = [];
+
     /// <summary>
     /// Gets or sets the database primary key.
     /// </summary>
