@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
@@ -56,9 +57,9 @@ internal sealed class BulkManageActivityActionsDisplayDriver : DisplayDriver<Bul
 
             var subjectContentTypes = new List<SelectListItem>();
 
-            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
+            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync())
             {
-                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayText, contentType.Name));
             }
 
             vm.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);

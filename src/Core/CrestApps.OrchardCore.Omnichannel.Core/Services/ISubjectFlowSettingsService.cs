@@ -1,42 +1,45 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using OrchardCore.ContentManagement.Metadata.Models;
+using CrestApps.OrchardCore.Omnichannel.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 /// <summary>
-/// Provides helpers for resolving subject flow configuration from the content-type part settings of the
-/// omnichannel subject part.
+/// Resolves the stable configuration of each kind of subject a tenant has defined.
 /// </summary>
+/// <remarks>
+/// Reported against subject definitions rather than whatever the host models a subject type with, so
+/// the services that read this do not have to know.
+/// </remarks>
 public interface ISubjectFlowSettingsService
 {
     /// <summary>
-    /// Gets the subject flow settings for every content type that has the omnichannel subject part.
+    /// Gets the subject flow settings for every configured subject definition.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<IReadOnlyList<SubjectFlowSettings>> GetConfiguredFlowSettingsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the subject flow settings for the specified subject content type.
+    /// Gets the subject flow settings for the specified subject definition.
     /// </summary>
-    /// <param name="subjectContentType">The subject content type name.</param>
+    /// <param name="subjectDefinitionName">The subject definition name.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    Task<SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, CancellationToken cancellationToken = default);
+    Task<SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectDefinitionName, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the content type definitions that have the omnichannel subject part.
+    /// Gets every configured subject definition.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets the content type definitions that have the omnichannel subject part and match the specified direction.
+    /// Gets the configured subject definitions matching the specified direction.
     /// </summary>
     /// <param name="direction">The subject communication direction to filter by.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(SubjectDirection direction, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Determines whether the specified flow settings belong to a subject content type.
+    /// Determines whether the specified flow settings belong to a configured subject.
     /// </summary>
     /// <param name="flowSettings">The flow settings to evaluate.</param>
     bool IsConfigured(SubjectFlowSettings flowSettings);

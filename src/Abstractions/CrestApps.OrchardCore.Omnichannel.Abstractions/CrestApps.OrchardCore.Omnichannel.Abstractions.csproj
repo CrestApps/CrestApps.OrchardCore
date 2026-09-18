@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.OrchardCore.Omnichannel</RootNamespace>
+    <Title>CrestApps OrchardCore Omnichannel Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The customer-record vocabulary the Omnichannel services work in: what a contact and a subject are,
+      what kinds of them a tenant has defined, and the contracts for reading and writing them. A host
+      decides how they are actually stored.
+    </Description>
+    <PackageTags>$(PackageTags) Omnichannel Contacts Subjects Abstractions</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CrestApps.Core" />
+  </ItemGroup>
+
+</Project>

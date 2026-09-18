@@ -23,6 +23,7 @@
     <Project Path="src/Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions/CrestApps.OrchardCore.PhoneNumbers.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Reports.Abstractions/CrestApps.OrchardCore.Reports.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
+    <Project Path="src/Abstractions/CrestApps.OrchardCore.Omnichannel.Abstractions/CrestApps.OrchardCore.Omnichannel.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Abstractions/CrestApps.OrchardCore.Omnichannel.Sms.Portal.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.Users.Abstractions/CrestApps.OrchardCore.Users.Abstractions.csproj" />
     <Project Path="src/Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions.csproj" />

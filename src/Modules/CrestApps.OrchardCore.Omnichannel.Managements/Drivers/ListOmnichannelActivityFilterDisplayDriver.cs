@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Models;
 using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -99,9 +100,9 @@ internal sealed class ListOmnichannelActivityFilterDisplayDriver : DisplayDriver
                 new(S["Any subject"], ""),
             };
 
-            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
+            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync())
             {
-                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayText, contentType.Name));
             }
 
             model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);

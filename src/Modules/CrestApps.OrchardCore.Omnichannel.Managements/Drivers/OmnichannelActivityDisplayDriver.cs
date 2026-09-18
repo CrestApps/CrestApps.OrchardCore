@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Models;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Services;
@@ -110,12 +111,12 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             var contactContentTypes = new List<SelectListItem>();
 
             var configuredSubjectTypes = isCreatingOutbound
-                ? await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound)
-                : await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync();
+                ? await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync(SubjectDirection.Outbound)
+                : await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync();
 
             foreach (var contentType in configuredSubjectTypes)
             {
-                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+                subjectContentTypes.Add(new SelectListItem(contentType.DisplayText, contentType.Name));
             }
 
             // When creating an outbound activity and there is exactly one outbound subject, auto-select it.

@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -93,7 +94,7 @@ public sealed class SubjectFlowsController : Controller
             return Forbid();
         }
 
-        var subjectTypes = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync();
+        var subjectTypes = await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync();
 
         var allActions = await _actionCatalog.GetAllAsync();
         var actionsPerSubject = allActions
@@ -104,14 +105,14 @@ public sealed class SubjectFlowsController : Controller
 
         var entries = new List<SubjectFlowEntryViewModel>();
 
-        foreach (var subjectType in subjectTypes.OrderBy(t => t.DisplayName))
+        foreach (var subjectType in subjectTypes.OrderBy(t => t.DisplayText))
         {
             var flowSettings = await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectType.Name);
 
             entries.Add(new SubjectFlowEntryViewModel
             {
                 ContentTypeName = subjectType.Name,
-                DisplayName = subjectType.DisplayName,
+                DisplayName = subjectType.DisplayText,
                 Direction = flowSettings?.Direction ?? SubjectDirection.Outbound,
                 InteractionType = flowSettings?.InteractionType ?? ActivityInteractionType.Manual,
                 Channel = flowSettings?.Channel,

@@ -958,6 +958,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public ContentDefinitionOmnichannelContactTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
         public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContentTypeSubjectDefinitionProvider : CrestApps.OrchardCore.Omnichannel.Services.ISubjectDefinitionProvider
+    {
+        public ContentTypeSubjectDefinitionProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition> FindAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public static bool IsSubjectType(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition contentTypeDefinition) { }
+        public static CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition Project(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition contentTypeDefinition) { }
+    }
+    public sealed class ContentTypeSubjectFlowSettingsService : CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService
+    {
+        public ContentTypeSubjectFlowSettingsService(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectDefinitionName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings>> GetConfiguredFlowSettingsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default) { }
+        public bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
+    }
     public sealed class DispositionChoice
     {
         public DispositionChoice() { }
@@ -1080,10 +1097,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public interface ISubjectFlowSettingsService
     {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectDefinitionName, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings>> GetConfiguredFlowSettingsAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default);
         bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings);
     }
     public sealed class InMemoryAutomatedConversationGate : CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedConversationGate
@@ -1188,14 +1205,5 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public static class SubjectDispositionGuidance
     {
         public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.DispositionChoice> Describe(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> dispositions, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> actions, string subjectContentType) { }
-    }
-    public sealed class SubjectFlowSettingsService : CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService
-    {
-        public SubjectFlowSettingsService(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings>> GetConfiguredFlowSettingsAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default) { }
-        public bool IsConfigured(CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectFlowSettings flowSettings) { }
     }
 }

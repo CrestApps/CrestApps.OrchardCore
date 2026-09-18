@@ -102,11 +102,12 @@ CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore #0 Sco
 CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelChannelEndpointManager
 CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelChannelEndpointStore
 CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionExecutor #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultSubjectActionExecutor
-CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.SubjectFlowSettingsService
+CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeSubjectFlowSettingsService
 CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader
 CrestApps.OrchardCore.Omnichannel.Managements.Services.IActivityBatchLoadCoordinator #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityBatchLoadCoordinator
 CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContactDefinitionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContactDefinitionService
 CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider #0 Singleton -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider
+CrestApps.OrchardCore.Omnichannel.Services.ISubjectDefinitionProvider #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeSubjectDefinitionProvider
 CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService #0 Singleton -> type:CrestApps.OrchardCore.PhoneNumbers.Core.Services.DefaultPhoneNumberService
 CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver #0 Singleton -> type:CrestApps.OrchardCore.Telephony.Core.Services.ProviderIdentityResolver
 CrestApps.OrchardCore.Users.Core.IUserCacheService #0 Scoped -> type:CrestApps.OrchardCore.Users.Core.Services.DefaultUserCacheService

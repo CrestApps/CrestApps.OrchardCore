@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Models;
 using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
@@ -332,7 +333,7 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound);
+        var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync(SubjectDirection.Outbound);
 
         var activity = new OmnichannelActivity()
         {
@@ -374,7 +375,7 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Outbound);
+        var outboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync(SubjectDirection.Outbound);
 
         if (outboundSubjects.Count == 0)
         {
@@ -428,13 +429,13 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Inbound);
+        var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync(SubjectDirection.Inbound);
 
         var model = new CreateInboundActivityViewModel
         {
             ContactContentItem = contact,
             HasInboundSubjects = inboundSubjects.Count > 0,
-            SubjectContentTypes = inboundSubjects.Select(x => new SelectListItem(x.DisplayName, x.Name)).ToArray(),
+            SubjectContentTypes = inboundSubjects.Select(x => new SelectListItem(x.DisplayText, x.Name)).ToArray(),
         };
 
         if (!model.HasInboundSubjects)
@@ -493,7 +494,7 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync(SubjectDirection.Inbound);
+        var inboundSubjects = await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync(SubjectDirection.Inbound);
 
         if (inboundSubjects.Count == 0)
         {
@@ -506,7 +507,7 @@ public sealed class ActivitiesController : Controller
         {
             ContactContentItem = contact,
             HasInboundSubjects = true,
-            SubjectContentTypes = inboundSubjects.Select(x => new SelectListItem(x.DisplayName, x.Name)).ToArray(),
+            SubjectContentTypes = inboundSubjects.Select(x => new SelectListItem(x.DisplayText, x.Name)).ToArray(),
         };
 
         var isValidSubject = !string.IsNullOrEmpty(subjectContentType) &&
@@ -574,7 +575,7 @@ public sealed class ActivitiesController : Controller
         return View(model);
     }
 
-    private static string ResolveInboundSubjectContentType(string requested, IReadOnlyList<ContentTypeDefinition> inboundSubjects)
+    private static string ResolveInboundSubjectContentType(string requested, IReadOnlyList<SubjectDefinition> inboundSubjects)
     {
         if (!string.IsNullOrEmpty(requested) &&
             inboundSubjects.Any(subject => string.Equals(subject.Name, requested, StringComparison.Ordinal)))

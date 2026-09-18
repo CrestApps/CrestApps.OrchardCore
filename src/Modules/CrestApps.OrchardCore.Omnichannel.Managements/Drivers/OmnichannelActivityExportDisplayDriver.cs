@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
@@ -48,10 +49,10 @@ public sealed class OmnichannelActivityExportDisplayDriver : DisplayDriver<Expor
             viewModel.SubjectContentType = source?.SubjectContentType;
             viewModel.OnlyContactsWithLastActivity = source?.OnlyContactsWithLastActivity ?? false;
 
-            var subjectTypes = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync();
+            var subjectTypes = await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync();
 
             viewModel.SubjectContentTypes = subjectTypes
-                .Select(type => new SelectListItem(type.DisplayName, type.Name))
+                .Select(type => new SelectListItem(type.DisplayText, type.Name))
                 .OrderBy(item => item.Text)
                 .ToArray();
             viewModel.ContactContentTypes = await _contentTypeProvider.GetContactContentTypesAsync();

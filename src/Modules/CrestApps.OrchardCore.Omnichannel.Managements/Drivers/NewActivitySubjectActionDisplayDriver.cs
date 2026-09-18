@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -72,12 +73,12 @@ internal sealed class NewActivitySubjectActionDisplayDriver : DisplayDriver<Subj
                 }
             }
 
-            var subjectTypes = await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync();
+            var subjectTypes = await _subjectFlowSettingsService.GetConfiguredSubjectDefinitionsAsync();
 
             model.SubjectContentTypes = subjectTypes
                 .Select(t => new SelectListItem
                 {
-                    Text = t.DisplayName,
+                    Text = t.DisplayText,
                     Value = t.Name,
                     Selected = string.Equals(t.Name, metadata?.SubjectContentType, StringComparison.OrdinalIgnoreCase),
                 })

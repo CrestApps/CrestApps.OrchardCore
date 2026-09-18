@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -1081,11 +1082,11 @@ public sealed class DefaultContactActivityBatchLoaderTests
                 ? _settings
                 : null);
 
-        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+        public Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SubjectDefinition>>([]);
 
-        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+        public Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SubjectDefinition>>([]);
 
         public bool IsConfigured(SubjectFlowSettings flowSettings)
             => flowSettings is not null;

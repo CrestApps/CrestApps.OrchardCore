@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Models;
 using Microsoft.Extensions.Time.Testing;
 using System.Collections.Concurrent;
 using CrestApps.Core.AI;
@@ -1195,11 +1196,11 @@ public sealed class SmsReEngagementBackgroundTaskTests
         public Task<SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, CancellationToken cancellationToken = default)
             => Task.FromResult<SubjectFlowSettings>(null);
 
-        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+        public Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SubjectDefinition>>([]);
 
-        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+        public Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SubjectDefinition>>([]);
 
         public bool IsConfigured(SubjectFlowSettings flowSettings)
             => false;

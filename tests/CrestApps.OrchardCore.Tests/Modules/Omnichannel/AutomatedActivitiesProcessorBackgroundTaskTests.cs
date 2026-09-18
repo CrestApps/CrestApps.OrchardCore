@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Models;
 using Microsoft.Extensions.Time.Testing;
 using System.Collections.Concurrent;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -532,11 +533,11 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
         public Task<SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, CancellationToken cancellationToken = default)
             => Task.FromResult<SubjectFlowSettings>(null);
 
-        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+        public Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SubjectDefinition>>([]);
 
-        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+        public Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SubjectDefinition>>([]);
 
         public bool IsConfigured(SubjectFlowSettings flowSettings)
             => false;
@@ -557,11 +558,11 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
         public Task<SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, CancellationToken cancellationToken = default)
             => Task.FromResult(_settings.FirstOrDefault(settings => string.Equals(settings.SubjectContentType, subjectContentType, StringComparison.Ordinal)));
 
-        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+        public Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SubjectDefinition>>([]);
 
-        public Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ContentTypeDefinition>>([]);
+        public Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SubjectDefinition>>([]);
 
         public bool IsConfigured(SubjectFlowSettings flowSettings)
             => flowSettings is not null;

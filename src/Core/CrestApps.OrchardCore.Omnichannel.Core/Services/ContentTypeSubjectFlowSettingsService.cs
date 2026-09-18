@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 
@@ -9,15 +10,15 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 /// stable configuration of a subject lives on its content-type definition; volatile per-run values are
 /// chosen when an activity batch is loaded.
 /// </summary>
-public sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
+public sealed class ContentTypeSubjectFlowSettingsService : ISubjectFlowSettingsService
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SubjectFlowSettingsService"/> class.
+    /// Initializes a new instance of the <see cref="ContentTypeSubjectFlowSettingsService"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
-    public SubjectFlowSettingsService(IContentDefinitionManager contentDefinitionManager)
+    public ContentTypeSubjectFlowSettingsService(IContentDefinitionManager contentDefinitionManager)
     {
         _contentDefinitionManager = contentDefinitionManager;
     }
@@ -43,37 +44,39 @@ public sealed class SubjectFlowSettingsService : ISubjectFlowSettingsService
     }
 
     /// <inheritdoc />
-    public async Task<SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectContentType, CancellationToken cancellationToken = default)
+    public async Task<SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectDefinitionName, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(subjectContentType))
+        if (string.IsNullOrWhiteSpace(subjectDefinitionName))
         {
             return null;
         }
 
-        var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectContentType);
+        var contentType = await _contentDefinitionManager.GetTypeDefinitionAsync(subjectDefinitionName);
 
         return BuildFlowSettings(contentType);
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CancellationToken cancellationToken = default)
     {
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
 
         return contentTypes
             .Where(HasOmnichannelSubjectPart)
             .OrderBy(contentType => contentType.DisplayName)
+            .Select(ContentTypeSubjectDefinitionProvider.Project)
             .ToArray();
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<ContentTypeDefinition>> GetConfiguredSubjectTypesAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(SubjectDirection direction, CancellationToken cancellationToken = default)
     {
         var contentTypes = await _contentDefinitionManager.ListTypeDefinitionsAsync();
 
         return contentTypes
             .Where(contentType => HasOmnichannelSubjectPart(contentType) && GetDirection(contentType) == direction)
             .OrderBy(contentType => contentType.DisplayName)
+            .Select(ContentTypeSubjectDefinitionProvider.Project)
             .ToArray();
     }
 

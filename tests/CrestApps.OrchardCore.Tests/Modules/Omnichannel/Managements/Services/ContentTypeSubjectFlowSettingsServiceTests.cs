@@ -4,13 +4,13 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;
 
-public sealed class SubjectFlowSettingsServiceTests
+public sealed class ContentTypeSubjectFlowSettingsServiceTests
 {
     [Fact]
     public void IsConfigured_WhenFlowHasSubjectContentType_ShouldReturnTrue()
     {
         // Arrange
-        var service = new SubjectFlowSettingsService(null);
+        var service = new ContentTypeSubjectFlowSettingsService(null);
         var flowSettings = CreateAutomatedFlowSettings();
 
         // Act
@@ -24,7 +24,7 @@ public sealed class SubjectFlowSettingsServiceTests
     public void IsConfigured_WhenFlowIsNull_ShouldReturnFalse()
     {
         // Arrange
-        var service = new SubjectFlowSettingsService(null);
+        var service = new ContentTypeSubjectFlowSettingsService(null);
 
         // Act
         var result = service.IsConfigured(null);
@@ -40,7 +40,7 @@ public sealed class SubjectFlowSettingsServiceTests
     public void IsConfigured_WhenSubjectContentTypeIsMissing_ShouldReturnFalse(string subjectContentType)
     {
         // Arrange
-        var service = new SubjectFlowSettingsService(null);
+        var service = new ContentTypeSubjectFlowSettingsService(null);
         var flowSettings = CreateAutomatedFlowSettings();
         flowSettings.SubjectContentType = subjectContentType;
 

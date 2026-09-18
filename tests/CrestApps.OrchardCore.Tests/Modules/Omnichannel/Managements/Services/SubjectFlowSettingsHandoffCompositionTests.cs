@@ -41,7 +41,7 @@ public sealed class SubjectFlowSettingsHandoffCompositionTests
             .Setup(manager => manager.GetTypeDefinitionAsync("Lead"))
             .ReturnsAsync(typeDefinition);
 
-        var service = new SubjectFlowSettingsService(contentDefinitionManager.Object);
+        var service = new ContentTypeSubjectFlowSettingsService(contentDefinitionManager.Object);
 
         var flow = await service.FindConfiguredFlowSettingsAsync("Lead", TestContext.Current.CancellationToken);
 
