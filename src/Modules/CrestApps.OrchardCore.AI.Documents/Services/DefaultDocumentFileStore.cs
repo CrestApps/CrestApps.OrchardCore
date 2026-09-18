@@ -1,5 +1,5 @@
-﻿using System.Text.RegularExpressions;
-using CrestApps.Core.AI.Documents;
+﻿using CrestApps.Core.AI.Ingestion;
+using System.Text.RegularExpressions;
 using OrchardCore.FileStorage;
 
 namespace CrestApps.OrchardCore.AI.Documents.Services;

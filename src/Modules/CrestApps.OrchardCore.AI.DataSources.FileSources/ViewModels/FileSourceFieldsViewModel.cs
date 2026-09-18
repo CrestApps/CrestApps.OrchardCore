@@ -1,4 +1,4 @@
-using CrestApps.Core.AI.Documents.Ingestion;
+using CrestApps.Core.AI.Ingestion;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 

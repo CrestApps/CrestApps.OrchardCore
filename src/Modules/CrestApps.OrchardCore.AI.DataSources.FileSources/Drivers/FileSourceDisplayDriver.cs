@@ -1,7 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Deployments;
-using CrestApps.Core.AI.Documents.Ingestion;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.FileSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.DataSources.FileSources.Services;

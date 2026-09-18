@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Documents.Services;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Resilience;
