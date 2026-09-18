@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.Core.ContactCenter.Security;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -38,7 +39,9 @@ public sealed class SupervisorQueueAuthorizationService : ISupervisorQueueAuthor
             return false;
         }
 
-        if (!await _authorizationService.AuthorizeAsync(principal, ContactCenterPermissions.MonitorContactCenter))
+        // The host answers the coarse question - may this caller supervise - against the queue in
+        // hand; the entitlement check below is what narrows it to the queues this supervisor owns.
+        if (!(await _authorizationService.AuthorizeAsync(principal, queueId, ContactCenterOperations.SuperviseQueue)).Succeeded)
         {
             return false;
         }

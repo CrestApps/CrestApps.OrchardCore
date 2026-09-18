@@ -139,4 +139,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal
             public const string Twilio = "Twilio";
         }
     }
+    public static class SmsPortalPermissions
+    {
+        public static readonly OrchardCore.Security.Permissions.Permission ManageSmsNumberRoutes;
+        public static readonly OrchardCore.Security.Permissions.Permission SendDuringQuietHours;
+        public static readonly OrchardCore.Security.Permissions.Permission SendGroupSms;
+        public static readonly OrchardCore.Security.Permissions.Permission UseSmsPortal;
+        public static readonly OrchardCore.Security.Permissions.Permission ViewAllConversations;
+    }
 }

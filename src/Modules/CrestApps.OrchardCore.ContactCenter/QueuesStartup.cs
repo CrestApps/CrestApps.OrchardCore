@@ -52,6 +52,7 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityQueueGroupManager, ActivityQueueGroupManager>()
             .AddScoped<IActivityQueueStore, ActivityQueueStore>()
             .AddScoped<IActivityQueueManager, ActivityQueueManager>()
+            .AddContactCenterOperationAuthorization()
             .AddScoped<ISupervisorQueueAuthorizationService, SupervisorQueueAuthorizationService>()
             .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
             .AddScoped<IContactCenterSkillManager, ContactCenterSkillManager>()

@@ -106,6 +106,7 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()
             .AddScoped<ICallControlAuthorizationService, CallControlAuthorizationService>()
             .AddSiteSettingsOptions<ContactCenterExternalTransferSettings>()
+            .AddContactCenterOperationAuthorization()
             .AddScoped<ITransferDestinationResolver, TransferDestinationResolver>()
             // Attended transfer as the three phases it is, recorded against the call so a supervisor can see a
             // customer held while their agent talks to somebody else.

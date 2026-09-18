@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Sms.Portal.Security;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -8,8 +9,8 @@ using Microsoft.AspNetCore.Authorization;
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 
 /// <summary>
-/// The default <see cref="ISmsConversationAuthorizationService"/>. A supervisor holding
-/// <see cref="SmsPortalPermissions.ViewAllConversations"/> may do anything; every other caller is resolved to
+/// The default <see cref="ISmsConversationAuthorizationService"/>. A supervisor allowed to
+/// <see cref="SmsPortalOperations.ViewAllConversations"/> may do anything; every other caller is resolved to
 /// an agent profile and may only act on the threads they own, are assigned, or serve through a queue they belong
 /// to. Queue membership is confirmed against the agent entitlement policy, so the Agent Entitlements feature
 /// narrows SMS access the same way it narrows queue sign-in.
@@ -48,7 +49,7 @@ public sealed class SmsConversationAuthorizationService : ISmsConversationAuthor
             return false;
         }
 
-        if (await _authorizationService.AuthorizeAsync(principal, SmsPortalPermissions.ViewAllConversations))
+        if ((await _authorizationService.AuthorizeAsync(principal, conversation, SmsPortalOperations.ViewAllConversations)).Succeeded)
         {
             return true;
         }

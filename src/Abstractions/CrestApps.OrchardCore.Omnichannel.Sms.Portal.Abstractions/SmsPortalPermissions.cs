@@ -1,6 +1,6 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core;
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal;
 
 /// <summary>
 /// The permissions exposed by the SMS Communication Portal. Queue membership itself is governed by the

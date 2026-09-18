@@ -1,10 +1,14 @@
 using OrchardCore.Security.Permissions;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core;
+namespace CrestApps.OrchardCore.ContactCenter;
 
 /// <summary>
 /// Defines the permissions exposed by the base Contact Center feature.
 /// </summary>
+/// <remarks>
+/// A permission is the host's own concept, so this lives on the host side of the suite. A Contact
+/// Center service asks about an operation instead, which a handler answers with the permission here.
+/// </remarks>
 public static class ContactCenterPermissions
 {
     /// <summary>

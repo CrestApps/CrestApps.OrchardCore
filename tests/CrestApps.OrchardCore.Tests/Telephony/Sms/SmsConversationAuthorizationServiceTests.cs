@@ -1,3 +1,6 @@
+using CrestApps.Core.Omnichannel.Sms.Portal.Security;
+using CrestApps.OrchardCore.Omnichannel.Sms.Portal;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -234,9 +237,11 @@ public class SmsConversationAuthorizationServiceTests
             .Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>()))
             .ReturnsAsync((ClaimsPrincipal _, object _, IEnumerable<IAuthorizationRequirement> requirements) =>
             {
+                // The service asks for the operation; on this host a handler answers it with the
+                // ViewAllConversations permission, and this stands in for that handler.
                 var wantsViewAll = requirements
-                    .OfType<PermissionRequirement>()
-                    .Any(requirement => requirement.Permission.Name == SmsPortalPermissions.ViewAllConversations.Name);
+                    .OfType<OperationAuthorizationRequirement>()
+                    .Any(requirement => requirement.Name == SmsPortalOperations.ViewAllConversations.Name);
 
                 return canViewAll && wantsViewAll
                     ? AuthorizationResult.Success()

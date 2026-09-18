@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Omnichannel.Sms.Portal</RootNamespace>
+    <Title>CrestApps Core SMS Portal Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The SMS portal contracts that do not depend on a host. Currently the authorization operations
+      an SMS portal service asks about, which a host maps to whatever it calls a permission.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

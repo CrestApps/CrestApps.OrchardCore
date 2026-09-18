@@ -92,6 +92,7 @@ public sealed class Startup : StartupBase
         // it a caller owns or serves. The handler narrows the portal permission when a conversation is supplied as
         // the authorization resource.
         services
+            .AddSmsPortalOperationAuthorization()
             .AddScoped<ISmsConversationAuthorizationService, SmsConversationAuthorizationService>()
             .AddScoped<IAuthorizationHandler, SmsConversationAuthorizationHandler>();
 

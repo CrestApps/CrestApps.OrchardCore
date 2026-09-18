@@ -249,6 +249,25 @@ namespace CrestApps.OrchardCore.ContactCenter
         DeduplicatedByEventId = 2,
         GuardedByDurableStore = 3,
     }
+    public static class ContactCenterPermissions
+    {
+        public static readonly OrchardCore.Security.Permissions.Permission InitiateSecureCapture;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageAgents;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageBusinessHours;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageContactCenter;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageDialer;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageInteractions;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageQueueGroups;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageQueues;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageSkills;
+        public static readonly OrchardCore.Security.Permissions.Permission ManageVoiceMedia;
+        public static readonly OrchardCore.Security.Permissions.Permission MonitorContactCenter;
+        public static readonly OrchardCore.Security.Permissions.Permission SecurePauseRecording;
+        public static readonly OrchardCore.Security.Permissions.Permission SignIntoQueues;
+        public static readonly OrchardCore.Security.Permissions.Permission TransferExternally;
+        public static readonly OrchardCore.Security.Permissions.Permission ViewInteractions;
+        public static readonly OrchardCore.Security.Permissions.Permission ViewReports;
+    }
     public static class ContactCenterProcessHealthApplicationBuilderExtensions
     {
         public static void ThrowIfShadowsSharedHealthEndpoint(string livenessPath, string sharedEndpointRoute, string tenantName) { }

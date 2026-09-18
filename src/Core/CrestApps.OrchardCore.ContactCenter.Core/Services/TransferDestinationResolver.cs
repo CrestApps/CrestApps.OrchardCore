@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter.Security;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -99,7 +100,7 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
         ClaimsPrincipal principal)
     {
         if (principal is null ||
-            !await _authorizationService.AuthorizeAsync(principal, ContactCenterPermissions.TransferExternally))
+            !(await _authorizationService.AuthorizeAsync(principal, targetId, ContactCenterOperations.TransferExternally)).Succeeded)
         {
             return TransferDestinationResolutionResult.Denied();
         }

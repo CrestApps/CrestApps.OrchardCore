@@ -567,14 +567,3 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing
         public System.Threading.Tasks.Task<string> SelectAgentAsync(string queueId, string excludeAgentId = null, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
-namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core
-{
-    public static class SmsPortalPermissions
-    {
-        public static readonly OrchardCore.Security.Permissions.Permission ManageSmsNumberRoutes;
-        public static readonly OrchardCore.Security.Permissions.Permission SendDuringQuietHours;
-        public static readonly OrchardCore.Security.Permissions.Permission SendGroupSms;
-        public static readonly OrchardCore.Security.Permissions.Permission UseSmsPortal;
-        public static readonly OrchardCore.Security.Permissions.Permission ViewAllConversations;
-    }
-}
