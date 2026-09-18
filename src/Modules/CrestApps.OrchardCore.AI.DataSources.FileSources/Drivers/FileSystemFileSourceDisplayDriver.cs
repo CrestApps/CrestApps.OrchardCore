@@ -11,27 +11,27 @@ using OrchardCore.Mvc.ModelBinding;
 namespace CrestApps.OrchardCore.AI.DataSources.FileSources.Drivers;
 
 /// <summary>
-/// Display driver for the local-folder connector settings.
+/// Display driver for the file-system connector settings.
 /// </summary>
 /// <remarks>
 /// The folder is written and stored relative to this tenant's own file-source folder, and refused when it
 /// resolves anywhere else. The connector repeats that check before it reads anything, because a stored
 /// record may predate the rule or have been written straight into the database.
 /// </remarks>
-internal sealed class LocalFolderFileSourceDisplayDriver : DisplayDriver<WebCrawler>
+internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<WebCrawler>
 {
     private readonly ITenantFileSourceRoot _tenantRoot;
 
     internal readonly IStringLocalizer S;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="LocalFolderFileSourceDisplayDriver"/> class.
+    /// Initializes a new instance of the <see cref="FileSystemFileSourceDisplayDriver"/> class.
     /// </summary>
     /// <param name="tenantRoot">This tenant's file-source folder.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
-    public LocalFolderFileSourceDisplayDriver(
+    public FileSystemFileSourceDisplayDriver(
         ITenantFileSourceRoot tenantRoot,
-        IStringLocalizer<LocalFolderFileSourceDisplayDriver> stringLocalizer)
+        IStringLocalizer<FileSystemFileSourceDisplayDriver> stringLocalizer)
     {
         _tenantRoot = tenantRoot;
         S = stringLocalizer;
@@ -39,12 +39,12 @@ internal sealed class LocalFolderFileSourceDisplayDriver : DisplayDriver<WebCraw
 
     public override IDisplayResult Edit(WebCrawler fileSource, BuildEditorContext context)
     {
-        if (!IsLocalFolder(fileSource))
+        if (!IsFileSystem(fileSource))
         {
             return null;
         }
 
-        return Initialize<LocalFolderFileSourceViewModel>("LocalFolderFileSource_Edit", model =>
+        return Initialize<FileSystemFileSourceViewModel>("FileSystemFileSource_Edit", model =>
         {
             // Created on demand, so the path shown to a reader is a folder they can actually drop files in.
             model.TenantRootPath = _tenantRoot.EnsureRoot();
@@ -63,12 +63,12 @@ internal sealed class LocalFolderFileSourceDisplayDriver : DisplayDriver<WebCraw
 
     public override async Task<IDisplayResult> UpdateAsync(WebCrawler fileSource, UpdateEditorContext context)
     {
-        if (!IsLocalFolder(fileSource))
+        if (!IsFileSystem(fileSource))
         {
             return null;
         }
 
-        var model = new LocalFolderFileSourceViewModel();
+        var model = new FileSystemFileSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
@@ -127,6 +127,6 @@ internal sealed class LocalFolderFileSourceDisplayDriver : DisplayDriver<WebCraw
         }
     }
 
-    private static bool IsLocalFolder(WebCrawler fileSource)
-        => string.Equals(fileSource.Source, LocalFolderIngestionConnector.ConnectorName, StringComparison.OrdinalIgnoreCase);
+    private static bool IsFileSystem(WebCrawler fileSource)
+        => string.Equals(fileSource.Source, FileSystemIngestionConnector.ConnectorName, StringComparison.OrdinalIgnoreCase);
 }

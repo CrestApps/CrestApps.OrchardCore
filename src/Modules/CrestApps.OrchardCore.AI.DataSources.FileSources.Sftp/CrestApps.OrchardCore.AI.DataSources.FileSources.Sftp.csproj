@@ -7,7 +7,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      Adds an SFTP connector to File Sources. Its own module so a tenant that reads only local folders never loads the SSH client.
+      Adds an SFTP connector to File Sources. Its own module so a tenant that reads only its own folders never loads the SSH client.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS AI DataSources RAG FileSources SFTP</PackageTags>
   </PropertyGroup>

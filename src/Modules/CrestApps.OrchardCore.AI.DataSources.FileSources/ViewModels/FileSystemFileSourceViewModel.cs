@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace CrestApps.OrchardCore.AI.DataSources.FileSources.ViewModels;
 
 /// <summary>
-/// View model for the local-folder connector settings.
+/// View model for the file-system connector settings.
 /// </summary>
-public class LocalFolderFileSourceViewModel
+public class FileSystemFileSourceViewModel
 {
     /// <summary>
     /// Gets or sets the folder to read, relative to this tenant's file-source folder. Empty means the

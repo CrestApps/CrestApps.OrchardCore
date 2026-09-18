@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace CrestApps.OrchardCore.AI.DataSources.FileSources.Services;
 
 /// <summary>
-/// The framework's local-folder connector, confined to this tenant's own file-source folder.
+/// The framework's file-system connector, confined to this tenant's own file-source folder.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,23 +21,28 @@ namespace CrestApps.OrchardCore.AI.DataSources.FileSources.Services;
 /// a folder that has since been replaced by a link pointing somewhere else. A check that only happens on
 /// the way in is a check an attacker walks around.
 /// </para>
+/// <para>
+/// <c>LocalFolderIndexerMetadata</c> keeps its older name on purpose, matching the framework: it is stored
+/// under its short type name, so renaming it would strand the settings of every file source already
+/// configured. The connector around it was renamed; the stored shape was not.
+/// </para>
 /// </remarks>
-internal sealed class TenantLocalFolderIngestionConnector : IIngestionConnector
+internal sealed class TenantFileSystemIngestionConnector : IIngestionConnector
 {
-    private readonly LocalFolderIngestionConnector _inner;
+    private readonly FileSystemIngestionConnector _inner;
     private readonly ITenantFileSourceRoot _tenantRoot;
-    private readonly ILogger<TenantLocalFolderIngestionConnector> _logger;
+    private readonly ILogger<TenantFileSystemIngestionConnector> _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="TenantLocalFolderIngestionConnector"/> class.
+    /// Initializes a new instance of the <see cref="TenantFileSystemIngestionConnector"/> class.
     /// </summary>
     /// <param name="inner">The framework connector that does the reading.</param>
     /// <param name="tenantRoot">This tenant's file-source folder.</param>
     /// <param name="logger">The logger.</param>
-    public TenantLocalFolderIngestionConnector(
-        LocalFolderIngestionConnector inner,
+    public TenantFileSystemIngestionConnector(
+        FileSystemIngestionConnector inner,
         ITenantFileSourceRoot tenantRoot,
-        ILogger<TenantLocalFolderIngestionConnector> logger)
+        ILogger<TenantFileSystemIngestionConnector> logger)
     {
         _inner = inner;
         _tenantRoot = tenantRoot;
@@ -45,7 +50,7 @@ internal sealed class TenantLocalFolderIngestionConnector : IIngestionConnector
     }
 
     /// <inheritdoc />
-    public string Name => LocalFolderIngestionConnector.ConnectorName;
+    public string Name => FileSystemIngestionConnector.ConnectorName;
 
     /// <inheritdoc />
     public async ValueTask ValidateAsync(WebCrawler settings, ValidationResultDetails result, CancellationToken cancellationToken = default)

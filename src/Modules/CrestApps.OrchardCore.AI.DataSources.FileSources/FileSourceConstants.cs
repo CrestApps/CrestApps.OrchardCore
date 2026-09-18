@@ -11,7 +11,7 @@ public static class FileSourceConstants
     public static class Feature
     {
         /// <summary>
-        /// The base File Sources feature, which ships the local-folder connector.
+        /// The base File Sources feature, which ships the file-system connector.
         /// </summary>
         public const string FileSources = "CrestApps.OrchardCore.AI.DataSources.FileSources";
     }

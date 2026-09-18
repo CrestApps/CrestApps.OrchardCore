@@ -7,7 +7,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      Adds an FTP/FTPS connector to File Sources. Its own module so a tenant that reads only local folders never loads the FTP client.
+      Adds an FTP/FTPS connector to File Sources. Its own module so a tenant that reads only its own folders never loads the FTP client.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS AI DataSources RAG FileSources FTP</PackageTags>
   </PropertyGroup>

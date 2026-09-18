@@ -7,7 +7,7 @@
     <Description>
       $(CrestAppsDescription)
 
-      Adds a File AI data source populated by file sources. A file source reads a folder or a file server on a schedule and stores each file's text, figures, charts and tables as separately retrievable knowledge. Ships the local-folder connector; FTP and SFTP are separate features so a tenant that reads only local folders never loads their libraries.
+      Adds a File AI data source populated by file sources. A file source reads a folder or a file server on a schedule and stores each file's text, figures, charts and tables as separately retrievable knowledge. Ships the file-system connector; FTP and SFTP are separate features so a tenant that reads only its own folders never loads their libraries.
     </Description>
     <PackageTags>$(PackageTags) OrchardCoreCMS AI DataSources RAG FileSources Ingestion</PackageTags>
   </PropertyGroup>

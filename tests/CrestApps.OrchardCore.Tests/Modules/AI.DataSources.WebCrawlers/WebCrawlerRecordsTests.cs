@@ -28,7 +28,7 @@ public sealed class WebCrawlerRecordsTests
         => Assert.True(WebCrawlerRecords.IsCrawlStrategy(source, _strategies));
 
     [Theory]
-    [InlineData("LocalFolder")]
+    [InlineData("FileSystem")]
     [InlineData("Ftp")]
     [InlineData("Sftp")]
     [InlineData("")]
@@ -42,7 +42,7 @@ public sealed class WebCrawlerRecordsTests
     {
         WebCrawler[] records =
         [
-            new() { ItemId = "a", Source = "LocalFolder" },
+            new() { ItemId = "a", Source = "FileSystem" },
             new() { ItemId = "b", Source = "Sitemap" },
             new() { ItemId = "c", Source = "Ftp" },
         ];

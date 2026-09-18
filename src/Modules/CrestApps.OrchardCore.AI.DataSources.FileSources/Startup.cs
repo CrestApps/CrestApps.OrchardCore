@@ -33,15 +33,15 @@ public sealed class Startup : StartupBase
         // Registers the File AI data source handler, the connector resolver, the run service and the
         // knowledge ingestion the connectors feed. Nothing here grants access to a folder on its own.
         services.AddCoreFileSources();
-        services.AddCoreLocalFolderConnector();
+        services.AddCoreFileSystemConnector();
 
-        // The framework's local-folder connector, wrapped so it can only ever read inside this tenant's own
+        // The framework's file-system connector, wrapped so it can only ever read inside this tenant's own
         // folder. Registered after the framework's, because a keyed service resolves to the last
         // registration -- which is how the framework itself replaces a reader for a shared media type.
-        services.AddScoped<TenantLocalFolderIngestionConnector>();
+        services.AddScoped<TenantFileSystemIngestionConnector>();
         services.AddKeyedScoped<IIngestionConnector>(
-            LocalFolderIngestionConnector.ConnectorName,
-            (sp, _) => sp.GetRequiredService<TenantLocalFolderIngestionConnector>());
+            FileSystemIngestionConnector.ConnectorName,
+            (sp, _) => sp.GetRequiredService<TenantFileSystemIngestionConnector>());
 
         // Singleton, not scoped: the folder is a pure function of the tenant's own identity and never
         // changes for the life of the shell, and the options it feeds are themselves a singleton. A scoped
@@ -56,7 +56,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<FileSourceIndexMigrations>();
 
         services.AddDisplayDriver<WebCrawler, FileSourceDisplayDriver>();
-        services.AddDisplayDriver<WebCrawler, LocalFolderFileSourceDisplayDriver>();
+        services.AddDisplayDriver<WebCrawler, FileSystemFileSourceDisplayDriver>();
         services.AddDisplayDriver<AIDataSource, FileAIDataSourceDisplayDriver>();
 
         services.AddScoped<IAuthorizationHandler, OrchardKnowledgeFigureAuthorizationHandler>();

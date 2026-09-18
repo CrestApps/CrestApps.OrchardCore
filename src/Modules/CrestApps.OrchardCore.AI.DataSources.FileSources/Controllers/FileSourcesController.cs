@@ -20,7 +20,7 @@ using OrchardCore.Routing;
 namespace CrestApps.OrchardCore.AI.DataSources.FileSources.Controllers;
 
 /// <summary>
-/// Manages file sources in the admin area. Each registered ingestion connector (local folder, FTP, SFTP) is
+/// Manages file sources in the admin area. Each registered ingestion connector (file system, FTP, SFTP) is
 /// a source, so the create flow mirrors the other source-based catalog editors.
 /// </summary>
 /// <remarks>

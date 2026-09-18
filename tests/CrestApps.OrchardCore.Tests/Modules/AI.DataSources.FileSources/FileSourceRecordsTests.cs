@@ -18,16 +18,16 @@ public sealed class FileSourceRecordsTests
 {
     private static readonly IReadOnlyList<IngestionConnectorDescriptor> _connectors =
     [
-        Descriptor(LocalFolderIngestionConnector.ConnectorName),
+        Descriptor(FileSystemIngestionConnector.ConnectorName),
         Descriptor("Ftp"),
         Descriptor("Sftp"),
     ];
 
     [Theory]
-    [InlineData("LocalFolder")]
+    [InlineData("FileSystem")]
     [InlineData("Ftp")]
     [InlineData("Sftp")]
-    [InlineData("localfolder")]
+    [InlineData("filesystem")]
     [InlineData("SFTP")]
     public void ARegisteredConnector_IsAFileSource(string source)
         => Assert.True(FileSourceRecords.IsConnector(source, _connectors));
@@ -54,7 +54,7 @@ public sealed class FileSourceRecordsTests
     {
         WebCrawler[] records =
         [
-            new() { ItemId = "a", Source = "LocalFolder" },
+            new() { ItemId = "a", Source = "FileSystem" },
             new() { ItemId = "b", Source = "Sitemap" },
             new() { ItemId = "c", Source = "Sftp" },
             new() { ItemId = "d", Source = "Dropbox" },
