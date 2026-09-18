@@ -1,5 +1,24 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Omnichannel.Sms.Portal")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Hubs
+{
+    public interface ISmsPortalHubClient
+    {
+        System.Threading.Tasks.Task ConversationAssigned(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.SmsAssignmentNotification notification);
+        System.Threading.Tasks.Task FirstResponseBreached(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.SmsFirstResponseBreachNotification notification);
+        System.Threading.Tasks.Task MessageDeliveryUpdated(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.SmsDeliveryNotification notification);
+        System.Threading.Tasks.Task NewInboundMessage(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.SmsInboundNotification notification);
+    }
+    public abstract class SmsPortalHubBase : Microsoft.AspNetCore.SignalR.Hub<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Hubs.ISmsPortalHubClient>
+    {
+        public const string UnassignedGroup = "sms:unassigned";
+        protected SmsPortalHubBase(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsAgentPresenceTracker presenceTracker, CrestApps.Core.Hosting.ITenantAccessor tenantAccessor) { }
+        public System.Threading.Tasks.Task Heartbeat() { }
+        public override System.Threading.Tasks.Task OnConnectedAsync() { }
+        public static string AgentGroup(string agentId) { }
+        public static string QueueGroup(string queueId) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Indexes
 {
     public sealed class SmsBroadcastIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex, CrestApps.Core.Data.YesSql.INameAwareIndex, YesSql.Indexes.IIndex

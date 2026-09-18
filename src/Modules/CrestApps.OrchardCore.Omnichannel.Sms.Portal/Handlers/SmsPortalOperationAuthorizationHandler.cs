@@ -19,6 +19,7 @@ public sealed class SmsPortalOperationAuthorizationHandler : AuthorizationHandle
     private static readonly FrozenDictionary<string, Permission> _permissions = new Dictionary<string, Permission>(StringComparer.Ordinal)
     {
         [SmsPortalOperations.ViewAllConversations.Name] = SmsPortalPermissions.ViewAllConversations,
+        [SmsPortalOperations.UseSmsPortal.Name] = SmsPortalPermissions.UseSmsPortal,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     private readonly Lazy<IAuthorizationService> _authorizationService;

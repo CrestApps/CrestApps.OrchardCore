@@ -32,6 +32,7 @@ public sealed class OperationAuthorizationHandlerTests
     public static TheoryData<string, string> SmsPortalMappings => new()
     {
         { SmsPortalOperations.ViewAllConversations.Name, SmsPortalPermissions.ViewAllConversations.Name },
+        { SmsPortalOperations.UseSmsPortal.Name, SmsPortalPermissions.UseSmsPortal.Name },
     };
 
     [Theory]

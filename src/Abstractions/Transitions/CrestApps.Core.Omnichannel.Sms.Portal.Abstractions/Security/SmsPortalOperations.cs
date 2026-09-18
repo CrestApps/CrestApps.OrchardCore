@@ -19,4 +19,13 @@ public static class SmsPortalOperations
     /// it is narrowed to their own threads and their own queues rather than refused outright.
     /// </remarks>
     public static readonly OperationAuthorizationRequirement ViewAllConversations = new() { Name = nameof(ViewAllConversations) };
+
+    /// <summary>
+    /// Open the SMS portal at all.
+    /// </summary>
+    /// <remarks>
+    /// Asked when a connection is established rather than per conversation, because a caller who should not be
+    /// in the portal must not reach the point of subscribing to anybody's inbox.
+    /// </remarks>
+    public static readonly OperationAuthorizationRequirement UseSmsPortal = new() { Name = nameof(UseSmsPortal) };
 }

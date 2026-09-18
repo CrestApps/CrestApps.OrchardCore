@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 
-namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Hubs;
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Hubs;
 
 /// <summary>
 /// The strongly-typed callbacks the SMS portal hub invokes on connected clients (the inbox workspace and the
