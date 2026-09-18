@@ -4,8 +4,8 @@ Branch `ma/contact-center-framework-extraction`, cut from `ma/add-contact-center
 to be merged back into `ma/add-contact-center`.
 
 After every commit below: `dotnet build CrestApps.OrchardCore.slnx -c Release -warnaserror` succeeds,
-`CrestApps.OrchardCore.Tests` is 5294 passed / 0 failed / 1 skipped, and
-`ContactCenter.FeatureActivationTests` is 76 passed / 0 failed / 2 skipped — identical to the
+and both suites are green. They have grown as workstreams landed, because each one pins what it
+touches: the main suite started at 5294 cases and the activation suite at 76, against the
 baseline in [phase-0-baseline.md](phase-0-baseline.md).
 
 ## Done
@@ -23,6 +23,11 @@ baseline in [phase-0-baseline.md](phase-0-baseline.md).
 | P0.1 | **Reduced by decision, see below.** The pre-extraction upgrade test landed; the coverage audit and its gate were dropped in favour of a test-count ratchet |
 | P0.1 | Reduced by decision (see below): the pre-extraction upgrade test landed; the coverage audit and its gate were dropped for a test-count ratchet |
 | P0.13a | The dependency-injection snapshot: 19 feature/profile baselines plus 4 resolution-order baselines, captured before any registration moves. See the note below on why order is pinned separately |
+| P0.10 (S18) | Feature-owned work is keyed on a capability the owning startup contributes, not on an Orchard feature id, so no module has to name another module's features |
+| P0.3 (S21) | `IAgentSignOutHandler` owns what ending a session means; the cookie hook only calls it. Takes a user id, because the principal is already gone by then |
+| P0.5 | `ISmsProvider`/`ISmsProviderResolver` with an Orchard adapter; the suite sends SMS through the contract |
+| P0.11 | Migration bodies move behind `ISchemaMigration`; the Orchard `DataMigration` classes keep their names, attributes and version numbers and delegate |
+| P0.3 (S9) | `IUserDirectory` + `IUserProfileStore` replace `UserManager<IUser>`, `IDisplayNameProvider` and the user index across the suite; `ITelephonyUserAccessor` collapses into them |
 | Phase 1 W1 (part) | `src/Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions` and `src/Core/Transitions/CrestApps.Core.Hosting` created with their final names and namespaces, Core-repo package metadata, `IsPackable=false`, and matching solution folders. `grep -rlE "OrchardCore" src/*/Transitions` is empty |
 
 ## Exit-criteria scoreboard
@@ -51,7 +56,7 @@ a shippable unit that keeps the build green:
 
 1. **Measurement instruments** - P0.13a, P0.1, P0.14. Nothing here changes behaviour, and everything
    here is what the later batches are measured against. *(Done.)*
-2. **Independent seams** - P0.10-S18, P0.3-S9, P0.3-S21, P0.5, P0.11.
+2. **Independent seams** - P0.10-S18, P0.3-S9, P0.3-S21, P0.5, P0.11. *(Done.)*
 3. **Content boundary, settings, authorization** - P0.4, P0.6, P0.7.
 4. **Background work and routes** - P0.8, P0.12.
 5. **Hub split and client configuration** - P0.9, P0.3-S23.
@@ -63,14 +68,12 @@ workstreams across three batches, and `AgentWorkspaceEndpoints.cs` by four acros
 
 ## Not started
 
-**Batches 2 to 6, thirteen workstreams.** P0.4 (contacts, subjects, subject flows — the largest and
-highest risk), P0.5 (SMS provider abstraction), P0.6 (settings to options), P0.7 (authorization
-operations), P0.8 (background tasks to cycles), P0.9 (hub base classes), P0.11 (schema migration
-steps), P0.12 (endpoints as `Map*` methods), P0.13 (`AddCore*` registration methods), and the rest of
-P0.3 (`IUserDirectory`, `IAgentSignOutHandler`, client configuration models).
+**Batches 3 to 6, eight workstreams.** P0.4 (contacts, subjects, subject flows — the largest and
+highest risk), P0.6 (settings to options), P0.7 (authorization operations), P0.8 (background tasks to
+cycles), P0.9 (hub base classes), P0.12 (endpoints as `Map*` methods), P0.13 (`AddCore*` registration
+methods), and the rest of P0.3 (client configuration models, S23).
 
-**Phase 0 is therefore not finished, and Phase 1 must not start.** Batch 1 only built the instruments
-the remaining batches are measured against.
+**Phase 0 is therefore not finished, and Phase 1 must not start.**
 
 All of Phase 1 is ahead, except the two Transitions projects noted above.
 
