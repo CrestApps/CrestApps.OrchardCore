@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
 using CrestApps.OrchardCore.AI.Core;
 using OrchardCore.Modules.Manifest;
 
@@ -12,5 +13,11 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         AIConstants.Feature.DataSources,
+
+        // Ingestion is document processing: the pipeline, the readers and the knowledge store all come
+        // from this feature, and the run service cannot be constructed without them. Declaring it also
+        // orders its registrations ahead of ours, which is what lets the HTML reader this feature's own
+        // registration adds win the keyed ".html" slot over the plain-text one.
+        ChatInteractionsConstants.Feature.ChatDocuments,
     ]
 )]
