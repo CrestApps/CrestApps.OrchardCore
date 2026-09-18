@@ -1,0 +1,57 @@
+@using CrestApps.OrchardCore.AI.FileSources.ViewModels
+
+@model FileSystemFileSourceViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="alert alert-info mb-0" role="alert">
+            <h5 class="alert-heading">@T["Where to put the files"]</h5>
+            <p class="mb-1">@T["This tenant reads from one folder and nothing outside it:"]</p>
+            <p class="mb-1"><code>@Model.TenantRootPath</code></p>
+            <p class="mb-0">@T["Drop files there, or in a folder inside it, and name that folder below."]</p>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RootPath" class="ocat-label">@T["Folder"]</label>
+    <div class="ocat-end">
+        <input asp-for="RootPath" class="form-control" placeholder="@T["Leave empty to read the folder above"]" />
+        <span asp-validation-for="RootPath" class="text-danger"></span>
+        <span class="hint">@T["A folder inside the one shown above, written relative to it, for example <code>handbooks</code> or <code>handbooks/2026</code>. Leave it empty to read the folder itself."]</span>
+
+        @if (Model.IsEmpty)
+        {
+            <div class="alert alert-warning mt-2 mb-0" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2" aria-hidden="true"></i>
+                @T["That folder is empty. A run will find nothing to ingest until files are put there."]
+            </div>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="SearchPattern" class="ocat-label">@T["File pattern"]</label>
+    <div class="ocat-end">
+        <input asp-for="SearchPattern" class="form-control" />
+        <span class="hint">@T["Which files to read, for example <code>*.pdf</code>. The default reads everything the ingestion readers recognize."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Recursive" class="form-check-input" type="checkbox" />
+            <label asp-for="Recursive" class="form-check-label">@T["Include sub-folders"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxItems" class="ocat-label">@T["Files per listing"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxItems" class="form-control" type="number" min="1" />
+        <span asp-validation-for="MaxItems" class="text-danger"></span>
+        <span class="hint">@T["The most files one listing will take on. Leave empty to use the items-per-run setting above. A run that had to stop part-way removes nothing, because deciding a file is gone needs a listing of the whole folder in one pass."]</span>
+    </div>
+</div>
