@@ -1,8 +1,8 @@
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 /// <summary>
-/// Tenant-scoped site settings that govern agent-assisted secure data capture. Stored via Orchard Core site
-/// settings so the policy is isolated per shell/tenant and never shared across tenants.
+/// Tenant-scoped settings that govern agent-assisted secure data capture. Read through options, and stored
+/// per tenant so the policy is never shared across tenants.
 /// </summary>
 public sealed class SecureCaptureSettings
 {

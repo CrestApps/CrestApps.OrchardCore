@@ -23,7 +23,7 @@ public sealed class MovingSetTestCountRatchetTests
     /// lower than the total the runner prints. Raise it when the suite grows, so a later deletion is
     /// caught against the new high-water mark rather than the original one.
     /// </remarks>
-    private const int MinimumTestMethods = 3748;
+    private const int MinimumTestMethods = 3776;
 
     [Fact]
     public void TheSuite_DoesNotShrink()

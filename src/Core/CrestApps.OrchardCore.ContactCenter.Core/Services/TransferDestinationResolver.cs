@@ -1,9 +1,9 @@
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -17,7 +17,7 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
     private readonly IAuthorizationService _authorizationService;
     private readonly IAgentProfileManager _agentManager;
     private readonly IActivityQueueManager _queueManager;
-    private readonly ISiteService _siteService;
+    private readonly IOptionsMonitor<ContactCenterExternalTransferSettings> _settings;
     private readonly IDialDestinationPolicy _destinationPolicy;
 
     /// <summary>
@@ -26,19 +26,19 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
     /// <param name="authorizationService">The authorization service used for external transfer RBAC.</param>
     /// <param name="agentManager">The agent profile manager used to resolve agent destinations.</param>
     /// <param name="queueManager">The queue manager used to resolve queue destinations.</param>
-    /// <param name="siteService">The site service used to read the tenant-scoped approved-destination catalog.</param>
+    /// <param name="settings">The tenant-scoped approved-destination catalog.</param>
     /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
     public TransferDestinationResolver(
         IAuthorizationService authorizationService,
         IAgentProfileManager agentManager,
         IActivityQueueManager queueManager,
-        ISiteService siteService,
+        IOptionsMonitor<ContactCenterExternalTransferSettings> settings,
         IDialDestinationPolicy destinationPolicy)
     {
         _authorizationService = authorizationService;
         _agentManager = agentManager;
         _queueManager = queueManager;
-        _siteService = siteService;
+        _settings = settings;
         _destinationPolicy = destinationPolicy;
     }
 
@@ -104,9 +104,7 @@ public sealed class TransferDestinationResolver : ITransferDestinationResolver
             return TransferDestinationResolutionResult.Denied();
         }
 
-        var site = await _siteService.GetSiteSettingsAsync();
-        var settings = site.GetOrCreate<ContactCenterExternalTransferSettings>();
-        var entry = settings.Destinations
+        var entry = _settings.CurrentValue.Destinations
             .FirstOrDefault(d => string.Equals(d.Id, targetId, StringComparison.OrdinalIgnoreCase));
 
         if (entry is null || !entry.Enabled)

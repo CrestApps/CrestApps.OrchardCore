@@ -1,3 +1,4 @@
+using CrestApps.Core.Hosting;
 using System.Net;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -280,13 +281,8 @@ public sealed class TelnyxContactCenterVoiceMediaProviderTests
             ApiBaseUrl = "https://api.telnyx.test/v2/",
         });
 
-        var site = new Mock<ISite>();
-        site.SetupGet(s => s.BaseUrl).Returns(siteBaseUrl);
-        var siteService = new Mock<ISiteService>();
-        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site.Object);
-
         return new TelnyxContactCenterVoiceMediaProvider(
-            siteService.Object,
+            new StaticPublicBaseUrlAccessor(siteBaseUrl),
             new Microsoft.AspNetCore.Http.HttpContextAccessor(),
             new StubHttpClientFactory(handler),
             workManager ?? new TestContactCenterFeatureWorkManager(),

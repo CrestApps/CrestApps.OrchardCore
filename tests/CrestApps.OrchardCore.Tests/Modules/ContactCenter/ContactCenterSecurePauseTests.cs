@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -265,7 +266,7 @@ public sealed class ContactCenterSecurePauseTests
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         var recordingService = new Mock<IContactCenterRecordingService>(MockBehavior.Strict);
         var service = new SecurePauseAutoResumeService(
-            SiteServiceFactory.Create(new ContactCenterRecordingSettings { MaxSecurePauseSeconds = 0 }),
+            new TestOptionsMonitor<ContactCenterRecordingSettings>(new ContactCenterRecordingSettings { MaxSecurePauseSeconds = 0 }),
             interactionManager.Object,
             recordingService.Object,
             [],
@@ -297,7 +298,7 @@ public sealed class ContactCenterSecurePauseTests
             .ReturnsAsync(RecordingCommandResult.Success());
         var notifier = new CapturingRealTimeNotifier();
         var service = new SecurePauseAutoResumeService(
-            SiteServiceFactory.Create(new ContactCenterRecordingSettings { MaxSecurePauseSeconds = 300 }),
+            new TestOptionsMonitor<ContactCenterRecordingSettings>(new ContactCenterRecordingSettings { MaxSecurePauseSeconds = 300 }),
             interactionManager.Object,
             recordingService.Object,
             [notifier],
@@ -519,7 +520,7 @@ public sealed class ContactCenterSecurePauseTests
             .ReturnsAsync([]);
         var recordingService = new Mock<IContactCenterRecordingService>(MockBehavior.Strict);
         var service = new SecurePauseAutoResumeService(
-            SiteServiceFactory.Create(new ContactCenterRecordingSettings { MaxSecurePauseSeconds = int.MaxValue }),
+            new TestOptionsMonitor<ContactCenterRecordingSettings>(new ContactCenterRecordingSettings { MaxSecurePauseSeconds = int.MaxValue }),
             interactionManager.Object,
             recordingService.Object,
             [],
@@ -626,7 +627,7 @@ public sealed class ContactCenterSecurePauseTests
         var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
         var recordingService = new Mock<IContactCenterRecordingService>(MockBehavior.Strict);
         var service = new SecurePauseAutoResumeService(
-            SiteServiceFactory.Create(new ContactCenterRecordingSettings { MaxSecurePauseSeconds = -30 }),
+            new TestOptionsMonitor<ContactCenterRecordingSettings>(new ContactCenterRecordingSettings { MaxSecurePauseSeconds = -30 }),
             interactionManager.Object,
             recordingService.Object,
             [],
@@ -736,7 +737,7 @@ public sealed class ContactCenterSecurePauseTests
             recordingService.Object,
             (monitoringService ?? new Mock<IContactCenterMonitoringService>()).Object,
             resolver.Object,
-            SiteServiceFactory.Create(settings),
+            new TestOptionsMonitor<ContactCenterRecordingSettings>(settings),
             notifier is null ? [] : [notifier],
             new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)));
     }

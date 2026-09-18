@@ -1,9 +1,9 @@
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -19,7 +19,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
     private readonly IContactCenterRecordingService _recordingService;
     private readonly IContactCenterMonitoringService _monitoringService;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
-    private readonly ISiteService _siteService;
+    private readonly IOptionsMonitor<ContactCenterRecordingSettings> _settings;
     private readonly IEnumerable<IContactCenterRealTimeNotifier> _realTimeNotifiers;
     private readonly TimeProvider _timeProvider;
 
@@ -31,7 +31,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
     /// <param name="recordingService">The recording orchestration service that applies the state change.</param>
     /// <param name="monitoringService">The monitoring service used to evict live supervisor engagements when a secure pause begins.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver used to check pause capability.</param>
-    /// <param name="siteService">The site service used to read the tenant recording governance settings.</param>
+    /// <param name="settings">The tenant recording governance settings.</param>
     /// <param name="realTimeNotifiers">The optional real-time notifiers used to broadcast the recording state change.</param>
     /// <param name="timeProvider">The time provider used to stamp the real-time notification.</param>
     public AgentRecordingControlService(
@@ -40,7 +40,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
         IContactCenterRecordingService recordingService,
         IContactCenterMonitoringService monitoringService,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
-        ISiteService siteService,
+        IOptionsMonitor<ContactCenterRecordingSettings> settings,
         IEnumerable<IContactCenterRealTimeNotifier> realTimeNotifiers,
         TimeProvider timeProvider)
     {
@@ -49,7 +49,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
         _recordingService = recordingService;
         _monitoringService = monitoringService;
         _voiceProviderResolver = voiceProviderResolver;
-        _siteService = siteService;
+        _settings = settings;
         _realTimeNotifiers = realTimeNotifiers;
         _timeProvider = timeProvider;
     }
@@ -67,7 +67,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
             return AgentRecordingControlResult.Failure("An interaction and an agent are required.");
         }
 
-        var settings = await GetSettingsAsync();
+        var settings = _settings.CurrentValue;
 
         if (!settings.AllowAgentSecurePause)
         {
@@ -151,7 +151,7 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
             return AgentRecordingControlResult.Failure("An interaction and an agent are required.");
         }
 
-        var settings = await GetSettingsAsync();
+        var settings = _settings.CurrentValue;
 
         if (!settings.AllowAgentSecurePause)
         {
@@ -216,13 +216,6 @@ public sealed class AgentRecordingControlService : IAgentRecordingControlService
             provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.Recording) &&
             provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.RecordingPause) &&
             !string.IsNullOrEmpty(interaction.ProviderInteractionId);
-    }
-
-    private async Task<ContactCenterRecordingSettings> GetSettingsAsync()
-    {
-        var site = await _siteService.GetSiteSettingsAsync();
-
-        return site.GetOrCreate<ContactCenterRecordingSettings>();
     }
 
     private async Task NotifyAsync(

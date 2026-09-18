@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -40,6 +41,7 @@ public sealed class SecureCaptureStartup : StartupBase
     {
         services.AddScoped<ISecureCaptureSessionStore, SecureCaptureSessionStore>();
         services.AddScoped<ISecureCaptureSessionManager, SecureCaptureSessionManager>();
+        services.AddSiteSettingsOptions<SecureCaptureSettings>();
         services.AddScoped<ISecureCaptureService, SecureCaptureService>();
 
         // The default tokenization sink is chosen fail-closed. In development the in-tree masking sink lets the

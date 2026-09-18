@@ -1,3 +1,4 @@
+using CrestApps.Core.Hosting;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -7,7 +8,6 @@ using CrestApps.OrchardCore.WebSockets;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoiceMediaProvider
 {
-    private readonly ISiteService _siteService;
+    private readonly IPublicBaseUrlAccessor _publicBaseUrlAccessor;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IContactCenterFeatureWorkManager _workManager;
@@ -30,7 +30,7 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
     private readonly TimeSpan _connectTimeout;
 
     public TelnyxContactCenterVoiceMediaProvider(
-        ISiteService siteService,
+        IPublicBaseUrlAccessor publicBaseUrlAccessor,
         IHttpContextAccessor httpContextAccessor,
         IHttpClientFactory httpClientFactory,
         IContactCenterFeatureWorkManager workManager,
@@ -39,7 +39,7 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
         ILogger<TelnyxContactCenterVoiceMediaProvider> logger,
         TimeSpan? connectTimeout = null)
     {
-        _siteService = siteService;
+        _publicBaseUrlAccessor = publicBaseUrlAccessor;
         _httpContextAccessor = httpContextAccessor;
         _httpClientFactory = httpClientFactory;
         _workManager = workManager;
@@ -237,7 +237,7 @@ internal sealed class TelnyxContactCenterVoiceMediaProvider : IContactCenterVoic
         //      host only when OrchardCore's Reverse Proxy feature is enabled to validate the forwarded headers, so
         //      an untrusted client cannot inject the host Telnyx is told to stream call audio to.
         var baseUrl = ResolveOverrideBaseUrl(metadata)
-            ?? (await _siteService.GetSiteSettingsAsync())?.BaseUrl
+            ?? await _publicBaseUrlAccessor.GetBaseUrlAsync()
             ?? ResolveRequestBaseUrl();
 
         if (string.IsNullOrWhiteSpace(baseUrl))

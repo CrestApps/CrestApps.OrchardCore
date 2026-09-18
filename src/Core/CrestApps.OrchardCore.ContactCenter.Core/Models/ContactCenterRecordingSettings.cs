@@ -1,8 +1,8 @@
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 /// <summary>
-/// Tenant-scoped site settings that describe the recording governance policy every voice interaction must satisfy.
-/// Stored via Orchard Core site settings so the policy is isolated per shell/tenant and never shared across tenants.
+/// Tenant-scoped settings that describe the recording governance policy every voice interaction must satisfy.
+/// Read through options, and stored per tenant so the policy is never shared across tenants.
 /// </summary>
 public sealed class ContactCenterRecordingSettings
 {

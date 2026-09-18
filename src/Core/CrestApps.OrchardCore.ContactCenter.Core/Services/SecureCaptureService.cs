@@ -1,10 +1,10 @@
+using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -23,7 +23,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
     private readonly ISecureCaptureTokenSink _tokenSink;
     private readonly IContactCenterRecordingService _recordingService;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly ISiteService _siteService;
+    private readonly IOptionsMonitor<SecureCaptureSettings> _settings;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<SecureCaptureService> _logger;
 
@@ -36,7 +36,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
     /// <param name="tokenSink">The tokenization sink the raw value is exchanged through.</param>
     /// <param name="recordingService">The recording service used to resume recording a capture had paused.</param>
     /// <param name="publisher">The event publisher used to record the capture lifecycle in the audit history.</param>
-    /// <param name="siteService">The site service used to read the tenant secure capture settings.</param>
+    /// <param name="settings">The tenant secure capture settings.</param>
     /// <param name="timeProvider">The time provider used to stamp capture times.</param>
     /// <param name="logger">The logger instance.</param>
     public SecureCaptureService(
@@ -46,7 +46,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
         ISecureCaptureTokenSink tokenSink,
         IContactCenterRecordingService recordingService,
         IContactCenterEventPublisher publisher,
-        ISiteService siteService,
+        IOptionsMonitor<SecureCaptureSettings> settings,
         TimeProvider timeProvider,
         ILogger<SecureCaptureService> logger)
     {
@@ -56,7 +56,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
         _tokenSink = tokenSink;
         _recordingService = recordingService;
         _publisher = publisher;
-        _siteService = siteService;
+        _settings = settings;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -86,7 +86,7 @@ public sealed class SecureCaptureService : ISecureCaptureService
             return SecureCaptureBeginResult.Failure("One or more requested fields are not recognized.");
         }
 
-        var settings = await GetSettingsAsync();
+        var settings = _settings.CurrentValue;
 
         if (!settings.Enabled)
         {
@@ -455,13 +455,6 @@ public sealed class SecureCaptureService : ISecureCaptureService
             ProviderName = interaction.ProviderName,
             ProviderCallId = interaction.ProviderInteractionId,
         }, cancellationToken);
-    }
-
-    private async Task<SecureCaptureSettings> GetSettingsAsync()
-    {
-        var site = await _siteService.GetSiteSettingsAsync();
-
-        return site.GetOrCreate<SecureCaptureSettings>();
     }
 
     private async Task PublishAsync(

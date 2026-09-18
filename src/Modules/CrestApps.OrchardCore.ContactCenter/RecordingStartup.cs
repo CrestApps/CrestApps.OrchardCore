@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
@@ -29,6 +30,7 @@ public sealed class RecordingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddSiteSettingsOptions<ContactCenterRecordingSettings>();
         services.AddScoped<IRecordingGovernancePolicy, RecordingGovernancePolicy>();
         services.AddScoped<IContactCenterRecordingService, ContactCenterRecordingService>();
         services.AddScoped<IAgentRecordingControlService, AgentRecordingControlService>();

@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Tests.Doubles;
 using System.Security.Claims;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.OrchardCore.AI.Mcp.Handlers;
@@ -299,7 +300,7 @@ public sealed class McpServerAuthorizationHandlerTests
         services.AddSingleton(Options.Create(options));
         // The handler reads its options through IOptionsMonitor, so register a monitor over the same values.
         services.AddSingleton<Microsoft.Extensions.Options.IOptionsMonitor<McpServerOptions>>(
-            new CrestApps.OrchardCore.Tests.Telephony.Doubles.TestOptionsMonitor<McpServerOptions>(options));
+            new TestOptionsMonitor<McpServerOptions>(options));
 
         var authServiceMock = new Mock<IAuthorizationService>();
         authServiceMock

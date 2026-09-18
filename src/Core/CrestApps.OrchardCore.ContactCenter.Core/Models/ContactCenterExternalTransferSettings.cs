@@ -1,9 +1,9 @@
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
 /// <summary>
-/// Tenant-scoped site settings that hold the operator-curated catalog of approved external
-/// transfer destinations.  Stored via Orchard Core site settings so the catalog is isolated
-/// per shell/tenant and never shared across tenants.
+/// Tenant-scoped settings that hold the operator-curated catalog of approved external transfer
+/// destinations. Read through options, and stored per tenant so the catalog is never shared across
+/// tenants.
 /// </summary>
 public sealed class ContactCenterExternalTransferSettings
 {

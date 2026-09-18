@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
@@ -700,7 +701,7 @@ public sealed class ContactCenterSecureCaptureTests
                 tokenSink ?? new MaskingSecureCaptureTokenSink(),
                 RecordingService.Object,
                 Publisher.Object,
-                SiteServiceFactory.Create(settings ?? new SecureCaptureSettings { Enabled = true }),
+                new TestOptionsMonitor<SecureCaptureSettings>(settings ?? new SecureCaptureSettings { Enabled = true }),
                 Clock,
                 NullLogger<SecureCaptureService>.Instance);
         }

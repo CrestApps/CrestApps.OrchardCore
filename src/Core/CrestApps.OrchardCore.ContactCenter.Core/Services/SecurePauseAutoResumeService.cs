@@ -1,8 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -13,7 +13,7 @@ public sealed class SecurePauseAutoResumeService : ISecurePauseAutoResumeService
 {
     private const int MaxResumeBatchSize = 200;
 
-    private readonly ISiteService _siteService;
+    private readonly IOptionsMonitor<ContactCenterRecordingSettings> _settings;
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterRecordingService _recordingService;
     private readonly IEnumerable<IContactCenterRealTimeNotifier> _realTimeNotifiers;
@@ -22,19 +22,19 @@ public sealed class SecurePauseAutoResumeService : ISecurePauseAutoResumeService
     /// <summary>
     /// Initializes a new instance of the <see cref="SecurePauseAutoResumeService"/> class.
     /// </summary>
-    /// <param name="siteService">The site service used to read the tenant recording governance settings.</param>
+    /// <param name="settings">The tenant recording governance settings.</param>
     /// <param name="interactionManager">The interaction manager used to list expired pauses.</param>
     /// <param name="recordingService">The recording orchestration service that resumes recording.</param>
     /// <param name="realTimeNotifiers">The optional real-time notifiers used to broadcast the resume.</param>
     /// <param name="timeProvider">The time provider used to compute the pause-expiry cutoff.</param>
     public SecurePauseAutoResumeService(
-        ISiteService siteService,
+        IOptionsMonitor<ContactCenterRecordingSettings> settings,
         IInteractionManager interactionManager,
         IContactCenterRecordingService recordingService,
         IEnumerable<IContactCenterRealTimeNotifier> realTimeNotifiers,
         TimeProvider timeProvider)
     {
-        _siteService = siteService;
+        _settings = settings;
         _interactionManager = interactionManager;
         _recordingService = recordingService;
         _realTimeNotifiers = realTimeNotifiers;
@@ -44,8 +44,7 @@ public sealed class SecurePauseAutoResumeService : ISecurePauseAutoResumeService
     /// <inheritdoc/>
     public async Task<int> ResumeExpiredAsync(CancellationToken cancellationToken = default)
     {
-        var site = await _siteService.GetSiteSettingsAsync();
-        var settings = site.GetOrCreate<ContactCenterRecordingSettings>();
+        var settings = _settings.CurrentValue;
 
         // Clamp defensively at enforcement time as well as in the settings UI: a persisted value written by a
         // recipe, import, or older build must never widen the pause window past the one-day ceiling.

@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using OrchardCore.Modules;
-using OrchardCore.Settings;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -10,33 +9,32 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
 {
-    private readonly ISiteService _siteService;
+    private readonly IOptionsMonitor<ContactCenterRecordingSettings> _settings;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RecordingGovernancePolicy"/> class.
     /// </summary>
-    /// <param name="siteService">The site service used to read the tenant recording governance settings.</param>
+    /// <param name="settings">The tenant recording governance settings.</param>
     /// <param name="timeProvider">The time provider used to resolve the recording retention window.</param>
     public RecordingGovernancePolicy(
-        ISiteService siteService,
+        IOptionsMonitor<ContactCenterRecordingSettings> settings,
         TimeProvider timeProvider)
     {
-        _siteService = siteService;
+        _settings = settings;
         _timeProvider = timeProvider;
     }
 
     /// <inheritdoc/>
-    public async Task<RecordingGovernanceDecision> EvaluateStartAsync(Interaction interaction, CancellationToken cancellationToken = default)
+    public Task<RecordingGovernanceDecision> EvaluateStartAsync(Interaction interaction, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interaction);
 
-        var site = await _siteService.GetSiteSettingsAsync();
-        var settings = site.GetOrCreate<ContactCenterRecordingSettings>();
+        var settings = _settings.CurrentValue;
 
         if (!settings.RecordingEnabled)
         {
-            return RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled);
+            return Task.FromResult(RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled));
         }
 
         // Fail closed for any consent model that is not explicitly single-party (including an undefined persisted
@@ -45,7 +43,7 @@ public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
             settings.ConsentModel != RecordingConsentModel.SingleParty &&
             interaction.RecordingConsentCapturedUtc is null)
         {
-            return RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.ConsentRequired);
+            return Task.FromResult(RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.ConsentRequired));
         }
 
         var retentionDays = Math.Clamp(settings.RetentionDays, 0, ContactCenterRecordingSettings.MaxRetentionDays);
@@ -54,6 +52,6 @@ public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
             ? _timeProvider.GetUtcNow().UtcDateTime.AddDays(retentionDays)
             : (DateTime?)null;
 
-        return RecordingGovernanceDecision.Allow(retainUntilUtc, settings.LegalHoldByDefault);
+        return Task.FromResult(RecordingGovernanceDecision.Allow(retainUntilUtc, settings.LegalHoldByDefault));
     }
 }

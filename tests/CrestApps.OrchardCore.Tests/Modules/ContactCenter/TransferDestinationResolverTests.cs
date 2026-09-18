@@ -359,7 +359,7 @@ public sealed class TransferDestinationResolverTests
             authorizationService,
             Mock.Of<IAgentProfileManager>(),
             Mock.Of<IActivityQueueManager>(),
-            SiteServiceFactory.Create(settings),
+            new TestOptionsMonitor<ContactCenterExternalTransferSettings>(settings),
             DialDestinationPolicyFactory.Create());
     }
 

@@ -52,6 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddCoreUserDirectory();
         services.TryAddSingleton<IDistributedLockProvider, OrchardCoreDistributedLockProvider>();
         services.TryAddSingleton<ITenantAccessor, ShellSettingsTenantAccessor>();
+        services.TryAddScoped<IPublicBaseUrlAccessor, SiteSettingsPublicBaseUrlAccessor>();
         services.TryAddScoped<IDetachedWorkExecutor, ShellDetachedWorkExecutor>();
         services.TryAddScoped<IAfterCommitTaskQueue, ShellScopeAfterCommitTaskQueue>();
 
