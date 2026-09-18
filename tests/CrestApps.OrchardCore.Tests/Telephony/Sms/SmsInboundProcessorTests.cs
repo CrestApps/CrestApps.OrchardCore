@@ -2,12 +2,14 @@ using CrestApps.Core;
 using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -224,6 +226,8 @@ public class SmsInboundProcessorTests
     {
         public Mock<ISmsRealTimeNotifier> Notifier { get; } = new();
 
+        public FakeOmnichannelContactStore Contacts { get; }
+
         public FakeDistributedLockProvider DistributedLock { get; } = new();
 
         public SmsConversation CreatedConversation { get; private set; }
@@ -301,15 +305,14 @@ public class SmsInboundProcessorTests
                 new FallbackRouter(),
             };
 
-            var contentManager = new Mock<IContentManager>();
+            Contacts = new FakeOmnichannelContactStore();
 
             if (contactContentItemId is not null)
             {
-                var contact = new ContentItem { ContentType = "Customer", ContentItemId = contactContentItemId };
-                contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(contactOptedOut, DateTime.UtcNow));
+                var contact = new OmnichannelContact { Id = contactContentItemId, DefinitionName = "Customer" };
+                contact.SetDoNotSms(contactOptedOut, DateTime.UtcNow);
 
-                contentManager.Setup(m => m.GetAsync(contactContentItemId, It.IsAny<VersionOptions>()))
-                    .ReturnsAsync(contact);
+                Contacts.Add(contact);
             }
 
             var session = new Mock<ISession>();
@@ -333,7 +336,8 @@ public class SmsInboundProcessorTests
                 new NoOpSmsFirstResponseSlaService(),
                 Dispatcher.Object,
                 new OptionsWrapper<SmsKeywordReplySettings>(new SmsKeywordReplySettings()),
-                contentManager.Object,
+                Contacts,
+                Contacts,
                 distributedLock,
                 new OptionsWrapper<SmsPortalOptions>(new SmsPortalOptions()),
                 session.Object,

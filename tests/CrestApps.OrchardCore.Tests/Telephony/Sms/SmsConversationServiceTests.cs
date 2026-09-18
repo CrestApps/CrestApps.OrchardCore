@@ -1,9 +1,11 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -124,8 +126,7 @@ public class SmsConversationServiceTests
             ContactContentItemId = "contact-1",
         };
 
-        var optedOutContact = new ContentItem();
-        optedOutContact.Alter<OmnichannelContactPart>(part => part.DoNotSms = true);
+        var optedOutContact = new OmnichannelContact { Id = "contact-1", DoNotSms = true };
 
         var (service, dispatcher) = CreateService(conversation, dispatchSucceeds: true, onSave: _ => { }, contact: optedOutContact);
 
@@ -201,7 +202,7 @@ public class SmsConversationServiceTests
         SmsConversation conversation,
         bool dispatchSucceeds,
         Action<OmnichannelMessage> onSave,
-        ContentItem contact = null,
+        OmnichannelContact contact = null,
         bool conversationAuthorized = true)
     {
         var store = new Mock<ISmsConversationStore>();
@@ -216,9 +217,7 @@ public class SmsConversationServiceTests
                 ? SmsDispatchResult.Success("provider-message-1")
                 : SmsDispatchResult.Failed("provider down"));
 
-        var contentManager = new Mock<IContentManager>();
-        contentManager.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
-            .ReturnsAsync(contact);
+        var contacts = contact is null ? new FakeOmnichannelContactStore() : new FakeOmnichannelContactStore(contact);
 
         var notifier = new Mock<ISmsRealTimeNotifier>();
 
@@ -237,7 +236,7 @@ public class SmsConversationServiceTests
         var service = new SmsConversationService(
             store.Object,
             dispatcher.Object,
-            contentManager.Object,
+            contacts,
             contactResolver.Object,
             notifier.Object,
             CreateConversationAuthorizationService(conversationAuthorized),

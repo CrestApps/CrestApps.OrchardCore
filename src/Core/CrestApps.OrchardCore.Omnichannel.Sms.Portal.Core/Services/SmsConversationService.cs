@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Services;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Support;
@@ -28,7 +29,7 @@ public sealed class SmsConversationService : ISmsConversationService
 
     private readonly ISmsConversationStore _conversationStore;
     private readonly ISmsDispatcher _dispatcher;
-    private readonly IContentManager _contentManager;
+    private readonly IOmnichannelContactResolver _contactLookup;
     private readonly ISmsContactResolver _contactResolver;
     private readonly ISmsRealTimeNotifier _notifier;
     private readonly ISmsConversationAuthorizationService _conversationAuthorizationService;
@@ -44,7 +45,7 @@ public sealed class SmsConversationService : ISmsConversationService
     public SmsConversationService(
         ISmsConversationStore conversationStore,
         ISmsDispatcher dispatcher,
-        IContentManager contentManager,
+        IOmnichannelContactResolver contactLookup,
         ISmsContactResolver contactResolver,
         ISmsRealTimeNotifier notifier,
         ISmsConversationAuthorizationService conversationAuthorizationService,
@@ -56,7 +57,7 @@ public sealed class SmsConversationService : ISmsConversationService
     {
         _conversationStore = conversationStore;
         _dispatcher = dispatcher;
-        _contentManager = contentManager;
+        _contactLookup = contactLookup;
         _contactResolver = contactResolver;
         _notifier = notifier;
         _conversationAuthorizationService = conversationAuthorizationService;
@@ -454,9 +455,9 @@ public sealed class SmsConversationService : ISmsConversationService
             return false;
         }
 
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+        var contact = await _contactLookup.FindByIdAsync(conversation.ContactContentItemId);
 
-        return contact is not null && contact.TryGet<OmnichannelContactPart>(out var part) && part.DoNotSms;
+        return contact?.DoNotSms == true;
     }
 
     // Records what the provider said about one attempt. An accepted message stores the provider's own id so a

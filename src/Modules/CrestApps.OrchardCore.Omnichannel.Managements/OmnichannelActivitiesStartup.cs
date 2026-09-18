@@ -106,7 +106,12 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddSingleton<IContentDefinitionEventHandler>(sp => sp.GetRequiredService<OmnichannelContentTypeProvider>());
 
         services.AddScoped<ISubjectFlowSettingsService, ContentTypeSubjectFlowSettingsService>();
-        services.AddScoped<ISubjectDefinitionProvider, ContentTypeSubjectDefinitionProvider>();
+
+        // Contacts and subjects stay content types and content items here. These bind the
+        // customer-record contracts to that model, so the services that read a contact or write to a
+        // subject stop depending on the content model directly.
+        services.AddOrchardCoreOmnichannelContacts();
+        services.AddOrchardCoreOmnichannelSubjects();
 
         services.Configure<SubjectActionOptions>(options =>
         {

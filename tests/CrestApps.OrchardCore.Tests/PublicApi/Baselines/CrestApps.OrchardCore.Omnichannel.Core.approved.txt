@@ -958,6 +958,39 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public ContentDefinitionOmnichannelContactTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
         public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public static class ContentItemOmnichannelContactProjection
+    {
+        public static CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact Project(OrchardCore.ContentManagement.ContentItem contentItem) { }
+    }
+    public sealed class ContentItemOmnichannelContactResolver : CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactResolver
+    {
+        public ContentItemOmnichannelContactResolver(OrchardCore.ContentManagement.IContentManager contentManager, YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact>> FindByEmailAsync(string email, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact> FindByIdAsync(string contactId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact>> FindByPhoneNumberAsync(string phoneNumber, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContentItemOmnichannelContactWriter : CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactWriter
+    {
+        public ContentItemOmnichannelContactWriter(OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<bool> ApplyAsync(string contactId, CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContactChanges changes, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact> CreateAsync(CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact contact, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContentItemOmnichannelSubjectAccessor : CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelSubjectAccessor
+    {
+        public ContentItemOmnichannelSubjectAccessor(OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Services.ISubjectDefinitionProvider subjectDefinitionProvider) { }
+        public System.Threading.Tasks.Task<bool> ApplyAsync(string subjectId, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Models.OmnichannelSubject> CreateAsync(string definitionName, string contactId, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Models.OmnichannelSubject> GetAsync(string subjectId, System.Threading.CancellationToken cancellationToken = default) { }
+        public static bool ApplyFields(OrchardCore.ContentManagement.ContentItem contentItem, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Models.SubjectFieldDefinition> fields) { }
+    }
+    public sealed class ContentTypeContactDefinitionProvider : CrestApps.OrchardCore.Omnichannel.Services.IContactDefinitionProvider
+    {
+        public ContentTypeContactDefinitionProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Models.ContactDefinition> FindAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Models.ContactDefinition>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public static bool IsContactType(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition contentTypeDefinition) { }
+        public static CrestApps.OrchardCore.Omnichannel.Models.ContactDefinition Project(OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition contentTypeDefinition) { }
+    }
     public sealed class ContentTypeSubjectDefinitionProvider : CrestApps.OrchardCore.Omnichannel.Services.ISubjectDefinitionProvider
     {
         public ContentTypeSubjectDefinitionProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }

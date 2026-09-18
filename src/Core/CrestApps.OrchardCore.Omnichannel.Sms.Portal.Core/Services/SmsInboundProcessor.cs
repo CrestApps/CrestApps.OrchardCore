@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.OrchardCore.Omnichannel.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
@@ -37,7 +39,8 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
     private readonly ISmsFirstResponseSlaService _slaService;
     private readonly ISmsDispatcher _dispatcher;
     private readonly SmsKeywordReplySettings _keywordReplySettings;
-    private readonly IContentManager _contentManager;
+    private readonly IOmnichannelContactResolver _contactLookup;
+    private readonly IOmnichannelContactWriter _contactWriter;
     private readonly IDistributedLockProvider _distributedLock;
     private readonly SmsPortalOptions _options;
     private readonly ISession _session;
@@ -58,7 +61,8 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         ISmsFirstResponseSlaService slaService,
         ISmsDispatcher dispatcher,
         IOptions<SmsKeywordReplySettings> keywordReplySettings,
-        IContentManager contentManager,
+        IOmnichannelContactResolver contactLookup,
+        IOmnichannelContactWriter contactWriter,
         IDistributedLockProvider distributedLock,
         IOptions<SmsPortalOptions> options,
         ISession session,
@@ -75,7 +79,8 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
         _slaService = slaService;
         _dispatcher = dispatcher;
         _keywordReplySettings = keywordReplySettings.Value;
-        _contentManager = contentManager;
+        _contactLookup = contactLookup;
+        _contactWriter = contactWriter;
         _distributedLock = distributedLock;
         _options = options.Value;
         _session = session;
@@ -360,13 +365,11 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
             return false;
         }
 
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+        // A read rather than a write: a contact that has never recorded a preference reads as "not
+        // opted out" rather than having an empty one created on it during what is only a question.
+        var contact = await _contactLookup.FindByIdAsync(conversation.ContactContentItemId, cancellationToken);
 
-        // TryGet rather than As: a contact that has never carried the part should read as "not opted out", not
-        // have an empty one created on it during what is only a question.
-        return contact is not null
-            && contact.TryGet<OmnichannelContactPart>(out var contactPart)
-            && contactPart.DoNotSms;
+        return contact?.DoNotSms == true;
     }
 
     private async Task SetDoNotSmsAsync(SmsConversation conversation, bool doNotSms, CancellationToken cancellationToken)
@@ -376,16 +379,10 @@ public sealed class SmsInboundProcessor : IOmnichannelEventHandler, ISmsInboundP
             return;
         }
 
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
-
-        if (contact is null)
-        {
-            return;
-        }
-
-        contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(doNotSms, _timeProvider.GetUtcNow().UtcDateTime));
-
-        await _contentManager.UpdateAsync(contact);
+        await _contactWriter.ApplyAsync(
+            conversation.ContactContentItemId,
+            new OmnichannelContactChanges { DoNotSms = doNotSms },
+            cancellationToken);
     }
 
 }

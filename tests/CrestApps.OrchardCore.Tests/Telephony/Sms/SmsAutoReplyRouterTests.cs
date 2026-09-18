@@ -1,10 +1,12 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -171,11 +173,9 @@ public sealed class SmsAutoReplyRouterTests
     {
         private readonly AutoReplyRouter _router;
         private readonly OmnichannelChannelEndpoint _endpoint;
-        private readonly Dictionary<string, ContentItem> _contacts = new(StringComparer.Ordinal);
+        private readonly FakeOmnichannelContactStore _contacts = new();
 
         public Mock<ISmsDispatcher> Dispatcher { get; } = new();
-
-        public Mock<IContentManager> ContentManager { get; } = new();
 
         public Harness(string autoReply)
         {
@@ -197,21 +197,17 @@ public sealed class SmsAutoReplyRouterTests
                 .Setup(dispatcher => dispatcher.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(SmsDispatchResult.Success("provider-1"));
 
-            ContentManager
-                .Setup(manager => manager.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
-                .ReturnsAsync((string contentItemId, VersionOptions _) => _contacts.TryGetValue(contentItemId, out var contact) ? contact : null);
-
             var clock = new FakeTimeProvider();
             clock.SetUtcNow(_now);
 
-            _router = new AutoReplyRouter(Dispatcher.Object, ContentManager.Object, clock);
+            _router = new AutoReplyRouter(Dispatcher.Object, _contacts, clock);
         }
 
         public void AddContact(string contentItemId, bool doNotSms)
         {
-            var contact = new ContentItem { ContentItemId = contentItemId, ContentType = "Customer" };
-            contact.Alter<OmnichannelContactPart>(part => part.SetDoNotSms(doNotSms, _now));
-            _contacts[contentItemId] = contact;
+            var contact = new OmnichannelContact { Id = contentItemId, DefinitionName = "Customer" };
+            contact.SetDoNotSms(doNotSms, _now);
+            _contacts.Add(contact);
         }
 
         public Task<bool> RouteAsync(SmsConversation conversation, string body = "hello")

@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using OrchardCore.ContentManagement;
@@ -21,7 +22,7 @@ public sealed class AutoReplyRouter : ISmsInboundRouter
     private static readonly TimeSpan _minimumInterval = TimeSpan.FromDays(1);
 
     private readonly ISmsDispatcher _dispatcher;
-    private readonly IContentManager _contentManager;
+    private readonly IOmnichannelContactResolver _contactResolver;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -30,10 +31,10 @@ public sealed class AutoReplyRouter : ISmsInboundRouter
     /// <param name="dispatcher">The dispatcher that sends the reply.</param>
     /// <param name="contentManager">The content manager, used to read the contact's opt-out state.</param>
     /// <param name="timeProvider">The time provider.</param>
-    public AutoReplyRouter(ISmsDispatcher dispatcher, IContentManager contentManager, TimeProvider timeProvider)
+    public AutoReplyRouter(ISmsDispatcher dispatcher, IOmnichannelContactResolver contactResolver, TimeProvider timeProvider)
     {
         _dispatcher = dispatcher;
-        _contentManager = contentManager;
+        _contactResolver = contactResolver;
         _timeProvider = timeProvider;
     }
 
@@ -103,8 +104,8 @@ public sealed class AutoReplyRouter : ISmsInboundRouter
             return false;
         }
 
-        var contact = await _contentManager.GetAsync(conversation.ContactContentItemId, VersionOptions.Latest);
+        var contact = await _contactResolver.FindByIdAsync(conversation.ContactContentItemId, cancellationToken);
 
-        return contact is not null && contact.TryGet<OmnichannelContactPart>(out var part) && part.DoNotSms;
+        return contact?.DoNotSms == true;
     }
 }

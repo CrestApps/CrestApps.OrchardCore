@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -79,7 +80,7 @@ public class SmsSendDirectTests
         var service = new SmsConversationService(
             store.Object,
             dispatcher.Object,
-            new Mock<IContentManager>().Object,
+            new FakeOmnichannelContactStore(),
             contactResolver.Object,
             new Mock<ISmsRealTimeNotifier>().Object,
             Mock.Of<ISmsConversationAuthorizationService>(),
