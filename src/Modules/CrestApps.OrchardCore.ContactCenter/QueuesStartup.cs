@@ -85,6 +85,7 @@ public sealed class QueuesStartup : StartupBase
         // The sweep that plays it. It also runs the overflow due-times, because both are timing-sensitive in
         // the same way and reading the queues twice on two schedules would be the same work done twice.
         services.AddScoped<IQueueTreatmentService, QueueTreatmentService>();
+        services.AddBackgroundCycle<IQueueTreatmentCycle, QueueTreatmentCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, QueueTreatmentBackgroundTask>());
 
         // Queue size and maximum-wait limits. Sending a waiting caller to voicemail needs a live call to move,
@@ -142,8 +143,11 @@ public sealed class QueuesStartup : StartupBase
                 serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                 serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
+        services.AddBackgroundCycle<IReservationExpiryCycle, ReservationExpiryCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ReservationExpiryBackgroundTask>());
+        services.AddBackgroundCycle<IDirectRingTimeoutCycle, DirectRingTimeoutCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DirectRingTimeoutBackgroundTask>());
+        services.AddBackgroundCycle<IOrphanedActivityRecoveryCycle, OrphanedActivityRecoveryCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, OrphanedActivityRecoveryBackgroundTask>());
     }
 

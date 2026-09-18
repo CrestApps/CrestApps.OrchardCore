@@ -1,5 +1,5 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
@@ -17,37 +17,6 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class ProviderWebhookInboxBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterCapabilities.Voice);
-
-        if (workLease is null)
-        {
-            return;
-        }
-
-        var inbox = serviceProvider.GetRequiredService<IProviderWebhookInbox>();
-        var logger = serviceProvider.GetRequiredService<ILogger<ProviderWebhookInboxBackgroundTask>>();
-
-        try
-        {
-            var processed = await inbox.DispatchDueAsync(cancellationToken);
-
-            if (processed > 0 && logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("Processed {Count} provider webhook inbox message(s).", processed);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(
-                exception,
-                "An error occurred while dispatching the provider webhook inbox.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IProviderWebhookInboxCycle>().RunAsync(cancellationToken);
 }

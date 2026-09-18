@@ -94,7 +94,9 @@ public sealed class AgentsStartup : StartupBase
             .AddIndexProvider<AgentSessionIndexProvider>()
             .AddDataMigration<AgentSessionIndexMigrations>();
 
+        services.AddBackgroundCycle<IAgentSessionCleanupCycle, AgentSessionCleanupCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>());
+        services.AddBackgroundCycle<IAgentAvailabilityRecoveryCycle, AgentAvailabilityRecoveryCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AgentAvailabilityRecoveryBackgroundTask>());
 
         services.ConfigureOptions<ContactCenterAgentSignOutCookieConfiguration>();

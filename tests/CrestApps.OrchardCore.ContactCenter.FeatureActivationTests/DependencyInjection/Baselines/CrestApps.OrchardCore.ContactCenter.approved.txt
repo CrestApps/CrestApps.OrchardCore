@@ -43,6 +43,7 @@ CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventDeduplicati
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Handlers.ContactCenterMetricsProjectionHandler
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.DefaultContactCenterEventPublisher
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricDeltaStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterMetricDeltaStore
+CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricRollupCycle #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterMetricRollupCycle
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricRollupService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterMetricRollupService
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterMetricStore
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterMetricsProjectionMaintenanceService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterMetricsProjectionMaintenanceService
@@ -51,6 +52,7 @@ CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterOutbox #0 Scoped
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterOutboxStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterOutboxStore
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterProcessedEventStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterProcessedEventStore
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterProjectionCheckpointStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterProjectionCheckpointStore
+CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterRetentionCycle #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterRetentionCycle
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterRetentionService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterRetentionService
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterScopeExecutor
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateActivityProjection #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterWorkStateActivityProjection
@@ -62,6 +64,7 @@ CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore #0 Scop
 CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventUpcastService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.DefaultInteractionEventUpcastService
 CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.InteractionManager
 CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.InteractionStore
+CrestApps.OrchardCore.ContactCenter.Core.Services.IOutboxDispatchCycle #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.OutboxDispatchCycle
 CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCallStateSynchronizationService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.NoProviderCallStateSynchronizationService
 CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedVoiceWorkOfferService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.NoQueuedVoiceWorkOfferService
 CrestApps.OrchardCore.ContactCenter.Core.Services.IVoiceMediaItemManager #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.VoiceMediaItemManager

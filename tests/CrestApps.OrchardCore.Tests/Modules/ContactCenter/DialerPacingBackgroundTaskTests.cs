@@ -254,6 +254,8 @@ public sealed class DialerPacingBackgroundTaskTests
         services.AddSingleton(workManager ?? new TestContactCenterFeatureWorkManager());
         services.AddLogging();
 
+        services.AddScoped<IDialerPacingCycle, DialerPacingCycle>();
+
         return services.BuildServiceProvider();
     }
 }

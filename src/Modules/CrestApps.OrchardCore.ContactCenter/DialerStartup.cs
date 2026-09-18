@@ -83,6 +83,7 @@ public sealed class DialerStartup : StartupBase
             .AddIndexProvider<CallbackRequestIndexProvider>()
             .AddDataMigration<CallbackRequestIndexMigrations>();
 
+        services.AddBackgroundCycle<ICallbackDispatchCycle, CallbackDispatchCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, CallbackDispatchBackgroundTask>());
 
         services.Configure<ActivityBatchSourceOptions>(options =>

@@ -277,6 +277,8 @@ public sealed class ContactCenterFeatureLifecycleTests
             .AddLogging()
             .AddSingleton<IContactCenterFeatureWorkManager>(workManager)
             .AddSingleton(tenantEvents)
+            .AddSingleton<IVoiceLifecycleReconciler>(tenantEvents)
+            .AddScoped<IProviderCallStateReconciliationCycle, ProviderCallStateReconciliationCycle>()
             .BuildServiceProvider();
         var task = new ProviderCallStateReconciliationBackgroundTask();
 

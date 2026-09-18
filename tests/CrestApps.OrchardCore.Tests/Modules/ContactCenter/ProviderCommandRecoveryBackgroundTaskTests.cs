@@ -21,7 +21,9 @@ public sealed class ProviderCommandRecoveryBackgroundTaskTests
         var services = new ServiceCollection();
         services.AddSingleton(processor.Object);
         services.AddSingleton<IContactCenterFeatureWorkManager>(new TestContactCenterFeatureWorkManager());
-        services.AddSingleton(new Mock<ILogger<ProviderCommandRecoveryBackgroundTask>>().Object);
+        services.AddSingleton(new Mock<ILogger<ProviderCommandRecoveryCycle>>().Object);
+        services.AddScoped<IProviderCommandRecoveryCycle, ProviderCommandRecoveryCycle>();
+
         await using var serviceProvider = services.BuildServiceProvider();
 
         // Act
@@ -47,7 +49,9 @@ public sealed class ProviderCommandRecoveryBackgroundTaskTests
         var services = new ServiceCollection();
         services.AddSingleton(processor.Object);
         services.AddSingleton<IContactCenterFeatureWorkManager>(new TestContactCenterFeatureWorkManager());
-        services.AddSingleton(new Mock<ILogger<ProviderCommandRecoveryBackgroundTask>>().Object);
+        services.AddSingleton(new Mock<ILogger<ProviderCommandRecoveryCycle>>().Object);
+        services.AddScoped<IProviderCommandRecoveryCycle, ProviderCommandRecoveryCycle>();
+
         await using var serviceProvider = services.BuildServiceProvider();
 
         // Act & Assert

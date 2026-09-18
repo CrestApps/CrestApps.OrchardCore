@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
@@ -20,23 +19,6 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class ContactCenterMetricRollupBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var rollupService = serviceProvider.GetRequiredService<IContactCenterMetricRollupService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<ContactCenterMetricRollupBackgroundTask>>();
-
-        try
-        {
-            var folded = await rollupService.RollupAsync(cancellationToken);
-
-            if (folded > 0 && logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("Folded {Count} Contact Center event metric contribution(s) into their daily totals.", folded);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while folding Contact Center event metric contributions.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IContactCenterMetricRollupCycle>().RunAsync(cancellationToken);
 }

@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
@@ -42,47 +41,6 @@ public sealed class SecureCaptureExpiryBackgroundTask : IBackgroundTask
     private const int MaxCapturesPerRun = 200;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var secureCaptureService = serviceProvider.GetRequiredService<ISecureCaptureService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<SecureCaptureExpiryBackgroundTask>>();
-
-        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        runCts.CancelAfter(MaxRunDurationMilliseconds);
-        var runToken = runCts.Token;
-
-        try
-        {
-            var expired = await secureCaptureService.ExpireDueAsync(MaxCapturesPerRun, runToken);
-
-            if (expired > 0 && logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Expired {Count} secure capture session(s) whose window elapsed without a submission.", expired);
-            }
-
-            var recovered = await secureCaptureService.RecoverRecordingResumesAsync(MaxCapturesPerRun, runToken);
-
-            if (recovered > 0 && logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Recovered {Count} secure capture session(s) whose recording resume had not completed.", recovered);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (OperationCanceledException) when (runToken.IsCancellationRequested)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug(
-                    "The secure capture expiry run reached its {BudgetMilliseconds} ms time budget; deferring the remaining work to the next scheduled tick.",
-                    MaxRunDurationMilliseconds);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while expiring secure capture sessions.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ISecureCaptureExpiryCycle>().RunAsync(cancellationToken);
 }

@@ -22,7 +22,9 @@ public sealed class AgentAvailabilityRecoveryBackgroundTaskTests
             .ReturnsAsync(2);
         var services = new ServiceCollection();
         services.AddSingleton(recoveryService.Object);
-        services.AddSingleton(new Mock<ILogger<AgentAvailabilityRecoveryBackgroundTask>>().Object);
+        services.AddSingleton(new Mock<ILogger<AgentAvailabilityRecoveryCycle>>().Object);
+        services.AddScoped<IAgentAvailabilityRecoveryCycle, AgentAvailabilityRecoveryCycle>();
+
         await using var serviceProvider = services.BuildServiceProvider();
 
         // Act
@@ -52,7 +54,9 @@ public sealed class AgentAvailabilityRecoveryBackgroundTaskTests
             .ThrowsAsync(new OperationCanceledException(cancellationSource.Token));
         var services = new ServiceCollection();
         services.AddSingleton(recoveryService.Object);
-        services.AddSingleton(new Mock<ILogger<AgentAvailabilityRecoveryBackgroundTask>>().Object);
+        services.AddSingleton(new Mock<ILogger<AgentAvailabilityRecoveryCycle>>().Object);
+        services.AddScoped<IAgentAvailabilityRecoveryCycle, AgentAvailabilityRecoveryCycle>();
+
         await using var serviceProvider = services.BuildServiceProvider();
 
         // Act & Assert

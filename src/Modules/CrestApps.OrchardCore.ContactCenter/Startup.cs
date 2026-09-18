@@ -258,8 +258,11 @@ public sealed class Startup : StartupBase
             .AddIndexProvider<CallSessionIndexProvider>()
             .AddDataMigration<CallSessionIndexMigrations>();
 
+        services.AddBackgroundCycle<IOutboxDispatchCycle, OutboxDispatchCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, OutboxDispatchBackgroundTask>());
+        services.AddBackgroundCycle<IContactCenterRetentionCycle, ContactCenterRetentionCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>());
+        services.AddBackgroundCycle<IContactCenterMetricRollupCycle, ContactCenterMetricRollupCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactCenterMetricRollupBackgroundTask>());
         services.AddPermissionProvider<ContactCenterPermissionProvider>();
 

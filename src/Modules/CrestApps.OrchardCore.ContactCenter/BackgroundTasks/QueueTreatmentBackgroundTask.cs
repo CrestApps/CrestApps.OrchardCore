@@ -1,8 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 
@@ -53,76 +51,6 @@ public sealed class QueueTreatmentBackgroundTask : IBackgroundTask
     private static readonly TimeSpan _sweepInterval = TimeSpan.FromSeconds(10);
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterCapabilities.Queues);
-
-        if (workLease is null)
-        {
-            return;
-        }
-
-        var logger = serviceProvider.GetRequiredService<ILogger<QueueTreatmentBackgroundTask>>();
-        var scopeExecutor = serviceProvider.GetRequiredService<IContactCenterScopeExecutor>();
-
-        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        runCts.CancelAfter(_runBudget);
-        var runToken = runCts.Token;
-
-        try
-        {
-            while (!runToken.IsCancellationRequested)
-            {
-                await scopeExecutor.ExecuteAsync(scoped => SweepAsync(scoped, logger, runToken));
-
-                await Task.Delay(_sweepInterval, runToken);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            // The run budget expired or the tenant is shutting down. Both end the run normally: the next
-            // scheduled tick picks the sweep back up.
-        }
-    }
-
-    /// <summary>
-    /// Sweeps every queue once.
-    /// </summary>
-    private static async Task SweepAsync(IServiceProvider serviceProvider, ILogger logger, CancellationToken runToken)
-    {
-        var queueManager = serviceProvider.GetRequiredService<IActivityQueueManager>();
-        var treatmentService = serviceProvider.GetRequiredService<IQueueTreatmentService>();
-        var queueService = serviceProvider.GetRequiredService<IActivityQueueService>();
-        var limitService = serviceProvider.GetRequiredService<IQueueLimitService>();
-
-        var queues = await queueManager.GetAllAsync(runToken);
-
-        foreach (var queue in queues)
-        {
-            if (runToken.IsCancellationRequested)
-            {
-                break;
-            }
-
-            try
-            {
-                await treatmentService.RunDueAsync(queue, runToken);
-                await queueService.OverflowDueAsync(queue, runToken);
-
-                // After the overflow tiers, so a caller whose hop and maximum wait fall due together is
-                // handed on rather than sent to voicemail.
-                await limitService.EnforceMaxWaitAsync(queue, runToken);
-            }
-            catch (OperationCanceledException) when (runToken.IsCancellationRequested)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                // One misconfigured queue must not stop the sweep for every other queue on the tenant.
-                logger.LogError(ex, "A queue-treatment pass failed for one queue; the remaining queues are still swept.");
-            }
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IQueueTreatmentCycle>().RunAsync(cancellationToken);
 }

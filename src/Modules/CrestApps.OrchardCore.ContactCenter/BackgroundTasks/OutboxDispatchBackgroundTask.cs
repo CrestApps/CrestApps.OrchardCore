@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
@@ -20,35 +19,6 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class OutboxDispatchBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterCapabilities.Core);
-
-        if (workLease is null)
-        {
-            return;
-        }
-
-        var outbox = serviceProvider.GetRequiredService<IContactCenterOutbox>();
-        var logger = serviceProvider.GetRequiredService<ILogger<OutboxDispatchBackgroundTask>>();
-
-        try
-        {
-            var redelivered = await outbox.DispatchDueAsync(cancellationToken);
-
-            if (redelivered > 0 && logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("Redelivered {Count} Contact Center event(s) from the outbox.", redelivered);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while dispatching the Contact Center event outbox.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IOutboxDispatchCycle>().RunAsync(cancellationToken);
 }

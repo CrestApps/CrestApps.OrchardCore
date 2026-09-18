@@ -138,6 +138,8 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped(sp => new Lazy<IInboundVoiceCallProcessor>(sp.GetRequiredService<IInboundVoiceCallProcessor>))
             .AddScoped<IIncomingCallContextProvider, ContactCenterIncomingCallContextProvider>()
             .AddScoped<ContactCenterVoiceLifecycleParticipant>()
+            .AddScoped<IVoiceLifecycleReconciler>(serviceProvider =>
+                serviceProvider.GetRequiredService<ContactCenterVoiceLifecycleParticipant>())
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 serviceProvider.GetRequiredService<ContactCenterVoiceLifecycleParticipant>());
 

@@ -10,7 +10,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// <c>ProviderCallStateReconciliationBackgroundTask</c>, which invokes <see cref="ReconcileProviderStateAsync"/>
 /// under the work-admission gate, so provider and database work never runs during shell activation.
 /// </summary>
-internal sealed class ContactCenterVoiceLifecycleParticipant : IContactCenterFeatureLifecycleParticipant
+internal sealed class ContactCenterVoiceLifecycleParticipant : IContactCenterFeatureLifecycleParticipant, IVoiceLifecycleReconciler
 {
     private readonly IProviderCallStateSynchronizationService _synchronizationService;
     private readonly IContactCenterFeatureWorkManager _workManager;

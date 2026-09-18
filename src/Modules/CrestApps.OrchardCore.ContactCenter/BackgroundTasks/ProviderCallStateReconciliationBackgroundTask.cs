@@ -1,6 +1,5 @@
-using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
@@ -18,26 +17,6 @@ namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 public sealed class ProviderCallStateReconciliationBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterCapabilities.Voice);
-
-        if (workLease is null)
-        {
-            return;
-        }
-
-        var participant = serviceProvider.GetRequiredService<ContactCenterVoiceLifecycleParticipant>();
-        var logger = serviceProvider.GetRequiredService<ILogger<ProviderCallStateReconciliationBackgroundTask>>();
-
-        try
-        {
-            await participant.ReconcileProviderStateAsync(cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while reconciling Contact Center provider call state.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IProviderCallStateReconciliationCycle>().RunAsync(cancellationToken);
 }

@@ -39,6 +39,7 @@ public sealed class ProviderInboxStartup : StartupBase
             .AddIndexProvider<ProviderWebhookInboxMessageIndexProvider>()
             .AddDataMigration<ProviderWebhookInboxMessageIndexMigrations>();
 
+        services.AddBackgroundCycle<IProviderWebhookInboxCycle, ProviderWebhookInboxCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>());
     }
 }

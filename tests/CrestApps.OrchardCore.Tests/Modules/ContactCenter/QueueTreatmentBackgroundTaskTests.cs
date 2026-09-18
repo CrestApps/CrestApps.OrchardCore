@@ -81,6 +81,8 @@ public sealed class QueueTreatmentBackgroundTaskTests
         services.AddSingleton(NullLoggerFactory.Instance);
         services.AddLogging();
 
+        services.AddScoped<IQueueTreatmentCycle, QueueTreatmentCycle>();
+
         await using var serviceProvider = services.BuildServiceProvider();
 
         // Act
@@ -104,12 +106,15 @@ public sealed class QueueTreatmentBackgroundTaskTests
         services.AddSingleton(workManager.Object);
         services.AddSingleton(scopeExecutor);
         services.AddLogging();
+        services.AddScoped<IQueueTreatmentCycle, QueueTreatmentCycle>();
 
         return services.BuildServiceProvider();
     }
 
     private static ServiceProvider BuildSweepServices(Action onSweep)
-        => BuildSweepServiceCollection(onSweep).BuildServiceProvider();
+        => BuildSweepServiceCollection(onSweep)
+            .AddScoped<IQueueTreatmentCycle, QueueTreatmentCycle>()
+            .BuildServiceProvider();
 
     private static ServiceCollection BuildSweepServiceCollection(Action onSweep)
     {

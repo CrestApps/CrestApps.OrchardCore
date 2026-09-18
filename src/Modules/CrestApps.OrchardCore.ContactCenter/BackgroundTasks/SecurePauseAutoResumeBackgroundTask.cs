@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
@@ -37,40 +36,6 @@ public sealed class SecurePauseAutoResumeBackgroundTask : IBackgroundTask
     private const int MaxRunDurationMilliseconds = 90_000;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var autoResumeService = serviceProvider.GetRequiredService<ISecurePauseAutoResumeService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<SecurePauseAutoResumeBackgroundTask>>();
-
-        using var runCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        runCts.CancelAfter(MaxRunDurationMilliseconds);
-        var runToken = runCts.Token;
-
-        try
-        {
-            var resumed = await autoResumeService.ResumeExpiredAsync(runToken);
-
-            if (resumed > 0 && logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation("Force-resumed {Count} recording(s) paused past the maximum secure-pause window.", resumed);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (OperationCanceledException) when (runToken.IsCancellationRequested)
-        {
-            if (logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug(
-                    "The secure-pause auto-resume run reached its {BudgetMilliseconds} ms time budget; deferring the remaining work to the next scheduled tick.",
-                    MaxRunDurationMilliseconds);
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while resuming recordings paused past the maximum secure-pause window.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ISecurePauseAutoResumeCycle>().RunAsync(cancellationToken);
 }

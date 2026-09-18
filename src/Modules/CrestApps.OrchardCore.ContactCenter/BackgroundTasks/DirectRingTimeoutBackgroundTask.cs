@@ -1,9 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
-using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 
@@ -46,59 +43,6 @@ public sealed class DirectRingTimeoutBackgroundTask : IBackgroundTask
     private const int MaxRunDurationMilliseconds = 55_000;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        var scopeExecutor = serviceProvider.GetRequiredService<IContactCenterScopeExecutor>();
-        var timeProvider = serviceProvider.GetRequiredService<TimeProvider>();
-        var logger = serviceProvider.GetRequiredService<ILogger<DirectRingTimeoutBackgroundTask>>();
-
-        // The direct-to-agent hold timeout is only registered when the Voice feature is enabled; without it there
-        // is still value in expiring due reservations promptly, so the sweep runs either way.
-        var hasDirectHoldTimeout = serviceProvider.GetService<IDirectHoldTimeoutService>() is not null;
-
-        var deadlineUtc = timeProvider.GetUtcNow().UtcDateTime.AddMilliseconds(MaxRunDurationMilliseconds);
-
-        while (!cancellationToken.IsCancellationRequested && timeProvider.GetUtcNow().UtcDateTime < deadlineUtc)
-        {
-            // Acquire the drain lease per tick (and release it before the delay) so a feature disable can still
-            // drain without waiting out the whole invocation.
-            using (var workLease = workManager.TryEnter(ContactCenterCapabilities.Queues))
-            {
-                if (workLease is null)
-                {
-                    return;
-                }
-
-                try
-                {
-                    await scopeExecutor.ExecuteAsync<IActivityReservationService>(
-                        reservationService => reservationService.ExpireDueAsync(cancellationToken));
-
-                    if (hasDirectHoldTimeout)
-                    {
-                        await scopeExecutor.ExecuteAsync<IDirectHoldTimeoutService>(
-                            directHoldTimeoutService => directHoldTimeoutService.ProcessDueAsync(cancellationToken));
-                    }
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "An error occurred while enforcing the direct-to-agent ring timeout.");
-                }
-            }
-
-            try
-            {
-                await Task.Delay(TickIntervalMilliseconds, cancellationToken);
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IDirectRingTimeoutCycle>().RunAsync(cancellationToken);
 }

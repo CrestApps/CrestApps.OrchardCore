@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
@@ -43,29 +42,6 @@ public sealed class OrphanedActivityRecoveryBackgroundTask : IBackgroundTask
     private const int LockExpirationMilliseconds = 120_000;
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var workManager = serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>();
-        using var workLease = workManager.TryEnter(ContactCenterCapabilities.Queues);
-
-        if (workLease is null)
-        {
-            return;
-        }
-
-        var recoveryService = serviceProvider.GetRequiredService<IOrphanedActivityRecoveryService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<OrphanedActivityRecoveryBackgroundTask>>();
-
-        var recovered = await recoveryService.RecoverAsync(
-            TimeSpan.FromMinutes(GracePeriodMinutes),
-            MaxRecoveriesPerRun,
-            cancellationToken);
-
-        if (recovered > 0 && logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation(
-                "Recovered {RecoveredCount} orphaned Contact Center activity(ies) stranded in an intermediate status.",
-                recovered);
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IOrphanedActivityRecoveryCycle>().RunAsync(cancellationToken);
 }

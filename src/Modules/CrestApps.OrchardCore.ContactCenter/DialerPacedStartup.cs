@@ -44,6 +44,7 @@ public sealed class DialerPacedStartup : StartupBase
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
+        services.AddBackgroundCycle<IDialerPacingCycle, DialerPacingCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DialerPacingBackgroundTask>());
 
         services.Configure<ActivityBatchSourceOptions>(options =>

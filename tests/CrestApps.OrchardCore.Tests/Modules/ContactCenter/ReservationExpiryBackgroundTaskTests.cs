@@ -608,6 +608,8 @@ public sealed class ReservationExpiryBackgroundTaskTests
         services.AddSingleton<IContactCenterFeatureWorkManager>(workManager ?? new TestContactCenterFeatureWorkManager());
         services.AddLogging();
 
+        services.AddScoped<IReservationExpiryCycle, ReservationExpiryCycle>();
+
         return services.BuildServiceProvider();
     }
 }
