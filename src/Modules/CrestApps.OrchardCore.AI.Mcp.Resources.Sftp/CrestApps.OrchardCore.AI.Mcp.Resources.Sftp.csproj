@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CrestApps.Core.AI.Mcp.Sftp" />
+    <PackageReference Include="CrestApps.Core.AI.Sftp" />
   </ItemGroup>
 
   <ItemGroup>
