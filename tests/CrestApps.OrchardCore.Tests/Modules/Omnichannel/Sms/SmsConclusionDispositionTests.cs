@@ -1,9 +1,11 @@
+using CrestApps.Core.Security;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -410,6 +412,7 @@ public sealed class SmsConclusionDispositionTests
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
             session.Object,
+            new FakeUserDirectory(),
             clock,
             localClock.Object,
             NullLogger<DefaultSubjectActionExecutor>.Instance);

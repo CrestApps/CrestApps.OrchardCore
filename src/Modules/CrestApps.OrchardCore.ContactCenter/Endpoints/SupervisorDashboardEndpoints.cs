@@ -1,11 +1,11 @@
 using System.Security.Claims;
 using CrestApps.Core.Models;
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
-using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -13,19 +13,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using OrchardCore.Modules;
-using OrchardCore.Users;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
-using YesSql.Services;
-using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
 internal static class SupervisorDashboardEndpoints
 {
     private const int AgentPageSize = 200;
-    private const int UserQueryBatchSize = 500;
 
     public const string StateRouteName = "ContactCenterSupervisorDashboardState";
     public const string EngageRouteName = "ContactCenterSupervisorDashboardEngage";
@@ -49,8 +42,7 @@ internal static class SupervisorDashboardEndpoints
         IInteractionManager interactionManager,
         ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
         IEnumerable<IContactCenterMonitoringService> monitoringServices,
-        ISession session,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         TimeProvider timeProvider,
         HttpContext httpContext)
     {
@@ -157,8 +149,7 @@ internal static class SupervisorDashboardEndpoints
             : await interactionManager.CountActiveByAgentIdsAsync(scopedAgentIds, httpContext.RequestAborted);
         var agentDisplayNames = await ResolveAgentDisplayNamesAsync(
             scopedAgents,
-            session,
-            displayNameProvider,
+            userDirectory,
             httpContext.RequestAborted);
 
         foreach (var agent in scopedAgents)
@@ -268,8 +259,7 @@ internal static class SupervisorDashboardEndpoints
 
     private static async Task<IReadOnlyDictionary<string, string>> ResolveAgentDisplayNamesAsync(
         AgentProfile[] agents,
-        ISession session,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         CancellationToken cancellationToken)
     {
         var displayNames = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -279,25 +269,13 @@ internal static class SupervisorDashboardEndpoints
             return displayNames;
         }
 
-        var userIds = agents
-            .Where(agent => !string.IsNullOrEmpty(agent.UserId))
-            .Select(agent => agent.UserId)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        var usersById = new Dictionary<string, IUser>(StringComparer.Ordinal);
+        // One batch lookup for the whole page rather than a round trip per agent; the directory
+        // resolves the name to show, so nothing here touches the host's own user type.
+        var users = await userDirectory.GetAsync(
+            agents.Select(agent => agent.UserId),
+            cancellationToken);
 
-        // Resolve every agent's user in bounded batches rather than one lookup per agent; the display-name
-        // provider then works from the already-materialized user without touching the database again.
-        foreach (var userIdBatch in userIds.Chunk(UserQueryBatchSize))
-        {
-            var users = await session.Query<User, UserIndex>(index => index.UserId.IsIn(userIdBatch))
-                .ListAsync(cancellationToken);
-
-            foreach (var user in users)
-            {
-                usersById[user.UserId] = user;
-            }
-        }
+        var usersById = users.ToDictionary(user => user.Id, StringComparer.Ordinal);
 
         foreach (var agent in agents)
         {
@@ -305,7 +283,7 @@ internal static class SupervisorDashboardEndpoints
 
             if (!string.IsNullOrEmpty(agent.UserId) && usersById.TryGetValue(agent.UserId, out var user))
             {
-                displayName = await displayNameProvider.GetAsync(user, cancellationToken);
+                displayName = user.DisplayName;
             }
 
             displayNames[agent.ItemId] = string.IsNullOrWhiteSpace(displayName)

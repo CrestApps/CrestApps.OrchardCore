@@ -2,6 +2,9 @@ CrestApps.Core.Hosting.IAfterCommitTaskQueue #0 Scoped -> type:CrestApps.Orchard
 CrestApps.Core.Hosting.IDetachedWorkExecutor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellDetachedWorkExecutor
 CrestApps.Core.Hosting.ITenantAccessor #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.ShellSettingsTenantAccessor
 CrestApps.Core.Locking.IDistributedLockProvider #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreDistributedLockProvider
+CrestApps.Core.Security.IUserAccessor #0 Scoped -> type:CrestApps.Core.Services.UserAccessor
+CrestApps.Core.Security.IUserDirectory #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreUserDirectory
+CrestApps.Core.Security.IUserProfileStore #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreUserProfileStore
 CrestApps.Core.Services.ICatalog<> #0 Scoped -> type:CrestApps.OrchardCore.Core.Services.Catalog<>
 CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.Cadence> #0 Scoped -> factory
 CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityBatch> #0 Scoped -> factory
@@ -247,7 +250,6 @@ CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver #0 Scoped -> type:Cre
 CrestApps.OrchardCore.Telephony.ITelephonyService #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyService
 CrestApps.OrchardCore.Telephony.ITelephonyUserTokenStore #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyUserTokenStore
 CrestApps.OrchardCore.Telephony.Services.IDialDestinationPolicy #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.DefaultDialDestinationPolicy
-CrestApps.OrchardCore.Telephony.Services.ITelephonyUserAccessor #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyUserAccessor
 CrestApps.OrchardCore.Telephony.Services.ITransferTargetPolicy #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterTransferTargetPolicy
 CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.VoiceAgentMediaProviderResolver
 CrestApps.OrchardCore.Users.Core.IUserCacheService #0 Scoped -> type:CrestApps.OrchardCore.Users.Core.Services.DefaultUserCacheService

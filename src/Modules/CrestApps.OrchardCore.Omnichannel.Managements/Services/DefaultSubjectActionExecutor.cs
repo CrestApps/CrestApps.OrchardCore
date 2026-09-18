@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
@@ -8,8 +9,6 @@ using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;
@@ -20,6 +19,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
     private readonly ISession _session;
+    private readonly IUserDirectory _userDirectory;
     private readonly TimeProvider _timeProvider;
     private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
@@ -29,6 +29,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
         ISession session,
+        IUserDirectory userDirectory,
         TimeProvider timeProvider,
         ILocalClock localClock,
         ILogger<DefaultSubjectActionExecutor> logger)
@@ -37,6 +38,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
         _session = session;
+        _userDirectory = userDirectory;
         _timeProvider = timeProvider;
         _localClock = localClock;
         _logger = logger;
@@ -337,7 +339,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return true;
         }
 
-        var owner = await _session.Query<User, UserIndex>(x => x.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync();
+        // The stored value is already the host's normalized form, and looking a name up normalizes
+        // again, so passing it straight through resolves the same user.
+        var owner = await _userDirectory.FindByNameAsync(normalizedUserName);
 
         if (owner is null)
         {
@@ -349,7 +353,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return false;
         }
 
-        AssignOwner(followUpActivity, owner.UserId, owner.UserName, assignedToUtc);
+        AssignOwner(followUpActivity, owner.Id, owner.UserName, assignedToUtc);
 
         return true;
     }

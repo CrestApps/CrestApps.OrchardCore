@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using CrestApps.Core.Security;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -10,12 +11,10 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -79,8 +78,7 @@ internal static partial class AgentWorkspaceEndpoints
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IContentManager contentManager,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         TimeProvider timeProvider,
         IOptions<AgentAvailabilityOptions> availabilityOptions,
@@ -94,7 +92,7 @@ internal static partial class AgentWorkspaceEndpoints
 
         var userId = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
         var now = timeProvider.GetUtcNow().UtcDateTime;
-        var displayName = await GetCurrentUserDisplayNameAsync(httpContext.User, userManager, displayNameProvider, httpContext.RequestAborted);
+        var displayName = await GetCurrentUserDisplayNameAsync(httpContext.User, userDirectory, httpContext.RequestAborted);
 
         var model = new AgentWorkspaceStateViewModel
         {
@@ -112,7 +110,7 @@ internal static partial class AgentWorkspaceEndpoints
 
         model.AgentId = profile.ItemId;
         model.HasProfile = true;
-        model.DisplayName = await GetUserDisplayNameAsync(profile.UserId, profile.DisplayName ?? model.DisplayName, userManager, displayNameProvider, httpContext.RequestAborted);
+        model.DisplayName = await GetUserDisplayNameAsync(profile.UserId, profile.DisplayName ?? model.DisplayName, userDirectory, httpContext.RequestAborted);
         model.IsSignedIn = profile.QueueIds.Count > 0 || profile.CampaignIds.Count > 0;
         model.Presence = new WorkspacePresenceViewModel
         {
@@ -187,8 +185,7 @@ internal static partial class AgentWorkspaceEndpoints
         IOmnichannelActivityManager activityManager,
         IInteractionManager interactionManager,
         IActivityDispositionService dispositionService,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         HttpContext httpContext)
     {
         if (!await authorizationService.AuthorizeAsync(httpContext.User, ContactCenterPermissions.SignIntoQueues))
@@ -245,7 +242,7 @@ internal static partial class AgentWorkspaceEndpoints
             ActionScheduleDates = request.ActionScheduleDates,
             Source = ActivityDispositionSource.Agent,
             ActorId = userId,
-            ActorDisplayName = await GetCurrentUserDisplayNameAsync(httpContext.User, userManager, displayNameProvider, httpContext.RequestAborted),
+            ActorDisplayName = await GetCurrentUserDisplayNameAsync(httpContext.User, userDirectory, httpContext.RequestAborted),
         }, httpContext.RequestAborted);
 
         return TypedResults.Ok(new

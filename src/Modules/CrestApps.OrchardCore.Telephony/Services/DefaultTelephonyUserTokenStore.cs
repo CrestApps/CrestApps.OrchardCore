@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.DataProtection;
 using OrchardCore.Entities;
@@ -11,19 +12,19 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// </summary>
 public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
 {
-    private readonly ITelephonyUserAccessor _userAccessor;
+    private readonly IUserProfileStore _userProfileStore;
     private readonly IDataProtector _protector;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyUserTokenStore"/> class.
     /// </summary>
-    /// <param name="userAccessor">The user accessor.</param>
+    /// <param name="userProfileStore">The user accessor.</param>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     public DefaultTelephonyUserTokenStore(
-        ITelephonyUserAccessor userAccessor,
+        IUserProfileStore userProfileStore,
         IDataProtectionProvider dataProtectionProvider)
     {
-        _userAccessor = userAccessor;
+        _userProfileStore = userProfileStore;
         _protector = dataProtectionProvider.CreateProtector(TelephonyConstants.TokenProtectorPurpose);
     }
 
@@ -35,14 +36,9 @@ public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
             return null;
         }
 
-        var user = await _userAccessor.GetCurrentUserAsync();
+        var connections = await _userProfileStore.FindAsync<TelephonyUserConnections>(cancellationToken);
 
-        if (user is not IEntity entity || !entity.TryGet<TelephonyUserConnections>(out var connections))
-        {
-            return null;
-        }
-
-        if (connections.Connections is null || !connections.Connections.TryGetValue(providerName, out var stored) || stored is null)
+        if (connections?.Connections is null || !connections.Connections.TryGetValue(providerName, out var stored) || stored is null)
         {
             return null;
         }
@@ -56,21 +52,15 @@ public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
         ArgumentException.ThrowIfNullOrEmpty(providerName);
         ArgumentNullException.ThrowIfNull(tokens);
 
-        await _userAccessor.PersistCurrentUserAsync(user =>
-        {
-            if (user is not IEntity entity)
+        await _userProfileStore.UpdateAsync<TelephonyUserConnections>(
+            connections =>
             {
-                throw new TelephonyUserPersistenceException("The current user cannot store telephony tokens.");
-            }
+                connections.Connections ??= [];
+                connections.Connections[providerName] = Protect(providerName, tokens);
 
-            var connections = entity.GetOrCreate<TelephonyUserConnections>();
-            connections.Connections ??= [];
-            connections.Connections[providerName] = Protect(providerName, tokens);
-
-            entity.Put(connections);
-
-            return true;
-        });
+                return true;
+            },
+            cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -81,22 +71,9 @@ public sealed class DefaultTelephonyUserTokenStore : ITelephonyUserTokenStore
             return;
         }
 
-        await _userAccessor.PersistCurrentUserAsync(user =>
-        {
-            if (user is not IEntity entity || !entity.TryGet<TelephonyUserConnections>(out var connections) || connections.Connections is null)
-            {
-                return false;
-            }
-
-            if (!connections.Connections.Remove(providerName))
-            {
-                return false;
-            }
-
-            entity.Put(connections);
-
-            return true;
-        });
+        await _userProfileStore.UpdateAsync<TelephonyUserConnections>(
+            connections => connections.Connections is not null && connections.Connections.Remove(providerName),
+            cancellationToken);
     }
 
     private TelephonyUserTokens Protect(string providerName, TelephonyUserTokens tokens)

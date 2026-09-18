@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.ComponentModel.DataAnnotations;
 using CrestApps.Core;
 using CrestApps.Core.Handlers;
@@ -7,9 +8,6 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Deployments;
 using Microsoft.Extensions.Localization;
-using OrchardCore.Users.Indexes;
-using OrchardCore.Users.Models;
-using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 
@@ -19,7 +17,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectAction>
 {
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
-    private readonly ISession _session;
+    private readonly IUserDirectory _userDirectory;
 
     internal readonly IStringLocalizer S;
 
@@ -31,11 +29,11 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
     /// <param name="stringLocalizer">The string localizer.</param>
     public SubjectActionHandler(
         ISubjectFlowSettingsService subjectFlowSettingsService,
-        ISession session,
+        IUserDirectory userDirectory,
         IStringLocalizer<SubjectActionHandler> stringLocalizer)
     {
         _subjectFlowSettingsService = subjectFlowSettingsService;
-        _session = session;
+        _userDirectory = userDirectory;
         S = stringLocalizer;
     }
 
@@ -106,7 +104,9 @@ internal sealed class SubjectActionHandler : CatalogEntryHandlerBase<SubjectActi
             return;
         }
 
-        if (await _session.Query<User, UserIndex>(x => x.NormalizedUserName == owner).FirstOrDefaultAsync() is null)
+        // The stored value is already the host's normalized form, and looking a name up normalizes
+        // again, so passing it straight through resolves the same user.
+        if (await _userDirectory.FindByNameAsync(owner) is null)
         {
             context.Result.Fail(new ValidationResult(S["The selected user does not exist."], [nameof(NewActivityActionMetadata.NormalizedUserName)]));
         }

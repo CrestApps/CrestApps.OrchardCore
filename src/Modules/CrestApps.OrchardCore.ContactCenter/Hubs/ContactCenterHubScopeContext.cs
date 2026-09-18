@@ -1,9 +1,7 @@
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
-using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Hubs;
 
@@ -14,8 +12,7 @@ internal sealed class ContactCenterHubScopeContext
         IAgentSessionService sessionService,
         IAgentPresenceManager presenceManager,
         ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         IQueuedVoiceWorkOfferService queuedVoiceWorkOfferService,
         IEnumerable<IPendingIncomingCallOfferService> pendingIncomingCallOfferServices)
     {
@@ -23,8 +20,7 @@ internal sealed class ContactCenterHubScopeContext
         SessionService = sessionService;
         PresenceManager = presenceManager;
         SupervisorQueueAuthorizationService = supervisorQueueAuthorizationService;
-        UserManager = userManager;
-        DisplayNameProvider = displayNameProvider;
+        UserDirectory = userDirectory;
         QueuedVoiceWorkOfferService = queuedVoiceWorkOfferService;
         PendingIncomingCallOfferService = pendingIncomingCallOfferServices.FirstOrDefault();
     }
@@ -37,9 +33,7 @@ internal sealed class ContactCenterHubScopeContext
 
     public ISupervisorQueueAuthorizationService SupervisorQueueAuthorizationService { get; }
 
-    public UserManager<IUser> UserManager { get; }
-
-    public IDisplayNameProvider DisplayNameProvider { get; }
+    public IUserDirectory UserDirectory { get; }
 
     public IQueuedVoiceWorkOfferService QueuedVoiceWorkOfferService { get; }
 

@@ -1,9 +1,11 @@
+using CrestApps.Core.Security;
 using CrestApps.Core;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
 using YesSql;
@@ -154,7 +156,7 @@ public class SubjectActionHandlerValidationTests
 
         var handler = new SubjectActionHandler(
             flowSettingsService.Object,
-            new Mock<ISession>().Object,
+            new FakeUserDirectory(),
             new PassThroughStringLocalizer<SubjectActionHandler>());
 
         var context = new ValidatingContext<SubjectAction>(action);

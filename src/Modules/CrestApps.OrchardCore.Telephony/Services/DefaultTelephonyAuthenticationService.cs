@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,9 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     private readonly ISiteService _siteService;
     private readonly ITelephonyProviderResolver _providerResolver;
     private readonly ITelephonyUserTokenStore _tokenStore;
-    private readonly ITelephonyUserAccessor _userAccessor;
+    private readonly IUserAccessor _userAccessor;
+    private readonly IUserDirectory _userDirectory;
+    private readonly IUserProfileStore _userProfileStore;
     private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
@@ -38,7 +41,9 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         ISiteService siteService,
         ITelephonyProviderResolver providerResolver,
         ITelephonyUserTokenStore tokenStore,
-        ITelephonyUserAccessor userAccessor,
+        IUserAccessor userAccessor,
+        IUserDirectory userDirectory,
+        IUserProfileStore userProfileStore,
         IDistributedLockProvider distributedLock,
         TimeProvider timeProvider,
         IOptions<TelephonyCoordinationOptions> coordinationOptions,
@@ -48,6 +53,8 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         _providerResolver = providerResolver;
         _tokenStore = tokenStore;
         _userAccessor = userAccessor;
+        _userDirectory = userDirectory;
+        _userProfileStore = userProfileStore;
         _distributedLock = distributedLock;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -289,7 +296,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         TelephonyUserTokens expiredTokens,
         CancellationToken cancellationToken)
     {
-        var user = await _userAccessor.GetCurrentUserAsync();
+        var user = await _userDirectory.FindByPrincipalAsync(_userAccessor.User, cancellationToken);
         var lockKey = $"Telephony:TokenRefresh:{providerName}:{user?.UserName ?? providerName}";
 
         (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
@@ -304,7 +311,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             // the database (bypassing this scope's cached copy) in case the peer just committed a refresh;
             // otherwise give up rather than starting a competing refresh that would rotate the peer's
             // replacement refresh token out from under it.
-            await _userAccessor.ReloadCurrentUserAsync();
+            await _userProfileStore.ReloadAsync(cancellationToken);
             var contended = await _tokenStore.GetAsync(providerName, cancellationToken);
 
             return IsUsable(contended) ? contended : null;
@@ -315,7 +322,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         // Reload the user from the database before the re-read so a peer's committed refresh is observed rather
         // than the stale tokens this request loaded before waiting for the lock. Without this the identity map
         // would keep serving the pre-refresh copy and the double-check below could rotate the token again.
-        await _userAccessor.ReloadCurrentUserAsync();
+        await _userProfileStore.ReloadAsync(cancellationToken);
 
         var current = await _tokenStore.GetAsync(providerName, cancellationToken);
 

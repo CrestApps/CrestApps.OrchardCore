@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using CrestApps.Core.Security;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -10,12 +11,10 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -313,25 +312,14 @@ internal static partial class AgentWorkspaceEndpoints
 
     private static async Task<string> GetCurrentUserDisplayNameAsync(
         ClaimsPrincipal user,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         CancellationToken cancellationToken)
-    {
-        var currentUser = await userManager.GetUserAsync(user);
-
-        if (currentUser is not null)
-        {
-            return await GetUserDisplayNameAsync(currentUser, "Unknown user", displayNameProvider, cancellationToken);
-        }
-
-        return "Unknown user";
-    }
+        => Or(await userDirectory.FindByPrincipalAsync(user, cancellationToken), "Unknown user");
 
     private static async Task<string> GetUserDisplayNameAsync(
         string userId,
         string fallback,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(userId))
@@ -339,29 +327,17 @@ internal static partial class AgentWorkspaceEndpoints
             return fallback;
         }
 
-        var user = await userManager.FindByIdAsync(userId);
-
-        return await GetUserDisplayNameAsync(user, fallback, displayNameProvider, cancellationToken);
+        return Or(await userDirectory.FindByIdAsync(userId, cancellationToken), fallback);
     }
 
-    private static async Task<string> GetUserDisplayNameAsync(
-        IUser user,
-        string fallback,
-        IDisplayNameProvider displayNameProvider,
-        CancellationToken cancellationToken)
-    {
-        if (user is not null)
-        {
-            var displayName = await displayNameProvider.GetAsync(user, cancellationToken);
-
-            if (!string.IsNullOrWhiteSpace(displayName))
-            {
-                return displayName;
-            }
-        }
-
-        return fallback;
-    }
+    /// <summary>
+    /// Gets a user's display name, or the fallback when there is no user or no name to show.
+    /// </summary>
+    /// <param name="user">The user, or <see langword="null"/>.</param>
+    /// <param name="fallback">What to show instead.</param>
+    /// <returns>The name to render.</returns>
+    private static string Or(UserSummary user, string fallback)
+        => string.IsNullOrWhiteSpace(user?.DisplayName) ? fallback : user.DisplayName;
 
     private sealed class SetPresenceRequest
     {

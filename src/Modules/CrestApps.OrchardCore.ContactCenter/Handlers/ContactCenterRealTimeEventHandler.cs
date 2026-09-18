@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -5,7 +6,6 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using OrchardCore.Modules;
 using OrchardCore.Users;
@@ -67,8 +67,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                 await BroadcastPresenceAsync(
                     interactionEvent,
                     context.AgentManager,
-                    context.UserManager,
-                    context.DisplayNameProvider,
+                    context.UserDirectory,
                     cancellationToken);
                 break;
 
@@ -148,8 +147,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
     private async Task BroadcastPresenceAsync(
         InteractionEvent interactionEvent,
         IAgentProfileManager agentManager,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(interactionEvent.AggregateId))
@@ -168,7 +166,7 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
         {
             UserId = profile.UserId,
             AgentId = profile.ItemId,
-            DisplayName = await GetAgentDisplayNameAsync(profile, userManager, displayNameProvider, cancellationToken),
+            DisplayName = await GetAgentDisplayNameAsync(profile, userDirectory, cancellationToken),
             Status = profile.PresenceStatus.ToString(),
             RequestedStatus = profile.RequestedPresenceStatus?.ToString(),
             Reason = profile.PresenceReason,
@@ -262,22 +260,16 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
 
     private static async Task<string> GetAgentDisplayNameAsync(
         AgentProfile agent,
-        UserManager<IUser> userManager,
-        IDisplayNameProvider displayNameProvider,
+        IUserDirectory userDirectory,
         CancellationToken cancellationToken)
     {
         if (!string.IsNullOrEmpty(agent.UserId))
         {
-            var user = await userManager.FindByIdAsync(agent.UserId);
+            var user = await userDirectory.FindByIdAsync(agent.UserId, cancellationToken);
 
-            if (user is not null)
+            if (!string.IsNullOrWhiteSpace(user?.DisplayName))
             {
-                var displayName = await displayNameProvider.GetAsync(user, cancellationToken);
-
-                if (!string.IsNullOrWhiteSpace(displayName))
-                {
-                    return displayName;
-                }
+                return user.DisplayName;
             }
         }
 

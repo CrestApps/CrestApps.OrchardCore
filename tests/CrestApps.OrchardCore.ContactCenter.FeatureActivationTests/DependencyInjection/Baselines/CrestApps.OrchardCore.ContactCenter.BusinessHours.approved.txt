@@ -2,6 +2,9 @@ CrestApps.Core.Hosting.IAfterCommitTaskQueue #0 Scoped -> type:CrestApps.Orchard
 CrestApps.Core.Hosting.IDetachedWorkExecutor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellDetachedWorkExecutor
 CrestApps.Core.Hosting.ITenantAccessor #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.ShellSettingsTenantAccessor
 CrestApps.Core.Locking.IDistributedLockProvider #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreDistributedLockProvider
+CrestApps.Core.Security.IUserAccessor #0 Scoped -> type:CrestApps.Core.Services.UserAccessor
+CrestApps.Core.Security.IUserDirectory #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreUserDirectory
+CrestApps.Core.Security.IUserProfileStore #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreUserProfileStore
 CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterConfigurationCacheInvalidationHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>
 CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> #1 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Handlers.BusinessHoursCalendarHandler
 CrestApps.OrchardCore.ContactCenter.ContactCenterProcessLivenessOptions #0 Singleton -> factory

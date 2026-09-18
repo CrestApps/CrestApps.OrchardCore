@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -391,8 +393,7 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             .AddSingleton((queueItemStore ?? new Mock<IQueueItemStore>()).Object)
             .AddSingleton((activityManager ?? new Mock<IOmnichannelActivityManager>()).Object)
             .AddSingleton((interactionManager ?? new Mock<IInteractionManager>()).Object)
-            .AddSingleton(MockUserManager().Object)
-            .AddSingleton(MockDisplayNameProvider().Object);
+            .AddSingleton<IUserDirectory>(new FakeUserDirectory(new UserSummary("u1", "agent.one", "Agent One", null)));
 
         // The soft-phone incoming-call dispatcher is optional (the Telephony module may be absent), so it is
         // only registered when a test supplies one -- mirroring how the scope context resolves it.
@@ -411,29 +412,5 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             clock);
     }
 
-    private static Mock<IDisplayNameProvider> MockDisplayNameProvider()
-    {
-        var displayNameProvider = new Mock<IDisplayNameProvider>();
-        displayNameProvider
-            .Setup(provider => provider.GetAsync(It.IsAny<IUser>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IUser user, CancellationToken _) => user?.UserName);
 
-        return displayNameProvider;
-    }
-
-    private static Mock<UserManager<IUser>> MockUserManager()
-    {
-        var store = new Mock<IUserStore<IUser>>();
-
-        return new Mock<UserManager<IUser>>(
-            store.Object,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null);
-    }
 }

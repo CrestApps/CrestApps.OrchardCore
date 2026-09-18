@@ -495,19 +495,9 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
         ContactCenterHubScopeContext services,
         string fallback)
     {
-        var user = await services.UserManager.GetUserAsync(Context.User);
+        var user = await services.UserDirectory.FindByPrincipalAsync(Context.User, HubConnectionWork.MustComplete);
 
-        if (user is not null)
-        {
-            var displayName = await services.DisplayNameProvider.GetAsync(user, HubConnectionWork.MustComplete);
-
-            if (!string.IsNullOrWhiteSpace(displayName))
-            {
-                return displayName;
-            }
-        }
-
-        return fallback;
+        return string.IsNullOrWhiteSpace(user?.DisplayName) ? fallback : user.DisplayName;
     }
 
     private string EnsureUserId()

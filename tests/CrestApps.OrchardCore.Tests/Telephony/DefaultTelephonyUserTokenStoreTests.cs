@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
 
@@ -11,8 +12,7 @@ public sealed class DefaultTelephonyUserTokenStoreTests
     public async Task StoreAndGet_RoundTripsTokens_AndPersistsUser()
     {
         // Arrange
-        var user = new FakeUser();
-        var accessor = new FakeTelephonyUserAccessor(user);
+        var accessor = new FakeUserProfileStore();
         var store = new DefaultTelephonyUserTokenStore(accessor, new EphemeralDataProtectionProvider());
 
         var tokens = new TelephonyUserTokens
@@ -40,8 +40,7 @@ public sealed class DefaultTelephonyUserTokenStoreTests
     public async Task StoreAsync_EncryptsTokensAtRest()
     {
         // Arrange
-        var user = new FakeUser();
-        var accessor = new FakeTelephonyUserAccessor(user);
+        var accessor = new FakeUserProfileStore();
         var store = new DefaultTelephonyUserTokenStore(accessor, new EphemeralDataProtectionProvider());
 
         var tokens = new TelephonyUserTokens
@@ -53,8 +52,9 @@ public sealed class DefaultTelephonyUserTokenStoreTests
         // Act
         await store.StoreAsync("Dialpad", tokens, TestContext.Current.CancellationToken);
 
-        // Assert - the raw persisted properties must not contain the plaintext tokens.
-        var serialized = user.Properties.ToJsonString();
+        // Assert - what was persisted must not contain the plaintext tokens.
+        var persisted = await accessor.FindAsync<TelephonyUserConnections>(TestContext.Current.CancellationToken);
+        var serialized = System.Text.Json.JsonSerializer.Serialize(persisted);
         Assert.DoesNotContain("super-secret-access", serialized);
         Assert.DoesNotContain("super-secret-refresh", serialized);
     }
@@ -63,8 +63,7 @@ public sealed class DefaultTelephonyUserTokenStoreTests
     public async Task RemoveAsync_RemovesTokens()
     {
         // Arrange
-        var user = new FakeUser();
-        var accessor = new FakeTelephonyUserAccessor(user);
+        var accessor = new FakeUserProfileStore();
         var store = new DefaultTelephonyUserTokenStore(accessor, new EphemeralDataProtectionProvider());
 
         await store.StoreAsync("Dialpad", new TelephonyUserTokens { AccessToken = "a" }, TestContext.Current.CancellationToken);

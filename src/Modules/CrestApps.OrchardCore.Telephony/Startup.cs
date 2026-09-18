@@ -114,7 +114,6 @@ public sealed class Startup : StartupBase
         services.AddTransient<IPostConfigureOptions<TelephonySettings>, TelephonySettingsConfiguration>();
         services.AddSignalOptionsChangeTokenSource<TelephonyProviderOptions>();
 
-        services.AddScoped<ITelephonyUserAccessor, DefaultTelephonyUserAccessor>();
         services.AddScoped<ITelephonyUserTokenStore, DefaultTelephonyUserTokenStore>();
         services.AddScoped<ITelephonyAuthenticationService, DefaultTelephonyAuthenticationService>();
 

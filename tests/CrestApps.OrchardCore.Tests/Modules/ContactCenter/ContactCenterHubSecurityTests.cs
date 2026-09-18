@@ -1,3 +1,5 @@
+using CrestApps.Core.Security;
+using CrestApps.OrchardCore.Tests.Doubles;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core;
@@ -313,8 +315,7 @@ public sealed class ContactCenterHubSecurityTests
                 .AddSingleton<IAgentSessionService>(SessionService)
                 .AddSingleton(Mock.Of<IAgentPresenceManager>())
                 .AddSingleton(Mock.Of<ISupervisorQueueAuthorizationService>())
-                .AddSingleton(MockUserManager())
-                .AddSingleton(Mock.Of<IDisplayNameProvider>())
+                .AddSingleton<IUserDirectory>(new FakeUserDirectory())
                 .AddSingleton<IQueuedVoiceWorkOfferService>(new NoQueuedVoiceWorkOfferService())
                 .AddTransient<ContactCenterHubScopeContext>()
                 .BuildServiceProvider();
@@ -359,22 +360,6 @@ public sealed class ContactCenterHubSecurityTests
         public void Grant(Permission permission)
         {
             AuthorizationService.GrantedPermissions.Add(permission.Name);
-        }
-
-        private static UserManager<IUser> MockUserManager()
-        {
-            var store = new Mock<IUserStore<IUser>>();
-
-            return new Mock<UserManager<IUser>>(
-                store.Object,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null).Object;
         }
     }
 

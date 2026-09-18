@@ -1,3 +1,6 @@
+using CrestApps.Core.Security;
+using CrestApps.OrchardCore.Tests.Doubles;
+using System.Security.Claims;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
@@ -359,7 +362,13 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
     {
         var siteService = SiteServiceFactory.Create(settings);
         var resolver = new StubTelephonyProviderResolver(provider);
-        var userAccessor = new FakeTelephonyUserAccessor(new FakeUser { UserName = "tester" });
+        var currentUser = new UserSummary("user-1", "tester", "Tester", "tester@example.test");
+        var userAccessor = new FakeUserAccessor
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, currentUser.Id)], "Test")),
+        };
+        var userDirectory = new FakeUserDirectory(currentUser) { CurrentUser = currentUser };
+        var userProfileStore = new FakeUserProfileStore();
         var options = Options.Create(new TelephonyCoordinationOptions());
 
         return new DefaultTelephonyAuthenticationService(
@@ -367,6 +376,8 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
             resolver,
             tokenStore,
             userAccessor,
+            userDirectory,
+            userProfileStore,
             distributedLock,
             new FakeTimeProvider(new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)),
             options,

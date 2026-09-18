@@ -6,11 +6,10 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -76,7 +75,7 @@ public sealed class AgentWorkspaceWrapUpRecencyTests
         private readonly Mock<IInteractionManager> _interactionManager = new();
         private readonly Mock<IOmnichannelActivityManager> _activityManager = new();
         private readonly Mock<IContentManager> _contentManager = new();
-        private readonly Mock<IDisplayNameProvider> _displayNameProvider = new();
+        private readonly FakeUserDirectory _userDirectory = new();
 
         public WrapUpProbe(DateTime endedUtc)
         {
@@ -141,8 +140,7 @@ public sealed class AgentWorkspaceWrapUpRecencyTests
                 _interactionManager.Object,
                 _activityManager.Object,
                 _contentManager.Object,
-                MockUserManager(),
-                _displayNameProvider.Object,
+                _userDirectory,
                 Mock.Of<IContactCenterVoiceProviderResolver>(),
                 new FakeTimeProvider(ClockNow),
                 Options.Create(new AgentAvailabilityOptions()),
@@ -163,22 +161,6 @@ public sealed class AgentWorkspaceWrapUpRecencyTests
                 object resource,
                 string policyName)
                 => Task.FromResult(AuthorizationResult.Success());
-        }
-
-        private static UserManager<IUser> MockUserManager()
-        {
-            var store = new Mock<IUserStore<IUser>>();
-
-            return new Mock<UserManager<IUser>>(
-                store.Object,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null).Object;
         }
 
         private static LinkGenerator CreateLinkGenerator()

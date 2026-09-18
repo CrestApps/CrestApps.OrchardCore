@@ -1,9 +1,11 @@
+using CrestApps.Core.Security;
 using CrestApps.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -69,25 +71,24 @@ public sealed class DefaultSubjectActionExecutorTests
     {
         // Arrange
         var action = CreateAction(actionType, SubjectActionOwnerAssignmentType.SameOwner, "SPECIFIC");
-        var owner = new User
-        {
-            UserId = "specific-user-id",
-            UserName = "Specific User",
-            NormalizedUserName = "SPECIFIC",
-        };
-        var session = CreateSessionWithUser(owner);
+        var owner = new UserSummary("specific-user-id", "Specific User", "Specific User", "specific@example.com");
+
+        // The action stores the normalized name, which is what the host matches on, so the directory
+        // has to answer to it rather than to the name the summary carries.
+        var userDirectory = new FakeUserDirectory().MapName("SPECIFIC", owner);
+        var session = new Mock<ISession>();
         OmnichannelActivity savedActivity = null;
 
         SetupSave(session, activity => savedActivity = activity);
 
-        var executor = CreateExecutor(action, session);
+        var executor = CreateExecutor(action, session, userDirectory: userDirectory);
 
         // Act
         await executor.ExecuteAsync(CreateContext(), TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotNull(savedActivity);
-        Assert.Equal(owner.UserId, savedActivity.AssignedToId);
+        Assert.Equal(owner.Id, savedActivity.AssignedToId);
         Assert.Equal(owner.UserName, savedActivity.AssignedToUsername);
         Assert.Equal(_now, savedActivity.AssignedToUtc);
         Assert.Equal(ActivityAssignmentStatus.Assigned, savedActivity.AssignmentStatus);
@@ -100,7 +101,7 @@ public sealed class DefaultSubjectActionExecutorTests
     {
         // Arrange
         var action = CreateAction(actionType, SubjectActionOwnerAssignmentType.SpecificOwner, "DELETED");
-        var session = CreateSessionWithUser(null);
+        var session = new Mock<ISession>();
         var executor = CreateExecutor(action, session);
 
         // Act
@@ -393,7 +394,8 @@ public sealed class DefaultSubjectActionExecutorTests
         SubjectAction action,
         Mock<ISession> session,
         ILocalClock localClock = null,
-        Mock<IContentManager> contentManager = null)
+        Mock<IContentManager> contentManager = null,
+        IUserDirectory userDirectory = null)
     {
         var actionCatalog = new Mock<ISourceCatalog<SubjectAction>>();
         actionCatalog
@@ -413,6 +415,7 @@ public sealed class DefaultSubjectActionExecutorTests
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
             session.Object,
+            userDirectory ?? new FakeUserDirectory(),
             clock,
             localClock ?? Mock.Of<ILocalClock>(),
             NullLogger<DefaultSubjectActionExecutor>.Instance);
@@ -470,30 +473,6 @@ public sealed class DefaultSubjectActionExecutorTests
         };
     }
 
-    private static Mock<ISession> CreateSessionWithUser(User user)
-    {
-        var query = new Mock<IQuery<User, UserIndex>>();
-        query
-            .Setup(x => x.FirstOrDefaultAsync())
-            .ReturnsAsync(user);
-
-        var entityQuery = new Mock<IQuery<User>>();
-        entityQuery
-            .Setup(x => x.With<UserIndex>(It.IsAny<Expression<Func<UserIndex, bool>>>()))
-            .Returns(query.Object);
-
-        var rootQuery = new Mock<IQuery>();
-        rootQuery
-            .Setup(x => x.For<User>(It.IsAny<bool>()))
-            .Returns(entityQuery.Object);
-
-        var session = new Mock<ISession>();
-        session
-            .Setup(x => x.Query(It.IsAny<string>()))
-            .Returns(rootQuery.Object);
-
-        return session;
-    }
 
     private static void SetupSave(
         Mock<ISession> session,

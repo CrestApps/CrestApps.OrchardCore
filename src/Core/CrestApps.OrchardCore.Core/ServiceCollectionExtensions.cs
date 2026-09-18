@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.Hosting;
 using CrestApps.Core.Locking;
+using CrestApps.Core.Security;
 using CrestApps.Core.Sms;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Hosting;
@@ -42,12 +43,13 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Binds the framework host seams to their Orchard Core implementations, so framework services
-    /// get the tenant's distributed lock and tenant name rather than the single-node defaults.
+    /// get the tenant's distributed lock, tenant name and users rather than the single-node defaults.
     /// </summary>
     /// <param name="services">The services.</param>
     public static IServiceCollection AddCoreHostSeams(this IServiceCollection services)
     {
         services.AddCoreTimeProvider();
+        services.AddCoreUserDirectory();
         services.TryAddSingleton<IDistributedLockProvider, OrchardCoreDistributedLockProvider>();
         services.TryAddSingleton<ITenantAccessor, ShellSettingsTenantAccessor>();
         services.TryAddScoped<IDetachedWorkExecutor, ShellDetachedWorkExecutor>();
@@ -63,6 +65,26 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddCoreSmsProviderSeam(this IServiceCollection services)
     {
         services.TryAddScoped<ISmsProviderResolver, OrchardCoreSmsProviderResolver>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Binds the framework user seams to Orchard Core's users.
+    /// </summary>
+    /// <remarks>
+    /// Registration only, so a tenant that never reads a user never resolves the user manager. Folded
+    /// into <see cref="AddCoreHostSeams(IServiceCollection)"/> as well, because a feature that reads
+    /// users should not have to know it needs a second call.
+    /// </remarks>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddCoreUserDirectory(this IServiceCollection services)
+    {
+        // The ambient-principal accessor ships in CrestApps.Core but nothing in this repository
+        // registered it, so the contract was unusable until now.
+        services.TryAddScoped<IUserAccessor, CrestApps.Core.Services.UserAccessor>();
+        services.TryAddScoped<IUserDirectory, OrchardCoreUserDirectory>();
+        services.TryAddScoped<IUserProfileStore, OrchardCoreUserProfileStore>();
 
         return services;
     }
