@@ -1199,7 +1199,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     }
     public static class OmnichannelContactPreferences
     {
-        public static bool HasOptedOut(OrchardCore.ContentManagement.ContentItem contact, string channel) { }
+        public static bool HasOptedOut(CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact contact, string channel) { }
     }
     public static class OmnichannelHandoffHelper
     {

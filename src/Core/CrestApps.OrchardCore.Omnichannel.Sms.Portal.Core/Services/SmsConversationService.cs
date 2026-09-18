@@ -12,8 +12,6 @@ using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Logging;
-using OrchardCore.ContentManagement;
-using OrchardCore.Entities;
 using OrchardCore.Modules;
 using CrestApps.Core.Sms;
 using YesSql;

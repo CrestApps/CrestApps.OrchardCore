@@ -2,6 +2,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.Flows.Models;
 
@@ -25,7 +26,11 @@ internal static class OmnichannelHelper
     /// <param name="channel">The channel they would be reached on.</param>
     public static bool HasOptedOut(ContentItem contact, string channel)
     {
-        return OmnichannelContactPreferences.HasOptedOut(contact, channel);
+        // Projected first, so this host and the framework answer the question from the same reading of
+        // the record rather than from two copies of the rule.
+        return OmnichannelContactPreferences.HasOptedOut(
+            ContentItemOmnichannelContactProjection.Project(contact),
+            channel);
     }
 
     /// <summary>

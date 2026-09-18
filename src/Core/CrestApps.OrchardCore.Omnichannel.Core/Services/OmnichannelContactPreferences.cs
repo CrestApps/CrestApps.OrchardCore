@@ -1,5 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using OrchardCore.ContentManagement;
+using CrestApps.OrchardCore.Omnichannel.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
@@ -24,15 +23,15 @@ public static class OmnichannelContactPreferences
     /// </remarks>
     /// <param name="contact">The contact, or <see langword="null"/> when there is none to ask.</param>
     /// <param name="channel">The channel they would be reached on.</param>
-    public static bool HasOptedOut(ContentItem contact, string channel)
+    public static bool HasOptedOut(OmnichannelContact contact, string channel)
     {
-        if (contact is null || !contact.TryGet<OmnichannelContactPart>(out var contactPart))
+        if (contact is null)
         {
             return false;
         }
 
-        return (channel == OmnichannelConstants.Channels.Phone && contactPart.DoNotCall) ||
-               (channel == OmnichannelConstants.Channels.Sms && contactPart.DoNotSms) ||
-               (channel == OmnichannelConstants.Channels.Email && contactPart.DoNotEmail);
+        return (channel == OmnichannelConstants.Channels.Phone && contact.DoNotCall) ||
+               (channel == OmnichannelConstants.Channels.Sms && contact.DoNotSms) ||
+               (channel == OmnichannelConstants.Channels.Email && contact.DoNotEmail);
     }
 }

@@ -258,7 +258,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         // A follow-up is a message like any other, and this task never asked whether it was still welcome. The
         // conversation it is reviving began when the contact was willing to hear from us; somebody who has since
         // said stop is exactly the person a cadence would otherwise keep messaging, on a schedule, for days.
-        if (OmnichannelContactPreferences.HasOptedOut(contact, activity.Channel))
+        if (OmnichannelContactPreferences.HasOptedOut(ContentItemOmnichannelContactProjection.Project(contact), activity.Channel))
         {
             return;
         }

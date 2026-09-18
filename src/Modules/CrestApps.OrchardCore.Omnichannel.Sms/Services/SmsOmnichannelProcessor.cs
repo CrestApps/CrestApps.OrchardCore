@@ -184,7 +184,7 @@ public sealed class SmsOmnichannelProcessor : IOmnichannelProcessor
         // re-enters here too. This method is the last code before the carrier and it has already loaded the
         // contact for the template, so the question costs nothing and asking it is what makes the guarantee hold
         // for every caller rather than for one of them.
-        if (OmnichannelContactPreferences.HasOptedOut(contact, activity.Channel))
+        if (OmnichannelContactPreferences.HasOptedOut(ContentItemOmnichannelContactProjection.Project(contact), activity.Channel))
         {
             return;
         }

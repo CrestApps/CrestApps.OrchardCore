@@ -28,6 +28,9 @@ baseline in [phase-0-baseline.md](phase-0-baseline.md).
 | P0.5 | `ISmsProvider`/`ISmsProviderResolver` with an Orchard adapter; the suite sends SMS through the contract |
 | P0.11 | Migration bodies move behind `ISchemaMigration`; the Orchard `DataMigration` classes keep their names, attributes and version numbers and delegate |
 | P0.3 (S9) | `IUserDirectory` + `IUserProfileStore` replace `UserManager<IUser>`, `IDisplayNameProvider` and the user index across the suite; `ITelephonyUserAccessor` collapses into them |
+| P0.6 | The five services that read tenant settings take `IOptionsMonitor<T>` through a generic site-settings bridge; the Telnyx media provider's base-URL read became `IPublicBaseUrlAccessor`. The framework defaults in `CrestApps.Core.Hosting` gained the tests they never had |
+| P0.7 | `ContactCenterOperations`/`SmsPortalOperations` replace the three permission checks in the framework-bound projects; Orchard handlers map each operation to the permission that already governed it. `ContactCenterPermissions`/`SmsPortalPermissions` moved to the host-side projects |
+| P0.4 (part) | The customer-record vocabulary and contracts; subject flow settings re-based on `SubjectDefinition`; Orchard bindings for contact definitions, contacts and subjects; SMS and voice consumers migrated; `OmnichannelSubjectWriter` retired. **See the open item below** |
 | Phase 1 W1 (part) | `src/Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions` and `src/Core/Transitions/CrestApps.Core.Hosting` created with their final names and namespaces, Core-repo package metadata, `IsPackable=false`, and matching solution folders. `grep -rlE "OrchardCore" src/*/Transitions` is empty |
 
 ## Exit-criteria scoreboard
@@ -57,7 +60,8 @@ a shippable unit that keeps the build green:
 1. **Measurement instruments** - P0.13a, P0.1, P0.14. Nothing here changes behaviour, and everything
    here is what the later batches are measured against. *(Done.)*
 2. **Independent seams** - P0.10-S18, P0.3-S9, P0.3-S21, P0.5, P0.11. *(Done.)*
-3. **Content boundary, settings, authorization** - P0.4, P0.6, P0.7.
+3. **Content boundary, settings, authorization** - P0.4, P0.6, P0.7. *(P0.6 and P0.7 done; P0.4 has one
+   open item, below.)*
 4. **Background work and routes** - P0.8, P0.12.
 5. **Hub split and client configuration** - P0.9, P0.3-S23.
 6. **Registration collapse** - P0.13, alone, because it rewrites the same 42 startup files every
@@ -68,10 +72,31 @@ workstreams across three batches, and `AgentWorkspaceEndpoints.cs` by four acros
 
 ## Not started
 
-**Batches 3 to 6, eight workstreams.** P0.4 (contacts, subjects, subject flows — the largest and
-highest risk), P0.6 (settings to options), P0.7 (authorization operations), P0.8 (background tasks to
-cycles), P0.9 (hub base classes), P0.12 (endpoints as `Map*` methods), P0.13 (`AddCore*` registration
-methods), and the rest of P0.3 (client configuration models, S23).
+**Batches 4 to 6, five workstreams**, plus P0.4's open item. P0.8 (background tasks to cycles), P0.9
+(hub base classes), P0.12 (endpoints as `Map*` methods), P0.13 (`AddCore*` registration methods), and
+the rest of P0.3 (client configuration models, S23).
+
+### P0.4's open item: the subject on an activity
+
+`OmnichannelActivity.Subject` is an Orchard `ContentItem`, and the activity is a moving class, so
+P0.4's definition of done is not met while it stays one. Everything else P0.4 asked for has landed:
+no service in the framework-bound projects reaches for the content model any more.
+
+It is left open deliberately, because it is not the same kind of change as the rest of P0.4 and it
+should not be made as a footnote to it:
+
+1. **It changes a stored shape.** The subject is serialized inside the activity document. Carrying a
+   `JsonObject` instead would keep the stored text identical, the way `JsonPropertyBag` already does
+   for the four types P0.10 moved - but "identical" has to be proved against a real tenant, which is
+   exactly what the pre-extraction upgrade test exists for.
+2. **It is visible to tenants.** The activity's subject is handed to Liquid templates and rendered by
+   the Orchard admin screens as a content item. A tenant's prompt template that reaches into the
+   content-item shape would keep compiling and quietly render nothing.
+
+The same applies to the `Contact` object those Liquid templates receive, which is still a content
+item for the same reason.
+
+Both are one workstream, and both want the upgrade test green before they start rather than after.
 
 **Phase 0 is therefore not finished, and Phase 1 must not start.**
 
