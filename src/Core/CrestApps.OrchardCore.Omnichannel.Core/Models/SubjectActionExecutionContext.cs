@@ -1,26 +1,19 @@
-using OrchardCore.ContentManagement;
-
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
 /// Context passed to <see cref="Services.ISubjectActionExecutor"/> when processing subject actions.
 /// </summary>
+/// <remarks>
+/// The contact and the subject are not carried here. The activity names the contact and carries the
+/// subject, so an executor resolves both from it - which keeps a caller from handing over a stale copy
+/// of either, and keeps this context free of whatever the host stores them as.
+/// </remarks>
 public sealed class SubjectActionExecutionContext
 {
     /// <summary>
     /// Gets or sets the activity being completed.
     /// </summary>
     public OmnichannelActivity Activity { get; set; }
-
-    /// <summary>
-    /// Gets or sets the contact content item.
-    /// </summary>
-    public ContentItem Contact { get; set; }
-
-    /// <summary>
-    /// Gets or sets the subject content item.
-    /// </summary>
-    public ContentItem Subject { get; set; }
 
     /// <summary>
     /// Gets or sets the selected disposition.

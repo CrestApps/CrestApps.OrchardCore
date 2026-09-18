@@ -35,6 +35,7 @@ public static class OmnichannelContentServiceCollectionExtensions
     {
         services.TryAddScoped<ISubjectDefinitionProvider, ContentTypeSubjectDefinitionProvider>();
         services.TryAddScoped<IOmnichannelSubjectAccessor, ContentItemOmnichannelSubjectAccessor>();
+        services.TryAddScoped<IActivitySubjectWriter, ContentItemActivitySubjectWriter>();
 
         return services;
     }

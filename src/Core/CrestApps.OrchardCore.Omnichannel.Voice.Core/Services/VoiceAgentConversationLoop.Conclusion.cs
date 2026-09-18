@@ -47,10 +47,9 @@ public sealed partial class VoiceAgentConversationLoop
         var clientFactory = services.GetRequiredService<IAIClientFactory>();
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
         var contextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
-        var contentManager = services.GetRequiredService<IContentManager>();
         var contactResolver = services.GetRequiredService<IOmnichannelContactResolver>();
         var contactWriter = services.GetRequiredService<IOmnichannelContactWriter>();
-        var subjectDefinitionProvider = services.GetRequiredService<ISubjectDefinitionProvider>();
+        var subjectWriter = services.GetRequiredService<IActivitySubjectWriter>();
         var dispositionCatalog = services.GetRequiredService<ICatalog<OmnichannelDisposition>>();
         var actionCatalog = services.GetRequiredService<ISourceCatalog<SubjectAction>>();
         var executor = services.GetRequiredService<ISubjectActionExecutor>();
@@ -97,24 +96,22 @@ public sealed partial class VoiceAgentConversationLoop
         var allowUpdateSubject = activity.AllowAIToUpdateSubject;
         var allowUpdateContact = activity.AllowAIToUpdateContact;
 
-        // Resolve the content items the analysis and subject actions operate on up front. These are content-manager
-        // reads that trigger a YesSql session flush; doing them here — before the activity is mutated — keeps that
-        // flush from ever trying to persist a dirty, stale activity (which surfaced as a ConcurrencyException when
-        // the background expiry pass concurrently transitioned the same AwaitingCustomerAnswer activity to Failed).
-        var contact = string.IsNullOrWhiteSpace(activity.ContactContentItemId)
-            ? null
-            : await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+        // Read up front, before the activity is mutated. These are reads that trigger a session flush,
+        // and a flush that happens after the activity is dirty tries to persist a stale copy of it -
+        // which surfaced as a concurrency conflict whenever the automated expiry pass touched the same
+        // activity at the same moment.
         var contactRecord = string.IsNullOrWhiteSpace(activity.ContactContentItemId)
             ? null
             : await contactResolver.FindByIdAsync(activity.ContactContentItemId);
-        var subject = activity.Subject ?? (string.IsNullOrWhiteSpace(activity.SubjectContentType) ? null : await contentManager.NewAsync(activity.SubjectContentType));
 
-        // The subject's updatable text fields, read from the content type definition so the model is asked for the
-        // exact fields that exist (rather than authoring a free-form content item, which produced values in shapes
-        // the field editors could not read).
-        var subjectTextFields = allowUpdateSubject && !string.IsNullOrWhiteSpace(activity.SubjectContentType)
-            ? (await subjectDefinitionProvider.FindAsync(activity.SubjectContentType))?.Fields ?? []
+        // The fields the model may set, so it is asked for the exact fields that exist rather than
+        // authoring free-form structure the field editors could not read.
+        var subjectFieldNames = allowUpdateSubject
+            ? await subjectWriter.GetWritableFieldNamesAsync(activity)
             : [];
+        var subjectValues = allowUpdateSubject
+            ? await subjectWriter.ReadAsync(activity)
+            : new Dictionary<string, string>();
 
         // The prompt lives in Templates/Prompts as a file, like every other system prompt here, so it can be read
         // and changed by someone who is not editing C#. The two guarded sections are passed as variables rather
@@ -125,7 +122,7 @@ public sealed partial class VoiceAgentConversationLoop
             VoiceTemplateIds.ConclusionAnalysis,
             new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
             {
-                ["AllowSubjectFields"] = allowUpdateSubject && subjectTextFields.Count > 0,
+                ["AllowSubjectFields"] = allowUpdateSubject && subjectFieldNames.Count > 0,
                 ["AllowContactEmail"] = allowUpdateContact,
             });
 
@@ -138,20 +135,14 @@ public sealed partial class VoiceAgentConversationLoop
             Available dispositions (choose one DispositionId): {JsonSerializer.Serialize(SubjectDispositionGuidance.Describe(dispositions, allActions, activity.SubjectContentType))}
             """;
 
-        if (allowUpdateSubject && subject is not null && subjectTextFields.Count > 0)
+        if (subjectFieldNames.Count > 0)
         {
-            var subjectContent = (JsonObject)subject.Content;
-            var fieldList = subjectTextFields.Select(field =>
-            {
-                // The definition names a field as "Part.Field", which is both the key the model is
-                // asked for and the path the value is read back from.
-                var separator = field.Name.IndexOf('.', StringComparison.Ordinal);
-                var current = separator <= 0
-                    ? null
-                    : (subjectContent[field.Name[..separator]]?[field.Name[(separator + 1)..]]?["Text"])?.ToString();
-
-                return string.IsNullOrWhiteSpace(current) ? field.Name : $"{field.Name} (current: {current})";
-            });
+            // Each field is offered with whatever is already on record, so the model is asked to fill
+            // gaps rather than to restate what is known.
+            var fieldList = subjectFieldNames.Select(name =>
+                subjectValues.TryGetValue(name, out var current) && !string.IsNullOrWhiteSpace(current)
+                    ? $"{name} (current: {current})"
+                    : name);
 
             userPrompt += $"{Environment.NewLine}{Environment.NewLine}Subject fields you may set (return these keys in SubjectFields): {string.Join("; ", fieldList)}";
         }
@@ -225,9 +216,9 @@ public sealed partial class VoiceAgentConversationLoop
         // known fields. Each value is written into the field's real structure (a TextField's Text property) rather
         // than merging a model-authored content item, which produced shapes the field editors could not read. The
         // subject lives on the activity, so it must be applied before the activity is persisted below.
-        if (allowUpdateSubject && subject is not null && ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, result?.SubjectFields, subjectTextFields))
+        if (allowUpdateSubject)
         {
-            concluded.Subject = subject;
+            await subjectWriter.ApplyAsync(concluded, result?.SubjectFields);
         }
 
         await store.UpdateAsync(concluded);
@@ -264,8 +255,9 @@ public sealed partial class VoiceAgentConversationLoop
             await executor.ExecuteAsync(new SubjectActionExecutionContext
             {
                 Activity = concluded,
-                Contact = contact,
-                Subject = subject,
+
+                // The contact is named on the activity and the subject is carried on it, so the
+                // executor resolves both from there rather than being handed content items.
                 Disposition = disposition,
             });
         }

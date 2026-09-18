@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
@@ -184,9 +185,9 @@ public sealed class DefaultSubjectActionExecutorTests
         action.SetDoNotCall = true;
         var session = new Mock<ISession>();
         var executor = CreateExecutor(action, session);
-        var contact = new ContentItem();
+        var contact = new ContentItem { ContentItemId = "contact-1" };
         var context = CreateContext();
-        context.Contact = contact;
+        context.Activity.ContactContentItemId = contact.ContentItemId;
         context.Activity.ContactResolutionStatus = resolutionStatus;
         context.Activity.Source = ActivitySources.Inbound;
 
@@ -230,11 +231,14 @@ public sealed class DefaultSubjectActionExecutorTests
 
         SetupSave(session, _ => { });
 
-        var executor = CreateExecutor(action, session);
-        var contact = new ContentItem();
+        var contentManager = new Mock<IContentManager>();
+        var executor = CreateExecutor(action, session, contentManager: contentManager);
+        var contact = new ContentItem { ContentItemId = "contact-1" };
         var context = CreateContext();
-        context.Contact = contact;
+        context.Activity.ContactContentItemId = contact.ContentItemId;
         context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        SetupContact(contentManager, contact);
 
         // Act
         await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
@@ -328,10 +332,12 @@ public sealed class DefaultSubjectActionExecutorTests
         var contentManager = new Mock<IContentManager>();
         var executor = CreateExecutor(action, session, contentManager: contentManager);
 
-        var contact = new ContentItem();
+        var contact = new ContentItem { ContentItemId = "contact-1" };
         var context = CreateContext();
-        context.Contact = contact;
+        context.Activity.ContactContentItemId = contact.ContentItemId;
         context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        SetupContact(contentManager, contact);
 
         // Act
         await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
@@ -353,10 +359,12 @@ public sealed class DefaultSubjectActionExecutorTests
         var contentManager = new Mock<IContentManager>();
         var executor = CreateExecutor(action, session, contentManager: contentManager);
 
-        var contact = new ContentItem { Published = true };
+        var contact = new ContentItem { ContentItemId = "contact-1", Published = true };
         var context = CreateContext();
-        context.Contact = contact;
+        context.Activity.ContactContentItemId = contact.ContentItemId;
         context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        SetupContact(contentManager, contact);
 
         // Act
         await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
@@ -377,10 +385,12 @@ public sealed class DefaultSubjectActionExecutorTests
         var contentManager = new Mock<IContentManager>();
         var executor = CreateExecutor(action, session, contentManager: contentManager);
 
-        var contact = new ContentItem { Published = true };
+        var contact = new ContentItem { ContentItemId = "contact-1", Published = true };
         var context = CreateContext();
-        context.Contact = contact;
+        context.Activity.ContactContentItemId = contact.ContentItemId;
         context.Activity.ContactResolutionStatus = ContactResolutionStatus.Resolved;
+
+        SetupContact(contentManager, contact);
 
         // Act
         await executor.ExecuteAsync(context, TestContext.Current.CancellationToken);
@@ -410,16 +420,34 @@ public sealed class DefaultSubjectActionExecutorTests
         var clock = new FakeTimeProvider();
         clock.SetUtcNow(_now);
 
+        // A real writer over the mocked content manager, so the assertions about saving and publishing
+        // a contact still exercise the path that actually does it.
+        var contactWriter = new ContentItemOmnichannelContactWriter(
+            contentManager.Object,
+            Mock.Of<IPhoneNumberService>(),
+            clock);
+
         return new DefaultSubjectActionExecutor(
             actionCatalog.Object,
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
+            contactWriter,
             session.Object,
             userDirectory ?? new FakeUserDirectory(),
             clock,
             localClock ?? Mock.Of<ILocalClock>(),
             NullLogger<DefaultSubjectActionExecutor>.Instance);
     }
+
+    /// <summary>
+    /// Makes the content manager answer with this contact, which is how the writer finds it.
+    /// </summary>
+    /// <param name="contentManager">The content manager mock.</param>
+    /// <param name="contact">The contact.</param>
+    private static void SetupContact(Mock<IContentManager> contentManager, ContentItem contact)
+        => contentManager
+            .Setup(manager => manager.GetAsync(contact.ContentItemId, It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
 
     private static SubjectAction CreateAction(
         string actionType,

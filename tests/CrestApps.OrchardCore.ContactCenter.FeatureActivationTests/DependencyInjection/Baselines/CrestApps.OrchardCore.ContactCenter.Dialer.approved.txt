@@ -209,6 +209,7 @@ CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver #0 Scoped ->
 CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterActivityDialerContributor
 CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionHandler #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Handlers.ContactCenterActivityDispositionHandler
 CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityDispositionService
+CrestApps.OrchardCore.Omnichannel.Core.Services.IActivitySubjectWriter #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentItemActivitySubjectWriter
 CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityCompletionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivityCompletionService
 CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityScreener #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.AutomatedVoiceCallScreener
 CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.BusinessHoursGate

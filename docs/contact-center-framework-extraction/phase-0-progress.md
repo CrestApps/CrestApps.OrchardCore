@@ -76,27 +76,26 @@ workstreams across three batches, and `AgentWorkspaceEndpoints.cs` by four acros
 (hub base classes), P0.12 (endpoints as `Map*` methods), P0.13 (`AddCore*` registration methods), and
 the rest of P0.3 (client configuration models, S23).
 
-### P0.4's open item: the subject on an activity
+### P0.4's open item: the carrier for an activity's subject
 
-`OmnichannelActivity.Subject` is an Orchard `ContentItem`, and the activity is a moving class, so
-P0.4's definition of done is not met while it stays one. Everything else P0.4 asked for has landed:
-no service in the framework-bound projects reaches for the content model any more.
+`OmnichannelActivity.Subject` is still an Orchard `ContentItem`. Nothing reaches into it any more:
+the services that record what a conversation learned go through `IActivitySubjectWriter`, and
+`ContentItemActivitySubjectWriter` is the only thing left that knows what the subject is stored as.
+Changing the carrier is then a change to that one adapter plus the property, rather than a change to
+every caller.
 
-It is left open deliberately, because it is not the same kind of change as the rest of P0.4 and it
-should not be made as a footnote to it:
+It is left for Phase 1 deliberately:
 
 1. **It changes a stored shape.** The subject is serialized inside the activity document. Carrying a
    `JsonObject` instead would keep the stored text identical, the way `JsonPropertyBag` already does
    for the four types P0.10 moved - but "identical" has to be proved against a real tenant, which is
    exactly what the pre-extraction upgrade test exists for.
-2. **It is visible to tenants.** The activity's subject is handed to Liquid templates and rendered by
-   the Orchard admin screens as a content item. A tenant's prompt template that reaches into the
-   content-item shape would keep compiling and quietly render nothing.
+2. **It is visible to tenants.** The subject and the contact are handed to Liquid templates and
+   rendered by the Orchard admin screens as content items. A tenant's prompt template that reaches
+   into the content-item shape would keep compiling and quietly render nothing.
 
-The same applies to the `Contact` object those Liquid templates receive, which is still a content
-item for the same reason.
-
-Both are one workstream, and both want the upgrade test green before they start rather than after.
+Both want the upgrade test green before they start rather than after, and both are now one adapter
+away rather than thirty call sites away.
 
 **Phase 0 is therefore not finished, and Phase 1 must not start.**
 

@@ -865,8 +865,6 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                                         await executor.ExecuteAsync(new SubjectActionExecutionContext
                                         {
                                             Activity = omnichannelActivity,
-                                            Contact = contact,
-                                            Subject = subject,
                                             Disposition = dispositionObj,
                                             ActionScheduleDates = actionScheduleDates,
                                             ActionPreparationNotes = actionPreparationNotes,

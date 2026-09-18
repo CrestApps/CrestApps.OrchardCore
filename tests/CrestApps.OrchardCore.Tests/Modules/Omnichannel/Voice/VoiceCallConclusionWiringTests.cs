@@ -68,7 +68,9 @@ public sealed class VoiceCallConclusionWiringTests
 
         Assert.Same(harness.Activity, run.Activity);
         Assert.Equal("disposition-callback", run.Disposition.ItemId);
-        Assert.Same(harness.Contact, run.Contact);
+
+        // The executor resolves the contact from the activity rather than being handed a copy of it.
+        Assert.Equal(harness.Contact.ContentItemId, run.Activity.ContactContentItemId);
     }
 
     [Fact]
@@ -454,6 +456,7 @@ public sealed class VoiceCallConclusionWiringTests
                 .AddSingleton<IOmnichannelContactResolver>(Contacts)
                 .AddSingleton<IOmnichannelContactWriter>(Contacts)
                 .AddSingleton(Mock.Of<ISubjectDefinitionProvider>())
+                .AddSingleton(Mock.Of<IActivitySubjectWriter>())
                 .BuildServiceProvider();
 
             _loop = new VoiceAgentConversationLoop(

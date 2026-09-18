@@ -112,8 +112,6 @@ public sealed class DefaultActivityDispositionService : IActivityDispositionServ
             var executionContext = new SubjectActionExecutionContext
             {
                 Activity = activity,
-                Contact = contact,
-                Subject = activity.Subject,
                 Disposition = disposition,
                 ActionScheduleDates = request.ActionScheduleDates,
                 ActionPreparationNotes = request.ActionPreparationNotes,

@@ -98,12 +98,22 @@ public sealed class ContentItemOmnichannelContactWriter : IOmnichannelContactWri
 
         // Committed only when something actually differs, so a conversation that learns nothing new
         // does not produce a version of the contact that says the same thing.
-        if (changed)
+        if (!changed)
         {
-            await _contentManager.UpdateAsync(contentItem);
+            return false;
         }
 
-        return changed;
+        await _contentManager.UpdateAsync(contentItem);
+
+        // Updating writes the draft. The lists that decide who gets dialled or messaged query the
+        // published record, so without this a customer could ask not to be called, be recorded exactly
+        // right, and be dialled again on the next load.
+        if (contentItem.Published)
+        {
+            await _contentManager.PublishAsync(contentItem);
+        }
+
+        return true;
     }
 
     /// <summary>

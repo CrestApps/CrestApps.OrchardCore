@@ -79,6 +79,7 @@ CrestApps.OrchardCore.ContactCenter.IContactCenterFeatureWorkManager #0 Singleto
 CrestApps.OrchardCore.ContactCenter.Services.ContactCenterFeatureLifecycleCoordinator #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterFeatureLifecycleCoordinator
 CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver #0 Scoped -> type:CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver
 CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityDispositionService
+CrestApps.OrchardCore.Omnichannel.Core.Services.IActivitySubjectWriter #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentItemActivitySubjectWriter
 CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityCompletionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivityCompletionService
 CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.AlwaysOpenBusinessHoursGate
 CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelActivityManager

@@ -844,9 +844,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public System.Collections.Generic.IDictionary<string, string> ActionPreparationNotes { get; set; }
         public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
-        public OrchardCore.ContentManagement.ContentItem Contact { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition Disposition { get; set; }
-        public OrchardCore.ContentManagement.ContentItem Subject { get; set; }
     }
     public sealed class SubjectActionOptions
     {
@@ -958,6 +956,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public ContentDefinitionOmnichannelContactTypeProvider(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager) { }
         public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContentItemActivitySubjectWriter : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivitySubjectWriter
+    {
+        public ContentItemActivitySubjectWriter(OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Services.ISubjectDefinitionProvider subjectDefinitionProvider) { }
+        public System.Threading.Tasks.Task<bool> ApplyAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetWritableFieldNamesAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> ReadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public static class ContentItemOmnichannelContactProjection
     {
         public static CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact Project(OrchardCore.ContentManagement.ContentItem contentItem) { }
@@ -1039,6 +1044,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public interface IActivityDispositionService
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> ApplyAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IActivitySubjectWriter
+    {
+        System.Threading.Tasks.Task<bool> ApplyAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetWritableFieldNamesAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> ReadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAutomatedActivityCompletionService
     {

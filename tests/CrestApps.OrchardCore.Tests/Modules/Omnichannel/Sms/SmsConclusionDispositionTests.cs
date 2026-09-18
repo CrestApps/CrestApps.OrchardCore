@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -411,6 +412,7 @@ public sealed class SmsConclusionDispositionTests
             actionCatalog.Object,
             Mock.Of<ISubjectFlowSettingsService>(),
             contentManager.Object,
+            new ContentItemOmnichannelContactWriter(contentManager.Object, Mock.Of<IPhoneNumberService>(), clock),
             session.Object,
             new FakeUserDirectory(),
             clock,

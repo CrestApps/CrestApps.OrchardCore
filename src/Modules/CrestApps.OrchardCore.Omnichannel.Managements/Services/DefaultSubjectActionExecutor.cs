@@ -4,6 +4,8 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.OrchardCore.Omnichannel.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.ContentManagement;
@@ -18,6 +20,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly ISourceCatalog<SubjectAction> _actionCatalog;
     private readonly ISubjectFlowSettingsService _subjectFlowSettingsService;
     private readonly IContentManager _contentManager;
+    private readonly IOmnichannelContactWriter _contactWriter;
     private readonly ISession _session;
     private readonly IUserDirectory _userDirectory;
     private readonly TimeProvider _timeProvider;
@@ -28,6 +31,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ISourceCatalog<SubjectAction> actionCatalog,
         ISubjectFlowSettingsService subjectFlowSettingsService,
         IContentManager contentManager,
+        IOmnichannelContactWriter contactWriter,
         ISession session,
         IUserDirectory userDirectory,
         TimeProvider timeProvider,
@@ -37,6 +41,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
         _contentManager = contentManager;
+        _contactWriter = contactWriter;
         _session = session;
         _userDirectory = userDirectory;
         _timeProvider = timeProvider;
@@ -80,7 +85,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
 
     private async Task ExecuteActionAsync(SubjectAction action, SubjectActionExecutionContext context)
     {
-        await ApplyCommunicationPreferencesAsync(action, context.Contact);
+        await ApplyCommunicationPreferencesAsync(action, context.Activity?.ContactContentItemId);
 
         switch (action.Source)
         {
@@ -222,9 +227,16 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             newActivity.CampaignId = flowSettings.CampaignId ?? activity.CampaignId;
         }
 
-        if (context.Contact is not null)
+        // Read here rather than taken from the caller, and read after the preference write above, so a
+        // follow-up is never addressed to somebody the same disposition just recorded an opt-out for.
+        if (!string.IsNullOrEmpty(activity.ContactContentItemId))
         {
-            newActivity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(context.Contact, newActivity.Channel);
+            var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+
+            if (contact is not null)
+            {
+                newActivity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(contact, newActivity.Channel);
+            }
         }
 
         await _session.SaveAsync(newActivity, collection: OmnichannelConstants.CollectionName);
@@ -235,9 +247,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         return await _subjectFlowSettingsService.FindConfiguredFlowSettingsAsync(subjectContentType);
     }
 
-    private async Task ApplyCommunicationPreferencesAsync(SubjectAction action, ContentItem contact)
+    private async Task ApplyCommunicationPreferencesAsync(SubjectAction action, string contactId)
     {
-        if (contact is null)
+        if (string.IsNullOrEmpty(contactId))
         {
             return;
         }
@@ -249,36 +261,19 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return;
         }
 
-        var now = _timeProvider.GetUtcNow().UtcDateTime;
-
-        contact.Alter<OmnichannelContactPart>(part =>
-        {
-            if (action.SetDoNotCall.HasValue)
+        // Through the writer rather than by altering the item here, so the preference reaches the
+        // published record the same way it does from every other place that records one. Altering the
+        // copy in memory is not enough: the lists that decide who gets dialled or messaged query the
+        // published record, and a customer could ask not to be called, be dispositioned exactly right,
+        // and be dialled again on the next load.
+        await _contactWriter.ApplyAsync(
+            contactId,
+            new OmnichannelContactChanges
             {
-                part.SetDoNotCall(action.SetDoNotCall.Value, now);
-            }
-
-            if (action.SetDoNotEmail.HasValue)
-            {
-                part.SetDoNotEmail(action.SetDoNotEmail.Value, now);
-            }
-
-            if (action.SetDoNotSms.HasValue)
-            {
-                part.SetDoNotSms(action.SetDoNotSms.Value, now);
-            }
-        });
-
-        // Altering the content item only changes the copy in memory. Nothing downstream reads that copy: the
-        // preference is read back from the contact's own record, and the lists that decide who gets dialled or
-        // messaged query the published one. Without these two lines a customer could ask not to be called, be
-        // dispositioned exactly right, and be dialled again on the next load -- which is what happened.
-        await _contentManager.UpdateAsync(contact);
-
-        if (contact.Published)
-        {
-            await _contentManager.PublishAsync(contact);
-        }
+                DoNotCall = action.SetDoNotCall,
+                DoNotEmail = action.SetDoNotEmail,
+                DoNotSms = action.SetDoNotSms,
+            });
     }
 
     private async Task<DateTime> ResolveScheduleDateAsync(
