@@ -1,8 +1,12 @@
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.WebCrawlers;
+using CrestApps.Core.AI.WebCrawlers.Strategies;
+using CrestApps.OrchardCore.AI.DataSources.WebCrawlers.Services;
 using CrestApps.OrchardCore.AI.DataSources.WebCrawlers.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -16,6 +20,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.WebCrawlers.Drivers;
 internal sealed class WebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
 {
     private readonly IAIDataSourceStore _dataSourceStore;
+    private readonly IReadOnlyList<WebCrawlerStrategyDescriptor> _strategies;
 
     internal readonly IStringLocalizer S;
 
@@ -23,17 +28,25 @@ internal sealed class WebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
     /// Initializes a new instance of the <see cref="WebCrawlerDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataSourceStore">The AI data source store.</param>
+    /// <param name="strategyOptions">The registered crawl strategies.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public WebCrawlerDisplayDriver(
         IAIDataSourceStore dataSourceStore,
+        IOptions<WebCrawlerStrategyOptions> strategyOptions,
         IStringLocalizer<WebCrawlerDisplayDriver> stringLocalizer)
     {
         _dataSourceStore = dataSourceStore;
+        _strategies = strategyOptions.Value.Strategies;
         S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(WebCrawler crawler, BuildDisplayContext context)
     {
+        if (!IsCrawler(crawler))
+        {
+            return Task.FromResult<IDisplayResult>(null);
+        }
+
         return CombineAsync(
             View("WebCrawler_Fields_SummaryAdmin", crawler).Location("Content:1"),
             View("WebCrawler_Buttons_SummaryAdmin", crawler).Location("Actions:5"),
@@ -44,6 +57,11 @@ internal sealed class WebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
 
     public override IDisplayResult Edit(WebCrawler crawler, BuildEditorContext context)
     {
+        if (!IsCrawler(crawler))
+        {
+            return null;
+        }
+
         return Initialize<WebCrawlerFieldsViewModel>("WebCrawlerFields_Edit", async model =>
         {
             model.DisplayText = crawler.DisplayText;
@@ -64,6 +82,11 @@ internal sealed class WebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
 
     public override async Task<IDisplayResult> UpdateAsync(WebCrawler crawler, UpdateEditorContext context)
     {
+        if (!IsCrawler(crawler))
+        {
+            return null;
+        }
+
         var model = new WebCrawlerFieldsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -90,4 +113,13 @@ internal sealed class WebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
 
         return Edit(crawler, context);
     }
+
+    /// <summary>
+    /// Determines whether this record is a web crawler rather than a file source, which the same record
+    /// type also stores.
+    /// </summary>
+    /// <param name="crawler">The record.</param>
+    /// <returns><see langword="true"/> when its source is a registered crawl strategy.</returns>
+    private bool IsCrawler(WebCrawler crawler)
+        => WebCrawlerRecords.IsCrawlStrategy(crawler.Source, _strategies);
 }

@@ -43,7 +43,10 @@ public sealed class Startup : StartupBase
             LocalFolderIngestionConnector.ConnectorName,
             (sp, _) => sp.GetRequiredService<TenantLocalFolderIngestionConnector>());
 
-        services.AddScoped<ITenantFileSourceRoot, TenantFileSourceRoot>();
+        // Singleton, not scoped: the folder is a pure function of the tenant's own identity and never
+        // changes for the life of the shell, and the options it feeds are themselves a singleton. A scoped
+        // registration here is a captive dependency, which the container refuses to build at all.
+        services.AddSingleton<ITenantFileSourceRoot, TenantFileSourceRoot>();
         services.AddTransient<IConfigureOptions<FileSourceOptions>, FileSourceOptionsConfiguration>();
 
         // Registers the YesSql-backed IWebCrawlerStore (which also stores file sources) and the knowledge

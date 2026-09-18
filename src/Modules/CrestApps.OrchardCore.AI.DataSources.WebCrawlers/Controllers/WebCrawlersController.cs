@@ -83,12 +83,7 @@ public sealed class WebCrawlersController : Controller
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value.GetPageSize());
-
-        var result = await _manager.PageAsync(pager.Page, pager.PageSize, new QueryContext
-        {
-            Sorted = true,
-            Name = options.Search,
-        });
+        var crawlers = await LoadCrawlersAsync(options.Search);
 
         var routeData = new RouteData();
 
@@ -101,11 +96,11 @@ public sealed class WebCrawlersController : Controller
         {
             Models = [],
             Options = options,
-            Pager = await shapeFactory.PagerAsync(pager, result.Count, routeData),
+            Pager = await shapeFactory.PagerAsync(pager, crawlers.Count, routeData),
             Sources = _strategies,
         };
 
-        foreach (var model in result.Entries)
+        foreach (var model in crawlers.Skip((pager.Page - 1) * pager.PageSize).Take(pager.PageSize))
         {
             viewModel.Models.Add(new CatalogEntryViewModel<WebCrawler>
             {
@@ -239,7 +234,7 @@ public sealed class WebCrawlersController : Controller
             return Forbid();
         }
 
-        var crawler = await _manager.FindByIdAsync(id);
+        var crawler = await FindCrawlerAsync(id);
 
         if (crawler == null)
         {
@@ -269,7 +264,7 @@ public sealed class WebCrawlersController : Controller
             return Forbid();
         }
 
-        var crawler = await _manager.FindByIdAsync(id);
+        var crawler = await FindCrawlerAsync(id);
 
         if (crawler == null)
         {
@@ -307,7 +302,7 @@ public sealed class WebCrawlersController : Controller
             return Forbid();
         }
 
-        var crawler = await _manager.FindByIdAsync(id);
+        var crawler = await FindCrawlerAsync(id);
 
         if (crawler == null)
         {
@@ -339,7 +334,7 @@ public sealed class WebCrawlersController : Controller
             return Forbid();
         }
 
-        var crawler = await _manager.FindByIdAsync(id);
+        var crawler = await FindCrawlerAsync(id);
 
         if (crawler == null)
         {
@@ -384,7 +379,7 @@ public sealed class WebCrawlersController : Controller
                     var counter = 0;
                     foreach (var id in itemIds)
                     {
-                        var crawler = await _manager.FindByIdAsync(id);
+                        var crawler = await FindCrawlerAsync(id);
 
                         if (crawler == null)
                         {
@@ -411,6 +406,52 @@ public sealed class WebCrawlersController : Controller
         }
 
         return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Loads every record whose source is a registered crawl strategy.
+    /// </summary>
+    /// <param name="search">An optional name filter.</param>
+    /// <returns>The matching crawlers, ordered by name.</returns>
+    /// <remarks>
+    /// Listed per strategy rather than paged over the whole catalog, because the same record type also
+    /// stores file sources and paging the catalog would show those here.
+    /// </remarks>
+    private async Task<IReadOnlyList<WebCrawler>> LoadCrawlersAsync(string search)
+    {
+        var records = new List<WebCrawler>();
+
+        foreach (var strategy in _strategies)
+        {
+            records.AddRange(await _manager.GetAsync(strategy.Strategy));
+        }
+
+        IEnumerable<WebCrawler> matches = records;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            matches = matches.Where(record =>
+                record.DisplayText?.Contains(search, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        return matches
+            .OrderBy(record => record.DisplayText, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Finds a record and refuses one that is not a web crawler, so a file source's id cannot be edited,
+    /// synchronized or deleted through these screens.
+    /// </summary>
+    /// <param name="id">The record id.</param>
+    /// <returns>The crawler, or <see langword="null"/>.</returns>
+    private async Task<WebCrawler> FindCrawlerAsync(string id)
+    {
+        var record = await _manager.FindByIdAsync(id);
+
+        return record is not null && WebCrawlerRecords.IsCrawlStrategy(record.Source, _strategies)
+            ? record
+            : null;
     }
 
     private bool TryGetStrategy(string source, out WebCrawlerStrategyDescriptor strategy)

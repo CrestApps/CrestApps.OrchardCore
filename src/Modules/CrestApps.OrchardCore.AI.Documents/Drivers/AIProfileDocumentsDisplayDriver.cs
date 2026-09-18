@@ -293,12 +293,53 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
     private static int? NormalizeMaxIndexableCharacters(int? value)
         => value is null ? null : Math.Max(0, value.Value);
 
+    /// <summary>
+    /// Finds which template this profile is being created from.
+    /// </summary>
+    /// <returns>The template id, or <see langword="null"/> when the profile is not from a template.</returns>
+    /// <remarks>
+    /// The selector belongs to another display driver, so its field arrives namespaced by that driver's
+    /// prefix. Reading the bare name alone finds nothing, which is why the template's documents were never
+    /// cloned onto a profile built from it. The query string is checked too, because applying a template
+    /// reloads the editor with it there.
+    /// </remarks>
+    private string ReadTemplateId()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+
+        if (request is null)
+        {
+            return null;
+        }
+
+        if (request.HasFormContentType)
+        {
+            foreach (var key in request.Form.Keys)
+            {
+                if (key.Equals("TemplateId", StringComparison.OrdinalIgnoreCase) ||
+                    key.EndsWith(".TemplateId", StringComparison.OrdinalIgnoreCase))
+                {
+                    var value = request.Form[key].ToString();
+
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+            }
+        }
+
+        var fromQuery = request.Query["templateId"].ToString();
+
+        return string.IsNullOrWhiteSpace(fromQuery) ? null : fromQuery;
+    }
+
     private async Task CloneTemplateDocumentsAsync(
         AIProfile profile,
         DocumentsMetadata documentsMetadata,
         IEnumerable<string> removedDocumentIds)
     {
-        var templateId = _httpContextAccessor.HttpContext?.Request?.Form["TemplateId"].ToString();
+        var templateId = ReadTemplateId();
 
         if (string.IsNullOrWhiteSpace(templateId))
         {
