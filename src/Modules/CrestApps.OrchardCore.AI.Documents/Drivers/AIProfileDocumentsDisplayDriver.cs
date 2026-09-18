@@ -100,6 +100,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             var documentsMetadata = profile.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
             model.DocumentRetrievalMode = documentsMetadata.RetrievalMode;
+            model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
+            model.DescribeFiguresInUploads = documentsMetadata.DescribeFiguresInUploads;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
         }).Location("Content:7#Knowledge;2");
 
@@ -144,6 +146,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.RetrievalMode = model.DocumentRetrievalMode;
+        documentsMetadata.MaxIndexableCharacters = NormalizeMaxIndexableCharacters(model.MaxIndexableCharacters);
+        documentsMetadata.DescribeFiguresInUploads = model.DescribeFiguresInUploads;
 
         if (context.Updater.ModelState.IsValid)
         {
@@ -231,7 +235,12 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                             file,
                             profile.ItemId,
                             AIConstants.DocumentReferenceTypes.Profile,
-                            embeddingGenerator);
+                            embeddingGenerator,
+                            // This profile's own answers when it gave them, the site's otherwise. Passing
+                            // nothing here would measure the profile's own knowledge files against the site
+                            // ceiling while its sessions were measured against the profile's.
+                            documentsMetadata.MaxIndexableCharacters,
+                            documentsMetadata.DescribeFiguresInUploads);
 
                         if (!result.Success)
                         {
@@ -276,6 +285,13 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
         return Edit(profile, context);
     }
+
+    /// <summary>
+    /// Keeps a blank field meaning "use the site default" and clamps a negative number to the "no limit"
+    /// zero, rather than storing a ceiling no upload could satisfy.
+    /// </summary>
+    private static int? NormalizeMaxIndexableCharacters(int? value)
+        => value is null ? null : Math.Max(0, value.Value);
 
     private async Task CloneTemplateDocumentsAsync(
         AIProfile profile,

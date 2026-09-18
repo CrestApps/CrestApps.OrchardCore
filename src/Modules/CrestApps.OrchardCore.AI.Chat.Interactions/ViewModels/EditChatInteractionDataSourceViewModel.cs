@@ -34,6 +34,11 @@ public class EditChatInteractionDataSourceViewModel
     public string Filter { get; set; }
 
     /// <summary>
+    /// Gets or sets the kinds of knowledge to retrieve, comma-separated. Empty means every kind.
+    /// </summary>
+    public string ObjectTypes { get; set; }
+
+    /// <summary>
     /// Gets or sets the data sources.
     /// </summary>
     [BindNever]

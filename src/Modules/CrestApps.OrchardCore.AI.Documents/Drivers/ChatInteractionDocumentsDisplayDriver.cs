@@ -56,7 +56,10 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
         {
             model.ItemId = interaction.ItemId;
             model.Documents = interaction.Documents ?? [];
-            model.DocumentRetrievalMode = interaction.GetOrCreate<DocumentsMetadata>().RetrievalMode;
+
+            var documentsMetadata = interaction.GetOrCreate<DocumentsMetadata>();
+            model.DocumentRetrievalMode = documentsMetadata.RetrievalMode;
+            model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
@@ -89,6 +92,10 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
         interaction.Alter<DocumentsMetadata>(metadata =>
         {
             metadata.RetrievalMode = model.DocumentRetrievalMode;
+            // Only the ceiling. The framework's interaction upload endpoint follows the site's own answer
+            // about describing figures whatever the interaction says, so storing one here would be storing
+            // a value nothing reads.
+            metadata.MaxIndexableCharacters = model.MaxIndexableCharacters is null ? null : Math.Max(0, model.MaxIndexableCharacters.Value);
         });
 
         // Documents are uploaded via minimal API endpoints, so we just return the current view
