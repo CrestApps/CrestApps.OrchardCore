@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.OrchardCore.Omnichannel.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;
@@ -46,6 +48,9 @@ public sealed partial class VoiceAgentConversationLoop
         var deploymentManager = services.GetRequiredService<IAIDeploymentManager>();
         var contextBuilder = services.GetRequiredService<IAICompletionContextBuilder>();
         var contentManager = services.GetRequiredService<IContentManager>();
+        var contactResolver = services.GetRequiredService<IOmnichannelContactResolver>();
+        var contactWriter = services.GetRequiredService<IOmnichannelContactWriter>();
+        var subjectDefinitionProvider = services.GetRequiredService<ISubjectDefinitionProvider>();
         var dispositionCatalog = services.GetRequiredService<ICatalog<OmnichannelDisposition>>();
         var actionCatalog = services.GetRequiredService<ISourceCatalog<SubjectAction>>();
         var executor = services.GetRequiredService<ISubjectActionExecutor>();
@@ -99,14 +104,16 @@ public sealed partial class VoiceAgentConversationLoop
         var contact = string.IsNullOrWhiteSpace(activity.ContactContentItemId)
             ? null
             : await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+        var contactRecord = string.IsNullOrWhiteSpace(activity.ContactContentItemId)
+            ? null
+            : await contactResolver.FindByIdAsync(activity.ContactContentItemId);
         var subject = activity.Subject ?? (string.IsNullOrWhiteSpace(activity.SubjectContentType) ? null : await contentManager.NewAsync(activity.SubjectContentType));
 
         // The subject's updatable text fields, read from the content type definition so the model is asked for the
         // exact fields that exist (rather than authoring a free-form content item, which produced values in shapes
         // the field editors could not read).
-        var definitionManager = services.GetRequiredService<IContentDefinitionManager>();
         var subjectTextFields = allowUpdateSubject && !string.IsNullOrWhiteSpace(activity.SubjectContentType)
-            ? OmnichannelSubjectWriter.GetSubjectTextFields(await definitionManager.GetTypeDefinitionAsync(activity.SubjectContentType))
+            ? (await subjectDefinitionProvider.FindAsync(activity.SubjectContentType))?.Fields ?? []
             : [];
 
         // The prompt lives in Templates/Prompts as a file, like every other system prompt here, so it can be read
@@ -134,19 +141,24 @@ public sealed partial class VoiceAgentConversationLoop
         if (allowUpdateSubject && subject is not null && subjectTextFields.Count > 0)
         {
             var subjectContent = (JsonObject)subject.Content;
-            var fieldList = subjectTextFields.Select(f =>
+            var fieldList = subjectTextFields.Select(field =>
             {
-                var key = $"{f.Part}.{f.Field}";
-                var current = (subjectContent[f.Part]?[f.Field]?["Text"])?.ToString();
-                return string.IsNullOrWhiteSpace(current) ? key : $"{key} (current: {current})";
+                // The definition names a field as "Part.Field", which is both the key the model is
+                // asked for and the path the value is read back from.
+                var separator = field.Name.IndexOf('.', StringComparison.Ordinal);
+                var current = separator <= 0
+                    ? null
+                    : (subjectContent[field.Name[..separator]]?[field.Name[(separator + 1)..]]?["Text"])?.ToString();
+
+                return string.IsNullOrWhiteSpace(current) ? field.Name : $"{field.Name} (current: {current})";
             });
 
             userPrompt += $"{Environment.NewLine}{Environment.NewLine}Subject fields you may set (return these keys in SubjectFields): {string.Join("; ", fieldList)}";
         }
 
-        if (allowUpdateContact && contact is not null)
+        if (allowUpdateContact && contactRecord is not null)
         {
-            userPrompt += $"{Environment.NewLine}{Environment.NewLine}Current contact email on file: {OmnichannelSubjectWriter.GetContactEmail(contact) ?? "(none)"}";
+            userPrompt += $"{Environment.NewLine}{Environment.NewLine}Current contact email on file: {contactRecord.GetPrimaryEmail() ?? "(none)"}";
         }
 
         var conclusionContext = await contextBuilder.BuildAsync(profile, context =>
@@ -213,7 +225,7 @@ public sealed partial class VoiceAgentConversationLoop
         // known fields. Each value is written into the field's real structure (a TextField's Text property) rather
         // than merging a model-authored content item, which produced shapes the field editors could not read. The
         // subject lives on the activity, so it must be applied before the activity is persisted below.
-        if (allowUpdateSubject && subject is not null && OmnichannelSubjectWriter.ApplySubjectFields(subject, result?.SubjectFields, subjectTextFields))
+        if (allowUpdateSubject && subject is not null && ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, result?.SubjectFields, subjectTextFields))
         {
             concluded.Subject = subject;
         }
@@ -238,11 +250,9 @@ public sealed partial class VoiceAgentConversationLoop
         // is durably committed above — a failing contact save cannot then roll back the disposition. Rather than
         // deep-merging a model-authored content item (which appends duplicate contact-method items and cannot
         // build a correctly structured EmailAddress), we upsert only a captured email into the ContactMethods bag.
-        if (allowUpdateContact && contact is not null &&
-            await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contentManager, contact, result?.ContactEmail))
+        if (allowUpdateContact && contactRecord is not null &&
+            await contactWriter.ApplyAsync(contactRecord.Id, new OmnichannelContactChanges { Email = result?.ContactEmail }))
         {
-            await contentManager.UpdateAsync(contact);
-
             if (_logger.IsEnabled(LogLevel.Information))
             {
                 _logger.LogInformation("AI voice activity '{ActivityId}' saved a customer-provided email to the contact.", activityId.SanitizeLogValue());

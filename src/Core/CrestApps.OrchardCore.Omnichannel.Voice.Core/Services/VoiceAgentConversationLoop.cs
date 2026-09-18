@@ -12,6 +12,7 @@ using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
 using CrestApps.OrchardCore.Telephony.Services;
@@ -66,6 +67,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
+    private readonly IOmnichannelContactResolver _contactResolver;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
@@ -88,6 +90,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IRealtimeVoiceConversationRunner realtimeRunner,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
+        IOmnichannelContactResolver contactResolver,
         IAfterCommitTaskQueue afterCommitTaskQueue,
         TimeProvider timeProvider,
         ILogger<VoiceAgentConversationLoop> logger)
@@ -111,6 +114,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _realtimeRunner = realtimeRunner;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
+        _contactResolver = contactResolver;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -347,7 +351,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             return null;
         }
 
-        var contact = await _contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+        var contact = await _contactResolver.FindByIdAsync(activity.ContactContentItemId, cancellationToken);
 
         return string.IsNullOrWhiteSpace(contact?.DisplayText) ? null : contact.DisplayText.Trim();
     }

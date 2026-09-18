@@ -1,4 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.OrchardCore.Omnichannel.Services;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
@@ -674,16 +676,19 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                         var client = await clientFactory.CreateChatClientAsync(deployment, builder => builder.UseDefaultResilience());
 
                         var contentManager = scope.ServiceProvider.GetRequiredService<IContentManager>();
-                        var contentDefinitionManager = scope.ServiceProvider.GetRequiredService<IContentDefinitionManager>();
+                        var contactResolver = scope.ServiceProvider.GetRequiredService<IOmnichannelContactResolver>();
+                        var contactWriter = scope.ServiceProvider.GetRequiredService<IOmnichannelContactWriter>();
+                        var subjectDefinitionProvider = scope.ServiceProvider.GetRequiredService<ISubjectDefinitionProvider>();
 
                         ContentItem subject = null;
                         ContentItem contact = null;
+                        OmnichannelContact contactRecord = null;
 
                         // The subject's TextField fields are the only structure the model may set; it is shown their keys
                         // ("Part.Field") and asked to return values, rather than authoring a content item (which produced
                         // shapes the field editors could not read and never persisted).
                         var subjectTextFields = activity.AllowAIToUpdateSubject && !string.IsNullOrWhiteSpace(activity.SubjectContentType)
-                            ? OmnichannelSubjectWriter.GetSubjectTextFields(await contentDefinitionManager.GetTypeDefinitionAsync(activity.SubjectContentType))
+                            ? (await subjectDefinitionProvider.FindAsync(activity.SubjectContentType))?.Fields ?? []
                             : [];
 
                         var sessionPrompts = await deferredPromptStore.GetPromptsAsync(chatSession.SessionId);
@@ -711,18 +716,18 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             userPrompt +=
                                 $"""
 
-                            Subject field keys: {JsonSerializer.Serialize(subjectTextFields.Select(f => $"{f.Part}.{f.Field}"))}
+                            Subject field keys: {JsonSerializer.Serialize(subjectTextFields.Select(field => field.Name))}
                             """;
                         }
 
                         if (activity.AllowAIToUpdateContact)
                         {
-                            contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
+                            contactRecord ??= await contactResolver.FindByIdAsync(activity.ContactContentItemId);
 
                             userPrompt +=
                                 $"""
 
-                            Current contact email: {OmnichannelSubjectWriter.GetContactEmail(contact) ?? "(none)"}
+                            Current contact email: {contactRecord?.GetPrimaryEmail() ?? "(none)"}
                             """;
                         }
 
@@ -741,7 +746,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             // Gated, field-aware subject write-back: set only known TextField fields, into their real Text
                             // structure, instead of merging a model-authored content item.
                             if (activity.AllowAIToUpdateSubject && subject is not null &&
-                                OmnichannelSubjectWriter.ApplySubjectFields(subject, result.Result.SubjectFields, subjectTextFields))
+                                ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, result.Result.SubjectFields, subjectTextFields))
                             {
                                 omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
 
@@ -753,10 +758,11 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                             // Gated contact write-back: upsert only a captured email into the ContactMethods bag
                             // instead of deep-merging a model-authored content item.
-                            if (activity.AllowAIToUpdateContact && contact is not null &&
-                                await OmnichannelSubjectWriter.TryApplyContactEmailAsync(contentManager, contact, result.Result.ContactEmail))
+                            if (activity.AllowAIToUpdateContact && contactRecord is not null)
                             {
-                                await contentManager.UpdateAsync(contact);
+                                await contactWriter.ApplyAsync(
+                                    contactRecord.Id,
+                                    new OmnichannelContactChanges { Email = result.Result.ContactEmail });
                             }
 
                             if (result.Result.Concluded || hangupRequested)

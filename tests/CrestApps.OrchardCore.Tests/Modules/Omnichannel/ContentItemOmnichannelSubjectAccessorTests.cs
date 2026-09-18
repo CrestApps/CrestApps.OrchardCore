@@ -1,21 +1,22 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Models;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 
 /// <summary>
-/// Verifies the automated AI voice conclusion writes model-provided subject values into the subject's real
-/// TextField structure (its <c>Text</c> property), rather than merging a free-form content item whose invented
-/// shape the field editors could not read.
+/// Verifies that model-provided subject values are written into the subject's real text-field structure
+/// (its <c>Text</c> property), rather than merging a free-form content item whose invented shape the
+/// field editors could not read.
 /// </summary>
-public sealed class OmnichannelSubjectWriterSubjectFieldsTests
+public sealed class ContentItemOmnichannelSubjectAccessorTests
 {
-    private static readonly List<(string Part, string Field)> _fields =
+    private static readonly List<SubjectFieldDefinition> _fields =
     [
-        ("LeadGeneration", "VehicleInterest"),
-        ("LeadGeneration", "Budget"),
-        ("LeadGeneration", "Timeline"),
+        new() { Name = "LeadGeneration.VehicleInterest" },
+        new() { Name = "LeadGeneration.Budget" },
+        new() { Name = "LeadGeneration.Timeline" },
     ];
 
     private static string Text(ContentItem item, string part, string field)
@@ -32,7 +33,7 @@ public sealed class OmnichannelSubjectWriterSubjectFieldsTests
             ["LeadGeneration.Timeline"] = "this month",
         };
 
-        var changed = OmnichannelSubjectWriter.ApplySubjectFields(subject, values, _fields);
+        var changed = ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, values, _fields);
 
         Assert.True(changed);
 
@@ -48,7 +49,7 @@ public sealed class OmnichannelSubjectWriterSubjectFieldsTests
         var subject = new ContentItem { ContentType = "LeadGeneration" };
         var values = new Dictionary<string, string> { ["VehicleInterest"] = "sedan" };
 
-        var changed = OmnichannelSubjectWriter.ApplySubjectFields(subject, values, _fields);
+        var changed = ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, values, _fields);
 
         Assert.True(changed);
         Assert.Equal("sedan", Text(subject, "LeadGeneration", "VehicleInterest"));
@@ -64,7 +65,7 @@ public sealed class OmnichannelSubjectWriterSubjectFieldsTests
             ["LeadGeneration.Budget"] = "   ",
         };
 
-        var changed = OmnichannelSubjectWriter.ApplySubjectFields(subject, values, _fields);
+        var changed = ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, values, _fields);
 
         Assert.False(changed);
         Assert.Null(Text(subject, "LeadGeneration", "Budget"));
@@ -75,8 +76,8 @@ public sealed class OmnichannelSubjectWriterSubjectFieldsTests
     {
         var subject = new ContentItem { ContentType = "LeadGeneration" };
 
-        Assert.False(OmnichannelSubjectWriter.ApplySubjectFields(subject, null, _fields));
-        Assert.False(OmnichannelSubjectWriter.ApplySubjectFields(subject, new Dictionary<string, string>(), _fields));
-        Assert.False(OmnichannelSubjectWriter.ApplySubjectFields(subject, new Dictionary<string, string> { ["LeadGeneration.Budget"] = "x" }, []));
+        Assert.False(ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, null, _fields));
+        Assert.False(ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, new Dictionary<string, string>(), _fields));
+        Assert.False(ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, new Dictionary<string, string> { ["LeadGeneration.Budget"] = "x" }, []));
     }
 }

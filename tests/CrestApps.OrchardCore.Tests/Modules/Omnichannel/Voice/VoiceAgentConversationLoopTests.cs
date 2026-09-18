@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+﻿using CrestApps.OrchardCore.Tests.Doubles;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Chat;
@@ -870,6 +871,7 @@ public sealed class VoiceAgentConversationLoopTests
                 Realtime,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
+                new FakeOmnichannelContactStore(),
                 AfterCommitQueue,
                 Mock.Of<TimeProvider>(),
                 NullLogger<VoiceAgentConversationLoop>.Instance);

@@ -11,9 +11,12 @@ using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.OrchardCore.Omnichannel.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -178,8 +181,8 @@ public sealed class VoiceCallConclusionWiringTests
         await harness.ConcludeAsync();
 
         // Assert
-        Assert.Equal("jamie@example.com", OmnichannelSubjectWriter.GetContactEmail(harness.Contact));
-        harness.ContentManager.Verify(manager => manager.UpdateAsync(harness.Contact), Times.Once);
+        Assert.Equal("jamie@example.com", harness.ContactRecord.GetPrimaryEmail());
+        Assert.Equal(1, harness.Contacts.AppliedCount);
     }
 
     [Fact]
@@ -201,8 +204,8 @@ public sealed class VoiceCallConclusionWiringTests
         await harness.ConcludeAsync();
 
         // Assert
-        Assert.Null(OmnichannelSubjectWriter.GetContactEmail(harness.Contact));
-        harness.ContentManager.Verify(manager => manager.UpdateAsync(It.IsAny<ContentItem>()), Times.Never);
+        Assert.Null(harness.ContactRecord.GetPrimaryEmail());
+        Assert.Equal(0, harness.Contacts.AppliedCount);
     }
 
     /// <summary>
@@ -308,6 +311,13 @@ public sealed class VoiceCallConclusionWiringTests
                 ContentItemId = "contact-1",
                 DisplayText = "Jamie Rivera",
             };
+
+            ContactRecord = Contacts.Add(new OmnichannelContact
+            {
+                Id = "contact-1",
+                DefinitionName = "Customer",
+                DisplayText = "Jamie Rivera",
+            });
 
             // A call two people spoke on. Tests that need a silent one empty this again.
             _prompts =
@@ -441,6 +451,9 @@ public sealed class VoiceCallConclusionWiringTests
                 // bare mock here would otherwise hand back a null type definition and silently offer the model no
                 // fields to fill in.
                 .AddSingleton(Mock.Of<IContentDefinitionManager>())
+                .AddSingleton<IOmnichannelContactResolver>(Contacts)
+                .AddSingleton<IOmnichannelContactWriter>(Contacts)
+                .AddSingleton(Mock.Of<ISubjectDefinitionProvider>())
                 .BuildServiceProvider();
 
             _loop = new VoiceAgentConversationLoop(
@@ -462,6 +475,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IRealtimeVoiceConversationRunner>(),
                 Mock.Of<ILiquidTemplateManager>(),
                 ContentManager.Object,
+                Contacts,
                 new RecordingAfterCommitTaskQueue(),
                 new FakeTimeProvider(_now),
                 NullLogger<VoiceAgentConversationLoop>.Instance);
@@ -472,6 +486,10 @@ public sealed class VoiceCallConclusionWiringTests
         public ContentItem Contact { get; }
 
         public Mock<IContentManager> ContentManager { get; }
+
+        public FakeOmnichannelContactStore Contacts { get; } = new();
+
+        public OmnichannelContact ContactRecord { get; }
 
         public List<OmnichannelDisposition> Dispositions { get; } = [];
 
