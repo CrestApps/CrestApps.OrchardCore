@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.BackgroundTasks;
@@ -19,22 +18,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.BackgroundTasks;
 public sealed class SmsBroadcastBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var broadcastService = serviceProvider.GetRequiredService<ISmsBroadcastService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<SmsBroadcastBackgroundTask>>();
-
-        try
-        {
-            await broadcastService.ProcessPendingAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while processing SMS broadcasts.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ISmsBroadcastCycle>().RunAsync(cancellationToken);
 }

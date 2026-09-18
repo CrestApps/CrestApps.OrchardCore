@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Asterisk.BackgroundTasks;
@@ -20,27 +19,6 @@ namespace CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 public sealed class AsteriskRecordingIngestBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var ingestService = serviceProvider.GetRequiredService<IAsteriskRecordingIngestService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<AsteriskRecordingIngestBackgroundTask>>();
-
-        try
-        {
-            var ingested = await ingestService.ProcessDueAsync(cancellationToken);
-
-            if (ingested > 0 && logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("Ingested {Count} Asterisk recording(s) into the media store.", ingested);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while ingesting Asterisk recordings.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IAsteriskRecordingIngestCycle>().RunAsync(cancellationToken);
 }

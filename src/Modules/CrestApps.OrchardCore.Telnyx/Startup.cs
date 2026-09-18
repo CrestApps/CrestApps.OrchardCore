@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Telephony.Extensions;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx.BackgroundTasks;
+using CrestApps.OrchardCore.Telnyx.Core.Services;
 using CrestApps.OrchardCore.Telnyx.Drivers;
 using CrestApps.OrchardCore.Telnyx.Endpoints;
 using CrestApps.OrchardCore.Telnyx.Indexes;
@@ -124,9 +125,11 @@ public sealed class Startup : StartupBase
         // Orphaned-call reconciliation: the only path that can see a call placed immediately before a restart,
         // for which no interaction was ever written and which no local sweep can therefore reach.
         services.AddScoped<TelnyxOrphanedCallReconciler>();
+        services.AddBackgroundCycle<ITelnyxOrphanedCallReconciliationCycle, TelnyxOrphanedCallReconciliationCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelnyxOrphanedCallReconciliationBackgroundTask>());
 
         services.AddSingleton<ISoftPhoneHealthMetrics, SoftPhoneHealthMetrics>();
+        services.AddBackgroundCycle<ISoftPhoneHealthCanaryCycle, SoftPhoneHealthCanaryCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SoftPhoneHealthCanaryBackgroundTask>());
     }
 
@@ -179,6 +182,7 @@ public sealed class DialerStartup : StartupBase
 
         services.AddIndexProvider<TelnyxRecordingIngestJobIndexProvider>();
         services.AddDataMigration<TelnyxRecordingIngestJobMigrations>();
+        services.AddBackgroundCycle<ITelnyxRecordingIngestCycle, TelnyxRecordingIngestCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelnyxRecordingIngestBackgroundTask>());
     }
 }

@@ -47,7 +47,9 @@ CrestApps.OrchardCore.Asterisk.Services.IAsteriskAriClient #0 Scoped -> type:Cre
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskCallTeardownService #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskCallTeardownService
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskChannelOwnershipGuard #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskChannelOwnershipGuard
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskChannelTenantBindingStore #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskChannelTenantBindingStore
+CrestApps.OrchardCore.Asterisk.Services.IAsteriskInboundReconciliationCycle #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskInboundReconciliationCycle
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskPendingCallerTerminationRegistry #0 Singleton -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskPendingCallerTerminationRegistry
+CrestApps.OrchardCore.Asterisk.Services.IAsteriskPjsipCredentialCleanupCycle #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskPjsipCredentialCleanupCycle
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskPjsipCredentialIssuer #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskPjsipCredentialIssuer
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskPjsipCredentialLeaseStore #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskPjsipCredentialLeaseStore
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskPjsipDialogTerminator #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskPjsipDialogTerminator
@@ -59,6 +61,7 @@ CrestApps.OrchardCore.Asterisk.Services.IAsteriskProviderStateReconciler #3 Scop
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskRealtimeVoiceEventBridge #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskAgentChannelReadyBridge
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskRealtimeVoiceEventBridge #1 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskInboundCallOfferBridge
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskRealtimeVoiceListener #0 Singleton -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskRealtimeVoiceListener
+CrestApps.OrchardCore.Asterisk.Services.IAsteriskRecordingIngestCycle #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskRecordingIngestCycle
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskRecordingIngestJobStore #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskRecordingIngestJobStore
 CrestApps.OrchardCore.Asterisk.Services.IAsteriskRecordingIngestService #0 Scoped -> type:CrestApps.OrchardCore.Asterisk.Services.AsteriskRecordingIngestService
 CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping #0 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterFeatureCapabilityMapping
@@ -278,6 +281,7 @@ CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionExecutor #0 Scoped
 CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeSubjectFlowSettingsService
 CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader
 CrestApps.OrchardCore.Omnichannel.Managements.Services.IActivityBatchLoadCoordinator #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityBatchLoadCoordinator
+CrestApps.OrchardCore.Omnichannel.Managements.Services.IAutomatedActivitiesProcessorCycle #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivitiesProcessorCycle
 CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContactDefinitionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContactDefinitionService
 CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider #0 Singleton -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider
 CrestApps.OrchardCore.Omnichannel.Services.IContactDefinitionProvider #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeContactDefinitionProvider
@@ -293,6 +297,7 @@ CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver #0 Singl
 CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionManager #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.TelephonyExtensionManager
 CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionResolver #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.TelephonyExtensionResolver
 CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionStore #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.TelephonyExtensionStore
+CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyInteractionReconciliationCycle #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.TelephonyInteractionReconciliationCycle
 CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.VoiceIngressGate
 CrestApps.OrchardCore.Telephony.Drivers.SoftPhonePartDisplayDriver #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Drivers.SoftPhonePartDisplayDriver
 CrestApps.OrchardCore.Telephony.IIncomingCallContextProvider #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterIncomingCallContextProvider

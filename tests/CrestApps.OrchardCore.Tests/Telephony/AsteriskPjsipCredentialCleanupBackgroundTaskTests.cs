@@ -42,6 +42,8 @@ public sealed class AsteriskPjsipCredentialCleanupBackgroundTaskTests
         services.AddSingleton(credentialIssuer);
         services.AddLogging();
 
+        services.AddScoped<IAsteriskPjsipCredentialCleanupCycle, AsteriskPjsipCredentialCleanupCycle>();
+
         return services.BuildServiceProvider();
     }
 

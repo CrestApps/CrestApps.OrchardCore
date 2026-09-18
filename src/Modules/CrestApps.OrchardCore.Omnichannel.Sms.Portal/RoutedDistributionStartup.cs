@@ -41,6 +41,7 @@ public sealed class RoutedDistributionStartup : StartupBase
             .Replace(ServiceDescriptor.Scoped<ISmsRoutingStrategy, LeastLoadedSmsRoutingStrategy>())
             .AddScoped<ISmsRoutedReassignmentService, SmsRoutedReassignmentService>();
 
+        services.AddBackgroundCycle<ISmsRoutedReassignmentCycle, SmsRoutedReassignmentCycle>();
         services.AddSingleton<IBackgroundTask, SmsRoutedReassignmentBackgroundTask>();
     }
 }

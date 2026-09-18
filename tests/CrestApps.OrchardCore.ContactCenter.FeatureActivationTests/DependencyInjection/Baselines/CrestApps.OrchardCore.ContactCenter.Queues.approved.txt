@@ -164,6 +164,7 @@ CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionExecutor #0 Scoped
 CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeSubjectFlowSettingsService
 CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader
 CrestApps.OrchardCore.Omnichannel.Managements.Services.IActivityBatchLoadCoordinator #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityBatchLoadCoordinator
+CrestApps.OrchardCore.Omnichannel.Managements.Services.IAutomatedActivitiesProcessorCycle #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivitiesProcessorCycle
 CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContactDefinitionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContactDefinitionService
 CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider #0 Singleton -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider
 CrestApps.OrchardCore.Omnichannel.Services.IContactDefinitionProvider #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeContactDefinitionProvider

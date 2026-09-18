@@ -1,7 +1,5 @@
-using CrestApps.OrchardCore.Telnyx.Services;
+using CrestApps.OrchardCore.Telnyx.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Telnyx.BackgroundTasks;
@@ -30,48 +28,5 @@ public sealed class SoftPhoneHealthCanaryBackgroundTask : IBackgroundTask
 
     /// <inheritdoc/>
     public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var options = serviceProvider.GetRequiredService<IOptionsMonitor<TelnyxOptions>>().CurrentValue;
-
-        // Nothing to canary when the provider is not configured.
-        if (!options.IsConfigured)
-        {
-            return Task.CompletedTask;
-        }
-
-        var metrics = serviceProvider.GetRequiredService<ISoftPhoneHealthMetrics>();
-        var logger = serviceProvider.GetRequiredService<ILogger<SoftPhoneHealthCanaryBackgroundTask>>();
-        var snapshot = metrics.GetSnapshot();
-        var credentialAttempts = snapshot.CredentialsIssued + snapshot.CredentialFailures;
-
-        if (credentialAttempts >= MinCredentialAttemptsBeforeAlert &&
-            snapshot.CredentialSuccessRate < CredentialSuccessRateAlertThreshold)
-        {
-            logger.LogWarning(
-                "Soft phone health canary: credential issuance success rate {Rate:P0} ({Issued} issued / {Failures} failed) is below the alert threshold since {Since:o}. Webhooks: {WebhooksOk} processed / {WebhookFailures} failed.",
-                snapshot.CredentialSuccessRate,
-                snapshot.CredentialsIssued,
-                snapshot.CredentialFailures,
-                snapshot.SinceUtc,
-                snapshot.WebhooksProcessed,
-                snapshot.WebhookFailures);
-
-            return Task.CompletedTask;
-        }
-
-        if (logger.IsEnabled(LogLevel.Information))
-        {
-            logger.LogInformation(
-                "Soft phone health canary: credentials {Issued} issued / {Failures} failed (success {Rate:P0}); webhooks {WebhooksOk} processed / {WebhookFailures} failed (success {WebhookRate:P0}) since {Since:o}.",
-                snapshot.CredentialsIssued,
-                snapshot.CredentialFailures,
-                snapshot.CredentialSuccessRate,
-                snapshot.WebhooksProcessed,
-                snapshot.WebhookFailures,
-                snapshot.WebhookSuccessRate,
-                snapshot.SinceUtc);
-        }
-
-        return Task.CompletedTask;
-    }
+        => serviceProvider.GetRequiredService<ISoftPhoneHealthCanaryCycle>().RunAsync(cancellationToken);
 }

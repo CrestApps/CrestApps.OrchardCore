@@ -1,6 +1,5 @@
-using CrestApps.OrchardCore.Telnyx.Services;
+using CrestApps.OrchardCore.Telnyx.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Telnyx.BackgroundTasks;
@@ -21,27 +20,6 @@ namespace CrestApps.OrchardCore.Telnyx.BackgroundTasks;
 public sealed class TelnyxRecordingIngestBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var ingestService = serviceProvider.GetRequiredService<ITelnyxRecordingIngestService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<TelnyxRecordingIngestBackgroundTask>>();
-
-        try
-        {
-            var ingested = await ingestService.ProcessDueAsync(cancellationToken);
-
-            if (ingested > 0 && logger.IsEnabled(LogLevel.Debug))
-            {
-                logger.LogDebug("Ingested {Count} Telnyx recording(s) into the media store.", ingested);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while ingesting Telnyx recordings.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ITelnyxRecordingIngestCycle>().RunAsync(cancellationToken);
 }

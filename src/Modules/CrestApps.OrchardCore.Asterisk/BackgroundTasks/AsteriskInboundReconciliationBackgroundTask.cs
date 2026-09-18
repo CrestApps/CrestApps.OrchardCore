@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Asterisk.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Asterisk.BackgroundTasks;
@@ -23,34 +22,6 @@ namespace CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 public sealed class AsteriskInboundReconciliationBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        // The service provider is the tenant's scoped container (Orchard runs background tasks per tenant), so the
-        // resolved reconcilers, binding store, and ARI client are all scoped to this tenant — the sweep can never
-        // read or act on another tenant's channels. Every configured tenant listener reconciles under the canonical
-        // voice provider technical name, and both inbound and agent-leg bindings are stamped with it, so the sweep
-        // uses the same name to match this tenant's Asterisk bindings.
-        var reconcilers = serviceProvider.GetServices<IAsteriskProviderStateReconciler>();
-        var logger = serviceProvider.GetRequiredService<ILogger<AsteriskInboundReconciliationBackgroundTask>>();
-
-        foreach (var reconciler in reconcilers)
-        {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                break;
-            }
-
-            try
-            {
-                await reconciler.ReconcileAsync(AsteriskConstants.ProviderTechnicalName, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(
-                    ex,
-                    "The periodic Asterisk channel binding reconciliation sweep failed for provider {ProviderName}.",
-                    AsteriskConstants.ProviderTechnicalName);
-            }
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<IAsteriskInboundReconciliationCycle>().RunAsync(cancellationToken);
 }

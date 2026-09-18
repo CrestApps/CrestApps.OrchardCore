@@ -118,6 +118,7 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension> FindByNumberAsync(string number, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITelephonyInteractionReconciliationCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle { }
     public interface IVoiceIngressGate
     {
         System.Threading.Tasks.Task<System.IAsyncDisposable> AcquireAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
@@ -150,6 +151,11 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
         protected override bool CheckConcurrency { get; }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension> FindByNumberAsync(string number, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class TelephonyInteractionReconciliationCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyInteractionReconciliationCycle
+    {
+        public TelephonyInteractionReconciliationCycle(CrestApps.OrchardCore.Telephony.ITelephonyInteractionSynchronizationService synchronizationService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Core.Services.TelephonyInteractionReconciliationCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class VoiceIngressGate : CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate
     {

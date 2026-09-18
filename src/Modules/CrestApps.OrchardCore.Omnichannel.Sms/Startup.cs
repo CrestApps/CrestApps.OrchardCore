@@ -34,10 +34,12 @@ public sealed class Startup : StartupBase
 
         // Re-drives automated SMS conversations whose in-memory reply generation was lost (for example on a restart),
         // so an owed reply is not left stranded and the no-response timeout does not wrongly fail the conversation.
+        services.AddBackgroundCycle<ISmsOwedReplyRecoveryCycle, SmsOwedReplyRecoveryCycle>();
         services.AddSingleton<IBackgroundTask, SmsOwedReplyRecoveryBackgroundTask>();
 
         // Proactively re-engages automated SMS contacts who have gone quiet (when the campaign enabled it), gated by
         // the campaign's business-hours calendar so nudges are never sent after hours.
+        services.AddBackgroundCycle<ISmsReEngagementCycle, SmsReEngagementCycle>();
         services.AddSingleton<IBackgroundTask, SmsReEngagementBackgroundTask>();
 
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));

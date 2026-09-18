@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Models;
 using Microsoft.Extensions.Time.Testing;
 using System.Collections.Concurrent;
@@ -272,6 +273,8 @@ public sealed class AutomatedActivitiesProcessorBackgroundTaskTests
         // Every due activity names a contact, and the contact is what says whether we are still allowed to reach
         // them. A harness with no way to answer that question would be testing a pass that cannot run.
         services.AddSingleton(contentManager ?? ContactsWhoHaveNotOptedOut());
+
+        services.AddScoped<IAutomatedActivitiesProcessorCycle, AutomatedActivitiesProcessorCycle>();
 
         return services.BuildServiceProvider();
     }

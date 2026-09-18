@@ -1,5 +1,6 @@
 using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -350,8 +351,9 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
             .ReturnsAsync(1);
         var services = new ServiceCollection()
             .AddSingleton(synchronizationService.Object)
-            .AddSingleton<ILogger<TelephonyInteractionReconciliationBackgroundTask>>(
-                NullLogger<TelephonyInteractionReconciliationBackgroundTask>.Instance)
+            .AddSingleton<ILogger<TelephonyInteractionReconciliationCycle>>(
+                NullLogger<TelephonyInteractionReconciliationCycle>.Instance)
+            .AddScoped<ITelephonyInteractionReconciliationCycle, TelephonyInteractionReconciliationCycle>()
             .BuildServiceProvider();
         var task = new TelephonyInteractionReconciliationBackgroundTask();
 

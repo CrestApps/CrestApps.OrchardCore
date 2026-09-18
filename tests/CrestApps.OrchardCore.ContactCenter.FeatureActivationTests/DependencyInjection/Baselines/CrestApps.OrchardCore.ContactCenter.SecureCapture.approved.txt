@@ -232,6 +232,7 @@ CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionExecutor #0 Scoped
 CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeSubjectFlowSettingsService
 CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader
 CrestApps.OrchardCore.Omnichannel.Managements.Services.IActivityBatchLoadCoordinator #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityBatchLoadCoordinator
+CrestApps.OrchardCore.Omnichannel.Managements.Services.IAutomatedActivitiesProcessorCycle #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivitiesProcessorCycle
 CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContactDefinitionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContactDefinitionService
 CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider #0 Singleton -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider
 CrestApps.OrchardCore.Omnichannel.Services.IContactDefinitionProvider #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeContactDefinitionProvider
@@ -247,6 +248,7 @@ CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver #0 Singl
 CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionManager #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.TelephonyExtensionManager
 CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionResolver #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.TelephonyExtensionResolver
 CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionStore #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.TelephonyExtensionStore
+CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyInteractionReconciliationCycle #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.TelephonyInteractionReconciliationCycle
 CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.VoiceIngressGate
 CrestApps.OrchardCore.Telephony.IIncomingCallContextProvider #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterIncomingCallContextProvider
 CrestApps.OrchardCore.Telephony.IIncomingCallDispatcher #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultIncomingCallDispatcher

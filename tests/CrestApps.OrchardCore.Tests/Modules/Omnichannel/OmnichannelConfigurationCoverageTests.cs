@@ -101,13 +101,16 @@ public sealed class OmnichannelConfigurationCoverageTests
         // A tuning number compiled into the pass cannot be changed for a node that is slower or busier than the
         // one it was chosen on, so an operator's only remedy is a rebuild. The lease is the single exception: it
         // is an attribute argument, which the language requires to be a constant.
+        // The pass itself, not the scheduled task that runs it: the task is a two-line wrapper, and the
+        // tuning values live with the work.
         var source = File.ReadAllText(Path.Combine(
             FindRepositoryRoot(),
             "src",
             "Modules",
             "CrestApps.OrchardCore.Omnichannel.Managements",
-            "BackgroundTasks",
-            "AutomatedActivitiesProcessorBackgroundTask.cs"));
+            "Services",
+            "Cycles",
+            "AutomatedActivitiesProcessorCycle.cs"));
 
         var constants = Regex.Matches(source, @"private const int (?<name>\w+)")
             .Select(match => match.Groups["name"].Value)
@@ -118,7 +121,7 @@ public sealed class OmnichannelConfigurationCoverageTests
             constants.Length == 0,
             "These tuning values are compiled into the automated-activity processor instead of being bound from " +
             "'CrestApps:Omnichannel:Automation': " + string.Join(", ", constants) + ". Add the value to " +
-            nameof(OmnichannelAutomationOptions) + ", validate it, and read it through IOptions in DoWorkAsync.");
+            nameof(OmnichannelAutomationOptions) + ", validate it, and read it through IOptions in RunAsync.");
 
         Assert.Contains("IOptions<" + nameof(OmnichannelAutomationOptions) + ">", source, StringComparison.Ordinal);
     }

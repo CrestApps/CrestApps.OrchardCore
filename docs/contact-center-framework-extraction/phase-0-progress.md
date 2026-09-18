@@ -31,6 +31,7 @@ baseline in [phase-0-baseline.md](phase-0-baseline.md).
 | P0.6 | The five services that read tenant settings take `IOptionsMonitor<T>` through a generic site-settings bridge; the Telnyx media provider's base-URL read became `IPublicBaseUrlAccessor`. The framework defaults in `CrestApps.Core.Hosting` gained the tests they never had |
 | P0.7 | `ContactCenterOperations`/`SmsPortalOperations` replace the three permission checks in the framework-bound projects; Orchard handlers map each operation to the permission that already governed it. `ContactCenterPermissions`/`SmsPortalPermissions` moved to the host-side projects |
 | P0.4 (part) | The customer-record vocabulary and contracts; subject flow settings re-based on `SubjectDefinition`; Orchard bindings for contact definitions, contacts and subjects; SMS and voice consumers migrated; `OmnichannelSubjectWriter` retired. **See the open item below** |
+| P0.8 | All 30 background tasks split into cycles. The Orchard task keeps its name, attribute and schedule and resolves the cycle; `CycleRunner<TCycle>` drives the same cycles for a host with no scheduler, and is unit-tested |
 | Phase 1 W1 (part) | `src/Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions` and `src/Core/Transitions/CrestApps.Core.Hosting` created with their final names and namespaces, Core-repo package metadata, `IsPackable=false`, and matching solution folders. `grep -rlE "OrchardCore" src/*/Transitions` is empty |
 
 ## Exit-criteria scoreboard
@@ -62,19 +63,25 @@ a shippable unit that keeps the build green:
 2. **Independent seams** - P0.10-S18, P0.3-S9, P0.3-S21, P0.5, P0.11. *(Done.)*
 3. **Content boundary, settings, authorization** - P0.4, P0.6, P0.7. *(P0.6 and P0.7 done; P0.4 has one
    open item, below.)*
-4. **Background work and routes** - P0.8, P0.12.
+4. **Background work and routes** - P0.8, P0.12. *(P0.8 done.)*
 5. **Hub split and client configuration** - P0.9, P0.3-S23.
 6. **Registration collapse** - P0.13, alone, because it rewrites the same 42 startup files every
    other workstream touches.
+
+### What P0.8 did not do
+
+The cycles' tests still sit with the tasks and still call `DoWorkAsync`, so they cover the Orchard
+wiring as well as the work. They have to be re-homed with the cycles in Phase 1; the test-count
+ratchet is what catches it if they are not.
 
 The scarce resource is contended files, not time: `ContactCenterHub.cs` is touched by four
 workstreams across three batches, and `AgentWorkspaceEndpoints.cs` by four across four.
 
 ## Not started
 
-**Batches 4 to 6, five workstreams**, plus P0.4's open item. P0.8 (background tasks to cycles), P0.9
-(hub base classes), P0.12 (endpoints as `Map*` methods), P0.13 (`AddCore*` registration methods), and
-the rest of P0.3 (client configuration models, S23).
+**Four workstreams**, plus P0.4's open item. P0.9 (hub base classes), P0.12 (endpoints as `Map*`
+methods), P0.13 (`AddCore*` registration methods), and the rest of P0.3 (client configuration models,
+S23).
 
 ### P0.4's open item: the carrier for an activity's subject
 

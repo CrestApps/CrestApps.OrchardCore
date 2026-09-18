@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.Time.Testing;
 using System.Collections.Concurrent;
 using CrestApps.Core.AI;
@@ -689,6 +690,8 @@ public sealed class SmsReEngagementBackgroundTaskTests
         services.AddSingleton(CadenceCatalog(scenario));
         services.AddSingleton(ActivityStore(scenario));
         services.AddSingleton(ContentManager(scenario));
+
+        services.AddScoped<ISmsReEngagementCycle, SmsReEngagementCycle>();
 
         return services.BuildServiceProvider();
     }

@@ -129,6 +129,7 @@ public sealed class Startup : StartupBase
         services.AddDataMigration<TelephonyExtensionIndexMigrations>();
         services.AddDisplayDriver<TelephonyExtension, TelephonyExtensionDisplayDriver>();
         services.AddNavigationProvider<TelephonyExtensionsAdminMenu>();
+        services.AddBackgroundCycle<ITelephonyInteractionReconciliationCycle, TelephonyInteractionReconciliationCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>());
         services.AddIndexProvider<TelephonyInteractionIndexProvider>();
         services.AddIndexProvider<TelephonyUserConnectionIndexProvider>();

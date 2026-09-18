@@ -686,6 +686,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Schemas
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
 {
+    public sealed class AutomatedActivitiesProcessorCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle, CrestApps.OrchardCore.Omnichannel.Managements.Services.IAutomatedActivitiesProcessorCycle
+    {
+        public AutomatedActivitiesProcessorCycle(Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelAutomationOptions> options, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.IOmnichannelProcessor> processors, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityScreener> screeners, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivitiesProcessorCycle> logger, YesSql.ISession session, System.TimeProvider timeProvider, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.ContentManagement.IContentManager contentManager) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class AutomatedActivityCompletionService : CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityCompletionService
     {
         public AutomatedActivityCompletionService(CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionService activityDispositionService) { }
@@ -720,6 +725,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     {
         System.Threading.Tasks.Task LoadAsync(string batchId, string loaderId, string loaderUserName, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IAutomatedActivitiesProcessorCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle { }
     public interface IOmnichannelContactDuplicateLookupService
     {
         System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(System.Threading.CancellationToken cancellationToken);

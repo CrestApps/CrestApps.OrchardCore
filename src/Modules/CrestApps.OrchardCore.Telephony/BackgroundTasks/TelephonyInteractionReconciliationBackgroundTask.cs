@@ -1,5 +1,5 @@
+using CrestApps.OrchardCore.Telephony.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Telephony.BackgroundTasks;
@@ -16,22 +16,6 @@ namespace CrestApps.OrchardCore.Telephony.BackgroundTasks;
 public sealed class TelephonyInteractionReconciliationBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var synchronizationService = serviceProvider.GetRequiredService<ITelephonyInteractionSynchronizationService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<TelephonyInteractionReconciliationBackgroundTask>>();
-
-        try
-        {
-            await synchronizationService.ReconcileActiveInteractionsAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            // The tenant is shutting down; stop quietly instead of logging the cancellation as a reconciliation failure.
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while reconciling telephony interaction state.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ITelephonyInteractionReconciliationCycle>().RunAsync(cancellationToken);
 }

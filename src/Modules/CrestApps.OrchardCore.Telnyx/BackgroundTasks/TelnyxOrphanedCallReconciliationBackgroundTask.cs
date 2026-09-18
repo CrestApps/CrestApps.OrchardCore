@@ -1,6 +1,5 @@
-﻿using CrestApps.OrchardCore.Telnyx.Services;
+﻿using CrestApps.OrchardCore.Telnyx.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Telnyx.BackgroundTasks;
@@ -23,30 +22,6 @@ namespace CrestApps.OrchardCore.Telnyx.BackgroundTasks;
 public sealed class TelnyxOrphanedCallReconciliationBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var reconciler = serviceProvider.GetRequiredService<TelnyxOrphanedCallReconciler>();
-        var logger = serviceProvider.GetRequiredService<ILogger<TelnyxOrphanedCallReconciliationBackgroundTask>>();
-
-        try
-        {
-            var result = await reconciler.ReconcileAsync(cancellationToken);
-
-            if (result.OrphansFound > 0 && logger.IsEnabled(LogLevel.Information))
-            {
-                logger.LogInformation(
-                    "Orphaned-call reconciliation found {Found} live Telnyx calls with no interaction and ended {Ended}.",
-                    result.OrphansFound,
-                    result.OrphansEnded);
-            }
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            // The tenant is shutting down; stop quietly rather than logging the cancellation as a failure.
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while reconciling orphaned Telnyx calls.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ITelnyxOrphanedCallReconciliationCycle>().RunAsync(cancellationToken);
 }

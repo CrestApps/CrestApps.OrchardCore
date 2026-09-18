@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.BackgroundTasks;
@@ -20,22 +19,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.BackgroundTasks;
 public sealed class SmsOutboundOutboxBackgroundTask : IBackgroundTask
 {
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var outbox = serviceProvider.GetRequiredService<ISmsOutboundOutbox>();
-        var logger = serviceProvider.GetRequiredService<ILogger<SmsOutboundOutboxBackgroundTask>>();
-
-        try
-        {
-            await outbox.DispatchDueAsync(cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "An error occurred while retrying queued outbound SMS messages.");
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ISmsOutboundOutboxCycle>().RunAsync(cancellationToken);
 }

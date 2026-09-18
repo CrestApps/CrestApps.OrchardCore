@@ -65,6 +65,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
         services.AddScoped<IActivityBatchLoadCoordinator, DefaultActivityBatchLoadCoordinator>();
         services.AddScoped<DefaultContactActivityBatchLoader>();
 
+        services.AddBackgroundCycle<IAutomatedActivitiesProcessorCycle, AutomatedActivitiesProcessorCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>());
 
         services

@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using OrchardCore.BackgroundTasks;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.BackgroundTasks;
@@ -22,31 +21,6 @@ public sealed class SmsFirstResponseSlaBackgroundTask : IBackgroundTask
     private static readonly TimeSpan _budget = TimeSpan.FromSeconds(50);
 
     /// <inheritdoc/>
-    public async Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        var service = serviceProvider.GetRequiredService<ISmsFirstResponseSlaService>();
-        var logger = serviceProvider.GetRequiredService<ILogger<SmsFirstResponseSlaBackgroundTask>>();
-        var deadline = DateTime.UtcNow + _budget;
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            try
-            {
-                await service.EscalateOverdueAsync(cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                // One bad pass must not stop the rest of the minute: the next customer waiting is unrelated to
-                // whatever this one tripped over.
-                logger.LogError(ex, "An SMS first-response escalation pass failed.");
-            }
-
-            if (DateTime.UtcNow + _interval >= deadline)
-            {
-                break;
-            }
-
-            await Task.Delay(_interval, cancellationToken);
-        }
-    }
+    public Task DoWorkAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+        => serviceProvider.GetRequiredService<ISmsFirstResponseSlaCycle>().RunAsync(cancellationToken);
 }

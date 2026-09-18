@@ -123,6 +123,7 @@ public sealed class Startup : StartupBase
         services.Configure<SmsKeywordReplySettings>(_shellConfiguration.GetSection("CrestApps:Sms:Portal:KeywordReplies"));
         services.AddScoped<ISmsContactTimeZoneResolver, SmsContactTimeZoneResolver>();
         services.AddScoped<SmsQuietHoursGuard>();
+        services.AddBackgroundCycle<ISmsFirstResponseSlaCycle, SmsFirstResponseSlaCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SmsFirstResponseSlaBackgroundTask>());
 
         // Per-agent SMS availability is independent of voice presence, so it stays in the base feature: the

@@ -135,6 +135,7 @@ public sealed class Startup : StartupBase
 
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
 
+        services.AddBackgroundCycle<IAsteriskPjsipCredentialCleanupCycle, AsteriskPjsipCredentialCleanupCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskPjsipCredentialCleanupBackgroundTask>());
 
         services
@@ -191,7 +192,9 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
         services.AddDataMigration<AsteriskChannelTenantBindingMigrations>();
         services.AddIndexProvider<AsteriskRecordingIngestJobIndexProvider>();
         services.AddDataMigration<AsteriskRecordingIngestJobMigrations>();
+        services.AddBackgroundCycle<IAsteriskInboundReconciliationCycle, AsteriskInboundReconciliationCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskInboundReconciliationBackgroundTask>());
+        services.AddBackgroundCycle<IAsteriskRecordingIngestCycle, AsteriskRecordingIngestCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AsteriskRecordingIngestBackgroundTask>());
     }
 }
