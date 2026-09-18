@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using CrestApps.Core;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;

@@ -1,0 +1,165 @@
+@using CrestApps.OrchardCore.AI.DataSources.FileSources.Sftp.ViewModels
+
+@model SftpFileSourceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Host" class="ocat-label">@T["Host"]</label>
+    <div class="ocat-end">
+        <input asp-for="Host" class="form-control" placeholder="@T["sftp.example.com"]" />
+        <span asp-validation-for="Host" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Port" class="ocat-label">@T["Port"]</label>
+    <div class="ocat-end">
+        <input asp-for="Port" class="form-control" type="number" min="1" max="65535" placeholder="22" />
+        <span asp-validation-for="Port" class="text-danger"></span>
+        <span class="hint">@T["Leave empty to use 22."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Username" class="ocat-label">@T["Username"]</label>
+    <div class="ocat-end">
+        <input asp-for="Username" class="form-control" autocomplete="off" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Password" class="ocat-label">@T["Password"]</label>
+    <div class="ocat-end">
+        <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" />
+        <span class="hint">
+            @if (Model.HasPassword)
+            {
+                @T["A password is stored. Leave this empty to keep it, or type a new one to replace it."]
+            }
+            else
+            {
+                @T["Leave empty when signing in with a private key."]
+            }
+        </span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="PrivateKey" class="ocat-label">@T["Private key"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="PrivateKey" class="form-control" rows="6" autocomplete="off" spellcheck="false"></textarea>
+        <span class="hint">
+            @if (Model.HasPrivateKey)
+            {
+                @T["A private key is stored. Leave this empty to keep it, or paste a new one to replace it."]
+            }
+            else
+            {
+                @T["Paste the PEM-encoded key. Stored encrypted, and never sent back to this form."]
+            }
+        </span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Passphrase" class="ocat-label">@T["Key passphrase"]</label>
+    <div class="ocat-end">
+        <input asp-for="Passphrase" class="form-control" type="password" autocomplete="new-password" />
+        <span class="hint">
+            @if (Model.HasPassphrase)
+            {
+                @T["A passphrase is stored. Leave this empty to keep it."]
+            }
+            else
+            {
+                @T["Only needed when the private key is encrypted."]
+            }
+        </span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RemoteRootPath" class="ocat-label">@T["Folder"]</label>
+    <div class="ocat-end">
+        <input asp-for="RemoteRootPath" class="form-control" placeholder="/" />
+        <span class="hint">@T["The folder on the server to read, for example <code>/handbooks</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="RemoteRecursive" class="form-check-input" type="checkbox" />
+            <label asp-for="RemoteRecursive" class="form-check-label">@T["Include sub-folders"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RemoteMaxItems" class="ocat-label">@T["Files per listing"]</label>
+    <div class="ocat-end">
+        <input asp-for="RemoteMaxItems" class="form-control" type="number" min="1" />
+        <span asp-validation-for="RemoteMaxItems" class="text-danger"></span>
+        <span class="hint">@T["The most files one listing will take on. A listing that could not finish removes nothing."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ConnectionTimeout" class="ocat-label">@T["Connection timeout (ms)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ConnectionTimeout" class="form-control" type="number" min="1" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="KeepAliveInterval" class="ocat-label">@T["Keep-alive interval (ms)"]</label>
+    <div class="ocat-end">
+        <input asp-for="KeepAliveInterval" class="form-control" type="number" min="1" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyType" class="ocat-label">@T["Proxy"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProxyType" class="form-select">
+            <option value="">@T["No proxy"]</option>
+            <option value="Http">@T["HTTP"]</option>
+            <option value="Socks4">@T["SOCKS4"]</option>
+            <option value="Socks5">@T["SOCKS5"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyHost" class="ocat-label">@T["Proxy host"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyHost" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyPort" class="ocat-label">@T["Proxy port"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyPort" class="form-control" type="number" min="1" max="65535" />
+        <span asp-validation-for="ProxyPort" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyUsername" class="ocat-label">@T["Proxy username"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyUsername" class="form-control" autocomplete="off" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ProxyPassword" class="ocat-label">@T["Proxy password"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProxyPassword" class="form-control" type="password" autocomplete="new-password" />
+        <span class="hint">
+            @if (Model.HasProxyPassword)
+            {
+                @T["A proxy password is stored. Leave this empty to keep it."]
+            }
+        </span>
+    </div>
+</div>

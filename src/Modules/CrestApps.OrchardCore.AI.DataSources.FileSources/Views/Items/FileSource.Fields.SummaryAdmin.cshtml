@@ -1,0 +1,46 @@
+@using CrestApps.Core
+@using CrestApps.Core.AI.FileSources
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<WebCrawler>
+
+@{
+    Model.Value.TryGet<IndexerRunSummary>(out var lastRun);
+}
+
+<h5>
+    @(Model.Value.DisplayText)
+    @if (!Model.Value.Enabled)
+    {
+        <span class="badge bg-secondary align-middle">@T["Disabled"]</span>
+    }
+</h5>
+<div class="text-muted small">
+    <span class="badge bg-light text-dark">@Model.Value.Source</span>
+
+    @if (lastRun is not null && lastRun.StartedUtc != default)
+    {
+        @* A file source runs unattended, so the list is the only account anyone gets of what it did. *@
+        <span class="badge @(lastRun.Status switch
+                             {
+                                 FileSourceRunStatus.Succeeded => "bg-success",
+                                 FileSourceRunStatus.PartiallyCompleted => "bg-warning text-dark",
+                                 FileSourceRunStatus.Failed => "bg-danger",
+                                 FileSourceRunStatus.Running => "bg-info text-dark",
+                                 _ => "bg-light text-dark",
+                             })">@lastRun.Status</span>
+
+        <span>@T["{0} ingested, {1} removed, {2} failed", lastRun.ItemsIndexed, lastRun.ItemsDeleted, lastRun.ItemsFailed]</span>
+
+        @if (!lastRun.DiscoveryCompleted)
+        {
+            @* Worth surfacing: a run that saw only part of the source deletes nothing. *@
+            <span class="badge bg-light text-dark" data-bs-toggle="tooltip" title="@T["This run saw only part of the source, so nothing was removed. The next run resumes where it stopped."]">@T["Partial listing"]</span>
+        }
+    }
+    else
+    {
+        <span>@T["Never run"]</span>
+    }
+</div>

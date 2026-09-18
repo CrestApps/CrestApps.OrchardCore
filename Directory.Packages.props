@@ -119,6 +119,7 @@
     <PackageVersion Include="CrestApps.Core.AI.WebRTC" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Claude" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Copilot" Version="$(CrestAppsCoreVersion)" />
+    <PackageVersion Include="CrestApps.Core.AI.FileSources" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Ftp" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Markdown" Version="$(CrestAppsCoreVersion)" />
     <PackageVersion Include="CrestApps.Core.AI.Mcp" Version="$(CrestAppsCoreVersion)" />
