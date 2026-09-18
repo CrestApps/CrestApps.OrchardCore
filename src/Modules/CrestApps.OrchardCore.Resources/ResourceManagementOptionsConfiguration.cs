@@ -205,6 +205,26 @@ internal sealed class ResourceManagementOptionsConfiguration : IConfigureOptions
                 "sha384-NLPKccGh39Ymb5v2aC3tD6zdtg+MhT/Sa+QpCRmDVY2xXSC10rxBNBh0iRqLUQkK")
             .SetVersion("2.0.0");
 
+        // Shared marker reader (window.CoreAIChatMarkers), consumed by the AI chat and chat interaction
+        // apps. A model writes [doc:N], [fig:N], [chart:{...}] and [tbl:N] rather than addresses, and this
+        // turns those labels back into citations, pictures, charts and tables.
+        //
+        // It depends on chart.js because an expanded [chart:{...}] marker is drawn onto a canvas, and it
+        // must load before the chat apps that read it -- which is what their own dependency on it ensures.
+        _manifest
+            .DefineScript("chat-markers")
+            .SetUrl(
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/chat-markers.min.js",
+                "~/CrestApps.OrchardCore.Resources/vendors/crestapps/chat-markers.js")
+            .SetCdn(
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.193/dist/chat-markers.min.js",
+                "https://cdn.jsdelivr.net/npm/@crestapps/ai-chat-ui@2.0.0-preview.193/dist/chat-markers.js")
+            .SetCdnIntegrity(
+                "sha384-K+PhPvYInXlQX95L3h3LnirPA5WonUzV2eL9Ky4EHXAqhdtmBaaEXV1NRURyelH5",
+                "sha384-Y/x3UclAAF/yDK3+tt9dTnPRnghA1Qtj3fPY5Ax8aAc7KuBxOKODD10vchnp/CdK")
+            .SetDependencies("chart.js")
+            .SetVersion("2.0.0");
+
         // Shared realtime (speech-to-speech) audio controller (window.CoreAIRealtime), consumed by the AI
         // chat and chat interaction apps. Registered once here; those features depend on this resource.
         _manifest
