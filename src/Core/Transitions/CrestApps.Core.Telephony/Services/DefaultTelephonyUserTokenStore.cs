@@ -1,11 +1,9 @@
 using CrestApps.Core.Security;
 using Microsoft.AspNetCore.DataProtection;
-using OrchardCore.Entities;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Stores the current user's telephony tokens on the user's account, encrypting the token values at

@@ -101,11 +101,10 @@ public sealed class DefaultTelephonyProviderResolverTests
 
     private static DefaultTelephonyProviderResolver CreateResolver(TelephonyProviderOptions options, TelephonySettings settings)
     {
-        var siteService = SiteServiceFactory.Create(settings);
         var serviceProvider = new ServiceCollection().BuildServiceProvider();
 
         return new DefaultTelephonyProviderResolver(
-            siteService,
+            new TestOptionsMonitor<TelephonySettings>(settings),
             new TestOptionsMonitor<TelephonyProviderOptions>(options),
             serviceProvider,
             NullLogger<DefaultTelephonyProviderResolver>.Instance);

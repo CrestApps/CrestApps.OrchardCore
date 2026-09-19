@@ -119,7 +119,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<ITelephonyService, DefaultTelephonyService>();
         services.AddScoped<ITelephonyCommandExecutor, DefaultTelephonyCommandExecutor>();
         services.AddScoped<IIncomingCallDispatcher, DefaultIncomingCallDispatcher>();
-        services.AddTransient<IPostConfigureOptions<TelephonySettings>, TelephonySettingsConfiguration>();
+        // The telephony settings are read as options by the framework services, and the settings screen asks
+        // the options system to refresh when they are saved.
+        services.AddSiteSettingsOptions<TelephonySettings>();
         services.AddSignalOptionsChangeTokenSource<TelephonyProviderOptions>();
 
         services.AddScoped<ITelephonyUserTokenStore, DefaultTelephonyUserTokenStore>();

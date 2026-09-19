@@ -18,7 +18,8 @@ a reviewed diff of every approval baseline that moved.
 | W3.1 | `bffa165f` | The telephony contracts: 110 files into `CrestApps.Core.Telephony.Abstractions`, with the feature ids left behind in a new Orchard `TelephonyFeatures`. |
 | W3.2 | `3ca794ce` | The telephony primitive: hub base, models, services, and the reconciliation cycle into `CrestApps.Core.Telephony`. |
 | W3.3 (first half), W3.5 | `91530579` | The module services with no host dependency, and the encrypted recording store with a backend contract under it. |
-| W3.3 (second half) | this commit | The three services and the dial endpoint that pushed to the soft phone, behind a notifier contract. |
+| W3.3 (second half) | `70820d96` | The three services and the dial endpoint that pushed to the soft phone, behind a notifier contract. |
+| W3.3 (rest), W3.4 | this commit | The token store, the provider resolver and the authentication service: the last module services that were not Orchard's own. |
 
 ## Decisions the plan did not make
 
@@ -90,6 +91,24 @@ They make three calls between them, so `ITelephonySoftPhoneNotifier` names those
 `TelephonySoftPhoneNotifier<THub>`, is generic over the hub and is the only thing that knows about
 SignalR or about how a user's connections are grouped. Orchard registers it closed over its own
 `TelephonyHub`, which is where its `[Authorize]` lives.
+
+### Telephony settings became options, and the settings screen now says when they change (W3.3)
+
+The provider resolver and the authentication service read the default provider name straight from
+`ISiteService`, which is always current. Moving them to `IOptionsMonitor<TelephonySettings>` would
+have cached that value forever, because the module's own `IPostConfigureOptions` bridge had no
+change-token source behind it: the default provider would have kept resolving to the old one until
+the tenant restarted.
+
+So the bridge was replaced by `AddSiteSettingsOptions<TelephonySettings>()`, which registers one, and
+`TelephonySettingsDisplayDriver` now calls `IOptionsUpdateNotifier.RequestUpdate<TelephonySettings>()`
+when it saves. That is the pattern the AI modules already use. `TelephonySettings` has exactly the
+two properties the hand-written bridge copied, so nothing else about the value changes.
+
+Three Contact Center settings use `AddSiteSettingsOptions` without any driver calling
+`RequestUpdate`, which is the same gap this change closed for telephony. That is recorded as its own
+task rather than folded in here, because it is a fix to shipped behaviour rather than part of the
+extraction.
 
 ## Guards that had to be repointed (W3.2)
 

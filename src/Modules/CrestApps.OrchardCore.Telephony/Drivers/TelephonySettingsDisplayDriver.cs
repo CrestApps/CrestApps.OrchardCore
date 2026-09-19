@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Entities;
+using OrchardCore.Environment.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -22,6 +23,7 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IOptionsMonitor<TelephonyProviderOptions> _providerOptions;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     internal readonly IStringLocalizer S;
 
@@ -34,16 +36,19 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="providerOptions">The registered telephony provider options.</param>
+    /// <param name="optionsUpdateNotifier">Tells the options system the saved settings have changed.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public TelephonySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
         IOptionsMonitor<TelephonyProviderOptions> providerOptions,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IStringLocalizer<TelephonySettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _providerOptions = providerOptions;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         S = stringLocalizer;
     }
 
@@ -76,9 +81,6 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        // The default provider name is read live from the site settings by every consumer
-        // (via ISiteService or IOptionsSnapshot<TelephonySettings>), so changing it does not
-        // require releasing the shell.
         settings.DefaultProviderName = model.DefaultProvider;
 
         // Only digits are meaningful as a short code, so anything else is dropped rather than stored and then
@@ -88,6 +90,11 @@ public sealed class TelephonySettingsDisplayDriver : SiteDisplayDriver<Telephony
             .Where(code => code.All(char.IsAsciiDigit))
             .Distinct(StringComparer.Ordinal)
             .ToList();
+
+        // Consumers read these settings as options, which are cached until something says otherwise. This is
+        // what says otherwise, so a changed default provider takes effect on the next call rather than on the
+        // next restart.
+        _optionsUpdateNotifier.RequestUpdate<TelephonySettings>();
 
         return Edit(site, settings, context);
     }

@@ -1,10 +1,9 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell.Builders;
-using OrchardCore.Settings;
+using Microsoft.Extensions.DependencyInjection;
 using CrestApps.Core.Telephony;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Resolves the configured telephony provider using the registered <see cref="TelephonyProviderOptions"/>
@@ -12,7 +11,7 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// </summary>
 public sealed class DefaultTelephonyProviderResolver : ITelephonyProviderResolver
 {
-    private readonly ISiteService _siteService;
+    private readonly IOptionsMonitor<TelephonySettings> _settings;
     private readonly IServiceProvider _serviceProvider;
     private readonly IOptionsMonitor<TelephonyProviderOptions> _providerOptions;
     private readonly ILogger _logger;
@@ -20,17 +19,17 @@ public sealed class DefaultTelephonyProviderResolver : ITelephonyProviderResolve
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyProviderResolver"/> class.
     /// </summary>
-    /// <param name="siteService">The site service used to read the default provider name.</param>
+    /// <param name="settings">The telephony settings the default provider name is read from.</param>
     /// <param name="providerOptions">The registered telephony provider options.</param>
     /// <param name="serviceProvider">The service provider used to instantiate the provider.</param>
     /// <param name="logger">The logger.</param>
     public DefaultTelephonyProviderResolver(
-        ISiteService siteService,
+        IOptionsMonitor<TelephonySettings> settings,
         IOptionsMonitor<TelephonyProviderOptions> providerOptions,
         IServiceProvider serviceProvider,
         ILogger<DefaultTelephonyProviderResolver> logger)
     {
-        _siteService = siteService;
+        _settings = settings;
         _serviceProvider = serviceProvider;
         _providerOptions = providerOptions;
         _logger = logger;
@@ -41,9 +40,7 @@ public sealed class DefaultTelephonyProviderResolver : ITelephonyProviderResolve
     {
         if (string.IsNullOrEmpty(name))
         {
-            var settings = await _siteService.GetSettingsAsync<TelephonySettings>();
-
-            name = settings.DefaultProviderName;
+            name = _settings.CurrentValue.DefaultProviderName;
         }
 
         if (string.IsNullOrEmpty(name))
@@ -58,7 +55,7 @@ public sealed class DefaultTelephonyProviderResolver : ITelephonyProviderResolve
 
         if (_providerOptions.CurrentValue.Providers.TryGetValue(name, out var providerType) && providerType.IsEnabled)
         {
-            return _serviceProvider.CreateInstance<ITelephonyProvider>(providerType.Type);
+            return (ITelephonyProvider)ActivatorUtilities.CreateInstance(_serviceProvider, providerType.Type);
         }
 
         if (_logger.IsEnabled(LogLevel.Error))

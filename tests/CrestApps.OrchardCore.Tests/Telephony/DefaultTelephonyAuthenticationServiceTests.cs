@@ -363,7 +363,6 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         ITelephonyUserTokenStore tokenStore,
         FakeDistributedLockProvider distributedLock)
     {
-        var siteService = SiteServiceFactory.Create(settings);
         var resolver = new StubTelephonyProviderResolver(provider);
         var currentUser = new UserSummary("user-1", "tester", "Tester", "tester@example.test");
         var userAccessor = new FakeUserAccessor
@@ -375,7 +374,7 @@ public sealed class DefaultTelephonyAuthenticationServiceTests
         var options = Options.Create(new TelephonyCoordinationOptions());
 
         return new DefaultTelephonyAuthenticationService(
-            siteService,
+            new TestOptionsMonitor<TelephonySettings>(settings),
             resolver,
             tokenStore,
             userAccessor,

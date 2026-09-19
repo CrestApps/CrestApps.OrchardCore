@@ -2,14 +2,11 @@ using CrestApps.Core.Security;
 using CrestApps.Core.Locking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Modules;
-using OrchardCore.Settings;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.Core.Telephony.Services;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Default <see cref="ITelephonyAuthenticationService"/> implementation that coordinates the OAuth
@@ -17,7 +14,7 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// </summary>
 public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthenticationService
 {
-    private readonly ISiteService _siteService;
+    private readonly IOptionsMonitor<TelephonySettings> _settings;
     private readonly ITelephonyProviderResolver _providerResolver;
     private readonly ITelephonyUserTokenStore _tokenStore;
     private readonly IUserAccessor _userAccessor;
@@ -32,7 +29,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyAuthenticationService"/> class.
     /// </summary>
-    /// <param name="siteService">The site service used to read the default provider name.</param>
+    /// <param name="settings">The telephony settings the default provider name is read from.</param>
     /// <param name="providerResolver">The telephony provider resolver.</param>
     /// <param name="tokenStore">The user token store.</param>
     /// <param name="userAccessor">The accessor used to identify the current user when serializing token refreshes.</param>
@@ -41,7 +38,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
     /// <param name="logger">The logger used to record incomplete remote revocations.</param>
     public DefaultTelephonyAuthenticationService(
-        ISiteService siteService,
+        IOptionsMonitor<TelephonySettings> settings,
         ITelephonyProviderResolver providerResolver,
         ITelephonyUserTokenStore tokenStore,
         IUserAccessor userAccessor,
@@ -52,7 +49,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         IOptions<TelephonyCoordinationOptions> coordinationOptions,
         ILogger<DefaultTelephonyAuthenticationService> logger)
     {
-        _siteService = siteService;
+        _settings = settings;
         _providerResolver = providerResolver;
         _tokenStore = tokenStore;
         _userAccessor = userAccessor;
@@ -68,7 +65,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <inheritdoc/>
     public async Task<TelephonyConnectionStatus> GetStatusAsync(CancellationToken cancellationToken = default)
     {
-        var name = await GetDefaultProviderNameAsync();
+        var name = GetDefaultProviderName();
         var provider = await _providerResolver.GetAsync();
 
         var status = new TelephonyConnectionStatus
@@ -169,7 +166,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             return TelephonyResult.Failed("The authorization code is required.");
         }
 
-        var name = await GetDefaultProviderNameAsync();
+        var name = GetDefaultProviderName();
         var provider = await _providerResolver.GetAsync();
 
         if (string.IsNullOrEmpty(name) || provider is not ITelephonyAuthenticationProvider authenticationProvider)
@@ -209,7 +206,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <inheritdoc/>
     public async Task<TelephonyResult> DisconnectAsync(CancellationToken cancellationToken = default)
     {
-        var name = await GetDefaultProviderNameAsync();
+        var name = GetDefaultProviderName();
 
         if (string.IsNullOrEmpty(name))
         {
@@ -425,10 +422,6 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         return _timeProvider.GetUtcNow().UtcDateTime >= tokens.ExpiresUtc.Value.UtcDateTime.AddSeconds(-30);
     }
 
-    private async Task<string> GetDefaultProviderNameAsync()
-    {
-        var settings = await _siteService.GetSettingsAsync<TelephonySettings>();
-
-        return settings.DefaultProviderName;
-    }
+    private string GetDefaultProviderName()
+        => _settings.CurrentValue.DefaultProviderName;
 }
