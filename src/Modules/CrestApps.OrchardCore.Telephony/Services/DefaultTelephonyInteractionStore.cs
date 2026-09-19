@@ -1,7 +1,8 @@
 ﻿using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Indexes;
-using CrestApps.OrchardCore.Telephony.Models;
 using YesSql;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
 

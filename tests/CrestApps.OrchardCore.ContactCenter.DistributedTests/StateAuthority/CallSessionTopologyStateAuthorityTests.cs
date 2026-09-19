@@ -4,8 +4,8 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Telephony.Core.Services;
-using CrestApps.OrchardCore.Telephony.Models;
 using YesSql;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.StateAuthority;
 

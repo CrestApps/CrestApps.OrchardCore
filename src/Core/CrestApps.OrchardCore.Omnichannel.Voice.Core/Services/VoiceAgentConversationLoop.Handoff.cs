@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 

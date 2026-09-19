@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
 

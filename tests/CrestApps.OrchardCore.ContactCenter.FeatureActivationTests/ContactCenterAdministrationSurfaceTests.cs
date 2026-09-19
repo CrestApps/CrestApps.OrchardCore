@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Navigation;
+using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
@@ -45,7 +46,7 @@ public sealed class ContactCenterAdministrationSurfaceTests
         var surface = await GetSurfaceAsync(
             host,
             "telephony-provider-configuration",
-            [TelephonyConstants.Feature.Area]);
+            [TelephonyFeatures.Area]);
 
         Assert.True(
             _alwaysAvailableConfigurationSurface.All(surface.Contains),

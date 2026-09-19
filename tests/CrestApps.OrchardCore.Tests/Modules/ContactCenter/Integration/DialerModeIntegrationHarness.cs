@@ -10,8 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
-using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +22,8 @@ using System.Text.Json;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 

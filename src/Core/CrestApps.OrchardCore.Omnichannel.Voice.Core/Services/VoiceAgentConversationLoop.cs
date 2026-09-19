@@ -15,7 +15,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.AI;

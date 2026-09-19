@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

@@ -3,11 +3,12 @@ using CrestApps.OrchardCore.Dialpad;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Indexes;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using YesSql;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Dialpad;
 

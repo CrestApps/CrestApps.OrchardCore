@@ -1,9 +1,10 @@
 using System.Security.Cryptography;
-using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.FileStorage.FileSystem;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

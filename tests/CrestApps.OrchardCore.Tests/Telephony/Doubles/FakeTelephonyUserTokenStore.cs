@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 

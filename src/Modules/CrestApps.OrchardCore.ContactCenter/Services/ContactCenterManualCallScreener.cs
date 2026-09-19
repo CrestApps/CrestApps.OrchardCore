@@ -5,12 +5,13 @@ using CrestApps.OrchardCore.DncRegistry;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.Core.PhoneNumbers;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 

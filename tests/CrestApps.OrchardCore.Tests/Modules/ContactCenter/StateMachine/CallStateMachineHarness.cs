@@ -11,6 +11,7 @@ using Moq;
 using OrchardCore.Modules;
 using System.Text.Json.Nodes;
 using YesSql;
+using CrestApps.Core.Telephony;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.StateMachine;
 

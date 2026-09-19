@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Dialpad.Services;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Dialpad;
 

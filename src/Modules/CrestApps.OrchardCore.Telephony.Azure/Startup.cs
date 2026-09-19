@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Telephony.Azure.Services;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +11,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.FileStorage.AzureBlob;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony;
+using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Telephony.Azure;
 

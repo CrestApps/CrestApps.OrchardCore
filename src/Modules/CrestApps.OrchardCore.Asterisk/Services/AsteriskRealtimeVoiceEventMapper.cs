@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 

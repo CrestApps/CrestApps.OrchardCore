@@ -1,5 +1,5 @@
 using System.Collections.Frozen;
-using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 

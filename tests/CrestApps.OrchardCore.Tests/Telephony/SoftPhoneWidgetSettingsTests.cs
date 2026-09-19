@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Telephony.Models;
 
+using CrestApps.OrchardCore.Telephony.Models;
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
 public sealed class SoftPhoneWidgetSettingsTests

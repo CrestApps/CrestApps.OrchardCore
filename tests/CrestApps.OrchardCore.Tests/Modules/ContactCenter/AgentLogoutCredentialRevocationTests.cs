@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
+using CrestApps.Core.Telephony;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

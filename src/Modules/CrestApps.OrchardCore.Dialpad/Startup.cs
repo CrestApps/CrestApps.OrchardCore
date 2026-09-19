@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Dialpad.Drivers;
 using CrestApps.OrchardCore.Dialpad.Endpoints;
 using CrestApps.OrchardCore.Dialpad.Services;
-using CrestApps.OrchardCore.Telephony.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +11,7 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using Polly;
+using CrestApps.Core.Telephony.Extensions;
 
 namespace CrestApps.OrchardCore.Dialpad;
 

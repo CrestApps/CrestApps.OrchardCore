@@ -1,8 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Telephony.Extensions;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx.BackgroundTasks;
 using CrestApps.OrchardCore.Telnyx.Core;
@@ -24,6 +23,8 @@ using OrchardCore.Data;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using Polly;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Extensions;
 
 namespace CrestApps.OrchardCore.Telnyx;
 

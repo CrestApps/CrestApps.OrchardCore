@@ -2,9 +2,9 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -295,12 +295,12 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         => hangupCause?.Trim().ToUpperInvariant() switch
         {
             null or "" => null,
-            "NORMAL_CLEARING" => Telephony.Models.HangupCause.NormalClearing,
-            "TIMEOUT" or "NO_ANSWER" => Telephony.Models.HangupCause.NoAnswer,
-            "USER_BUSY" => Telephony.Models.HangupCause.Busy,
-            "CALL_REJECTED" or "REJECTED" => Telephony.Models.HangupCause.Rejected,
-            "ORIGINATOR_CANCEL" or "CANCELED" or "CANCELLED" => Telephony.Models.HangupCause.Canceled,
-            _ => Telephony.Models.HangupCause.Failed,
+            "NORMAL_CLEARING" => CrestApps.Core.Telephony.Models.HangupCause.NormalClearing,
+            "TIMEOUT" or "NO_ANSWER" => CrestApps.Core.Telephony.Models.HangupCause.NoAnswer,
+            "USER_BUSY" => CrestApps.Core.Telephony.Models.HangupCause.Busy,
+            "CALL_REJECTED" or "REJECTED" => CrestApps.Core.Telephony.Models.HangupCause.Rejected,
+            "ORIGINATOR_CANCEL" or "CANCELED" or "CANCELLED" => CrestApps.Core.Telephony.Models.HangupCause.Canceled,
+            _ => CrestApps.Core.Telephony.Models.HangupCause.Failed,
         };
 
     // Telnyx hangup causes that mean the target never answered (as opposed to a normal end after a conversation

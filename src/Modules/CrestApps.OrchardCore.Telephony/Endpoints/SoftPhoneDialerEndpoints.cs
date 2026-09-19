@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony.Hubs;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -10,6 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.SignalR;
 using OrchardCore.Environment.Shell;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony.Endpoints;
 

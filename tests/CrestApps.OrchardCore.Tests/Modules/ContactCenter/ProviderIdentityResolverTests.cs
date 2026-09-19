@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Telephony.Core.Services;
-using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

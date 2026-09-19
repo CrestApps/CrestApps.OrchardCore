@@ -1,6 +1,8 @@
-using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.ResourceManagement;
 using OrchardCore.Settings;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
 

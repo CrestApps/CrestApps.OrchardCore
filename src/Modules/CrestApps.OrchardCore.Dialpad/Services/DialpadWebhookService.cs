@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Telephony.Core.Services;
-using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Dialpad.Services;
 

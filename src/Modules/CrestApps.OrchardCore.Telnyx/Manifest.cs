@@ -23,7 +23,7 @@ using CrestApps.OrchardCore.WebSockets;
     Category = "Telephony",
     Dependencies =
     [
-        TelephonyConstants.Feature.Area,
+        TelephonyFeatures.Area,
         WebSocketsConstants.Feature.Area,
     ]
 )]

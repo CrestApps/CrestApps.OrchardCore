@@ -1,7 +1,8 @@
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.Options;
+using CrestApps.Core.Telephony;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Telephony;
 

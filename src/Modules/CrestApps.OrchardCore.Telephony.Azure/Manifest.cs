@@ -11,6 +11,6 @@ using OrchardCore.Modules.Manifest;
     Category = "Telephony",
     Dependencies =
     [
-        TelephonyConstants.Feature.Area,
+        TelephonyFeatures.Area,
     ]
 )]

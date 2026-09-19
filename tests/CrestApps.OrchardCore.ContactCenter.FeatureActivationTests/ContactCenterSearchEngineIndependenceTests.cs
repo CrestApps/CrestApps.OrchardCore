@@ -6,11 +6,11 @@ using System.Text;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 

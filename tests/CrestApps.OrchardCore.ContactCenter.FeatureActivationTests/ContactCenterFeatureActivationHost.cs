@@ -21,6 +21,7 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Models;
 using OrchardCore.Setup.Services;
 using YesSql.Indexes;
+using CrestApps.Core.Telephony;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 

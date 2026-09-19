@@ -1,9 +1,9 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony.Core.Services;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -119,7 +119,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
             OccurredUtc = occurredUtc,
             IdempotencyKey = TelnyxWebhookDelivery.GetDeliveryId(callEvent),
             RecordingReference = callEvent.RecordingId,
-            RecordingState = string.IsNullOrWhiteSpace(callEvent.RecordingId) ? null : Telephony.Models.RecordingState.Stopped,
+            RecordingState = string.IsNullOrWhiteSpace(callEvent.RecordingId) ? null : CrestApps.Core.Telephony.Models.RecordingState.Stopped,
             HangupCause = ResolveHangupCause(state, callEvent.HangupCause),
             Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -206,12 +206,12 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
     {
         return state switch
         {
-            VoiceCallState.Ended => Telephony.Models.HangupCause.NormalClearing,
-            VoiceCallState.Transferred => Telephony.Models.HangupCause.NormalClearing,
-            VoiceCallState.NoAnswer => Telephony.Models.HangupCause.NoAnswer,
-            VoiceCallState.Rejected => Telephony.Models.HangupCause.Rejected,
-            VoiceCallState.Canceled => Telephony.Models.HangupCause.Canceled,
-            VoiceCallState.Failed => Telephony.Models.HangupCause.Failed,
+            VoiceCallState.Ended => CrestApps.Core.Telephony.Models.HangupCause.NormalClearing,
+            VoiceCallState.Transferred => CrestApps.Core.Telephony.Models.HangupCause.NormalClearing,
+            VoiceCallState.NoAnswer => CrestApps.Core.Telephony.Models.HangupCause.NoAnswer,
+            VoiceCallState.Rejected => CrestApps.Core.Telephony.Models.HangupCause.Rejected,
+            VoiceCallState.Canceled => CrestApps.Core.Telephony.Models.HangupCause.Canceled,
+            VoiceCallState.Failed => CrestApps.Core.Telephony.Models.HangupCause.Failed,
             _ => null,
         };
     }

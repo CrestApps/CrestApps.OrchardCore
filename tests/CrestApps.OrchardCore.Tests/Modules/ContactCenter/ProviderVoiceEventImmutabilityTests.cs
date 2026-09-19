@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Immutable;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

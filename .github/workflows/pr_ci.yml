@@ -39,17 +39,9 @@ jobs:
       run: |
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
     # The projects under a Transitions folder are the Contact Center Suite as it will exist once it leaves this
-    # repository, so they must not name the host they are leaving. A reference that creeps in compiles perfectly
-    # well here and is only discovered when the move is attempted, which is the worst moment to discover it.
-    - name: Transitions projects name no host
-      shell: bash
-      run: |
-        hits=$(grep -rlE "OrchardCore" src/Abstractions/Transitions src/Core/Transitions tests/Transitions --include='*.cs' --include='*.csproj' --include='*.props' --exclude='TransitionsNameNoHostTests.cs' || true)
-        if [ -n "$hits" ]; then
-          echo "These files under a Transitions folder mention OrchardCore:"
-          echo "$hits"
-          exit 1
-        fi
+    # repository, so they must not name the host they are leaving. The rule lives in the framework test project
+    # rather than as a grep here, because it has to tell a dependency on the host from a string that merely
+    # contains its name - two of those strings are data-protection purposes that must never be renamed.
     - name: Framework tests
       run: |
         dotnet test -c Release --no-build ./tests/Transitions/CrestApps.Core.ContactCenter.Tests/CrestApps.Core.ContactCenter.Tests.csproj

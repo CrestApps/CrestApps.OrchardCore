@@ -1,3 +1,4 @@
+using CrestApps.Core.Telephony.Models;
 namespace CrestApps.OrchardCore.ContactCenter;
 
 public static partial class ContactCenterConstants

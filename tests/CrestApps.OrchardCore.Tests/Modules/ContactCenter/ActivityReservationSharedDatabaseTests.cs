@@ -18,6 +18,7 @@ using OrchardCore.Modules;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.Core.Telephony;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

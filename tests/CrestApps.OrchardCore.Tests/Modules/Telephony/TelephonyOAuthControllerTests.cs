@@ -2,13 +2,14 @@ using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Controllers;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Telephony;
 

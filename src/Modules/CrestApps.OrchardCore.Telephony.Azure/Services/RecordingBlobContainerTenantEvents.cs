@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony;
 
 namespace CrestApps.OrchardCore.Telephony.Azure.Services;
 

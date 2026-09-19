@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 using CrestApps.Core.Support;
 using CrestApps.Core.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Hubs;
-using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -14,6 +13,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Environment.Shell;
 using CrestApps.Core.Hosting;
 using CrestApps.OrchardCore.Core.Hosting;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

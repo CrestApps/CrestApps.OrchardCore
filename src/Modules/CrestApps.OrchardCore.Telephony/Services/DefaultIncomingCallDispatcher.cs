@@ -1,11 +1,12 @@
 using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony.Hubs;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
 

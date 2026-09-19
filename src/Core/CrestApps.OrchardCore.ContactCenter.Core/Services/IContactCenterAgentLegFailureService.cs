@@ -1,3 +1,4 @@
+using CrestApps.Core.Telephony.Models;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
@@ -42,6 +43,6 @@ public interface IContactCenterAgentLegFailureService
     Task<bool> FailAsync(
         string providerName,
         string peerProviderCallId,
-        Telephony.Models.HangupCause? hangupCause,
+        CrestApps.Core.Telephony.Models.HangupCause? hangupCause,
         CancellationToken cancellationToken = default);
 }

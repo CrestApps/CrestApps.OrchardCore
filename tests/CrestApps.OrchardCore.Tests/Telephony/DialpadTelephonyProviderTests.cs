@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Dialpad;
 using CrestApps.OrchardCore.Dialpad.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.DataProtection;
@@ -11,6 +10,8 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using System.Net;
 using System.Text.Json;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

@@ -7,7 +7,6 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
@@ -16,6 +15,8 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using OrchardCore.Users;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

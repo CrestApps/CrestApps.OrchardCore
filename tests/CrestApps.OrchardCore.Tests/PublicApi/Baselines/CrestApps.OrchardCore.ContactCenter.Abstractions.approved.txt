@@ -396,7 +396,7 @@ namespace CrestApps.OrchardCore.ContactCenter
     }
     public interface IProviderVoiceEventSink
     {
-        System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.OrchardCore.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.Core.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IProviderWebhookInbox
     {
@@ -648,7 +648,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public bool OutcomeUnknown { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderLegId { get; set; }
-        public CrestApps.OrchardCore.Telephony.Models.VoiceCallState? ProviderLegState { get; set; }
+        public CrestApps.Core.Telephony.Models.VoiceCallState? ProviderLegState { get; set; }
         public string ProviderName { get; set; }
         public bool Succeeded { get; set; }
         public static CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult Failure(string providerName, string errorCode, string errorMessage) { }
@@ -659,7 +659,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string ProviderCallId { get; set; }
-        public CrestApps.OrchardCore.Telephony.Models.RecordingState State { get; set; }
+        public CrestApps.Core.Telephony.Models.RecordingState State { get; set; }
     }
     public sealed class ContactCenterVoiceTransferRequest
     {

@@ -1,10 +1,12 @@
 using CrestApps.Core.Security;
 using CrestApps.Core.Locking;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using OrchardCore.Settings;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
 

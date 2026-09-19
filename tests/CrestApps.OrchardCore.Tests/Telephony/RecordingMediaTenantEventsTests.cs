@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell.Removing;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

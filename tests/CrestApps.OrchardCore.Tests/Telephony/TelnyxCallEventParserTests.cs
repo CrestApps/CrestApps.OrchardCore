@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Telnyx.Services;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

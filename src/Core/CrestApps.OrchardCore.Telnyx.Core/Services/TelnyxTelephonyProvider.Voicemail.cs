@@ -1,6 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 

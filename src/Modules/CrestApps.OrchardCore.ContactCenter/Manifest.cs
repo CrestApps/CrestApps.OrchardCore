@@ -123,7 +123,7 @@ using OrchardCore.Modules.Manifest;
         ContactCenterConstants.Feature.RealTime,
         ContactCenterConstants.Feature.RecordingCore,
         ContactCenterConstants.Feature.ProviderInbox,
-        TelephonyConstants.Feature.Area,
+        TelephonyFeatures.Area,
     ]
 )]
 
@@ -186,7 +186,7 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         ContactCenterConstants.Feature.Recording,
-        TelephonyConstants.Feature.SoftPhoneCore,
+        TelephonyFeatures.SoftPhoneCore,
     ]
 )]
 

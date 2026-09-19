@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Telephony.Core.Services;
 

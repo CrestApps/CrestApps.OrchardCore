@@ -1,11 +1,13 @@
-using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Telephony.Controllers;
 
@@ -15,7 +17,7 @@ namespace CrestApps.OrchardCore.Telephony.Controllers;
 /// the agent navigating other sites. Unauthenticated requests are redirected to the login and returned here.
 /// </summary>
 [Authorize]
-[Feature(TelephonyConstants.Feature.SoftPhoneExtension)]
+[Feature(TelephonyFeatures.SoftPhoneExtension)]
 public sealed class SoftPhoneController : Controller
 {
     private readonly IAuthorizationService _authorizationService;

@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 using CrestApps.OrchardCore.Omnichannel.Voice.Core;
+using CrestApps.Core.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice;
 

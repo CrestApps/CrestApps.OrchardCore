@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Telephony.Models;
 using YesSql.Indexes;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony.Indexes;
 

@@ -4,9 +4,10 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
-using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;
 using OrchardCore.Environment.Shell;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 

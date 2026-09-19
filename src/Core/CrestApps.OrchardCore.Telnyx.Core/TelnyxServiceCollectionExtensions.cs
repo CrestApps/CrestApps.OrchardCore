@@ -1,7 +1,7 @@
 using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telnyx.Core.Services;
 using CrestApps.OrchardCore.Telnyx.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 using Polly;
+using CrestApps.Core.Telephony;
 
 namespace CrestApps.OrchardCore.Telnyx.Core;
 

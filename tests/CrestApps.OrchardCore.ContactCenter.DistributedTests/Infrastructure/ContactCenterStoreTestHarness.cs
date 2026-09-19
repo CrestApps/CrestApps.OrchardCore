@@ -1,9 +1,9 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
-using CrestApps.OrchardCore.Telephony.Models;
 using YesSql;
 using YesSql.Indexes;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 

@@ -7,8 +7,7 @@ using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Hubs;
-using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,6 +17,9 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using System.Text.Json.Nodes;
 using YesSql;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -281,7 +283,7 @@ public sealed class VoiceEventFanOutIntegrationTests
             OccurredUtc = occurredUtc,
             IdempotencyKey = $"{eventType}:{occurredUtc:O}",
             HangupCause = state == CallState.Disconnected
-                ? CrestApps.OrchardCore.Telephony.Models.HangupCause.NormalClearing
+                ? CrestApps.Core.Telephony.Models.HangupCause.NormalClearing
                 : null,
         };
     }

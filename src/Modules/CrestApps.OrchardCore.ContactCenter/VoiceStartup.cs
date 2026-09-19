@@ -12,7 +12,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -25,6 +25,8 @@ using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -166,7 +168,7 @@ public sealed class VoiceStartup : StartupBase
 /// Telephony soft phone are all enabled, rather than a separately selectable feature.
 /// </summary>
 [Feature(ContactCenterConstants.Feature.Voice)]
-[RequireFeatures(ContactCenterConstants.Feature.RealTime, TelephonyConstants.Feature.SoftPhoneCore)]
+[RequireFeatures(ContactCenterConstants.Feature.RealTime, TelephonyFeatures.SoftPhoneCore)]
 public sealed class VoiceSoftPhoneStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Microsoft.Extensions.Options;
+using CrestApps.Core.Telephony.Models;
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
 /// <summary>

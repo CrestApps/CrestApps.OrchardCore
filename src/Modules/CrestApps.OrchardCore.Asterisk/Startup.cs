@@ -8,7 +8,6 @@ using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Diagnostics;
-using CrestApps.OrchardCore.Telephony.Extensions;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Configuration;
@@ -23,6 +22,8 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using Polly;
+using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Extensions;
 
 namespace CrestApps.OrchardCore.Asterisk;
 

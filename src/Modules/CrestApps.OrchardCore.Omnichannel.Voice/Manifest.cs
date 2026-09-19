@@ -21,7 +21,7 @@ using OrchardCore.Modules.Manifest;
     Category = "Contact Center",
     Dependencies =
     [
-        TelephonyConstants.Feature.Area,
+        TelephonyFeatures.Area,
         AIConstants.Feature.Area,
         AIConstants.Feature.ChatCore,
         OmnichannelConstants.Features.Managements,

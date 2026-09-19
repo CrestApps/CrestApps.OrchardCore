@@ -10,8 +10,7 @@ using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Migrations;
-using CrestApps.OrchardCore.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
@@ -34,6 +33,9 @@ using OrchardCore.FileStorage.FileSystem;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
+using CrestApps.Core.Telephony;
+using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Telephony;
 
@@ -177,7 +179,7 @@ public sealed class Startup : StartupBase
 /// Registers the shared soft phone client. This feature is enabled by dependency only; the soft phone widget
 /// and the browser-extension endpoint both depend on it and reuse the presenter and resources it provides.
 /// </summary>
-[Feature(TelephonyConstants.Feature.SoftPhoneCore)]
+[Feature(TelephonyFeatures.SoftPhoneCore)]
 public sealed class SoftPhoneCoreStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -200,7 +202,7 @@ public sealed class SoftPhoneCoreStartup : StartupBase
 /// Registers the soft phone widget feature: the admin auto-injected floating phone and the placeable
 /// front-end Soft Phone widget.
 /// </summary>
-[Feature(TelephonyConstants.Feature.SoftPhone)]
+[Feature(TelephonyFeatures.SoftPhone)]
 public sealed class SoftPhoneWidgetStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -222,7 +224,7 @@ public sealed class SoftPhoneWidgetStartup : StartupBase
 /// Registers the soft phone browser-extension feature: the standalone <c>/softphone</c> page and its
 /// configuration endpoint hosted by the CrestApps Soft Phone browser extension.
 /// </summary>
-[Feature(TelephonyConstants.Feature.SoftPhoneExtension)]
+[Feature(TelephonyFeatures.SoftPhoneExtension)]
 public sealed class SoftPhoneExtensionStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

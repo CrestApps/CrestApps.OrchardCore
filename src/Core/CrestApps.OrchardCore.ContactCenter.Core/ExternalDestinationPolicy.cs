@@ -1,4 +1,5 @@
 using CrestApps.Core.PhoneNumbers;
+using CrestApps.Core.Telephony.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core;
 
@@ -13,7 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core;
 /// workflow that dials it directly.
 /// </para>
 /// </summary>
-[Obsolete("Use IDialDestinationPolicy from CrestApps.OrchardCore.Telephony.Services. This type is kept for one release and will be removed.")]
+[Obsolete("Use IDialDestinationPolicy from CrestApps.Core.Telephony.Services. This type is kept for one release and will be removed.")]
 public static class ExternalDestinationPolicy
 {
     // The bound is on the whole E.164 value, so it admits seven digits after the leading plus sign. It is

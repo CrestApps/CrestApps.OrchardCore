@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Core.Hosting;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.AspNetCore.Http;
@@ -7,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Users;
 using ISession = YesSql.ISession;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Hosting;
 

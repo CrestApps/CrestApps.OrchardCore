@@ -95,12 +95,38 @@ public sealed class TransitionsNameNoHostTests
     }
 
     /// <summary>
-    /// Removes comments so a mention of the host in prose is not read as a dependency on it.
+    /// Removes comments and string literals, so that mentioning the host is not read as depending on it.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Comments are removed because saying which host a seam exists for is the sort of thing these files should
+    /// say.
+    /// </para>
+    /// <para>
+    /// String literals are removed because some of them cannot be renamed. Two are data-protection purposes -
+    /// the key derivation reads them - so changing their text does not rename anything, it makes every user
+    /// token and every stored recording encrypted under the old text permanently unreadable. Others are feature
+    /// identifiers a host already has written into its database. These travel with the code precisely because
+    /// they must not change.
+    /// </para>
+    /// <para>
+    /// The cost is that a dependency expressed as a string, such as a type resolved by name at runtime, is not
+    /// caught here. That is the narrower risk: it fails loudly the first time it runs, where a renamed
+    /// derivation purpose fails silently and unrecoverably.
+    /// </para>
+    /// </remarks>
     /// <param name="text">The file text.</param>
-    /// <returns>The text with its comments blanked out.</returns>
+    /// <returns>The text with its comments and string literals blanked out.</returns>
     private static string StripComments(string text)
-        => Regex.Replace(text, @"//.*?$|/\*.*?\*/|<!--.*?-->", string.Empty, RegexOptions.Singleline | RegexOptions.Multiline);
+    {
+        var withoutComments = Regex.Replace(
+            text,
+            @"//.*?$|/\*.*?\*/|<!--.*?-->",
+            string.Empty,
+            RegexOptions.Singleline | RegexOptions.Multiline);
+
+        return Regex.Replace(withoutComments, "\"(?:[^\"\\\\\\r\\n]|\\\\.)*\"", "\"\"");
+    }
 
     /// <summary>
     /// Walks up to the repository root.
