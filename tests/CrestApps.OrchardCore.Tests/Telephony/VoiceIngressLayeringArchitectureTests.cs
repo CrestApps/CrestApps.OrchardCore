@@ -51,23 +51,18 @@ public sealed partial class VoiceIngressLayeringArchitectureTests
     [Fact]
     public void TelephonyCore_DeclaresNoContactCenterProjectReference()
     {
-        // Arrange: both halves of the telephony primitive are walked. The mechanics live in the framework
-        // project, and the Orchard project that remains holds the YesSql glue for them; a Contact Center
-        // reference in either one would put the Contact Center back underneath telephony ingestion.
-        var repositoryRoot = FindRepositoryRoot();
-        var projects = new[]
-        {
-            Path.Combine(repositoryRoot, "src", "Core", "Transitions", "CrestApps.Core.Telephony", "CrestApps.Core.Telephony.csproj"),
-            Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Telephony.Core", "CrestApps.OrchardCore.Telephony.Core.csproj"),
-        };
+        // Arrange
+        var project = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "Core",
+            "Transitions",
+            "CrestApps.Core.Telephony",
+            "CrestApps.Core.Telephony.csproj");
 
         // Act
         var closure = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var project in projects)
-        {
-            CollectProjectClosure(project, closure);
-        }
+        CollectProjectClosure(project, closure);
 
         var violations = closure
             .Keys
@@ -98,7 +93,7 @@ public sealed partial class VoiceIngressLayeringArchitectureTests
 
         // Assert
         Assert.Contains(closure.Keys, IsContactCenterName);
-        Assert.Contains("CrestApps.OrchardCore.Telephony.Core", closure.Keys);
+        Assert.Contains("CrestApps.Core.Telephony", closure.Keys);
     }
 
     [Fact]

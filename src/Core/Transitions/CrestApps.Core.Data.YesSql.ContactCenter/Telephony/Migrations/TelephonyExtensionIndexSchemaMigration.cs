@@ -1,8 +1,8 @@
+using CrestApps.Core.Data.YesSql.Telephony.Indexes;
 using CrestApps.Core.Data.YesSql.Migrations;
-using CrestApps.OrchardCore.Telephony.Core.Indexes;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.Telephony.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="TelephonyExtensionIndex"/>.

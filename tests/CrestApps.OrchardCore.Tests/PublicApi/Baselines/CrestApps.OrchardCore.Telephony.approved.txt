@@ -187,16 +187,6 @@ namespace CrestApps.OrchardCore.Telephony.Hubs
 }
 namespace CrestApps.OrchardCore.Telephony.Indexes
 {
-    public sealed class TelephonyExtensionIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Telephony.Models.TelephonyExtension>
-    {
-        public TelephonyExtensionIndexProvider() { }
-        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Telephony.Models.TelephonyExtension> context) { }
-    }
-    public sealed class TelephonyInteractionIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Telephony.Models.TelephonyInteraction>
-    {
-        public TelephonyInteractionIndexProvider() { }
-        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Telephony.Models.TelephonyInteraction> context) { }
-    }
     public sealed class TelephonyUserConnectionIndexProvider : YesSql.Indexes.IndexProvider<OrchardCore.Users.Models.User>
     {
         public TelephonyUserConnectionIndexProvider(Microsoft.AspNetCore.Identity.ILookupNormalizer lookupNormalizer) { }
@@ -239,26 +229,6 @@ namespace CrestApps.OrchardCore.Telephony.Models
 }
 namespace CrestApps.OrchardCore.Telephony.Services
 {
-    public sealed class DefaultTelephonyInteractionStore : CrestApps.Core.Telephony.ITelephonyInteractionStore
-    {
-        public DefaultTelephonyInteractionStore(YesSql.ISession session, YesSql.IStore store, CrestApps.Core.Telephony.Services.IProviderIdentityResolver providerIdentityResolver) { }
-        public System.Threading.Tasks.Task CreateAsync(CrestApps.Core.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task DeleteAsync(CrestApps.Core.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> FindActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> FindByCallIdAsync(string userId, string callId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> FindByInteractionIdAsync(string userId, string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> FindByProviderCallIdAsync(string providerName, string callId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Models.TelephonyInteraction>> GetActiveAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Models.TelephonyInteraction>> GetActiveAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Models.TelephonyInteraction>> GetActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Models.TelephonyInteraction>> GetRecentAsync(string userId, int count, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<int> GetUnreadVoicemailCountAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<int> MarkAllVoicemailsReadAsync(string userId, System.DateTime readUtc, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> MarkVoicemailReadAsync(string userId, string callId, System.DateTime readUtc, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task UpdateAsync(CrestApps.Core.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> UpdateByIdAsync(string interactionId, System.Func<CrestApps.Core.Telephony.Models.TelephonyInteraction, bool> mutate, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> UpdateByProviderCallIdAsync(string providerName, string callId, System.Func<CrestApps.Core.Telephony.Models.TelephonyInteraction, bool> mutate, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class FileStoreRecordingMediaFileStore : CrestApps.Core.Telephony.IRecordingMediaFileStore
     {
         public FileStoreRecordingMediaFileStore(OrchardCore.FileStorage.IFileStore fileStore) { }

@@ -38,7 +38,7 @@
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions/CrestApps.OrchardCore.ContactCenter.Abstractions.csproj" />
     <ProjectReference Include="..\Transitions\CrestApps.Core.WebSockets\CrestApps.Core.WebSockets.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Core/CrestApps.OrchardCore.Core.csproj" />
-    <ProjectReference Include="../CrestApps.OrchardCore.Telephony.Core/CrestApps.OrchardCore.Telephony.Core.csproj" />
+    <ProjectReference Include="../Transitions/CrestApps.Core.Telephony/CrestApps.Core.Telephony.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.ContactCenter.Core/CrestApps.OrchardCore.ContactCenter.Core.csproj" />
   </ItemGroup>
 

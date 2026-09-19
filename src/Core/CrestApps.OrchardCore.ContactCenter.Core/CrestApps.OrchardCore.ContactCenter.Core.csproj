@@ -33,7 +33,7 @@
     <ProjectReference Include="..\..\Abstractions\Transitions\CrestApps.Core.PhoneNumbers.Abstractions\CrestApps.Core.PhoneNumbers.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\Transitions\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />
-    <ProjectReference Include="../CrestApps.OrchardCore.Telephony.Core/CrestApps.OrchardCore.Telephony.Core.csproj" />
+    <ProjectReference Include="../Transitions/CrestApps.Core.Telephony/CrestApps.Core.Telephony.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />

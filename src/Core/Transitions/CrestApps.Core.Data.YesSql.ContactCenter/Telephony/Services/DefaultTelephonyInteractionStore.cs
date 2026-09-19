@@ -1,10 +1,11 @@
-﻿using CrestApps.Core.Telephony.Services;
-using CrestApps.OrchardCore.Telephony.Indexes;
+using CrestApps.Core.Data.YesSql.Telephony.Indexes;
+using CrestApps.Core.Data.YesSql.Services;
+using CrestApps.Core.Telephony.Services;
 using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Data.YesSql.Telephony.Services;
 
 /// <summary>
 /// Default <see cref="ITelephonyInteractionStore"/> backed by YesSql.

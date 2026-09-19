@@ -13,9 +13,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CrestApps.Core" />
+    <PackageReference Include="CrestApps.Core.Data.YesSql" />
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="YesSql.Core" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.Core.Telephony\CrestApps.Core.Telephony.csproj" />
   </ItemGroup>
 
 </Project>

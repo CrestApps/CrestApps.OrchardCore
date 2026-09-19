@@ -1,10 +1,7 @@
 using YesSql.Indexes;
 using CrestApps.Core.Telephony.Models;
 
-// The namespace intentionally stays CrestApps.OrchardCore.Telephony.Indexes even though the type now lives in
-// the Core project: the index moved here so the schema migration that creates its table can live beside it,
-// and keeping the namespace means no consumer outside this project has to change.
-namespace CrestApps.OrchardCore.Telephony.Indexes;
+namespace CrestApps.Core.Data.YesSql.Telephony.Indexes;
 
 /// <summary>
 /// Search index for <see cref="TelephonyInteraction"/> documents.

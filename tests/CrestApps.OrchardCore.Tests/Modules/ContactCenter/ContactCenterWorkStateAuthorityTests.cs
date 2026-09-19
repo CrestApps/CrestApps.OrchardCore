@@ -79,7 +79,6 @@ public sealed class ContactCenterWorkStateAuthorityTests
     [
         "CrestApps.OrchardCore.ContactCenter.Abstractions",
         "CrestApps.OrchardCore.ContactCenter.Core",
-        "CrestApps.OrchardCore.Telephony.Core",
         "CrestApps.Core.Telephony",
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.Telephony",
@@ -91,7 +90,6 @@ public sealed class ContactCenterWorkStateAuthorityTests
     [
         Path.Combine("Abstractions", "CrestApps.OrchardCore.ContactCenter.Abstractions"),
         Path.Combine("Core", "CrestApps.OrchardCore.ContactCenter.Core"),
-        Path.Combine("Core", "CrestApps.OrchardCore.Telephony.Core"),
         Path.Combine("Core", "Transitions", "CrestApps.Core.Telephony"),
         Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),

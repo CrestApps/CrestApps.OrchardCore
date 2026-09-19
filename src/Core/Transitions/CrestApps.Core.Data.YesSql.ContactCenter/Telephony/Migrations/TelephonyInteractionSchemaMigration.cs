@@ -1,9 +1,9 @@
+using CrestApps.Core.Data.YesSql.Telephony.Indexes;
 using CrestApps.Core.Data.YesSql.Migrations;
-using CrestApps.OrchardCore.Telephony.Indexes;
 using YesSql.Sql;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.Telephony.Migrations;
 
 /// <summary>
 /// Creates the schema used to store telephony interactions for history and reporting.

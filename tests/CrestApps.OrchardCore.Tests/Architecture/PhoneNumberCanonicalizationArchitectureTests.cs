@@ -28,7 +28,6 @@ public sealed class PhoneNumberCanonicalizationArchitectureTests
         "src/Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions",
         "src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions",
         "src/Core/CrestApps.OrchardCore.ContactCenter.Core",
-        "src/Core/CrestApps.OrchardCore.Telephony.Core",
         "src/Core/Transitions/CrestApps.Core.Telephony",
         "src/Modules/CrestApps.OrchardCore.ContactCenter",
         "src/Modules/CrestApps.OrchardCore.DncRegistry",

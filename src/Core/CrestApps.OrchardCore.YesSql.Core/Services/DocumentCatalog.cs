@@ -1,3 +1,4 @@
+using CrestApps.Core.Data.YesSql.Services;
 using YesSql;
 
 namespace CrestApps.OrchardCore.YesSql.Core.Services;
@@ -7,7 +8,7 @@ namespace CrestApps.OrchardCore.YesSql.Core.Services;
 /// catalog entries as individual YesSql documents with a corresponding index.
 /// </summary>
 /// <remarks>
-/// The implementation lives on <see cref="ConcurrentDocumentCatalog{T, TIndex}"/>. This type keeps
+/// The implementation lives on the suite's <see cref="ConcurrentDocumentCatalog{T, TIndex}"/>. This type keeps
 /// its own name and shape because it is part of the published
 /// <c>CrestApps.OrchardCore.YesSql.Core</c> surface that consumers outside this repository derive
 /// from.

@@ -19,7 +19,8 @@ a reviewed diff of every approval baseline that moved.
 | W3.2 | `3ca794ce` | The telephony primitive: hub base, models, services, and the reconciliation cycle into `CrestApps.Core.Telephony`. |
 | W3.3 (first half), W3.5 | `91530579` | The module services with no host dependency, and the encrypted recording store with a backend contract under it. |
 | W3.3 (second half) | `70820d96` | The three services and the dial endpoint that pushed to the soft phone, behind a notifier contract. |
-| W3.3 (rest), W3.4 | this commit | The token store, the provider resolver and the authentication service: the last module services that were not Orchard's own. |
+| W3.3 (rest), W3.4 | `9a049eb2` | The token store, the provider resolver and the authentication service: the last module services that were not Orchard's own. |
+| W3.6, W3.7 | this commit | The store package: the shared catalog base, the telephony indexes, their schema migrations and their stores. The Orchard `Telephony.Core` project is gone, and the documents it wrote are migrated to the names that replaced it. |
 
 ## Decisions the plan did not make
 
@@ -51,7 +52,7 @@ references that project so its hundred-odd existing callers still resolve it wit
 Phase 2 folds both into the `CrestApps.Core.Support` package, which is where the namespace already
 says they belong.
 
-### The Orchard `Telephony.Core` project did not disappear (W3.2)
+### The Orchard `Telephony.Core` project did not disappear at first (W3.2)
 
 The plan expects it to be deleted once emptied. Three index classes, three schema migrations, and
 `TelephonyExtensionStore` are still in it, because they belong in
@@ -62,6 +63,9 @@ project is deleted when the store package is built, not before.
 `TelephonyExtensionStore` therefore stayed in `CrestApps.OrchardCore.Telephony.Core.Services` while
 its interface moved to `CrestApps.Core.Telephony.Services`. That is the honest position: the
 framework namespace belongs to framework assemblies.
+
+W3.6 closed this. The catalog base moved, the indexes, migrations and stores followed it into
+`CrestApps.Core.Data.YesSql.ContactCenter`, and the project was deleted.
 
 ### The recording store kept a backend seam rather than a root path (W3.5)
 
@@ -109,6 +113,36 @@ Three Contact Center settings use `AddSiteSettingsOptions` without any driver ca
 `RequestUpdate`, which is the same gap this change closed for telephony. That is recorded as its own
 task rather than folded in here, because it is a fix to shipped behaviour rather than part of the
 extraction.
+
+### The shared catalog base moved rather than being copied (W3.6)
+
+The plan has the store package take a *copy* of the Orchard `DocumentCatalog` implementation under
+the name `ConcurrentDocumentCatalog`. There is nothing to copy: Phase 0 already split that
+implementation out under exactly that name, and it carries no host type. It moved, and the Orchard
+`DocumentCatalog` — which is published API that consumers outside this repository derive from —
+now derives from the framework one. One implementation, and the Contact Center, Omnichannel and SMS
+Portal stores that sit on it did not change.
+
+Its collection-name constructor was `internal`, which stopped working across an assembly boundary.
+It is `protected` now, which is what it was for.
+
+### The legacy type-name rewrite matches the assembly exactly (W3.7)
+
+The three legacy telephony assembly names are prefixes of one another:
+`CrestApps.OrchardCore.Telephony`, `...Telephony.Abstractions`, `...Telephony.Core`. The AI migration
+this one is modelled on matches the assembly with a trailing wildcard, which here would rewrite an
+Abstractions document to the wrong assembly and lose it. The telephony rules match the assembly as an
+exact suffix, and a test pins that.
+
+`TelephonyUserConnections` is in the plan's table and is not in the migration: it is stored in a
+user's properties under its simple type name, so its namespace never reached the database.
+
+### What stayed that the plan expected to move
+
+`SoftPhoneExtensionEndpoints` is host glue in practice, whatever its name suggests. It resolves a
+Contact Center route by name through Orchard's link generator, derives the hub URL from Orchard's own
+hub-route convention, and builds the rest out of the current request. There is nothing in it that a
+framework consumer could use without reimplementing all three, so it stays in the module.
 
 ## Guards that had to be repointed (W3.2)
 

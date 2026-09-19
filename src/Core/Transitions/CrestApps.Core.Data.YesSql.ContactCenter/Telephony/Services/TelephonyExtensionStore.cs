@@ -1,10 +1,10 @@
-using CrestApps.OrchardCore.Telephony.Core.Indexes;
+using CrestApps.Core.Data.YesSql.Telephony.Indexes;
+using CrestApps.Core.Data.YesSql.Services;
 using CrestApps.Core.Telephony.Models;
 using CrestApps.Core.Telephony.Services;
-using CrestApps.OrchardCore.YesSql.Core.Services;
 using YesSql;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Data.YesSql.Telephony.Services;
 
 /// <summary>
 /// Provides a YesSql-based implementation of <see cref="ITelephonyExtensionStore"/>.

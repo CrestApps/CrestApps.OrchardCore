@@ -10,8 +10,9 @@ using CrestApps.Core.Telephony.Endpoints;
 using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
+using CrestApps.Core.Data.YesSql.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Migrations;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Data.YesSql.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
@@ -145,6 +146,10 @@ public sealed class Startup : StartupBase
         services.AddIndexProvider<TelephonyUserConnectionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();
         services.AddDataMigration<TelephonyUserConnectionIndexMigrations>();
+
+        // Every telephony document written before the move records a type name that no longer resolves, so
+        // this runs before anything tries to read one.
+        services.AddDataMigration<TelephonyLegacyDocumentTypeNameMigrations>();
 
         // The default recording media store keeps encrypted recordings under a tenant-scoped application-data
         // folder, so recordings ingested by any voice provider are namespaced per tenant and never observable

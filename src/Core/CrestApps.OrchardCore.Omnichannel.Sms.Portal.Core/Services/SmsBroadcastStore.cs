@@ -1,3 +1,4 @@
+using CrestApps.Core.Data.YesSql.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;

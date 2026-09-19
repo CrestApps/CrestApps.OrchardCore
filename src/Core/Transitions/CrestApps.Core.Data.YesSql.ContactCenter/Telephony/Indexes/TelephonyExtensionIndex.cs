@@ -1,9 +1,9 @@
 using CrestApps.Core.Data.YesSql.Indexes;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Indexes;
+namespace CrestApps.Core.Data.YesSql.Telephony.Indexes;
 
 /// <summary>
-/// Indexes <see cref="Models.TelephonyExtension"/> documents for lookup by dialed number and by owning user.
+/// Indexes <see cref="Core.Telephony.Models.TelephonyExtension"/> documents for lookup by dialed number and by owning user.
 /// The stable catalog identifier is provided by the <see cref="CatalogItemIndex"/> base as <c>ItemId</c>.
 /// </summary>
 public sealed class TelephonyExtensionIndex : CatalogItemIndex

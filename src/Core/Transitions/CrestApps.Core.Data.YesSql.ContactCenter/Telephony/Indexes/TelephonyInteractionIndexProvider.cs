@@ -1,7 +1,7 @@
 using YesSql.Indexes;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Indexes;
+namespace CrestApps.Core.Data.YesSql.Telephony.Indexes;
 
 /// <summary>
 /// Maps <see cref="TelephonyInteraction"/> documents to the <see cref="TelephonyInteractionIndex"/>.

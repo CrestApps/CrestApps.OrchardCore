@@ -17,3 +17,131 @@ namespace CrestApps.Core.Data.YesSql.Migrations
         public System.Collections.Generic.Dictionary<string, int> AppliedVersions { get; init; }
     }
 }
+namespace CrestApps.Core.Data.YesSql.Services
+{
+    public class ConcurrentDocumentCatalog<T, TIndex> : CrestApps.Core.Services.ICatalog<T>, CrestApps.Core.Services.IReadCatalog<T>
+        where T : CrestApps.Core.Models.CatalogItem
+        where TIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        protected readonly YesSql.ISession Session;
+        public ConcurrentDocumentCatalog(YesSql.ISession session) { }
+        protected ConcurrentDocumentCatalog(YesSql.ISession session, string collectionName) { }
+        protected virtual bool CheckConcurrency { get; }
+        protected string CollectionName { get; set; }
+        public System.Threading.Tasks.ValueTask CreateAsync(T record, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.ValueTask<bool> DeleteAsync(T entry, System.Threading.CancellationToken cancellationToken = default) { }
+        protected virtual System.Threading.Tasks.ValueTask DeletingAsync(T model) { }
+        public System.Threading.Tasks.ValueTask<T> FindByIdAsync(string id, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<T>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<T>> GetAsync(System.Collections.Generic.IEnumerable<string> ids, System.Threading.CancellationToken cancellationToken = default) { }
+        protected System.Threading.Tasks.ValueTask<T[]> LoadedAsync(System.Collections.Generic.IEnumerable<T> records) { }
+        protected System.Threading.Tasks.ValueTask<T> LoadedAsync(T record) { }
+        protected virtual System.Threading.Tasks.ValueTask LoadingAsync(T record) { }
+        public System.Threading.Tasks.ValueTask<CrestApps.Core.Models.PageResult<T>> PageAsync<TQuery>(int page, int pageSize, TQuery context, System.Threading.CancellationToken cancellationToken = default)
+            where TQuery : CrestApps.Core.Models.QueryContext { }
+        protected virtual System.Threading.Tasks.ValueTask PagingAsync<TQuery>(YesSql.IQuery<T> query, TQuery context)
+            where TQuery : CrestApps.Core.Models.QueryContext { }
+        protected virtual System.Threading.Tasks.ValueTask SavingAsync(T record) { }
+        public System.Threading.Tasks.ValueTask UpdateAsync(T record, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace CrestApps.Core.Data.YesSql.Telephony.Indexes
+{
+    public sealed class TelephonyExtensionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public TelephonyExtensionIndex() { }
+        public long DocumentId { get; set; }
+        public string Name { get; set; }
+        public string Number { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class TelephonyExtensionIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Telephony.Models.TelephonyExtension>
+    {
+        public TelephonyExtensionIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Telephony.Models.TelephonyExtension> context) { }
+    }
+    public sealed class TelephonyInteractionIndex : YesSql.Indexes.MapIndex
+    {
+        public TelephonyInteractionIndex() { }
+        public string CallId { get; set; }
+        public CrestApps.Core.Telephony.Models.CallDirection Direction { get; set; }
+        public string InteractionId { get; set; }
+        public bool IsExtension { get; set; }
+        public bool IsVoicemail { get; set; }
+        public CrestApps.Core.Telephony.Models.CallOutcome Outcome { get; set; }
+        public string ProviderName { get; set; }
+        public System.DateTime StartedUtc { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+        public System.DateTime? VoicemailReadUtc { get; set; }
+    }
+    public sealed class TelephonyInteractionIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Telephony.Models.TelephonyInteraction>
+    {
+        public TelephonyInteractionIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Telephony.Models.TelephonyInteraction> context) { }
+    }
+    public sealed class TelephonyUserConnectionIndex : YesSql.Indexes.MapIndex
+    {
+        public TelephonyUserConnectionIndex() { }
+        public bool IsEnabled { get; set; }
+        public string NormalizedRemotePhoneNumber { get; set; }
+        public string NormalizedRemoteUserEmail { get; set; }
+        public string ProviderName { get; set; }
+        public string RemoteUserId { get; set; }
+        public string UserId { get; set; }
+    }
+}
+namespace CrestApps.Core.Data.YesSql.Telephony.Migrations
+{
+    public sealed class TelephonyExtensionIndexSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public TelephonyExtensionIndexSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class TelephonyInteractionSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public TelephonyInteractionSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class TelephonyUserConnectionIndexSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public TelephonyUserConnectionIndexSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+}
+namespace CrestApps.Core.Data.YesSql.Telephony.Services
+{
+    public sealed class DefaultTelephonyInteractionStore : CrestApps.Core.Telephony.ITelephonyInteractionStore
+    {
+        public DefaultTelephonyInteractionStore(YesSql.ISession session, YesSql.IStore store, CrestApps.Core.Telephony.Services.IProviderIdentityResolver providerIdentityResolver) { }
+        public System.Threading.Tasks.Task CreateAsync(CrestApps.Core.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteAsync(CrestApps.Core.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> FindActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> FindByCallIdAsync(string userId, string callId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> FindByInteractionIdAsync(string userId, string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> FindByProviderCallIdAsync(string providerName, string callId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Models.TelephonyInteraction>> GetActiveAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Models.TelephonyInteraction>> GetActiveAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Models.TelephonyInteraction>> GetActiveByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Models.TelephonyInteraction>> GetRecentAsync(string userId, int count, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> GetUnreadVoicemailCountAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> MarkAllVoicemailsReadAsync(string userId, System.DateTime readUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> MarkVoicemailReadAsync(string userId, string callId, System.DateTime readUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task UpdateAsync(CrestApps.Core.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> UpdateByIdAsync(string interactionId, System.Func<CrestApps.Core.Telephony.Models.TelephonyInteraction, bool> mutate, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyInteraction> UpdateByProviderCallIdAsync(string providerName, string callId, System.Func<CrestApps.Core.Telephony.Models.TelephonyInteraction, bool> mutate, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class TelephonyExtensionStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.Telephony.Models.TelephonyExtension, CrestApps.Core.Data.YesSql.Telephony.Indexes.TelephonyExtensionIndex>, CrestApps.Core.Services.ICatalog<CrestApps.Core.Telephony.Models.TelephonyExtension>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.Telephony.Models.TelephonyExtension>, CrestApps.Core.Telephony.Services.ITelephonyExtensionStore
+    {
+        public TelephonyExtensionStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyExtension> FindByNumberAsync(string number, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyExtension> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}

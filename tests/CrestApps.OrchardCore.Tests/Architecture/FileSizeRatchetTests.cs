@@ -25,7 +25,6 @@ public sealed class FileSizeRatchetTests
         Path.Combine("Core", "CrestApps.OrchardCore.ContactCenter.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),
-        Path.Combine("Core", "CrestApps.OrchardCore.Telephony.Core"),
         Path.Combine("Core", "Transitions", "CrestApps.Core.Telephony"),
         Path.Combine("Core", "CrestApps.OrchardCore.Telnyx.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telnyx"),

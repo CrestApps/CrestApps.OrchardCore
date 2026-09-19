@@ -81,6 +81,12 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Asterisk",
         "CrestApps.OrchardCore.Dialpad",
+
+        // The framework halves of the same features. They carry the code the Orchard assemblies used to, so
+        // leaving them out would let the rule be satisfied by moving a violation rather than removing it.
+        "CrestApps.Core.ContactCenter",
+        "CrestApps.Core.Telephony",
+        "CrestApps.Core.Data.YesSql.ContactCenter",
     ];
 
     /// <summary>
@@ -88,6 +94,10 @@ public sealed class ContactCenterSearchEngineIndependenceTests
     /// </summary>
     private static readonly string[] _expectedShippedAssemblies =
     [
+        "CrestApps.Core.ContactCenter.Abstractions",
+        "CrestApps.Core.Data.YesSql.ContactCenter",
+        "CrestApps.Core.Telephony",
+        "CrestApps.Core.Telephony.Abstractions",
         "CrestApps.OrchardCore.Asterisk",
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.ContactCenter.Abstractions",
@@ -96,7 +106,6 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         "CrestApps.OrchardCore.Telephony",
         "CrestApps.OrchardCore.Telephony.Abstractions",
         "CrestApps.OrchardCore.Telephony.Azure",
-        "CrestApps.OrchardCore.Telephony.Core",
     ];
 
     /// <summary>

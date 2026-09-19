@@ -1,12 +1,11 @@
 using CrestApps.Core;
-using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using YesSql;
 using YesSql.Services;
 
-namespace CrestApps.OrchardCore.YesSql.Core.Services;
+namespace CrestApps.Core.Data.YesSql.Services;
 
 /// <summary>
 /// YesSql-backed implementation of <see cref="ICatalog{T}"/> that stores catalog entries
@@ -14,9 +13,9 @@ namespace CrestApps.OrchardCore.YesSql.Core.Services;
 /// concurrency checking on update.
 /// </summary>
 /// <remarks>
-/// This is the base the Contact Center Suite stores derive from. It carries the implementation that
-/// <see cref="DocumentCatalog{T, TIndex}"/> used to hold directly, so the suite can be extracted
-/// without disturbing the other consumers of that published type.
+/// This is the base every Contact Center Suite store derives from. The host's own published catalog
+/// base derives from it too, so the two agree on how a catalog entry is stored and neither had to
+/// change when the suite was extracted.
 /// </remarks>
 /// <typeparam name="T">The type of catalog item managed by this catalog.</typeparam>
 /// <typeparam name="TIndex">The YesSql index type used to query catalog items.</typeparam>
@@ -48,7 +47,13 @@ public class ConcurrentDocumentCatalog<T, TIndex> : ICatalog<T>
         Session = session;
     }
 
-    internal ConcurrentDocumentCatalog(
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ConcurrentDocumentCatalog{T, TIndex}"/> class that reads
+    /// and writes its documents in a named YesSql collection rather than the default one.
+    /// </summary>
+    /// <param name="session">The YesSql session for database access.</param>
+    /// <param name="collectionName">The YesSql collection the documents live in.</param>
+    protected ConcurrentDocumentCatalog(
         ISession session,
         string collectionName)
         : this(session)
