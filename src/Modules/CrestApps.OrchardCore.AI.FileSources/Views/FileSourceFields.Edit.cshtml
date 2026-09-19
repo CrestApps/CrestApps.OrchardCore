@@ -1,0 +1,114 @@
+@using CrestApps.Core.AI.FileSources
+@using CrestApps.OrchardCore.AI.FileSources.ViewModels
+@using Microsoft.Extensions.Options
+
+@inject IOptions<FileSourceOptions> FileSourceOptions
+
+@using CrestApps.Core.AI.Ingestion
+@model FileSourceFieldsViewModel
+
+@{
+    var defaults = FileSourceOptions.Value;
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayText" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+        <span class="hint">@T["A human-readable name that identifies this file source in the list."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AIDataSourceId" class="ocat-label">@T["Target File data source"]</label>
+    <div class="ocat-end">
+        @if (Model.HasDataSources)
+        {
+            <select asp-for="AIDataSourceId" asp-items="Model.DataSources" class="form-select">
+                <option value="">@T["Select a File data source..."]</option>
+            </select>
+            <span asp-validation-for="AIDataSourceId" class="text-danger"></span>
+            <span class="hint">@T["The File AI data source whose knowledge base receives the files this source reads. Several file sources can target the same data source."]</span>
+        }
+        else
+        {
+            <div class="alert alert-warning mb-0" role="alert">
+                @T["No File data sources exist yet. Create a data source of type <strong>File</strong> under <strong>Artificial Intelligence &gt; Data Sources</strong>, then return here to point a file source at it."]
+            </div>
+        }
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" type="checkbox" />
+            <label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label>
+            <span class="hint">@T["Disabled file sources are skipped by the scheduled ingestion task."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ReindexIntervalMinutes" class="ocat-label">@T["Re-read interval (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReindexIntervalMinutes" class="form-control" type="number" min="1" />
+        <span asp-validation-for="ReindexIntervalMinutes" class="text-danger"></span>
+        <span class="hint">@T["How often the background task re-reads this source and ingests what changed. Leave empty to use the default ({0} minutes). The task evaluates sources hourly, so intervals are honored to the nearest hour.", defaults.DefaultRunIntervalMinutes]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="FigureMode" class="ocat-label">@T["Figures"]</label>
+    <div class="ocat-end">
+        <select asp-for="FigureMode" asp-items="Model.FigureModes" class="form-select"></select>
+        <span class="hint">@T["Describing a figure calls a vision model and is the expensive part of ingestion. A folder of scanned drawings is worth describing every figure in; a folder of meeting notes is not. A figure keeps its caption whatever this says."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxFigureDescriptionsPerDocument" class="ocat-label">@T["Figures described per document"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxFigureDescriptionsPerDocument" class="form-control" type="number" min="0" />
+        <span asp-validation-for="MaxFigureDescriptionsPerDocument" class="text-danger"></span>
+        <span class="hint">@T["A ceiling on what one unusually figure-heavy document can cost."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="VisionDeploymentName" class="ocat-label">@T["Vision deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="VisionDeploymentName" asp-items="Model.Deployments" class="form-select">
+            <option value="">@T["Use the deployment in the Vision slot"]</option>
+        </select>
+        <span class="hint">@T["The deployment that describes figures. A deployment that cannot read a picture is not a cheaper choice, it is a setting that describes nothing."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="UtilityDeploymentName" class="ocat-label">@T["Utility deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="UtilityDeploymentName" asp-items="Model.Deployments" class="form-select">
+            <option value="">@T["Use the deployment in the Utility slot"]</option>
+        </select>
+        <span class="hint">@T["The deployment that answers the short prompts ingestion runs, such as reading a document's front matter."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxItemsPerRun" class="ocat-label">@T["Items per run"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxItemsPerRun" class="form-control" type="number" min="1" />
+        <span asp-validation-for="MaxItemsPerRun" class="text-danger"></span>
+        <span class="hint">@T["The most items one run will take on; the rest wait for the next. Leave empty to use the default ({0}). A first read of a large source is the expensive one, and capping it makes that cost predictable.", defaults.MaxItemsPerRun]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Language" class="ocat-label">@T["Language"]</label>
+    <div class="ocat-end">
+        <input asp-for="Language" class="form-control" placeholder="@T["e.g. en-US"]" />
+        <span class="hint">@T["The BCP-47 language tag this corpus is written in, when it is known and uniform. Leave empty when it is mixed."]</span>
+    </div>
+</div>

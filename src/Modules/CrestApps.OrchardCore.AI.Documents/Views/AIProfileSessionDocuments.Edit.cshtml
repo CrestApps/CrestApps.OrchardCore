@@ -17,10 +17,15 @@
     </div>
 }
 
+@*
+    The upload-cost fields on the document parameters shape follow this switch, so it carries a stable
+    hook rather than relying on a generated id: the two shapes come from different display drivers and
+    nothing guarantees they share a prefix.
+*@
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
         <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="AllowSessionDocuments" />
+            <input type="checkbox" class="form-check-input" data-session-documents-toggle asp-for="AllowSessionDocuments" />
             <label class="form-check-label" asp-for="AllowSessionDocuments">@T["Allow session document uploads"]</label>
             <span class="hint">@T["When enabled, users can upload documents to chat sessions using this profile. Documents will be indexed for AI-powered search and Retrieval-Augmented Generation (RAG)."]</span>
         </div>

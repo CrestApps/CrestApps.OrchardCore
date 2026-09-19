@@ -1,14 +1,14 @@
 ---
 sidebar_label: Web Crawlers
 sidebar_position: 5
-title: AI Data Sources - Web Crawlers
+title: AI Web Crawlers
 description: A Web AI data source populated by strategy-based web crawlers that scrape public websites and index each page into the AI Knowledge Base for RAG.
 ---
 
 | | |
 | --- | --- |
-| **Feature Name** | AI Data Sources - Web Crawlers |
-| **Feature ID** | `CrestApps.OrchardCore.AI.DataSources.WebCrawlers` |
+| **Feature Name** | AI Web Crawlers |
+| **Feature ID** | `CrestApps.OrchardCore.AI.WebCrawlers` |
 
 Adds a **Web** AI data source that is populated by strategy-based web crawlers. Crawlers scrape public websites (starting with sitemap discovery), clean each page to text, and index it into the AI Knowledge Base for Retrieval-Augmented Generation (RAG).
 
@@ -24,7 +24,7 @@ Each scraped page becomes one knowledge-base document keyed by its URL, and the 
 
 ## Getting Started
 
-1. **Enable the feature** — Enable **AI Data Sources - Web Crawlers** in the Orchard Core admin dashboard. This also enables the **AI Data Sources** feature it depends on.
+1. **Enable the feature** — Enable **AI Web Crawlers** in the Orchard Core admin dashboard. This also enables the **AI Data Sources** feature it depends on.
 2. **Create a Knowledge Base Index** — In **Search > Indexing**, add an **AI Knowledge Base Index** (Elasticsearch or Azure AI Search) with an embedding connection configured. See the [AI Data Sources overview](index.md) for the embedding requirements.
 3. **Add a Web data source** — Under **Artificial Intelligence > Data Sources**, click **Add Data Source**, choose **Web**, then configure the destination knowledge-base index and field mappings. The Web source itself has no connection settings.
 4. **Add a web crawler** — Under **Artificial Intelligence > Web Crawlers**, click **Add Web Crawler**, choose the **Sitemap** strategy, and configure the site to scrape and its target Web data source.

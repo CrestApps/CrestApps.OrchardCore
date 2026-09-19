@@ -1,0 +1,126 @@
+@using CrestApps.OrchardCore.AI.FileSources.Ftp.ViewModels
+
+@model FtpFileSourceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Host" class="ocat-label">@T["Host"]</label>
+    <div class="ocat-end">
+        <input asp-for="Host" class="form-control" placeholder="@T["ftp.example.com"]" />
+        <span asp-validation-for="Host" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Port" class="ocat-label">@T["Port"]</label>
+    <div class="ocat-end">
+        <input asp-for="Port" class="form-control" type="number" min="1" max="65535" placeholder="21" />
+        <span asp-validation-for="Port" class="text-danger"></span>
+        <span class="hint">@T["Leave empty to use 21."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Username" class="ocat-label">@T["Username"]</label>
+    <div class="ocat-end">
+        <input asp-for="Username" class="form-control" autocomplete="off" />
+        <span class="hint">@T["Leave empty to connect anonymously."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Password" class="ocat-label">@T["Password"]</label>
+    <div class="ocat-end">
+        <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" />
+        <span class="hint">
+            @if (Model.HasPassword)
+            {
+                @T["A password is stored. Leave this empty to keep it, or type a new one to replace it."]
+            }
+            else
+            {
+                @T["Stored encrypted. It is never sent back to this form."]
+            }
+        </span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RemoteRootPath" class="ocat-label">@T["Folder"]</label>
+    <div class="ocat-end">
+        <input asp-for="RemoteRootPath" class="form-control" placeholder="/" />
+        <span class="hint">@T["The folder on the server to read, for example <code>/handbooks</code>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="RemoteRecursive" class="form-check-input" type="checkbox" />
+            <label asp-for="RemoteRecursive" class="form-check-label">@T["Include sub-folders"]</label>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RemoteMaxItems" class="ocat-label">@T["Files per listing"]</label>
+    <div class="ocat-end">
+        <input asp-for="RemoteMaxItems" class="form-control" type="number" min="1" />
+        <span asp-validation-for="RemoteMaxItems" class="text-danger"></span>
+        <span class="hint">@T["The most files one listing will take on. A listing that could not finish removes nothing."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="EncryptionMode" class="ocat-label">@T["Encryption mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="EncryptionMode" class="form-select">
+            <option value="">@T["Automatic"]</option>
+            <option value="None">@T["None (plain FTP)"]</option>
+            <option value="Explicit">@T["Explicit FTPS"]</option>
+            <option value="Implicit">@T["Implicit FTPS"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DataConnectionType" class="ocat-label">@T["Data connection"]</label>
+    <div class="ocat-end">
+        <select asp-for="DataConnectionType" class="form-select">
+            <option value="">@T["Automatic"]</option>
+            <option value="AutoPassive">@T["Passive"]</option>
+            <option value="AutoActive">@T["Active"]</option>
+        </select>
+        <span class="hint">@T["Passive is usually the one that works through a firewall."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="ValidateAnyCertificate" class="form-check-input" type="checkbox" />
+            <label asp-for="ValidateAnyCertificate" class="form-check-label">@T["Accept any TLS certificate"]</label>
+            <span class="hint">@T["Accepts a certificate that does not validate, including one an attacker presents. Only for a server with a self-signed certificate on a network you control."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ConnectTimeout" class="ocat-label">@T["Connect timeout (ms)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ConnectTimeout" class="form-control" type="number" min="1" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ReadTimeout" class="ocat-label">@T["Read timeout (ms)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReadTimeout" class="form-control" type="number" min="1" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RetryAttempts" class="ocat-label">@T["Retry attempts"]</label>
+    <div class="ocat-end">
+        <input asp-for="RetryAttempts" class="form-control" type="number" min="0" />
+    </div>
+</div>

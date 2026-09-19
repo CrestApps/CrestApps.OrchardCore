@@ -5,6 +5,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Documents.Services;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Resilience;
 using CrestApps.Core.Infrastructure.Indexing;
@@ -92,6 +93,8 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
             model.DocumentRetrievalMode = documentsMetadata.RetrievalMode;
+            model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
+            model.DescribeFiguresInUploads = documentsMetadata.DescribeFiguresInUploads;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
         }).Location("Content:7#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
@@ -135,6 +138,8 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
         var documentsMetadata = template.GetOrCreate<DocumentsMetadata>();
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.RetrievalMode = model.DocumentRetrievalMode;
+        documentsMetadata.MaxIndexableCharacters = NormalizeMaxIndexableCharacters(model.MaxIndexableCharacters);
+        documentsMetadata.DescribeFiguresInUploads = model.DescribeFiguresInUploads;
         documentsMetadata.Documents ??= [];
 
         if (context.Updater.ModelState.IsValid)
@@ -222,7 +227,12 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
                             file,
                             template.ItemId,
                             AIConstants.DocumentReferenceTypes.ProfileTemplate,
-                            embeddingGenerator);
+                            embeddingGenerator,
+                            // This template's own answers when it gave them, the site's otherwise, so a
+                            // template's knowledge files are measured the same way the profiles built from
+                            // it will measure theirs.
+                            documentsMetadata.MaxIndexableCharacters,
+                            documentsMetadata.DescribeFiguresInUploads);
 
                         if (!result.Success)
                         {
@@ -266,6 +276,13 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
 
         return Edit(template, context);
     }
+
+    /// <summary>
+    /// Keeps a blank field meaning "use the site default" and clamps a negative number to the "no limit"
+    /// zero, rather than storing a ceiling no upload could satisfy.
+    /// </summary>
+    private static int? NormalizeMaxIndexableCharacters(int? value)
+        => value is null ? null : Math.Max(0, value.Value);
 
     private async Task<AIDeployment> ResolveDeploymentAsync(ProfileTemplateMetadata profileMetadata)
     {

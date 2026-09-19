@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Documents.Services;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.AI.Resilience;
@@ -100,6 +101,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             var documentsMetadata = profile.GetOrCreate<DocumentsMetadata>();
             model.TopN = documentsMetadata.DocumentTopN ?? 3;
             model.DocumentRetrievalMode = documentsMetadata.RetrievalMode;
+            model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
+            model.DescribeFiguresInUploads = documentsMetadata.DescribeFiguresInUploads;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
         }).Location("Content:7#Knowledge;2");
 
@@ -144,6 +147,8 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
 
         documentsMetadata.DocumentTopN = model.TopN > 0 ? model.TopN : 3;
         documentsMetadata.RetrievalMode = model.DocumentRetrievalMode;
+        documentsMetadata.MaxIndexableCharacters = NormalizeMaxIndexableCharacters(model.MaxIndexableCharacters);
+        documentsMetadata.DescribeFiguresInUploads = model.DescribeFiguresInUploads;
 
         if (context.Updater.ModelState.IsValid)
         {
@@ -231,7 +236,12 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
                             file,
                             profile.ItemId,
                             AIConstants.DocumentReferenceTypes.Profile,
-                            embeddingGenerator);
+                            embeddingGenerator,
+                            // This profile's own answers when it gave them, the site's otherwise. Passing
+                            // nothing here would measure the profile's own knowledge files against the site
+                            // ceiling while its sessions were measured against the profile's.
+                            documentsMetadata.MaxIndexableCharacters,
+                            documentsMetadata.DescribeFiguresInUploads);
 
                         if (!result.Success)
                         {
@@ -277,12 +287,60 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
         return Edit(profile, context);
     }
 
+    /// <summary>
+    /// Keeps a blank field meaning "use the site default" and clamps a negative number to the "no limit"
+    /// zero, rather than storing a ceiling no upload could satisfy.
+    /// </summary>
+    private static int? NormalizeMaxIndexableCharacters(int? value)
+        => value is null ? null : Math.Max(0, value.Value);
+
+    /// <summary>
+    /// Finds which template this profile is being created from.
+    /// </summary>
+    /// <returns>The template id, or <see langword="null"/> when the profile is not from a template.</returns>
+    /// <remarks>
+    /// The selector belongs to another display driver, so its field arrives namespaced by that driver's
+    /// prefix. Reading the bare name alone finds nothing, which is why the template's documents were never
+    /// cloned onto a profile built from it. The query string is checked too, because applying a template
+    /// reloads the editor with it there.
+    /// </remarks>
+    private string ReadTemplateId()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+
+        if (request is null)
+        {
+            return null;
+        }
+
+        if (request.HasFormContentType)
+        {
+            foreach (var key in request.Form.Keys)
+            {
+                if (key.Equals("TemplateId", StringComparison.OrdinalIgnoreCase) ||
+                    key.EndsWith(".TemplateId", StringComparison.OrdinalIgnoreCase))
+                {
+                    var value = request.Form[key].ToString();
+
+                    if (!string.IsNullOrWhiteSpace(value))
+                    {
+                        return value;
+                    }
+                }
+            }
+        }
+
+        var fromQuery = request.Query["templateId"].ToString();
+
+        return string.IsNullOrWhiteSpace(fromQuery) ? null : fromQuery;
+    }
+
     private async Task CloneTemplateDocumentsAsync(
         AIProfile profile,
         DocumentsMetadata documentsMetadata,
         IEnumerable<string> removedDocumentIds)
     {
-        var templateId = _httpContextAccessor.HttpContext?.Request?.Form["TemplateId"].ToString();
+        var templateId = ReadTemplateId();
 
         if (string.IsNullOrWhiteSpace(templateId))
         {

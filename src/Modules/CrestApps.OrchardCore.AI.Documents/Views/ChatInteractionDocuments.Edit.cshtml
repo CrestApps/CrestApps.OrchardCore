@@ -1,3 +1,5 @@
+@using CrestApps.Core.AI.Ingestion
+@using System.Globalization
 @using CrestApps.Core.AI.Documents.Models
 @using CrestApps.OrchardCore.AI.Core
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
@@ -43,6 +45,26 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
         <div class="form-text">@T["Overrides the site default when this interaction searches uploaded document knowledge."]</div>
     </div>
 </div>
+
+@if (Model.AllowDocumentUploads)
+{
+    @*
+        What an upload costs. Blank means "use the site default".
+
+        Only the ceiling appears here. The framework's interaction upload endpoint deliberately follows the
+        site's own answer about describing figures whatever an interaction says -- an interaction is one
+        conversation, so the recurring cost that choice controls does not arise -- and a control the upload
+        ignores would save, reload and do nothing. That choice lives on the AI profile, where it applies to
+        every session the profile serves.
+    *@
+    <div class="mb-3">
+        <label for="@Html.IdFor(m => m.MaxIndexableCharacters)" class="form-label">@T["Largest document that can be indexed"]</label>
+        <div>
+            <input type="number" class="form-control setting-input" data-setting="maxIndexableCharacters" id="@Html.IdFor(m => m.MaxIndexableCharacters)" name="@Html.NameFor(m => m.MaxIndexableCharacters)" value="@(Model.MaxIndexableCharacters?.ToString(CultureInfo.InvariantCulture))" min="0" step="1" placeholder="@T["Use site default"]" />
+            <div class="form-text">@T["Characters of extracted text. A larger document is refused at upload rather than stored unsearchable. 0 means no limit. Leave empty to use the site default."]</div>
+        </div>
+    </div>
+}
 
 <div class="mb-3">
     <label class="form-label">
@@ -309,7 +331,10 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
                     throw new Error(stripHtml(error) || '@T["Upload failed"]');
                 }
 
-                const result = await response.json();
+                // An expired auth cookie answers a POST with the login page, and reading that as JSON
+                // throws "unexpected character at line 1 column 1" -- which tells a reader nothing about
+                // what happened. Check what came back before trying to read it.
+                const result = await readJson(response);
                 progressBar.style.width = '100%';
 
                 // Handle successful uploads
@@ -322,12 +347,17 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
                 const successCount = result.uploaded ? result.uploaded.length : 0;
                 const failCount = result.failed ? result.failed.length : 0;
 
-                // Show per-file errors (persistent, dismissible)
+                // Show per-file errors (persistent, dismissible). The reason matters more than the name:
+                // a document refused for being past the indexable ceiling says so, with its measured size
+                // and the configured limit, and that is the only way a reader learns what to do about it.
                 if (failCount > 0) {
                     const lines = [];
                     for (const f of result.failed) {
-                        const name = f.fileName || '@T["Unknown file"]';
-                        lines.push(`@T["The file"] \"${escapeHtml(name)}\" @T["failed to upload"].`);
+                        const name = escapeHtml(f.fileName || '@T["Unknown file"]');
+                        const reason = f.error ? escapeHtml(f.error) : '';
+                        lines.push(reason
+                            ? `<strong>${name}</strong>: ${reason}`
+                            : `<strong>${name}</strong>: @T["This file could not be uploaded."]`);
                     }
 
                     showUploadAlert(lines.join('<br>'));
@@ -409,6 +439,22 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        async function readJson(response) {
+            const contentType = response.headers.get('content-type') || '';
+
+            if (!contentType.toLowerCase().includes('json')) {
+                // A redirect to the sign-in page is the common cause, and it is worth saying so rather
+                // than reporting a parse error against a page the reader never asked for.
+                if (response.redirected && /(\/login|\/signin)/i.test(response.url || '')) {
+                    throw new Error('@T["Your session expired. Sign in again and retry the upload."]');
+                }
+
+                throw new Error('@T["The server did not return an upload result. Your session may have expired."]');
+            }
+
+            return await response.json();
         }
 
         function stripHtml(html) {
