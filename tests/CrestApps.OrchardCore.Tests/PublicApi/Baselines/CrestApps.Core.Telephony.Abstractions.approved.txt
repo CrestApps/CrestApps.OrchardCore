@@ -1,0 +1,7 @@
+namespace CrestApps.Core.Telephony.Security
+{
+    public static class TelephonyOperations
+    {
+        public static readonly Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement UseSoftPhone;
+    }
+}

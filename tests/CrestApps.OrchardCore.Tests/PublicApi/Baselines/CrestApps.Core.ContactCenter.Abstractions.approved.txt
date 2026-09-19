@@ -1,0 +1,10 @@
+namespace CrestApps.Core.ContactCenter.Security
+{
+    public static class ContactCenterOperations
+    {
+        public static readonly Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement MonitorContactCenter;
+        public static readonly Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement SuperviseQueue;
+        public static readonly Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement TakeAgentWork;
+        public static readonly Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement TransferExternally;
+    }
+}

@@ -1,0 +1,8 @@
+namespace CrestApps.Core.Omnichannel.Sms.Portal.Security
+{
+    public static class SmsPortalOperations
+    {
+        public static readonly Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement UseSmsPortal;
+        public static readonly Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement ViewAllConversations;
+    }
+}

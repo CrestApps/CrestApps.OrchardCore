@@ -142,8 +142,11 @@ public sealed class PublicApiApprovalTests
             .OrderBy(violation => violation, StringComparer.Ordinal)
             .ToList();
 
-        // Assert
-        Assert.True(candidates.Count > 0, $"No public class was read from {assemblyName}, so this gate proves nothing.");
+        // Assert: a contracts-only assembly has no instantiable class to judge, which is not a failure. What would
+        // be a failure is reading nothing at all, because a gate that reads nothing passes for the wrong reason.
+        Assert.True(
+            assembly.GetExportedTypes().Length > 0,
+            $"No public type was read from {assemblyName}, so this gate proves nothing.");
 
         Assert.True(
             violations.Count == 0,
@@ -374,8 +377,16 @@ public sealed class PublicApiApprovalTests
         "CrestApps.OrchardCore.Cms.Web",
     };
 
+    /// <summary>
+    /// The project families whose public surface is recorded.
+    /// </summary>
+    /// <remarks>
+    /// The <c>CrestApps.Core.*</c> projects are here because they are what this suite is being extracted into:
+    /// their surface is the package surface, and it is the one that stops being ours to change once it ships.
+    /// Recording it while it is still cheap to change is the point of recording it at all.
+    /// </remarks>
     private static readonly Regex _familyRegex = new(
-        @"^CrestApps\.OrchardCore\.(ContactCenter|Telephony|Omnichannel)(\..+)?$",
+        @"^CrestApps\.(OrchardCore\.(ContactCenter|Telephony|Omnichannel)|Core)(\..+)?$",
         RegexOptions.Compiled);
 
     private static readonly Regex _typeDeclarationRegex = new(
@@ -415,11 +426,17 @@ public sealed class PublicApiApprovalTests
     /// A hand-written list is a list someone has to remember to add to. Deriving the set means a new project in the
     /// Contact Center, Telephony or Omnichannel families starts being governed the moment something compiles against
     /// it, rather than the moment somebody notices.
+    /// <para>
+    /// A project under a <c>Transitions</c> folder is governed whether or not anything compiles against it yet. It is
+    /// on its way out of this repository, so its surface is a package surface already; waiting for a consumer would
+    /// mean recording it for the first time at the point where changing it costs something.
+    /// </para>
     /// </remarks>
     private static List<string> GetGovernedAssemblyNames()
     {
         var consumed = new HashSet<string>(StringComparer.Ordinal);
         var family = new HashSet<string>(StringComparer.Ordinal);
+        var leaving = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var projectPath in Directory.EnumerateFiles(Path.Combine(GetRepositoryRoot(), "src"), "*.csproj", SearchOption.AllDirectories))
         {
@@ -428,6 +445,11 @@ public sealed class PublicApiApprovalTests
             if (_familyRegex.IsMatch(consumer))
             {
                 family.Add(consumer);
+
+                if (IsLeavingThisRepository(projectPath))
+                {
+                    leaving.Add(consumer);
+                }
             }
 
             if (_aggregators.Contains(consumer))
@@ -448,7 +470,7 @@ public sealed class PublicApiApprovalTests
 
         Assert.True(family.Count > 0, "No project was found in the governed families, so the rule read nothing.");
 
-        var governed = family.Where(consumed.Contains).ToList();
+        var governed = family.Where(name => consumed.Contains(name) || leaving.Contains(name)).ToList();
 
         Assert.True(
             governed.Count > 0,
@@ -461,6 +483,25 @@ public sealed class PublicApiApprovalTests
             $"apart from leaf modules. Families: {string.Join(", ", family.OrderBy(name => name, StringComparer.Ordinal))}.");
 
         return governed;
+    }
+
+    /// <summary>
+    /// Says whether a project sits under a <c>Transitions</c> folder, which is where the projects staged to leave
+    /// this repository live.
+    /// </summary>
+    /// <param name="projectPath">The full path to the project file.</param>
+    /// <returns><see langword="true"/> when the project is staged to leave; otherwise, <see langword="false"/>.</returns>
+    private static bool IsLeavingThisRepository(string projectPath)
+    {
+        for (var directory = Directory.GetParent(projectPath); directory is not null; directory = directory.Parent)
+        {
+            if (string.Equals(directory.Name, "Transitions", StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static string GetRepositoryRoot()

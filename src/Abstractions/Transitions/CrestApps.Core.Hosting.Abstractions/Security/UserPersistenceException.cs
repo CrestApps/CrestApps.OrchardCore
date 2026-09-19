@@ -7,7 +7,7 @@ namespace CrestApps.Core.Security;
 /// Its own type because callers must not report success after a failed persist: a soft-phone
 /// credential that was never stored looks identical to one that was, until a call fails to connect.
 /// </remarks>
-public class UserPersistenceException : Exception
+public sealed class UserPersistenceException : Exception
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="UserPersistenceException"/> class.

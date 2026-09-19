@@ -1,0 +1,19 @@
+namespace CrestApps.Core.Data.YesSql.Migrations
+{
+    public interface ISchemaMigration
+    {
+        string Name { get; }
+        System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder);
+        System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder);
+    }
+    public sealed class SchemaMigrationRunner
+    {
+        public SchemaMigrationRunner(YesSql.IStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration> migrations, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Data.YesSql.Migrations.SchemaMigrationRunner> logger) { }
+        public System.Threading.Tasks.Task<int> RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SchemaVersion
+    {
+        public SchemaVersion() { }
+        public System.Collections.Generic.Dictionary<string, int> AppliedVersions { get; init; }
+    }
+}

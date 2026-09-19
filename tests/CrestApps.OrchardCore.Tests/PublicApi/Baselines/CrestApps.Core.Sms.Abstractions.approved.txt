@@ -1,0 +1,28 @@
+namespace CrestApps.Core.Sms
+{
+    public interface ISmsProvider
+    {
+        string Name { get; }
+        System.Threading.Tasks.Task<CrestApps.Core.Sms.SmsResult> SendAsync(CrestApps.Core.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISmsProviderResolver
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Sms.ISmsProvider> GetAsync(string name, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<string> GetDefaultProviderNameAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class SmsMessage
+    {
+        public SmsMessage() { }
+        public string Body { get; set; }
+        public string From { get; set; }
+        public string To { get; set; }
+    }
+    public sealed class SmsResult
+    {
+        public System.Collections.Generic.IReadOnlyList<string> Errors { get; }
+        public string ProviderMessageId { get; }
+        public bool Succeeded { get; }
+        public static CrestApps.Core.Sms.SmsResult Failed(params string[] errors) { }
+        public static CrestApps.Core.Sms.SmsResult Success(string providerMessageId = null) { }
+    }
+}

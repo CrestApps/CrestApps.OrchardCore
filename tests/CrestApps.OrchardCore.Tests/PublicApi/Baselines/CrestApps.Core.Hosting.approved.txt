@@ -1,0 +1,63 @@
+namespace CrestApps.Core.Hosting
+{
+    public sealed class AfterCommitTaskQueue : CrestApps.Core.Hosting.IAfterCommitTaskQueue
+    {
+        public AfterCommitTaskQueue() { }
+        public bool HasPendingWork { get; }
+        public System.Threading.Tasks.Task DrainAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken = default) { }
+        public void Enqueue(System.Func<System.IServiceProvider, System.Threading.Tasks.Task> operation) { }
+    }
+    public sealed class ServiceProviderDetachedWorkExecutor : CrestApps.Core.Hosting.IDetachedWorkExecutor
+    {
+        public ServiceProviderDetachedWorkExecutor(System.IServiceProvider serviceProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Hosting.ServiceProviderDetachedWorkExecutor> logger) { }
+        public void Run(System.Func<System.IServiceProvider, System.Threading.Tasks.Task> operation) { }
+    }
+    public sealed class ServiceProviderScopedWorkExecutor : CrestApps.Core.Hosting.IScopedWorkExecutor
+    {
+        public ServiceProviderScopedWorkExecutor(System.IServiceProvider serviceProvider) { }
+        public System.Threading.Tasks.Task ExecuteAsync(System.Func<System.IServiceProvider, System.Threading.Tasks.Task> operation) { }
+        public System.Threading.Tasks.Task ExecuteAsync<TContext>(System.Func<TContext, System.Threading.Tasks.Task> operation)
+            where TContext :  notnull { }
+    }
+    public sealed class SingleTenantAccessor : CrestApps.Core.Hosting.ITenantAccessor
+    {
+        public const string DefaultTenantName = "Default";
+        public SingleTenantAccessor() { }
+        public string TenantName { get; }
+    }
+    public sealed class StaticPublicBaseUrlAccessor : CrestApps.Core.Hosting.IPublicBaseUrlAccessor
+    {
+        public StaticPublicBaseUrlAccessor(string baseUrl) { }
+        public System.Threading.Tasks.ValueTask<string> GetBaseUrlAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace CrestApps.Core.Hosting.Background
+{
+    public sealed class CycleRunner<TCycle> : Microsoft.Extensions.Hosting.BackgroundService
+        where TCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public CycleRunner(System.IServiceProvider serviceProvider, CrestApps.Core.Locking.IDistributedLockProvider distributedLockProvider, Microsoft.Extensions.Options.IOptionsMonitor<CrestApps.Core.Hosting.Background.BackgroundCycleOptions> options, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Hosting.Background.CycleRunner<TCycle>> logger) { }
+        public static string CycleName { get; }
+        protected override System.Threading.Tasks.Task ExecuteAsync(System.Threading.CancellationToken stoppingToken) { }
+    }
+}
+namespace CrestApps.Core.Hosting.Locking
+{
+    public sealed class LocalDistributedLockProvider : CrestApps.Core.Locking.IDistributedLockProvider
+    {
+        public LocalDistributedLockProvider(System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Locking.ILocker> AcquireLockAsync(string key, System.TimeSpan? expiration = default, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsLockAcquiredAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Locker",
+                "Locked"})]
+        public System.Threading.Tasks.Task<System.ValueTuple<CrestApps.Core.Locking.ILocker, bool>> TryAcquireLockAsync(string key, System.TimeSpan timeout, System.TimeSpan? expiration = default, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace CrestApps.Core
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreHosting(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
