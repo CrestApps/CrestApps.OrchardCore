@@ -114,7 +114,7 @@ public sealed class ServiceResolutionOrderTests
 
     [Theory]
     [MemberData(nameof(ProviderMembershipChains))]
-    public async Task ProviderMembershipChains_AreTrulyOrderInsensitive(string chainId, string serviceTypeName, string providerProfile)
+    public void ProviderMembershipChains_AreTrulyOrderInsensitive(string chainId, string serviceTypeName, string providerProfile)
     {
         // Guards the claim this category rests on. If one of these chains grows a consumer that stops at the
         // first match, its order starts deciding behaviour while nothing pins that order - and the host does
@@ -123,13 +123,12 @@ public sealed class ServiceResolutionOrderTests
 
         Assert.True(
             consumers.Count > 0,
-            $"Nothing consumes '{serviceTypeName}', so '{chainId}' proves nothing. Remove it or fix the name.");
+            $"Nothing consumes '{serviceTypeName}', so '{chainId}' (pinned against the '{providerProfile}' profile) " +
+            "proves nothing. Remove it or fix the name.");
 
         // Deliberately only the selection pattern. The loop does carry a break, for cancellation, and reading
         // that as an early exit would make this fire on code that is fine.
         Assert.All(consumers, source => Assert.DoesNotContain("FirstOrDefault", source, StringComparison.Ordinal));
-
-        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -172,16 +171,14 @@ public sealed class ServiceResolutionOrderTests
 
     [Theory]
     [MemberData(nameof(ProviderMembershipChains))]
-    public Task ProviderMembershipChains_HaveTheApprovedMembers(string chainId, string serviceTypeName, string providerProfile)
-        => AssertResolutionOrderAsync(
-            chainId,
-            serviceTypeName,
-            providerProfile,
-            [.. ContactCenterSupportMatrix.LoadAsync().GetAwaiter().GetResult()
-                .TenantProfiles
-                .First(profile => string.Equals(profile.ProviderProfile, providerProfile, StringComparison.Ordinal))
-                .Features],
-            sorted: true);
+    public async Task ProviderMembershipChains_HaveTheApprovedMembers(string chainId, string serviceTypeName, string providerProfile)
+    {
+        var matrix = await ContactCenterSupportMatrix.LoadAsync();
+        var profile = matrix.TenantProfiles
+            .First(candidate => string.Equals(candidate.ProviderProfile, providerProfile, StringComparison.Ordinal));
+
+        await AssertResolutionOrderAsync(chainId, serviceTypeName, providerProfile, [.. profile.Features], sorted: true);
+    }
 
     [Theory]
     [MemberData(nameof(SelfOrderingChains))]
