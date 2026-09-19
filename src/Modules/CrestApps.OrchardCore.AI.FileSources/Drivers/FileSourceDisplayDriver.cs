@@ -20,14 +20,13 @@ namespace CrestApps.OrchardCore.AI.FileSources.Drivers;
 /// enabled flag, schedule, and what ingestion is allowed to spend on each file it reads.
 /// </summary>
 /// <remarks>
-/// Renders only for records whose source names a registered ingestion connector. The same
-/// <c>WebCrawler</c> record type also stores web crawlers, and a crawler's editor is not this one.
+/// Every record it is given is a file source, because a file source is its own record in its own store.
+/// Which connector reads it decides only which of the connector-specific drivers adds its own section.
 /// </remarks>
-internal sealed class FileSourceDisplayDriver : DisplayDriver<WebCrawler>
+internal sealed class FileSourceDisplayDriver : DisplayDriver<FileSource>
 {
     private readonly IAIDataSourceStore _dataSourceStore;
     private readonly IAIDeploymentStore _deploymentStore;
-    private readonly IReadOnlyList<IngestionConnectorDescriptor> _connectors;
 
     internal readonly IStringLocalizer S;
 
@@ -36,27 +35,19 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<WebCrawler>
     /// </summary>
     /// <param name="dataSourceStore">The AI data source store.</param>
     /// <param name="deploymentStore">The AI deployment store.</param>
-    /// <param name="connectorOptions">The registered ingestion connectors.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public FileSourceDisplayDriver(
         IAIDataSourceStore dataSourceStore,
         IAIDeploymentStore deploymentStore,
-        IOptions<IngestionConnectorOptions> connectorOptions,
         IStringLocalizer<FileSourceDisplayDriver> stringLocalizer)
     {
         _dataSourceStore = dataSourceStore;
         _deploymentStore = deploymentStore;
-        _connectors = connectorOptions.Value.Connectors;
         S = stringLocalizer;
     }
 
-    public override Task<IDisplayResult> DisplayAsync(WebCrawler fileSource, BuildDisplayContext context)
+    public override Task<IDisplayResult> DisplayAsync(FileSource fileSource, BuildDisplayContext context)
     {
-        if (!IsFileSource(fileSource))
-        {
-            return Task.FromResult<IDisplayResult>(null);
-        }
-
         return CombineAsync(
             View("FileSource_Fields_SummaryAdmin", fileSource).Location("Content:1"),
             View("FileSource_Buttons_SummaryAdmin", fileSource).Location("Actions:5"),
@@ -65,13 +56,8 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<WebCrawler>
         );
     }
 
-    public override IDisplayResult Edit(WebCrawler fileSource, BuildEditorContext context)
+    public override IDisplayResult Edit(FileSource fileSource, BuildEditorContext context)
     {
-        if (!IsFileSource(fileSource))
-        {
-            return null;
-        }
-
         return Initialize<FileSourceFieldsViewModel>("FileSourceFields_Edit", async model =>
         {
             model.DisplayText = fileSource.DisplayText;
@@ -79,7 +65,7 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<WebCrawler>
             model.Enabled = fileSource.Enabled;
             model.ReindexIntervalMinutes = fileSource.ReindexIntervalMinutes;
 
-            var metadata = fileSource.GetOrCreate<IndexerMetadata>();
+            var metadata = fileSource.GetOrCreate<FileSourceMetadata>();
             model.FigureMode = metadata.FigureMode;
             model.VisionDeploymentName = metadata.VisionDeploymentName;
             model.UtilityDeploymentName = metadata.UtilityDeploymentName;
@@ -110,13 +96,8 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<WebCrawler>
         }).Location("Content:1");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(WebCrawler fileSource, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(FileSource fileSource, UpdateEditorContext context)
     {
-        if (!IsFileSource(fileSource))
-        {
-            return null;
-        }
-
         var model = new FileSourceFieldsViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
@@ -151,7 +132,7 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<WebCrawler>
         fileSource.Enabled = model.Enabled;
         fileSource.ReindexIntervalMinutes = model.ReindexIntervalMinutes;
 
-        fileSource.Put(new IndexerMetadata
+        fileSource.Put(new FileSourceMetadata
         {
             FigureMode = model.FigureMode,
             VisionDeploymentName = Trimmed(model.VisionDeploymentName),
@@ -166,7 +147,4 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<WebCrawler>
 
     private static string Trimmed(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    private bool IsFileSource(WebCrawler fileSource)
-        => FileSourceRecords.IsConnector(fileSource.Source, _connectors);
 }

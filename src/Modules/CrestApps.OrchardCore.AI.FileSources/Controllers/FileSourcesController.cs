@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.AI.FileSources.Controllers;
 /// a source, so the create flow mirrors the other source-based catalog editors.
 /// </summary>
 /// <remarks>
-/// A file source is stored as a <c>WebCrawler</c> record whose source names a connector rather than a crawl
+/// A file source is stored as a <c>FileSource</c> record whose source names a connector rather than a crawl
 /// strategy, so these screens list by connector instead of paging the whole catalog. Paging it would show
 /// web crawlers here and file sources there.
 /// </remarks>
@@ -34,8 +34,8 @@ public sealed class FileSourcesController : Controller
 
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
-    private readonly ISourceCatalogManager<WebCrawler> _manager;
-    private readonly IDisplayManager<WebCrawler> _displayManager;
+    private readonly ISourceCatalogManager<FileSource> _manager;
+    private readonly IDisplayManager<FileSource> _displayManager;
     private readonly IFileSourceRunService _runService;
     private readonly IReadOnlyList<IngestionConnectorDescriptor> _connectors;
     private readonly INotifier _notifier;
@@ -58,8 +58,8 @@ public sealed class FileSourcesController : Controller
     public FileSourcesController(
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
-        ISourceCatalogManager<WebCrawler> manager,
-        IDisplayManager<WebCrawler> displayManager,
+        ISourceCatalogManager<FileSource> manager,
+        IDisplayManager<FileSource> displayManager,
         IFileSourceRunService runService,
         IOptions<IngestionConnectorOptions> connectorOptions,
         INotifier notifier,
@@ -104,7 +104,7 @@ public sealed class FileSourcesController : Controller
             routeData.Values.TryAdd(_optionsSearch, options.Search);
         }
 
-        var viewModel = new ListSourceModelViewModel<IngestionConnectorDescriptor, CatalogEntryViewModel<WebCrawler>>
+        var viewModel = new ListSourceModelViewModel<IngestionConnectorDescriptor, CatalogEntryViewModel<FileSource>>
         {
             Models = [],
             Options = options,
@@ -114,7 +114,7 @@ public sealed class FileSourcesController : Controller
 
         foreach (var model in records.Skip((pager.Page - 1) * pager.PageSize).Take(pager.PageSize))
         {
-            viewModel.Models.Add(new CatalogEntryViewModel<WebCrawler>
+            viewModel.Models.Add(new CatalogEntryViewModel<FileSource>
             {
                 Model = model,
                 Shape = await _displayManager.BuildDisplayAsync(model, _updateModelAccessor.ModelUpdater, "SummaryAdmin"),
@@ -246,7 +246,7 @@ public sealed class FileSourcesController : Controller
             return Forbid();
         }
 
-        var fileSource = await FindFileSourceAsync(id);
+        var fileSource = await _manager.FindByIdAsync(id);
 
         if (fileSource == null)
         {
@@ -276,7 +276,7 @@ public sealed class FileSourcesController : Controller
             return Forbid();
         }
 
-        var fileSource = await FindFileSourceAsync(id);
+        var fileSource = await _manager.FindByIdAsync(id);
 
         if (fileSource == null)
         {
@@ -314,7 +314,7 @@ public sealed class FileSourcesController : Controller
             return Forbid();
         }
 
-        var fileSource = await FindFileSourceAsync(id);
+        var fileSource = await _manager.FindByIdAsync(id);
 
         if (fileSource == null)
         {
@@ -346,7 +346,7 @@ public sealed class FileSourcesController : Controller
             return Forbid();
         }
 
-        var fileSource = await FindFileSourceAsync(id);
+        var fileSource = await _manager.FindByIdAsync(id);
 
         if (fileSource == null)
         {
@@ -400,7 +400,7 @@ public sealed class FileSourcesController : Controller
 
                     foreach (var id in itemIds)
                     {
-                        var fileSource = await FindFileSourceAsync(id);
+                        var fileSource = await _manager.FindByIdAsync(id);
 
                         if (fileSource == null)
                         {
@@ -432,20 +432,18 @@ public sealed class FileSourcesController : Controller
     }
 
     /// <summary>
-    /// Loads every record whose source is one of this tenant's registered connectors.
+    /// Loads every file source on this tenant.
     /// </summary>
     /// <param name="search">An optional name filter.</param>
     /// <returns>The matching file sources, ordered by name.</returns>
-    private async Task<IReadOnlyList<WebCrawler>> LoadFileSourcesAsync(string search)
+    /// <remarks>
+    /// Every record in the store is a file source, so nothing is filtered out here. One whose connector is
+    /// no longer registered is still listed, because hiding it would leave an operator with something they
+    /// cannot see, edit or delete.
+    /// </remarks>
+    private async Task<IReadOnlyList<FileSource>> LoadFileSourcesAsync(string search)
     {
-        var records = new List<WebCrawler>();
-
-        foreach (var connector in _connectors)
-        {
-            records.AddRange(await _manager.GetAsync(connector.Name));
-        }
-
-        IEnumerable<WebCrawler> matches = records;
+        IEnumerable<FileSource> matches = await _manager.GetAllAsync();
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -456,21 +454,6 @@ public sealed class FileSourcesController : Controller
         return matches
             .OrderBy(record => record.DisplayText, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-    }
-
-    /// <summary>
-    /// Finds a record and refuses one that is not a file source, so a web crawler's id cannot be edited,
-    /// run or deleted through these screens.
-    /// </summary>
-    /// <param name="id">The record id.</param>
-    /// <returns>The file source, or <see langword="null"/>.</returns>
-    private async Task<WebCrawler> FindFileSourceAsync(string id)
-    {
-        var record = await _manager.FindByIdAsync(id);
-
-        return record is not null && FileSourceRecords.IsConnector(record.Source, _connectors)
-            ? record
-            : null;
     }
 
     private bool TryGetConnector(string source, out IngestionConnectorDescriptor connector)

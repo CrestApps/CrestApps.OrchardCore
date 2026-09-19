@@ -18,7 +18,7 @@ namespace CrestApps.OrchardCore.AI.FileSources.Drivers;
 /// resolves anywhere else. The connector repeats that check before it reads anything, because a stored
 /// record may predate the rule or have been written straight into the database.
 /// </remarks>
-internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<WebCrawler>
+internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<FileSource>
 {
     private readonly ITenantFileSourceRoot _tenantRoot;
 
@@ -37,7 +37,7 @@ internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<WebCrawl
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(WebCrawler fileSource, BuildEditorContext context)
+    public override IDisplayResult Edit(FileSource fileSource, BuildEditorContext context)
     {
         if (!IsFileSystem(fileSource))
         {
@@ -49,10 +49,9 @@ internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<WebCrawl
             // Created on demand, so the path shown to a reader is a folder they can actually drop files in.
             model.TenantRootPath = _tenantRoot.EnsureRoot();
 
-            if (fileSource.TryGet<LocalFolderIndexerMetadata>(out var metadata))
+            if (fileSource.TryGet<FileSystemFileSourceMetadata>(out var metadata))
             {
                 model.RootPath = metadata.RootPath;
-                model.SearchPattern = metadata.SearchPattern;
                 model.Recursive = metadata.Recursive;
                 model.MaxItems = metadata.MaxItems;
             }
@@ -61,7 +60,7 @@ internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<WebCrawl
         }).Location("Content:5");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(WebCrawler fileSource, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(FileSource fileSource, UpdateEditorContext context)
     {
         if (!IsFileSystem(fileSource))
         {
@@ -93,10 +92,9 @@ internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<WebCrawl
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxItems), S["The number of files must be a positive number."]);
         }
 
-        fileSource.Put(new LocalFolderIndexerMetadata
+        fileSource.Put(new FileSystemFileSourceMetadata
         {
             RootPath = stored,
-            SearchPattern = string.IsNullOrWhiteSpace(model.SearchPattern) ? "*.*" : model.SearchPattern.Trim(),
             Recursive = model.Recursive,
             MaxItems = model.MaxItems,
         });
@@ -127,6 +125,6 @@ internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<WebCrawl
         }
     }
 
-    private static bool IsFileSystem(WebCrawler fileSource)
+    private static bool IsFileSystem(FileSource fileSource)
         => string.Equals(fileSource.Source, FileSystemIngestionConnector.ConnectorName, StringComparison.OrdinalIgnoreCase);
 }

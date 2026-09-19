@@ -1,7 +1,6 @@
 using CrestApps.Core.AI.Documents.Endpoints;
 using CrestApps.Core.AI.FileSources;
 using CrestApps.Core.AI.FileSources.Connectors;
-using CrestApps.Core.AI.Indexing;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.OrchardCore.AI.FileSources.BackgroundTasks;
@@ -30,35 +29,41 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        // Registers the File AI data source handler, the connector resolver, the run service and the
-        // knowledge ingestion the connectors feed. Nothing here grants access to a folder on its own.
+        // Registers the File AI data source handler, the connector resolver, the run service, the scheduler
+        // and the knowledge ingestion the connectors feed. Nothing here grants access to a folder on its own.
         services.AddCoreFileSources()
             .AddCoreFileSystemConnector();
 
-        // The framework's file-system connector, wrapped so it can only ever read inside this tenant's own
-        // folder. Order is the whole of it: the framework registers its own under the same key with a
-        // TryAdd, so this has to come after AddCoreFileSystemConnector to be the one the name resolves to.
-        // Ahead of it, the TryAdd is the no-op and every run reads with the unconfined connector instead,
-        // with nothing at the call site to show for it. FileSystemConnectorResolutionTests holds the order.
-        services.AddScoped<TenantFileSystemIngestionConnector>();
-        services.AddKeyedScoped<IIngestionConnector>(
-            FileSystemIngestionConnector.ConnectorName,
-            (sp, _) => sp.GetRequiredService<TenantFileSystemIngestionConnector>());
-
-        // Singleton, not scoped: the folder is a pure function of the tenant's own identity and never
-        // changes for the life of the shell, and the options it feeds are themselves a singleton. A scoped
+        // The one folder this tenant may read. It is computed from the tenant's own shell settings and
+        // never from configuration or a request, so a tenant administrator cannot widen their own reach.
+        //
+        // Singleton, not scoped: the folder is a pure function of the tenant's identity and never changes
+        // for the life of the shell, and the options it feeds are themselves a singleton. A scoped
         // registration here is a captive dependency, which the container refuses to build at all.
         services.AddSingleton<ITenantFileSourceRoot, TenantFileSourceRoot>();
+
         services.AddTransient<IConfigureOptions<FileSourceOptions>, FileSourceOptionsConfiguration>();
 
-        // Registers the YesSql-backed IWebCrawlerStore (which also stores file sources) and the knowledge
-        // object store the ingested pieces land in.
+        // Post-configure, not configure: the framework's own configuration step adds whatever the host set
+        // and points the base path at the content root. This has to run after it to take both back, and a
+        // single surviving entry is the whole tenant boundary gone.
+        services.AddTransient<IPostConfigureOptions<FileSystemConnectorOptions>, FileSystemConnectorOptionsConfiguration>();
+
+        // The file source records, their per-item ingestion state, and their index providers.
+        services.AddCoreFileSourceStoresYesSql();
+
+        // Still needed for two things the file source feature cannot get anywhere else in
+        // CrestApps.Core 2.0.0-preview.284: IKnowledgeObjectStore, which only this registration provides,
+        // and IWebCrawlerStore, which DefaultFileSourceScheduler takes as a required dependency even in a
+        // host that has no web crawlers. Both are Core-side gaps this split exposed; when Core offers a
+        // knowledge-store registration of its own and makes the scheduler's crawler store optional, this
+        // call and the crawler tables in FileSourceIndexMigrations go together.
         services.AddCoreWebCrawlerStoresYesSql();
 
         services.AddDataMigration<FileSourceIndexMigrations>();
 
-        services.AddDisplayDriver<WebCrawler, FileSourceDisplayDriver>();
-        services.AddDisplayDriver<WebCrawler, FileSystemFileSourceDisplayDriver>();
+        services.AddDisplayDriver<FileSource, FileSourceDisplayDriver>();
+        services.AddDisplayDriver<FileSource, FileSystemFileSourceDisplayDriver>();
         services.AddDisplayDriver<AIDataSource, FileAIDataSourceDisplayDriver>();
 
         services.AddScoped<IAuthorizationHandler, OrchardKnowledgeFigureAuthorizationHandler>();

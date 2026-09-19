@@ -27,26 +27,20 @@ public sealed class FileSourceOptionsConfigurationTests
     }
 
     [Fact]
-    public void Configure_PinsTheAllowedRootToTheTenantFolder()
-    {
-        var options = Configure([]);
-
-        Assert.Equal(["/tenants/TenantA/file-sources"], options.AllowedLocalRoots);
-    }
-
-    [Fact]
     public void Configure_DiscardsAnAllowedRootFromConfiguration()
     {
         // The framework's allow-list is host-wide, which is the wrong shape here: a tenant administrator
-        // able to add an entry would be able to read anything the host process can open. One surviving
-        // entry is the whole boundary gone, so the list is cleared rather than appended to.
+        // able to add an entry would be able to read anything the host process can open. The framework
+        // carries this list into the file-system connector's own allowed roots, so one surviving entry is
+        // the whole boundary gone. Which folder the tenant may read is settled in
+        // FileSystemConnectorOptionsConfiguration; this list only ever has to end up empty.
         var options = Configure(new Dictionary<string, string>
         {
             ["CrestApps:AI:FileSources:AllowedLocalRoots:0"] = "/",
             ["CrestApps:AI:FileSources:AllowedLocalRoots:1"] = "/etc",
         });
 
-        Assert.Equal(["/tenants/TenantA/file-sources"], options.AllowedLocalRoots);
+        Assert.Empty(options.AllowedLocalRoots);
     }
 
     [Fact]
@@ -73,12 +67,9 @@ public sealed class FileSourceOptionsConfigurationTests
             .Setup(x => x.GetSection(It.IsAny<string>()))
             .Returns<string>(configuration.GetSection);
 
-        var tenantRoot = new Mock<ITenantFileSourceRoot>();
-        tenantRoot.Setup(x => x.GetRoot()).Returns("/tenants/TenantA/file-sources");
-
         var options = new FileSourceOptions();
 
-        new FileSourceOptionsConfiguration(shellConfiguration.Object, tenantRoot.Object).Configure(options);
+        new FileSourceOptionsConfiguration(shellConfiguration.Object).Configure(options);
 
         return options;
     }

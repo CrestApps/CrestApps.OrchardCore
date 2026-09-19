@@ -34,19 +34,14 @@ internal sealed class FileSourceOptionsConfiguration : IConfigureOptions<FileSou
     public const string ConfigurationSectionName = "CrestApps:AI:FileSources";
 
     private readonly IShellConfiguration _shellConfiguration;
-    private readonly ITenantFileSourceRoot _tenantRoot;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="FileSourceOptionsConfiguration"/> class.
     /// </summary>
     /// <param name="shellConfiguration">The tenant's shell configuration.</param>
-    /// <param name="tenantRoot">This tenant's file-source folder.</param>
-    public FileSourceOptionsConfiguration(
-        IShellConfiguration shellConfiguration,
-        ITenantFileSourceRoot tenantRoot)
+    public FileSourceOptionsConfiguration(IShellConfiguration shellConfiguration)
     {
         _shellConfiguration = shellConfiguration;
-        _tenantRoot = tenantRoot;
     }
 
     /// <summary>
@@ -59,9 +54,9 @@ internal sealed class FileSourceOptionsConfiguration : IConfigureOptions<FileSou
 
         _shellConfiguration.GetSection(ConfigurationSectionName).Bind(options);
 
-        // Whatever configuration said about roots is discarded. The boundary is the tenant's own folder and
-        // nothing else.
+        // Whatever configuration said about roots is discarded. The framework carries this list into the
+        // file-system connector's own allowed roots, so anything left here would be a root this tenant
+        // could read. The boundary itself is set in FileSystemConnectorOptionsConfiguration.
         options.AllowedLocalRoots.Clear();
-        options.AllowedLocalRoots.Add(_tenantRoot.GetRoot());
     }
 }

@@ -3,10 +3,10 @@
 @using CrestApps.Core.AI.Models
 @using OrchardCore.DisplayManagement.Views
 
-@model ShapeViewModel<WebCrawler>
+@model ShapeViewModel<FileSource>
 
 @{
-    Model.Value.TryGet<IndexerRunSummary>(out var lastRun);
+    Model.Value.TryGet<FileSourceRunSummary>(out var lastRun);
 }
 
 <h5>

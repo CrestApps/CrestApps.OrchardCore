@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.AI.FileSources.Ftp.Drivers;
 /// The password never travels back to the browser. The editor is told only that one is stored, and a blank
 /// submission keeps whatever is there -- otherwise opening the form and pressing Save would erase it.
 /// </remarks>
-internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
+internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<FileSource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
@@ -38,7 +38,7 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(WebCrawler fileSource, BuildEditorContext context)
+    public override IDisplayResult Edit(FileSource fileSource, BuildEditorContext context)
     {
         if (!IsFtp(fileSource))
         {
@@ -47,7 +47,7 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
 
         return Initialize<FtpFileSourceViewModel>("FtpFileSource_Edit", model =>
         {
-            var folder = fileSource.GetOrCreate<RemoteFolderIndexerMetadata>();
+            var folder = fileSource.GetOrCreate<RemoteFileSourceMetadata>();
             model.RemoteRootPath = folder.RootPath;
             model.RemoteRecursive = folder.Recursive;
             model.RemoteMaxItems = folder.MaxItems;
@@ -66,7 +66,7 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
         }).Location("Content:5");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(WebCrawler fileSource, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(FileSource fileSource, UpdateEditorContext context)
     {
         if (!IsFtp(fileSource))
         {
@@ -94,7 +94,7 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
 
         var existing = fileSource.GetOrCreate<FtpConnectionMetadata>();
 
-        fileSource.Put(new RemoteFolderIndexerMetadata
+        fileSource.Put(new RemoteFileSourceMetadata
         {
             RootPath = string.IsNullOrWhiteSpace(model.RemoteRootPath) ? "/" : model.RemoteRootPath.Trim(),
             Recursive = model.RemoteRecursive,
@@ -123,6 +123,6 @@ internal sealed class FtpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
     private static string Trimmed(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static bool IsFtp(WebCrawler fileSource)
+    private static bool IsFtp(FileSource fileSource)
         => string.Equals(fileSource.Source, FtpIngestionConnector.ConnectorName, StringComparison.OrdinalIgnoreCase);
 }

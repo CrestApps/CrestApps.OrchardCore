@@ -13,10 +13,6 @@ public class FileSystemFileSourceViewModel
     /// </summary>
     public string RootPath { get; set; }
 
-    /// <summary>
-    /// Gets or sets the file pattern to match.
-    /// </summary>
-    public string SearchPattern { get; set; } = "*.*";
 
     /// <summary>
     /// Gets or sets a value indicating whether sub-folders are read too.

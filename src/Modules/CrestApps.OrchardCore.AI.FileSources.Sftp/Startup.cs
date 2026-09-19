@@ -18,6 +18,6 @@ public sealed class Startup : StartupBase
         // and taking this one does not start an MCP server.
         services.AddCoreSftpIngestionConnector();
 
-        services.AddDisplayDriver<WebCrawler, SftpFileSourceDisplayDriver>();
+        services.AddDisplayDriver<FileSource, SftpFileSourceDisplayDriver>();
     }
 }

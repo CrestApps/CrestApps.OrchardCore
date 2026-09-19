@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.AI.FileSources.Sftp.Drivers;
 /// The editor is told only that one is stored, and a blank submission keeps whatever is there; otherwise
 /// opening the form and pressing Save would erase the key.
 /// </remarks>
-internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
+internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<FileSource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
@@ -39,7 +39,7 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
         S = stringLocalizer;
     }
 
-    public override IDisplayResult Edit(WebCrawler fileSource, BuildEditorContext context)
+    public override IDisplayResult Edit(FileSource fileSource, BuildEditorContext context)
     {
         if (!IsSftp(fileSource))
         {
@@ -48,7 +48,7 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
 
         return Initialize<SftpFileSourceViewModel>("SftpFileSource_Edit", model =>
         {
-            var folder = fileSource.GetOrCreate<RemoteFolderIndexerMetadata>();
+            var folder = fileSource.GetOrCreate<RemoteFileSourceMetadata>();
             model.RemoteRootPath = folder.RootPath;
             model.RemoteRecursive = folder.Recursive;
             model.RemoteMaxItems = folder.MaxItems;
@@ -71,7 +71,7 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
         }).Location("Content:5");
     }
 
-    public override async Task<IDisplayResult> UpdateAsync(WebCrawler fileSource, UpdateEditorContext context)
+    public override async Task<IDisplayResult> UpdateAsync(FileSource fileSource, UpdateEditorContext context)
     {
         if (!IsSftp(fileSource))
         {
@@ -105,7 +105,7 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
         var existing = fileSource.GetOrCreate<SftpConnectionMetadata>();
         var protector = _dataProtectionProvider.CreateProtector(SftpResourceConstants.DataProtectionPurpose);
 
-        fileSource.Put(new RemoteFolderIndexerMetadata
+        fileSource.Put(new RemoteFileSourceMetadata
         {
             RootPath = string.IsNullOrWhiteSpace(model.RemoteRootPath) ? "/" : model.RemoteRootPath.Trim(),
             Recursive = model.RemoteRecursive,
@@ -145,6 +145,6 @@ internal sealed class SftpFileSourceDisplayDriver : DisplayDriver<WebCrawler>
     private static string Trimmed(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static bool IsSftp(WebCrawler fileSource)
+    private static bool IsSftp(FileSource fileSource)
         => string.Equals(fileSource.Source, SftpIngestionConnector.ConnectorName, StringComparison.OrdinalIgnoreCase);
 }
