@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Diagnostics;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.Core.Telephony.Models;
+using CrestApps.Core.Data.YesSql.Telephony;
 using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Endpoints;
@@ -64,85 +65,37 @@ public sealed class Startup : StartupBase
 
         services.ValidateTenantOptionsOnActivation();
 
-        services
-            .AddOptions<TelephonyCommandOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_Telephony:Commands"))
-            .Validate(
-                options => options.Timeout >= TimeSpan.FromSeconds(TelephonyCommandOptions.MinimumTimeoutSeconds) &&
-                    options.Timeout <= TimeSpan.FromSeconds(TelephonyCommandOptions.MaximumTimeoutSeconds),
-                "The Telephony command timeout must be between one second and two minutes.")
-            .ValidateOnStart();
+        // The telephony core, and the parts of it this module turns on. The options come from one section
+        // with the same child names the module has always bound.
+        services.AddCoreTelephony(_shellConfiguration.GetSection("CrestApps_Telephony"));
 
-        services
-            .AddOptions<TelephonyCoordinationOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps_Telephony:Coordination"))
-            .Validate(
-                options => options.InteractionLockTimeout > TimeSpan.Zero,
-                "'CrestApps_Telephony:Coordination:InteractionLockTimeout' must be greater than zero.")
-            .Validate(
-                options => options.InteractionLockExpiration > options.InteractionLockTimeout,
-                "'CrestApps_Telephony:Coordination:InteractionLockExpiration' must exceed 'InteractionLockTimeout', otherwise the reconciliation lease expires while a peer is still waiting for it and two sweeps run at once.")
-            .Validate(
-                options => options.NewInteractionGracePeriod > TimeSpan.Zero,
-                "'CrestApps_Telephony:Coordination:NewInteractionGracePeriod' must be greater than zero, otherwise reconciliation can terminate an interaction another node has only just written.")
-            .Validate(
-                options => options.ClientRecordedCallMaxAge > options.NewInteractionGracePeriod,
-                "'CrestApps_Telephony:Coordination:ClientRecordedCallMaxAge' must exceed 'NewInteractionGracePeriod', otherwise reconciliation can disconnect a browser-originated call that is still in progress.")
-            .Validate(
-                options => options.TokenRefreshLockTimeout > TimeSpan.Zero,
-                "'CrestApps_Telephony:Coordination:TokenRefreshLockTimeout' must be greater than zero.")
-            .Validate(
-                options => options.TokenRefreshLockExpiration > options.TokenRefreshLockTimeout,
-                "'CrestApps_Telephony:Coordination:TokenRefreshLockExpiration' must exceed 'TokenRefreshLockTimeout', otherwise the refresh lease expires while a peer is still waiting for it and two refreshes run at once.")
-            .ValidateOnStart();
-
-        services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
-        services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
         // The soft-phone pushes go through the framework notifier over this module's hub, which is what
         // carries the host's authorization. Everything that raises a push depends on the notifier instead,
         // so no service needs to name the hub.
-        services.AddScoped<ITelephonySoftPhoneNotifier, TelephonySoftPhoneNotifier<TelephonyHub>>();
-        services.AddScoped<IVoiceIngressGate, VoiceIngressGate>();
-        services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
-        services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();
-        services.AddScoped<ITelephonyProviderResolver, DefaultTelephonyProviderResolver>();
-        services.AddScoped<IVoiceAgentMediaProviderResolver, VoiceAgentMediaProviderResolver>();
-        services.AddScoped<IOutboundCallScreeningService, DefaultOutboundCallScreeningService>();
+        services.AddCoreTelephonySoftPhoneNotifier<TelephonyHub>();
 
-        // The destination safety policy. Contact Center Voice decorates it with the approved-catalog rules; the
-        // default here refuses emergency and premium destinations for every telephony consumer.
-        services.TryAddScoped<IDialDestinationPolicy, DefaultDialDestinationPolicy>();
+        services.AddCoreTelephonyVoiceIngress();
+        services.AddCoreTelephonyCalling();
 
-        // What an agent may transfer to. Contact Center Voice replaces this with a policy that accepts only
-        // curated destinations, so the soft phone transfer field stops accepting a raw number there.
-        services.TryAddScoped<ITransferTargetPolicy, DefaultTransferTargetPolicy>();
-
-        services.AddScoped<ITelephonyService, DefaultTelephonyService>();
-        services.AddScoped<ITelephonyCommandExecutor, DefaultTelephonyCommandExecutor>();
-        services.AddScoped<IIncomingCallDispatcher, DefaultIncomingCallDispatcher>();
         // The telephony settings are read as options by the framework services, and the settings screen asks
         // the options system to refresh when they are saved.
         services.AddSiteSettingsOptions<TelephonySettings>();
         services.AddSignalOptionsChangeTokenSource<TelephonyProviderOptions>();
 
-        services.AddScoped<ITelephonyUserTokenStore, DefaultTelephonyUserTokenStore>();
-        services.AddScoped<ITelephonyAuthenticationService, DefaultTelephonyAuthenticationService>();
+        services.AddCoreTelephonyAuthentication();
 
-        services.AddScoped<ITelephonyInteractionStore, DefaultTelephonyInteractionStore>();
-        services.AddScoped<ITelephonyInteractionSynchronizationService, TelephonyInteractionSynchronizationService>();
+        // Persistence for the two framework stores, and the index providers that keep their tables in step.
+        services.AddCoreTelephonyStoresYesSql();
 
-        // Internal extension registry: the provider-neutral system of record that maps a dialed extension
-        // number to an on-platform user. Providers translate the resolved user into their own live endpoint.
-        services.AddScoped<ITelephonyExtensionStore, TelephonyExtensionStore>();
-        services.AddScoped<ITelephonyExtensionManager, TelephonyExtensionManager>();
-        services.AddScoped<ITelephonyExtensionResolver, TelephonyExtensionResolver>();
-        services.AddIndexProvider<TelephonyExtensionIndexProvider>();
+        services.AddCoreTelephonyInteractions();
+        services.AddCoreTelephonyExtensions();
+
+        // The Orchard side of the same features: the schema, the screens, and the index over Orchard's own
+        // user documents, which only a host can describe.
         services.AddDataMigration<TelephonyExtensionIndexMigrations>();
         services.AddDisplayDriver<TelephonyExtension, TelephonyExtensionDisplayDriver>();
         services.AddNavigationProvider<TelephonyExtensionsAdminMenu>();
-        services.AddBackgroundCycle<ITelephonyInteractionReconciliationCycle, TelephonyInteractionReconciliationCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, TelephonyInteractionReconciliationBackgroundTask>());
-        services.AddIndexProvider<TelephonyInteractionIndexProvider>();
         services.AddIndexProvider<TelephonyUserConnectionIndexProvider>();
         services.AddDataMigration<TelephonyInteractionMigrations>();
         services.AddDataMigration<TelephonyUserConnectionIndexMigrations>();
@@ -155,20 +108,16 @@ public sealed class Startup : StartupBase
         // folder, so recordings ingested by any voice provider are namespaced per tenant and never observable
         // across tenants. The abstraction is pluggable, so a deployment can replace this with a cloud-backed
         // store without touching ingest callers.
-        services.AddSingleton<IRecordingMediaStore>(serviceProvider =>
+        services.AddCoreTelephonyLocalRecordingStore(serviceProvider =>
         {
             var shellOptions = serviceProvider.GetRequiredService<IOptions<ShellOptions>>().Value;
             var shellSettings = serviceProvider.GetRequiredService<ShellSettings>();
-            var dataProtectionProvider = serviceProvider.GetRequiredService<IDataProtectionProvider>();
-            var path = Path.Combine(
+
+            return Path.Combine(
                 shellOptions.ShellsApplicationDataPath,
                 shellOptions.ShellsContainerName,
                 shellSettings.Name,
                 TelephonyConstants.RecordingMediaFolderName);
-
-            return new LocalEncryptedRecordingMediaStore(
-                new LocalRecordingMediaFileStore(path),
-                dataProtectionProvider);
         });
         services.AddScoped<IModularTenantEvents, RecordingMediaTenantEvents>();
 

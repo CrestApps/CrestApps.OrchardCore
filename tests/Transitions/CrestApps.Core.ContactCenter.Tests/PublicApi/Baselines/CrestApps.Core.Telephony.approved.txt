@@ -1,3 +1,18 @@
+namespace CrestApps.Core.Telephony
+{
+    public static class CoreTelephonyServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephony(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyCalling(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyExtensions(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyInteractions(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyLocalRecordingStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Func<System.IServiceProvider, string> rootPathResolver) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonySoftPhoneNotifier<THub>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+            where THub : Microsoft.AspNetCore.SignalR.Hub<CrestApps.Core.Telephony.ITelephonyClient> { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyVoiceIngress(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
 namespace CrestApps.Core.Telephony.Endpoints
 {
     public static class SoftPhoneDialerEndpoints

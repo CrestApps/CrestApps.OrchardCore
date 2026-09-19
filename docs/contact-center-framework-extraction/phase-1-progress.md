@@ -20,7 +20,8 @@ a reviewed diff of every approval baseline that moved.
 | W3.3 (first half), W3.5 | `91530579` | The module services with no host dependency, and the encrypted recording store with a backend contract under it. |
 | W3.3 (second half) | `70820d96` | The three services and the dial endpoint that pushed to the soft phone, behind a notifier contract. |
 | W3.3 (rest), W3.4 | `9a049eb2` | The token store, the provider resolver and the authentication service: the last module services that were not Orchard's own. |
-| W3.6, W3.7 | this commit | The store package: the shared catalog base, the telephony indexes, their schema migrations and their stores. The Orchard `Telephony.Core` project is gone, and the documents it wrote are migrated to the names that replaced it. |
+| W3.6, W3.7 | `5bca9fe8` | The store package: the shared catalog base, the telephony indexes, their schema migrations and their stores. The Orchard `Telephony.Core` project is gone, and the documents it wrote are migrated to the names that replaced it. |
+| W3.8 | this commit | The `AddCoreTelephony*` methods, and the Orchard startup reduced to calling them plus its own glue. |
 
 ## Decisions the plan did not make
 
@@ -143,6 +144,17 @@ user's properties under its simple type name, so its namespace never reached the
 Contact Center route by name through Orchard's link generator, derives the hub URL from Orchard's own
 hub-route convention, and builds the rest out of the current request. There is nothing in it that a
 framework consumer could use without reimplementing all three, so it stays in the module.
+
+### The registration methods live in their own namespace, not in `Microsoft.Extensions.DependencyInjection` (W3.8)
+
+That is where a registration extension normally goes, and it is where the first draft put them. The
+public-surface baselines do not record that namespace, so the methods a host calls -- the whole point
+of the package — would have been the one part of it nobody reviewed. `AddCorePhoneNumbers` and
+`AddCoreWebSockets` already sit in their own project's namespace for the same reason, so these follow
+them.
+
+The rewire itself changed no registration: the dependency-injection snapshot and the resolution-order
+tests are both unchanged, which is what makes it a rewire rather than a rewrite.
 
 ## Guards that had to be repointed (W3.2)
 

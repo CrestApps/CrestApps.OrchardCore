@@ -45,6 +45,13 @@ namespace CrestApps.Core.Data.YesSql.Services
         public System.Threading.Tasks.ValueTask UpdateAsync(T record, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
+namespace CrestApps.Core.Data.YesSql.Telephony
+{
+    public static class CoreTelephonyStoresServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyStoresYesSql(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
 namespace CrestApps.Core.Data.YesSql.Telephony.Indexes
 {
     public sealed class TelephonyExtensionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
