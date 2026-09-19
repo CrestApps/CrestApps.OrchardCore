@@ -51,9 +51,145 @@ public sealed class ServiceResolutionOrderTests
         },
     };
 
+    /// <summary>
+    /// The chains that decide their own order, and the member that decides it.
+    /// </summary>
+    /// <remarks>
+    /// These look like the chains above and are not. Their consumers sort or select by a value on each
+    /// implementation rather than taking the sequence as given, so where a registration sits says nothing
+    /// about what runs. Pinning their resolution order would fail on a harmless move and stay green through
+    /// the change that actually breaks them - two implementations claiming the same value, where the loser
+    /// becomes unreachable and nothing says so.
+    /// <para>
+    /// So what is pinned is the deciding value, and that no two members share one.
+    /// </para>
+    /// </remarks>
+    public static TheoryData<string, string, string, string[]> SelfOrderingChains() => new()
+    {
+        {
+            // Six routers from the portal and a seventh from routed distribution, sorted by Order before the
+            // first one to claim a conversation ends the chain. A duplicate would make one of them dead, and
+            // the dead one decides whether a department conversation is pushed at an agent or pooled.
+            "sms-inbound-routers",
+            "CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsInboundRouter",
+            "Order",
+            [Omnichannel.Sms.Portal.SmsPortalConstants.Feature.Portal, Omnichannel.Sms.Portal.SmsPortalConstants.Feature.RoutedDistribution]
+        },
+        {
+            // The pacing strategies, picked by the mode a campaign asks for. Two claiming one mode would make
+            // a campaign quietly dial at the other one's pace.
+            "dialer-strategies",
+            "CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerStrategy",
+            "Mode",
+            [ContactCenterConstants.Feature.DialerPaced]
+        },
+    };
+
+    /// <summary>
+    /// The chains where losing a member matters but running them in a different order does not, with a
+    /// provider profile that registers them.
+    /// </summary>
+    /// <remarks>
+    /// Their consumers run every member rather than stopping at the first, and their members come from
+    /// more than one startup, which is an order the host does not promise to keep stable between runs.
+    /// Pinning a sequence here would fail for reasons that have nothing to do with behaviour. What is
+    /// pinned instead is who is in the chain, because a member that stops being registered stops doing
+    /// its work and nothing reports it.
+    /// </remarks>
+    public static TheoryData<string, string, string> ProviderMembershipChains() => new()
+    {
+        {
+            // Four reconcilers, each recovering a different kind of call the provider and this platform
+            // have come to disagree about. Losing one leaves that kind of call stranded indefinitely.
+            "asterisk-state-reconcilers",
+            "CrestApps.OrchardCore.Asterisk.Services.IAsteriskProviderStateReconciler",
+            "asterisk-ga-core"
+        },
+    };
+
     [Theory]
     [MemberData(nameof(OrderSensitiveChains))]
-    public async Task OrderSensitiveChains_ResolveInTheApprovedOrder(string chainId, string serviceTypeName, string[] features)
+    public Task OrderSensitiveChains_ResolveInTheApprovedOrder(string chainId, string serviceTypeName, string[] features)
+        => AssertResolutionOrderAsync(chainId, serviceTypeName, "none", features);
+
+    [Theory]
+    [MemberData(nameof(ProviderMembershipChains))]
+    public async Task ProviderMembershipChains_AreTrulyOrderInsensitive(string chainId, string serviceTypeName, string providerProfile)
+    {
+        // Guards the claim this category rests on. If one of these chains grows a consumer that stops at the
+        // first match, its order starts deciding behaviour while nothing pins that order - and the host does
+        // not promise to keep it stable. Move the chain to OrderSensitiveChains if this ever fires.
+        var consumers = FindConsumers(serviceTypeName);
+
+        Assert.True(
+            consumers.Count > 0,
+            $"Nothing consumes '{serviceTypeName}', so '{chainId}' proves nothing. Remove it or fix the name.");
+
+        // Deliberately only the selection pattern. The loop does carry a break, for cancellation, and reading
+        // that as an early exit would make this fire on code that is fine.
+        Assert.All(consumers, source => Assert.DoesNotContain("FirstOrDefault", source, StringComparison.Ordinal));
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Finds the source of everything that takes a chain as a sequence.
+    /// </summary>
+    /// <param name="serviceTypeName">The full name of the chain's contract.</param>
+    /// <returns>The text of each file that injects the sequence.</returns>
+    private static List<string> FindConsumers(string serviceTypeName)
+    {
+        var shortName = serviceTypeName[(serviceTypeName.LastIndexOf('.') + 1)..];
+        var needle = $"IEnumerable<{shortName}>";
+
+        return
+        [
+            .. Directory
+                .EnumerateFiles(Path.Combine(FindRepositoryRoot(), "src"), "*.cs", SearchOption.AllDirectories)
+                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                .Select(File.ReadAllText)
+                .Where(source => source.Contains(needle, StringComparison.Ordinal)),
+        ];
+    }
+
+    /// <summary>
+    /// Walks up from the test binaries to the repository the sources live in.
+    /// </summary>
+    /// <returns>The repository root.</returns>
+    private static string FindRepositoryRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CrestApps.OrchardCore.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.True(directory is not null, "The repository root was not found, so this gate reads nothing.");
+
+        return directory.FullName;
+    }
+
+    [Theory]
+    [MemberData(nameof(ProviderMembershipChains))]
+    public Task ProviderMembershipChains_HaveTheApprovedMembers(string chainId, string serviceTypeName, string providerProfile)
+        => AssertResolutionOrderAsync(
+            chainId,
+            serviceTypeName,
+            providerProfile,
+            [.. ContactCenterSupportMatrix.LoadAsync().GetAwaiter().GetResult()
+                .TenantProfiles
+                .First(profile => string.Equals(profile.ProviderProfile, providerProfile, StringComparison.Ordinal))
+                .Features],
+            sorted: true);
+
+    [Theory]
+    [MemberData(nameof(SelfOrderingChains))]
+    public async Task SelfOrderingChains_LeaveNoMemberUnreachable(
+        string chainId,
+        string serviceTypeName,
+        string discriminatorName,
+        string[] features)
     {
         // Arrange
         await using var host = await ContactCenterFeatureActivationHost.StartAsync();
@@ -62,6 +198,69 @@ public sealed class ServiceResolutionOrderTests
         {
             Id = chainId,
             ProviderProfile = "none",
+            Features = features,
+        });
+
+        var serviceType = FindServiceType(serviceTypeName);
+
+        Assert.True(
+            serviceType is not null,
+            $"'{serviceTypeName}' was not found in any loaded assembly, so this gate proves nothing.");
+
+        // Act
+        var members = await host.ExecuteInTenantScopeAsync(tenant, serviceProvider =>
+        {
+            var sequenceType = typeof(IEnumerable<>).MakeGenericType(serviceType);
+            var services = (System.Collections.IEnumerable)serviceProvider.GetService(sequenceType);
+            var discriminator = serviceType.GetProperty(discriminatorName);
+
+            var described = new List<string>();
+
+            foreach (var service in services ?? Array.Empty<object>())
+            {
+                described.Add($"{service.GetType().FullName} = {discriminator.GetValue(service)}");
+            }
+
+            return Task.FromResult(described);
+        });
+
+        // Assert
+        Assert.True(
+            members.Count > 0,
+            $"The tenant resolved no implementation of '{serviceTypeName}', so this gate proves nothing.");
+
+        var duplicates = members
+            .GroupBy(member => member[(member.LastIndexOf(" = ", StringComparison.Ordinal) + 3)..], StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => $"{discriminatorName} {group.Key}: {string.Join(", ", group)}")
+            .ToList();
+
+        Assert.True(
+            duplicates.Count == 0,
+            $"Two members of '{chainId}' claim the same {discriminatorName}, so one of them never runs and " +
+            $"nothing reports it: {string.Join("; ", duplicates)}.");
+
+        // Sorted by type rather than by the deciding value, so the file cannot be misread as a run order.
+        // What it records is which implementation claims which value.
+        await AssertMatchesBaselineAsync(
+            chainId,
+            string.Join(Environment.NewLine, members.Order(StringComparer.Ordinal)) + Environment.NewLine);
+    }
+
+    private static async Task AssertResolutionOrderAsync(
+        string chainId,
+        string serviceTypeName,
+        string providerProfile,
+        string[] features,
+        bool sorted = false)
+    {
+        // Arrange
+        await using var host = await ContactCenterFeatureActivationHost.StartAsync();
+
+        var tenant = await host.CreateTenantAsync(new ContactCenterTenantProfile
+        {
+            Id = chainId,
+            ProviderProfile = providerProfile,
             Features = features,
         });
 
@@ -97,7 +296,18 @@ public sealed class ServiceResolutionOrderTests
             $"The tenant resolved no implementation of '{serviceTypeName}', so its order cannot be pinned. Either " +
             "the feature that registers the chain is missing from this entry, or the chain no longer exists.");
 
-        var actual = string.Join(Environment.NewLine, resolved) + Environment.NewLine;
+        await AssertMatchesBaselineAsync(
+            chainId,
+            string.Join(Environment.NewLine, sorted ? resolved.Order(StringComparer.Ordinal) : resolved) + Environment.NewLine);
+    }
+
+    /// <summary>
+    /// Compares what a chain resolved to against what was approved, writing the first one for review.
+    /// </summary>
+    /// <param name="chainId">The chain identifier, which names its baseline.</param>
+    /// <param name="actual">What the tenant resolved.</param>
+    private static async Task AssertMatchesBaselineAsync(string chainId, string actual)
+    {
         var baselinePath = GetBaselinePath(chainId);
 
         if (!File.Exists(baselinePath))

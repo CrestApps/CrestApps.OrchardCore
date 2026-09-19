@@ -1,0 +1,3 @@
+CrestApps.OrchardCore.ContactCenter.Core.Services.PowerDialerStrategy = Power
+CrestApps.OrchardCore.ContactCenter.Core.Services.PredictiveDialerStrategy = Predictive
+CrestApps.OrchardCore.ContactCenter.Core.Services.ProgressiveDialerStrategy = Progressive

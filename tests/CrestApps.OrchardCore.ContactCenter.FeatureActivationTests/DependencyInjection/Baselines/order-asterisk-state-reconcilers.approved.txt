@@ -1,0 +1,4 @@
+CrestApps.OrchardCore.Asterisk.Services.AsteriskContactCenterProviderStateReconciler
+CrestApps.OrchardCore.Asterisk.Services.AsteriskInboundReconciler
+CrestApps.OrchardCore.Asterisk.Services.AsteriskPendingCallerTerminationReconciler
+CrestApps.OrchardCore.Asterisk.Services.AsteriskTelephonyProviderStateReconciler

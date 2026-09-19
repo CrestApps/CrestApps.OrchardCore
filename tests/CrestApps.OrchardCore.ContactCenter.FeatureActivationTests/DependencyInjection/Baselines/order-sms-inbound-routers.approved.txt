@@ -1,0 +1,7 @@
+CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers.AutoReplyRouter = 50
+CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers.ExistingConversationRouter = 200
+CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers.FallbackRouter = 1000
+CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers.HandoffQueueRouter = 120
+CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers.NumberRouteRouter = 300
+CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers.ReassignmentRouter = 110
+CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers.RoutedQueueRouter = 250
