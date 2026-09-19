@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Antiforgery;

@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Diagnostics;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;

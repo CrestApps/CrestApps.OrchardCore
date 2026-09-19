@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Compliance.Classification;
 
-namespace CrestApps.OrchardCore.Diagnostics;
+namespace CrestApps.Core.Diagnostics;
 
 /// <summary>
 /// Provides the well-known <see cref="DataClassification"/> values used with the

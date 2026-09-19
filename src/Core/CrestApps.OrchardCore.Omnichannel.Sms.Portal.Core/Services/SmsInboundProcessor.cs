@@ -1,7 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;

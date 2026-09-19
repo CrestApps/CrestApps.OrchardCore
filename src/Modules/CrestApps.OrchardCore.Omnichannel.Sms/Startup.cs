@@ -1,5 +1,5 @@
 ﻿using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;

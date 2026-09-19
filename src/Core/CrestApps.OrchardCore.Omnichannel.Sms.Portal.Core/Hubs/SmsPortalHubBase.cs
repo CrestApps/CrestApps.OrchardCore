@@ -2,7 +2,7 @@ using CrestApps.Core.Hosting;
 using CrestApps.Core.Omnichannel.Sms.Portal.Security;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
-using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.Core.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 

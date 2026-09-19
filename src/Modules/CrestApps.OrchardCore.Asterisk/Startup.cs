@@ -7,7 +7,7 @@ using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Core;
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Diagnostics;
 using CrestApps.OrchardCore.Telephony.Extensions;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Compliance.Redaction;

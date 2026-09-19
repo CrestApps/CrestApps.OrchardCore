@@ -427,29 +427,23 @@ public sealed class PublicApiApprovalTests
     /// Contact Center, Telephony or Omnichannel families starts being governed the moment something compiles against
     /// it, rather than the moment somebody notices.
     /// <para>
-    /// A project under a <c>Transitions</c> folder is governed whether or not anything compiles against it yet. It is
-    /// on its way out of this repository, so its surface is a package surface already; waiting for a consumer would
-    /// mean recording it for the first time at the point where changing it costs something.
+    /// Projects under a <c>Transitions</c> folder are governed by the framework test project instead, which is the
+    /// only one that references them. Their surface is the package surface, and it is recorded beside the code that
+    /// will carry it rather than beside the host it is leaving.
     /// </para>
     /// </remarks>
     private static List<string> GetGovernedAssemblyNames()
     {
         var consumed = new HashSet<string>(StringComparer.Ordinal);
         var family = new HashSet<string>(StringComparer.Ordinal);
-        var leaving = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (var projectPath in Directory.EnumerateFiles(Path.Combine(GetRepositoryRoot(), "src"), "*.csproj", SearchOption.AllDirectories))
         {
             var consumer = Path.GetFileNameWithoutExtension(projectPath);
 
-            if (_familyRegex.IsMatch(consumer))
+            if (_familyRegex.IsMatch(consumer) && !IsLeavingThisRepository(projectPath))
             {
                 family.Add(consumer);
-
-                if (IsLeavingThisRepository(projectPath))
-                {
-                    leaving.Add(consumer);
-                }
             }
 
             if (_aggregators.Contains(consumer))
@@ -470,7 +464,7 @@ public sealed class PublicApiApprovalTests
 
         Assert.True(family.Count > 0, "No project was found in the governed families, so the rule read nothing.");
 
-        var governed = family.Where(name => consumed.Contains(name) || leaving.Contains(name)).ToList();
+        var governed = family.Where(consumed.Contains).ToList();
 
         Assert.True(
             governed.Count > 0,

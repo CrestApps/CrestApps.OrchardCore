@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Hubs;
-using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.Core.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Microsoft.AspNetCore.Http;

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.Core.SignalR;
 
 namespace CrestApps.OrchardCore.Tests.SignalR;
 

@@ -44,7 +44,7 @@ jobs:
     - name: Transitions projects name no host
       shell: bash
       run: |
-        hits=$(grep -rlE "OrchardCore" src/Abstractions/Transitions src/Core/Transitions tests/Transitions --include='*.cs' --include='*.csproj' --include='*.props' || true)
+        hits=$(grep -rlE "OrchardCore" src/Abstractions/Transitions src/Core/Transitions tests/Transitions --include='*.cs' --include='*.csproj' --include='*.props' --exclude='TransitionsNameNoHostTests.cs' || true)
         if [ -n "$hits" ]; then
           echo "These files under a Transitions folder mention OrchardCore:"
           echo "$hits"

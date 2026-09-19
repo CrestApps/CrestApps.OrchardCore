@@ -1,5 +1,5 @@
 using CrestApps.Core.Locking;
-using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;

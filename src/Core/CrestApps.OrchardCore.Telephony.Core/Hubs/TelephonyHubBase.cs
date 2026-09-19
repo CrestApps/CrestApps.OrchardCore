@@ -1,8 +1,8 @@
 using CrestApps.Core.Hosting;
 using CrestApps.Core.Support;
 using CrestApps.Core.Telephony.Security;
-using CrestApps.OrchardCore.Diagnostics;
-using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.Core.Diagnostics;
+using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;

@@ -19,6 +19,15 @@ namespace CrestApps.Core.ContactCenter.Tests;
 /// </remarks>
 public sealed class TransitionsNameNoHostTests
 {
+    /// <summary>
+    /// The host these projects are leaving, assembled rather than written out.
+    /// </summary>
+    /// <remarks>
+    /// Written this way so that searching for it does not depend on how this file happens to spell it, and so
+    /// that this file is not the reason the rule fails.
+    /// </remarks>
+    private static readonly string _host = string.Concat("Orchard", "Core");
+
     private static readonly string[] _folders =
     [
         Path.Combine("src", "Abstractions", "Transitions"),
@@ -27,6 +36,15 @@ public sealed class TransitionsNameNoHostTests
     ];
 
     private static readonly string[] _extensions = [".cs", ".csproj", ".props"];
+
+    /// <summary>
+    /// The one file under these folders that is allowed to name the host: this one, which is the rule.
+    /// </summary>
+    /// <remarks>
+    /// Excluded by name rather than left to chance. The continuous-integration copy of this rule greps for the
+    /// plain word and would otherwise report the rule itself, which reads like a bug to whoever finds it.
+    /// </remarks>
+    private const string ThisRule = "TransitionsNameNoHostTests.cs";
 
     [Fact]
     public void NothingUnderTransitions_NamesTheHost()
@@ -46,7 +64,8 @@ public sealed class TransitionsNameNoHostTests
 
             foreach (var file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories))
             {
-                if (!_extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase) ||
+                if (string.Equals(Path.GetFileName(file), ThisRule, StringComparison.Ordinal) ||
+                    !_extensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase) ||
                     file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
                     file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
                 {
@@ -59,7 +78,7 @@ public sealed class TransitionsNameNoHostTests
 
                 // Only outside a comment. Naming the host in prose - saying which product a seam exists for -
                 // is the sort of thing these files should say; depending on it is not.
-                if (Regex.IsMatch(StripComments(text), @"\bOrchardCore\b"))
+                if (StripComments(text).Contains(_host, StringComparison.Ordinal))
                 {
                     offenders.Add(Path.GetRelativePath(repositoryRoot, file));
                 }

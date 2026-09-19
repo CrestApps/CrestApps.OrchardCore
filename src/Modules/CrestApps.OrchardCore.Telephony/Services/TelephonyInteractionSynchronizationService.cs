@@ -1,6 +1,6 @@
 using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.SignalR.Core;
+using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.SignalR;

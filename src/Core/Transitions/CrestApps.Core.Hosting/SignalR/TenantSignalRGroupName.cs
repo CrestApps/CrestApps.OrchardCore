@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.SignalR.Core;
+namespace CrestApps.Core.SignalR;
 
 /// <summary>
 /// Builds SignalR group names that isolate destinations by Orchard tenant.

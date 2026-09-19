@@ -2,7 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Services;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Diagnostics;
+using CrestApps.Core.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;

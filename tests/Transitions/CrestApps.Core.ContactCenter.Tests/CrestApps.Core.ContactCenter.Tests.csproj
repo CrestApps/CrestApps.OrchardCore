@@ -27,4 +27,27 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Abstractions\Transitions\CrestApps.Core.ContactCenter.Abstractions\CrestApps.Core.ContactCenter.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Abstractions\Transitions\CrestApps.Core.Hosting.Abstractions\CrestApps.Core.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Abstractions\Transitions\CrestApps.Core.Omnichannel.Abstractions\CrestApps.Core.Omnichannel.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Abstractions\Transitions\CrestApps.Core.Omnichannel.Sms.Portal.Abstractions\CrestApps.Core.Omnichannel.Sms.Portal.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Abstractions\Transitions\CrestApps.Core.PhoneNumbers.Abstractions\CrestApps.Core.PhoneNumbers.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Abstractions\Transitions\CrestApps.Core.Sms.Abstractions\CrestApps.Core.Sms.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Abstractions\Transitions\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.ContactCenter\CrestApps.Core.ContactCenter.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Data.YesSql.ContactCenter\CrestApps.Core.Data.YesSql.ContactCenter.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Hosting\CrestApps.Core.Hosting.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Omnichannel.Sms.Portal\CrestApps.Core.Omnichannel.Sms.Portal.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Omnichannel.Sms\CrestApps.Core.Omnichannel.Sms.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Omnichannel.Voice\CrestApps.Core.Omnichannel.Voice.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Omnichannel\CrestApps.Core.Omnichannel.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.PhoneNumbers\CrestApps.Core.PhoneNumbers.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Telephony.Asterisk\CrestApps.Core.Telephony.Asterisk.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Telephony.Dialpad\CrestApps.Core.Telephony.Dialpad.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Telephony.Telnyx\CrestApps.Core.Telephony.Telnyx.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.Telephony\CrestApps.Core.Telephony.csproj" />
+    <ProjectReference Include="..\..\..\src\Core\Transitions\CrestApps.Core.WebSockets\CrestApps.Core.WebSockets.csproj" />
+  </ItemGroup>
+
 </Project>

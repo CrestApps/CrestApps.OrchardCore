@@ -61,3 +61,15 @@ namespace CrestApps.Core
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreHosting(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }
+namespace CrestApps.Core.SignalR
+{
+    public static class HubConnectionWork
+    {
+        public static System.Threading.CancellationToken MustComplete { get; }
+    }
+    public static class TenantSignalRGroupName
+    {
+        public static string ForGroup(string tenantName, string groupName) { }
+        public static string ForUser(string tenantName, string userId) { }
+    }
+}

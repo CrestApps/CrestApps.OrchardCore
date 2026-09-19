@@ -1,3 +1,12 @@
+namespace CrestApps.Core.Diagnostics
+{
+    public static class LogDataClassifications
+    {
+        public const string TaxonomyName = "CrestApps";
+        public static Microsoft.Extensions.Compliance.Classification.DataClassification Address { get; }
+        public static Microsoft.Extensions.Compliance.Classification.DataClassificationSet AddressSet { get; }
+    }
+}
 namespace CrestApps.Core.Entities
 {
     public static class JsonPropertyBag
