@@ -36,8 +36,10 @@ public sealed class Startup : StartupBase
             .AddCoreFileSystemConnector();
 
         // The framework's file-system connector, wrapped so it can only ever read inside this tenant's own
-        // folder. Registered after the framework's, because a keyed service resolves to the last
-        // registration -- which is how the framework itself replaces a reader for a shared media type.
+        // folder. Order is the whole of it: the framework registers its own under the same key with a
+        // TryAdd, so this has to come after AddCoreFileSystemConnector to be the one the name resolves to.
+        // Ahead of it, the TryAdd is the no-op and every run reads with the unconfined connector instead,
+        // with nothing at the call site to show for it. FileSystemConnectorResolutionTests holds the order.
         services.AddScoped<TenantFileSystemIngestionConnector>();
         services.AddKeyedScoped<IIngestionConnector>(
             FileSystemIngestionConnector.ConnectorName,
