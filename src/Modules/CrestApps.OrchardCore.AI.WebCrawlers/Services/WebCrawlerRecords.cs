@@ -7,14 +7,19 @@ namespace CrestApps.OrchardCore.AI.WebCrawlers.Services;
 /// Decides which stored records belong on the Web Crawlers screens.
 /// </summary>
 /// <remarks>
-/// A record's source is either a crawl strategy or an ingestion connector, and that is the only thing
-/// separating the two kinds: a strategy-backed record crawls a website, while a connector-backed record
-/// reads files and is managed on the File Sources screens. Without this the two bleed into each other --
-/// a file source lists here, and its editor grows a second name and a target Web data source it does not
-/// have.
+/// File sources have their own store now, so a crawler record is normally a crawler and this would have
+/// nothing to do. It is still here for the records that predate that split, when both kinds shared this
+/// store and were told apart only by whether their source named a crawl strategy or an ingestion
+/// connector. Those move across on upgrade, but two cases leave one behind: a tenant whose upgrade has not
+/// run yet, and a record whose connector module was disabled when it did -- the move only claims sources
+/// it can see registered, so an FTP file source on a tenant with FTP switched off stays put.
 /// <para>
-/// An unregistered source belongs to neither screen and is shown on neither: whatever registered it is
-/// gone, and the record cannot be run either way.
+/// Whatever the reason, the record is not a crawler and must not be treated as one: it would list here,
+/// and its editor would grow a second name and a target Web data source it does not have.
+/// </para>
+/// <para>
+/// A source that names neither a strategy nor anything else registered belongs to no screen and is shown
+/// on none: whatever registered it is gone, and the record cannot be run either way.
 /// </para>
 /// </remarks>
 public static class WebCrawlerRecords
