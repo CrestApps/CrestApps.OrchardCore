@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter.Models;
 using System.Linq.Expressions;
 using System.Reflection;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;

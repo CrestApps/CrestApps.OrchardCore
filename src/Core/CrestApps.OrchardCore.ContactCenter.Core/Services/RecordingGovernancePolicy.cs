@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using Microsoft.Extensions.Options;
 

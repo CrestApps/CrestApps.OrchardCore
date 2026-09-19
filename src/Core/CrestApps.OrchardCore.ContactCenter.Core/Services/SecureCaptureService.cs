@@ -1,8 +1,9 @@
+using CrestApps.Core.ContactCenter;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 

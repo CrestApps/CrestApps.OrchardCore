@@ -15,6 +15,13 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.Core.Hosting.Abstractions\CrestApps.Core.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.Core.Omnichannel.Abstractions\CrestApps.Core.Omnichannel.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

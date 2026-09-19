@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;

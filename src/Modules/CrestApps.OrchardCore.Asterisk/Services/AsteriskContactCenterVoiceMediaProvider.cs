@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -6,7 +7,7 @@ using System.Text;
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;

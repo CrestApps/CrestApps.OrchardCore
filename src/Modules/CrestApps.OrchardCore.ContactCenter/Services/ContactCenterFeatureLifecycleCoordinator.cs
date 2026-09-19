@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;

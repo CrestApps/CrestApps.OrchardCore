@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter;

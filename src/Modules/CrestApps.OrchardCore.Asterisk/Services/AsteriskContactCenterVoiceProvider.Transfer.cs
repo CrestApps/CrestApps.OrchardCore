@@ -1,7 +1,8 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;

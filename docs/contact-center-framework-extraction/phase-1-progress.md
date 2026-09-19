@@ -25,6 +25,7 @@ a reviewed diff of every approval baseline that moved.
 | W4.1 (first half) | `57d65f62` | The 44 Omnichannel models that name no content type, into `CrestApps.Core.Omnichannel.Abstractions`. |
 | W4.1 (second half) | `d42653e3` | The eleven Omnichannel contracts that name no content type and no persistence. |
 | W4.2 (first half) | `1f791056` | The nine Omnichannel services that name no content type, into `CrestApps.Core.Omnichannel`. |
+| W5.1 | this commit | The Contact Center contracts: 102 files into `CrestApps.Core.ContactCenter.Abstractions`. |
 
 ## Decisions the plan did not make
 
@@ -202,6 +203,30 @@ to know which channels carry a number. Those three names were inside `Omnichanne
 cannot move. They are `CrestApps.Core.Omnichannel.OmnichannelChannels` now, and the module's
 `OmnichannelConstants.Channels` members are `const` references to them, so every existing caller
 still compiles against the name it already uses and the stored values cannot drift apart.
+
+### The Contact Center feature ids are still in the framework (W5.1)
+
+`ContactCenterConstants.Features` holds the host's feature ids, and it moved with the rest of the
+partial class because a partial class cannot be split across assemblies. The no-host gate passes it,
+because they are string literals and the gate ignores those, but a framework package should not be
+naming `CrestApps.OrchardCore.ContactCenter.Agents`.
+
+W5 already owns the fix: the plan replaces feature ids in framework code with
+`ContactCenterCapabilities`, and has Orchard map a feature id to a capability. Doing it here would
+have meant renaming several hundred `ContactCenterConstants.Feature.*` call sites inside a commit
+that is otherwise a pure relocation. This is the first thing W5 should do.
+
+Telephony had the same problem and solved it differently, because its feature ids were few: W3.1 left
+them behind in a new Orchard `TelephonyFeatures` class. That option is not available here without the
+rename, since the Contact Center ids are reached through the partial `ContactCenterConstants`.
+
+### Four ratcheted files grew by one line each (W5.1)
+
+Each gained one `using` for the framework namespace while still needing the namespace it already
+imported, so the line is real and cannot be avoided by removing a dead import the way the SMS portal
+controller's was. The recorded sizes went up by one. A ratchet exists to stop a file accumulating
+logic; a namespace move is not that, and pretending otherwise would mean splitting four large files
+inside a relocation commit.
 
 ## Guards that had to be repointed (W3.2)
 

@@ -1,5 +1,6 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Hosting.Background;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 

@@ -1,8 +1,9 @@
+using CrestApps.Core.ContactCenter;
 using System.Text;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Asterisk.Models;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;

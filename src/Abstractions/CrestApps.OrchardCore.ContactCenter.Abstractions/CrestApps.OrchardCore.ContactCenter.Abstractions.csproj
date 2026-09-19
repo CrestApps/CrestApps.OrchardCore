@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions/CrestApps.Core.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\Transitions\CrestApps.Core.ContactCenter.Abstractions\CrestApps.Core.ContactCenter.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Telephony.Abstractions\CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <ProjectReference Include="..\Transitions\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />
   </ItemGroup>

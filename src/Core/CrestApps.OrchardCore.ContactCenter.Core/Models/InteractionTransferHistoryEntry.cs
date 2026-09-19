@@ -17,7 +17,7 @@ public sealed class InteractionTransferHistoryEntry
 
     /// <summary>
     /// Gets or sets the transfer destination type recorded as a historical text snapshot of the
-    /// <see cref="CrestApps.OrchardCore.ContactCenter.Models.InteractionTransferTargetType"/> name at the time of the
+    /// <see cref="CrestApps.Core.ContactCenter.Models.InteractionTransferTargetType"/> name at the time of the
     /// transfer. This is an audit value for display only; the live topology exposes the typed target and this string is
     /// never re-parsed back into the enum.
     /// </summary>

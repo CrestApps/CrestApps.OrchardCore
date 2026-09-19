@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;

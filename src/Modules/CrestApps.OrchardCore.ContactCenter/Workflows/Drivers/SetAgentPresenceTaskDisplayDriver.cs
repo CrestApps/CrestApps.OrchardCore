@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;

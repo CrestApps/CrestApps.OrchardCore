@@ -1,3 +1,5 @@
+using CrestApps.Core.ContactCenter.Models;
+using CrestApps.Core.ContactCenter;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
@@ -109,7 +111,7 @@ internal sealed class ContactCenterEntryPointDisplayDriver : DisplayDriver<Conta
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
 
-        var isAgentTarget = model.TargetType == CrestApps.OrchardCore.ContactCenter.Models.EntryPointTargetType.Agent;
+        var isAgentTarget = model.TargetType == CrestApps.Core.ContactCenter.Models.EntryPointTargetType.Agent;
 
         entryPoint.Name = model.Name?.Trim();
         entryPoint.Description = model.Description?.Trim();

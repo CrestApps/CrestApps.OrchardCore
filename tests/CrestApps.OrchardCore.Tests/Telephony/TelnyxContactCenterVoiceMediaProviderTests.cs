@@ -1,7 +1,7 @@
 using CrestApps.Core.Hosting;
 using System.Net;
 using System.Text.Json;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Doubles;

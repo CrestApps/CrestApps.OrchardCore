@@ -1,3 +1,5 @@
+using CrestApps.Core.ContactCenter;
+
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>

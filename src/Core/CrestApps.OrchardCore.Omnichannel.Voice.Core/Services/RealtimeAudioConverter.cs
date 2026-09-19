@@ -1,5 +1,5 @@
 ﻿using System.Buffers.Binary;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 

@@ -1,3 +1,5 @@
+CrestApps.Core.ContactCenter.ContactCenterProcessLivenessOptions #0 Singleton -> factory
+CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationChangeNotifier #0 Singleton -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.SignalContactCenterConfigurationChangeNotifier
 CrestApps.Core.Hosting.IAfterCommitTaskQueue #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellScopeAfterCommitTaskQueue
 CrestApps.Core.Hosting.IDetachedWorkExecutor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellDetachedWorkExecutor
 CrestApps.Core.Hosting.IPublicBaseUrlAccessor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.SiteSettingsPublicBaseUrlAccessor
@@ -10,12 +12,10 @@ CrestApps.Core.Security.IUserDirectory #0 Scoped -> type:CrestApps.OrchardCore.C
 CrestApps.Core.Security.IUserProfileStore #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreUserProfileStore
 CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterConfigurationCacheInvalidationHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>
 CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> #1 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Handlers.BusinessHoursCalendarHandler
-CrestApps.OrchardCore.ContactCenter.ContactCenterProcessLivenessOptions #0 Singleton -> factory
 CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarManager #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.BusinessHoursCalendarManager
 CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarStore #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.BusinessHoursCalendarStore
 CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.DefaultBusinessHoursService
 CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache #0 Singleton -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterConfigurationCache
-CrestApps.OrchardCore.ContactCenter.Services.IContactCenterConfigurationChangeNotifier #0 Singleton -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.SignalContactCenterConfigurationChangeNotifier
 Microsoft.Extensions.Hosting.IHostedService #0 Singleton -> instance:CrestApps.OrchardCore.ContactCenter.ContactCenterProcessLivenessPathValidator
 OrchardCore.Data.Migration.IDataMigration #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Migrations.BusinessHoursCalendarIndexMigrations
 OrchardCore.Deployment.IDeploymentSource #0 Transient -> type:CrestApps.OrchardCore.ContactCenter.Deployments.Sources.ContactCenterBusinessHoursCalendarDeploymentSource

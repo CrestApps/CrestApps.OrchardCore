@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
 public sealed class ContactCenterFeatureActivationTests

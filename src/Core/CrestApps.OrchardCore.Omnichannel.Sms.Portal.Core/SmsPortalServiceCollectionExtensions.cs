@@ -1,7 +1,8 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;

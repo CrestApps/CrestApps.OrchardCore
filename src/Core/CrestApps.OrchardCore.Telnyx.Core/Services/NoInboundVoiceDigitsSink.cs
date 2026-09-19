@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.Core.ContactCenter;
+using CrestApps.Core.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 

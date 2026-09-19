@@ -1,9 +1,10 @@
+using CrestApps.Core.ContactCenter;
 using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Tests.Doubles;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;

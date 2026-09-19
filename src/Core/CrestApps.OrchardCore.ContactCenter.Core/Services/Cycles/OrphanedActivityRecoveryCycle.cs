@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Hosting.Background;
 using Microsoft.Extensions.Logging;
 

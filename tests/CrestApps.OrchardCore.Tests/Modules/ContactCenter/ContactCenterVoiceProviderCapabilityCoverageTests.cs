@@ -1,7 +1,8 @@
+using CrestApps.Core.ContactCenter;
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;

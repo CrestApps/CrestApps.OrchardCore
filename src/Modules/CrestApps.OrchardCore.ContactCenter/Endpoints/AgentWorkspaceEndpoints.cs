@@ -1,11 +1,12 @@
-﻿using CrestApps.Core.Omnichannel.Models;
+﻿using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Omnichannel.Models;
 using System.Security.Claims;
 using CrestApps.Core.Security;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;

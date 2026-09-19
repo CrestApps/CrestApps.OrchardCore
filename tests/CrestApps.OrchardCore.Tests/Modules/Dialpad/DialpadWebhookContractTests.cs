@@ -1,5 +1,6 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;

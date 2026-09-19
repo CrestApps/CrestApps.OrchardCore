@@ -2,7 +2,7 @@ using CrestApps.Core.ContactCenter.Security;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
 

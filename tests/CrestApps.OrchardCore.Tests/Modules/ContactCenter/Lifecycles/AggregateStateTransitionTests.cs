@@ -1,6 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Lifecycles;

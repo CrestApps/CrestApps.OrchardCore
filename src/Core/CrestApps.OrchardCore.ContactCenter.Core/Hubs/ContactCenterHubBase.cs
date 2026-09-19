@@ -1,9 +1,10 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.Core.ContactCenter.Security;
 using CrestApps.Core.Hosting;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.SignalR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;

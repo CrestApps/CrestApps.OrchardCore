@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports;

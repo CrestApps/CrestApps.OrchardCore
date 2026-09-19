@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Hosting;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Hubs;

@@ -1,7 +1,8 @@
+using CrestApps.Core.ContactCenter;
 using System.Net;
 using System.Net.Sockets;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 

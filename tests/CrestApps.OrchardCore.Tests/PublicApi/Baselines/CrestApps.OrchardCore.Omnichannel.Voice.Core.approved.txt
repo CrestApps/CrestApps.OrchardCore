@@ -97,9 +97,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public const int RealtimeSampleRate = 24000;
         public static short DecodeMuLawSample(byte value) { }
         public static byte EncodeMuLawSample(short sample) { }
-        public static System.ReadOnlyMemory<byte> FromRealtime(System.ReadOnlyMemory<byte> audio, CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat format) { }
+        public static System.ReadOnlyMemory<byte> FromRealtime(System.ReadOnlyMemory<byte> audio, CrestApps.Core.ContactCenter.Models.ContactCenterVoiceMediaFormat format) { }
         public static short[] Resample(short[] samples, int fromRate, int toRate) { }
-        public static System.ReadOnlyMemory<byte> ToRealtime(System.ReadOnlyMemory<byte> frame, CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat format) { }
+        public static System.ReadOnlyMemory<byte> ToRealtime(System.ReadOnlyMemory<byte> frame, CrestApps.Core.ContactCenter.Models.ContactCenterVoiceMediaFormat format) { }
     }
     public sealed class RealtimeCallCompletionRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner
     {
@@ -124,7 +124,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     }
     public sealed class RealtimeVoiceConversationRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner
     {
-        public RealtimeVoiceConversationRunner(CrestApps.Core.AI.Realtime.IRealtimeOrchestrator orchestrator, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaProviderResolver mediaResolver, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, YesSql.ISession session, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationRunner> logger) { }
+        public RealtimeVoiceConversationRunner(CrestApps.Core.AI.Realtime.IRealtimeOrchestrator orchestrator, CrestApps.Core.ContactCenter.IContactCenterVoiceMediaProviderResolver mediaResolver, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, YesSql.ISession session, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationRunner> logger) { }
         public System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class VoiceAgentConversationLoop : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceAgentConversationLoop
@@ -137,7 +137,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.Core.Omnichannel.Services.IOmnichannelHandoffTurn handoffTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn endCallTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner completionRunner,
-                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IQueuedCallerAbandonmentHandler> abandonmentHandlers,
+                    System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.IQueuedCallerAbandonmentHandler> abandonmentHandlers,
                     CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
                     CrestApps.Core.AI.Capabilities.IAIDeploymentCapabilityService capabilityService,
                     CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,

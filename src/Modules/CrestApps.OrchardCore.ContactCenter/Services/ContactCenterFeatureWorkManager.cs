@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using System.Collections.Concurrent;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 

@@ -1,5 +1,6 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Endpoints;
 using CrestApps.OrchardCore.Telnyx.Models;

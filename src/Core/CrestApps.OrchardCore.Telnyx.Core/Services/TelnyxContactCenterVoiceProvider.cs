@@ -1,9 +1,10 @@
+using CrestApps.Core.ContactCenter;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
