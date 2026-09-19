@@ -30,6 +30,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.ContactCenter.Core;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -47,56 +48,19 @@ public sealed class QueuesStartup : StartupBase
 
         services.AddCoreHostSeams();
 
+        services.AddCoreContactCenterQueues();
+
         services
-            .AddScoped<IActivityQueueGroupStore, ActivityQueueGroupStore>()
-            .AddScoped<IActivityQueueGroupManager, ActivityQueueGroupManager>()
-            .AddScoped<IActivityQueueStore, ActivityQueueStore>()
-            .AddScoped<IActivityQueueManager, ActivityQueueManager>()
             .AddContactCenterOperationAuthorization()
-            .AddScoped<ISupervisorQueueAuthorizationService, SupervisorQueueAuthorizationService>()
-            .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
-            .AddScoped<IContactCenterSkillManager, ContactCenterSkillManager>()
-            .AddScoped<IQueueItemStore, QueueItemStore>()
-            .AddScoped<IQueueItemManager, QueueItemManager>()
-            .AddScoped<IActivityReservationStore, ActivityReservationStore>()
-            .AddScoped<IActivityReservationManager, ActivityReservationManager>()
-            .AddScoped<IActivityQueueService, ActivityQueueService>()
-            .AddScoped<ActivityReservationService>()
-            .AddScoped<IActivityReservationService>(static sp => sp.GetRequiredService<ActivityReservationService>())
-            .AddScoped<IActivityReservationReclaimer>(static sp => sp.GetRequiredService<ActivityReservationService>())
-            .AddScoped<IContactCenterRetentionPolicy, QueueItemRetentionPolicy>()
-            .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>()
             .AddScoped<IHandoffQueueOptionsProvider, ContactCenterHandoffQueueOptionsProvider>();
 
-        // This feature owns queues, so work stranded in one is something it can heal; it replaces the do-nothing
-        // default the base feature registers for tenants that have no queues.
-        services.Replace(ServiceDescriptor.Scoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>());
-
-        // Chooses which of an agent's queues to serve next; reservation still runs through AssignNextAsync.
-        services.AddScoped<IAgentWorkSelector, AgentWorkSelector>();
-
-        // In-queue treatment: the policy decides what a waiting caller hears, the provider makes them hear it,
-        // and the default provider plays nothing so a tenant with no voice provider is silent rather than
-        // throwing at somebody who is already on hold.
-        services.AddScoped<IQueuedCallbackService, QueuedCallbackService>();
-        services.TryAddScoped<IQueueTreatmentProvider, NoQueueTreatmentProvider>();
-
-        // The sweep that plays it. It also runs the overflow due-times, because both are timing-sensitive in
-        // the same way and reading the queues twice on two schedules would be the same work done twice.
-        services.AddScoped<IQueueTreatmentService, QueueTreatmentService>();
-        services.AddBackgroundCycle<IQueueTreatmentCycle, QueueTreatmentCycle>();
+        // The host's scheduler for the queue-treatment cycle.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, QueueTreatmentBackgroundTask>());
 
-        // Queue size and maximum-wait limits. Sending a waiting caller to voicemail needs a live call to move,
-        // which only a voice feature has, so the default sink declines and Voice replaces it.
-        services.AddScoped<IQueueLimitService, QueueLimitService>();
-        services.TryAddScoped<IWaitingCallVoicemailSink, NoWaitingCallVoicemailSink>();
-
-        // Shared Contact Center configuration cache. The Business Hours feature also registers it; TryAdd keeps a
-        // single instance whichever feature configures services first.
+        // How the shared configuration cache learns a tenant's configuration changed. The Business Hours
+        // feature also registers it; TryAdd keeps a single instance whichever feature runs first.
         services.TryAddSingleton<IContactCenterConfigurationChangeNotifier, SignalContactCenterConfigurationChangeNotifier>();
-        services.TryAddSingleton<IContactCenterConfigurationCache, ContactCenterConfigurationCache>();
 
         services
             .AddScoped<ICatalogEntryHandler<ActivityQueueGroup>, ActivityQueueGroupHandler>()
@@ -124,30 +88,15 @@ public sealed class QueuesStartup : StartupBase
 
         services.AddNavigationProvider<ContactCenterAdminMenu>();
 
-        // Policy-based routing strategies and activity assignment orchestration.
-        services
-            .AddScoped<IActivityRoutingService, ActivityRoutingService>()
-            .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, PreferredSkillsRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, CapacityRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, StickyAgentRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, RoundRobinRoutingStrategy>()
-            .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
-            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
-            .AddScoped<IOrphanedActivityRecoveryService, OrphanedActivityRecoveryService>();
-
         services.AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
             new ContactCenterFeatureWorkLifecycleParticipant(
                 ContactCenterCapabilities.Queues,
                 serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                 serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
-        services.AddBackgroundCycle<IReservationExpiryCycle, ReservationExpiryCycle>();
+        // The host's scheduler for the cycles AddCoreContactCenterQueues registered.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ReservationExpiryBackgroundTask>());
-        services.AddBackgroundCycle<IDirectRingTimeoutCycle, DirectRingTimeoutCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DirectRingTimeoutBackgroundTask>());
-        services.AddBackgroundCycle<IOrphanedActivityRecoveryCycle, OrphanedActivityRecoveryCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, OrphanedActivityRecoveryBackgroundTask>());
     }
 

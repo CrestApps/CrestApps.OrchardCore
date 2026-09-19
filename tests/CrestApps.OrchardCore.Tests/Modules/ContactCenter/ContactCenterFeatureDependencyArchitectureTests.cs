@@ -844,7 +844,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var methods = GetRegistrationMethods(repositoryRoot);
         var builder = new StringBuilder(body);
 
-        foreach (Match call in Regex.Matches(body, @"Add(?:Core|Orchard)\w+\s*[(<]"))
+        foreach (Match call in Regex.Matches(body, @"\bAdd(?:Core|Orchard)\w+\s*[(<]"))
         {
             var name = call.Value[..^1].TrimEnd();
 

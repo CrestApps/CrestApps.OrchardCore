@@ -9,6 +9,7 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.ContactCenter.Core;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -30,16 +31,13 @@ public sealed class ProviderInboxStartup : StartupBase
     {
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterStorage.CollectionName));
 
-        services
-            .AddScoped<IProviderWebhookInboxStore, ProviderWebhookInboxStore>()
-            .AddScoped<IProviderWebhookInbox, ProviderWebhookInbox>()
-            .AddScoped<IContactCenterRetentionPolicy, ProviderWebhookInboxMessageRetentionPolicy>();
+        services.AddCoreContactCenterProviderInbox();
 
         services
             .AddIndexProvider<ProviderWebhookInboxMessageIndexProvider>()
             .AddDataMigration<ProviderWebhookInboxMessageIndexMigrations>();
 
-        services.AddBackgroundCycle<IProviderWebhookInboxCycle, ProviderWebhookInboxCycle>();
+        // The host's scheduler for the cycle AddCoreContactCenterProviderInbox registered.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderWebhookInboxBackgroundTask>());
     }
 }

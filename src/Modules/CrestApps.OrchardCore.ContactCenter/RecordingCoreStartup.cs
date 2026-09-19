@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.ContactCenter.Core;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -15,6 +16,6 @@ public sealed class RecordingCoreStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddScoped<IRecordingAccessGovernanceService, RecordingAccessGovernanceService>();
+        services.AddCoreContactCenterRecordingGovernance();
     }
 }

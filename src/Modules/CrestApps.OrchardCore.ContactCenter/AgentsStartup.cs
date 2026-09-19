@@ -26,6 +26,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.ContactCenter.Core;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -52,9 +53,7 @@ public sealed class AgentsStartup : StartupBase
     {
         // The agent-profile directory (store, manager, index) is provided by the Agent Services feature this
         // feature depends on, so it is not registered again here.
-        services
-            .AddScoped<IAgentStateReasonCodeStore, AgentStateReasonCodeStore>()
-            .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
+        services.AddCoreContactCenterAgents(_shellConfiguration);
 
         services
             .AddIndexProvider<AgentQueueMembershipIndexProvider>()
@@ -71,32 +70,14 @@ public sealed class AgentsStartup : StartupBase
         services.AddDisplayDriver<AgentStateReasonCode, AgentStateReasonCodeDisplayDriver>();
         services.AddNavigationProvider<ContactCenterAgentsAdminMenu>();
 
-        // Durable agent presence, availability sessions, heartbeat recovery, and logout synchronization.
-        services
-            .AddOptions<AgentAvailabilityOptions>()
-            .Bind(_shellConfiguration.GetSection("CrestApps:ContactCenter:Availability"))
-            .Validate(options => options.HeartbeatTimeout > TimeSpan.Zero, "HeartbeatTimeout must be greater than zero.")
-            .Validate(options => options.MaximumWrapUpDuration > TimeSpan.Zero, "MaximumWrapUpDuration must be greater than zero.")
-            .ValidateOnStart();
-
-        services
-            .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
-            .AddScoped<IAgentSignOutHandler, DefaultAgentSignOutHandler>()
-            .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
-            .AddScoped<IAgentSessionStore, AgentSessionStore>()
-            .AddScoped<IAgentSessionManager, AgentSessionManager>()
-            .AddScoped<IAgentSessionService, AgentSessionService>()
-            .AddScoped<IAgentAvailabilityService, AgentAvailabilityService>()
-            .AddScoped<IAgentAvailabilityRecoveryService, AgentAvailabilityRecoveryService>()
-            .AddScoped<IContactCenterRetentionPolicy, AgentSessionRetentionPolicy>();
+        services.AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>();
 
         services
             .AddIndexProvider<AgentSessionIndexProvider>()
             .AddDataMigration<AgentSessionIndexMigrations>();
 
-        services.AddBackgroundCycle<IAgentSessionCleanupCycle, AgentSessionCleanupCycle>();
+        // The host's scheduler for the cycles AddCoreContactCenterAgents registered.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AgentSessionCleanupBackgroundTask>());
-        services.AddBackgroundCycle<IAgentAvailabilityRecoveryCycle, AgentAvailabilityRecoveryCycle>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AgentAvailabilityRecoveryBackgroundTask>());
 
         services.ConfigureOptions<ContactCenterAgentSignOutCookieConfiguration>();

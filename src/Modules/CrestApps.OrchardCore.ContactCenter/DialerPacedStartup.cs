@@ -8,6 +8,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.ContactCenter.Core;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -32,19 +33,16 @@ public sealed class DialerPacedStartup : StartupBase
     {
         services.AddContactCenterCapability(ContactCenterConstants.Feature.DialerPaced, ContactCenterCapabilities.DialerPaced);
 
+        services.AddCoreContactCenterPacedDialing();
+
         services
-            .AddScoped<IDialerStrategy, PowerDialerStrategy>()
-            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
-            // Predictive is no longer blocked: its pacing is gated by the abandonment policy, which fails
-            // closed when the rate cannot be proven.
-            .AddScoped<IDialerStrategy, PredictiveDialerStrategy>()
             .AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
                 new ContactCenterFeatureWorkLifecycleParticipant(
                     ContactCenterCapabilities.DialerPaced,
                     serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                     serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
 
-        services.AddBackgroundCycle<IDialerPacingCycle, DialerPacingCycle>();
+        // The host's scheduler for the cycle AddCoreContactCenterPacedDialing registered.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DialerPacingBackgroundTask>());
 
         services.Configure<ActivityBatchSourceOptions>(options =>

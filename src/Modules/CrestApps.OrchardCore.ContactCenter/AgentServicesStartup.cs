@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.ContactCenter.Core;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -28,18 +29,7 @@ public sealed class AgentServicesStartup : StartupBase
         // registers the same collection; the registration is idempotent).
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterStorage.CollectionName));
 
-        services
-            .AddScoped<IAgentProfileStore, AgentProfileStore>()
-            .AddScoped<IAgentProfileManager, AgentProfileManager>();
-
-        // The permissive default: no entitlement restriction. The Agent Entitlements feature replaces this with an
-        // enforcing policy when enabled. It lives with the directory rather than the Agents administration because
-        // every consumer of agent identity - including a tenant that runs only the SMS Portal - needs it.
-        services.TryAddScoped<IAgentEntitlementPolicy, PermissiveAgentEntitlementPolicy>();
-
-        // Queue membership expressed over the agent directory alone, so a channel that groups agents by queue
-        // (the SMS Portal) does not need the Work Distribution feature to resolve who serves what.
-        services.TryAddScoped<IAgentQueueMembershipReader, AgentQueueMembershipReader>();
+        services.AddCoreContactCenterAgentServices();
 
         services
             .AddIndexProvider<AgentProfileIndexProvider>()

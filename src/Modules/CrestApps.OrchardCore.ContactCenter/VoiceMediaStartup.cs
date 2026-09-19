@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.ContactCenter.Core;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 
@@ -14,6 +15,6 @@ public sealed class VoiceMediaStartup : StartupBase
     {
         services.AddContactCenterCapability(ContactCenterConstants.Feature.VoiceMedia, ContactCenterCapabilities.VoiceMedia);
 
-        services.AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>();
+        services.AddCoreContactCenterVoiceMedia();
     }
 }

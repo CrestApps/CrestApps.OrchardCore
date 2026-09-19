@@ -185,4 +185,206 @@ public static class ContactCenterServiceCollectionExtensions
 
         return services;
     }
+
+    /// <summary>
+    /// Adds queues, skills, reservations, routing and the work that expires and recovers them.
+    /// </summary>
+    /// <remarks>
+    /// The routing strategies are a chain the router asks in turn, so the order they are added in is the order
+    /// they are consulted in and is part of what this method means.
+    /// </remarks>
+    /// <param name="services">The services.</param>
+    /// <returns>The same service collection, so calls can be chained.</returns>
+    public static IServiceCollection AddCoreContactCenterQueues(this IServiceCollection services)
+    {
+        services
+            .AddScoped<IActivityQueueGroupStore, ActivityQueueGroupStore>()
+            .AddScoped<IActivityQueueGroupManager, ActivityQueueGroupManager>()
+            .AddScoped<IActivityQueueStore, ActivityQueueStore>()
+            .AddScoped<IActivityQueueManager, ActivityQueueManager>()
+            .AddScoped<ISupervisorQueueAuthorizationService, SupervisorQueueAuthorizationService>()
+            .AddScoped<IContactCenterSkillStore, ContactCenterSkillStore>()
+            .AddScoped<IContactCenterSkillManager, ContactCenterSkillManager>()
+            .AddScoped<IQueueItemStore, QueueItemStore>()
+            .AddScoped<IQueueItemManager, QueueItemManager>()
+            .AddScoped<IActivityReservationStore, ActivityReservationStore>()
+            .AddScoped<IActivityReservationManager, ActivityReservationManager>()
+            .AddScoped<IActivityQueueService, ActivityQueueService>()
+            .AddScoped<ActivityReservationService>()
+            .AddScoped<IActivityReservationService>(static sp => sp.GetRequiredService<ActivityReservationService>())
+            .AddScoped<IActivityReservationReclaimer>(static sp => sp.GetRequiredService<ActivityReservationService>())
+            .AddScoped<IContactCenterRetentionPolicy, QueueItemRetentionPolicy>()
+            .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>();
+
+        // Queues are something this feature owns, so work stranded in one is something it can heal; it replaces
+        // the do-nothing default registered for hosts that have no queues.
+        services.Replace(ServiceDescriptor.Scoped<IAgentWorkStateHealingService, AgentWorkStateHealingService>());
+
+        // Chooses which of an agent's queues to serve next; reservation still runs through the assignment path.
+        services.AddScoped<IAgentWorkSelector, AgentWorkSelector>();
+
+        // In-queue treatment: the policy decides what a waiting caller hears, the provider makes them hear it,
+        // and the default provider plays nothing so a host with no voice provider is silent rather than
+        // throwing at somebody who is already on hold.
+        services.AddScoped<IQueuedCallbackService, QueuedCallbackService>();
+        services.TryAddScoped<IQueueTreatmentProvider, NoQueueTreatmentProvider>();
+
+        // The sweep that plays it. It also runs the overflow due-times, because both are timing-sensitive in
+        // the same way and reading the queues twice on two schedules would be the same work done twice.
+        services.AddScoped<IQueueTreatmentService, QueueTreatmentService>();
+        services.AddBackgroundCycle<IQueueTreatmentCycle, QueueTreatmentCycle>();
+
+        // Queue size and maximum-wait limits. Sending a waiting caller to voicemail needs a live call to move,
+        // which only a voice feature has, so the default sink declines and voice replaces it.
+        services.AddScoped<IQueueLimitService, QueueLimitService>();
+        services.TryAddScoped<IWaitingCallVoicemailSink, NoWaitingCallVoicemailSink>();
+
+        services.TryAddSingleton<IContactCenterConfigurationCache, ContactCenterConfigurationCache>();
+
+        // Policy-based routing strategies and activity assignment orchestration. Asked in this order.
+        services
+            .AddScoped<IActivityRoutingService, ActivityRoutingService>()
+            .AddScoped<IActivityRoutingStrategy, RequiredSkillsRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, PreferredSkillsRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, CapacityRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, StickyAgentRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, LongestIdleRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, RoundRobinRoutingStrategy>()
+            .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
+            .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
+            .AddScoped<IOrphanedActivityRecoveryService, OrphanedActivityRecoveryService>();
+
+        services.AddBackgroundCycle<IReservationExpiryCycle, ReservationExpiryCycle>();
+        services.AddBackgroundCycle<IDirectRingTimeoutCycle, DirectRingTimeoutCycle>();
+        services.AddBackgroundCycle<IOrphanedActivityRecoveryCycle, OrphanedActivityRecoveryCycle>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds agent presence, durable sessions, availability and the work that recovers them.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <param name="configuration">The configuration the availability options are bound against.</param>
+    /// <returns>The same service collection, so calls can be chained.</returns>
+    public static IServiceCollection AddCoreContactCenterAgents(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services
+            .AddScoped<IAgentStateReasonCodeStore, AgentStateReasonCodeStore>()
+            .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
+
+        // Durable agent presence, availability sessions, heartbeat recovery, and sign-out synchronization.
+        services
+            .AddOptions<AgentAvailabilityOptions>()
+            .Bind(configuration.GetSection("CrestApps:ContactCenter:Availability"))
+            .Validate(options => options.HeartbeatTimeout > TimeSpan.Zero, "HeartbeatTimeout must be greater than zero.")
+            .Validate(options => options.MaximumWrapUpDuration > TimeSpan.Zero, "MaximumWrapUpDuration must be greater than zero.")
+            .ValidateOnStart();
+
+        services
+            .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
+            .AddScoped<IAgentSignOutHandler, DefaultAgentSignOutHandler>();
+
+        services
+            .AddScoped<IAgentSessionStore, AgentSessionStore>()
+            .AddScoped<IAgentSessionManager, AgentSessionManager>()
+            .AddScoped<IAgentSessionService, AgentSessionService>()
+            .AddScoped<IAgentAvailabilityService, AgentAvailabilityService>()
+            .AddScoped<IAgentAvailabilityRecoveryService, AgentAvailabilityRecoveryService>()
+            .AddScoped<IContactCenterRetentionPolicy, AgentSessionRetentionPolicy>();
+
+        services.AddBackgroundCycle<IAgentSessionCleanupCycle, AgentSessionCleanupCycle>();
+        services.AddBackgroundCycle<IAgentAvailabilityRecoveryCycle, AgentAvailabilityRecoveryCycle>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the agent directory: who the agents are, what they are entitled to, and which queues they serve.
+    /// </summary>
+    /// <remarks>
+    /// Separate from the agents feature because a host that runs only a messaging channel still needs to know
+    /// who its agents are, without taking on presence and sessions.
+    /// </remarks>
+    /// <param name="services">The services.</param>
+    /// <returns>The same service collection, so calls can be chained.</returns>
+    public static IServiceCollection AddCoreContactCenterAgentServices(this IServiceCollection services)
+    {
+        services
+            .AddScoped<IAgentProfileStore, AgentProfileStore>()
+            .AddScoped<IAgentProfileManager, AgentProfileManager>();
+
+        // The permissive default: no entitlement restriction. A host that enforces entitlements replaces this.
+        // It lives with the directory rather than the agents administration because every consumer of agent
+        // identity needs it, including a host that runs only a messaging channel.
+        services.TryAddScoped<IAgentEntitlementPolicy, PermissiveAgentEntitlementPolicy>();
+
+        // Queue membership expressed over the agent directory alone, so a channel that groups agents by queue
+        // does not need the work-distribution feature to resolve who serves what.
+        services.TryAddScoped<IAgentQueueMembershipReader, AgentQueueMembershipReader>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the durable inbox a provider's webhook deliveries are taken into, and the work that drains it.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The same service collection, so calls can be chained.</returns>
+    public static IServiceCollection AddCoreContactCenterProviderInbox(this IServiceCollection services)
+    {
+        services
+            .AddScoped<IProviderWebhookInboxStore, ProviderWebhookInboxStore>()
+            .AddScoped<IProviderWebhookInbox, ProviderWebhookInbox>()
+            .AddScoped<IContactCenterRetentionPolicy, ProviderWebhookInboxMessageRetentionPolicy>();
+
+        services.AddBackgroundCycle<IProviderWebhookInboxCycle, ProviderWebhookInboxCycle>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the governance that decides who may reach a recording.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The same service collection, so calls can be chained.</returns>
+    public static IServiceCollection AddCoreContactCenterRecordingGovernance(this IServiceCollection services)
+    {
+        services.AddScoped<IRecordingAccessGovernanceService, RecordingAccessGovernanceService>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the resolver that picks which provider plays a piece of voice media.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The same service collection, so calls can be chained.</returns>
+    public static IServiceCollection AddCoreContactCenterVoiceMedia(this IServiceCollection services)
+    {
+        services.AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the paced dialing strategies and the sweep that paces them.
+    /// </summary>
+    /// <param name="services">The services.</param>
+    /// <returns>The same service collection, so calls can be chained.</returns>
+    public static IServiceCollection AddCoreContactCenterPacedDialing(this IServiceCollection services)
+    {
+        services
+            .AddScoped<IDialerStrategy, PowerDialerStrategy>()
+            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
+            // Predictive is not blocked: its pacing is gated by the abandonment policy, which fails closed when
+            // the rate cannot be proven.
+            .AddScoped<IDialerStrategy, PredictiveDialerStrategy>();
+
+        services.AddBackgroundCycle<IDialerPacingCycle, DialerPacingCycle>();
+
+        return services;
+    }
 }
