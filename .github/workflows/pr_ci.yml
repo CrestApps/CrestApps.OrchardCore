@@ -38,6 +38,21 @@ jobs:
       # warnings and other better approaches don't work, see https://github.com/OrchardCMS/OrchardCore/pull/16317.
       run: |
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
+    # The projects under a Transitions folder are the Contact Center Suite as it will exist once it leaves this
+    # repository, so they must not name the host they are leaving. A reference that creeps in compiles perfectly
+    # well here and is only discovered when the move is attempted, which is the worst moment to discover it.
+    - name: Transitions projects name no host
+      shell: bash
+      run: |
+        hits=$(grep -rlE "OrchardCore" src/Abstractions/Transitions src/Core/Transitions tests/Transitions --include='*.cs' --include='*.csproj' --include='*.props' || true)
+        if [ -n "$hits" ]; then
+          echo "These files under a Transitions folder mention OrchardCore:"
+          echo "$hits"
+          exit 1
+        fi
+    - name: Framework tests
+      run: |
+        dotnet test -c Release --no-build ./tests/Transitions/CrestApps.Core.ContactCenter.Tests/CrestApps.Core.ContactCenter.Tests.csproj
     - name: Unit Tests
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj

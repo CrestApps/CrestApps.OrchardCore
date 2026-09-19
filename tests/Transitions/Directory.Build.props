@@ -1,0 +1,14 @@
+<Project>
+
+  <!--
+    Tests for the projects under a 'Transitions' folder. They reference only those projects, so a
+    reference to anything Orchard Core is a compile error rather than something to notice later.
+  -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <RepositoryUrl>https://github.com/CrestApps/CrestApps.Core</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

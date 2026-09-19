@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Omnichannel</RootNamespace>
+    <Title>CrestApps Core Omnichannel Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The customer-record and conversation contracts: who a contact is, what a subject is, and the
+      activities recorded against them. A host supplies the records; the suite never names a
+      content model.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.Core.PhoneNumbers.Abstractions\CrestApps.Core.PhoneNumbers.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.Core.Hosting.Abstractions\CrestApps.Core.Hosting.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -34,6 +34,8 @@
     <Project Path="src/Abstractions/Transitions/CrestApps.Core.Omnichannel.Sms.Portal.Abstractions/CrestApps.Core.Omnichannel.Sms.Portal.Abstractions.csproj" />
     <Project Path="src/Abstractions/Transitions/CrestApps.Core.Sms.Abstractions/CrestApps.Core.Sms.Abstractions.csproj" />
     <Project Path="src/Abstractions/Transitions/CrestApps.Core.Telephony.Abstractions/CrestApps.Core.Telephony.Abstractions.csproj" />
+    <Project Path="src/Abstractions/Transitions/CrestApps.Core.Omnichannel.Abstractions/CrestApps.Core.Omnichannel.Abstractions.csproj" />
+    <Project Path="src/Abstractions/Transitions/CrestApps.Core.PhoneNumbers.Abstractions/CrestApps.Core.PhoneNumbers.Abstractions.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />
@@ -58,6 +60,17 @@
   <Folder Name="/src/Core/Transitions/">
     <Project Path="src/Core/Transitions/CrestApps.Core.Hosting/CrestApps.Core.Hosting.csproj" />
     <Project Path="src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/CrestApps.Core.Data.YesSql.ContactCenter.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.ContactCenter/CrestApps.Core.ContactCenter.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Omnichannel/CrestApps.Core.Omnichannel.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Omnichannel.Sms/CrestApps.Core.Omnichannel.Sms.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Omnichannel.Sms.Portal/CrestApps.Core.Omnichannel.Sms.Portal.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Omnichannel.Voice/CrestApps.Core.Omnichannel.Voice.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.PhoneNumbers/CrestApps.Core.PhoneNumbers.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Telephony/CrestApps.Core.Telephony.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Telephony.Asterisk/CrestApps.Core.Telephony.Asterisk.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Telephony.Dialpad/CrestApps.Core.Telephony.Dialpad.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.Telephony.Telnyx/CrestApps.Core.Telephony.Telnyx.csproj" />
+    <Project Path="src/Core/Transitions/CrestApps.Core.WebSockets/CrestApps.Core.WebSockets.csproj" />
   </Folder>
   <Folder Name="/src/Modules/">
     <Project Path="src/Modules/CrestApps.OrchardCore.ContentAccessControl/CrestApps.OrchardCore.ContentAccessControl.csproj" />
@@ -140,7 +153,11 @@
     <Project Path="tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj" />
     <Project Path="tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj" />
   </Folder>
+  <Folder Name="/tests/Transitions/">
+    <Project Path="tests/Transitions/CrestApps.Core.ContactCenter.Tests/CrestApps.Core.ContactCenter.Tests.csproj" />
+  </Folder>
   <Folder Name="/utilities/">
     <Project Path="utilities/CrestApps.OrchardCore.RecipeSchemaExporter/CrestApps.OrchardCore.RecipeSchemaExporter.csproj" />
   </Folder>
 </Solution>
+
