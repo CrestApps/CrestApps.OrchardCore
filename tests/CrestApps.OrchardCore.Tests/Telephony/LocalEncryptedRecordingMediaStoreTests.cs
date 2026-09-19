@@ -1,8 +1,6 @@
 using System.Security.Cryptography;
 using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Logging.Abstractions;
-using OrchardCore.FileStorage.FileSystem;
 using CrestApps.Core.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 
@@ -18,8 +16,9 @@ public sealed class LocalEncryptedRecordingMediaStoreTests : IDisposable
         _rootPath = Path.Combine(Path.GetTempPath(), "crestapps-recording-media-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_rootPath);
 
-        var fileStore = new FileSystemStore(_rootPath, NullLogger<FileSystemStore>.Instance);
-        _store = new LocalEncryptedRecordingMediaStore(fileStore, new EphemeralDataProtectionProvider());
+        _store = new LocalEncryptedRecordingMediaStore(
+            new LocalRecordingMediaFileStore(_rootPath),
+            new EphemeralDataProtectionProvider());
     }
 
     [Fact]

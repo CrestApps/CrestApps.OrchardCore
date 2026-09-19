@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Telephony.Models;
+namespace CrestApps.Core.Telephony.Models;
 
 /// <summary>
 /// The distributed-lock timings the Telephony module coordinates with. These are deployment characteristics

@@ -147,16 +147,16 @@ public sealed class Startup : StartupBase
         {
             var shellOptions = serviceProvider.GetRequiredService<IOptions<ShellOptions>>().Value;
             var shellSettings = serviceProvider.GetRequiredService<ShellSettings>();
-            var logger = serviceProvider.GetRequiredService<ILogger<FileSystemStore>>();
             var dataProtectionProvider = serviceProvider.GetRequiredService<IDataProtectionProvider>();
             var path = Path.Combine(
                 shellOptions.ShellsApplicationDataPath,
                 shellOptions.ShellsContainerName,
                 shellSettings.Name,
                 TelephonyConstants.RecordingMediaFolderName);
-            var fileStore = new FileSystemStore(path, logger);
 
-            return new LocalEncryptedRecordingMediaStore(fileStore, dataProtectionProvider);
+            return new LocalEncryptedRecordingMediaStore(
+                new LocalRecordingMediaFileStore(path),
+                dataProtectionProvider);
         });
         services.AddScoped<IModularTenantEvents, RecordingMediaTenantEvents>();
 

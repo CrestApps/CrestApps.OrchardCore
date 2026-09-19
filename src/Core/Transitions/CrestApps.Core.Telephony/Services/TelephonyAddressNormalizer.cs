@@ -1,8 +1,8 @@
 using System.Text;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
-internal static class TelephonyAddressNormalizer
+public static class TelephonyAddressNormalizer
 {
     public static string NormalizePhoneNumber(string value)
     {

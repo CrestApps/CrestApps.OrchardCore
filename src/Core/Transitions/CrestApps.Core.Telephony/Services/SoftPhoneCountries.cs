@@ -1,11 +1,11 @@
 using System.Globalization;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Provides the list of selectable countries and resolves the soft phone's default country code.
 /// </summary>
-internal static class SoftPhoneCountries
+public static class SoftPhoneCountries
 {
     private static readonly IReadOnlyList<SoftPhoneCountry> _countries = BuildCountries();
 

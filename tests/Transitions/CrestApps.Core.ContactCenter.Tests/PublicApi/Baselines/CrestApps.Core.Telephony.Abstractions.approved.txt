@@ -56,6 +56,13 @@ namespace CrestApps.Core.Telephony
     {
         System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.Models.ProviderIdentity> GetIdentities();
     }
+    public interface IRecordingMediaFileStore
+    {
+        System.Threading.Tasks.Task<bool> DeleteAsync(string name, System.Threading.CancellationToken cancellationToken = default);
+        System.Collections.Generic.IAsyncEnumerable<string> ListAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string name, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task WriteAsync(string name, System.IO.Stream content, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IRecordingMediaStore
     {
         System.Threading.Tasks.Task<bool> DeleteAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default);

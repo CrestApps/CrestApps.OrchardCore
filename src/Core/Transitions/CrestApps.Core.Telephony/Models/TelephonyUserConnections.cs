@@ -1,5 +1,5 @@
 using CrestApps.Core.Telephony.Models;
-namespace CrestApps.OrchardCore.Telephony.Models;
+namespace CrestApps.Core.Telephony.Models;
 
 /// <summary>
 /// Stores the current user's telephony provider tokens, keyed by the provider technical name.

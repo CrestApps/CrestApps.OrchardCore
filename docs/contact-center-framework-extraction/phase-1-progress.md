@@ -16,7 +16,8 @@ a reviewed diff of every approval baseline that moved.
 | W1 | `fd71e996` | `TenantSignalRGroupName`, `HubConnectionWork`, `LogDataClassifications`. |
 | W2 | `b1435bf0` | Phone numbers (`DefaultPhoneNumberService` and its contracts) and the WebSocket connection registry. |
 | W3.1 | `bffa165f` | The telephony contracts: 110 files into `CrestApps.Core.Telephony.Abstractions`, with the feature ids left behind in a new Orchard `TelephonyFeatures`. |
-| W3.2 | this commit | The telephony primitive: hub base, models, services, and the reconciliation cycle into `CrestApps.Core.Telephony`. |
+| W3.2 | `3ca794ce` | The telephony primitive: hub base, models, services, and the reconciliation cycle into `CrestApps.Core.Telephony`. |
+| W3.3 (first half), W3.5 | this commit | The module services with no host dependency, and the encrypted recording store with a backend contract under it. |
 
 ## Decisions the plan did not make
 
@@ -59,6 +60,22 @@ project is deleted when the store package is built, not before.
 `TelephonyExtensionStore` therefore stayed in `CrestApps.OrchardCore.Telephony.Core.Services` while
 its interface moved to `CrestApps.Core.Telephony.Services`. That is the honest position: the
 framework namespace belongs to framework assemblies.
+
+### The recording store kept a backend seam rather than a root path (W3.5)
+
+The plan says `LocalEncryptedRecordingMediaStore` should take a root path in place of Orchard's
+`IOptions<ShellOptions>`/`ShellSettings`. It never took those. It takes an Orchard `IFileStore`, and
+the Azure recording module deliberately reuses the same store with a blob-backed file store so
+recordings are client-side encrypted before they reach Azure. Giving the class a root path would have
+deleted that capability.
+
+So the seam stayed, as a framework contract: `IRecordingMediaFileStore` with four operations over
+flat names. `LocalRecordingMediaFileStore` is the framework's own backend, and
+`FileStoreRecordingMediaFileStore` in the Orchard Telephony module binds any Orchard file store to
+it, which is what the Azure module now passes. Encryption, the container format, and the derivation
+of a file name from a storage key all stayed above the seam, so moving a deployment's recordings
+between backends does not change how they are encrypted or what they are called — and a test pins
+that the two backends agree on the name.
 
 ## Guards that had to be repointed (W3.2)
 

@@ -65,7 +65,7 @@ public sealed class Startup : StartupBase
             var dataProtectionProvider = serviceProvider.GetRequiredService<IDataProtectionProvider>();
             var fileStore = new BlobFileStore(blobStorageOptions, clock, contentTypeProvider);
 
-            return new LocalEncryptedRecordingMediaStore(fileStore, dataProtectionProvider);
+            return new LocalEncryptedRecordingMediaStore(new FileStoreRecordingMediaFileStore(fileStore), dataProtectionProvider);
         }));
 
         services.AddScoped<IModularTenantEvents, RecordingBlobContainerTenantEvents>();

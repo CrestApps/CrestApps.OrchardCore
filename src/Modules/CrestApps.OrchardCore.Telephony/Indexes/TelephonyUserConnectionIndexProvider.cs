@@ -5,6 +5,7 @@ using OrchardCore.Users.Models;
 using YesSql.Indexes;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telephony.Indexes;
 

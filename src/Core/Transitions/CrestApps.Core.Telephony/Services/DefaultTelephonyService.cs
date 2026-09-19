@@ -3,7 +3,7 @@ using Microsoft.Extensions.Localization;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Default <see cref="ITelephonyService"/> implementation that resolves the configured default

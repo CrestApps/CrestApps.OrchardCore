@@ -38,6 +38,16 @@ namespace CrestApps.Core.Telephony.Hubs
 }
 namespace CrestApps.Core.Telephony.Models
 {
+    public sealed class TelephonyCoordinationOptions
+    {
+        public TelephonyCoordinationOptions() { }
+        public System.TimeSpan ClientRecordedCallMaxAge { get; set; }
+        public System.TimeSpan InteractionLockExpiration { get; set; }
+        public System.TimeSpan InteractionLockTimeout { get; set; }
+        public System.TimeSpan NewInteractionGracePeriod { get; set; }
+        public System.TimeSpan TokenRefreshLockExpiration { get; set; }
+        public System.TimeSpan TokenRefreshLockTimeout { get; set; }
+    }
     public sealed class TelephonyExtension : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
     {
         public TelephonyExtension() { }
@@ -48,6 +58,11 @@ namespace CrestApps.Core.Telephony.Models
         public string UserId { get; set; }
         public string UserName { get; set; }
         public static string NormalizeNumber(string number) { }
+    }
+    public sealed class TelephonyUserConnections
+    {
+        public TelephonyUserConnections() { }
+        public System.Collections.Generic.Dictionary<string, CrestApps.Core.Telephony.Models.TelephonyUserTokens> Connections { get; set; }
     }
     public enum VoiceCallLifecyclePhase
     {
@@ -78,6 +93,37 @@ namespace CrestApps.Core.Telephony.Services
     {
         public DefaultDialDestinationPolicy(Microsoft.Extensions.Options.IOptionsSnapshot<CrestApps.Core.Telephony.TelephonySettings> telephonySettings) { }
         public CrestApps.Core.Telephony.Services.DialDestinationDecision Evaluate(string address, CrestApps.Core.Telephony.Services.DialDestinationContext context) { }
+    }
+    public sealed class DefaultOutboundCallScreeningService : CrestApps.Core.Telephony.IOutboundCallScreeningService
+    {
+        public DefaultOutboundCallScreeningService(System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.IOutboundCallScreener> screeners) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.OutboundCallScreeningResult> ScreenAsync(CrestApps.Core.Telephony.Models.OutboundCallScreeningContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultTelephonyCommandExecutor : CrestApps.Core.Telephony.ITelephonyCommandExecutor
+    {
+        public DefaultTelephonyCommandExecutor(Microsoft.Extensions.Options.IOptions<CrestApps.Core.Telephony.TelephonyCommandOptions> options, Microsoft.Extensions.Hosting.IHostApplicationLifetime hostApplicationLifetime) { }
+        public System.Threading.Tasks.Task<TResult> ExecuteAsync<TResult>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<TResult>> operation) { }
+    }
+    public sealed class DefaultTelephonyService : CrestApps.Core.Telephony.ITelephonyService
+    {
+        public DefaultTelephonyService(CrestApps.Core.Telephony.ITelephonyProviderResolver resolver, CrestApps.Core.Telephony.IOutboundCallScreeningService screeningService, CrestApps.Core.Telephony.Services.ITelephonyExtensionResolver extensionResolver, CrestApps.Core.Telephony.Services.IDialDestinationPolicy destinationPolicy, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.Core.Telephony.Services.DefaultTelephonyService> stringLocalizer) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> AddExtensionToConferenceAsync(CrestApps.Core.Telephony.Models.ExtensionConferenceRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> AnswerAsync(CrestApps.Core.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> DialAsync(CrestApps.Core.Telephony.Models.DialRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> DialExtensionAsync(CrestApps.Core.Telephony.Models.ExtensionDialRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyCapabilities> GetCapabilitiesAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyClientCredentials> GetClientCredentialsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyDirectoryResult> GetDirectoryAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> HangupAsync(CrestApps.Core.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> HoldAsync(CrestApps.Core.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> MergeAsync(CrestApps.Core.Telephony.Models.MergeRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> MuteAsync(CrestApps.Core.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> RejectAsync(CrestApps.Core.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> ResumeAsync(CrestApps.Core.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> SendDigitsAsync(CrestApps.Core.Telephony.Models.SendDigitsRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> SendToVoicemailAsync(CrestApps.Core.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> TransferAsync(CrestApps.Core.Telephony.Models.TransferRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> UnmuteAsync(CrestApps.Core.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DefaultTransferTargetPolicy : CrestApps.Core.Telephony.Services.ITransferTargetPolicy
     {
@@ -127,6 +173,23 @@ namespace CrestApps.Core.Telephony.Services
         System.Threading.Tasks.Task<System.IAsyncDisposable> AcquireAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         bool IsHeld(string providerName, string providerCallId);
     }
+    public sealed class LocalEncryptedRecordingMediaStore : CrestApps.Core.Telephony.IRecordingMediaStore, CrestApps.Core.Telephony.ISupportsTenantMediaPurge
+    {
+        public LocalEncryptedRecordingMediaStore(CrestApps.Core.Telephony.IRecordingMediaFileStore fileStore, Microsoft.AspNetCore.DataProtection.IDataProtectionProvider dataProtectionProvider) { }
+        public System.Threading.Tasks.Task<bool> DeleteAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string storageReference, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<string> StoreAsync(CrestApps.Core.Telephony.Models.RecordingMediaWriteRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> TryPurgeAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class LocalRecordingMediaFileStore : CrestApps.Core.Telephony.IRecordingMediaFileStore
+    {
+        public LocalRecordingMediaFileStore(string rootPath) { }
+        public System.Threading.Tasks.Task<bool> DeleteAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachine(typeof(CrestApps.Core.Telephony.Services.LocalRecordingMediaFileStore.<ListAsync>d__5))]
+        public System.Collections.Generic.IAsyncEnumerable<string> ListAsync([System.Runtime.CompilerServices.EnumeratorCancellation] System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.IO.Stream> OpenReadAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task WriteAsync(string name, System.IO.Stream content, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class NormalizedVoiceEventIngestor : CrestApps.Core.Telephony.Services.INormalizedVoiceEventIngestor
     {
         public NormalizedVoiceEventIngestor(System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler> handlers, CrestApps.Core.Telephony.Services.IProviderIdentityResolver providerIdentityResolver, CrestApps.Core.Telephony.Services.IVoiceIngressGate ingressGate, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Services.NormalizedVoiceEventIngestor> logger) { }
@@ -136,6 +199,21 @@ namespace CrestApps.Core.Telephony.Services
     {
         public ProviderIdentityResolver(System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.IProviderIdentityProvider> identityProviders) { }
         public string Canonicalize(string providerName) { }
+    }
+    public static class SoftPhoneCountries
+    {
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Services.SoftPhoneCountry> All { get; }
+        public static string ResolveDefaultCountryCode(string configuredCountryCode) { }
+    }
+    public readonly struct SoftPhoneCountry : System.IEquatable<CrestApps.Core.Telephony.Services.SoftPhoneCountry>
+    {
+        public SoftPhoneCountry(string Code, string Name) { }
+        public string Code { get; init; }
+        public string Name { get; init; }
+    }
+    public static class TelephonyAddressNormalizer
+    {
+        public static string NormalizePhoneNumber(string value) { }
     }
     public sealed class TelephonyExtensionManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.Telephony.Models.TelephonyExtension>, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Telephony.Models.TelephonyExtension>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.Telephony.Models.TelephonyExtension>, CrestApps.Core.Telephony.Services.ITelephonyExtensionManager
     {
@@ -152,6 +230,17 @@ namespace CrestApps.Core.Telephony.Services
     {
         public TelephonyInteractionReconciliationCycle(CrestApps.Core.Telephony.ITelephonyInteractionSynchronizationService synchronizationService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Services.TelephonyInteractionReconciliationCycle> logger) { }
         public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class TelephonyPkceGenerator
+    {
+        public const string Sha256Method = "S256";
+        public static string CreateCodeChallenge(string codeVerifier) { }
+        public static string CreateCodeVerifier() { }
+    }
+    public sealed class TelephonyUserPersistenceException : System.Exception
+    {
+        public TelephonyUserPersistenceException(string message) { }
+        public TelephonyUserPersistenceException(string message, System.Exception innerException) { }
     }
     public sealed class VoiceAgentMediaProviderResolver : CrestApps.Core.Telephony.Services.IVoiceAgentMediaProviderResolver
     {

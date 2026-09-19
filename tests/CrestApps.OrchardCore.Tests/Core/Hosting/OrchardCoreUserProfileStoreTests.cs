@@ -7,6 +7,7 @@ using Moq;
 using OrchardCore.Users;
 using ISession = YesSql.ISession;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.Core.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Tests.Core.Hosting;
 
