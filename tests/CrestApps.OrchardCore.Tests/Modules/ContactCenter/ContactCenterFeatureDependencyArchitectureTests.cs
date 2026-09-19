@@ -820,10 +820,88 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             var braceEnd = FindMatching(text, braceStart, '{', '}');
             var body = text.Substring(braceStart, braceEnd - braceStart + 1);
 
-            classes.Add(new StartupClass(featureId, body, requiredFeatureIds));
+            classes.Add(new StartupClass(featureId, ExpandRegistrationMethods(repositoryRoot, body), requiredFeatureIds));
         }
 
         return classes;
+    }
+
+    /// <summary>
+    /// Inlines the body of every <c>AddCore*</c> method a startup calls.
+    /// </summary>
+    /// <remarks>
+    /// These rules are about which feature owns a registration, and they find the owner by looking for the
+    /// registration in a startup's body. A registration that moves into an extension method is still owned by
+    /// whichever feature calls that method, so the search follows the call rather than losing the rule. It goes
+    /// one level deep, which is as deep as these methods go; a nested call would show up as a rule that stopped
+    /// finding its registration, which fails rather than passing quietly.
+    /// </remarks>
+    /// <param name="repositoryRoot">The repository root.</param>
+    /// <param name="body">The startup class body.</param>
+    /// <returns>The body, followed by the body of each registration method it calls.</returns>
+    private static string ExpandRegistrationMethods(string repositoryRoot, string body)
+    {
+        var methods = GetRegistrationMethods(repositoryRoot);
+        var builder = new StringBuilder(body);
+
+        foreach (Match call in Regex.Matches(body, @"Add(?:Core|Orchard)\w+\s*[(<]"))
+        {
+            var name = call.Value[..^1].TrimEnd();
+
+            if (methods.TryGetValue(name, out var methodBody))
+            {
+                builder.AppendLine().Append(methodBody);
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    /// The body of every registration extension method declared under <c>src</c>, by name.
+    /// </summary>
+    /// <param name="repositoryRoot">The repository root.</param>
+    /// <returns>A map of method name to method body.</returns>
+    private static Dictionary<string, string> GetRegistrationMethods(string repositoryRoot)
+    {
+        if (_registrationMethods is not null)
+        {
+            return _registrationMethods;
+        }
+
+        var methods = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories))
+        {
+            if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var text = File.ReadAllText(file);
+
+            foreach (Match declaration in Regex.Matches(
+                text,
+                @"public\s+static\s+[\w<>\.]+\s+(?<name>Add(?:Core|Orchard)\w+)(?:<[^>]*>)?\s*\(\s*this\s+IServiceCollection"))
+            {
+                var braceStart = text.IndexOf('{', declaration.Index + declaration.Length);
+
+                if (braceStart < 0)
+                {
+                    continue;
+                }
+
+                var braceEnd = FindMatching(text, braceStart, '{', '}');
+
+                // First declaration wins. An overload set shares a name, and appending every overload would
+                // attribute a registration to a feature that calls a different one.
+                methods.TryAdd(declaration.Groups["name"].Value, text[braceStart..(braceEnd + 1)]);
+            }
+        }
+
+        _registrationMethods = methods;
+
+        return methods;
     }
 
     private static List<StartupClass> ParseStartupClassesInDirectory(
@@ -1085,6 +1163,8 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         string Id,
         IReadOnlyList<string> Dependencies,
         bool EnabledByDependencyOnly);
+
+    private static Dictionary<string, string> _registrationMethods;
 
     private sealed record StartupClass(
         string FeatureId,
