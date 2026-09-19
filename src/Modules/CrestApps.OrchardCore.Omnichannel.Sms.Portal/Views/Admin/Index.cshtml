@@ -1,3 +1,4 @@
+@using CrestApps.Core.Omnichannel.Sms.Portal.ClientConfiguration
 @using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Hubs
 @using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models
 @model SmsInboxViewModel
@@ -10,8 +11,20 @@
         _ => T["All conversations"],
     };
 
-    var smsHubUrl = Html.SignalRHubUrl<SmsPortalHub>();
-    var conversationUrlTemplate = Url.Action("Conversation", new { id = "__ID__" });
+    var clientConfiguration = new SmsPortalClientConfiguration
+    {
+        HubUrl = Html.SignalRHubUrl<SmsPortalHub>(),
+        ConversationUrlTemplate = Url.Action("Conversation", new { id = "__ID__" }),
+        SetAvailabilityUrl = Model.HasAgentProfile ? Url.Action("SetAvailability") : null,
+
+        // Left here rather than moved onto the model: a translation is looked up by the template it was
+        // written in as much as by the text, so relocating these would leave every existing one unreachable.
+        Strings = new Dictionary<string, string>
+        {
+            ["newMessage"] = T["New message"].Value,
+            ["viewConversation"] = T["View conversation"].Value,
+        },
+    };
 }
 
 <zone Name="Title"><h1>@RenderTitleSegments(T["SMS Conversations"])</h1></zone>
@@ -136,7 +149,7 @@
         (function () {
             var toggle = document.getElementById('sms-available-toggle');
             if (!toggle) { return; }
-            var url = '@Url.Action("SetAvailability")';
+            var url = '@clientConfiguration.SetAvailabilityUrl';
             var tokenEl = document.querySelector('#sms-availability-form input[name="__RequestVerificationToken"]');
             toggle.addEventListener('change', function () {
                 var token = tokenEl ? tokenEl.value : '';
@@ -155,10 +168,10 @@
 
 <script asp-name="signalr" at="Foot"></script>
 <script at="Foot" depends-on="signalr"
-        data-sms-hub-url="@smsHubUrl"
-        data-sms-conversation-url="@conversationUrlTemplate"
-        data-sms-new-message-text="@T["New message"]"
-        data-sms-view-text="@T["View conversation"]">
+        data-sms-hub-url="@clientConfiguration.HubUrl"
+        data-sms-conversation-url="@clientConfiguration.ConversationUrlTemplate"
+        data-sms-new-message-text="@clientConfiguration.Strings["newMessage"]"
+        data-sms-view-text="@clientConfiguration.Strings["viewConversation"]">
     (function () {
         var script = document.currentScript;
         var hubUrl = script.getAttribute('data-sms-hub-url');

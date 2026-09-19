@@ -1,17 +1,20 @@
 @using System.Text.Json
+@using CrestApps.Core.ContactCenter.ClientConfiguration
 @model SupervisorDashboardIndexViewModel
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 @{
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
-    var config = new Dictionary<string, object>
+    var config = new SupervisorDashboardClientConfiguration
     {
-        ["hubUrl"] = Model.HubUrl,
-        ["stateUrl"] = Model.StateUrl,
-        ["engageUrl"] = Model.EngageUrl,
-        ["antiForgeryToken"] = antiForgeryToken,
-        ["strings"] = new Dictionary<string, string>
+        HubUrl = Model.HubUrl,
+        StateUrl = Model.StateUrl,
+        EngageUrl = Model.EngageUrl,
+        AntiForgeryToken = antiForgeryToken,
+        // Left here rather than moved onto the model: a translation is looked up by the template it was
+        // written in as much as by the text, so relocating these would leave every existing one unreachable.
+        Strings = new Dictionary<string, string>
         {
             ["waiting"] = T["Waiting"].Value,
             ["available"] = T["Available agents"].Value,

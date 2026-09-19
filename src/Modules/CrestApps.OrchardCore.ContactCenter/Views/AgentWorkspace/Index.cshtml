@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using CrestApps.Core.ContactCenter.ClientConfiguration
 @using CrestApps.OrchardCore.ContactCenter
 @using CrestApps.OrchardCore.Omnichannel.Core
 @model AgentWorkspaceIndexViewModel
@@ -18,23 +19,25 @@
             returnUrl = workspaceUrl,
         });
 
-    var config = new Dictionary<string, object>
+    var config = new AgentWorkspaceClientConfiguration
     {
-        ["hubUrl"] = Model.HubUrl,
-        ["stateUrl"] = Model.StateUrl,
-        ["setPresenceUrl"] = Model.SetPresenceUrl,
-        ["acceptOfferUrl"] = Model.AcceptOfferUrl,
-        ["declineOfferUrl"] = Model.DeclineOfferUrl,
-        ["pauseRecordingUrl"] = Model.PauseRecordingUrl,
-        ["resumeRecordingUrl"] = Model.ResumeRecordingUrl,
-        ["canSecurePause"] = Model.CanSecurePause,
-        ["requirePauseReason"] = Model.RequirePauseReason,
-        ["beginSecureCaptureUrl"] = Model.BeginSecureCaptureUrl,
-        ["canInitiateSecureCapture"] = Model.CanInitiateSecureCapture,
-        ["secureCaptureFields"] = Model.SecureCaptureFields,
-        ["completeActivityUrlTemplate"] = completeActivityUrlTemplate,
-        ["antiForgeryToken"] = antiForgeryToken,
-        ["strings"] = new Dictionary<string, string>
+        HubUrl = Model.HubUrl,
+        StateUrl = Model.StateUrl,
+        SetPresenceUrl = Model.SetPresenceUrl,
+        AcceptOfferUrl = Model.AcceptOfferUrl,
+        DeclineOfferUrl = Model.DeclineOfferUrl,
+        PauseRecordingUrl = Model.PauseRecordingUrl,
+        ResumeRecordingUrl = Model.ResumeRecordingUrl,
+        CanSecurePause = Model.CanSecurePause,
+        RequirePauseReason = Model.RequirePauseReason,
+        BeginSecureCaptureUrl = Model.BeginSecureCaptureUrl,
+        CanInitiateSecureCapture = Model.CanInitiateSecureCapture,
+        SecureCaptureFields = Model.SecureCaptureFields,
+        CompleteActivityUrlTemplate = completeActivityUrlTemplate,
+        AntiForgeryToken = antiForgeryToken,
+        // Left here rather than moved onto the model: a translation is looked up by the template it was
+        // written in as much as by the text, so relocating these would leave every existing one unreachable.
+        Strings = new Dictionary<string, string>
         {
             ["noQueues"] = T["Not signed in to any queue"].Value,
             ["incomingOffer"] = T["Incoming"].Value,

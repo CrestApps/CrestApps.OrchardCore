@@ -1,3 +1,29 @@
+namespace CrestApps.Core.Telephony.ClientConfiguration
+{
+    public sealed class SoftPhoneClientConfiguration
+    {
+        public const string DefaultStorageKey = "telephony-soft-phone";
+        public SoftPhoneClientConfiguration() { }
+        public string AntiForgeryToken { get; set; }
+        public int AudioCapabilities { get; set; }
+        public int AudioMode { get; set; }
+        public string BrowserMediaAdapterName { get; set; }
+        public int Capabilities { get; set; }
+        public string ConnectUrl { get; set; }
+        public string DefaultCountryCode { get; set; }
+        public string DisconnectUrl { get; set; }
+        public bool EnableDiagnostics { get; set; }
+        public string HubUrl { get; set; }
+        public int RecentCallsCount { get; set; }
+        public string RegistrationConfigUrl { get; set; }
+        public string StorageKey { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Strings { get; set; }
+        public bool VoicemailDeleteEnabled { get; set; }
+        public string VoicemailDeleteUrlTemplate { get; set; }
+        public string VoicemailMediaUrlTemplate { get; set; }
+        public bool VoicemailPlaybackEnabled { get; set; }
+    }
+}
 namespace CrestApps.Core.Telephony.Security
 {
     public static class TelephonyOperations

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.AspNetCore.Http;
+using CrestApps.Core.ContactCenter.ClientConfiguration;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -15,5 +16,5 @@ public interface IContactCenterAgentBarBuilder
     /// </summary>
     /// <param name="httpContext">The current HTTP context.</param>
     /// <returns>The agent bar configuration.</returns>
-    Task<AgentBarViewModel> BuildAsync(HttpContext httpContext);
+    Task<AgentBarClientConfiguration> BuildAsync(HttpContext httpContext);
 }

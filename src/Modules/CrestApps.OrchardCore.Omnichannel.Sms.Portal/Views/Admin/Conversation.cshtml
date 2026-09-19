@@ -1,3 +1,4 @@
+@using CrestApps.Core.Omnichannel.Sms.Portal.ClientConfiguration
 @using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Hubs
 @using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models
 @using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Support
@@ -5,8 +6,12 @@
 
 @{
     var contactLabel = string.IsNullOrEmpty(Model.ContactDisplayText) ? Model.Conversation.ContactAddress : Model.ContactDisplayText;
-    var smsHubUrl = Html.SignalRHubUrl<SmsPortalHub>();
-    var smsMessagesUrl = Url.Action("ThreadMessages", new { id = Model.Conversation.ItemId });
+    var clientConfiguration = new SmsThreadClientConfiguration
+    {
+        HubUrl = Html.SignalRHubUrl<SmsPortalHub>(),
+        ConversationId = Model.Conversation.ItemId,
+        MessagesUrl = Url.Action("ThreadMessages", new { id = Model.Conversation.ItemId }),
+    };
 }
 
 <div class="d-flex flex-row gap-3" style="height: calc(100vh - 2rem - var(--oc-top-nav-height, 0));">
@@ -224,9 +229,9 @@
 
 <script asp-name="signalr" at="Foot"></script>
 <script at="Foot" depends-on="signalr"
-        data-sms-hub-url="@smsHubUrl"
-        data-sms-conversation-id="@Model.Conversation.ItemId"
-        data-sms-messages-url="@smsMessagesUrl">
+        data-sms-hub-url="@clientConfiguration.HubUrl"
+        data-sms-conversation-id="@clientConfiguration.ConversationId"
+        data-sms-messages-url="@clientConfiguration.MessagesUrl">
     (function () {
         var thread = document.getElementById('sms-thread');
         if (!thread) { return; }

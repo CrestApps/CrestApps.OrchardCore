@@ -1,3 +1,57 @@
+namespace CrestApps.Core.ContactCenter.ClientConfiguration
+{
+    public sealed class AgentBarClientConfiguration
+    {
+        public AgentBarClientConfiguration() { }
+        public string AcceptOfferUrl { get; set; }
+        public string AntiForgeryToken { get; set; }
+        public string CompleteActivityUrlTemplate { get; set; }
+        public string CompleteUrl { get; set; }
+        public string DeclineOfferUrl { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.ClientConfiguration.AgentBarOption> Dispositions { get; set; }
+        public string HubUrl { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.ClientConfiguration.AgentBarOption> ReasonCodes { get; set; }
+        public string SetPresenceUrl { get; set; }
+        public string StateUrl { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Strings { get; set; }
+        public string WorkspaceUrl { get; set; }
+    }
+    public sealed class AgentBarOption
+    {
+        public AgentBarOption() { }
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class AgentWorkspaceClientConfiguration
+    {
+        public const string DefaultSecureCaptureFields = "CreditCardNumber,CardExpiry,CardSecurityCode";
+        public AgentWorkspaceClientConfiguration() { }
+        public string AcceptOfferUrl { get; set; }
+        public string AntiForgeryToken { get; set; }
+        public string BeginSecureCaptureUrl { get; set; }
+        public bool CanInitiateSecureCapture { get; set; }
+        public bool CanSecurePause { get; set; }
+        public string CompleteActivityUrlTemplate { get; set; }
+        public string DeclineOfferUrl { get; set; }
+        public string HubUrl { get; set; }
+        public string PauseRecordingUrl { get; set; }
+        public bool RequirePauseReason { get; set; }
+        public string ResumeRecordingUrl { get; set; }
+        public string SecureCaptureFields { get; set; }
+        public string SetPresenceUrl { get; set; }
+        public string StateUrl { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Strings { get; set; }
+    }
+    public sealed class SupervisorDashboardClientConfiguration
+    {
+        public SupervisorDashboardClientConfiguration() { }
+        public string AntiForgeryToken { get; set; }
+        public string EngageUrl { get; set; }
+        public string HubUrl { get; set; }
+        public string StateUrl { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Strings { get; set; }
+    }
+}
 namespace CrestApps.Core.ContactCenter.Security
 {
     public static class ContactCenterOperations

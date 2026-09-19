@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using CrestApps.Core.Telephony.ClientConfiguration
 @using CrestApps.OrchardCore.Telephony
 @using CrestApps.OrchardCore.Telephony.Hubs
 @using CrestApps.OrchardCore.Telephony.Models
@@ -64,26 +65,28 @@
     // value is empty, so the client falls back to its path derivation exactly as before.
     var registrationConfigUrl = Url.RouteUrl("ContactCenterAgentSoftPhoneRegistrationConfig");
 
-    var config = new Dictionary<string, object>
+    var config = new SoftPhoneClientConfiguration
     {
-        ["hubUrl"] = hubUrl,
-        ["registrationConfigUrl"] = registrationConfigUrl ?? string.Empty,
-        ["voicemailPlaybackEnabled"] = !string.IsNullOrEmpty(voicemailMediaUrlTemplate),
-        ["voicemailMediaUrlTemplate"] = voicemailMediaUrlTemplate ?? string.Empty,
-        ["voicemailDeleteEnabled"] = !string.IsNullOrEmpty(voicemailDeleteUrlTemplate),
-        ["voicemailDeleteUrlTemplate"] = voicemailDeleteUrlTemplate ?? string.Empty,
-        ["capabilities"] = capabilities,
-        ["audioCapabilities"] = audioCapabilities,
-        ["audioMode"] = audioMode,
-        ["browserMediaAdapterName"] = browserMediaAdapterName,
-        ["recentCallsCount"] = recentCallsCount,
-        ["connectUrl"] = connectUrl,
-        ["disconnectUrl"] = disconnectUrl,
-        ["antiForgeryToken"] = antiForgeryToken,
-        ["storageKey"] = "telephony-soft-phone",
-        ["defaultCountryCode"] = defaultCountryCode,
-        ["enableDiagnostics"] = enableDiagnostics,
-        ["strings"] = new Dictionary<string, string>
+        HubUrl = hubUrl,
+        RegistrationConfigUrl = registrationConfigUrl ?? string.Empty,
+        VoicemailPlaybackEnabled = !string.IsNullOrEmpty(voicemailMediaUrlTemplate),
+        VoicemailMediaUrlTemplate = voicemailMediaUrlTemplate ?? string.Empty,
+        VoicemailDeleteEnabled = !string.IsNullOrEmpty(voicemailDeleteUrlTemplate),
+        VoicemailDeleteUrlTemplate = voicemailDeleteUrlTemplate ?? string.Empty,
+        Capabilities = capabilities,
+        AudioCapabilities = audioCapabilities,
+        AudioMode = audioMode,
+        BrowserMediaAdapterName = browserMediaAdapterName,
+        RecentCallsCount = recentCallsCount,
+        ConnectUrl = connectUrl,
+        DisconnectUrl = disconnectUrl,
+        AntiForgeryToken = antiForgeryToken,
+        StorageKey = SoftPhoneClientConfiguration.DefaultStorageKey,
+        DefaultCountryCode = defaultCountryCode,
+        EnableDiagnostics = enableDiagnostics,
+        // Left here rather than moved onto the model: a translation is looked up by the template it was
+        // written in as much as by the text, so relocating these would leave every existing one unreachable.
+        Strings = new Dictionary<string, string>
         {
             ["idle"] = T["Ready"].Value,
             ["connecting"] = T["Connecting..."].Value,

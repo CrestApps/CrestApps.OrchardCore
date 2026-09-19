@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using CrestApps.Core.ContactCenter.ClientConfiguration;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -45,7 +46,7 @@ public sealed class ContactCenterAgentBarBuilder : IContactCenterAgentBarBuilder
     }
 
     /// <inheritdoc/>
-    public async Task<AgentBarViewModel> BuildAsync(HttpContext httpContext)
+    public async Task<AgentBarClientConfiguration> BuildAsync(HttpContext httpContext)
     {
         ArgumentNullException.ThrowIfNull(httpContext);
 
@@ -56,7 +57,7 @@ public sealed class ContactCenterAgentBarBuilder : IContactCenterAgentBarBuilder
 
         var tokens = _antiforgery.GetAndStoreTokens(httpContext);
 
-        return new AgentBarViewModel
+        return new AgentBarClientConfiguration
         {
             HubUrl = SignalRHubRoutes.GetTenantAwareHubUrl<ContactCenterHub>(httpContext),
             StateUrl = _linkGenerator.GetPathByName(httpContext, AgentWorkspaceEndpoints.StateRouteName),
@@ -71,12 +72,12 @@ public sealed class ContactCenterAgentBarBuilder : IContactCenterAgentBarBuilder
                 "AgentWorkspace",
                 new { area = ContactCenterConstants.Feature.Area }),
             AntiForgeryToken = tokens.RequestToken,
-            Dispositions = [.. dispositions.Select(disposition => new WorkspaceLookupViewModel
+            Dispositions = [.. dispositions.Select(disposition => new AgentBarOption
             {
                 Id = disposition.ItemId,
                 Name = disposition.Name,
             })],
-            ReasonCodes = [.. reasonCodes.Select(code => new WorkspaceLookupViewModel
+            ReasonCodes = [.. reasonCodes.Select(code => new AgentBarOption
             {
                 Id = code.AppliesTo.ToString(),
                 Name = code.Name,

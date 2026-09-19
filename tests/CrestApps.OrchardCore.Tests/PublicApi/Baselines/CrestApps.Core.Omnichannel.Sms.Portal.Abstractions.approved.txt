@@ -1,3 +1,21 @@
+namespace CrestApps.Core.Omnichannel.Sms.Portal.ClientConfiguration
+{
+    public sealed class SmsPortalClientConfiguration
+    {
+        public SmsPortalClientConfiguration() { }
+        public string ConversationUrlTemplate { get; set; }
+        public string HubUrl { get; set; }
+        public string SetAvailabilityUrl { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Strings { get; set; }
+    }
+    public sealed class SmsThreadClientConfiguration
+    {
+        public SmsThreadClientConfiguration() { }
+        public string ConversationId { get; set; }
+        public string HubUrl { get; set; }
+        public string MessagesUrl { get; set; }
+    }
+}
 namespace CrestApps.Core.Omnichannel.Sms.Portal.Security
 {
     public static class SmsPortalOperations
