@@ -33,25 +33,31 @@ baseline in [phase-0-baseline.md](phase-0-baseline.md).
 | P0.4 (part) | The customer-record vocabulary and contracts; subject flow settings re-based on `SubjectDefinition`; Orchard bindings for contact definitions, contacts and subjects; SMS and voice consumers migrated; `OmnichannelSubjectWriter` retired. **See the open item below** |
 | P0.8 | All 30 background tasks split into cycles. The Orchard task keeps its name, attribute and schedule and resolves the cycle; `CycleRunner<TCycle>` drives the same cycles for a host with no scheduler, and is unit-tested |
 | Phase 1 W1 (part) | `src/Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions` and `src/Core/Transitions/CrestApps.Core.Hosting` created with their final names and namespaces, Core-repo package metadata, `IsPackable=false`, and matching solution folders. `grep -rlE "OrchardCore" src/*/Transitions` is empty |
+| P0.9 | All three hubs split. `SmsPortalHubBase`, `ContactCenterHubBase` and `TelephonyHubBase` live in their `*.Core` projects and name no Orchard type; each module keeps a sealed subclass of the same name carrying `[Authorize]`, because a hub's route is derived from `typeof(T).Name`. None of the three needed an abstract hook. `ShellScopedWorkExecutor` joins the host seams so `IScopedWorkExecutor` opens a unit of work here rather than a bare scope |
+| P0.12 | The eighteen endpoint methods renamed to the `Map*` names the registration document is written against, made public and documented, and each given an optional `Action<RouteHandlerBuilder>` applied to every route it maps. No route template, verb, name, authorization attribute or filter changed |
+| P0.3 (S23) | Seven client-configuration models in the Transitions projects carry what the browser is told, with the JSON unchanged. A new test reads each script and asserts every configuration key it touches is one the server sends |
+| P0.13 (part) | Eleven `AddCore*` methods covering 150 of the 275 framework-eligible registrations, across Telnyx, the Contact Center base and six of its features, the SMS portal and automated voice. The dependency-injection snapshot is unchanged for every one, order included |
+| (added) | The public-API gate now governs the `CrestApps.Core.*` projects - the ones being extracted - rather than only the Orchard-named families. Seven surfaces recorded for the first time |
+| (added) | Three more service chains pinned before the registration moves began, each by what actually decides it rather than by registration order |
 
 ## Exit-criteria scoreboard
 
-Counted over the framework-bound projects only (the six `*.Abstractions` and eight `*.Core`
-projects in scope); the Orchard modules are expected to keep these.
+Counted over the framework-bound projects only (the `*.Abstractions` and `*.Core` projects in scope);
+the Orchard modules are expected to keep these.
 
 | Forbidden reference | Files | Note |
 | --- | ---: | --- |
 | `IClock` | 0 | done |
 | `IDistributedLock` | 0 | done |
-| `UserManager<` | 0 | already clear before this branch |
-| `IBackgroundTask` | 0 | the tasks live in the modules; P0.8 still splits them into cycles |
-| `ShellSettings` | 3 | all in the process-health files, which the plan leaves on the Orchard side |
+| `UserManager<` | 0 | done |
+| `IBackgroundTask` | 0 | done; the tasks live in the modules and the cycles here carry the work |
+| `ShellSettings` | 3 | the process-health files, which the plan leaves on the Orchard side |
 | `ShellScope` | 1 | `ContactCenterScopeExecutor`, the Orchard adapter, which stays |
 | `ISignal` | 1 | `SignalContactCenterConfigurationChangeNotifier`, the Orchard adapter, which stays |
-| `OrchardCore.Entities` | 3 | all content-item code, cleared by P0.4 |
-| `ISiteService` | 10 | P0.6 |
-| `OrchardCore.Sms` | 9 | P0.5 |
-| `ContentItem` / `IContentManager` / `IContentDefinitionManager` | 7 / 6 / 3 | P0.4, the largest remaining workstream |
+| `ISiteService` | 1 | `TelnyxSmsOptionsConfiguration`, the last settings read |
+| `OrchardCore.Sms` | 2 | `TelnyxSmsOptionsConfiguration` and a constants file |
+| `OrchardCore.Entities` | 1 | `VoiceAgentConversationLoop`, through the activity subject |
+| `ContentItem` / `IContentManager` / `IContentDefinitionManager` | 6 / 5 / 4 | nine of these are the deliberate Orchard content bindings the plan keeps; the rest is P0.4's open item below |
 
 ## The execution order
 
@@ -63,10 +69,11 @@ a shippable unit that keeps the build green:
 2. **Independent seams** - P0.10-S18, P0.3-S9, P0.3-S21, P0.5, P0.11. *(Done.)*
 3. **Content boundary, settings, authorization** - P0.4, P0.6, P0.7. *(P0.6 and P0.7 done; P0.4 has one
    open item, below.)*
-4. **Background work and routes** - P0.8, P0.12. *(P0.8 done.)*
-5. **Hub split and client configuration** - P0.9, P0.3-S23.
+4. **Background work and routes** - P0.8, P0.12. *(Done.)*
+5. **Hub split and client configuration** - P0.9, P0.3-S23. *(Done, with one client surface carved
+   out; see below.)*
 6. **Registration collapse** - P0.13, alone, because it rewrites the same 42 startup files every
-   other workstream touches.
+   other workstream touches. *(As far as the type layout allows; see below.)*
 
 ### What P0.8 did not do
 
@@ -76,37 +83,6 @@ ratchet is what catches it if they are not.
 
 The scarce resource is contended files, not time: `ContactCenterHub.cs` is touched by four
 workstreams across three batches, and `AgentWorkspaceEndpoints.cs` by four across four.
-
-## Not started
-
-**Four workstreams**, plus P0.4's open item. P0.9 (hub base classes), P0.12 (endpoints as `Map*`
-methods), P0.13 (`AddCore*` registration methods), and the rest of P0.3 (client configuration models,
-S23).
-
-### P0.4's open item: the carrier for an activity's subject
-
-`OmnichannelActivity.Subject` is still an Orchard `ContentItem`. Nothing reaches into it any more:
-the services that record what a conversation learned go through `IActivitySubjectWriter`, and
-`ContentItemActivitySubjectWriter` is the only thing left that knows what the subject is stored as.
-Changing the carrier is then a change to that one adapter plus the property, rather than a change to
-every caller.
-
-It is left for Phase 1 deliberately:
-
-1. **It changes a stored shape.** The subject is serialized inside the activity document. Carrying a
-   `JsonObject` instead would keep the stored text identical, the way `JsonPropertyBag` already does
-   for the four types P0.10 moved - but "identical" has to be proved against a real tenant, which is
-   exactly what the pre-extraction upgrade test exists for.
-2. **It is visible to tenants.** The subject and the contact are handed to Liquid templates and
-   rendered by the Orchard admin screens as content items. A tenant's prompt template that reaches
-   into the content-item shape would keep compiling and quietly render nothing.
-
-Both want the upgrade test green before they start rather than after, and both are now one adapter
-away rather than thirty call sites away.
-
-**Phase 0 is therefore not finished, and Phase 1 must not start.**
-
-All of Phase 1 is ahead, except the two Transitions projects noted above.
 
 ## P0.1: what was kept and what was dropped
 
@@ -197,3 +173,85 @@ and passed the existing tests while being wrong. Summarised:
 - Plus: `ContactPreferenceDoNotCallRegistry` cannot be built before P0.4; the tenant
   `IServiceCollection` has no public mechanism to dump (hence the application-module startup); and
   P0.1's own gate commands are stale in the way `phase-0-baseline.md` already records.
+
+## Not finished
+
+P0.4's open item, the part of P0.13 the type layout blocks, and two pieces carved out of P0.12 and
+P0.3-S23 for the reasons recorded below.
+
+### P0.4's open item: the carrier for an activity's subject
+
+`OmnichannelActivity.Subject` is still an Orchard `ContentItem`. Nothing reaches into it any more:
+the services that record what a conversation learned go through `IActivitySubjectWriter`, and
+`ContentItemActivitySubjectWriter` is the only thing left that knows what the subject is stored as.
+Changing the carrier is then a change to that one adapter plus the property, rather than a change to
+every caller.
+
+It is left for Phase 1 deliberately:
+
+1. **It changes a stored shape.** The subject is serialized inside the activity document. Carrying a
+   `JsonObject` instead would keep the stored text identical, the way `JsonPropertyBag` already does
+   for the four types P0.10 moved - but "identical" has to be proved against a real tenant, which is
+   exactly what the pre-extraction upgrade test exists for.
+2. **It is visible to tenants.** The subject and the contact are handed to Liquid templates and
+   rendered by the Orchard admin screens as content items. A tenant's prompt template that reaches
+   into the content-item shape would keep compiling and quietly render nothing.
+
+Both want the upgrade test green before they start rather than after, and both are now one adapter
+away rather than thirty call sites away.
+
+### P0.13: what is blocked rather than deferred
+
+Eleven methods landed: `AddCoreTelnyx`, `AddCoreContactCenter`, `AddCoreContactCenterQueues`,
+`AddCoreContactCenterAgents`, `AddCoreContactCenterAgentServices`,
+`AddCoreContactCenterProviderInbox`, `AddCoreContactCenterRecordingGovernance`,
+`AddCoreContactCenterVoiceMedia`, `AddCoreContactCenterPacedDialing`, `AddCoreSmsPortal` and
+`AddCoreOmnichannelAutomatedVoice`. The dependency-injection snapshot is unchanged for every one of
+them, order included.
+
+What remains is 125 registrations, and the obstacle is not effort. A `*.Core` project cannot
+reference a module, so a registration whose implementation is declared in a module cannot move into a
+framework method however much one would like it to. Those implementations are what Phase 1 moves, and
+these registrations follow them rather than leading them. The concentrations:
+
+| Startup | Movable | Declared in the module |
+| --- | ---: | ---: |
+| `ContactCenter/VoiceStartup.cs` | 30 | 13 |
+| `ContactCenter/DialerStartup.cs` | 12 | 4 |
+| `ContactCenter/InboundVoiceStartup.cs` | 10 | 3 |
+| `Telephony/Startup.cs` | 10 | 14 |
+| `Omnichannel.Managements/Startup.cs` | 5 | 19 |
+| `Asterisk/Startup.cs` | 4 | 28 |
+
+Voice is the clearest case: its thirteen module-declared implementations are interleaved through one
+chain with the thirty that could move, and two of the `IEnumerable` chains inside it are ones whose
+order decides behaviour. Splitting that chain now would reorder them for no gain, so it waits for the
+types.
+
+Asterisk and Dialpad have no `*.Core` project at all, so their methods have nowhere to live yet.
+
+### What P0.12 left out
+
+`MapContactCenterVoiceMediaEndpoints` is listed in the registration document but is not a conversion
+of an existing endpoint file. Its source is two controller actions reached through conventional area
+routing, with no route names, serving governed recording and voicemail media. Writing new public
+endpoints for that is a change to how sensitive media is reached, not a rename, and it does not
+belong in a pass whose whole claim is that nothing about the routes changed.
+
+### What P0.3-S23 left out
+
+Five of the six client surfaces are typed. The sixth - the Contact Center panel inside the soft
+phone - carries ten separate `data-` attributes rather than one payload, so folding them into a model
+means editing the script that reads them in the same change. The constraint that the browser payload
+does not change is what makes that a separate step.
+
+### Where that leaves Phase 1
+
+Phase 1 may start. Every workstream Phase 0 owns has either landed or is recorded above as waiting on
+a type move that Phase 1 performs, which is the opposite of the situation this document described
+before: the remaining items are no longer work Phase 1 depends on, they are work that depends on
+Phase 1.
+
+The exception is P0.4's open item. It changes a stored shape and a shape tenants can see, and it
+wants the pre-extraction upgrade test green against a real tenant first. It is one adapter and one
+property, and it should be the first thing Phase 1 does rather than something Phase 1 discovers.
