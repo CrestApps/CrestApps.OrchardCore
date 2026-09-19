@@ -2,7 +2,7 @@ using System.Globalization;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.ContentFields.Settings;
 using CrestApps.OrchardCore.ContentFields.ViewModels;
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.Core.PhoneNumbers;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;

@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.DncRegistry.Models;
 using CrestApps.OrchardCore.DncRegistry.ViewModels;
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.Core.PhoneNumbers;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;

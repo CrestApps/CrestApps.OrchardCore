@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.Core.PhoneNumbers;
 using System.Text.RegularExpressions;
 
 namespace CrestApps.OrchardCore.Tests.Architecture;

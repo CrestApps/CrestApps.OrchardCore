@@ -447,7 +447,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers
     }
     public sealed class OmnichannelContactImportOptionsDisplayDriver : OrchardCore.DisplayManagement.Handlers.DisplayDriver<CrestApps.OrchardCore.ContentTransfer.Models.ImportContent>
     {
-        public OmnichannelContactImportOptionsDisplayDriver(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelContactImportOptionsDisplayDriver> stringLocalizer) { }
+        public OmnichannelContactImportOptionsDisplayDriver(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, CrestApps.Core.PhoneNumbers.IPhoneNumberService phoneNumberService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelContactImportOptionsDisplayDriver> stringLocalizer) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> EditAsync(CrestApps.OrchardCore.ContentTransfer.Models.ImportContent model, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.ContentTransfer.Models.ImportContent model, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
@@ -488,14 +488,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
     }
     public sealed class OmnichannelContactImportRowFilter : CrestApps.OrchardCore.ContentTransfer.IContentImportRowFilter
     {
-        public OmnichannelContactImportRowFilter(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.DncRegistry.INationalDoNotCallRegistry> registries, CrestApps.OrchardCore.Omnichannel.Managements.Services.IOmnichannelContactDuplicateLookupService duplicateLookupService, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, OrchardCore.Settings.ISiteService siteService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.OmnichannelContactImportRowFilter> logger) { }
+        public OmnichannelContactImportRowFilter(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.DncRegistry.INationalDoNotCallRegistry> registries, CrestApps.OrchardCore.Omnichannel.Managements.Services.IOmnichannelContactDuplicateLookupService duplicateLookupService, CrestApps.Core.PhoneNumbers.IPhoneNumberService phoneNumberService, OrchardCore.Settings.ISiteService siteService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.OmnichannelContactImportRowFilter> logger) { }
         public System.Threading.Tasks.Task<bool> InitializeAsync(CrestApps.OrchardCore.ContentTransfer.ContentImportRowFilterInitContext context) { }
         public System.Threading.Tasks.Task PrepareBatchAsync(CrestApps.OrchardCore.ContentTransfer.ContentImportRowFilterBatchContext context) { }
         public System.Threading.Tasks.Task<bool> ShouldSkipRowAsync(CrestApps.OrchardCore.ContentTransfer.ContentImportRowFilterContext context) { }
     }
     public sealed class OmnichannelContactPartContentImportHandler : CrestApps.OrchardCore.ContentTransfer.Handlers.ContentImportHandlerBase, CrestApps.OrchardCore.ContentTransfer.IContentPartImportHandler
     {
-        public OmnichannelContactPartContentImportHandler(System.TimeProvider timeProvider, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.OmnichannelContactPartContentImportHandler> stringLocalizer) { }
+        public OmnichannelContactPartContentImportHandler(System.TimeProvider timeProvider, CrestApps.Core.PhoneNumbers.IPhoneNumberService phoneNumberService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Handlers.OmnichannelContactPartContentImportHandler> stringLocalizer) { }
         public System.Threading.Tasks.Task ExportAsync(CrestApps.OrchardCore.ContentTransfer.ContentPartExportMapContext context) { }
         public System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContentTransfer.ImportColumn> GetColumns(CrestApps.OrchardCore.ContentTransfer.ImportContentPartContext context) { }
         public System.Threading.Tasks.Task ImportAsync(CrestApps.OrchardCore.ContentTransfer.ContentPartImportMapContext context) { }
@@ -747,7 +747,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
     }
     public sealed class OmnichannelContactDuplicateLookupService : CrestApps.OrchardCore.Omnichannel.Managements.Services.IOmnichannelContactDuplicateLookupService
     {
-        public OmnichannelContactDuplicateLookupService(YesSql.ISession session, CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService phoneNumberService) { }
+        public OmnichannelContactDuplicateLookupService(YesSql.ISession session, CrestApps.Core.PhoneNumbers.IPhoneNumberService phoneNumberService) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.Dictionary<string, string[]>> GetAllExistingNormalizedPhoneNumberOwnersAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetAllExistingNormalizedPhoneNumbersAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.HashSet<string>> GetExistingNormalizedPhoneNumbersAsync(System.Collections.Generic.IEnumerable<string> phoneNumbers, System.Threading.CancellationToken cancellationToken) { }

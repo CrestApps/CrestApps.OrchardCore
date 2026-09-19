@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using CrestApps.OrchardCore.WebSockets;
+using CrestApps.Core.WebSockets;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

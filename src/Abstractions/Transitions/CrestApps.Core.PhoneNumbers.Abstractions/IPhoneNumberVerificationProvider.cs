@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers;
+namespace CrestApps.Core.PhoneNumbers;
 
 /// <summary>
 /// Represents a single phone number verification provider implementation.

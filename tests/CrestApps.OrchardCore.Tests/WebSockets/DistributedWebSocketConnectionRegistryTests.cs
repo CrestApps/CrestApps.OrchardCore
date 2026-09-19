@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Tests.WebSockets.Doubles;
 using CrestApps.OrchardCore.WebSockets.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using CrestApps.Core.WebSockets;
 
 namespace CrestApps.OrchardCore.Tests.WebSockets;
 

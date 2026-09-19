@@ -3,7 +3,7 @@ using System.Net.WebSockets;
 using System.Runtime.CompilerServices;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.WebSockets;
+using CrestApps.Core.WebSockets;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 

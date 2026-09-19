@@ -1,6 +1,6 @@
 using System.Net.WebSockets;
 
-namespace CrestApps.OrchardCore.WebSockets;
+namespace CrestApps.Core.WebSockets;
 
 /// <summary>
 /// Coordinates the hand-off of a single WebSocket between the two halves of a provider-initiated flow that never

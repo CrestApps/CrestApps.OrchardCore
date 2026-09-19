@@ -25,7 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
-    <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions/CrestApps.OrchardCore.WebSockets.Abstractions.csproj" />
+    <ProjectReference Include="..\..\Core\Transitions\CrestApps.Core.WebSockets\CrestApps.Core.WebSockets.csproj" />
   </ItemGroup>
 
 </Project>

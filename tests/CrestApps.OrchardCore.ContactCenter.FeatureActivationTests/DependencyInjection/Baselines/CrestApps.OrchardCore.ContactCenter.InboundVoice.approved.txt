@@ -4,6 +4,7 @@ CrestApps.Core.Hosting.IPublicBaseUrlAccessor #0 Scoped -> type:CrestApps.Orchar
 CrestApps.Core.Hosting.IScopedWorkExecutor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellScopedWorkExecutor
 CrestApps.Core.Hosting.ITenantAccessor #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.ShellSettingsTenantAccessor
 CrestApps.Core.Locking.IDistributedLockProvider #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreDistributedLockProvider
+CrestApps.Core.PhoneNumbers.IPhoneNumberService #0 Singleton -> type:CrestApps.Core.PhoneNumbers.DefaultPhoneNumberService
 CrestApps.Core.Security.IUserAccessor #0 Scoped -> type:CrestApps.Core.Services.UserAccessor
 CrestApps.Core.Security.IUserDirectory #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreUserDirectory
 CrestApps.Core.Security.IUserProfileStore #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreUserProfileStore
@@ -241,7 +242,6 @@ CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactResolver #0 Scoped
 CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactWriter #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentItemOmnichannelContactWriter
 CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelSubjectAccessor #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentItemOmnichannelSubjectAccessor
 CrestApps.OrchardCore.Omnichannel.Services.ISubjectDefinitionProvider #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeSubjectDefinitionProvider
-CrestApps.OrchardCore.PhoneNumbers.IPhoneNumberService #0 Singleton -> type:CrestApps.OrchardCore.PhoneNumbers.Core.Services.DefaultPhoneNumberService
 CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterVoiceProjection
 CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler #1 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.TelephonyCallHistoryVoiceEventHandler
 CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventIngestor #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Core.Services.NormalizedVoiceEventIngestor

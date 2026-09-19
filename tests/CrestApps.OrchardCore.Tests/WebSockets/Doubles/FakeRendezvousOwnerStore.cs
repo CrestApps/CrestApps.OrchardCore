@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using CrestApps.OrchardCore.WebSockets.Services;
+using CrestApps.Core.WebSockets;
 
 namespace CrestApps.OrchardCore.Tests.WebSockets.Doubles;
 

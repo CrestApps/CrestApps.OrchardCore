@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers;
+namespace CrestApps.Core.PhoneNumbers;
 
 /// <summary>
 /// Produces the keys used to decide whether two phone numbers written by different people, in different

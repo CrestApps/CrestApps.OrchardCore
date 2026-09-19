@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace CrestApps.OrchardCore.WebSockets.Services;
+namespace CrestApps.Core.WebSockets;
 
 /// <summary>
 /// The default per-node in-memory <see cref="IWebSocketConnectionRegistry"/>. Every operation completes
@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.WebSockets.Services;
 /// node with host-level affinity). A multi-node deployment behind a callback-agnostic load balancer needs a
 /// distributed implementation instead.
 /// </summary>
-internal sealed class InMemoryWebSocketConnectionRegistry : IWebSocketConnectionRegistry
+public sealed class InMemoryWebSocketConnectionRegistry : IWebSocketConnectionRegistry
 {
     private readonly ConcurrentDictionary<string, WebSocketRendezvous> _pending =
         new(StringComparer.Ordinal);

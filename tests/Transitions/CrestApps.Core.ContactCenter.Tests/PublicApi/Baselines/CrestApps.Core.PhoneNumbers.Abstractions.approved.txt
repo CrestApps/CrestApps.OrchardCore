@@ -1,0 +1,104 @@
+namespace CrestApps.Core.PhoneNumbers
+{
+    public interface IPhoneNumberService
+    {
+        string FormatForDisplay(string phoneNumber, string regionCode = null);
+        int GetCountryCode(string regionCode);
+        string GetRegionCode(string e164Number);
+        System.Collections.Generic.IReadOnlyCollection<string> GetSupportedRegions();
+        System.Collections.Generic.IReadOnlyList<string> GetTimeZones(string e164Number);
+        bool IsValidNumber(string phoneNumber, string regionCode);
+        bool TryFormatToE164(string phoneNumber, string regionCode, out string e164Number);
+    }
+    public interface IPhoneNumberVerificationProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.PhoneNumbers.PhoneNumberVerificationResult> VerifyAsync(string phoneNumber, System.Threading.CancellationToken cancellationToken = default);
+    }
+    [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.Core.PhoneNumbers.PhoneNumberJsonConverter))]
+    public readonly struct PhoneNumber : System.IEquatable<CrestApps.Core.PhoneNumbers.PhoneNumber>
+    {
+        public const int MaxDigits = 15;
+        public string Digits { get; }
+        public bool HasValue { get; }
+        public string Value { get; }
+        public override string ToString() { }
+        public static CrestApps.Core.PhoneNumbers.PhoneNumber FromE164(string e164Number) { }
+        public static bool IsE164([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string value) { }
+        public static bool TryFromE164(string e164Number, out CrestApps.Core.PhoneNumbers.PhoneNumber phoneNumber) { }
+    }
+    public static class PhoneNumberComparisonKey
+    {
+        public static string[] AllFor(CrestApps.Core.PhoneNumbers.PhoneNumber canonical, string rawValue) { }
+        public static string For(CrestApps.Core.PhoneNumbers.PhoneNumber canonical, string rawValue) { }
+    }
+    public sealed class PhoneNumberJsonConverter : System.Text.Json.Serialization.JsonConverter<CrestApps.Core.PhoneNumbers.PhoneNumber>
+    {
+        public PhoneNumberJsonConverter() { }
+        public override CrestApps.Core.PhoneNumbers.PhoneNumber Read(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) { }
+        public override CrestApps.Core.PhoneNumbers.PhoneNumber ReadAsPropertyName(ref System.Text.Json.Utf8JsonReader reader, System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) { }
+        public override void Write(System.Text.Json.Utf8JsonWriter writer, CrestApps.Core.PhoneNumbers.PhoneNumber value, System.Text.Json.JsonSerializerOptions options) { }
+        public override void WriteAsPropertyName(System.Text.Json.Utf8JsonWriter writer, CrestApps.Core.PhoneNumbers.PhoneNumber value, System.Text.Json.JsonSerializerOptions options) { }
+    }
+    public enum PhoneNumberLineType
+    {
+        Unknown = 0,
+        Mobile = 1,
+        Landline = 2,
+        Voip = 3,
+        TollFree = 4,
+        Premium = 5,
+    }
+    public static class PhoneNumberServiceExtensions
+    {
+        public static string GetRegionCode(this CrestApps.Core.PhoneNumbers.IPhoneNumberService service, CrestApps.Core.PhoneNumbers.PhoneNumber phoneNumber) { }
+        public static bool TryParse(this CrestApps.Core.PhoneNumbers.IPhoneNumberService service, string rawNumber, out CrestApps.Core.PhoneNumbers.PhoneNumber phoneNumber) { }
+        public static bool TryParse(this CrestApps.Core.PhoneNumbers.IPhoneNumberService service, string rawNumber, string regionCode, out CrestApps.Core.PhoneNumbers.PhoneNumber phoneNumber) { }
+    }
+    public sealed class PhoneNumberVerificationProviderDescriptor
+    {
+        public PhoneNumberVerificationProviderDescriptor(string key) { }
+        public Microsoft.Extensions.Localization.LocalizedString Description { get; set; }
+        public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; set; }
+        public string Key { get; }
+    }
+    public sealed class PhoneNumberVerificationResult
+    {
+        public PhoneNumberVerificationResult() { }
+        public string Carrier { get; set; }
+        public string City { get; set; }
+        public string CountryCode { get; set; }
+        public string CountryName { get; set; }
+        public string CountryPrefix { get; set; }
+        public string ErrorMessage { get; set; }
+        public bool? IsAbuseDetected { get; set; }
+        public bool? IsDisposable { get; set; }
+        public bool IsLandline { get; set; }
+        public bool IsMobile { get; set; }
+        public bool IsReachable { get; set; }
+        public bool IsValid { get; set; }
+        public bool IsVoip { get; set; }
+        public string LineStatus { get; set; }
+        public CrestApps.Core.PhoneNumbers.PhoneNumberLineType LineType { get; set; }
+        public System.Text.Json.Nodes.JsonObject Metadata { get; init; }
+        public string MinimumAge { get; set; }
+        public string NationalFormat { get; set; }
+        public string NormalizedPhoneNumber { get; set; }
+        public string PhoneNumber { get; set; }
+        public string ProviderReferenceId { get; set; }
+        public string RawProviderResponse { get; set; }
+        public string Region { get; set; }
+        public string RiskLevel { get; set; }
+        public double? RiskScore { get; set; }
+        public CrestApps.Core.PhoneNumbers.PhoneNumberVerificationStatus Status { get; set; }
+        public string TimeZone { get; set; }
+        public System.DateTime VerificationDateUtc { get; set; }
+        public string VerificationProvider { get; set; }
+    }
+    public enum PhoneNumberVerificationStatus
+    {
+        Unverified = 0,
+        Verified = 1,
+        Invalid = 2,
+        Failed = 3,
+    }
+}

@@ -1,24 +1,24 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <RootNamespace>CrestApps.Core.PhoneNumbers</RootNamespace>
-    <Title>CrestApps Core Phone Numbers</Title>
-    <Description>
-      $(CrestAppsDescription)
-
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.PhoneNumbers</RootNamespace>
+    <Title>CrestApps Core Phone Numbers</Title>
+    <Description>
+      $(CrestAppsDescription)
+
       Phone-number parsing and formatting over libphonenumber, and the comparison key the suite
-      matches callers by.
-    </Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="libphonenumber-csharp" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.PhoneNumbers.Abstractions\CrestApps.Core.PhoneNumbers.Abstractions.csproj" />
-  </ItemGroup>
-
-</Project>
+      matches callers by.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="libphonenumber-csharp" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.PhoneNumbers.Abstractions\CrestApps.Core.PhoneNumbers.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,25 +1,25 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <RootNamespace>CrestApps.Core.Omnichannel.Voice</RootNamespace>
-    <Title>CrestApps Core Omnichannel Voice</Title>
-    <Description>
-      $(CrestAppsDescription)
-
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Omnichannel.Voice</RootNamespace>
+    <Title>CrestApps Core Omnichannel Voice</Title>
+    <Description>
+      $(CrestAppsDescription)
+
       Automated voice conversations: the turn-based loop, the speech-to-speech runner, and how a
-      call that has run its course is concluded.
-    </Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\CrestApps.Core.Omnichannel\CrestApps.Core.Omnichannel.csproj" />
-    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />
-  </ItemGroup>
-
-</Project>
+      call that has run its course is concluded.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.Core.Omnichannel\CrestApps.Core.Omnichannel.csproj" />
+    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

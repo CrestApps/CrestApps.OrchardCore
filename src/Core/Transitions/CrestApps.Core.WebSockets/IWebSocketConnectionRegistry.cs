@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.WebSockets;
+namespace CrestApps.Core.WebSockets;
 
 /// <summary>
 /// Correlates a provider-initiated WebSocket callback with the request that started it. A feature that asks a

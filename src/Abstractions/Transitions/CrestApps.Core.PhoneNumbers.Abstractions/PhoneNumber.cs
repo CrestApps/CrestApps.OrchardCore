@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
-namespace CrestApps.OrchardCore.PhoneNumbers;
+namespace CrestApps.Core.PhoneNumbers;
 
 /// <summary>
 /// A phone number that is in E.164 form by construction. It exists so that a number cannot be compared,
@@ -13,7 +13,8 @@ namespace CrestApps.OrchardCore.PhoneNumbers;
 /// The shape invariant — a leading <c>+</c>, a non-zero country digit, and up to fifteen digits in total —
 /// is enforced here and always holds. Whether the number is *assignable* under its country's numbering plan
 /// is a separate question that only <see cref="IPhoneNumberService"/> can answer, so a number entered by a
-/// person or read from a file must be created through <see cref="PhoneNumberServiceExtensions.TryParse"/>.
+/// person or read from a file must be created through
+/// <see cref="PhoneNumberServiceExtensions.TryParse(IPhoneNumberService, string, out PhoneNumber)"/>.
 /// <see cref="FromE164(string)"/> exists for values that were canonicalized once already and persisted, so
 /// reading them back does not require the number-plan metadata to still recognize them.
 /// </remarks>

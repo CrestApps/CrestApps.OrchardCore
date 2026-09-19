@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.WebSockets.Services;
+using CrestApps.Core.WebSockets;
 
 namespace CrestApps.OrchardCore.Tests.WebSockets;
 

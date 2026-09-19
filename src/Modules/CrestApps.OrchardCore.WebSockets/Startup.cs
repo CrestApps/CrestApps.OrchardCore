@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.WebSockets.Services;
+using CrestApps.Core.WebSockets;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.WebSockets.Services;
 
 namespace CrestApps.OrchardCore.WebSockets;
 
@@ -28,9 +29,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        // The default rendezvous registry is per-node in-memory. A distributed feature (for example one gated on the
-        // Redis feature) can replace this registration so a provider callback that lands on another node still binds.
-        services.AddSingleton<IWebSocketConnectionRegistry, InMemoryWebSocketConnectionRegistry>();
+        services.AddCoreWebSockets();
 
         // Bind the tenant configuration straight onto the framework WebSocketOptions the middleware consumes. Absent
         // values keep the framework defaults (a two-minute keep-alive interval and no origin restriction).

@@ -5,6 +5,7 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
 using YesSql.Sql;
+using CrestApps.Core.PhoneNumbers;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Migrations;
 

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.WebSockets.Services;
+namespace CrestApps.Core.WebSockets;
 
 /// <summary>
 /// Records which node holds the rendezvous for a correlation key, so a provider callback that lands on another
@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.WebSockets.Services;
 /// Deliberately separate from the registry: the registry owns the affinity policy — what to do when the socket
 /// arrives somewhere else — and this owns nothing but the shared record of who holds what.
 /// </remarks>
-internal interface IRendezvousOwnerStore
+public interface IRendezvousOwnerStore
 {
     /// <summary>
     /// Records this node as the owner of the key, if nobody else already is.

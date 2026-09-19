@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.WebSockets.Services;
+namespace CrestApps.Core.WebSockets;
 
 /// <summary>
 /// This process's identity, used to record which node holds a rendezvous.
@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.WebSockets.Services;
 /// containers, or side by side during a rolling deployment), and two of them sharing an identity would make a
 /// misrouted callback look like it had arrived in the right place.
 /// </remarks>
-internal static class WebSocketsNode
+public static class WebSocketsNode
 {
     /// <summary>
     /// Gets this process's node identity.

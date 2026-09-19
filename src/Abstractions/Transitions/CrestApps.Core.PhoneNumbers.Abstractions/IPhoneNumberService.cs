@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers;
+namespace CrestApps.Core.PhoneNumbers;
 
 /// <summary>
 /// Provides phone number parsing, validation, and formatting operations

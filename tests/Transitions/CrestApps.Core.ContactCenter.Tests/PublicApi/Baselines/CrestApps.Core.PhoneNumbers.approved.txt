@@ -1,0 +1,18 @@
+namespace CrestApps.Core.PhoneNumbers
+{
+    public sealed class DefaultPhoneNumberService : CrestApps.Core.PhoneNumbers.IPhoneNumberService
+    {
+        public DefaultPhoneNumberService() { }
+        public string FormatForDisplay(string phoneNumber, string regionCode = null) { }
+        public int GetCountryCode(string regionCode) { }
+        public string GetRegionCode(string e164Number) { }
+        public System.Collections.Generic.IReadOnlyCollection<string> GetSupportedRegions() { }
+        public System.Collections.Generic.IReadOnlyList<string> GetTimeZones(string e164Number) { }
+        public bool IsValidNumber(string phoneNumber, string regionCode) { }
+        public bool TryFormatToE164(string phoneNumber, string regionCode, out string e164Number) { }
+    }
+    public static class PhoneNumberServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCorePhoneNumbers(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}

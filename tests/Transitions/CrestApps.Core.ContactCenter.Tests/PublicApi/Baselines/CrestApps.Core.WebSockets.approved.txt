@@ -1,0 +1,46 @@
+namespace CrestApps.Core.WebSockets
+{
+    public sealed class DistributedWebSocketConnectionRegistry : CrestApps.Core.WebSockets.IWebSocketConnectionRegistry
+    {
+        public DistributedWebSocketConnectionRegistry(CrestApps.Core.WebSockets.IRendezvousOwnerStore owners, string nodeId, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.WebSockets.DistributedWebSocketConnectionRegistry> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.WebSockets.WebSocketRendezvous> RegisterAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RemoveAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.WebSockets.WebSocketRendezvous> TryClaimAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public interface IRendezvousOwnerStore
+    {
+        System.Threading.Tasks.Task<string> GetOwnerAsync(string key, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ReleaseAsync(string key, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> TryTakeOwnershipAsync(string key, string nodeId, System.TimeSpan timeToLive, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IWebSocketConnectionRegistry
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.WebSockets.WebSocketRendezvous> RegisterAsync(string key, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RemoveAsync(string key, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.WebSockets.WebSocketRendezvous> TryClaimAsync(string key, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class InMemoryWebSocketConnectionRegistry : CrestApps.Core.WebSockets.IWebSocketConnectionRegistry
+    {
+        public InMemoryWebSocketConnectionRegistry() { }
+        public System.Threading.Tasks.Task<CrestApps.Core.WebSockets.WebSocketRendezvous> RegisterAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RemoveAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.WebSockets.WebSocketRendezvous> TryClaimAsync(string key, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class WebSocketRendezvous
+    {
+        public WebSocketRendezvous() { }
+        public System.Threading.Tasks.Task<System.Net.WebSockets.WebSocket> ConnectedTask { get; }
+        public System.Threading.Tasks.Task ReleasedTask { get; }
+        public void Abort() { }
+        public void Release() { }
+        public bool TryComplete(System.Net.WebSockets.WebSocket webSocket) { }
+    }
+    public static class WebSocketServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreWebSockets(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    public static class WebSocketsNode
+    {
+        public static string Id { get; }
+    }
+}

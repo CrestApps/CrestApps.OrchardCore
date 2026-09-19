@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.Core.PhoneNumbers;
 
 namespace CrestApps.OrchardCore.DncRegistry;
 

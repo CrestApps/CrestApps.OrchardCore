@@ -1,3 +1,4 @@
+using CrestApps.Core.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Modules;
@@ -11,6 +12,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddSingleton<IPhoneNumberService, DefaultPhoneNumberService>();
+        services.AddCorePhoneNumbers();
     }
 }

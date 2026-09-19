@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers;
+namespace CrestApps.Core.PhoneNumbers;
 
 /// <summary>
 /// Describes the line type of a phone number as reported by a verification provider.

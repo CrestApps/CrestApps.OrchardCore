@@ -1,15 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <RootNamespace>CrestApps.Core.PhoneNumbers</RootNamespace>
-    <Title>CrestApps Core Phone Number Abstractions</Title>
-    <Description>
-      $(CrestAppsDescription)
-
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.PhoneNumbers</RootNamespace>
+    <Title>CrestApps Core Phone Number Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
       The phone-number contracts the suite is written against: parsing, formatting, and the
-      comparison key two numbers are judged equal by.
-    </Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-
-</Project>
+      comparison key two numbers are judged equal by.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Localization.Abstractions" />
+  </ItemGroup>
+
+</Project>

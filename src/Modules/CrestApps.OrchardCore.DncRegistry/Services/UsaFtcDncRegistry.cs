@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using CrestApps.OrchardCore.DncRegistry.Models;
-using CrestApps.OrchardCore.PhoneNumbers;
+using CrestApps.Core.PhoneNumbers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;

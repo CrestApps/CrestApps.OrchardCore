@@ -1,5 +1,6 @@
 using OrchardCore.Redis;
 using StackExchange.Redis;
+using CrestApps.Core.WebSockets;
 
 namespace CrestApps.OrchardCore.WebSockets.Services;
 

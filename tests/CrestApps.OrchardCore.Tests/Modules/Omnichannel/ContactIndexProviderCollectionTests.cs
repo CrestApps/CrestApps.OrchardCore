@@ -1,4 +1,5 @@
 using System.Reflection;
+using CrestApps.Core.PhoneNumbers;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel;
 
@@ -11,7 +12,7 @@ public sealed class ContactIndexProviderCollectionTests
         var provider = CreateProvider(
             typeof(CrestApps.OrchardCore.Omnichannel.Managements.Startup).Assembly,
             "CrestApps.OrchardCore.Omnichannel.Managements.Indexes.OmnichannelContactIndexProvider",
-            [new CrestApps.OrchardCore.PhoneNumbers.Core.Services.DefaultPhoneNumberService()]);
+            [new CrestApps.Core.PhoneNumbers.DefaultPhoneNumberService()]);
 
         // Act
         var collectionName = GetCollectionName(provider);

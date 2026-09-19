@@ -4,8 +4,8 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Voice;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx;
-using CrestApps.OrchardCore.WebSockets;
 using OrchardCore.Modules.Manifest;
+using CrestApps.OrchardCore.WebSockets;
 
 [assembly: Module(
     Name = "Telnyx",

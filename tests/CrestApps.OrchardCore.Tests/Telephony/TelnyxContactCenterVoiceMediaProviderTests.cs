@@ -6,11 +6,11 @@ using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using CrestApps.OrchardCore.WebSockets;
 using CrestApps.OrchardCore.WebSockets.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Settings;
+using CrestApps.Core.WebSockets;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

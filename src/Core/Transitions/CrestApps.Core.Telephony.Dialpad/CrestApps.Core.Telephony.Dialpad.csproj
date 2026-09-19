@@ -1,26 +1,26 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <RootNamespace>CrestApps.Core.Telephony.Dialpad</RootNamespace>
-    <Title>CrestApps Core Telephony Cloud Provider</Title>
-    <Description>
-      $(CrestAppsDescription)
-
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Telephony.Dialpad</RootNamespace>
+    <Title>CrestApps Core Telephony Cloud Provider</Title>
+    <Description>
+      $(CrestAppsDescription)
+
       A hosted voice provider implementation: call control over its public interface and its signed
-      webhook deliveries.
-    </Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\CrestApps.Core.Telephony\CrestApps.Core.Telephony.csproj" />
-    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.ContactCenter.Abstractions\CrestApps.Core.ContactCenter.Abstractions.csproj" />
-  </ItemGroup>
-
-</Project>
+      webhook deliveries.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CrestApps.Core.Telephony\CrestApps.Core.Telephony.csproj" />
+    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.ContactCenter.Abstractions\CrestApps.Core.ContactCenter.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

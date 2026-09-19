@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.PhoneNumbers;
+namespace CrestApps.Core.PhoneNumbers;
 
 /// <summary>
 /// The canonical entry point for turning a raw phone number into a <see cref="PhoneNumber"/>.

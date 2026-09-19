@@ -1,27 +1,27 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <RootNamespace>CrestApps.Core.Omnichannel.Sms.Portal</RootNamespace>
-    <Title>CrestApps Core SMS Portal</Title>
-    <Description>
-      $(CrestAppsDescription)
-
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Omnichannel.Sms.Portal</RootNamespace>
+    <Title>CrestApps Core SMS Portal</Title>
+    <Description>
+      $(CrestAppsDescription)
+
       The two-way messaging workspace an agent works a conversation in: inbox, templates,
-      broadcasts, and who owns which thread.
-    </Description>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Options" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Omnichannel.Sms.Portal.Abstractions\CrestApps.Core.Omnichannel.Sms.Portal.Abstractions.csproj" />
-    <ProjectReference Include="..\CrestApps.Core.Omnichannel.Sms\CrestApps.Core.Omnichannel.Sms.csproj" />
-    <ProjectReference Include="..\CrestApps.Core.ContactCenter\CrestApps.Core.ContactCenter.csproj" />
-  </ItemGroup>
-
-</Project>
+      broadcasts, and who owns which thread.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Omnichannel.Sms.Portal.Abstractions\CrestApps.Core.Omnichannel.Sms.Portal.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.Core.Omnichannel.Sms\CrestApps.Core.Omnichannel.Sms.csproj" />
+    <ProjectReference Include="..\CrestApps.Core.ContactCenter\CrestApps.Core.ContactCenter.csproj" />
+  </ItemGroup>
+
+</Project>

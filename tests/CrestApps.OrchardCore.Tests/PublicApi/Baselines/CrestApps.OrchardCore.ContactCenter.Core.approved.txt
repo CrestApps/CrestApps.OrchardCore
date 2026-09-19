@@ -31,7 +31,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
         "pe is kept for one release and will be removed.")]
     public static class ExternalDestinationPolicy
     {
-        public static bool IsAllowed(CrestApps.OrchardCore.PhoneNumbers.PhoneNumber phoneNumber) { }
+        public static bool IsAllowed(CrestApps.Core.PhoneNumbers.PhoneNumber phoneNumber) { }
         public static bool IsAllowed(string address) { }
         public static bool IsEmergencyNumber(string digits) { }
         public static bool IsPremiumNumber(string digits) { }

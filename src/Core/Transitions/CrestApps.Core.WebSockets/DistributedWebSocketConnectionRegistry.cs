@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.OrchardCore.WebSockets.Services;
+namespace CrestApps.Core.WebSockets;
 
 /// <summary>
 /// A rendezvous registry for a multi-node deployment. The rendezvous itself stays on the node that created it —
@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.WebSockets.Services;
 /// provider's retry.
 /// </para>
 /// </summary>
-internal sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnectionRegistry
+public sealed class DistributedWebSocketConnectionRegistry : IWebSocketConnectionRegistry
 {
     /// <summary>
     /// How long a shared ownership record survives on its own. Long enough for a provider to dial back and for a
