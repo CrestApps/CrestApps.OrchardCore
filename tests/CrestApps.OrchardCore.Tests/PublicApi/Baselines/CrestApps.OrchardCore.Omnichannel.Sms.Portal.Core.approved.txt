@@ -611,3 +611,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routing
         public System.Threading.Tasks.Task<string> SelectAgentAsync(string queueId, string excludeAgentId = null, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
+namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core
+{
+    public static class SmsPortalServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreSmsPortal(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration) { }
+    }
+}

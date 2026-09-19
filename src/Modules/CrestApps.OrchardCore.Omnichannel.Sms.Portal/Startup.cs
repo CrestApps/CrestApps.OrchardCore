@@ -61,105 +61,34 @@ public sealed class Startup : StartupBase
         services.AddCoreHostSeams();
         services.AddCoreSmsProviderSeam();
 
-        // Portal tunables (thread lock waits, inbox page size). The configuration section is deliberately still
-        // "CrestApps:Sms:Workspace" so an existing appsettings entry keeps binding; renaming it would fail silently.
-        services.Configure<SmsPortalOptions>(_shellConfiguration.GetSection("CrestApps:Sms:Workspace"));
+        services.AddCoreSmsPortal(_shellConfiguration);
 
-        // Conversation catalog.
         services
-            .AddScoped<ISmsConversationStore, SmsConversationStore>()
-            .AddScoped<ISmsConversationManager, SmsConversationManager>();
-
-        // Canned-response template catalog.
-        services
-            .AddScoped<ISmsTemplateStore, SmsTemplateStore>()
-            .AddScoped<ISmsTemplateManager, SmsTemplateManager>()
-            .AddScoped<ICatalogEntryHandler<SmsTemplate>, SmsTemplateHandler>();
-
-        // Broadcast catalog + fan-out.
-        services
-            .AddScoped<ISmsBroadcastStore, SmsBroadcastStore>()
-            .AddScoped<ISmsBroadcastManager, SmsBroadcastManager>()
-            .AddScoped<ISmsBroadcastService, SmsBroadcastService>()
+            .AddScoped<ICatalogEntryHandler<SmsTemplate>, SmsTemplateHandler>()
             .AddScoped<ICatalogEntryHandler<SmsBroadcast>, SmsBroadcastHandler>();
 
-        // Provider dispatch and two-way send.
-        services
-            .AddScoped<ISmsDispatcher, SmsDispatcher>()
-            .AddScoped<ISmsConversationService, SmsConversationService>();
-
-        // Per-thread authorization: the portal permission grants the workspace, this decides which threads inside
-        // it a caller owns or serves. The handler narrows the portal permission when a conversation is supplied as
-        // the authorization resource.
+        // Per-thread authorization narrows the portal grant when a conversation is supplied as the
+        // authorization resource. The handler takes the service it narrows lazily: that service consults the
+        // authorization system, which is what runs the handler.
         services
             .AddSmsPortalOperationAuthorization()
-            .AddScoped<ISmsConversationAuthorizationService, SmsConversationAuthorizationService>()
             .AddScoped<IAuthorizationHandler, SmsConversationAuthorizationHandler>();
 
-        // The handler declares the authorization service it narrows, but takes it lazily: that service consults
-        // the authorization system, which is what runs the handler.
         services.AddScoped(sp => new Lazy<ISmsConversationAuthorizationService>(sp.GetRequiredService<ISmsConversationAuthorizationService>));
 
-        // Inbound routing chain (deterministic order via ISmsInboundRouter.Order). The routed (push) router is
-        // contributed by the Routed Distribution feature, which owns the Work Distribution dependency.
-        services
-            .AddScoped<ISmsInboundRouter, AutoReplyRouter>()
-            .AddScoped<ISmsInboundRouter, ReassignmentRouter>()
-            .AddScoped<ISmsInboundRouter, HandoffQueueRouter>()
-            .AddScoped<ISmsInboundRouter, ExistingConversationRouter>()
-            .AddScoped<ISmsInboundRouter, NumberRouteRouter>()
-            .AddScoped<ISmsInboundRouter, FallbackRouter>();
-
-        // The one entry point every ownership decision goes through, whatever triggered it.
-        services.AddScoped<ISmsConversationRouter, SmsConversationRouter>();
-
-        // The first-response clock and the pass that announces the threads that missed it.
-        // A tenant with no Work Distribution has no queues, so the null reader reports every lookup as not
-        // found and the SLA and quiet-hours paths take their no-policy branch. Work Distribution replaces it.
-        services.TryAddScoped<ISmsQueuePolicyReader, NullSmsQueuePolicyReader>();
-        services.AddScoped<ISmsFirstResponseSlaService, SmsFirstResponseSlaService>();
-
-        // Carrier keywords, the contact time zone quiet hours are judged in, and the guard that reads both.
-        services.Configure<SmsKeywordReplySettings>(_shellConfiguration.GetSection("CrestApps:Sms:Portal:KeywordReplies"));
-        services.AddScoped<ISmsContactTimeZoneResolver, SmsContactTimeZoneResolver>();
-        services.AddScoped<SmsQuietHoursGuard>();
-        services.AddBackgroundCycle<ISmsFirstResponseSlaCycle, SmsFirstResponseSlaCycle>();
+        // The host's scheduler for the first-response cycle AddCoreSmsPortal registered.
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SmsFirstResponseSlaBackgroundTask>());
 
-        // Per-agent SMS availability is independent of voice presence, so it stays in the base feature: the
-        // inbox toggle works whether or not push distribution is enabled.
-        services.AddScoped<ISmsAgentAvailabilityService, SmsAgentAvailabilityService>();
+        // Which time zone a contact is in, read from this host's contact records.
+        services.AddScoped<ISmsContactTimeZoneResolver, SmsContactTimeZoneResolver>();
 
-        // Portal presence lives in the distributed cache: a heartbeat is a fact that expires, and the cache is
-        // shared across nodes wherever the deployment has configured it to be.
-        services.AddSingleton<ISmsAgentPresenceTracker, DistributedCacheSmsAgentPresenceTracker>();
-
-        // The inbound processor is both the portal's orchestration service and an Omnichannel event handler, so
-        // any provider webhook that raises SmsReceived feeds the human conversation pipeline.
-        services.AddScoped<SmsInboundProcessor>();
-        services.AddScoped<ISmsInboundProcessor>(sp => sp.GetRequiredService<SmsInboundProcessor>());
-        services.AddScoped<IOmnichannelEventHandler>(sp => sp.GetRequiredService<SmsInboundProcessor>());
-
-        // Inbound SMS is committed to the durable provider webhook inbox before it is processed, keyed on the
-        // provider's own message id, so a redelivered text is absorbed rather than stored and answered twice.
-        services.AddScoped<IProviderWebhookInboxHandler, SmsInboundInboxHandler>();
-
-        // Resolve the CRM contact for a contact number so conversations link to the contact. The contact content
-        // types are read from the content definitions, so contact search works without the Omnichannel Management
-        // administration.
+        // Resolve the contact for a number so conversations link to it. The contact types are read from the
+        // content definitions, so contact search works without the management administration.
         services.AddScoped<ISmsContactResolver, SmsContactResolver>();
         services.TryAddScoped<IOmnichannelContactTypeProvider, ContentDefinitionOmnichannelContactTypeProvider>();
 
-        // Real-time messaging notifications over the SMS portal SignalR hub.
+        // Real-time messaging notifications over the portal's hub.
         services.AddScoped<ISmsRealTimeNotifier, SmsRealTimeNotifier>();
-
-        // Receives AI-to-agent handoffs for the SMS channel: moves an escalated automated conversation into a
-        // queue-owned human thread in the inbox.
-        // The escalation path asks the routing strategy whether a routed queue would push this thread to
-        // someone. Without the routed-distribution feature the default selects nobody, so the thread is pooled,
-        // which is the behaviour that tenant configured.
-        services.TryAddScoped<ISmsRoutingStrategy, NoSmsRoutingStrategy>();
-        services.AddScoped<IOmnichannelHandoffService, SmsAgentHandoffService>();
 
         // Storage schema + indexes.
         // The SMS portal stores its catalog documents in a dedicated YesSql collection. Registering it makes

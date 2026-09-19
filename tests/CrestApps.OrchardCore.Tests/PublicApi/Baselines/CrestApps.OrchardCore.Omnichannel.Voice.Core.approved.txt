@@ -1,5 +1,12 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Omnichannel.Voice")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Omnichannel.Voice.Core
+{
+    public static class AutomatedVoiceServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreOmnichannelAutomatedVoice(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
 {
     public sealed class PendingVoiceHandoff
