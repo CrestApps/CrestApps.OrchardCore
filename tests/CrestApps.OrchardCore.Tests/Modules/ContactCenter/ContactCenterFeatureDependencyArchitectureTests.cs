@@ -176,7 +176,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
                 StringComparison.Ordinal));
         var endpointOwner = startupClasses.Single(startup =>
             startup.Body.Contains(
-                "AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix)",
+                "MapContactCenterAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix)",
                 StringComparison.Ordinal));
         var voice = "CrestApps.OrchardCore.ContactCenter.Voice";
 
@@ -310,7 +310,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
         // Act
         var endpointOwner = startupClasses.Single(startup =>
-            startup.Body.Contains("AddAgentWorkspaceEndpoints()", StringComparison.Ordinal));
+            startup.Body.Contains("MapContactCenterAgentWorkspaceEndpoints()", StringComparison.Ordinal));
         var navigationOwner = startupClasses.Single(startup =>
             startup.Body.Contains(
                 "AddNavigationProvider<ContactCenterAgentDesktopAdminMenu>()",
@@ -371,7 +371,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var dependencies = features["CrestApps.OrchardCore.ContactCenter.Supervision"].Dependencies
             .Order(StringComparer.Ordinal);
         var endpointOwner = startupClasses.Single(startup =>
-            startup.Body.Contains("AddSupervisorDashboardEndpoints()", StringComparison.Ordinal));
+            startup.Body.Contains("MapContactCenterSupervisorDashboardEndpoints()", StringComparison.Ordinal));
         var navigationOwner = startupClasses.Single(startup =>
             startup.Body.Contains(
                 "AddNavigationProvider<ContactCenterSupervisionAdminMenu>()",
@@ -463,7 +463,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var resolverOwner = startupClasses.Single(startup =>
             startup.Body.Contains("AddScoped<IEntryPointResolver, EntryPointResolver>()", StringComparison.Ordinal));
         var ingressOwner = startupClasses.Single(startup =>
-            startup.Body.Contains("AddVoiceIngressEndpoint()", StringComparison.Ordinal));
+            startup.Body.Contains("MapContactCenterVoiceIngressEndpoint()", StringComparison.Ordinal));
         var navigationOwner = startupClasses.Single(startup =>
             startup.Body.Contains(
                 "AddNavigationProvider<ContactCenterEntryPointsAdminMenu>()",

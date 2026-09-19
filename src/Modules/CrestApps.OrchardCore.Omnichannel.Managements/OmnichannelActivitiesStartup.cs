@@ -179,6 +179,6 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
     /// <inheritdoc/>
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddSubjectDispositionActionsEndpoint();
+        routes.MapOmnichannelSubjectActionEndpoints();
     }
 }

@@ -21,16 +21,31 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Dialpad.Endpoints;
 
-internal static class DialpadWebhookEndpoint
+public static class DialpadWebhookEndpoint
 {
     public const long MaximumRequestBodySizeBytes = 1024 * 1024;
 
-    public static IEndpointRouteBuilder AddDialpadWebhookEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the provider call webhook endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Where the provider delivers call events.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapDialpadWebhookEndpoint(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapPost("api/dialpad/webhook/call", HandleAsync)
+        var route = builder.MapPost("api/dialpad/webhook/call", HandleAsync)
             .AllowAnonymous()
             .DisableAntiforgery()
-            .WithMetadata(new RequestSizeLimitAttribute(MaximumRequestBodySizeBytes));
+            .WithMetadata(new RequestSizeLimitAttribute(MaximumRequestBodySizeBytes));
+
+        configure?.Invoke(route);
 
         return builder;
     }

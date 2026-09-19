@@ -67,6 +67,6 @@ public sealed class SecureCaptureStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddSecureCaptureEndpoints();
+        routes.MapContactCenterSecureCaptureEndpoints();
     }
 }

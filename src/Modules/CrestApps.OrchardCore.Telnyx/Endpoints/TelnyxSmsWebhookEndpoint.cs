@@ -24,16 +24,31 @@ namespace CrestApps.OrchardCore.Telnyx.Endpoints;
 /// message onto the shared Omnichannel <c>SmsReceived</c> bus (which the SMS portal and the automated AI path
 /// both observe) or applies an outbound delivery receipt to the sent message.
 /// </summary>
-internal static class TelnyxSmsWebhookEndpoint
+public static class TelnyxSmsWebhookEndpoint
 {
     public const long MaximumRequestBodySizeBytes = 1024 * 1024;
 
-    public static IEndpointRouteBuilder AddTelnyxSmsWebhookEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the provider SMS webhook endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Where the provider delivers inbound and status SMS events.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapTelnyxSmsWebhookEndpoint(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapPost(TelnyxConstants.SmsWebhookPath, HandleAsync)
+        var route = builder.MapPost(TelnyxConstants.SmsWebhookPath, HandleAsync)
             .AllowAnonymous()
             .DisableAntiforgery()
-            .WithMetadata(new RequestSizeLimitAttribute(MaximumRequestBodySizeBytes));
+            .WithMetadata(new RequestSizeLimitAttribute(MaximumRequestBodySizeBytes));
+
+        configure?.Invoke(route);
 
         return builder;
     }

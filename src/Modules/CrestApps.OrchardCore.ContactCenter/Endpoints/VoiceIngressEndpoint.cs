@@ -9,12 +9,27 @@ using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static class VoiceIngressEndpoint
+public static class VoiceIngressEndpoint
 {
-    public static IEndpointRouteBuilder AddVoiceIngressEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the inbound voice ingress endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Where a provider hands an inbound call to the Contact Center.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterVoiceIngressEndpoint(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapPost("api/contact-center/voice/inbound", HandleAsync)
-            .DisableAntiforgery();
+        var route = builder.MapPost("api/contact-center/voice/inbound", HandleAsync)
+            .DisableAntiforgery();
+
+        configure?.Invoke(route);
 
         return builder;
     }

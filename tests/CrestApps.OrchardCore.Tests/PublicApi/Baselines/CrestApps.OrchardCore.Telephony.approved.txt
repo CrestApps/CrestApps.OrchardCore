@@ -148,6 +148,17 @@ namespace CrestApps.OrchardCore.Telephony.Drivers
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(OrchardCore.Settings.ISite site, CrestApps.OrchardCore.Telephony.TelephonySettings settings, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
 }
+namespace CrestApps.OrchardCore.Telephony.Endpoints
+{
+    public static class SoftPhoneDialerEndpoints
+    {
+        public static Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapSoftPhoneDialerEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder builder, System.Action<Microsoft.AspNetCore.Builder.RouteHandlerBuilder> configure = null) { }
+    }
+    public static class SoftPhoneExtensionEndpoints
+    {
+        public static Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapSoftPhoneExtensionConfigurationEndpoint(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder builder, System.Action<Microsoft.AspNetCore.Builder.RouteHandlerBuilder> configure = null) { }
+    }
+}
 namespace CrestApps.OrchardCore.Telephony.Filters
 {
     public sealed class SoftPhoneExtensionDialerFilter : Microsoft.AspNetCore.Mvc.Filters.IAsyncResultFilter, Microsoft.AspNetCore.Mvc.Filters.IFilterMetadata

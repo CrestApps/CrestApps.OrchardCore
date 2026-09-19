@@ -63,6 +63,6 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddDialpadWebhookEndpoint();
+        routes.MapDialpadWebhookEndpoint();
     }
 }

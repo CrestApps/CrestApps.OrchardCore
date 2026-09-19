@@ -38,7 +38,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 /// at the routes mapped here instead.
 /// </para>
 /// </remarks>
-internal static class ContactCenterHealthEndpoints
+public static class ContactCenterHealthEndpoints
 {
     private static readonly JsonSerializerOptions _serializerOptions = new(JsonSerializerDefaults.Web);
 
@@ -47,7 +47,20 @@ internal static class ContactCenterHealthEndpoints
     /// </summary>
     /// <param name="builder">The endpoint route builder to map the probes onto.</param>
     /// <returns>The same <paramref name="builder"/> so calls can be chained.</returns>
-    public static IEndpointRouteBuilder AddContactCenterHealthEndpoints(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the Contact Center health endpoints.
+    /// </summary>
+    /// <remarks>
+    /// Readiness, and a dependency report for diagnosing a degraded tenant.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterHealthEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
@@ -57,7 +70,9 @@ internal static class ContactCenterHealthEndpoints
             AllowCachingResponses = false,
         }).AllowAnonymous();
 
-        builder.MapGet(ContactCenterConstants.HealthChecks.DependenciesRoute, ReportDependenciesAsync);
+        var dependencies = builder.MapGet(ContactCenterConstants.HealthChecks.DependenciesRoute, ReportDependenciesAsync);
+
+        configure?.Invoke(dependencies);
 
         return builder;
     }

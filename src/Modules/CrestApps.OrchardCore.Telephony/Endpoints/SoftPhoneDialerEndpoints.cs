@@ -20,12 +20,27 @@ namespace CrestApps.OrchardCore.Telephony.Endpoints;
 /// connected (the in-page widget or the browser-extension window). The soft phone decides how to place it,
 /// including registering first when needed or holding an active call. Presence is never changed here.
 /// </summary>
-internal static class SoftPhoneDialerEndpoints
+public static class SoftPhoneDialerEndpoints
 {
-    public static IEndpointRouteBuilder AddSoftPhoneDialerEndpoints(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the soft phone dial endpoint.
+    /// </summary>
+    /// <remarks>
+    /// The soft phone dial endpoint.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapSoftPhoneDialerEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapPost("softphone/dial", HandleDialAsync)
-            .WithName("TelephonySoftPhoneDial");
+        var dial = builder.MapPost("softphone/dial", HandleDialAsync)
+            .WithName("TelephonySoftPhoneDial");
+
+        configure?.Invoke(dial);
 
         return builder;
     }

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
+using CrestApps.OrchardCore.Omnichannel.EventGrid.Endpoints;
 
 namespace CrestApps.OrchardCore.Omnichannel.EventGrid;
 
@@ -33,6 +34,6 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder builder, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddAzureEventGridEndpoint();
+        routes.MapOmnichannelEventGridEndpoint();
     }
 }

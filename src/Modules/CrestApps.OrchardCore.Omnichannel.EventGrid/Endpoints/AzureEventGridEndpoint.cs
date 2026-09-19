@@ -19,7 +19,9 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using OrchardCore.Modules;
 
-internal static class AzureEventGridEndpoint
+namespace CrestApps.OrchardCore.Omnichannel.EventGrid.Endpoints;
+
+public static class AzureEventGridEndpoint
 {
     private const long _maximumRequestBodySizeBytes = 1024 * 1024;
 
@@ -27,13 +29,28 @@ internal static class AzureEventGridEndpoint
     /// Adds the azure event grid endpoint.
     /// </summary>
     /// <param name="builder">The builder.</param>
-    public static IEndpointRouteBuilder AddAzureEventGridEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the event delivery webhook endpoint.
+    /// </summary>
+    /// <remarks>
+    /// The delivery firehose a cloud event service posts to.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapOmnichannelEventGridEndpoint(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
         // Provider webhooks follow the api/{provider}/webhook/{action} convention. This endpoint is the Azure
         // Event Grid delivery firehose (not SMS-specific), so the action names the mechanism it receives.
-        _ = builder.MapPost("api/azure/webhook/eventgrid", HandleAsync)
+        var route = builder.MapPost("api/azure/webhook/eventgrid", HandleAsync)
             .DisableAntiforgery()
             .AllowAnonymous();
+
+        configure?.Invoke(route);
 
         return builder;
     }
@@ -41,7 +58,7 @@ internal static class AzureEventGridEndpoint
     private static async Task<IResult> HandleAsync(
         HttpContext context,
         IEnumerable<IOmnichannelEventHandler> handlers,
-        YesSql.ISession session,
+        global::YesSql.ISession session,
         TimeProvider timeProvider,
         IOptions<EventGridOptions> options,
         ILogger<Startup> logger)

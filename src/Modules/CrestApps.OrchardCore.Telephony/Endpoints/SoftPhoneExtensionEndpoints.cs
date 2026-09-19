@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.Telephony.Endpoints;
 /// endpoint once after the user is authenticated to discover the tenant-aware hub and offer URLs, then opens
 /// its own background connection to receive inbound calls even while the phone window is closed.
 /// </summary>
-internal static class SoftPhoneExtensionEndpoints
+public static class SoftPhoneExtensionEndpoints
 {
     /// <summary>
     /// The well-known route name of the Contact Center pending-incoming-offer endpoint. It is referenced by
@@ -21,10 +21,25 @@ internal static class SoftPhoneExtensionEndpoints
     /// </summary>
     private const string CurrentIncomingOfferRouteName = "ContactCenterAgentSoftPhoneCurrentIncomingOffer";
 
-    public static IEndpointRouteBuilder AddSoftPhoneExtensionEndpoints(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the soft phone extension configuration endpoint.
+    /// </summary>
+    /// <remarks>
+    /// The configuration a soft phone reads to place extension calls.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapSoftPhoneExtensionConfigurationEndpoint(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapGet("softphone/extension-config", HandleExtensionConfigAsync)
-            .WithName("TelephonySoftPhoneExtensionConfig");
+        var extensionConfig = builder.MapGet("softphone/extension-config", HandleExtensionConfigAsync)
+            .WithName("TelephonySoftPhoneExtensionConfig");
+
+        configure?.Invoke(extensionConfig);
 
         return builder;
     }

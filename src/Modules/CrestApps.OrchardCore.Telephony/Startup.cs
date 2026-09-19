@@ -192,7 +192,7 @@ public sealed class SoftPhoneCoreStartup : StartupBase
     {
         // The phone-field "call" button posts here to start a call on the caller's own soft phone, wherever it is
         // connected. It belongs to the soft phone core so it is available in both the widget and extension surfaces.
-        routes.AddSoftPhoneDialerEndpoints();
+        routes.MapSoftPhoneDialerEndpoints();
     }
 }
 
@@ -238,7 +238,7 @@ public sealed class SoftPhoneExtensionStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddSoftPhoneExtensionEndpoints();
+        routes.MapSoftPhoneExtensionConfigurationEndpoint();
     }
 }
 

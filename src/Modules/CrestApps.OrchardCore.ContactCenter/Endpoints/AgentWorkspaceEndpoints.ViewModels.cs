@@ -34,7 +34,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 /// call the endpoint - and together they were the largest file in the module.
 /// </para>
 /// </summary>
-internal static partial class AgentWorkspaceEndpoints
+public static partial class AgentWorkspaceEndpoints
 {
     private static async Task<WorkspaceOfferViewModel> BuildOfferAsync(
         string agentId,

@@ -18,16 +18,31 @@ using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Telnyx.Endpoints;
 
-internal static class TelnyxWebhookEndpoint
+public static class TelnyxWebhookEndpoint
 {
     public const long MaximumRequestBodySizeBytes = 1024 * 1024;
 
-    public static IEndpointRouteBuilder AddTelnyxWebhookEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the provider voice webhook endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Where the voice provider delivers call events.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapTelnyxWebhookEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapPost(TelnyxConstants.WebhookPath, HandleAsync)
+        var route = builder.MapPost(TelnyxConstants.WebhookPath, HandleAsync)
             .AllowAnonymous()
             .DisableAntiforgery()
-            .WithMetadata(new RequestSizeLimitAttribute(MaximumRequestBodySizeBytes));
+            .WithMetadata(new RequestSizeLimitAttribute(MaximumRequestBodySizeBytes));
+
+        configure?.Invoke(route);
 
         return builder;
     }

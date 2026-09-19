@@ -26,7 +26,7 @@ using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static partial class AgentWorkspaceEndpoints
+public static partial class AgentWorkspaceEndpoints
 {
     private const int RecentHistoryCount = 10;
 
@@ -38,28 +38,55 @@ internal static partial class AgentWorkspaceEndpoints
     public const string VoicemailMediaRouteName = "ContactCenterVoicemailMedia";
     public const string VoicemailDeleteRouteName = "ContactCenterVoicemailDelete";
 
-    public static IEndpointRouteBuilder AddAgentWorkspaceEndpoints(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the agent workspace endpoints.
+    /// </summary>
+    /// <remarks>
+    /// The agent workspace: presence, work completion, recording control and voicemail.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterAgentWorkspaceEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapGet("Admin/contact-center/voicemail/{interactionId}/media", HandleVoicemailMediaAsync)
+        var voicemailMedia = builder.MapGet("Admin/contact-center/voicemail/{interactionId}/media", HandleVoicemailMediaAsync)
             .WithName(VoicemailMediaRouteName);
 
-        builder.MapPost("Admin/contact-center/voicemail/{interactionId}/delete", HandleDeleteVoicemailAsync)
+        configure?.Invoke(voicemailMedia);
+
+        var deleteVoicemail = builder.MapPost("Admin/contact-center/voicemail/{interactionId}/delete", HandleDeleteVoicemailAsync)
             .WithName(VoicemailDeleteRouteName);
 
-        builder.MapGet("Admin/contact-center/workspace/state", HandleStateAsync)
+        configure?.Invoke(deleteVoicemail);
+
+        var state = builder.MapGet("Admin/contact-center/workspace/state", HandleStateAsync)
             .WithName(StateRouteName);
 
-        builder.MapPost("Admin/contact-center/workspace/presence", HandleSetPresenceAsync)
+        configure?.Invoke(state);
+
+        var setPresence = builder.MapPost("Admin/contact-center/workspace/presence", HandleSetPresenceAsync)
             .WithName(SetPresenceRouteName);
 
-        builder.MapPost("Admin/contact-center/workspace/complete", HandleCompleteAsync)
+        configure?.Invoke(setPresence);
+
+        var complete = builder.MapPost("Admin/contact-center/workspace/complete", HandleCompleteAsync)
             .WithName(CompleteRouteName);
 
-        builder.MapPost("Admin/contact-center/workspace/recording/pause", HandlePauseRecordingAsync)
+        configure?.Invoke(complete);
+
+        var pauseRecording = builder.MapPost("Admin/contact-center/workspace/recording/pause", HandlePauseRecordingAsync)
             .WithName(PauseRecordingRouteName);
 
-        builder.MapPost("Admin/contact-center/workspace/recording/resume", HandleResumeRecordingAsync)
+        configure?.Invoke(pauseRecording);
+
+        var resumeRecording = builder.MapPost("Admin/contact-center/workspace/recording/resume", HandleResumeRecordingAsync)
             .WithName(ResumeRecordingRouteName);
+
+        configure?.Invoke(resumeRecording);
 
         return builder;
     }

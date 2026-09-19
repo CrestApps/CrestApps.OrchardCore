@@ -16,20 +16,37 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static class SupervisorDashboardEndpoints
+public static class SupervisorDashboardEndpoints
 {
     private const int AgentPageSize = 200;
 
     public const string StateRouteName = "ContactCenterSupervisorDashboardState";
     public const string EngageRouteName = "ContactCenterSupervisorDashboardEngage";
 
-    public static IEndpointRouteBuilder AddSupervisorDashboardEndpoints(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the supervisor dashboard endpoints.
+    /// </summary>
+    /// <remarks>
+    /// The live floor view and the supervisor engagement action.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterSupervisorDashboardEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapGet("Admin/contact-center/dashboard/state", HandleStateAsync)
-            .WithName(StateRouteName);
+        var state = builder.MapGet("Admin/contact-center/dashboard/state", HandleStateAsync)
+            .WithName(StateRouteName);
 
-        builder.MapPost("Admin/contact-center/dashboard/engage", HandleEngageAsync)
-            .WithName(EngageRouteName);
+        configure?.Invoke(state);
+
+        var engage = builder.MapPost("Admin/contact-center/dashboard/engage", HandleEngageAsync)
+            .WithName(EngageRouteName);
+
+        configure?.Invoke(engage);
 
         return builder;
     }

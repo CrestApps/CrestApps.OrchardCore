@@ -12,18 +12,35 @@ using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static class SecureCaptureEndpoints
+public static class SecureCaptureEndpoints
 {
     public const string BeginRouteName = "ContactCenterSecureCaptureBegin";
     public const string CancelRouteName = "ContactCenterSecureCaptureCancel";
 
-    public static IEndpointRouteBuilder AddSecureCaptureEndpoints(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the secure capture endpoints.
+    /// </summary>
+    /// <remarks>
+    /// Beginning and cancelling a capture that must not be recorded.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterSecureCaptureEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapPost("Admin/contact-center/workspace/secure-capture/begin", HandleBeginAsync)
-            .WithName(BeginRouteName);
+        var begin = builder.MapPost("Admin/contact-center/workspace/secure-capture/begin", HandleBeginAsync)
+            .WithName(BeginRouteName);
 
-        builder.MapPost("Admin/contact-center/workspace/secure-capture/cancel", HandleCancelAsync)
-            .WithName(CancelRouteName);
+        configure?.Invoke(begin);
+
+        var cancel = builder.MapPost("Admin/contact-center/workspace/secure-capture/cancel", HandleCancelAsync)
+            .WithName(CancelRouteName);
+
+        configure?.Invoke(cancel);
 
         return builder;
     }

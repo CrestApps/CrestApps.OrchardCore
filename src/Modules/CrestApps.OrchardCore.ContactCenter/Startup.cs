@@ -391,6 +391,6 @@ public sealed class ContactCenterHealthChecksStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddContactCenterHealthEndpoints();
+        routes.MapContactCenterHealthEndpoints();
     }
 }

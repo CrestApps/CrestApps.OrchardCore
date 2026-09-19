@@ -15,13 +15,28 @@ namespace CrestApps.OrchardCore.Telnyx.Endpoints;
 /// refused. When the token resolves, the accepted socket is handed to the awaiting media session and the request is
 /// parked until the session stops, keeping the socket alive for the call.
 /// </summary>
-internal static class TelnyxMediaStreamEndpoint
+public static class TelnyxMediaStreamEndpoint
 {
-    public static IEndpointRouteBuilder AddTelnyxMediaStreamEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the provider media stream endpoint.
+    /// </summary>
+    /// <remarks>
+    /// The socket the voice provider streams call audio over.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapTelnyxMediaStreamEndpoint(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapGet(TelnyxConstants.MediaStreamPath, HandleAsync)
+        var route = builder.MapGet(TelnyxConstants.MediaStreamPath, HandleAsync)
             .AllowAnonymous()
-            .DisableAntiforgery();
+            .DisableAntiforgery();
+
+        configure?.Invoke(route);
 
         return builder;
     }

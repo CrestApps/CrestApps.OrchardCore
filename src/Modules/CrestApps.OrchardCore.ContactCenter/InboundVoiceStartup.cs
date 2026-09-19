@@ -90,7 +90,7 @@ public sealed class InboundVoiceStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddVoiceIngressEndpoint();
+        routes.MapContactCenterVoiceIngressEndpoint();
     }
 }
 

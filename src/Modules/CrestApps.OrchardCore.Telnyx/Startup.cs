@@ -135,7 +135,7 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddTelnyxWebhookEndpoint();
+        routes.MapTelnyxWebhookEndpoints();
     }
 }
 
@@ -219,6 +219,6 @@ public sealed class TelnyxContactCenterMediaStartup : StartupBase
     {
         // Telnyx dials the media-stream endpoint as a raw WebSocket. The WebSocket middleware itself is added by the
         // CrestApps.OrchardCore.WebSockets feature, which the Telnyx module depends on, so this only maps the route.
-        routes.AddTelnyxMediaStreamEndpoint();
+        routes.MapTelnyxMediaStreamEndpoint();
     }
 }

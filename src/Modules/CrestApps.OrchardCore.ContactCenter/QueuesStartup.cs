@@ -153,7 +153,7 @@ public sealed class QueuesStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddQueueSearchEndpoint();
+        routes.MapContactCenterQueueSearchEndpoints();
     }
 }
 

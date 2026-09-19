@@ -24,14 +24,29 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 /// <c>X-Twilio-Signature</c> HMAC over the request URL and parameters; this endpoint verifies that signature,
 /// then raises an inbound <see cref="OmnichannelEvent"/> so the SMS is routed like any other channel event.
 /// </summary>
-internal static class TwilioWebhookEndpoint
+public static class TwilioWebhookEndpoint
 {
-    public static IEndpointRouteBuilder AddTwilioWebhookEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the provider SMS webhook endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Where the provider delivers inbound SMS.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapTwilioSmsWebhookEndpoint(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
         // Provider webhooks follow the api/{provider}/webhook/{kind} convention (see the Telnyx SMS/voice webhooks).
-        _ = builder.MapPost("api/twilio/webhook/sms", HandleAsync)
+        var route = builder.MapPost("api/twilio/webhook/sms", HandleAsync)
             .DisableAntiforgery()
-            .AllowAnonymous();
+            .AllowAnonymous();
+
+        configure?.Invoke(route);
 
         return builder;
     }

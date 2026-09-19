@@ -43,6 +43,6 @@ public sealed class SmsStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddTelnyxSmsWebhookEndpoint();
+        routes.MapTelnyxSmsWebhookEndpoint();
     }
 }

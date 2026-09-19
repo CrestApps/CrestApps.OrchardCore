@@ -14,16 +14,31 @@ using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Endpoints;
 
-internal static class SubjectActionEndpoints
+public static class SubjectActionEndpoints
 {
     public const string SubjectDispositionActionsRouteName = "CrestApps.Omnichannel.SubjectDispositionActions";
 
-    public static IEndpointRouteBuilder AddSubjectDispositionActionsEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the subject disposition action endpoints.
+    /// </summary>
+    /// <remarks>
+    /// The actions a subject may be dispositioned with from outside the admin.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapOmnichannelSubjectActionEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapPost("api/omnichannel/subject-disposition-actions", HandleAsync)
+        var route = builder.MapPost("api/omnichannel/subject-disposition-actions", HandleAsync)
             .AllowAnonymous()
             .DisableAntiforgery()
             .WithName(SubjectDispositionActionsRouteName);
+
+        configure?.Invoke(route);
 
         return builder;
     }

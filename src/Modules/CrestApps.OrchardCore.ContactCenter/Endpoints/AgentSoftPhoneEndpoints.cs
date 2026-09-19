@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static class AgentSoftPhoneEndpoints
+public static class AgentSoftPhoneEndpoints
 {
     public const string SyncQueuedVoiceWorkRouteName = "ContactCenterAgentSoftPhoneSyncQueuedVoiceWork";
     public const string CurrentIncomingOfferRouteName = "ContactCenterAgentSoftPhoneCurrentIncomingOffer";
@@ -30,25 +30,49 @@ internal static class AgentSoftPhoneEndpoints
         Converters = { new JsonStringEnumConverter() },
     };
 
-    public static IEndpointRouteBuilder AddAgentSoftPhoneEndpoints(
+    /// <summary>
+    /// Maps the agent soft phone endpoints.
+    /// </summary>
+    /// <remarks>
+    /// What an out-of-page soft phone polls for: queued work, the current offer, its registration and sign-out.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="adminUrlPrefix">
+    /// The prefix the host puts its administration routes behind. Defaults to "Admin", which is the
+    /// prefix these routes have always used.
+    /// </param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterAgentSoftPhoneEndpoints(
         this IEndpointRouteBuilder builder,
-        string adminUrlPrefix)
+        string adminUrlPrefix = null,
+        Action<RouteHandlerBuilder> configure = null)
     {
         var routePrefix = string.IsNullOrWhiteSpace(adminUrlPrefix)
             ? "Admin"
             : adminUrlPrefix.Trim('/');
 
-        builder.MapPost($"{routePrefix}/contact-center/agent/sync-queued-voice-work", HandleSyncQueuedVoiceWorkAsync)
-            .WithName(SyncQueuedVoiceWorkRouteName);
+        var syncQueuedVoiceWork = builder.MapPost($"{routePrefix}/contact-center/agent/sync-queued-voice-work", HandleSyncQueuedVoiceWorkAsync)
+            .WithName(SyncQueuedVoiceWorkRouteName);
 
-        builder.MapGet($"{routePrefix}/contact-center/agent/current-incoming-offer", HandleCurrentIncomingOfferAsync)
-            .WithName(CurrentIncomingOfferRouteName);
+        configure?.Invoke(syncQueuedVoiceWork);
 
-        builder.MapGet($"{routePrefix}/contact-center/agent/soft-phone/registration-config", HandleRegistrationConfigAsync)
-            .WithName(SoftPhoneRegistrationConfigRouteName);
+        var currentIncomingOffer = builder.MapGet($"{routePrefix}/contact-center/agent/current-incoming-offer", HandleCurrentIncomingOfferAsync)
+            .WithName(CurrentIncomingOfferRouteName);
 
-        builder.MapPost($"{routePrefix}/contact-center/agent/soft-phone/sign-out", HandleSignOutAsync)
-            .WithName(SoftPhoneSignOutRouteName);
+        configure?.Invoke(currentIncomingOffer);
+
+        var registrationConfig = builder.MapGet($"{routePrefix}/contact-center/agent/soft-phone/registration-config", HandleRegistrationConfigAsync)
+            .WithName(SoftPhoneRegistrationConfigRouteName);
+
+        configure?.Invoke(registrationConfig);
+
+        var signOut = builder.MapPost($"{routePrefix}/contact-center/agent/soft-phone/sign-out", HandleSignOutAsync)
+            .WithName(SoftPhoneSignOutRouteName);
+
+        configure?.Invoke(signOut);
 
         return builder;
     }

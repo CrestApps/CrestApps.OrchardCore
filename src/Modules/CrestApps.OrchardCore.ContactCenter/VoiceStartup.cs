@@ -155,7 +155,7 @@ public sealed class VoiceStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         routes
-            .AddVoiceOfferEndpoints();
+            .MapContactCenterVoiceOfferEndpoints();
     }
 
 }
@@ -181,7 +181,7 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
-        routes.AddAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix);
+        routes.MapContactCenterAgentSoftPhoneEndpoints(adminOptions.AdminUrlPrefix);
     }
 }
 

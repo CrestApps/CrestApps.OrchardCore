@@ -458,6 +458,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Reports.Models.ReportFilter filter, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
 }
+namespace CrestApps.OrchardCore.Omnichannel.Managements.Endpoints
+{
+    public static class SubjectActionEndpoints
+    {
+        public const string SubjectDispositionActionsRouteName = "CrestApps.Omnichannel.SubjectDispositionActions";
+        public static Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapOmnichannelSubjectActionEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder builder, System.Action<Microsoft.AspNetCore.Builder.RouteHandlerBuilder> configure = null) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
 {
     public sealed class BulkManageActivityFilterHandler : CrestApps.OrchardCore.Omnichannel.Core.Services.IBulkManageActivityFilterHandler

@@ -10,15 +10,30 @@ namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 /// example, by the SMS Portal routing editor to pick a department queue). It returns the enabled queues,
 /// optionally filtered by name, as {value, text} pairs.
 /// </summary>
-internal static class QueueSearchEndpoints
+public static class QueueSearchEndpoints
 {
     public const string RouteName = "CrestApps.ContactCenter.QueueSearch";
 
-    public static IEndpointRouteBuilder AddQueueSearchEndpoint(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the queue search endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Queue lookup for the pickers that assign work.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterQueueSearchEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapGet("Admin/api/crestapps/contact-center/queues/search", HandleAsync)
+        var route = builder.MapGet("Admin/api/crestapps/contact-center/queues/search", HandleAsync)
             .RequireAuthorization()
-            .WithName(RouteName);
+            .WithName(RouteName);
+
+        configure?.Invoke(route);
 
         return builder;
     }

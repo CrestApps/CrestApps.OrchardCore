@@ -310,7 +310,7 @@ public sealed class ContactCenterHealthEndpointsTests
         using var application = builder.Build();
 
         // Act
-        application.AddContactCenterHealthEndpoints();
+        application.MapContactCenterHealthEndpoints();
 
         var routes = GetMappedEndpoints(application)
             .Select(endpoint => endpoint.RoutePattern.RawText)
@@ -338,7 +338,7 @@ public sealed class ContactCenterHealthEndpointsTests
         using var application = builder.Build();
 
         // Act
-        application.AddContactCenterHealthEndpoints();
+        application.MapContactCenterHealthEndpoints();
 
         var endpoints = GetMappedEndpoints(application);
 
@@ -621,7 +621,7 @@ public sealed class ContactCenterHealthEndpointsTests
 
             var application = builder.Build();
 
-            application.AddContactCenterHealthEndpoints();
+            application.MapContactCenterHealthEndpoints();
 
             await application.StartAsync();
 

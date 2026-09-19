@@ -49,7 +49,7 @@ public sealed class RecordingStartup : StartupBase
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
         var adminOptions = serviceProvider.GetRequiredService<IOptions<AdminOptions>>().Value;
-        routes.AddRecordingErasureEndpoint(adminOptions.AdminUrlPrefix);
+        routes.MapContactCenterRecordingErasureEndpoint(adminOptions.AdminUrlPrefix);
     }
 }
 

@@ -21,6 +21,6 @@ public sealed class SupervisionStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddSupervisorDashboardEndpoints();
+        routes.MapContactCenterSupervisorDashboardEndpoints();
     }
 }

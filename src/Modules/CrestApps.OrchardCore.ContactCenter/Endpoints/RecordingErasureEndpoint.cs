@@ -10,20 +10,38 @@ using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static class RecordingErasureEndpoint
+public static class RecordingErasureEndpoint
 {
     public const string RouteName = "ContactCenterRecordingErasure";
 
-    public static IEndpointRouteBuilder AddRecordingErasureEndpoint(
+    /// <summary>
+    /// Maps the recording erasure endpoint.
+    /// </summary>
+    /// <remarks>
+    /// Erasing a recording, which is not undoable.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="adminUrlPrefix">
+    /// The prefix the host puts its administration routes behind. Defaults to "Admin", which is the
+    /// prefix these routes have always used.
+    /// </param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterRecordingErasureEndpoint(
         this IEndpointRouteBuilder builder,
-        string adminUrlPrefix)
+        string adminUrlPrefix = null,
+        Action<RouteHandlerBuilder> configure = null)
     {
         var routePrefix = string.IsNullOrWhiteSpace(adminUrlPrefix)
             ? "Admin"
             : adminUrlPrefix.Trim('/');
 
-        builder.MapPost($"{routePrefix}/contact-center/recordings/erase", HandleAsync)
-            .WithName(RouteName);
+        var route = builder.MapPost($"{routePrefix}/contact-center/recordings/erase", HandleAsync)
+            .WithName(RouteName);
+
+        configure?.Invoke(route);
 
         return builder;
     }

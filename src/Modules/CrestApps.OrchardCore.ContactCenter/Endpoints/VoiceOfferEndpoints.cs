@@ -9,18 +9,35 @@ using Microsoft.AspNetCore.Routing;
 
 namespace CrestApps.OrchardCore.ContactCenter.Endpoints;
 
-internal static class VoiceOfferEndpoints
+public static class VoiceOfferEndpoints
 {
     public const string AcceptOfferRouteName = "ContactCenterVoiceAcceptOffer";
     public const string DeclineOfferRouteName = "ContactCenterVoiceDeclineOffer";
 
-    public static IEndpointRouteBuilder AddVoiceOfferEndpoints(this IEndpointRouteBuilder builder)
+    /// <summary>
+    /// Maps the voice offer endpoints.
+    /// </summary>
+    /// <remarks>
+    /// Accepting and declining an offered inbound call.
+    /// </remarks>
+    /// <param name="builder">The route builder to map onto.</param>
+    /// <param name="configure">
+    /// Applied to every route mapped here, so a host can add its own filters or metadata.
+    /// </param>
+    /// <returns>The same route builder, so calls can be chained.</returns>
+    public static IEndpointRouteBuilder MapContactCenterVoiceOfferEndpoints(
+        this IEndpointRouteBuilder builder,
+        Action<RouteHandlerBuilder> configure = null)
     {
-        builder.MapPost("Admin/contact-center/voice/offer/accept", HandleAcceptAsync)
-            .WithName(AcceptOfferRouteName);
+        var accept = builder.MapPost("Admin/contact-center/voice/offer/accept", HandleAcceptAsync)
+            .WithName(AcceptOfferRouteName);
 
-        builder.MapPost("Admin/contact-center/voice/offer/decline", HandleDeclineAsync)
-            .WithName(DeclineOfferRouteName);
+        configure?.Invoke(accept);
+
+        var decline = builder.MapPost("Admin/contact-center/voice/offer/decline", HandleDeclineAsync)
+            .WithName(DeclineOfferRouteName);
+
+        configure?.Invoke(decline);
 
         return builder;
     }

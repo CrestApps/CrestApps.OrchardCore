@@ -41,6 +41,6 @@ public sealed class AgentDesktopStartup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddAgentWorkspaceEndpoints();
+        routes.MapContactCenterAgentWorkspaceEndpoints();
     }
 }
