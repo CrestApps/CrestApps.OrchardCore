@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.FileSources;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.OrchardCore.AI.FileSources.Services;
 using Microsoft.Extensions.Configuration;
 using Moq;

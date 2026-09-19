@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.FileSources;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.FileSources.Connectors;
 using CrestApps.OrchardCore.AI.FileSources;
 using CrestApps.OrchardCore.AI.FileSources.Services;

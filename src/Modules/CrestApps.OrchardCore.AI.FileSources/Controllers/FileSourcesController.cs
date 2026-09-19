@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.FileSources;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.FileSources.Services;
@@ -36,7 +37,7 @@ public sealed class FileSourcesController : Controller
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly ISourceCatalogManager<FileSource> _manager;
     private readonly IDisplayManager<FileSource> _displayManager;
-    private readonly IFileSourceRunService _runService;
+    private readonly IIngestionRunService _runService;
     private readonly IReadOnlyList<IngestionConnectorDescriptor> _connectors;
     private readonly INotifier _notifier;
 
@@ -60,7 +61,7 @@ public sealed class FileSourcesController : Controller
         IUpdateModelAccessor updateModelAccessor,
         ISourceCatalogManager<FileSource> manager,
         IDisplayManager<FileSource> displayManager,
-        IFileSourceRunService runService,
+        IIngestionRunService runService,
         IOptions<IngestionConnectorOptions> connectorOptions,
         INotifier notifier,
         IHtmlLocalizer<FileSourcesController> htmlLocalizer,

@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Documents.Endpoints;
 using CrestApps.Core.AI.FileSources;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.FileSources.Connectors;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
@@ -32,7 +33,8 @@ public sealed class Startup : StartupBase
         // Registers the File AI data source handler, the connector resolver, the run service, the scheduler
         // and the knowledge ingestion the connectors feed. Nothing here grants access to a folder on its own.
         services.AddCoreFileSources()
-            .AddCoreFileSystemConnector();
+            .AddCoreFileSystemConnector()
+            .AddCoreFileSourceStoresYesSql();
 
         // The one folder this tenant may read. It is computed from the tenant's own shell settings and
         // never from configuration or a request, so a tenant administrator cannot widen their own reach.
@@ -48,17 +50,6 @@ public sealed class Startup : StartupBase
         // and points the base path at the content root. This has to run after it to take both back, and a
         // single surviving entry is the whole tenant boundary gone.
         services.AddTransient<IPostConfigureOptions<FileSystemConnectorOptions>, FileSystemConnectorOptionsConfiguration>();
-
-        // The file source records, their per-item ingestion state, and their index providers.
-        services.AddCoreFileSourceStoresYesSql();
-
-        // Still needed for two things the file source feature cannot get anywhere else in
-        // CrestApps.Core 2.0.0-preview.284: IKnowledgeObjectStore, which only this registration provides,
-        // and IWebCrawlerStore, which DefaultFileSourceScheduler takes as a required dependency even in a
-        // host that has no web crawlers. Both are Core-side gaps this split exposed; when Core offers a
-        // knowledge-store registration of its own and makes the scheduler's crawler store optional, this
-        // call and the crawler tables in FileSourceIndexMigrations go together.
-        services.AddCoreWebCrawlerStoresYesSql();
 
         services.AddDataMigration<FileSourceIndexMigrations>();
 
