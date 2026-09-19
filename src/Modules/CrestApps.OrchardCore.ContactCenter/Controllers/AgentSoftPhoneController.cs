@@ -62,8 +62,8 @@ public sealed class AgentSoftPhoneController : Controller
             return Forbid();
         }
 
-        var queues = ContactCenterFormHelpers.NormalizeList(selectedQueueIds);
-        var campaigns = ContactCenterFormHelpers.NormalizeList(selectedCampaignIds);
+        var queues = AgentMembershipIds.Normalize(selectedQueueIds);
+        var campaigns = AgentMembershipIds.Normalize(selectedCampaignIds);
 
         if (queues.Count == 0 && campaigns.Count == 0)
         {

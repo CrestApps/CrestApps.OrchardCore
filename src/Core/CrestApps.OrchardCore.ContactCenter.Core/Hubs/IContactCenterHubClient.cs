@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Hubs;
+namespace CrestApps.OrchardCore.ContactCenter.Core.Hubs;
 
 /// <summary>
 /// Defines the strongly-typed methods the Contact Center hub invokes on connected clients. The agent

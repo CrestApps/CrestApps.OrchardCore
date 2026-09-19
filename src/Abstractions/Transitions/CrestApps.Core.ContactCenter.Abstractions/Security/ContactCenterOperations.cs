@@ -35,4 +35,23 @@ public static class ContactCenterOperations
     /// ordinary transfer because the cost of getting it wrong is a call leaving the building.
     /// </remarks>
     public static readonly OperationAuthorizationRequirement TransferExternally = new() { Name = nameof(TransferExternally) };
+
+    /// <summary>
+    /// Take work as an agent: sign in to queues and campaigns, and change presence.
+    /// </summary>
+    /// <remarks>
+    /// Asked without a resource. This is the agent's own question rather than a supervisor's, and it
+    /// is asked again on every call that changes a session rather than only when the session opens,
+    /// because a grant can be withdrawn while a connection is still up.
+    /// </remarks>
+    public static readonly OperationAuthorizationRequirement TakeAgentWork = new() { Name = nameof(TakeAgentWork) };
+
+    /// <summary>
+    /// Watch the Contact Center as a whole rather than one queue.
+    /// </summary>
+    /// <remarks>
+    /// Asked without a resource, and separate from <see cref="SuperviseQueue"/>: this is the question
+    /// behind the floor-wide view, where <see cref="SuperviseQueue"/> narrows a supervisor to one queue.
+    /// </remarks>
+    public static readonly OperationAuthorizationRequirement MonitorContactCenter = new() { Name = nameof(MonitorContactCenter) };
 }

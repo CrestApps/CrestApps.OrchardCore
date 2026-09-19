@@ -22,6 +22,10 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
+using CrestApps.OrchardCore.ContactCenter.Core.Hubs;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
+using CrestApps.OrchardCore.ContactCenter.Handlers;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -334,7 +338,7 @@ public sealed class ContactCenterHubSecurityTests
                 new TestContactCenterScopeExecutor(services),
                 workManager.Object,
                 ConnectionRegistry,
-                new ShellSettings { Name = TenantName })
+                new FakeTenantAccessor(TenantName))
             {
                 Context = Context,
                 Groups = Groups,
@@ -487,14 +491,25 @@ public sealed class ContactCenterHubSecurityTests
 
             foreach (var requirement in requirements)
             {
-                if (requirement is not PermissionRequirement permissionRequirement)
+                // The hub asks for an operation; this host answers with the permission that has always
+                // governed it, through the same map the real handler uses. Resolving it here rather than
+                // granting operation names keeps these tests asserting about permissions, which is what
+                // an administrator actually assigns.
+                var permission = requirement switch
+                {
+                    PermissionRequirement permissionRequirement => permissionRequirement.Permission,
+                    OperationAuthorizationRequirement operation => ContactCenterOperationAuthorizationHandler.GetPermission(operation.Name),
+                    _ => null,
+                };
+
+                if (permission is null)
                 {
                     continue;
                 }
 
-                EvaluatedPermissions.Add(permissionRequirement.Permission.Name);
+                EvaluatedPermissions.Add(permission.Name);
 
-                if (GrantedPermissions.Contains(permissionRequirement.Permission.Name))
+                if (GrantedPermissions.Contains(permission.Name))
                 {
                     granted = true;
                 }

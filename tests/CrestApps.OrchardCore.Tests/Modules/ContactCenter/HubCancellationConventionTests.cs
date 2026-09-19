@@ -57,7 +57,7 @@ public sealed partial class HubCancellationConventionTests
         // Assert
         Assert.Equal(
             [
-                "ContactCenterHub.cs",
+                "ContactCenterHubBase.cs",
                 "ContactCenterRealTimeNotifier.cs",
                 "ContactCenterRealTimeNotifierTests.cs",
                 "DistributedTestHub.cs",

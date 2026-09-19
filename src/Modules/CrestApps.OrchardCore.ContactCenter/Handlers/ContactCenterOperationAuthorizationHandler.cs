@@ -27,6 +27,8 @@ public sealed class ContactCenterOperationAuthorizationHandler : AuthorizationHa
     {
         [ContactCenterOperations.SuperviseQueue.Name] = ContactCenterPermissions.MonitorContactCenter,
         [ContactCenterOperations.TransferExternally.Name] = ContactCenterPermissions.TransferExternally,
+        [ContactCenterOperations.TakeAgentWork.Name] = ContactCenterPermissions.SignIntoQueues,
+        [ContactCenterOperations.MonitorContactCenter.Name] = ContactCenterPermissions.MonitorContactCenter,
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     private readonly Lazy<IAuthorizationService> _authorizationService;

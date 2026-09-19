@@ -35,6 +35,7 @@
     <ProjectReference Include="../CrestApps.OrchardCore.Telephony.Core/CrestApps.OrchardCore.Telephony.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.YesSql.Core/CrestApps.OrchardCore.YesSql.Core.csproj" />
     <ProjectReference Include="../CrestApps.OrchardCore.Omnichannel.Core/CrestApps.OrchardCore.Omnichannel.Core.csproj" />
+    <ProjectReference Include="../CrestApps.OrchardCore.SignalR.Core/CrestApps.OrchardCore.SignalR.Core.csproj" />
   </ItemGroup>
 
 </Project>

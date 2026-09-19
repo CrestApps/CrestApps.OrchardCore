@@ -27,6 +27,8 @@ public sealed class OperationAuthorizationHandlerTests
     {
         { ContactCenterOperations.SuperviseQueue.Name, ContactCenterPermissions.MonitorContactCenter.Name },
         { ContactCenterOperations.TransferExternally.Name, ContactCenterPermissions.TransferExternally.Name },
+        { ContactCenterOperations.TakeAgentWork.Name, ContactCenterPermissions.SignIntoQueues.Name },
+        { ContactCenterOperations.MonitorContactCenter.Name, ContactCenterPermissions.MonitorContactCenter.Name },
     };
 
     public static TheoryData<string, string> SmsPortalMappings => new()

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 
-namespace CrestApps.OrchardCore.ContactCenter.Services;
+namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <summary>
 /// Tracks tenant-local Contact Center hub connections so feature disable can abort and drain them.

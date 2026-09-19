@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.SignalR.Core;
 using Microsoft.AspNetCore.SignalR;
 using Moq;
 using OrchardCore.Environment.Shell;
+using CrestApps.OrchardCore.ContactCenter.Core.Hubs;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

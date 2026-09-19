@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Users;
+using CrestApps.OrchardCore.ContactCenter.Core;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -333,9 +334,9 @@ public sealed class ContactCenterAdminFormOptionsProvider
 
     internal async Task PopulateAgentEntitlementEditorAsync(AgentEntitlementViewModel model)
     {
-        model.AllowedQueueIds = ContactCenterFormHelpers.NormalizeList(model.AllowedQueueIds);
+        model.AllowedQueueIds = AgentMembershipIds.Normalize(model.AllowedQueueIds);
         model.QueueOptions = await GetQueueOptionsAsync(model.AllowedQueueIds);
-        model.AllowedCampaignIds = ContactCenterFormHelpers.NormalizeList(model.AllowedCampaignIds);
+        model.AllowedCampaignIds = AgentMembershipIds.Normalize(model.AllowedCampaignIds);
         model.CampaignOptions = await GetCampaignOptionsAsync(model.AllowedCampaignIds);
         model.SkillOptions = await GetSkillOptionsAsync(model.SkillProficiencies.Select(skill => skill?.SkillId));
 
@@ -354,7 +355,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
 
     internal async Task<IList<string>> FilterExistingQueueIdsAsync(IEnumerable<string> queueIds)
     {
-        var normalized = ContactCenterFormHelpers.NormalizeList(queueIds);
+        var normalized = AgentMembershipIds.Normalize(queueIds);
         var existing = new HashSet<string>(
             (await _queueManager.GetAllAsync()).Select(queue => queue.ItemId),
             StringComparer.OrdinalIgnoreCase);
@@ -364,7 +365,7 @@ public sealed class ContactCenterAdminFormOptionsProvider
 
     internal async Task<IList<string>> FilterExistingCampaignIdsAsync(IEnumerable<string> campaignIds)
     {
-        var normalized = ContactCenterFormHelpers.NormalizeList(campaignIds);
+        var normalized = AgentMembershipIds.Normalize(campaignIds);
         var existing = new HashSet<string>(
             (await _campaignManager.GetAllAsync()).Select(campaign => campaign.ItemId),
             StringComparer.OrdinalIgnoreCase);

@@ -3,6 +3,10 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.ContactCenter.Core
 {
+    public static class AgentMembershipIds
+    {
+        public static System.Collections.Generic.IList<string> Normalize(System.Collections.Generic.IEnumerable<string> values) { }
+    }
     public static class AgentOfferKindHelper
     {
         public static CrestApps.OrchardCore.ContactCenter.Models.AgentOfferKind FromActivitySource(string activitySource) { }
@@ -106,6 +110,47 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks
         public string HazardMessage { get; }
         public bool IsHazardous { get; }
         public void Record(string hazardMessage) { }
+    }
+}
+namespace CrestApps.OrchardCore.ContactCenter.Core.Hubs
+{
+    public abstract class ContactCenterHubBase : Microsoft.AspNetCore.SignalR.Hub<CrestApps.OrchardCore.ContactCenter.Core.Hubs.IContactCenterHubClient>
+    {
+        public const string SupervisorsGroup = "cc:supervisors";
+        protected ContactCenterHubBase(Microsoft.Extensions.Logging.ILogger logger, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.OrchardCore.ContactCenter.IContactCenterFeatureWorkManager workManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterHubConnectionRegistry connectionRegistry, CrestApps.Core.Hosting.ITenantAccessor tenantAccessor) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.PendingIncomingCallOffer> GetCurrentIncomingOffer() { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentDesktopSnapshot> GetSnapshot() { }
+        public System.Threading.Tasks.Task Heartbeat() { }
+        public override System.Threading.Tasks.Task OnConnectedAsync() { }
+        public override System.Threading.Tasks.Task OnDisconnectedAsync(System.Exception exception) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentDesktopSnapshot> SetPresence(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus status, string reason) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentDesktopSnapshot> SignIn(System.Collections.Generic.IList<string> queueIds, System.Collections.Generic.IList<string> campaignIds) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentDesktopSnapshot> SignOut() { }
+        public System.Threading.Tasks.Task<int> SyncQueuedVoiceWork() { }
+        public System.Threading.Tasks.Task UnwatchQueue(string queueId) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentDesktopSnapshot> UpdateMemberships(System.Collections.Generic.IList<string> queueIds, System.Collections.Generic.IList<string> campaignIds) { }
+        public System.Threading.Tasks.Task WatchQueue(string queueId) { }
+        public static string QueueGroup(string queueId) { }
+    }
+    public sealed class ContactCenterHubScopeContext
+    {
+        public ContactCenterHubScopeContext(Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionService sessionService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService, CrestApps.Core.Security.IUserDirectory userDirectory, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedVoiceWorkOfferService queuedVoiceWorkOfferService, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IPendingIncomingCallOfferService> pendingIncomingCallOfferServices) { }
+        public Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Services.IPendingIncomingCallOfferService PendingIncomingCallOfferService { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager PresenceManager { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Services.IQueuedVoiceWorkOfferService QueuedVoiceWorkOfferService { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionService SessionService { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorQueueAuthorizationService SupervisorQueueAuthorizationService { get; }
+        public CrestApps.Core.Security.IUserDirectory UserDirectory { get; }
+    }
+    public interface IContactCenterHubClient
+    {
+        System.Threading.Tasks.Task MembershipChanged();
+        System.Threading.Tasks.Task OfferReceived(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferNotification notification);
+        System.Threading.Tasks.Task OfferRevoked(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferRevokedNotification notification);
+        System.Threading.Tasks.Task PresenceChanged(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceNotification notification);
+        System.Threading.Tasks.Task QueueStatsChanged(CrestApps.OrchardCore.ContactCenter.Models.QueueStatsNotification notification);
+        System.Threading.Tasks.Task RecordingStateChanged(CrestApps.OrchardCore.ContactCenter.Models.RecordingStateNotification notification);
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
@@ -2567,6 +2612,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         public ContactCenterEventDispatchContext(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterOutbox outbox, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterEventDispatchContext> logger) { }
         public System.Threading.Tasks.Task DispatchAsync(string eventId) { }
+    }
+    public sealed class ContactCenterHubConnectionRegistry
+    {
+        public ContactCenterHubConnectionRegistry() { }
+        public void Activate() { }
+        public void Quiesce() { }
+        public bool Register(Microsoft.AspNetCore.SignalR.HubCallerContext context) { }
+        public void Unregister(string connectionId) { }
     }
     public static class ContactCenterMetricDateKey
     {
