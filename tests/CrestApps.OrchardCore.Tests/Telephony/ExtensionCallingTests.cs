@@ -1,12 +1,10 @@
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Core.Models;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Models;
 using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
 using CrestApps.Core.Telephony;
-using CrestApps.Core.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;

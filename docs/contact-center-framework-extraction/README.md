@@ -60,6 +60,12 @@ Out of scope: AI suite (already extracted), CRM content types and Orchard conten
 14. [appendix-c-startup-registration-inventory.md](appendix-c-startup-registration-inventory.md) - generated: every registration in every in-scope Orchard `Startup` (363 lines across 67 startup classes) with a heuristic stay/store/framework/map tag to confirm in Phase 0.
 15. [appendix-d-test-coverage-gaps.md](appendix-d-test-coverage-gaps.md) - generated: the 356 of 570 moving classes with no same-named test file; the input to the Phase 0 coverage audit.
 
+Written while the work happens, not before it:
+
+- [phase-0-baseline.md](phase-0-baseline.md) - the measured starting point Phase 0 was judged against.
+- [phase-0-progress.md](phase-0-progress.md) - what Phase 0 landed, and what it deliberately left to Phase 1.
+- [phase-1-progress.md](phase-1-progress.md) - what Phase 1 has landed, and the decisions made along the way that the plan did not anticipate.
+
 ## Non-negotiables
 
 1. **No Orchard Core in the framework.** No `CrestApps.Core.*` project may reference an `OrchardCore.*` package or a `CrestApps.OrchardCore.*` project. This is enforced by a grep gate and by the Phase 1 test project, which references only framework projects.

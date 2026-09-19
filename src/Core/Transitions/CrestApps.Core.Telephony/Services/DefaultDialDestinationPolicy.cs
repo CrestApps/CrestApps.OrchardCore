@@ -3,7 +3,7 @@ using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.Options;
 using CrestApps.Core.Telephony;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// The default <see cref="IDialDestinationPolicy"/>. It refuses emergency short codes and premium-rate numbers,

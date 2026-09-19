@@ -4,7 +4,7 @@ using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;

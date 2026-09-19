@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Resolves a dialed internal extension number to the on-platform user it rings. This is the provider-neutral

@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CrestApps.Core.Telephony.Services;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// The default <see cref="ITransferTargetPolicy"/> for a deployment with no curated destination catalog: the

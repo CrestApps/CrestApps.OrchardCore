@@ -3,7 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using YesSql;
 using CrestApps.Core.Telephony.Models;
 

@@ -2,7 +2,7 @@ using CrestApps.Core.Hosting.Background;
 using Microsoft.Extensions.Logging;
 using CrestApps.Core.Telephony;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Periodically reconciles in-progress telephony interactions with provider-authoritative state.

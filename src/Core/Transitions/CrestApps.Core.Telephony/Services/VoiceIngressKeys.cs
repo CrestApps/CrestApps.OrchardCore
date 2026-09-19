@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Builds the keys that serialize and de-duplicate one provider call stream. Every consumer of the same

@@ -1,5 +1,5 @@
 using CrestApps.Core.Telephony.Services;
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Default <see cref="IVoiceAgentMediaProviderResolver"/>.

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 

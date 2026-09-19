@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;

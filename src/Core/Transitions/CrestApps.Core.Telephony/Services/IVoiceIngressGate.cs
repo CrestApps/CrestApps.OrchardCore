@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Serializes every normalized voice event for one provider call stream behind a single distributed lock.

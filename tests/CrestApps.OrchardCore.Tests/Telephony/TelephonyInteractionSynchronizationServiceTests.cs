@@ -1,10 +1,9 @@
 using CrestApps.Core.Locking;
 using CrestApps.Core.SignalR;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Hubs;
-using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;

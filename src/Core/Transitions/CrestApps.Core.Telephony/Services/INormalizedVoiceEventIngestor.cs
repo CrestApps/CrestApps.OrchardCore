@@ -1,6 +1,6 @@
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Ingests normalized provider voice events through a single hardened path and fans them out to every

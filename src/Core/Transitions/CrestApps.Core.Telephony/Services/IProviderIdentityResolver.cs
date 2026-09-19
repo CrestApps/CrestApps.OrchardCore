@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Resolves a provider technical name or alias to its canonical technical identity. Canonicalization

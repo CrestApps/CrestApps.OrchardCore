@@ -201,7 +201,8 @@ public sealed class TelephonyCommandExecutorTests
             repositoryRoot,
             "src",
             "Core",
-            "CrestApps.OrchardCore.Telephony.Core",
+            "Transitions",
+            "CrestApps.Core.Telephony",
             "Hubs",
             "TelephonyHubBase.cs"));
         var executeStart = source.IndexOf(

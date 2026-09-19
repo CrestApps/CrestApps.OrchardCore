@@ -6,7 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

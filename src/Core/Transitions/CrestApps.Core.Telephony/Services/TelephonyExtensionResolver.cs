@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Default <see cref="ITelephonyExtensionResolver"/> backed by the extension registry.

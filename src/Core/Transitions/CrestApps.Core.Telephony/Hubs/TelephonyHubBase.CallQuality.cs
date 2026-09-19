@@ -2,7 +2,7 @@ using CrestApps.Core.Support;
 using Microsoft.Extensions.Logging;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Hubs;
+namespace CrestApps.Core.Telephony.Hubs;
 
 /// <summary>
 /// The media-quality half of the soft phone hub: the browser's own measurements of the live peer connection,

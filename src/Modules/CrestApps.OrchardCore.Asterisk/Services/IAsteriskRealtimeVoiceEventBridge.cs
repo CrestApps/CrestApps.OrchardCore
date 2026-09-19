@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Asterisk.Services;
 /// never reaches the normalized ingestion path. Only orchestration concerns may do that — answering and
 /// parking a first-seen inbound channel, or releasing a module-originated agent leg. A consumer that merely
 /// wants to observe call state must implement
-/// <see cref="CrestApps.OrchardCore.Telephony.Core.Services.INormalizedVoiceEventHandler"/> instead, because
+/// <see cref="CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler"/> instead, because
 /// absorbing the event there would silently desynchronize every other projection of the same call.
 /// </para>
 /// </summary>

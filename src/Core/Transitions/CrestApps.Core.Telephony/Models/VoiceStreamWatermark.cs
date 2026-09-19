@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Telephony.Core.Models;
+namespace CrestApps.Core.Telephony.Models;
 
 /// <summary>
 /// Describes what a consumer has already applied for one provider call stream. The ingress ordering rules

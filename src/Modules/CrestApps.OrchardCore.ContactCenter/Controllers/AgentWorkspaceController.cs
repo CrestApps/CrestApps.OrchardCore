@@ -5,7 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Users;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;

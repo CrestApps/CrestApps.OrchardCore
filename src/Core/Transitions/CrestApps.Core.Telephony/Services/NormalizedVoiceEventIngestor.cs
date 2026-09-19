@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="INormalizedVoiceEventIngestor"/>.

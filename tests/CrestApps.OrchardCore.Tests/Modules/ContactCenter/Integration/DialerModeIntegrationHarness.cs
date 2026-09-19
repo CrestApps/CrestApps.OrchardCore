@@ -9,7 +9,6 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;

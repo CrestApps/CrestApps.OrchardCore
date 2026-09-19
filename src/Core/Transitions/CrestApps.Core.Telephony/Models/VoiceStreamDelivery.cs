@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Telephony.Core.Models;
+namespace CrestApps.Core.Telephony.Models;
 
 /// <summary>
 /// Describes one normalized provider delivery as the ingress ordering rules see it. It carries only what

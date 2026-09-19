@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
 using Microsoft.Extensions.Time.Testing;
 using Moq;

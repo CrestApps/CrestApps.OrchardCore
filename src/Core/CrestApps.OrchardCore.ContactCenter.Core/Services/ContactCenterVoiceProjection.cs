@@ -1,5 +1,5 @@
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.Logging;
 using CrestApps.Core.Telephony.Models;
 

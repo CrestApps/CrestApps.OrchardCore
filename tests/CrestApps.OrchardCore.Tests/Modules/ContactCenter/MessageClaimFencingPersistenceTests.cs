@@ -4,7 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.Logging.Abstractions;

@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 

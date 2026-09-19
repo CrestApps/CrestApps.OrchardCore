@@ -1,6 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.Core.SignalR;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;

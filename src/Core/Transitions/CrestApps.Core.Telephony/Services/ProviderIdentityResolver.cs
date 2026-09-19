@@ -1,5 +1,5 @@
 using CrestApps.Core.Telephony;
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Provides the default <see cref="IProviderIdentityResolver"/> implementation. Canonical identities and

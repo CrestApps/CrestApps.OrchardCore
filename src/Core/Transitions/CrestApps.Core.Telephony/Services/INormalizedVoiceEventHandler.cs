@@ -1,6 +1,6 @@
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Projects a normalized provider voice event onto one consumer's own state.

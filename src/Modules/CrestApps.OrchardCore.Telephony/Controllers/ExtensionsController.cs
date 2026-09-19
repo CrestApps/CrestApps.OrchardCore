@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Core.Models;
-using CrestApps.OrchardCore.Telephony.Core.Models;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;

@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 

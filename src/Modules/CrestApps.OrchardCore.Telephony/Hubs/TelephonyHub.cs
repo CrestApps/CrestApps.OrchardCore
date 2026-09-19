@@ -1,5 +1,5 @@
 using CrestApps.Core.Hosting;
-using CrestApps.OrchardCore.Telephony.Core.Hubs;
+using CrestApps.Core.Telephony.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Localization;

@@ -3,8 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Telephony.Core.Models;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.Core.Telephony.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -51,17 +51,23 @@ public sealed partial class VoiceIngressLayeringArchitectureTests
     [Fact]
     public void TelephonyCore_DeclaresNoContactCenterProjectReference()
     {
-        // Arrange
-        var project = Path.Combine(
-            FindRepositoryRoot(),
-            "src",
-            "Core",
-            "CrestApps.OrchardCore.Telephony.Core",
-            "CrestApps.OrchardCore.Telephony.Core.csproj");
+        // Arrange: both halves of the telephony primitive are walked. The mechanics live in the framework
+        // project, and the Orchard project that remains holds the YesSql glue for them; a Contact Center
+        // reference in either one would put the Contact Center back underneath telephony ingestion.
+        var repositoryRoot = FindRepositoryRoot();
+        var projects = new[]
+        {
+            Path.Combine(repositoryRoot, "src", "Core", "Transitions", "CrestApps.Core.Telephony", "CrestApps.Core.Telephony.csproj"),
+            Path.Combine(repositoryRoot, "src", "Core", "CrestApps.OrchardCore.Telephony.Core", "CrestApps.OrchardCore.Telephony.Core.csproj"),
+        };
 
         // Act
         var closure = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        CollectProjectClosure(project, closure);
+
+        foreach (var project in projects)
+        {
+            CollectProjectClosure(project, closure);
+        }
 
         var violations = closure
             .Keys
@@ -109,11 +115,11 @@ public sealed partial class VoiceIngressLayeringArchitectureTests
             .ToArray();
 
         // Assert
-        Assert.Contains("CrestApps.OrchardCore.Telephony.Core.Services.IProviderIdentityResolver", publicTypes);
-        Assert.Contains("CrestApps.OrchardCore.Telephony.Core.Services.ProviderIdentityResolver", publicTypes);
-        Assert.Contains("CrestApps.OrchardCore.Telephony.Core.Services.VoiceIngressKeys", publicTypes);
-        Assert.Contains("CrestApps.OrchardCore.Telephony.Core.Services.VoiceStreamOrdering", publicTypes);
-        Assert.Contains("CrestApps.OrchardCore.Telephony.Core.Models.VoiceCallLifecyclePhase", publicTypes);
+        Assert.Contains("CrestApps.Core.Telephony.Services.IProviderIdentityResolver", publicTypes);
+        Assert.Contains("CrestApps.Core.Telephony.Services.ProviderIdentityResolver", publicTypes);
+        Assert.Contains("CrestApps.Core.Telephony.Services.VoiceIngressKeys", publicTypes);
+        Assert.Contains("CrestApps.Core.Telephony.Services.VoiceStreamOrdering", publicTypes);
+        Assert.Contains("CrestApps.Core.Telephony.Models.VoiceCallLifecyclePhase", publicTypes);
     }
 
     [Fact]

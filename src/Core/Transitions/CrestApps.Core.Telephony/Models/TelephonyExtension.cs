@@ -1,7 +1,7 @@
 using CrestApps.Core;
 using CrestApps.Core.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Models;
+namespace CrestApps.Core.Telephony.Models;
 
 /// <summary>
 /// Represents an internal extension: a stable, tenant-scoped number that maps to an on-platform user. It is the

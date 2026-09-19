@@ -1,7 +1,7 @@
 using CrestApps.Core.Locking;
 
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Provides the default <see cref="IVoiceIngressGate"/> implementation on top of the tenant-scoped

@@ -17,7 +17,7 @@ using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection.Extensions;

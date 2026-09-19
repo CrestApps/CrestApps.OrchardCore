@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.ContactCenter.Indexes;

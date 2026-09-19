@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Telephony.Core.Models;
+namespace CrestApps.Core.Telephony.Models;
 
 /// <summary>
 /// Describes how far a call has progressed through its lifecycle, independently of any consumer's own

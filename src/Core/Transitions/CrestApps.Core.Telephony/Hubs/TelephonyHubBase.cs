@@ -10,11 +10,10 @@ using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Hubs;
+namespace CrestApps.Core.Telephony.Hubs;
 
 /// <summary>
 /// The soft phone, independent of the host it runs in.
@@ -1277,7 +1276,7 @@ public abstract partial class TelephonyHubBase : Hub<ITelephonyClient>
 
             var interaction = new TelephonyInteraction
             {
-                InteractionId = IdGenerator.GenerateId(),
+                InteractionId = IdentifierGenerator.Generate(),
                 CallId = call.CallId,
                 ProviderName = call.ProviderName,
                 UserId = userId,

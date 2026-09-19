@@ -26,6 +26,7 @@ public sealed class FileSizeRatchetTests
         Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),
         Path.Combine("Core", "CrestApps.OrchardCore.Telephony.Core"),
+        Path.Combine("Core", "Transitions", "CrestApps.Core.Telephony"),
         Path.Combine("Core", "CrestApps.OrchardCore.Telnyx.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telnyx"),
         Path.Combine("Core", "CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core"),
@@ -40,10 +41,10 @@ public sealed class FileSizeRatchetTests
     /// </summary>
     private static readonly Dictionary<string, int> _existing = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["src/Core/CrestApps.OrchardCore.Telephony.Core/Hubs/TelephonyHubBase.cs"] = 1340,
+        ["src/Core/Transitions/CrestApps.Core.Telephony/Hubs/TelephonyHubBase.cs"] = 1339,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1317,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 1019,
-        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 975,
+        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 974,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Controllers/AdminController.cs"] = 955,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/AgentWorkforceReportProvider.cs"] = 833,
     };

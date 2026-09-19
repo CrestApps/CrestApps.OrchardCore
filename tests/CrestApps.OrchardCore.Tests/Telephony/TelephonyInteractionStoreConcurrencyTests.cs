@@ -1,9 +1,8 @@
 using System.Data.Common;
 using CrestApps.OrchardCore.Telephony;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony.Indexes;
 using CrestApps.OrchardCore.Telephony.Migrations;
-using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
 using YesSql;
 using YesSql.Provider.Sqlite;

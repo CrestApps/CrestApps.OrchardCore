@@ -73,3 +73,14 @@ namespace CrestApps.Core.SignalR
         public static string ForUser(string tenantName, string userId) { }
     }
 }
+namespace CrestApps.Core.Support
+{
+    public static class IdentifierGenerator
+    {
+        public static string Generate() { }
+    }
+    public static class SanitizedLoggingExtensions
+    {
+        public static string SanitizeLogValue(this string value) { }
+    }
+}

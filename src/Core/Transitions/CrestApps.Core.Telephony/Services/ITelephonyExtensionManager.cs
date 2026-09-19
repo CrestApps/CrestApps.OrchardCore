@@ -1,7 +1,7 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Telephony.Core.Models;
+using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Defines the management contract for internal telephony extensions.

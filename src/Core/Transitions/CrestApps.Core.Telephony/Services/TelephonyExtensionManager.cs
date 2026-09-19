@@ -1,8 +1,8 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Telephony.Core.Models;
+using CrestApps.Core.Telephony.Models;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.OrchardCore.Telephony.Core.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="ITelephonyExtensionManager"/>.

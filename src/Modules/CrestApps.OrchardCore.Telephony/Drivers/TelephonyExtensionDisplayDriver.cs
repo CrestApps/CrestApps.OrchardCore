@@ -1,5 +1,5 @@
-using CrestApps.OrchardCore.Telephony.Core.Models;
-using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.Core.Telephony.Models;
+using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
