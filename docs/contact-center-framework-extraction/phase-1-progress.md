@@ -21,7 +21,7 @@ a reviewed diff of every approval baseline that moved.
 | W3.3 (second half) | `70820d96` | The three services and the dial endpoint that pushed to the soft phone, behind a notifier contract. |
 | W3.3 (rest), W3.4 | `9a049eb2` | The token store, the provider resolver and the authentication service: the last module services that were not Orchard's own. |
 | W3.6, W3.7 | `5bca9fe8` | The store package: the shared catalog base, the telephony indexes, their schema migrations and their stores. The Orchard `Telephony.Core` project is gone, and the documents it wrote are migrated to the names that replaced it. |
-| W3.8 | this commit | The `AddCoreTelephony*` methods, and the Orchard startup reduced to calling them plus its own glue. |
+| W3.8 | `83c7b18c` | The `AddCoreTelephony*` methods, and the Orchard startup reduced to calling them plus its own glue. |
 
 ## Decisions the plan did not make
 
@@ -155,6 +155,18 @@ them.
 
 The rewire itself changed no registration: the dependency-injection snapshot and the resolution-order
 tests are both unchanged, which is what makes it a rewire rather than a rewrite.
+
+### The telephony tests did not move, and should move with everything else (W3.9)
+
+W3 asks for seventeen telephony test files to move into the framework test project. They share their
+doubles with the rest of the suite: `RecordingTelephonyProvider` and `PassThroughStringLocalizer`
+alone are used by twenty-six files across the Orchard test project, most of which stay. Moving a
+handful of tests now means either duplicating those doubles or having one test project reference
+another, and both are worse than the tests sitting where they are for another workstream.
+
+W12 exists to consolidate the test projects. That is where the doubles can move once, with everything
+that uses them. The framework test project already references every framework project and carries the
+same packages, so nothing about that move is blocked.
 
 ## Guards that had to be repointed (W3.2)
 
