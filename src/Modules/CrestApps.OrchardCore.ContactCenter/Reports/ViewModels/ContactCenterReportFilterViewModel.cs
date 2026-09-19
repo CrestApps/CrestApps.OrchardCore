@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.ViewModels;

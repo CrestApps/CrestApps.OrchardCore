@@ -1,8 +1,8 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;

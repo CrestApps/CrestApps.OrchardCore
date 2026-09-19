@@ -1,5 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;

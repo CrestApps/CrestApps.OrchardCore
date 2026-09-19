@@ -1,5 +1,5 @@
-﻿using System.Text;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.Core.Omnichannel.Models;
+using System.Text;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 

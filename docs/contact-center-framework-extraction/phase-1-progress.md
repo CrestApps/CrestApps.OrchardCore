@@ -22,6 +22,7 @@ a reviewed diff of every approval baseline that moved.
 | W3.3 (rest), W3.4 | `9a049eb2` | The token store, the provider resolver and the authentication service: the last module services that were not Orchard's own. |
 | W3.6, W3.7 | `5bca9fe8` | The store package: the shared catalog base, the telephony indexes, their schema migrations and their stores. The Orchard `Telephony.Core` project is gone, and the documents it wrote are migrated to the names that replaced it. |
 | W3.8 | `83c7b18c` | The `AddCoreTelephony*` methods, and the Orchard startup reduced to calling them plus its own glue. |
+| W4.1 (first half) | this commit | The 44 Omnichannel models that name no content type, into `CrestApps.Core.Omnichannel.Abstractions`. |
 
 ## Decisions the plan did not make
 
@@ -167,6 +168,19 @@ another, and both are worse than the tests sitting where they are for another wo
 W12 exists to consolidate the test projects. That is where the doubles can move once, with everything
 that uses them. The framework test project already references every framework project and carries the
 same packages, so nothing about that move is blocked.
+
+### The Omnichannel models split along the content-model line, not the folder line (W4.1)
+
+Forty-four of the models in `Omnichannel.Core/Models` name no host type at all and moved. Ten did not,
+and the line between them is the one S11 draws: `OmnichannelActivity` carries a `ContentItem Subject`
+and resolves a contact from a `ContentItem`; `OmnichannelContactPart`, `OmnichannelSubjectPart` and
+their settings are content parts; and six more models are typed in terms of those. They wait for the
+CRM contracts, which is what W4.0 is for.
+
+Three enums — `ActivityStatus`, `ActivityUrgencyLevel`, `ActivityInteractionType` — were declared
+at the bottom of `OmnichannelActivity.cs` and are used across every pillar. They are now files of
+their own in the framework, so the whole suite did not have to wait for the one model that cannot
+move yet.
 
 ## Guards that had to be repointed (W3.2)
 

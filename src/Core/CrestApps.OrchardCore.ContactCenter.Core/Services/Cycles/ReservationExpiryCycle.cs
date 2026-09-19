@@ -1,8 +1,8 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;

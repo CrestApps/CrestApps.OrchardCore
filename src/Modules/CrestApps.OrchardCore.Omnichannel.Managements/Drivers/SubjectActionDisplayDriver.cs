@@ -1,5 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;

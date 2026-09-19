@@ -1,5 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Security.Claims;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;

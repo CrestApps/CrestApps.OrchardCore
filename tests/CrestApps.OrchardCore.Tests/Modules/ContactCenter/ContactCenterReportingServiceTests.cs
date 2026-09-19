@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -5,7 +6,6 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

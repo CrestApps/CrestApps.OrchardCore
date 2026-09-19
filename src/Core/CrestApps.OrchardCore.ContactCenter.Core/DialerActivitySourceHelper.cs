@@ -1,5 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core;
 

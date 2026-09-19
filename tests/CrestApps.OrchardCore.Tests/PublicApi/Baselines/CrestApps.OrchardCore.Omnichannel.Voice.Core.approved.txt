@@ -158,10 +158,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         public const string CompletedWithoutSummaryNote = "Automated AI voice call completed.";
         public const string NoConversationNote = "The automated call produced no conversation: nothing was said by either side.";
-        public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, string modelChoiceId) { }
+        public static CrestApps.Core.Omnichannel.Models.OmnichannelDisposition ChooseDisposition(System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.OmnichannelDisposition> choices, string modelChoiceId) { }
         public static bool HasConversation(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
         public static string ResolveNotes(bool hasConversation, string modelSummary) { }
-        public static System.Collections.Generic.IReadOnlyList<string> ResolveSubjectDispositionIds(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
+        public static System.Collections.Generic.IReadOnlyList<string> ResolveSubjectDispositionIds(System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.SubjectAction> subjectActions, string subjectContentType) { }
         public static bool ShouldConclude(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
     }
     public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn

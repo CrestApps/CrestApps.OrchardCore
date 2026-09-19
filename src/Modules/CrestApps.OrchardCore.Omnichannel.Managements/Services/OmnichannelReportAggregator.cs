@@ -1,5 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Models.Reports;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Services;

@@ -1,7 +1,7 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Data.SqlTypes;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Reports;
 using YesSql;
 

@@ -1,5 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;

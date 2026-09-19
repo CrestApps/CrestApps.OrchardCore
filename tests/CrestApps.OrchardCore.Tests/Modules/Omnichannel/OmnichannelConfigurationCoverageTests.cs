@@ -1,3 +1,5 @@
+using System.Reflection;
+using CrestApps.Core.Omnichannel.Models;
 using System.Text.RegularExpressions;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -173,8 +175,18 @@ public sealed class OmnichannelConfigurationCoverageTests
 
     private static Type[] GetEntities()
     {
-        return typeof(OmnichannelDisposition).Assembly
-            .GetTypes()
+        // The omnichannel entities are split across two assemblies while the extraction is in progress: the
+        // ones that name no content type have moved to the framework, and the ones that still do have not.
+        // Scanning only one of them would quietly stop covering the other half.
+        Assembly[] assemblies =
+        [
+            typeof(OmnichannelDisposition).Assembly,
+            typeof(OmnichannelActivity).Assembly,
+        ];
+
+        return assemblies
+            .Distinct()
+            .SelectMany(assembly => assembly.GetTypes())
             .Where(type => type.IsClass
                 && !type.IsAbstract
                 && type.IsPublic

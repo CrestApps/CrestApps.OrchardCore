@@ -1,9 +1,9 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Security.Claims;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Authorization;

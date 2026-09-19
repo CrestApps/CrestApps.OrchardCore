@@ -1,8 +1,8 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.Extensions.DependencyInjection;

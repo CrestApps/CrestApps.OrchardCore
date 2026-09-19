@@ -1,7 +1,7 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;

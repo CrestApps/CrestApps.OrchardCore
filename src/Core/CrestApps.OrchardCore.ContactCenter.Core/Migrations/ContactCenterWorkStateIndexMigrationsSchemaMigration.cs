@@ -1,6 +1,6 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;

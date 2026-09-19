@@ -1,5 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+﻿using CrestApps.Core.Omnichannel.Models;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 

@@ -1,9 +1,9 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;

@@ -1,8 +1,8 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.ComponentModel.DataAnnotations;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 

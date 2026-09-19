@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.Support;
+﻿using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;

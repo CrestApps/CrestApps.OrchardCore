@@ -1,9 +1,9 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;

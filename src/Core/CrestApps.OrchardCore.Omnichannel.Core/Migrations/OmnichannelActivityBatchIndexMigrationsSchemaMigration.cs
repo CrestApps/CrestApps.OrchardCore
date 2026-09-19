@@ -1,7 +1,7 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Data.Common;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;

@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Locking;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;

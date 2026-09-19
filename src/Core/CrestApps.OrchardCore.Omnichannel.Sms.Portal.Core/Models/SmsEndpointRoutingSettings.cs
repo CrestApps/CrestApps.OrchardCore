@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;

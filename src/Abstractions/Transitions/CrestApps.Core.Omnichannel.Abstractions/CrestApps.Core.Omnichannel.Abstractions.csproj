@@ -14,6 +14,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="CrestApps.Core.Abstractions" />
+    <PackageReference Include="System.Memory.Data" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\CrestApps.Core.PhoneNumbers.Abstractions\CrestApps.Core.PhoneNumbers.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.Core.Hosting.Abstractions\CrestApps.Core.Hosting.Abstractions.csproj" />
   </ItemGroup>

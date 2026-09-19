@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Models;
 using OrchardCore.ContentManagement;
 
@@ -375,45 +376,4 @@ public sealed class OmnichannelActivity : CatalogItem
 
         return true;
     }
-}
-
-/// <summary>
-/// Specifies the activity interaction type options.
-/// </summary>
-public enum ActivityInteractionType
-{
-    Manual,
-    Automated,
-}
-
-/// <summary>
-/// Specifies the activity status options.
-/// </summary>
-public enum ActivityStatus
-{
-    NotStated,
-    AwaitingAgentResponse,
-    AwaitingCustomerAnswer,
-    Completed,
-    Pending,
-    Scheduled,
-    Reserved,
-    Dialing,
-    InProgress,
-    Failed,
-    Cancelled,
-    Purged,
-}
-
-/// <summary>
-/// Specifies the activity urgency level options.
-/// </summary>
-public enum ActivityUrgencyLevel
-{
-    Normal = 0,
-    VeryLow = 1,
-    Low = 2,
-    Medium = 3,
-    High = 4,
-    VeryHigh = 5,
 }

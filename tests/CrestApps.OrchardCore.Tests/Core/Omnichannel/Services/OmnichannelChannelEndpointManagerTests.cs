@@ -1,6 +1,6 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.PhoneNumbers;
 using Microsoft.Extensions.Logging.Abstractions;

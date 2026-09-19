@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Linq.Expressions;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;

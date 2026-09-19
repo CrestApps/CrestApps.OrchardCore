@@ -1,6 +1,6 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using CrestApps.OrchardCore.Users;
 using Microsoft.Extensions.Localization;

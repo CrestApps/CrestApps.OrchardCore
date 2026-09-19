@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -13,7 +14,6 @@ using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,6 +1,6 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Handlers;
 using CrestApps.Core.PhoneNumbers;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;

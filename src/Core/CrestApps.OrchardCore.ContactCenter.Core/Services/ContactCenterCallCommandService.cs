@@ -1,7 +1,7 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore;
 using OrchardCore.Modules;

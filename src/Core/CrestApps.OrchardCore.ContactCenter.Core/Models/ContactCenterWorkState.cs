@@ -1,8 +1,8 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 

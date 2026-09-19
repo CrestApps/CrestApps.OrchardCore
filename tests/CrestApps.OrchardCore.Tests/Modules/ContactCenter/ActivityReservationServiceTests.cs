@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 #nullable enable annotations

@@ -1,5 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Data.YesSql.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 

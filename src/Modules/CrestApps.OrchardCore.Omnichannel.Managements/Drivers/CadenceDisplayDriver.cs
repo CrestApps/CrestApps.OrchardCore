@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;

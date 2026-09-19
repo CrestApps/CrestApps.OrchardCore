@@ -1,8 +1,8 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Data.Common;
 using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 using CrestApps.OrchardCore.Tests.Migrations;
 using CrestApps.OrchardCore.Tests.Utilities;

@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Text.Json;
 using CrestApps.Core.Locking;
 using CrestApps.Core.Support;

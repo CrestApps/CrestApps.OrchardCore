@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Tests.Doubles;
+﻿using CrestApps.Core.Omnichannel.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;

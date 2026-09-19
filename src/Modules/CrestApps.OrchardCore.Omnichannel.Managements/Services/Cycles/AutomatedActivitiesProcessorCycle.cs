@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;

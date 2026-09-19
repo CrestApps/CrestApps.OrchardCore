@@ -1,10 +1,10 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Hubs;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;

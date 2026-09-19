@@ -1,7 +1,7 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Text.Json;
 using CrestApps.OrchardCore.Dialpad.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Telnyx.Services;

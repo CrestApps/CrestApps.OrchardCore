@@ -288,7 +288,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
     }
     public interface ISmsInboundProcessor
     {
-        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsConversation> ProcessAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsConversation> ProcessAsync(CrestApps.Core.Omnichannel.Models.OmnichannelMessage message, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ISmsInboundRouter
     {
@@ -340,7 +340,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
     {
         public SmsAgentHandoffService(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.ISmsRealTimeNotifier notifier, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsQueuePolicyReader queuePolicyReader, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationRouter router, YesSql.ISession session, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsAgentHandoffService> logger) { }
         public bool CanHandle(string channel) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffResult> RequestHandoffAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelHandoffResult> RequestHandoffAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class SmsBroadcastCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsBroadcastCycle
     {
@@ -463,8 +463,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
                     System.TimeProvider timeProvider,
                     Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsInboundProcessor> logger) { }
-        public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelEvent omnichannelEvent, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsConversation> ProcessAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task HandleAsync(CrestApps.Core.Omnichannel.Models.OmnichannelEvent omnichannelEvent, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsConversation> ProcessAsync(CrestApps.Core.Omnichannel.Models.OmnichannelMessage message, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class SmsKeywordPolicy
     {
@@ -508,11 +508,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
         public SmsRoutingContext() { }
         public CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsInboundRouter ClaimedBy { get; set; }
         public required CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsConversation Conversation { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint Endpoint { get; init; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint Endpoint { get; init; }
         public string ExcludeAgentId { get; set; }
         public bool IsNewConversation { get; init; }
         public int MaxReassignmentAttempts { get; init; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage Message { get; init; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelMessage Message { get; init; }
         public string TargetQueueId { get; init; }
         public CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsRoutingTrigger Trigger { get; init; }
     }
@@ -536,7 +536,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
     {
         public SmsSendResult() { }
         public string Error { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage Message { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelMessage Message { get; set; }
         public bool Succeeded { get; set; }
         public static CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsSendResult Failed(string error) { }
     }

@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 

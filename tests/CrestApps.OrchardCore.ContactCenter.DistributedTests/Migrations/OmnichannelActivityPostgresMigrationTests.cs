@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Data.Common;
 using System.Globalization;
 using CrestApps.OrchardCore.Omnichannel.Core;

@@ -322,7 +322,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public ContactCenterWorkStateIndex() { }
         public string ActivityItemId { get; set; }
         public string AssignedToId { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus AssignmentStatus { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus AssignmentStatus { get; set; }
         public long DocumentId { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
         public string ReservationId { get; set; }
@@ -1250,7 +1250,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string AssignedToUsername { get; set; }
         public System.DateTime? AssignedToUtc { get; set; }
         [System.Text.Json.Serialization.JsonInclude]
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus AssignmentStatus { get; }
+        public CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus AssignmentStatus { get; }
         public int Attempts { get; set; }
         public System.DateTime CreatedUtc { get; set; }
         public System.DateTime? ModifiedUtc { get; set; }
@@ -1259,10 +1259,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string ReservedById { get; set; }
         public string ReservedByUsername { get; set; }
         public System.DateTime? ReservedUtc { get; set; }
-        public void AdoptActivityAssignmentStatus(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus status) { }
-        public bool CanTransitionTo(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus status) { }
-        public CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState RestorePersistedAssignmentStatus(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus status) { }
-        public void TransitionTo(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus status) { }
+        public void AdoptActivityAssignmentStatus(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus status) { }
+        public bool CanTransitionTo(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus status) { }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState RestorePersistedAssignmentStatus(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus status) { }
+        public void TransitionTo(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus status) { }
     }
     public sealed class DialerAbandonmentEvaluation
     {
@@ -2038,7 +2038,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     }
     public static class WorkAssignmentLifecycle
     {
-        public static bool CanTransition(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus from, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityAssignmentStatus to) { }
+        public static bool CanTransition(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus from, CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus to) { }
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports
@@ -2139,7 +2139,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports
     {
         public ContactCenterReportCriteria() { }
         public string ActivitySource { get; set; }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityStatus? ActivityStatus { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityStatus? ActivityStatus { get; set; }
         public string AgentId { get; set; }
         public string CampaignGroupId { get; set; }
         public string CampaignId { get; set; }
@@ -2542,9 +2542,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class ContactCenterActivityDialerContributor : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor
     {
         public ContactCenterActivityDialerContributor(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileManager dialerProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService activityQueueService) { }
-        public System.Threading.Tasks.Task EnqueueAsync(string activityId, string campaignId, CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor> FindByIdAsync(string profileId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task EnqueueAsync(string activityId, string campaignId, CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor> FindByIdAsync(string profileId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterActivityWriter : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter
     {
@@ -2726,7 +2726,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterReportingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterReportingService
     {
-        public ContactCenterReportingService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueGroupManager queueGroupManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterReportingOptions> reportingOptions) { }
+        public ContactCenterReportingService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueGroupManager queueGroupManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterReportingOptions> reportingOptions) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.AgentProductivityReport> GetAgentProductivityAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.AgentProductivityReport> GetAgentProductivityAsync(System.DateTime fromUtc, System.DateTime toUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCriteria criteria, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.CallInsightsReport> GetCallInsightsAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }

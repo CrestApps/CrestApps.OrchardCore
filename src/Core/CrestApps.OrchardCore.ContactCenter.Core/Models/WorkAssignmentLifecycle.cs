@@ -1,5 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
 using System.Collections.Frozen;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 

@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core;
 using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
