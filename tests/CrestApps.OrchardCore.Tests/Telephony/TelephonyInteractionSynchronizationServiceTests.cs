@@ -1,18 +1,14 @@
 using CrestApps.Core.Locking;
-using CrestApps.Core.SignalR;
 using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
-using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
-using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
@@ -37,13 +33,10 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var (hubContext, client) = CreateHubContext();
-        client
-            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
-            .Returns(Task.CompletedTask);
+        var notifier = CreateNotifier();
         var service = CreateService(
             store,
-            hubContext,
+            notifier,
             new TelephonyCallLookupResult
             {
                 Succeeded = true,
@@ -57,10 +50,13 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         Assert.True(result.Succeeded);
         Assert.False(result.Found);
         store.Verify(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()), Times.Once);
-        client.Verify(
-            value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
-                call.CallId == "call-1" &&
-                call.State == CallState.Disconnected)),
+        notifier.Verify(
+            value => value.NotifyCallStateChangedAsync(
+                "user-1",
+                It.Is<TelephonyCall>(call =>
+                    call.CallId == "call-1" &&
+                    call.State == CallState.Disconnected),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -73,10 +69,10 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.FindActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(interaction);
-        var (hubContext, client) = CreateHubContext();
+        var notifier = CreateNotifier();
         var service = CreateService(
             store,
-            hubContext,
+            notifier,
             new TelephonyCallLookupResult
             {
                 Succeeded = true,
@@ -95,7 +91,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         // Assert
         Assert.True(result.Succeeded);
         Assert.True(result.Found);
-        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+        notifier.Verify(value => value.NotifyCallStateChangedAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -107,10 +103,10 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.FindActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(interaction);
-        var (hubContext, client) = CreateHubContext();
+        var notifier = CreateNotifier();
         var service = CreateService(
             store,
-            hubContext,
+            notifier,
             new TelephonyCallLookupResult
             {
                 Succeeded = false,
@@ -125,7 +121,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         Assert.False(result.Succeeded);
         Assert.Equal("Provider unavailable.", result.Error);
         store.Verify(value => value.DeleteAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Never);
-        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+        notifier.Verify(value => value.NotifyCallStateChangedAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -140,13 +136,10 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var (hubContext, client) = CreateHubContext();
-        client
-            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
-            .Returns(Task.CompletedTask);
+        var notifier = CreateNotifier();
         var service = CreateService(
             store,
-            hubContext,
+            notifier,
             new TelephonyCallLookupResult(),
             providerRegistered: false);
 
@@ -157,10 +150,13 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         Assert.True(result.Succeeded);
         Assert.False(result.Found);
         store.Verify(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()), Times.Once);
-        client.Verify(
-            value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
-                call.CallId == "call-1" &&
-                call.State == CallState.Disconnected)),
+        notifier.Verify(
+            value => value.NotifyCallStateChangedAsync(
+                "user-1",
+                It.Is<TelephonyCall>(call =>
+                    call.CallId == "call-1" &&
+                    call.State == CallState.Disconnected),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -174,10 +170,10 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.FindActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(interaction);
-        var (hubContext, client) = CreateHubContext();
+        var notifier = CreateNotifier();
         var service = CreateService(
             store,
-            hubContext,
+            notifier,
             new TelephonyCallLookupResult
             {
                 Succeeded = true,
@@ -191,7 +187,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         Assert.True(result.Succeeded);
         Assert.False(result.Found);
         store.Verify(value => value.DeleteAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Never);
-        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+        notifier.Verify(value => value.NotifyCallStateChangedAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -204,10 +200,10 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.GetActiveByUserAsync("user-1", It.IsAny<CancellationToken>()))
             .ReturnsAsync([firstInteraction, secondInteraction]);
-        var (hubContext, _) = CreateHubContext();
+        var notifier = CreateNotifier();
         var service = CreateService(
             store,
-            hubContext,
+            notifier,
             new TelephonyCallLookupResult
             {
                 Succeeded = true,
@@ -261,13 +257,10 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
             .Setup(value => value.GetActiveAsync("provider-1", It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([interaction]);
         store.SetupRetryingUpdates(interaction);
-        var (hubContext, client) = CreateHubContext();
-        client
-            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
-            .Returns(Task.CompletedTask);
+        var notifier = CreateNotifier();
         var service = CreateService(
             store,
-            hubContext,
+            notifier,
             new TelephonyCallLookupResult
             {
                 Succeeded = true,
@@ -314,13 +307,10 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var (hubContext, client) = CreateHubContext();
-        client
-            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
-            .Returns(Task.CompletedTask);
+        var notifier = CreateNotifier();
         var service = CreateService(
             store,
-            hubContext,
+            notifier,
             new TelephonyCallLookupResult
             {
                 Succeeded = true,
@@ -335,10 +325,13 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
 
         // Assert
         Assert.Equal(1, changed);
-        client.Verify(
-            value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
-                call.CallId == "call-1" &&
-                call.State == CallState.Disconnected)),
+        notifier.Verify(
+            value => value.NotifyCallStateChangedAsync(
+                "user-1",
+                It.Is<TelephonyCall>(call =>
+                    call.CallId == "call-1" &&
+                    call.State == CallState.Disconnected),
+                It.IsAny<CancellationToken>()),
             Times.Once);
         store.Verify(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -382,8 +375,8 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.GetActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([interaction]);
-        var (hubContext, client) = CreateHubContext();
-        var service = CreateService(store, hubContext, new TelephonyCallLookupResult(), lockAcquired: true);
+        var notifier = CreateNotifier();
+        var service = CreateService(store, notifier, new TelephonyCallLookupResult(), lockAcquired: true);
 
         // Act
         var changed = await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
@@ -391,7 +384,7 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         // Assert
         Assert.Equal(0, changed);
         store.Verify(value => value.DeleteAsync(It.IsAny<TelephonyInteraction>(), It.IsAny<CancellationToken>()), Times.Never);
-        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+        notifier.Verify(value => value.NotifyCallStateChangedAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     // The one case the sweep still owns for a client-recorded call: the browser went away mid-call and never
@@ -411,8 +404,8 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         store
             .Setup(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
-        var (hubContext, client) = CreateHubContext();
-        var service = CreateService(store, hubContext, new TelephonyCallLookupResult(), lockAcquired: true);
+        var notifier = CreateNotifier();
+        var service = CreateService(store, notifier, new TelephonyCallLookupResult(), lockAcquired: true);
 
         // Act
         var changed = await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
@@ -420,12 +413,12 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         // Assert
         Assert.Equal(1, changed);
         store.Verify(value => value.DeleteAsync(interaction, It.IsAny<CancellationToken>()), Times.Once);
-        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+        notifier.Verify(value => value.NotifyCallStateChangedAsync(It.IsAny<string>(), It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     private static TelephonyInteractionSynchronizationService CreateService(
         Mock<ITelephonyInteractionStore> store,
-        Mock<IHubContext<TelephonyHub, ITelephonyClient>> hubContext,
+        Mock<ITelephonySoftPhoneNotifier> notifier,
         TelephonyCallLookupResult lookup,
         bool lockAcquired = false,
         bool providerRegistered = true,
@@ -465,27 +458,15 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         return new TelephonyInteractionSynchronizationService(
             store.Object,
             resolver.Object,
-            hubContext.Object,
+            notifier.Object,
             distributedLock.Object,
             clock,
             NullLogger<TelephonyInteractionSynchronizationService>.Instance,
-            new ShellSettings
-            {
-                Name = "TenantA",
-            },
             Options.Create(new TelephonyCoordinationOptions()));
     }
 
-    private static (Mock<IHubContext<TelephonyHub, ITelephonyClient>> HubContext, Mock<ITelephonyClient> Client) CreateHubContext()
-    {
-        var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
-        var clients = new Mock<IHubClients<ITelephonyClient>>();
-        var client = new Mock<ITelephonyClient>();
-        hubContext.SetupGet(value => value.Clients).Returns(clients.Object);
-        clients.Setup(value => value.Group(TenantSignalRGroupName.ForUser("TenantA", "user-1"))).Returns(client.Object);
-
-        return (hubContext, client);
-    }
+    private static Mock<ITelephonySoftPhoneNotifier> CreateNotifier()
+        => new();
 
     private static TelephonyInteraction CreateInteraction(string callId = "call-1")
     {

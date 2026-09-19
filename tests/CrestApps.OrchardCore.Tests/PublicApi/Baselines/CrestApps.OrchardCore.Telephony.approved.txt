@@ -150,10 +150,6 @@ namespace CrestApps.OrchardCore.Telephony.Drivers
 }
 namespace CrestApps.OrchardCore.Telephony.Endpoints
 {
-    public static class SoftPhoneDialerEndpoints
-    {
-        public static Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapSoftPhoneDialerEndpoints(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder builder, System.Action<Microsoft.AspNetCore.Builder.RouteHandlerBuilder> configure = null) { }
-    }
     public static class SoftPhoneExtensionEndpoints
     {
         public static Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapSoftPhoneExtensionConfigurationEndpoint(this Microsoft.AspNetCore.Routing.IEndpointRouteBuilder builder, System.Action<Microsoft.AspNetCore.Builder.RouteHandlerBuilder> configure = null) { }
@@ -243,11 +239,6 @@ namespace CrestApps.OrchardCore.Telephony.Models
 }
 namespace CrestApps.OrchardCore.Telephony.Services
 {
-    public sealed class DefaultIncomingCallDispatcher : CrestApps.Core.Telephony.IIncomingCallDispatcher
-    {
-        public DefaultIncomingCallDispatcher(Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.Core.Telephony.ITelephonyClient> hubContext, System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.IIncomingCallContextProvider> contextProviders, CrestApps.Core.Telephony.ITelephonyInteractionStore interactionStore, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultIncomingCallDispatcher> logger, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
-        public System.Threading.Tasks.Task DispatchAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyCall call, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class DefaultTelephonyAuthenticationService : CrestApps.Core.Telephony.ITelephonyAuthenticationService
     {
         public DefaultTelephonyAuthenticationService(OrchardCore.Settings.ISiteService siteService, CrestApps.Core.Telephony.ITelephonyProviderResolver providerResolver, CrestApps.Core.Telephony.ITelephonyUserTokenStore tokenStore, CrestApps.Core.Security.IUserAccessor userAccessor, CrestApps.Core.Security.IUserDirectory userDirectory, CrestApps.Core.Security.IUserProfileStore userProfileStore, CrestApps.Core.Locking.IDistributedLockProvider distributedLock, System.TimeProvider timeProvider, Microsoft.Extensions.Options.IOptions<CrestApps.Core.Telephony.Models.TelephonyCoordinationOptions> coordinationOptions, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyAuthenticationService> logger) { }
@@ -314,24 +305,10 @@ namespace CrestApps.OrchardCore.Telephony.Services
         public TelephonyAdminMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.TelephonyAdminMenu> stringLocalizer) { }
         protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
     }
-    public sealed class TelephonyCallHistoryVoiceEventHandler : CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler
-    {
-        public TelephonyCallHistoryVoiceEventHandler(CrestApps.Core.Telephony.ITelephonyInteractionStore telephonyInteractionStore, Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.Core.Telephony.ITelephonyClient> hubContext, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.TelephonyCallHistoryVoiceEventHandler> logger, OrchardCore.Environment.Shell.ShellSettings shellSettings) { }
-        public int Order { get; }
-        public System.Threading.Tasks.Task<bool> HandleAsync(CrestApps.Core.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class TelephonyExtensionsAdminMenu : OrchardCore.Navigation.AdminNavigationProvider
     {
         public TelephonyExtensionsAdminMenu(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.TelephonyExtensionsAdminMenu> stringLocalizer) { }
         protected override System.Threading.Tasks.ValueTask BuildAsync(OrchardCore.Navigation.NavigationBuilder builder) { }
-    }
-    public sealed class TelephonyInteractionSynchronizationService : CrestApps.Core.Telephony.ITelephonyInteractionSynchronizationService
-    {
-        public TelephonyInteractionSynchronizationService(CrestApps.Core.Telephony.ITelephonyInteractionStore interactionStore, CrestApps.Core.Telephony.ITelephonyProviderResolver providerResolver, Microsoft.AspNetCore.SignalR.IHubContext<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub, CrestApps.Core.Telephony.ITelephonyClient> hubContext, CrestApps.Core.Locking.IDistributedLockProvider distributedLock, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.TelephonyInteractionSynchronizationService> logger, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Options.IOptions<CrestApps.Core.Telephony.Models.TelephonyCoordinationOptions> coordinationOptions) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyCallLookupResult> GetActiveCallAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyCallListLookupResult> GetActiveCallsAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<int> ReconcileActiveInteractionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<int> ReconcileProviderInteractionsAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class TelephonySettingsConfiguration : Microsoft.Extensions.Options.IPostConfigureOptions<CrestApps.Core.Telephony.TelephonySettings>
     {

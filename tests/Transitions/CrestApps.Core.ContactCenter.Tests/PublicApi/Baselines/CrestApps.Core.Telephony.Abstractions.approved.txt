@@ -229,6 +229,12 @@ namespace CrestApps.Core.Telephony
     {
         System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyClientCredentials> GetClientCredentialsAsync(System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITelephonySoftPhoneNotifier
+    {
+        System.Threading.Tasks.Task NotifyCallStateChangedAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyCall call, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyIncomingCallAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyCall call, CrestApps.Core.Telephony.Models.IncomingCallContext context, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RequestDialAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyDialRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITelephonyTransferProvider
     {
         System.Threading.Tasks.Task<CrestApps.Core.Telephony.Models.TelephonyResult> TransferAsync(CrestApps.Core.Telephony.Models.TransferRequest request, System.Threading.CancellationToken cancellationToken = default);

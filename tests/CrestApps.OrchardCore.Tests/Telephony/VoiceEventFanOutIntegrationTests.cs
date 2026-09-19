@@ -319,25 +319,18 @@ public sealed class VoiceEventFanOutIntegrationTests
             var telephonyInteractionStore = new Mock<ITelephonyInteractionStore>();
             telephonyInteractionStore.SetupRetryingUpdates(TelephonyInteraction);
 
-            var hubContext = new Mock<IHubContext<TelephonyHub, ITelephonyClient>>();
-            var hubClients = new Mock<IHubClients<ITelephonyClient>>();
-            var telephonyClient = new Mock<ITelephonyClient>();
+            var notifier = new Mock<ITelephonySoftPhoneNotifier>();
 
-            hubContext.SetupGet(value => value.Clients).Returns(hubClients.Object);
-            hubClients
-                .Setup(value => value.Group(TenantSignalRGroupName.ForUser(_shellSettings.Name, "user-1")))
-                .Returns(telephonyClient.Object);
-            telephonyClient
-                .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
-                .Callback<TelephonyCall>(call => SoftPhoneProjections.Add(call.State))
+            notifier
+                .Setup(value => value.NotifyCallStateChangedAsync("user-1", It.IsAny<TelephonyCall>(), It.IsAny<CancellationToken>()))
+                .Callback<string, TelephonyCall, CancellationToken>((_, call, _) => SoftPhoneProjections.Add(call.State))
                 .Returns(Task.CompletedTask);
 
             var telephonyProjection = new TelephonyCallHistoryVoiceEventHandler(
                 telephonyInteractionStore.Object,
-                hubContext.Object,
+                notifier.Object,
                 clock,
-                NullLogger<TelephonyCallHistoryVoiceEventHandler>.Instance,
-                _shellSettings);
+                NullLogger<TelephonyCallHistoryVoiceEventHandler>.Instance);
 
             var contactCenterProjection = new ContactCenterVoiceProjection(
                 new ProviderVoiceEventSink(BuildProviderVoiceEventService(clock, ingressGate)),

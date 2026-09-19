@@ -6,6 +6,7 @@ using CrestApps.Core.Telephony.Models;
 using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Telephony.Drivers;
 using CrestApps.OrchardCore.Telephony.Endpoints;
+using CrestApps.Core.Telephony.Endpoints;
 using CrestApps.OrchardCore.Telephony.Filters;
 using CrestApps.OrchardCore.Telephony.Hubs;
 using CrestApps.OrchardCore.Telephony.Indexes;
@@ -96,6 +97,10 @@ public sealed class Startup : StartupBase
 
         services.TryAddSingleton<IProviderIdentityResolver, ProviderIdentityResolver>();
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
+        // The soft-phone pushes go through the framework notifier over this module's hub, which is what
+        // carries the host's authorization. Everything that raises a push depends on the notifier instead,
+        // so no service needs to name the hub.
+        services.AddScoped<ITelephonySoftPhoneNotifier, TelephonySoftPhoneNotifier<TelephonyHub>>();
         services.AddScoped<IVoiceIngressGate, VoiceIngressGate>();
         services.AddScoped<INormalizedVoiceEventIngestor, NormalizedVoiceEventIngestor>();
         services.AddScoped<INormalizedVoiceEventHandler, TelephonyCallHistoryVoiceEventHandler>();

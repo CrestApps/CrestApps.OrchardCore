@@ -1,17 +1,11 @@
 using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
-using CrestApps.Core.SignalR;
-using CrestApps.OrchardCore.Telephony.Hubs;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Modules;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
-using CrestApps.OrchardCore.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Reconciles locally persisted telephony interactions with provider-authoritative call state.
@@ -22,11 +16,10 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     private const int MaxReconciliationBatchSize = 200;
     private readonly ITelephonyInteractionStore _interactionStore;
     private readonly ITelephonyProviderResolver _providerResolver;
-    private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
+    private readonly ITelephonySoftPhoneNotifier _notifier;
     private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
-    private readonly string _tenantName;
     private readonly TimeSpan _lockTimeout;
     private readonly TimeSpan _lockExpiration;
     private readonly TimeSpan _newInteractionGracePeriod;
@@ -37,29 +30,26 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
     /// </summary>
     /// <param name="interactionStore">The telephony interaction store.</param>
     /// <param name="providerResolver">The telephony provider resolver.</param>
-    /// <param name="hubContext">The soft-phone hub context.</param>
+    /// <param name="notifier">Pushes call-state changes to the user's soft phones.</param>
     /// <param name="distributedLock">The distributed lock used to prevent overlapping reconciliation sweeps.</param>
     /// <param name="timeProvider">The time provider used to stamp terminal interactions.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="shellSettings">The current Orchard shell settings.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
     public TelephonyInteractionSynchronizationService(
         ITelephonyInteractionStore interactionStore,
         ITelephonyProviderResolver providerResolver,
-        IHubContext<TelephonyHub, ITelephonyClient> hubContext,
+        ITelephonySoftPhoneNotifier notifier,
         IDistributedLockProvider distributedLock,
         TimeProvider timeProvider,
         ILogger<TelephonyInteractionSynchronizationService> logger,
-        ShellSettings shellSettings,
         IOptions<TelephonyCoordinationOptions> coordinationOptions)
     {
         _interactionStore = interactionStore;
         _providerResolver = providerResolver;
-        _hubContext = hubContext;
+        _notifier = notifier;
         _distributedLock = distributedLock;
         _timeProvider = timeProvider;
         _logger = logger;
-        _tenantName = shellSettings.Name;
         _lockTimeout = coordinationOptions.Value.InteractionLockTimeout;
         _lockExpiration = coordinationOptions.Value.InteractionLockExpiration;
         _newInteractionGracePeriod = coordinationOptions.Value.NewInteractionGracePeriod;
@@ -473,9 +463,7 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
             return;
         }
 
-        await _hubContext.Clients
-            .Group(TenantSignalRGroupName.ForUser(_tenantName, userId))
-            .CallStateChanged(call);
+        await _notifier.NotifyCallStateChangedAsync(userId, call);
     }
 
     private static bool SetIfDifferent(string currentValue, string providerValue, Action<string> setter)

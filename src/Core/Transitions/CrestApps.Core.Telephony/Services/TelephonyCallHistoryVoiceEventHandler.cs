@@ -1,15 +1,10 @@
 using CrestApps.Core.Support;
-using CrestApps.Core.SignalR;
 using CrestApps.Core.Telephony.Services;
-using CrestApps.OrchardCore.Telephony.Hubs;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Modules;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Projects the normalized provider voice event stream onto the telephony call history and the soft-phone hub.
@@ -23,31 +18,27 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEventHandler
 {
     private readonly ITelephonyInteractionStore _telephonyInteractionStore;
-    private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
+    private readonly ITelephonySoftPhoneNotifier _notifier;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
-    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="TelephonyCallHistoryVoiceEventHandler"/> class.
     /// </summary>
     /// <param name="telephonyInteractionStore">The telephony interaction store that owns call history.</param>
-    /// <param name="hubContext">The soft-phone hub context.</param>
+    /// <param name="notifier">Pushes call-state changes to the user's soft phones.</param>
     /// <param name="timeProvider">The time provider used to stamp call history times.</param>
     /// <param name="logger">The logger instance.</param>
-    /// <param name="shellSettings">The tenant shell settings used to scope hub groups.</param>
     public TelephonyCallHistoryVoiceEventHandler(
         ITelephonyInteractionStore telephonyInteractionStore,
-        IHubContext<TelephonyHub, ITelephonyClient> hubContext,
+        ITelephonySoftPhoneNotifier notifier,
         TimeProvider timeProvider,
-        ILogger<TelephonyCallHistoryVoiceEventHandler> logger,
-        ShellSettings shellSettings)
+        ILogger<TelephonyCallHistoryVoiceEventHandler> logger)
     {
         _telephonyInteractionStore = telephonyInteractionStore;
-        _hubContext = hubContext;
+        _notifier = notifier;
         _timeProvider = timeProvider;
         _logger = logger;
-        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -117,9 +108,10 @@ public sealed class TelephonyCallHistoryVoiceEventHandler : INormalizedVoiceEven
             return false;
         }
 
-        await _hubContext.Clients
-            .Group(TenantSignalRGroupName.ForUser(_tenantName, interaction.UserId))
-            .CallStateChanged(BuildTelephonyCall(interaction, providerEvent));
+        await _notifier.NotifyCallStateChangedAsync(
+            interaction.UserId,
+            BuildTelephonyCall(interaction, providerEvent),
+            cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {

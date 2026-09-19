@@ -42,7 +42,7 @@ CrestApps.Core.Services.ISourceCatalog<> #0 Scoped -> type:CrestApps.OrchardCore
 CrestApps.Core.Services.ISourceCatalog<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.SubjectActionCatalog
 CrestApps.Core.Services.ISourceCatalogManager<> #0 Scoped -> type:CrestApps.Core.Services.SourceCatalogManager<>
 CrestApps.Core.Telephony.IIncomingCallContextProvider #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterIncomingCallContextProvider
-CrestApps.Core.Telephony.IIncomingCallDispatcher #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultIncomingCallDispatcher
+CrestApps.Core.Telephony.IIncomingCallDispatcher #0 Scoped -> type:CrestApps.Core.Telephony.Services.DefaultIncomingCallDispatcher
 CrestApps.Core.Telephony.IOutboundCallScreener #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterManualCallScreener
 CrestApps.Core.Telephony.IOutboundCallScreeningService #0 Scoped -> type:CrestApps.Core.Telephony.Services.DefaultOutboundCallScreeningService
 CrestApps.Core.Telephony.IProviderIdentityProvider #0 Singleton -> type:CrestApps.OrchardCore.Dialpad.Services.DialpadProviderIdentityProvider
@@ -50,13 +50,14 @@ CrestApps.Core.Telephony.IRecordingMediaStore #0 Singleton -> factory
 CrestApps.Core.Telephony.ITelephonyAuthenticationService #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyAuthenticationService
 CrestApps.Core.Telephony.ITelephonyCommandExecutor #0 Scoped -> type:CrestApps.Core.Telephony.Services.DefaultTelephonyCommandExecutor
 CrestApps.Core.Telephony.ITelephonyInteractionStore #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyInteractionStore
-CrestApps.Core.Telephony.ITelephonyInteractionSynchronizationService #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.TelephonyInteractionSynchronizationService
+CrestApps.Core.Telephony.ITelephonyInteractionSynchronizationService #0 Scoped -> type:CrestApps.Core.Telephony.Services.TelephonyInteractionSynchronizationService
 CrestApps.Core.Telephony.ITelephonyProviderResolver #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyProviderResolver
 CrestApps.Core.Telephony.ITelephonyService #0 Scoped -> type:CrestApps.Core.Telephony.Services.DefaultTelephonyService
+CrestApps.Core.Telephony.ITelephonySoftPhoneNotifier #0 Scoped -> type:CrestApps.Core.Telephony.Services.TelephonySoftPhoneNotifier<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub>
 CrestApps.Core.Telephony.ITelephonyUserTokenStore #0 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyUserTokenStore
 CrestApps.Core.Telephony.Services.IDialDestinationPolicy #0 Scoped -> type:CrestApps.Core.Telephony.Services.DefaultDialDestinationPolicy
-CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterVoiceProjection
-CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler #1 Scoped -> type:CrestApps.OrchardCore.Telephony.Services.TelephonyCallHistoryVoiceEventHandler
+CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler #0 Scoped -> type:CrestApps.Core.Telephony.Services.TelephonyCallHistoryVoiceEventHandler
+CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler #1 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterVoiceProjection
 CrestApps.Core.Telephony.Services.INormalizedVoiceEventIngestor #0 Scoped -> type:CrestApps.Core.Telephony.Services.NormalizedVoiceEventIngestor
 CrestApps.Core.Telephony.Services.IProviderIdentityResolver #0 Singleton -> type:CrestApps.Core.Telephony.Services.ProviderIdentityResolver
 CrestApps.Core.Telephony.Services.ITelephonyExtensionManager #0 Scoped -> type:CrestApps.Core.Telephony.Services.TelephonyExtensionManager

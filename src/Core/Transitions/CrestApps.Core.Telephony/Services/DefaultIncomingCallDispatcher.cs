@@ -1,14 +1,9 @@
-using CrestApps.Core.SignalR;
-using CrestApps.OrchardCore.Telephony.Hubs;
-using Microsoft.AspNetCore.SignalR;
+using CrestApps.Core.Support;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
-using OrchardCore.Environment.Shell;
-using OrchardCore.Modules;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.Telephony.Services;
+namespace CrestApps.Core.Telephony.Services;
 
 /// <summary>
 /// Default <see cref="IIncomingCallDispatcher"/> implementation. It gathers the contextual cards from
@@ -17,36 +12,32 @@ namespace CrestApps.OrchardCore.Telephony.Services;
 /// </summary>
 public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
 {
-    private readonly IHubContext<TelephonyHub, ITelephonyClient> _hubContext;
+    private readonly ITelephonySoftPhoneNotifier _notifier;
     private readonly IEnumerable<IIncomingCallContextProvider> _contextProviders;
     private readonly ITelephonyInteractionStore _interactionStore;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
-    private readonly string _tenantName;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultIncomingCallDispatcher"/> class.
     /// </summary>
-    /// <param name="hubContext">The telephony hub context used to push events to connected clients.</param>
+    /// <param name="notifier">Pushes the ringing call to the user's soft phones.</param>
     /// <param name="contextProviders">The registered incoming-call context providers.</param>
     /// <param name="interactionStore">The telephony interaction store.</param>
     /// <param name="timeProvider">The time provider.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="shellSettings">The current Orchard shell settings.</param>
     public DefaultIncomingCallDispatcher(
-        IHubContext<TelephonyHub, ITelephonyClient> hubContext,
+        ITelephonySoftPhoneNotifier notifier,
         IEnumerable<IIncomingCallContextProvider> contextProviders,
         ITelephonyInteractionStore interactionStore,
         TimeProvider timeProvider,
-        ILogger<DefaultIncomingCallDispatcher> logger,
-        ShellSettings shellSettings)
+        ILogger<DefaultIncomingCallDispatcher> logger)
     {
-        _hubContext = hubContext;
+        _notifier = notifier;
         _contextProviders = contextProviders;
         _interactionStore = interactionStore;
         _timeProvider = timeProvider;
         _logger = logger;
-        _tenantName = shellSettings.Name;
     }
 
     /// <inheritdoc/>
@@ -77,9 +68,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
         };
 
         await RecordInteractionAsync(userId, call, cancellationToken);
-        await _hubContext.Clients
-            .Group(TenantSignalRGroupName.ForUser(_tenantName, userId))
-            .IncomingCall(call, context);
+        await _notifier.NotifyIncomingCallAsync(userId, call, context, cancellationToken);
     }
 
     private async Task RecordInteractionAsync(string userId, TelephonyCall call, CancellationToken cancellationToken)
@@ -95,7 +84,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
         {
             var interaction = new TelephonyInteraction
             {
-                InteractionId = IdGenerator.GenerateId(),
+                InteractionId = IdentifierGenerator.Generate(),
                 CallId = call.CallId,
                 ProviderName = call.ProviderName,
                 UserId = userId,

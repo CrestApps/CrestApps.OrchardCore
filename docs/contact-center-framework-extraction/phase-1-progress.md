@@ -17,7 +17,8 @@ a reviewed diff of every approval baseline that moved.
 | W2 | `b1435bf0` | Phone numbers (`DefaultPhoneNumberService` and its contracts) and the WebSocket connection registry. |
 | W3.1 | `bffa165f` | The telephony contracts: 110 files into `CrestApps.Core.Telephony.Abstractions`, with the feature ids left behind in a new Orchard `TelephonyFeatures`. |
 | W3.2 | `3ca794ce` | The telephony primitive: hub base, models, services, and the reconciliation cycle into `CrestApps.Core.Telephony`. |
-| W3.3 (first half), W3.5 | this commit | The module services with no host dependency, and the encrypted recording store with a backend contract under it. |
+| W3.3 (first half), W3.5 | `91530579` | The module services with no host dependency, and the encrypted recording store with a backend contract under it. |
+| W3.3 (second half) | this commit | The three services and the dial endpoint that pushed to the soft phone, behind a notifier contract. |
 
 ## Decisions the plan did not make
 
@@ -76,6 +77,19 @@ it, which is what the Azure module now passes. Encryption, the container format,
 of a file name from a storage key all stayed above the seam, so moving a deployment's recordings
 between backends does not change how they are encrypted or what they are called — and a test pins
 that the two backends agree on the name.
+
+### The soft-phone pushes went behind a notifier, not behind a generic (W3.3)
+
+Three services and the dial endpoint reached `IHubContext<TelephonyHub, ITelephonyClient>` and
+composed a group name out of `ShellSettings.Name`. The plan's idiom for this is a class generic over
+the hub, which would have made four generic types, four log categories carrying a type argument, and
+four places that still know a hub exists.
+
+They make three calls between them, so `ITelephonySoftPhoneNotifier` names those three:
+`NotifyIncomingCallAsync`, `NotifyCallStateChangedAsync`, `RequestDialAsync`. One framework class,
+`TelephonySoftPhoneNotifier<THub>`, is generic over the hub and is the only thing that knows about
+SignalR or about how a user's connections are grouped. Orchard registers it closed over its own
+`TelephonyHub`, which is where its `[Authorize]` lives.
 
 ## Guards that had to be repointed (W3.2)
 
