@@ -1,9 +1,8 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Environment.Shell.Scope;
 
-namespace CrestApps.OrchardCore.Telephony.Hubs;
+namespace CrestApps.OrchardCore.Telephony.Core.Hubs;
 
 /// <summary>
 /// The media-quality half of the soft phone hub: the browser's own measurements of the live peer connection,
@@ -11,7 +10,7 @@ namespace CrestApps.OrchardCore.Telephony.Hubs;
 /// grew a capture side once it turned out that every number here described only the direction the agent was
 /// listening to -- does not mean growing an already long file.
 /// </summary>
-public sealed partial class TelephonyHub
+public abstract partial class TelephonyHubBase
 {
     /// <summary>
     /// Receives a browser-measured media-quality sample (or an end-of-call summary) for the current user's
@@ -28,9 +27,9 @@ public sealed partial class TelephonyHub
             return;
         }
 
-        await ShellScope.UsingChildScopeAsync(async scope =>
+        await _scopeExecutor.ExecuteAsync(async services =>
         {
-            if (!await AuthorizeAsync(scope.ServiceProvider))
+            if (!await AuthorizeAsync(services))
             {
                 LogHubActionUnauthorized("ReportCallQuality");
                 return;

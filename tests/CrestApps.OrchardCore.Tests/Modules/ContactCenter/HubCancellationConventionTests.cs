@@ -62,7 +62,7 @@ public sealed partial class HubCancellationConventionTests
                 "ContactCenterRealTimeNotifierTests.cs",
                 "DistributedTestHub.cs",
                 "SmsPortalHubBase.cs",
-                "TelephonyHub.cs",
+                "TelephonyHubBase.cs",
             ],
             files);
     }

@@ -1,6 +1,7 @@
 CrestApps.Core.Hosting.IAfterCommitTaskQueue #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellScopeAfterCommitTaskQueue
 CrestApps.Core.Hosting.IDetachedWorkExecutor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellDetachedWorkExecutor
 CrestApps.Core.Hosting.IPublicBaseUrlAccessor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.SiteSettingsPublicBaseUrlAccessor
+CrestApps.Core.Hosting.IScopedWorkExecutor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellScopedWorkExecutor
 CrestApps.Core.Hosting.ITenantAccessor #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.ShellSettingsTenantAccessor
 CrestApps.Core.Locking.IDistributedLockProvider #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreDistributedLockProvider
 CrestApps.Core.Security.IUserAccessor #0 Scoped -> type:CrestApps.Core.Services.UserAccessor

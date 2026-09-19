@@ -56,6 +56,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddCoreHostSeams();
+        services.AddTelephonyOperationAuthorization();
 
         services.ValidateTenantOptionsOnActivation();
 

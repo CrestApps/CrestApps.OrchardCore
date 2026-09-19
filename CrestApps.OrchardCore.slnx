@@ -33,6 +33,7 @@
     <Project Path="src/Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions/CrestApps.Core.Hosting.Abstractions.csproj" />
     <Project Path="src/Abstractions/Transitions/CrestApps.Core.Omnichannel.Sms.Portal.Abstractions/CrestApps.Core.Omnichannel.Sms.Portal.Abstractions.csproj" />
     <Project Path="src/Abstractions/Transitions/CrestApps.Core.Sms.Abstractions/CrestApps.Core.Sms.Abstractions.csproj" />
+    <Project Path="src/Abstractions/Transitions/CrestApps.Core.Telephony.Abstractions/CrestApps.Core.Telephony.Abstractions.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
     <Project Path="src/Core/CrestApps.OrchardCore.AI.Chat.Core/CrestApps.OrchardCore.AI.Chat.Core.csproj" />

@@ -14,6 +14,7 @@ using Moq;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Builders;
 using OrchardCore.Environment.Shell.Scope;
+using CrestApps.OrchardCore.Core.Hosting;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -300,7 +301,7 @@ public sealed class TelephonyHubAuthorizationTests
             .AddSingleton(shellHost.Object)
             .BuildServiceProvider();
 
-        // The hub resolves scoped services through ShellScope.UsingChildScopeAsync, which requires an
+        // The hub resolves scoped services through the shell scope executor, which requires an
         // ambient shell scope whose IShellHost can produce child scopes. Returning child scopes over the
         // same test service provider lets each hub invocation resolve the registered test doubles.
         var shellContext = new ShellContext
@@ -316,7 +317,8 @@ public sealed class TelephonyHubAuthorizationTests
         var hub = new TelephonyHub(
             NullLogger<TelephonyHub>.Instance,
             new PassThroughStringLocalizer<TelephonyHub>(),
-            shellSettings,
+            new ShellScopedWorkExecutor(services),
+            new ShellSettingsTenantAccessor(shellSettings),
             RedactorProviderFactory.Create())
         {
             Context = CreateHubCallerContext(userId),

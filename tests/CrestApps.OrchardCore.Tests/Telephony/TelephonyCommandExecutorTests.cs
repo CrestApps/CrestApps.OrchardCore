@@ -197,10 +197,10 @@ public sealed class TelephonyCommandExecutorTests
         var source = File.ReadAllText(Path.Combine(
             repositoryRoot,
             "src",
-            "Modules",
-            "CrestApps.OrchardCore.Telephony",
+            "Core",
+            "CrestApps.OrchardCore.Telephony.Core",
             "Hubs",
-            "TelephonyHub.cs"));
+            "TelephonyHubBase.cs"));
         var executeStart = source.IndexOf(
             "private async Task<TelephonyResult> ExecuteAsync(",
             StringComparison.Ordinal);
@@ -216,10 +216,10 @@ public sealed class TelephonyCommandExecutorTests
             recordStart,
             StringComparison.Ordinal);
 
-        Assert.True(executeStart >= 0, "ExecuteAsync was not found in TelephonyHub.cs.");
-        Assert.True(executeEnd >= 0, "LogHubActionStart was not found after ExecuteAsync in TelephonyHub.cs.");
-        Assert.True(recordStart >= 0, "RecordInteractionAsync was not found in TelephonyHub.cs.");
-        Assert.True(recordEnd >= 0, "AuthorizeAsync was not found after RecordInteractionAsync in TelephonyHub.cs.");
+        Assert.True(executeStart >= 0, "ExecuteAsync was not found in TelephonyHubBase.cs.");
+        Assert.True(executeEnd >= 0, "LogHubActionStart was not found after ExecuteAsync in TelephonyHubBase.cs.");
+        Assert.True(recordStart >= 0, "RecordInteractionAsync was not found in TelephonyHubBase.cs.");
+        Assert.True(recordEnd >= 0, "AuthorizeAsync was not found after RecordInteractionAsync in TelephonyHubBase.cs.");
 
         // Act
         var mutationSource = source.Substring(executeStart, executeEnd - executeStart);

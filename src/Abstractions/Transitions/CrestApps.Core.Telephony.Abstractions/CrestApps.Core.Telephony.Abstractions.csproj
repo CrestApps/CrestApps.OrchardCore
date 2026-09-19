@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CrestApps.Core.Telephony</RootNamespace>
+    <Title>CrestApps Core Telephony Abstractions</Title>
+    <Description>
+      $(CrestAppsDescription)
+
+      The telephony contracts that do not depend on a host. Currently the authorization
+      operations a telephony service asks about, which a host maps to whatever it calls a
+      permission.
+    </Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

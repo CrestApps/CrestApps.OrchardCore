@@ -21,6 +21,10 @@ public sealed class RealTimeStartup : StartupBase
     {
         services.AddContactCenterCapability(ContactCenterConstants.Feature.RealTime, ContactCenterCapabilities.RealTime);
 
+        // The hub asks for its own operations, so this feature answers them rather than relying on
+        // another enabled feature having registered the handler first.
+        services.AddContactCenterOperationAuthorization();
+
         services
             .AddScoped<ContactCenterHubScopeContext>()
             .AddScoped<ContactCenterRealTimeEventScopeContext>()

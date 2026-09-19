@@ -12,6 +12,8 @@ using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Environment.Shell;
+using CrestApps.Core.Hosting;
+using CrestApps.OrchardCore.Core.Hosting;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -142,17 +144,25 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
         return new TelephonyHub(
             NullLogger<TelephonyHub>.Instance,
             new PassThroughStringLocalizer<TelephonyHub>(),
-            new ShellSettings(),
+            new ShellScopedWorkExecutor(new ServiceCollection().BuildServiceProvider()),
+            new SingleTenantAccessor(),
             redactorProvider);
     }
 
     private static string InvokeDescribe(TelephonyHub hub, string methodName, object argument)
     {
-        var method = typeof(TelephonyHub).GetMethod(
-            methodName,
-            BindingFlags.NonPublic | BindingFlags.Instance);
+        // Walked up the hierarchy: the describe helpers live on the base hub, and a private member of a
+        // base type is not returned when the derived type is asked for it.
+        MethodInfo method = null;
 
-        return Assert.IsType<string>(method?.Invoke(hub, [argument]));
+        for (var type = typeof(TelephonyHub); type is not null && method is null; type = type.BaseType)
+        {
+            method = type.GetMethod(methodName, BindingFlags.NonPublic | BindingFlags.Instance);
+        }
+
+        Assert.NotNull(method);
+
+        return Assert.IsType<string>(method.Invoke(hub, [argument]));
     }
 
     private static List<string> FindUnredactedLogArguments(string repositoryRoot)

@@ -64,6 +64,10 @@ namespace CrestApps.OrchardCore.Telephony
         public override void Configure(Microsoft.AspNetCore.Builder.IApplicationBuilder app, Microsoft.AspNetCore.Routing.IEndpointRouteBuilder routes, System.IServiceProvider serviceProvider) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    public static class TelephonyOperationAuthorizationServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddTelephonyOperationAuthorization(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
 }
 namespace CrestApps.OrchardCore.Telephony.Controllers
 {
@@ -157,43 +161,21 @@ namespace CrestApps.OrchardCore.Telephony.Filters
         public System.Threading.Tasks.Task OnResultExecutionAsync(Microsoft.AspNetCore.Mvc.Filters.ResultExecutingContext context, Microsoft.AspNetCore.Mvc.Filters.ResultExecutionDelegate next) { }
     }
 }
+namespace CrestApps.OrchardCore.Telephony.Handlers
+{
+    public sealed class TelephonyOperationAuthorizationHandler : Microsoft.AspNetCore.Authorization.AuthorizationHandler<Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement>
+    {
+        public TelephonyOperationAuthorizationHandler(System.Lazy<Microsoft.AspNetCore.Authorization.IAuthorizationService> authorizationService) { }
+        protected override System.Threading.Tasks.Task HandleRequirementAsync(Microsoft.AspNetCore.Authorization.AuthorizationHandlerContext context, Microsoft.AspNetCore.Authorization.Infrastructure.OperationAuthorizationRequirement requirement) { }
+        public static OrchardCore.Security.Permissions.Permission GetPermission(string operationName) { }
+    }
+}
 namespace CrestApps.OrchardCore.Telephony.Hubs
 {
     [Microsoft.AspNetCore.Authorization.Authorize]
-    public sealed class TelephonyHub : Microsoft.AspNetCore.SignalR.Hub<CrestApps.OrchardCore.Telephony.ITelephonyClient>
+    public sealed class TelephonyHub : CrestApps.OrchardCore.Telephony.Core.Hubs.TelephonyHubBase
     {
-        public TelephonyHub(Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub> stringLocalizer, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AddExtensionToConference(CrestApps.OrchardCore.Telephony.Models.ExtensionConferenceRequest request) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Answer(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Dial(CrestApps.OrchardCore.Telephony.Models.DialRequest request) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialExtension(CrestApps.OrchardCore.Telephony.Models.ExtensionDialRequest request) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCallLookupResult> GetActiveCall() { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCallListLookupResult> GetActiveCalls() { }
-        public System.Threading.Tasks.Task<int> GetCapabilities() { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyConnectionStatus> GetConnectionStatus() { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyClientCredentials> GetCredentials() { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyDirectoryResult> GetDirectory() { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction>> GetInteractions(int count) { }
-        public System.Threading.Tasks.Task<int> GetUnreadVoicemailCount() { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Hangup(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Hold(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
-        public System.Threading.Tasks.Task<int> MarkAllVoicemailsRead() { }
-        public System.Threading.Tasks.Task<int> MarkVoicemailRead(string callId) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Merge(CrestApps.OrchardCore.Telephony.Models.MergeRequest request) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Mute(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
-        public override System.Threading.Tasks.Task OnConnectedAsync() { }
-        public System.Threading.Tasks.Task RecordBrowserCall(string callId, string to, string from) { }
-        public System.Threading.Tasks.Task RecordBrowserCallEnded(string callId, bool connected) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Reject(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
-        public System.Threading.Tasks.Task ReportCallQuality(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
-        public System.Threading.Tasks.Task ReportClientDiagnostic(string level, string code, string message, string context) { }
-        public System.Threading.Tasks.Task ReportCredentialRegistered(string credentialId) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Resume(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
-        public System.Threading.Tasks.Task RevokeSupersededCredential(string credentialId) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> SendDigits(CrestApps.OrchardCore.Telephony.Models.SendDigitsRequest request) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Transfer(CrestApps.OrchardCore.Telephony.Models.TransferRequest request) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Unmute(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> Voicemail(CrestApps.OrchardCore.Telephony.Models.CallReference call) { }
+        public TelephonyHub(Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Hubs.TelephonyHub> stringLocalizer, CrestApps.Core.Hosting.IScopedWorkExecutor scopeExecutor, CrestApps.Core.Hosting.ITenantAccessor tenantAccessor, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider) { }
     }
 }
 namespace CrestApps.OrchardCore.Telephony.Indexes

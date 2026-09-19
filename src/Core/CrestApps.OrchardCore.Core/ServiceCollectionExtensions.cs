@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.TryAddScoped<IPublicBaseUrlAccessor, SiteSettingsPublicBaseUrlAccessor>();
         services.TryAddScoped<IDetachedWorkExecutor, ShellDetachedWorkExecutor>();
         services.TryAddScoped<IAfterCommitTaskQueue, ShellScopeAfterCommitTaskQueue>();
+        services.TryAddScoped<IScopedWorkExecutor, ShellScopedWorkExecutor>();
 
         return services;
     }
