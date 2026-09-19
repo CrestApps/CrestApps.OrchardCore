@@ -52,11 +52,26 @@ internal sealed class FileSourceIndexMigrations : DataMigration
     }
 
     /// <summary>
-    /// Creates every index table this feature reads.
+    /// Creates every index table this feature reads, and moves records that predate the split.
     /// </summary>
+    /// <remarks>
+    /// The move belongs in an upgrade step, and there is one below, but it cannot be reached by the tenants
+    /// that need it. Orchard records an applied migration under the migration class's full type name, and
+    /// this feature's namespace moved when the module was renamed, so every tenant -- including one that
+    /// has run file sources for weeks -- looks new to it and gets this method rather than the upgrade path.
+    /// Without the move here, a tenant's existing file sources stay in the web crawler table and show on
+    /// neither screen: the file source list reads its own store now, and the crawler list filters out
+    /// anything whose source names a connector.
+    /// <para>
+    /// Safe on a genuinely new tenant: the framework's migration works through the store interfaces, is
+    /// idempotent, and finds nothing to move when the crawler table is empty.
+    /// </para>
+    /// </remarks>
     public async Task<int> CreateAsync()
     {
         await CreateSchemaAsync();
+
+        await _serviceProvider.MigrateFileSourcesAsync();
 
         return 2;
     }
