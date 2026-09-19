@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../Abstractions/Transitions/CrestApps.Core.Omnichannel.Abstractions/CrestApps.Core.Omnichannel.Abstractions.csproj" />
+    <ProjectReference Include="../Transitions/CrestApps.Core.Omnichannel/CrestApps.Core.Omnichannel.csproj" />
     <ProjectReference Include="../Transitions/CrestApps.Core.Data.YesSql.ContactCenter/CrestApps.Core.Data.YesSql.ContactCenter.csproj" />
     <ProjectReference Include="../../Abstractions/Transitions/CrestApps.Core.Hosting.Abstractions/CrestApps.Core.Hosting.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />

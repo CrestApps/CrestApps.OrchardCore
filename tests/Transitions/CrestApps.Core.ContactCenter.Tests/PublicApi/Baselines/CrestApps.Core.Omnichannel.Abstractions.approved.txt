@@ -4,6 +4,12 @@ namespace CrestApps.Core.Omnichannel
     {
         System.Threading.Tasks.Task HandleAsync(CrestApps.Core.Omnichannel.Models.OmnichannelEvent omnichannelEvent, System.Threading.CancellationToken cancellationToken = default);
     }
+    public static class OmnichannelChannels
+    {
+        public const string Email = "Email";
+        public const string Phone = "Phone";
+        public const string Sms = "SMS";
+    }
 }
 namespace CrestApps.Core.Omnichannel.Models
 {

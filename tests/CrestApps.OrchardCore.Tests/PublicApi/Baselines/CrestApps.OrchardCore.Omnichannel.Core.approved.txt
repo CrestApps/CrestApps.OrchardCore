@@ -400,12 +400,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
 }
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services
 {
-    public sealed class AlwaysOpenBusinessHoursGate : CrestApps.Core.Omnichannel.Services.IBusinessHoursGate
-    {
-        public AlwaysOpenBusinessHoursGate() { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class AutomatedActivityScreeningResult
     {
         public AutomatedActivityScreeningResult() { }
@@ -489,13 +483,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CrestApps.Core.Omnichannel.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default) { }
         public bool IsConfigured(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
     }
-    public sealed class DispositionChoice
-    {
-        public DispositionChoice() { }
-        public string Description { get; init; }
-        public string Id { get; init; }
-        public string Name { get; init; }
-    }
     public interface IActivityDispositionHandler
     {
         System.Threading.Tasks.Task DispositionedAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default);
@@ -567,13 +554,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Models.SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CrestApps.Core.Omnichannel.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default);
         bool IsConfigured(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings);
     }
-    public sealed class InMemoryAutomatedConversationGate : CrestApps.Core.Omnichannel.Services.IAutomatedConversationGate
-    {
-        public InMemoryAutomatedConversationGate() { }
-        public CrestApps.Core.Omnichannel.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken) { }
-        public bool IsGenerating(string sessionId) { }
-        public bool TryClaimInboundMessage(string providerMessageId) { }
-    }
     public sealed class ListOmnichannelActivityFilterContext
     {
         public ListOmnichannelActivityFilterContext(CrestApps.Core.Omnichannel.Models.ListOmnichannelActivityFilter filter, YesSql.IQuery<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity, CrestApps.OrchardCore.Omnichannel.Core.Indexes.OmnichannelActivityIndex> query) { }
@@ -602,27 +582,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
         public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>> PageContactManualScheduledAsync(string contentContentItemId, int page, int pageSize, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>> PageManualScheduledAsync(string userId, int page, int pageSize, CrestApps.Core.Omnichannel.Models.ListOmnichannelActivityFilter filter, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public static class OmnichannelAutomationHelper
-    {
-        public const int MinimumHumanizedReplyDelaySeconds = 10;
-        public static CrestApps.Core.Omnichannel.Models.ActivityStatus GetInitialActivityStatus(CrestApps.Core.Omnichannel.Models.ActivityInteractionType interactionType, bool hasAssignedUser) { }
-        public static bool HasNoResponseTimeout(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
-        public static CrestApps.Core.Omnichannel.Models.AutomatedVoiceActivitySettings ResolveActivitySettings(CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatch batch, CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
-        public static System.TimeSpan ResolveHumanizedReadingDelay(System.TimeSpan? configuredDelay, int inboundCharacterCount) { }
-        public static System.TimeSpan ResolveHumanizedTypingDelay(int replyCharacterCount) { }
-        public static System.DateTime ResolveNoResponseDeadline(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings, System.DateTime utcNow) { }
-        public static System.TimeSpan? ResolveResponseDelay(CrestApps.Core.Omnichannel.Models.OmnichannelResponseDelayMode mode, int seconds, int jitterSeconds) { }
-    }
-    public sealed class OmnichannelAutomationOptionsValidator : Microsoft.Extensions.Options.IValidateOptions<CrestApps.Core.Omnichannel.Models.OmnichannelAutomationOptions>
-    {
-        public OmnichannelAutomationOptionsValidator() { }
-        public Microsoft.Extensions.Options.ValidateOptionsResult Validate(string name, CrestApps.Core.Omnichannel.Models.OmnichannelAutomationOptions options) { }
-    }
-    public sealed class OmnichannelChannelEndpointManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>, CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>
-    {
-        public OmnichannelChannelEndpointManager(CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointStore store, CrestApps.Core.PhoneNumbers.IPhoneNumberService phoneNumberService, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>> logger) { }
-        public System.Threading.Tasks.ValueTask<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class OmnichannelChannelEndpointStore : CrestApps.OrchardCore.Core.Services.Catalog<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>, CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>
     {
         public OmnichannelChannelEndpointStore(OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Models.DictionaryDocument<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>> documentManager) { }
@@ -631,31 +590,5 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services
     public static class OmnichannelContactPreferences
     {
         public static bool HasOptedOut(CrestApps.OrchardCore.Omnichannel.Models.OmnichannelContact contact, string channel) { }
-    }
-    public static class OmnichannelHandoffHelper
-    {
-        public const string TransferToAgentToolName = "transferToLiveAgent";
-        public static string BuildHandoffInstructions(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
-        public static bool IsHandoffEnabled(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
-    }
-    public sealed class OmnichannelHandoffTurn : CrestApps.Core.Omnichannel.Services.IOmnichannelHandoffTurn
-    {
-        public OmnichannelHandoffTurn() { }
-        public bool HandoffRequested { get; }
-        public System.Threading.CancellationToken HandoffRequestedToken { get; }
-        public string Reason { get; }
-        public void RequestHandoff(string reason) { }
-        public void Reset() { }
-    }
-    public static class OmnichannelSmsComplianceHelper
-    {
-        public static System.Collections.Generic.IReadOnlyList<string> DefaultOptOutKeywords { get; }
-        public static bool IsOptOutRequest(string message, System.Collections.Generic.IEnumerable<string> keywords = null) { }
-        public static System.Collections.Generic.IReadOnlyList<string> NormalizeOptOutKeywords(System.Collections.Generic.IEnumerable<string> keywords) { }
-        public static System.Collections.Generic.IReadOnlyList<string> ParseOptOutKeywords(string keywords) { }
-    }
-    public static class SubjectDispositionGuidance
-    {
-        public static System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.DispositionChoice> Describe(System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.OmnichannelDisposition> dispositions, System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.SubjectAction> actions, string subjectContentType) { }
     }
 }

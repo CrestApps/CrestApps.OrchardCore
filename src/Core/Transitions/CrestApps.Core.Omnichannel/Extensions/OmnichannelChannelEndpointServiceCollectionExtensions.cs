@@ -1,6 +1,7 @@
 using CrestApps.Core.Omnichannel.Models;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace CrestApps.Core.Omnichannel;
 
 /// <summary>
 /// Extension methods for registering channel-endpoint sources.

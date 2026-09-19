@@ -1,7 +1,7 @@
 using CrestApps.Core.Omnichannel.Models;
 using System.Text;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Pure helpers for AI-to-agent handoff: the name of the tool the model invokes to escalate, and the

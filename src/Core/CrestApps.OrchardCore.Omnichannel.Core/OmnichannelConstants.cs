@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core;
@@ -62,13 +63,17 @@ public static class OmnichannelConstants
     /// <summary>
     /// Represents the channels.
     /// </summary>
+    /// <remarks>
+    /// The values are the framework's, so a channel written by this module and one written by the framework
+    /// are the same stored value. This stays as a name the module's own callers already use.
+    /// </remarks>
     public static class Channels
     {
-        public const string Phone = "Phone";
+        public const string Phone = OmnichannelChannels.Phone;
 
-        public const string Sms = "SMS";
+        public const string Sms = OmnichannelChannels.Sms;
 
-        public const string Email = "Email";
+        public const string Email = OmnichannelChannels.Email;
     }
 
     public static class ActionTypes

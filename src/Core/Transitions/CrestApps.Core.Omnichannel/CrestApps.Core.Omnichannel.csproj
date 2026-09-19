@@ -13,6 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CrestApps.Core" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Options" />
@@ -21,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Omnichannel.Abstractions\CrestApps.Core.Omnichannel.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Hosting.Abstractions\CrestApps.Core.Hosting.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.PhoneNumbers.Abstractions\CrestApps.Core.PhoneNumbers.Abstractions.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@ CrestApps.Core.Locking.IDistributedLockProvider #0 Singleton -> type:CrestApps.O
 CrestApps.Core.Omnichannel.Services.IActivityDialerContributor #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterActivityDialerContributor
 CrestApps.Core.Omnichannel.Services.IBusinessHoursGate #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.BusinessHoursGate
 CrestApps.Core.Omnichannel.Services.IHandoffQueueOptionsProvider #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterHandoffQueueOptionsProvider
-CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointManager #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelChannelEndpointManager
+CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointManager #0 Scoped -> type:CrestApps.Core.Omnichannel.Services.OmnichannelChannelEndpointManager
 CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointStore #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelChannelEndpointStore
 CrestApps.Core.PhoneNumbers.IPhoneNumberService #0 Singleton -> type:CrestApps.Core.PhoneNumbers.DefaultPhoneNumberService
 CrestApps.Core.Security.IUserAccessor #0 Scoped -> type:CrestApps.Core.Services.UserAccessor

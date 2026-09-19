@@ -1,4 +1,5 @@
-﻿using CrestApps.Core;
+﻿using CrestApps.Core.Omnichannel.Services;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Handlers;

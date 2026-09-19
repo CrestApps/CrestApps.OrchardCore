@@ -1,7 +1,7 @@
 using CrestApps.Core.Omnichannel.Services;
 using System.Collections.Concurrent;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// The in-memory <see cref="IAutomatedConversationGate"/>. A single node owns each conversation's inbound

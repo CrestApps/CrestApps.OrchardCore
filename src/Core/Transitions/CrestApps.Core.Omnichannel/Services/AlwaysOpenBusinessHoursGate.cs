@@ -1,5 +1,5 @@
 using CrestApps.Core.Omnichannel.Services;
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// The default <see cref="IBusinessHoursGate"/> for a tenant with no business-hours calendars. Every moment is

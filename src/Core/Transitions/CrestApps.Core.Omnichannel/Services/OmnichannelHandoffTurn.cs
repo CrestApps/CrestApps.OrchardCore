@@ -1,5 +1,5 @@
 using CrestApps.Core.Omnichannel.Services;
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// The scoped <see cref="IOmnichannelHandoffTurn"/>: one instance per scope, holding whatever the transfer tool

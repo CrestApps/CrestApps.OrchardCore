@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Services;
 using System.Reflection;
 using CrestApps.Core.Omnichannel.Models;
 using System.Text.RegularExpressions;
@@ -137,7 +138,8 @@ public sealed class OmnichannelConfigurationCoverageTests
             FindRepositoryRoot(),
             "src",
             "Core",
-            "CrestApps.OrchardCore.Omnichannel.Core",
+            "Transitions",
+            "CrestApps.Core.Omnichannel",
             "Services",
             "OmnichannelAutomationOptionsValidator.cs"));
 

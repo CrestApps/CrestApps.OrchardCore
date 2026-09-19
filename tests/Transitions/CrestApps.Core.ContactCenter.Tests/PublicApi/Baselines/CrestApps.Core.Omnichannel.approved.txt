@@ -1,0 +1,77 @@
+namespace CrestApps.Core.Omnichannel
+{
+    public static class OmnichannelChannelEndpointServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddChannelEndpointSource(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string channel, System.Action<CrestApps.Core.Omnichannel.Models.ChannelEndpointSource> configure) { }
+    }
+}
+namespace CrestApps.Core.Omnichannel.Services
+{
+    public sealed class AlwaysOpenBusinessHoursGate : CrestApps.Core.Omnichannel.Services.IBusinessHoursGate
+    {
+        public AlwaysOpenBusinessHoursGate() { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DispositionChoice
+    {
+        public DispositionChoice() { }
+        public string Description { get; init; }
+        public string Id { get; init; }
+        public string Name { get; init; }
+    }
+    public sealed class InMemoryAutomatedConversationGate : CrestApps.Core.Omnichannel.Services.IAutomatedConversationGate
+    {
+        public InMemoryAutomatedConversationGate() { }
+        public CrestApps.Core.Omnichannel.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken) { }
+        public bool IsGenerating(string sessionId) { }
+        public bool TryClaimInboundMessage(string providerMessageId) { }
+    }
+    public static class OmnichannelAutomationHelper
+    {
+        public const int MinimumHumanizedReplyDelaySeconds = 10;
+        public static CrestApps.Core.Omnichannel.Models.ActivityStatus GetInitialActivityStatus(CrestApps.Core.Omnichannel.Models.ActivityInteractionType interactionType, bool hasAssignedUser) { }
+        public static bool HasNoResponseTimeout(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
+        public static CrestApps.Core.Omnichannel.Models.AutomatedVoiceActivitySettings ResolveActivitySettings(CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatch batch, CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
+        public static System.TimeSpan ResolveHumanizedReadingDelay(System.TimeSpan? configuredDelay, int inboundCharacterCount) { }
+        public static System.TimeSpan ResolveHumanizedTypingDelay(int replyCharacterCount) { }
+        public static System.DateTime ResolveNoResponseDeadline(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings, System.DateTime utcNow) { }
+        public static System.TimeSpan? ResolveResponseDelay(CrestApps.Core.Omnichannel.Models.OmnichannelResponseDelayMode mode, int seconds, int jitterSeconds) { }
+    }
+    public sealed class OmnichannelAutomationOptionsValidator : Microsoft.Extensions.Options.IValidateOptions<CrestApps.Core.Omnichannel.Models.OmnichannelAutomationOptions>
+    {
+        public OmnichannelAutomationOptionsValidator() { }
+        public Microsoft.Extensions.Options.ValidateOptionsResult Validate(string name, CrestApps.Core.Omnichannel.Models.OmnichannelAutomationOptions options) { }
+    }
+    public sealed class OmnichannelChannelEndpointManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>, CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>
+    {
+        public OmnichannelChannelEndpointManager(CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointStore store, CrestApps.Core.PhoneNumbers.IPhoneNumberService phoneNumberService, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>> logger) { }
+        public System.Threading.Tasks.ValueTask<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class OmnichannelHandoffHelper
+    {
+        public const string TransferToAgentToolName = "transferToLiveAgent";
+        public static string BuildHandoffInstructions(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
+        public static bool IsHandoffEnabled(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings) { }
+    }
+    public sealed class OmnichannelHandoffTurn : CrestApps.Core.Omnichannel.Services.IOmnichannelHandoffTurn
+    {
+        public OmnichannelHandoffTurn() { }
+        public bool HandoffRequested { get; }
+        public System.Threading.CancellationToken HandoffRequestedToken { get; }
+        public string Reason { get; }
+        public void RequestHandoff(string reason) { }
+        public void Reset() { }
+    }
+    public static class OmnichannelSmsComplianceHelper
+    {
+        public static System.Collections.Generic.IReadOnlyList<string> DefaultOptOutKeywords { get; }
+        public static bool IsOptOutRequest(string message, System.Collections.Generic.IEnumerable<string> keywords = null) { }
+        public static System.Collections.Generic.IReadOnlyList<string> NormalizeOptOutKeywords(System.Collections.Generic.IEnumerable<string> keywords) { }
+        public static System.Collections.Generic.IReadOnlyList<string> ParseOptOutKeywords(string keywords) { }
+    }
+    public static class SubjectDispositionGuidance
+    {
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Services.DispositionChoice> Describe(System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.OmnichannelDisposition> dispositions, System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.SubjectAction> actions, string subjectContentType) { }
+    }
+}

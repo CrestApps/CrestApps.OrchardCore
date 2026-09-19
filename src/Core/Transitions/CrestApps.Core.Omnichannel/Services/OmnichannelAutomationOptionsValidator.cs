@@ -1,7 +1,7 @@
 using CrestApps.Core.Omnichannel.Models;
 using Microsoft.Extensions.Options;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Validates the automated-activity processing tunables. A zero batch or invocation ceiling processes nothing

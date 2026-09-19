@@ -24,6 +24,7 @@ a reviewed diff of every approval baseline that moved.
 | W3.8 | `83c7b18c` | The `AddCoreTelephony*` methods, and the Orchard startup reduced to calling them plus its own glue. |
 | W4.1 (first half) | `57d65f62` | The 44 Omnichannel models that name no content type, into `CrestApps.Core.Omnichannel.Abstractions`. |
 | W4.1 (second half) | `d42653e3` | The eleven Omnichannel contracts that name no content type and no persistence. |
+| W4.2 (first half) | this commit | The nine Omnichannel services that name no content type, into `CrestApps.Core.Omnichannel`. |
 
 ## Decisions the plan did not make
 
@@ -193,6 +194,14 @@ They move when the thing they name moves.
 `OmnichannelConstants` also stayed whole. Half of it — `NamedParts`, `Sterotypes`, `ContentParts`,
 `ContentTypes` — describes a content model and imports the host's permission type. Splitting it is
 the spike's decision, not a mechanical one.
+
+### The channel names split out of the constants (W4.2)
+
+The channel-endpoint manager canonicalizes a phone or SMS address before looking it up, so it needs
+to know which channels carry a number. Those three names were inside `OmnichannelConstants`, which
+cannot move. They are `CrestApps.Core.Omnichannel.OmnichannelChannels` now, and the module's
+`OmnichannelConstants.Channels` members are `const` references to them, so every existing caller
+still compiles against the name it already uses and the stored values cannot drift apart.
 
 ## Guards that had to be repointed (W3.2)
 

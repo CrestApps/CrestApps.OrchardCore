@@ -1,10 +1,11 @@
+using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
 using CrestApps.Core.PhoneNumbers;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="IOmnichannelChannelEndpointManager"/> that delegates storage
@@ -40,8 +41,8 @@ public sealed class OmnichannelChannelEndpointManager : CatalogManager<Omnichann
         // differently (national format, a missing "+", spaces), so canonicalize the query the same way before the
         // exact-match lookup; otherwise a validly-configured endpoint silently fails to match its own inbound.
         if (!string.IsNullOrEmpty(serviceAddress) &&
-            (string.Equals(channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase) ||
-             string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase)) &&
+            (string.Equals(channel, OmnichannelChannels.Phone, StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(channel, OmnichannelChannels.Sms, StringComparison.OrdinalIgnoreCase)) &&
             _phoneNumberService.TryParse(serviceAddress, out var canonical))
         {
             serviceAddress = canonical.Value;
