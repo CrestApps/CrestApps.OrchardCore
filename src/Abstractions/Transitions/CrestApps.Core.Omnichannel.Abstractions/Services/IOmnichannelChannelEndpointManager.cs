@@ -1,7 +1,7 @@
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Defines the contract for omnichannel channel endpoint manager.

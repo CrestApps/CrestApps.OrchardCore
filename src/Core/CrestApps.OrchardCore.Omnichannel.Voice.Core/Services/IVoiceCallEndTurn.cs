@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// end gives up and hangs up on it. That is the part callers describe as the machine not knowing the
 /// conversation is over.
 /// <para>
-/// Scoped, like <see cref="CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn"/>: the tool
+/// Scoped, like <see cref="CrestApps.Core.Omnichannel.Services.IOmnichannelHandoffTurn"/>: the tool
 /// and the session resolve the same instance within one call, and two calls running at once cannot see each
 /// other's decision.
 /// </para>

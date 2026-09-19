@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// One in-flight automated reply. Disposing it releases the conversation, unless a newer generation has already

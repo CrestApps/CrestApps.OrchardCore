@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.Omnichannel.Models;
+﻿using CrestApps.Core.Omnichannel;
+using CrestApps.Core.Omnichannel.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Cryptography;
 using System.Text;

@@ -134,7 +134,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager,
                     CrestApps.Core.AI.IAIChatSessionPromptStore promptStore,
                     CrestApps.Core.AI.Completions.IAICompletionService completionService,
-                    CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffTurn handoffTurn,
+                    CrestApps.Core.Omnichannel.Services.IOmnichannelHandoffTurn handoffTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn endCallTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner completionRunner,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IQueuedCallerAbandonmentHandler> abandonmentHandlers,

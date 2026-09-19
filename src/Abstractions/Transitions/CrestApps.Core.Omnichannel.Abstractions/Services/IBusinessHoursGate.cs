@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Abstracts the business-hours check used to gate background-initiated sends (such as re-engagement nudges) without

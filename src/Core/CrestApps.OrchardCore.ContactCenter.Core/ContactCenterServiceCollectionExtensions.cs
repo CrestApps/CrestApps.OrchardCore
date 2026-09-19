@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;

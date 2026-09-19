@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Services;
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 /// <summary>

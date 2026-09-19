@@ -1,6 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Contributes optional dialer profiles and queueing behavior to Omnichannel activity management.
@@ -18,7 +18,7 @@ public interface IActivityDialerContributor
     /// <summary>
     /// Finds a dialer profile by identifier.
     /// </summary>
-    /// <param name="profile">The resolved profile descriptor.</param>
+    /// <param name="profileId">The identifier of the profile to find.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The matching profile descriptor, or <see langword="null"/>.</returns>
     Task<ActivityDialerProfileDescriptor> FindByIdAsync(

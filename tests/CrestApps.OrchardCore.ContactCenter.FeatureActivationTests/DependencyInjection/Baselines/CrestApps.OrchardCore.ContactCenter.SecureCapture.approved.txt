@@ -4,6 +4,10 @@ CrestApps.Core.Hosting.IPublicBaseUrlAccessor #0 Scoped -> type:CrestApps.Orchar
 CrestApps.Core.Hosting.IScopedWorkExecutor #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.ShellScopedWorkExecutor
 CrestApps.Core.Hosting.ITenantAccessor #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.ShellSettingsTenantAccessor
 CrestApps.Core.Locking.IDistributedLockProvider #0 Singleton -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreDistributedLockProvider
+CrestApps.Core.Omnichannel.Services.IBusinessHoursGate #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.BusinessHoursGate
+CrestApps.Core.Omnichannel.Services.IHandoffQueueOptionsProvider #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterHandoffQueueOptionsProvider
+CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointManager #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelChannelEndpointManager
+CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointStore #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelChannelEndpointStore
 CrestApps.Core.PhoneNumbers.IPhoneNumberService #0 Singleton -> type:CrestApps.Core.PhoneNumbers.DefaultPhoneNumberService
 CrestApps.Core.Security.IUserAccessor #0 Scoped -> type:CrestApps.Core.Services.UserAccessor
 CrestApps.Core.Security.IUserDirectory #0 Scoped -> type:CrestApps.OrchardCore.Core.Hosting.OrchardCoreUserDirectory
@@ -247,12 +251,8 @@ CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionHandler #0 S
 CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityDispositionService
 CrestApps.OrchardCore.Omnichannel.Core.Services.IActivitySubjectWriter #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentItemActivitySubjectWriter
 CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityCompletionService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivityCompletionService
-CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.BusinessHoursGate
-CrestApps.OrchardCore.Omnichannel.Core.Services.IHandoffQueueOptionsProvider #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterHandoffQueueOptionsProvider
 CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelActivityManager
 CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityStore #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelActivityStore
-CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelChannelEndpointManager
-CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.OmnichannelChannelEndpointStore
 CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.VoiceAgentHandoffService
 CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionExecutor #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultSubjectActionExecutor
 CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Core.Services.ContentTypeSubjectFlowSettingsService

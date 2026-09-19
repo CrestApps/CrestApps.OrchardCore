@@ -1,6 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core;
+namespace CrestApps.Core.Omnichannel;
 
 /// <summary>
 /// Defines the contract for omnichannel event handler.

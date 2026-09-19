@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Services;
 using System.Collections.Concurrent;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;

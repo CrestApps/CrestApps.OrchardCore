@@ -1,6 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Defines a strategy that loads activities into an <see cref="OmnichannelActivityBatch"/> for a

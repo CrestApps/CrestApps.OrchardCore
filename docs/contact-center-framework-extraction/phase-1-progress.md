@@ -22,7 +22,8 @@ a reviewed diff of every approval baseline that moved.
 | W3.3 (rest), W3.4 | `9a049eb2` | The token store, the provider resolver and the authentication service: the last module services that were not Orchard's own. |
 | W3.6, W3.7 | `5bca9fe8` | The store package: the shared catalog base, the telephony indexes, their schema migrations and their stores. The Orchard `Telephony.Core` project is gone, and the documents it wrote are migrated to the names that replaced it. |
 | W3.8 | `83c7b18c` | The `AddCoreTelephony*` methods, and the Orchard startup reduced to calling them plus its own glue. |
-| W4.1 (first half) | this commit | The 44 Omnichannel models that name no content type, into `CrestApps.Core.Omnichannel.Abstractions`. |
+| W4.1 (first half) | `57d65f62` | The 44 Omnichannel models that name no content type, into `CrestApps.Core.Omnichannel.Abstractions`. |
+| W4.1 (second half) | this commit | The eleven Omnichannel contracts that name no content type and no persistence. |
 
 ## Decisions the plan did not make
 
@@ -181,6 +182,17 @@ Three enums — `ActivityStatus`, `ActivityUrgencyLevel`, `ActivityInteractionTy
 at the bottom of `OmnichannelActivity.cs` and are used across every pillar. They are now files of
 their own in the framework, so the whole suite did not have to wait for the one model that cannot
 move yet.
+
+### Four contracts stayed behind with the models (W4.1)
+
+`IOmnichannelProcessor` is typed in terms of `OmnichannelActivity`; `BulkManageActivityFilterContext`
+carries YesSql's `ISqlBuilder`, `ISqlDialect` and `ITableNameConvention`, which makes it persistence
+rather than a contract; and the two filter-handler interfaces are typed in terms of those contexts.
+They move when the thing they name moves.
+
+`OmnichannelConstants` also stayed whole. Half of it — `NamedParts`, `Sterotypes`, `ContentParts`,
+`ContentTypes` — describes a content model and imports the host's permission type. Splitting it is
+the spike's decision, not a mechanical one.
 
 ## Guards that had to be repointed (W3.2)
 

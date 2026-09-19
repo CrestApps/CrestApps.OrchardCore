@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Supplies the selectable handoff-queue options for the subject AI-settings editor. Implemented by the Contact

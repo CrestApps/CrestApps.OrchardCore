@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Keeps one automated reply in flight per conversation. A newer inbound message makes the reply being composed

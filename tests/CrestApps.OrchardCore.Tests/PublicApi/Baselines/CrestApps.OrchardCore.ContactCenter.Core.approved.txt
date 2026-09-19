@@ -2454,10 +2454,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class BusinessHoursGate : CrestApps.OrchardCore.Omnichannel.Core.Services.IBusinessHoursGate
+    public sealed class BusinessHoursGate : CrestApps.Core.Omnichannel.Services.IBusinessHoursGate
     {
         public BusinessHoursGate(CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursService businessHoursService, CrestApps.OrchardCore.ContactCenter.Core.Services.IBusinessHoursCalendarManager calendarManager) { }
-        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class CallControlAuthorizationService : CrestApps.OrchardCore.ContactCenter.Core.Services.ICallControlAuthorizationService
@@ -2539,7 +2539,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<bool> MarkConnectedAsync(string callSessionId, string consultId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ConsultCall> StartAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ConsultTransferRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class ContactCenterActivityDialerContributor : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDialerContributor
+    public sealed class ContactCenterActivityDialerContributor : CrestApps.Core.Omnichannel.Services.IActivityDialerContributor
     {
         public ContactCenterActivityDialerContributor(CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileManager dialerProfileManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueService activityQueueService) { }
         public System.Threading.Tasks.Task EnqueueAsync(string activityId, string campaignId, CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default) { }

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Carries one automated conversation turn's handoff decision from the transfer-to-agent tool back to the
