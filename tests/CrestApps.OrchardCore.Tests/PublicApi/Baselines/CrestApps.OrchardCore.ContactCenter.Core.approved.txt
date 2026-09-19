@@ -11,6 +11,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
     {
         public static CrestApps.OrchardCore.ContactCenter.Models.AgentOfferKind FromActivitySource(string activitySource) { }
     }
+    public static class ContactCenterServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenter(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration) { }
+    }
     public static class DialerActivitySourceHelper
     {
         public static string GetActivitySource(CrestApps.OrchardCore.ContactCenter.Models.DialerMode mode) { }

@@ -284,12 +284,22 @@ public sealed class ContactCenterRetentionCoverageTests
     public void EveryPolicy_IsRegistered_SoACoveredTableIsActuallyPurgedAtRuntime()
     {
         // Arrange
-        var moduleDirectory = Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter");
+        // Looked for across the module's startups and the Core project's registration methods alike. A policy
+        // is registered wherever its registration is written; what matters to this rule is that something
+        // registers it, not which file does.
+        var searched = new[]
+        {
+            Path.Combine(RepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.ContactCenter"),
+            Path.Combine(RepositoryRoot(), "src", "Core", "CrestApps.OrchardCore.ContactCenter.Core"),
+        };
 
-        Assert.True(Directory.Exists(moduleDirectory), $"Could not find the Contact Center module directory at '{moduleDirectory}'.");
+        Assert.All(searched, directory => Assert.True(Directory.Exists(directory), $"Could not find '{directory}'."));
 
-        var startup = string.Concat(Directory
-            .EnumerateFiles(moduleDirectory, "*Startup.cs", SearchOption.AllDirectories)
+        var startup = string.Concat(searched
+            .SelectMany(directory => Directory.EnumerateFiles(directory, "*.cs", SearchOption.AllDirectories))
+            .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(file => file.EndsWith("Startup.cs", StringComparison.Ordinal)
+                || file.EndsWith("ServiceCollectionExtensions.cs", StringComparison.Ordinal))
             .Select(File.ReadAllText));
 
         // Act
