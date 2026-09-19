@@ -25,7 +25,7 @@ a reviewed diff of every approval baseline that moved.
 | W4.1 (first half) | `57d65f62` | The 44 Omnichannel models that name no content type, into `CrestApps.Core.Omnichannel.Abstractions`. |
 | W4.1 (second half) | `d42653e3` | The eleven Omnichannel contracts that name no content type and no persistence. |
 | W4.2 (first half) | `1f791056` | The nine Omnichannel services that name no content type, into `CrestApps.Core.Omnichannel`. |
-| W5.1 | this commit | The Contact Center contracts: 102 files into `CrestApps.Core.ContactCenter.Abstractions`. |
+| W5.1 | `6f86b698` | The Contact Center contracts: 102 files into `CrestApps.Core.ContactCenter.Abstractions`. |
 
 ## Decisions the plan did not make
 
