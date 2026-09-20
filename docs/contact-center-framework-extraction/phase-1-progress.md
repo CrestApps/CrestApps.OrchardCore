@@ -335,6 +335,30 @@ them.
 previous contents before the new fingerprint was recorded: two lines, the namespace and the
 accessibility, and no statement.
 
+### A dead `using` was holding thirteen files in the host (W5.1d)
+
+Seventeen Contact Center services imported `CrestApps.OrchardCore.Telephony`, which declares exactly
+two types - `TelephonyFeatures` and `TelephonyPermissions` - and not one of the seventeen named
+either. The import was left over from before the telephony primitive moved. To a dependency sweep it
+looked like a host dependency, which is how thirteen otherwise framework-clean services stayed
+behind. Removing it moved them.
+
+Worth remembering as a method note: "what does this file import" is a weak proxy for "what does this
+file need", and it fails in the direction that makes an extraction look more finished than it is - a
+stale import blocks a move, it never forces one.
+
+### The hub base and the health checks ship with the component (W5.1d)
+
+`CrestApps.Core.Telephony` already takes `<FrameworkReference Include="Microsoft.AspNetCore.App" />`
+and ships its own `Hubs` and `Endpoints`. The Contact Center package follows it: the hub base, the
+hub's client contract and all fifteen health checks are in it now, and the three
+`Microsoft.Extensions.*` package references the framework reference supersedes are gone (NuGet
+refuses them outright, which is a helpful way to be told).
+
+The alternative - separate `.Hubs` and `.HealthChecks` packages - would keep the services package
+free of ASP.NET, but it would also be the only component in the suite split that way. Consistency
+with telephony wins; if the split is wanted it should be made for both at once.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All

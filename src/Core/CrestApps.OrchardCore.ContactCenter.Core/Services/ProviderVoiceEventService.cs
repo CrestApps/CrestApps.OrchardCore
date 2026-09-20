@@ -2,7 +2,6 @@
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Telephony;
 using CrestApps.Core.Telephony.Models;
 using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.Logging;

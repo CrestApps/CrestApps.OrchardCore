@@ -53,9 +53,9 @@ public sealed class FileSizeRatchetTests
         // contracts did, and this file needs the framework import for each as well as the host one it already
         // had. A ratchet exists to stop a file accumulating logic; an import is not that.
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 1022,
-        // 975 rather than 974: the Contact Center service contracts moved into the framework package and this
-        // file needs the import. An import is not the accumulation this ratchet exists to stop.
-        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 975,
+        // Back to 974: the import this file gained when the Contact Center service contracts moved is paid for
+        // by a dead `using CrestApps.OrchardCore.Telephony;` the same sweep removed.
+        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 974,
         // 956 rather than 955: the omnichannel indexes moved namespace and this file needs the framework
         // import as well. An import is not the accumulation this ratchet exists to stop.
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Controllers/AdminController.cs"] = 956,

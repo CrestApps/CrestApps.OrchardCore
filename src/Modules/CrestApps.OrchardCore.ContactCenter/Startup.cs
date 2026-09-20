@@ -4,7 +4,7 @@ using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
-using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
+using CrestApps.Core.ContactCenter.HealthChecks;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.ContactCenter.Services.Retention;
 using CrestApps.Core.ContactCenter.Services;

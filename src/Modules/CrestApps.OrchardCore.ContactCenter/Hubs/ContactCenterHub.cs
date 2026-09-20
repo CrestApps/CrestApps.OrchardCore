@@ -1,7 +1,7 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Hosting;
 using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.ContactCenter.Core.Hubs;
+using CrestApps.Core.ContactCenter.Hubs;
 using CrestApps.Core.ContactCenter.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Logging;

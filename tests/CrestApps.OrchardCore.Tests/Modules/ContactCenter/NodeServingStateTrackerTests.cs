@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
+using CrestApps.Core.ContactCenter.HealthChecks;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

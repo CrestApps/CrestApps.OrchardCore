@@ -1,6 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
+using CrestApps.Core.ContactCenter.HealthChecks;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;

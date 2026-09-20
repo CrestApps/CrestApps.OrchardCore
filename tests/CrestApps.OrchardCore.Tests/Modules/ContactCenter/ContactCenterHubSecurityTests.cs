@@ -23,7 +23,7 @@ using OrchardCore.Environment.Shell;
 using OrchardCore.Security;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Users;
-using CrestApps.OrchardCore.ContactCenter.Core.Hubs;
+using CrestApps.Core.ContactCenter.Hubs;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
