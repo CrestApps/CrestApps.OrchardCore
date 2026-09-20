@@ -42,6 +42,7 @@ namespace CrestApps.OrchardCore.ContactCenter
     public static class ContactCenterProcessHealthServiceCollectionExtensions
     {
         public const string DefaultSharedHealthEndpointRoute = "/health/live";
+        public const string SharedHealthEndpointAcknowledgementConfigurationKey = "CrestApps:ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute";
         public const string SharedHealthEndpointConfigurationKey = "OrchardCore_HealthChecks:Url";
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddContactCenterProcessLiveness(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddContactCenterProcessLiveness(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string path) { }

@@ -329,6 +329,11 @@ namespace CrestApps.Core.ContactCenter
         System.Threading.Tasks.Task NotifyQueueStatsChangedAsync(CrestApps.Core.ContactCenter.Models.QueueStatsNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyRecordingStateChangedAsync(CrestApps.Core.ContactCenter.Models.RecordingStateNotification notification, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactCenterStartupCheck
+    {
+        string Name { get; }
+        System.Threading.Tasks.Task ValidateAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactCenterVoiceAttendedTransferProvider
     {
         System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterVoiceProviderResult> BeginConsultAsync(CrestApps.Core.ContactCenter.Models.ContactCenterVoiceAttendedTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
@@ -445,6 +450,14 @@ namespace CrestApps.Core.ContactCenter
     public interface ISecureCaptureTokenSink
     {
         System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureTokenResult> TokenizeAsync(CrestApps.Core.ContactCenter.Models.SecureCaptureField field, string rawValue, string idempotencyKey, System.Threading.CancellationToken cancellationToken = default);
+    }
+}
+namespace CrestApps.Core.ContactCenter.HealthChecks
+{
+    public interface ISharedHealthEndpointDescriptor
+    {
+        bool IsAcknowledged { get; }
+        string Route { get; }
     }
 }
 namespace CrestApps.Core.ContactCenter.Models

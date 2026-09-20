@@ -572,6 +572,30 @@ They had no owner in any workstream. Both are now run:
   module-resident and none changed namespace, so the alias still resolves. Everything else the sweep
   found is an in-memory cache key or a log message.
 
+### S14 exists now, and it was blocking two workstreams (W1/W5.2i/W8)
+
+`IStartupCheck` - the seam S14 names - was never built, and the audit found it cited as a blocker in three
+separate places: `AsteriskRealtimeVoiceTenantEvents` in W8, the health checks in W5.2i, and the
+process-health split in W5.1 that appendix A marks as only half done.
+
+`IContactCenterStartupCheck` is in the abstractions now, with `SharedHealthEndpointStartupCheck` as the
+first implementation and one Orchard `ContactCenterStartupCheckTenantEvents` driving every registered
+check on activation. Adding a check is a registration rather than another Orchard lifecycle class.
+
+Two decisions worth recording:
+
+- **A check reports, it does not throw.** Failing activation over a configuration mistake removes the
+  administration screens an operator would use to correct it. The wrapper logs a check that could not run -
+  which is a different thing from a check reporting a problem - and lets the others run.
+- **The host hands over the answers rather than the check going to find them.** The first attempt gave the
+  check an `IServiceProvider` so it could invoke the route resolver already on the liveness options. The
+  `DependencyInjectionArchitectureTests` guard rejected that, correctly: it is service location. The shape
+  now is `ISharedHealthEndpointDescriptor`, which Orchard implements over `IShellConfiguration`. Which key
+  carries the route, what it falls back to, and where an operator accepts the hazard all stay host
+  knowledge, and the check takes two properties.
+
+The guard earning its keep on a first attempt is the argument for having it.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All

@@ -26,4 +26,5 @@ public sealed class ContactCenterProcessLivenessOptions
     /// default included, so the check sees the route that will actually be served.
     /// </remarks>
     public Func<IServiceProvider, string> SharedHealthEndpointRouteResolver { get; set; }
+
 }

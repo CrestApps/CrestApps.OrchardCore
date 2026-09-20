@@ -17,6 +17,13 @@ public static class ContactCenterProcessHealthServiceCollectionExtensions
     public const string SharedHealthEndpointConfigurationKey = "OrchardCore_HealthChecks:Url";
 
     /// <summary>
+    /// The configuration key an operator sets to accept the hazard of pointing a liveness probe at the shared
+    /// aggregate health endpoint.
+    /// </summary>
+    public const string SharedHealthEndpointAcknowledgementConfigurationKey =
+        "CrestApps:ContactCenter:HealthChecks:AllowUnsafeSharedEndpointRoute";
+
+    /// <summary>
     /// The route the <c>OrchardCore.HealthChecks</c> module uses when no route is configured.
     /// </summary>
     public const string DefaultSharedHealthEndpointRoute = "/health/live";

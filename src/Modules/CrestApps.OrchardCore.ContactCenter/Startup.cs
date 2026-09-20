@@ -261,7 +261,12 @@ public sealed class ContactCenterHealthChecksStartup : StartupBase
             .ValidateOnStart();
 
         services.AddSingleton<SharedHealthEndpointHazardState>();
-        services.AddScoped<IModularTenantEvents, SharedHealthCheckEndpointValidator>();
+
+        // The verdict is the framework's; when it runs is this host's. One tenant-events wrapper drives every
+        // registered check, so adding a check is a registration rather than another Orchard lifecycle class.
+        services.AddScoped<ISharedHealthEndpointDescriptor, ShellSharedHealthEndpointDescriptor>();
+        services.AddScoped<IContactCenterStartupCheck, SharedHealthEndpointStartupCheck>();
+        services.AddScoped<IModularTenantEvents, ContactCenterStartupCheckTenantEvents>();
         services.AddContactCenterSharedEndpointHealthCheck();
 
         services.AddContactCenterHealthChecks();

@@ -120,6 +120,12 @@ namespace CrestApps.Core.ContactCenter.HealthChecks
         public bool IsHazardous { get; }
         public void Record(string hazardMessage) { }
     }
+    public sealed class SharedHealthEndpointStartupCheck : CrestApps.Core.ContactCenter.IContactCenterStartupCheck
+    {
+        public SharedHealthEndpointStartupCheck(CrestApps.Core.ContactCenter.HealthChecks.SharedHealthEndpointHazardState state, CrestApps.Core.ContactCenter.HealthChecks.ISharedHealthEndpointDescriptor descriptor, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.HealthChecks.SharedHealthEndpointStartupCheck> logger) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task ValidateAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
 }
 namespace CrestApps.Core.ContactCenter.Hubs
 {
