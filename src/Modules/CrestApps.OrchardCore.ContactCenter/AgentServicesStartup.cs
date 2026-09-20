@@ -16,11 +16,11 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Registers the <b>Contact Center Agent Services</b> feature: only the shared agent-profile directory —
 /// the profile store, manager, and index, plus the storage collection they live in. This is the minimal set
 /// that resolves an operator's agent identity, with no administration screens, presence, availability, reason
-/// codes, or queue concepts. The full <see cref="ContactCenterConstants.Feature.Agents"/> feature and any
+/// codes, or queue concepts. The full <see cref="ContactCenterFeatures.Agents"/> feature and any
 /// module that reuses agent identity (such as the SMS Portal) depend on this feature, so agent identity is
 /// available without pulling in the Agents and Work Distribution administration.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.AgentServices)]
+[Feature(ContactCenterFeatures.AgentServices)]
 public sealed class AgentServicesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

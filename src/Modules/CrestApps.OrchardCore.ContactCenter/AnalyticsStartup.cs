@@ -19,7 +19,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// and the Reports admin navigation. Available whenever both the Work Distribution and Reports features
 /// are enabled, so no separate feature is required.
 /// </summary>
-[RequireFeatures(ContactCenterConstants.Feature.Queues, ReportsConstants.Feature)]
+[RequireFeatures(ContactCenterFeatures.Queues, ReportsConstants.Feature)]
 public sealed class AnalyticsStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;

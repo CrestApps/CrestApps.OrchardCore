@@ -1,7 +1,8 @@
-using CrestApps.Core.Hosting.Background;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace CrestApps.Core.Hosting.Background;
 
 /// <summary>
 /// Provides extension methods for registering background cycles and the runner that drives them.
@@ -22,9 +23,11 @@ public static class BackgroundCycleServiceCollectionExtensions
         where TCycle : class, IBackgroundCycle
         where TImplementation : class, TCycle
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         services.AddBackgroundCycle<TCycle, TImplementation>();
         services.AddOptions<BackgroundCycleOptions>(CycleRunner<TCycle>.CycleName);
-        services.AddSingleton<IHostedService, CycleRunner<TCycle>>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IHostedService, CycleRunner<TCycle>>());
 
         return services;
     }

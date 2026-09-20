@@ -50,7 +50,7 @@ public sealed class Startup : StartupBase
 /// because that default is always registered, and this exists precisely to take over from it whichever startup
 /// runs first.
 /// </remarks>
-[RequireFeatures(ContactCenterConstants.Feature.VoiceMedia)]
+[RequireFeatures(ContactCenterFeatures.VoiceMedia)]
 public sealed class RealtimeVoiceStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

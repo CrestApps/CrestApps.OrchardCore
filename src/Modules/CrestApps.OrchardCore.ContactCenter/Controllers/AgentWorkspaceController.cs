@@ -25,9 +25,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// </summary>
 [Admin]
 [RequireFeatures(
-    ContactCenterConstants.Feature.Agents,
-    ContactCenterConstants.Feature.RealTime,
-    ContactCenterConstants.Feature.Voice,
+    ContactCenterFeatures.Agents,
+    ContactCenterFeatures.RealTime,
+    ContactCenterFeatures.Voice,
     TelephonyFeatures.SoftPhoneCore)]
 public sealed class AgentWorkspaceController : Controller
 {

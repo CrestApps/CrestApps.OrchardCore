@@ -453,7 +453,7 @@ public abstract partial class TelephonyHubBase : Hub<ITelephonyClient>
                 return;
             }
 
-            await store.MarkVoicemailReadAsync(userId, callId, DateTime.UtcNow, Context.ConnectionAborted);
+            await store.MarkVoicemailReadAsync(userId, callId, services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime, Context.ConnectionAborted);
             count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
         });
 
@@ -484,7 +484,7 @@ public abstract partial class TelephonyHubBase : Hub<ITelephonyClient>
                 return;
             }
 
-            await store.MarkAllVoicemailsReadAsync(userId, DateTime.UtcNow, Context.ConnectionAborted);
+            await store.MarkAllVoicemailsReadAsync(userId, services.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime, Context.ConnectionAborted);
             count = await store.GetUnreadVoicemailCountAsync(userId, Context.ConnectionAborted);
         });
 
@@ -1276,7 +1276,7 @@ public abstract partial class TelephonyHubBase : Hub<ITelephonyClient>
 
             var interaction = new TelephonyInteraction
             {
-                InteractionId = IdentifierGenerator.Generate(),
+                InteractionId = UniqueId.GenerateId(),
                 CallId = call.CallId,
                 ProviderName = call.ProviderName,
                 UserId = userId,

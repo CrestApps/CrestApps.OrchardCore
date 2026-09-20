@@ -77,28 +77,28 @@ public sealed class ContactCenterAdministrationSurfaceTests
 
     [Theory]
     [InlineData(
-        ContactCenterConstants.Feature.Area,
+        ContactCenterFeatures.Area,
         "CrestApps.OrchardCore.ContactCenter.Services.ContactCenterSettingsAdminMenu")]
     [InlineData(
-        ContactCenterConstants.Feature.Agents,
+        ContactCenterFeatures.Agents,
         "CrestApps.OrchardCore.ContactCenter.Drivers.AgentStateReasonCodeDisplayDriver")]
     [InlineData(
-        ContactCenterConstants.Feature.Queues,
+        ContactCenterFeatures.Queues,
         "CrestApps.OrchardCore.ContactCenter.Controllers.QueuesController")]
     [InlineData(
-        ContactCenterConstants.Feature.Dialer,
+        ContactCenterFeatures.Dialer,
         "CrestApps.OrchardCore.ContactCenter.Controllers.DialerProfilesController")]
     [InlineData(
-        ContactCenterConstants.Feature.DialerPaced,
+        ContactCenterFeatures.DialerPaced,
         "CrestApps.OrchardCore.ContactCenter.Controllers.DialerProfilesController")]
     [InlineData(
-        ContactCenterConstants.Feature.Recording,
+        ContactCenterFeatures.Recording,
         "CrestApps.OrchardCore.ContactCenter.Drivers.ContactCenterRecordingSettingsDisplayDriver")]
     [InlineData(
-        ContactCenterConstants.Feature.SecureCapture,
+        ContactCenterFeatures.SecureCapture,
         "CrestApps.OrchardCore.ContactCenter.Drivers.SecureCaptureSettingsDisplayDriver")]
     [InlineData(
-        ContactCenterConstants.Feature.InboundVoice,
+        ContactCenterFeatures.InboundVoice,
         "CrestApps.OrchardCore.ContactCenter.Controllers.EntryPointsController")]
     public async Task ConfigurableCapability_RegistersItsAdministrationSurface(
         string featureId,

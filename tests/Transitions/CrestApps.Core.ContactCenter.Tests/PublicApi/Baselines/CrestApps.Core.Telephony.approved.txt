@@ -1,18 +1,3 @@
-namespace CrestApps.Core.Telephony
-{
-    public static class CoreTelephonyServiceCollectionExtensions
-    {
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephony(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyCalling(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyExtensions(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyInteractions(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyLocalRecordingStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Func<System.IServiceProvider, string> rootPathResolver) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonySoftPhoneNotifier<THub>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services)
-            where THub : Microsoft.AspNetCore.SignalR.Hub<CrestApps.Core.Telephony.ITelephonyClient> { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyVoiceIngress(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-    }
-}
 namespace CrestApps.Core.Telephony.Endpoints
 {
     public static class SoftPhoneDialerEndpoints
@@ -107,6 +92,34 @@ namespace CrestApps.Core.Telephony.Models
         public long? HighWaterSequence { get; set; }
         public System.DateTime? LastEventUtc { get; set; }
         public CrestApps.Core.Telephony.Models.VoiceCallLifecyclePhase Phase { get; set; }
+    }
+}
+namespace CrestApps.Core.Telephony
+{
+    public static class ServiceCollectionExtensions
+    {
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddAuthentication(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder) { }
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddCalling(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephony(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephony(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfigurationSection configuration) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyAuthentication(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyCalling(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyExtensions(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyInteractions(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyInteractionsWorker(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyLocalRecordingStore(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Func<System.IServiceProvider, string> rootPathResolver) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonySoftPhoneNotifier<THub>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+            where THub : Microsoft.AspNetCore.SignalR.Hub<CrestApps.Core.Telephony.ITelephonyClient> { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyVoiceIngress(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddExtensions(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder) { }
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddInteractions(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder) { }
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddInteractionsWorker(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder) { }
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddLocalRecordingStore(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder, System.Func<System.IServiceProvider, string> rootPathResolver) { }
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddSoftPhoneNotifier<THub>(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder)
+            where THub : Microsoft.AspNetCore.SignalR.Hub<CrestApps.Core.Telephony.ITelephonyClient> { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder AddTelephony(this CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder builder, System.Action<CrestApps.Core.Builders.CrestAppsTelephonyBuilder> configure = null) { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder AddTelephony(this CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder builder, Microsoft.Extensions.Configuration.IConfigurationSection configuration, System.Action<CrestApps.Core.Builders.CrestAppsTelephonyBuilder> configure = null) { }
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddVoiceIngress(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder) { }
     }
 }
 namespace CrestApps.Core.Telephony.Services
@@ -243,6 +256,13 @@ namespace CrestApps.Core.Telephony.Services
         public NormalizedVoiceEventIngestor(System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler> handlers, CrestApps.Core.Telephony.Services.IProviderIdentityResolver providerIdentityResolver, CrestApps.Core.Telephony.Services.IVoiceIngressGate ingressGate, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Services.NormalizedVoiceEventIngestor> logger) { }
         public System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.Core.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class NullTelephonySoftPhoneNotifier : CrestApps.Core.Telephony.ITelephonySoftPhoneNotifier
+    {
+        public NullTelephonySoftPhoneNotifier() { }
+        public System.Threading.Tasks.Task NotifyCallStateChangedAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyCall call, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task NotifyIncomingCallAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyCall call, CrestApps.Core.Telephony.Models.IncomingCallContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RequestDialAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyDialRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ProviderIdentityResolver : CrestApps.Core.Telephony.Services.IProviderIdentityResolver
     {
         public ProviderIdentityResolver(System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.IProviderIdentityProvider> identityProviders) { }
@@ -306,11 +326,6 @@ namespace CrestApps.Core.Telephony.Services
         public System.Threading.Tasks.Task NotifyCallStateChangedAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyCall call, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task NotifyIncomingCallAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyCall call, CrestApps.Core.Telephony.Models.IncomingCallContext context, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task RequestDialAsync(string userId, CrestApps.Core.Telephony.Models.TelephonyDialRequest request, System.Threading.CancellationToken cancellationToken = default) { }
-    }
-    public sealed class TelephonyUserPersistenceException : System.Exception
-    {
-        public TelephonyUserPersistenceException(string message) { }
-        public TelephonyUserPersistenceException(string message, System.Exception innerException) { }
     }
     public sealed class VoiceAgentMediaProviderResolver : CrestApps.Core.Telephony.Services.IVoiceAgentMediaProviderResolver
     {

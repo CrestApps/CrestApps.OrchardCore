@@ -57,7 +57,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddContactCenterCapability(ContactCenterConstants.Feature.Area, ContactCenterCapabilities.Core);
+        services.AddContactCenterCapability(ContactCenterFeatures.Area, ContactCenterCapabilities.Core);
 
         services.AddCoreHostSeams();
 

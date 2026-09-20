@@ -15,12 +15,12 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Registers the shared SignalR hub and event projection that broadcasts presence, offer, and queue
 /// updates to optional real-time user experiences.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.RealTime)]
+[Feature(ContactCenterFeatures.RealTime)]
 public sealed class RealTimeStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddContactCenterCapability(ContactCenterConstants.Feature.RealTime, ContactCenterCapabilities.RealTime);
+        services.AddContactCenterCapability(ContactCenterFeatures.RealTime, ContactCenterCapabilities.RealTime);
 
         // The hub asks for its own operations, so this feature answers them rather than relying on
         // another enabled feature having registered the handler first.

@@ -308,7 +308,7 @@ public static partial class AgentWorkspaceEndpoints
                     httpContext,
                     "Index",
                     "AgentWorkspace",
-                    new { area = ContactCenterConstants.Feature.Area }),
+                    new { area = ContactCenterFeatures.Area }),
             });
     }
 

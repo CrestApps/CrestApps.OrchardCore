@@ -54,7 +54,7 @@ public sealed class ProviderCommandRecoveryCycle : IProviderCommandRecoveryCycle
             _logger.LogError(
                 ex,
                 "An error occurred while recovering Contact Center provider commands for feature {FeatureId}.",
-                ContactCenterConstants.Feature.Voice);
+                ContactCenterFeatures.Voice);
         }
     }
 }

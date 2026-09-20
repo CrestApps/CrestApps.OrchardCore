@@ -1,4 +1,5 @@
 using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -24,7 +25,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Registers agent-assisted secure data capture: persistence for capture sessions, the tokenization boundary, the
 /// orchestration service, the expiry safety net, and the agent and customer endpoints.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.SecureCapture)]
+[Feature(ContactCenterFeatures.SecureCapture)]
 public sealed class SecureCaptureStartup : StartupBase
 {
     private readonly IHostEnvironment _hostEnvironment;

@@ -9,7 +9,7 @@
 @{
     var initial = string.IsNullOrWhiteSpace(Model.DisplayName) ? "?" : Model.DisplayName.Trim().Substring(0, 1);
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
-    var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterConstants.Feature.Area });
+    var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterFeatures.Area });
     var completeActivityUrlTemplate = Url.Action(
         "Complete",
         "Activities",

@@ -1,4 +1,5 @@
 using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -26,7 +27,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Registers the Contact Center Call Recording feature: voice interaction recording orchestration and the
 /// recording and monitoring settings screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Recording)]
+[Feature(ContactCenterFeatures.Recording)]
 public sealed class RecordingStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -58,7 +59,7 @@ public sealed class RecordingStartup : StartupBase
 /// Registers the call-recording workflow tasks, available only when both Orchard Core Workflows and the
 /// Recording feature are enabled so the required recording service is always resolvable.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Recording)]
+[Feature(ContactCenterFeatures.Recording)]
 [RequireFeatures("OrchardCore.Workflows")]
 public sealed class ContactCenterRecordingWorkflowsStartup : StartupBase
 {
@@ -72,7 +73,7 @@ public sealed class ContactCenterRecordingWorkflowsStartup : StartupBase
 /// <summary>
 /// Registers the Orchard Audit Trail receipt for confirmed recording-media deletion.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Recording)]
+[Feature(ContactCenterFeatures.Recording)]
 [RequireFeatures("OrchardCore.AuditTrail")]
 public sealed class RecordingAuditTrailStartup : StartupBase
 {

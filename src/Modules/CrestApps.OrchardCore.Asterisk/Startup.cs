@@ -1,4 +1,5 @@
 using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 using CrestApps.OrchardCore.Asterisk.Drivers;
 using CrestApps.OrchardCore.Asterisk.Indexes;
@@ -156,7 +157,7 @@ public sealed class Startup : StartupBase
 /// both enabled, so an operator never has to enable a redundant per-provider toggle that must match the
 /// provider they already configured.
 /// </summary>
-[RequireFeatures(ContactCenterConstants.Feature.Voice)]
+[RequireFeatures(ContactCenterFeatures.Voice)]
 public sealed class AsteriskContactCenterVoiceStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -206,7 +207,7 @@ public sealed class AsteriskContactCenterVoiceStartup : StartupBase
 /// than a separately selectable feature: it activates automatically whenever the Asterisk provider and Contact
 /// Center Voice Media are both enabled.
 /// </summary>
-[RequireFeatures(ContactCenterConstants.Feature.VoiceMedia)]
+[RequireFeatures(ContactCenterFeatures.VoiceMedia)]
 public sealed class AsteriskContactCenterMediaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

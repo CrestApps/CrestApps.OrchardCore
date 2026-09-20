@@ -49,6 +49,14 @@ The alternative was an injected `IIdentifierGenerator` with an Orchard adapter. 
 a constructor parameter, a registration, and a baseline entry to every framework type that creates a
 record, to make two random values agree on nothing.
 
+**Correction (review pass, 2026-09-19):** the conclusion holds but the helper was the wrong one, and it
+is gone. `CrestApps.Core.Abstractions` already ships `UniqueId.GenerateId()`, and writing a second
+generator beside it was the duplication this extraction exists to remove. Worse, the two were not the
+same shape: the deleted helper encoded with the standard base32 alphabet
+(`0123456789abcdefghijklmnopqrstuv`) while both the host's generator and `UniqueId` use the Crockford
+one (`0123456789abcdefghjkmnpqrstvwxyz`), so the claim above that it "generates the same shape the host
+does" was true of the width and false of the characters. Both call sites now use `UniqueId`.
+
 ### `SanitizedLoggingExtensions` moved with the hub (W3.2)
 
 It is a pure helper already sitting in the `CrestApps.Core.Support` namespace, and the hub needs it.
@@ -239,3 +247,182 @@ rule with a hole in it.
 - `PhoneNumberCanonicalizationArchitectureTests` — guards the new root as well.
 - `ContactCenterWorkStateAuthorityTests` — scans the new assembly and folder as well.
 - `VoiceIngressLayeringArchitectureTests` — walks both project closures for a Contact Center reference.
+
+## Review pass against the Core repository (2026-09-19)
+
+An independent review read the extracted projects beside `CrestApps.Core` and asked one question of
+each: would this be the same code if it had been written in that repository? The answer was mostly
+yes - the project split, the contracts, the store package and the hub split all match - with the
+exceptions below. What was found is recorded here whether or not it was fixed, because a gap nobody
+wrote down is a gap nobody closes.
+
+### Fixed in this pass
+
+**The builder API now exists for more than telephony, and something runs it.** `AddContactCenterSuite`
+had no caller and no test, and `CrestAppsOmnichannelBuilder` was a type nothing constructed. There is
+now `AddOmnichannel(...)` with `AddChannelEndpoints()` and `AddAutomation(...)`, `AddPhoneNumbers()`,
+`AddWebSockets()`, and `AddYesSqlStores()` on the telephony builder - the last of which the telephony
+builder's own XML doc already told hosts to call. `ContactCenterSuiteCompositionTests` composes the
+suite the way the Core sample host composes the AI suite and pins what each call registers, which is
+what makes the front door of the package something that runs rather than something that compiles.
+
+**The two telephony registration classes became one `ServiceCollectionExtensions`.** That is the shape
+Core uses: `CrestApps.Core.AI/ServiceCollectionExtensions.cs` holds both `AddAISuite` and the
+`AddCoreAI*` methods it is sugar over. The Omnichannel primitive gained the same file.
+
+**`AddCoreTelephony` takes an `IConfigurationSection` and has a no-configuration overload**, matching
+`AddElasticsearch` / `AddAzureAISearch` / `AddPostgreSQL`, which all offer both.
+
+**Enumerable chains register with `TryAddEnumerable`.** The index providers, the normalized voice-event
+handler and the cycle runner used plain `Add*`, a form Core never uses for a chain. `AddCoreWebSockets`
+used `AddSingleton` where its own remarks said a host replaces the registry, so it is `TryAddSingleton`.
+Guards were added to the public registration methods that had none.
+
+**The Orchard feature ids left the framework package.** `ContactCenterConstants.Feature` - seventeen
+`CrestApps.OrchardCore.ContactCenter.*` strings - shipped inside
+`CrestApps.Core.ContactCenter.Abstractions`. They are now `ContactCenterFeatures` in
+`CrestApps.OrchardCore.ContactCenter.Abstractions`, which is exactly what W3.1 did for telephony, and
+what [02](02-inventory-and-target-layout.md) always said should happen. The 168 call sites across 58
+files were rewritten, and the seventeen string values are byte-identical, because a renamed feature id
+is a feature a tenant had enabled disappearing.
+
+**The process liveness probe stopped reading the host's configuration.** The framework middleware read
+`OrchardCore_HealthChecks:Url` and defaulted to that module's route, inside a package that must not
+know the host exists - and the no-host gate could not see it, because both are string literals. Which
+key names the shared health route, and what it falls back to, now live in
+`ContactCenterProcessHealthServiceCollectionExtensions` on the Orchard side and reach the framework
+through `ContactCenterProcessLivenessOptions.SharedHealthEndpointRouteResolver`. Behaviour is
+unchanged, and a host with no shared health endpoint now has nothing checked instead of being measured
+against a route it does not serve.
+
+**The MVC filter models went back to the host.** `ListOmnichannelActivityFilter` and
+`BulkManageActivityFilter` carry `[BindNever]` and a `RouteValueDictionary`; they are admin-list view
+models, and no framework code referenced them. They moved to
+`CrestApps.OrchardCore.Omnichannel.Core.Models`, next to the filter contexts and handler contracts that
+never left. That removed the last `Microsoft.AspNetCore.App` framework reference from
+`CrestApps.Core.Omnichannel.Abstractions`, which is the Core rule: an abstractions package is
+"framework-independent, usable in any ASP.NET Core application", not dependent on ASP.NET Core itself.
+
+**`CrestApps.Core.ContactCenter.Abstractions` stopped declaring dependencies it does not use.** It
+referenced `Hosting.Abstractions` and `Omnichannel.Abstractions` and used neither, and the three
+provider packages reference it - so a host that wanted a telephony provider transitively acquired the
+whole omnichannel contract set.
+
+**A live defect: the only guard around telephony token persistence caught a type nothing throws.**
+`TelephonyUserPersistenceException` survived the move to the general
+`CrestApps.Core.Security.UserPersistenceException`, and both `catch` clauses in
+`DefaultTelephonyAuthenticationService` still named the dead one. A failed token write therefore
+escaped `CompleteAuthorizationAsync` as an unhandled exception instead of returning the friendly
+result, and `GetStatusAsync` faulted instead of degrading to "not connected". The duplicate type is
+deleted and both catches repointed.
+
+**The property bag did not write what it claimed to write.** The bag serialized through
+`ExtensibleEntityExtensions.JsonSerializerOptions`, with a comment saying the settings "reproduce the
+host's text exactly, and a test pins that they do". Measured against the host helper, three of the four
+`DateTime` shapes disagreed: the host stamps the clock components it is given with a `Z` and second
+precision, while the serializer's default writes sub-second ticks, a local offset, or no suffix at all.
+The single-fixture test used the one shape where they agree. The bag now has its own read-only options
+with a converter that reproduces the host's format, and the test is a theory over all four shapes. The
+options are also no longer the shared mutable static: that static is settable, the AI suite's options
+initializer sets it, and durable tenant data must not change shape because an unrelated feature added a
+converter. One difference is documented and deliberate - an `object`-typed member reads back as a
+`JsonElement` rather than a CLR primitive - because no aspect stored through the bag declares one.
+
+**`AddCoreHosting` stopped registering a queue nothing drains.** What commits a unit of work is the
+store package a host chose, so the drain belongs with the store; a no-op `IAfterCommitTaskQueue` accepts
+work and silently loses it, where a missing one fails at startup. The package description, which
+promised an after-commit queue and "an empty user directory" that does not exist, was corrected.
+
+**A silent soft-phone notifier default.** Three services that record what a call did take
+`ITelephonySoftPhoneNotifier` as a required dependency, and only the optional
+`AddCoreTelephonySoftPhoneNotifier<THub>()` registered one - so a host that wanted call history and no
+soft phone could not resolve any of them. `NullTelephonySoftPhoneNotifier` is the `TryAdd` default, and
+the hub-bound notifier `Replace`s it rather than shadowing it, so there is never more than one
+descriptor deciding by registration order.
+
+**`TimeProvider` in the last three places that used the clock directly**, and the background-cycle
+registration extensions moved out of the `Microsoft.Extensions.DependencyInjection` namespace, where
+the public-surface baselines cannot see them - the same reason W3.8 gives for the `AddCoreTelephony*`
+methods living in their own namespace.
+
+**Three Contact Center settings screens now ask the options system to refresh.** Recording governance,
+secure capture and external transfer destinations were read as options and saved without a
+`RequestUpdate`, so a change took effect on the next tenant restart. This is the gap the entry above
+recorded as "its own task"; it is closed.
+
+**The no-host gate sees more.** It discovers `Transitions` folders rather than listing three, reads
+`.targets`, `.json`, `.cshtml` and `.razor` as well, and gained a second rule that loads every extracted
+assembly and asserts nothing in `GetReferencedAssemblies()` names the host - which catches a dependency
+however it was introduced, including through an imported build file or a transitive package. Both pass.
+
+### Found and not fixed
+
+- **`ConcurrentDocumentCatalog<T, TIndex>` is a second catalog base in a namespace Core already owns.**
+  `CrestApps.Core.Data.YesSql` ships `DocumentCatalog<T, TIndex>` in `CrestApps.Core.Data.YesSql.Services`,
+  and the Contact Center store package declares `ConcurrentDocumentCatalog` in that same namespace from a
+  second assembly. They are largely the same code. Collapsing them needs Core's `DocumentCatalog` to
+  gain the two things this one adds - an overridable concurrency check and a load hook - and its write
+  methods are not virtual, so the change belongs in the Core repository. Until then the merge D-3 calls
+  "namespace-neutral" would land two catalog bases side by side. **This is Phase 2's first task, not a
+  copy.**
+- **No `Create*IndexSchemaAsync` schema-builder extensions.** The README's stated rule is index classes
+  plus schema extensions in the store package; what exists is the `ISchemaMigration` runner, and the
+  runner itself is registered by nothing and called by nothing. One of the two has to become real.
+- **Provider packages depend on the contact centre.** `Telephony.Telnyx/Asterisk/Dialpad` each reference
+  `ContactCenter.Abstractions`, so a soft-phone-only host takes the contact centre with it. The
+  dependency is real for the `IContactCenterVoice*Provider` adapters and false for the call control,
+  credentials and webhook parsing in the same assembly. Splitting each provider into `<Provider>` and
+  `<Provider>.ContactCenter` is cheap while the projects are empty and expensive after W7/W8 fill them.
+  Recorded as a decision for W7 rather than pre-built here, because three more empty projects is not a
+  split.
+- **The dependency-injection snapshot never sees Telnyx or the SMS Portal**, the two largest startup
+  rewrites on this branch. The support matrix has two profiles, both Asterisk/Dialpad. A baseline
+  captured now would pin the shape from here on but could not prove the rewrites changed nothing, which
+  is what the gate is for; the honest fix is to capture those profiles from `a71550af` the way the
+  original snapshot was.
+- **Core's `Directory.Packages.props` cannot restore the copied projects.** Eight package ids the
+  Transitions projects reference have no `PackageVersion` there, and
+  [06](06-phase-2-move-to-core.md)'s checklist lists four of them plus one that is already present. The
+  list to add is `libphonenumber-csharp`, `System.Memory.Data`,
+  `Microsoft.Extensions.Compliance.Abstractions`, `Microsoft.Extensions.Compliance.Redaction`,
+  `Microsoft.Extensions.Caching.Abstractions`, `Microsoft.Extensions.Hosting.Abstractions`,
+  `Microsoft.Extensions.TimeProvider.Testing` and `PublicApiGenerator`.
+- **Suite package metadata lives in `Transitions/Directory.Build.props`, which the copy deletes.** Title
+  and Description are per project and survive; `PackageTags` and the suite description do not, so the
+  packages would ship with the AI suite's description unless those properties move into the csproj files
+  or into a props file that travels with them.
+- **Five Orchard `DataMigration` classes with real schema bodies were never moved behind
+  `ISchemaMigration`**, and every `ISchemaMigration` step outside the Transitions store package is
+  `internal`, so no standalone host can register one. P0.11's row states the conversion without the
+  qualifier.
+- **Framework unit tests still live in the Orchard test project**, W12's subject. The composition tests
+  added here are in the framework project; everything covering the framework defaults is not.
+- **XML docs on framework contracts still define themselves in host terms** in places. The no-host gate
+  strips comments by design, so nothing catches it; it costs little to fix and nothing forces it.
+- **`SanitizedLoggingExtensions.SanitizeLogValue` sits in `CrestApps.Core.Support`, a namespace Core
+  already owns, beside `StringExtensions.SanitizeForLog` which does nearly the same job under a
+  different name.** They are not interchangeable - one removes line breaks, the other replaces every
+  control character with a space and trims - so this is a Phase 2 reconciliation rather than a delete,
+  but two log sanitizers in one namespace is a choice somebody has to make once rather than a hundred
+  callers making it by which `using` they happened to write.
+- **Four abstractions packages take a `FrameworkReference` on `Microsoft.AspNetCore.App` for one type**,
+  `OperationAuthorizationRequirement`. No `CrestApps.Core` abstractions package takes that reference; a
+  `PackageReference` to `Microsoft.AspNetCore.Authorization` would do, but neither repository pins that
+  package today, so it is a Phase 2 packaging decision rather than a one-line edit. Omnichannel's copy
+  of this is gone because its cause was the MVC filter models, which moved.
+- **`AddCoreHosting()` and the host's `AddCoreHostSeams()` register four of the same seams with
+  different lifetimes** - `IScopedWorkExecutor` and `IDetachedWorkExecutor` are singletons in the
+  framework defaults and scoped in the Orchard adapters. Only one of the two methods runs in any host
+  today, so nothing is wrong now; a host that called both would get whichever ran first, at that one's
+  lifetime. The lifetimes should agree before both can be called.
+
+### What did not need changing
+
+The builder types themselves are a character-for-character match for Core's: sealed, in
+`CrestApps.Core.Builders`, one `Services` property, guarded constructor. Their home in
+`CrestApps.Core.Hosting.Abstractions` is right rather than wrong - Core keeps every builder in
+`CrestApps.Core.Abstractions/Builders`, including `CrestAppsMcpServerBuilder`, whose feature lives in a
+different package - and `Hosting.Abstractions` folds into `CrestApps.Core.Abstractions` at Phase 2 by
+D-7. The `AddCoreHosting()` call inside `AddContactCenterSuite` mirrors what `AddAISuite` does
+unconditionally. No extracted assembly references the host, and the assembly-level rule added here
+proves it rather than inferring it from text.

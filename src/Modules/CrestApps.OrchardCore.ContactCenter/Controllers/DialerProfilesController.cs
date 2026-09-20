@@ -23,7 +23,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of dialer profiles.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.Dialer)]
+[Feature(ContactCenterFeatures.Dialer)]
 public sealed class DialerProfilesController : ContactCenterCatalogController<DialerProfile>
 {
     /// <summary>

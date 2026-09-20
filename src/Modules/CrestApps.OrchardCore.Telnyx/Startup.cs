@@ -1,5 +1,6 @@
 using CrestApps.Core.ContactCenter.Services;
 using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Telephony.Services;
@@ -71,7 +72,7 @@ public sealed class Startup : StartupBase
 /// and Contact Center Voice are both enabled, so an operator never has to enable a redundant per-provider
 /// toggle that must match the provider they already configured.
 /// </summary>
-[RequireFeatures(ContactCenterConstants.Feature.Voice)]
+[RequireFeatures(ContactCenterFeatures.Voice)]
 public sealed class DialerStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -120,7 +121,7 @@ public sealed class DialerStartup : StartupBase
 /// WebSocket endpoint Telnyx dials back to; the WebSocket middleware itself comes from the WebSockets feature the
 /// module depends on.
 /// </summary>
-[RequireFeatures(ContactCenterConstants.Feature.VoiceMedia)]
+[RequireFeatures(ContactCenterFeatures.VoiceMedia)]
 public sealed class TelnyxContactCenterMediaStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

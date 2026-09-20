@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.Dialpad;
 /// and Contact Center Voice are both enabled, so an operator never has to enable a redundant per-provider
 /// toggle that must match the provider they already configured.
 /// </summary>
-[RequireFeatures(DialpadConstants.Feature.Area, ContactCenterConstants.Feature.Voice)]
+[RequireFeatures(DialpadConstants.Feature.Area, ContactCenterFeatures.Voice)]
 public sealed class DialerStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

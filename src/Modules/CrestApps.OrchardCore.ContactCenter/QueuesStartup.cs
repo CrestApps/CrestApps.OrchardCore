@@ -42,12 +42,12 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// availability-based assignment, and the policy-based routing strategies that distribute work to available
 /// agents, together with their administration screens.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterFeatures.Queues)]
 public sealed class QueuesStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddContactCenterCapability(ContactCenterConstants.Feature.Queues, ContactCenterCapabilities.Queues);
+        services.AddContactCenterCapability(ContactCenterFeatures.Queues, ContactCenterCapabilities.Queues);
 
         services.AddCoreHostSeams();
 
@@ -112,7 +112,7 @@ public sealed class QueuesStartup : StartupBase
 /// <summary>
 /// Registers the deployment steps that export the routing configuration owned by the queues feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterFeatures.Queues)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class QueuesDeploymentStartup : StartupBase
 {
@@ -128,7 +128,7 @@ public sealed class QueuesDeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe steps that import the routing configuration owned by the queues feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterFeatures.Queues)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class QueuesRecipesStartup : StartupBase
 {
@@ -145,7 +145,7 @@ public sealed class QueuesRecipesStartup : StartupBase
 /// Registers the Enqueue Activity workflow task, available only when both Orchard Core Workflows and the
 /// Queues feature are enabled so the required queue service is always resolvable.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterFeatures.Queues)]
 [RequireFeatures("OrchardCore.Workflows")]
 public sealed class ContactCenterQueuesWorkflowsStartup : StartupBase
 {
@@ -165,7 +165,7 @@ public sealed class ContactCenterQueuesWorkflowsStartup : StartupBase
 /// <c>OrchardCore.HealthChecks</c> feature is also enabled so a deployment that does not use health checks never
 /// pays for them.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Queues)]
+[Feature(ContactCenterFeatures.Queues)]
 [RequireFeatures("OrchardCore.HealthChecks")]
 public sealed class ContactCenterQueuesHealthChecksStartup : StartupBase
 {

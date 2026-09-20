@@ -143,37 +143,6 @@ namespace CrestApps.Core.Omnichannel.Models
         ChangeSource = 8,
         ChangeDialerProfile = 9,
     }
-    public sealed class BulkManageActivityFilter
-    {
-        public BulkManageActivityFilter() { }
-        public string[] AssignedToUserIds { get; set; }
-        public CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus? AssignmentStatus { get; set; }
-        public string AttemptFilter { get; set; }
-        public string CampaignId { get; set; }
-        public string Channel { get; set; }
-        public bool? ContactIsPublished { get; set; }
-        public System.DateTime? CreatedFrom { get; set; }
-        public string CreatedRange { get; set; }
-        public System.DateTime? CreatedTo { get; set; }
-        public System.DateTime? DoNotCallFrom { get; set; }
-        public string DoNotCallRange { get; set; }
-        public System.DateTime? DoNotCallTo { get; set; }
-        public CrestApps.Core.Omnichannel.Models.ActivityInteractionType? InteractionType { get; set; }
-        public int? Limit { get; set; }
-        public string PhoneNumber { get; set; }
-        public CrestApps.Core.Omnichannel.Models.PhoneNumberMatchType PhoneNumberMatchType { get; set; }
-        public System.Text.Json.Nodes.JsonObject Properties { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public Microsoft.AspNetCore.Routing.RouteValueDictionary RouteValues { get; set; }
-        public System.DateTime? ScheduledFrom { get; set; }
-        public string ScheduledRange { get; set; }
-        public System.DateTime? ScheduledTo { get; set; }
-        public string Source { get; set; }
-        public CrestApps.Core.Omnichannel.Models.ActivityStatus? Status { get; set; }
-        public string SubjectContentType { get; set; }
-        public string[] TimeZoneIds { get; set; }
-        public CrestApps.Core.Omnichannel.Models.ActivityUrgencyLevel? UrgencyLevel { get; set; }
-    }
     public sealed class Cadence : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel
     {
         public Cadence() { }
@@ -220,21 +189,6 @@ namespace CrestApps.Core.Omnichannel.Models
         WaitingInQueue = 1,
         CallbackScheduled = 2,
         Failed = 3,
-    }
-    public sealed class ListOmnichannelActivityFilter
-    {
-        public ListOmnichannelActivityFilter() { }
-        public string AttemptFilter { get; set; }
-        public string Channel { get; set; }
-        public System.Text.Json.Nodes.JsonObject Properties { get; set; }
-        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
-        public Microsoft.AspNetCore.Routing.RouteValueDictionary RouteValues { get; set; }
-        public System.DateTime? ScheduledFrom { get; set; }
-        public string ScheduledRange { get; set; }
-        public System.DateTime? ScheduledTo { get; set; }
-        public string SubjectContentType { get; set; }
-        public string TimeZoneId { get; set; }
-        public CrestApps.Core.Omnichannel.Models.ActivityUrgencyLevel? UrgencyLevel { get; set; }
     }
     public sealed class NewActivityActionMetadata
     {

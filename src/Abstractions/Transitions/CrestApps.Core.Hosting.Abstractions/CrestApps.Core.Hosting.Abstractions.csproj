@@ -14,6 +14,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!--
+      The seams in this project are the ones CrestApps.Core.Abstractions does not already have, and the
+      property bag here is serialized with that package's extensible-entity settings rather than with a
+      second set of its own. This project folds into CrestApps.Core.Abstractions in Phase 2, so the
+      reference is the shape it ends up in.
+    -->
+    <PackageReference Include="CrestApps.Core.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Compliance.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>

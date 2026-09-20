@@ -13,8 +13,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports;
 /// </remarks>
 internal static class ContactCenterReportCapabilityRequirements
 {
-    private static readonly string[] _voice = [ContactCenterConstants.Feature.Voice];
-    private static readonly string[] _recording = [ContactCenterConstants.Feature.Recording];
+    private static readonly string[] _voice = [ContactCenterFeatures.Voice];
+    private static readonly string[] _recording = [ContactCenterFeatures.Recording];
 
     /// <summary>
     /// Gets the features that must be enabled for an enterprise interaction report to have any data to measure.

@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal;
 /// the queue lookup lives behind a seam with a null default, and this startup replaces it only where there are
 /// queues to read.
 /// </summary>
-[RequireFeatures(ContactCenterConstants.Feature.Queues)]
+[RequireFeatures(ContactCenterFeatures.Queues)]
 public sealed class WorkDistributionStartup : StartupBase
 {
     /// <inheritdoc/>

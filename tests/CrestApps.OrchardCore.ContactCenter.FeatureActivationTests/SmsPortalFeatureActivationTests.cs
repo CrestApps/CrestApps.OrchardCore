@@ -139,7 +139,7 @@ public sealed class SmsPortalFeatureActivationTests
             services => Task.FromResult(services.GetService<ISmsRoutingStrategy>()));
 
         // Assert
-        Assert.Contains(ContactCenterConstants.Feature.Queues, enabledFeatureIds);
+        Assert.Contains(ContactCenterFeatures.Queues, enabledFeatureIds);
         Assert.Contains(SmsPortalConstants.Feature.Portal, enabledFeatureIds);
         Assert.NotNull(routingStrategy);
     }

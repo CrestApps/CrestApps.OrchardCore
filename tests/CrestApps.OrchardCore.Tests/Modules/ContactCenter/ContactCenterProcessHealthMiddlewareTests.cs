@@ -186,11 +186,25 @@ public sealed class ContactCenterProcessHealthMiddlewareTests
         string sharedRoute)
     {
         // An unset shared route means the module uses its default, so the collision must still be detected.
+        // The default lives with the host, because which key names the shared route and what it falls back to
+        // is the host's knowledge rather than the framework package's; the resolution is applied here for the
+        // same reason the registration applies it.
         Assert.Throws<InvalidOperationException>(
             () => ContactCenterProcessHealthApplicationBuilderExtensions.ThrowIfShadowsSharedHealthEndpoint(
                 livenessPath,
-                sharedRoute,
+                ContactCenterProcessHealthServiceCollectionExtensions.ResolveSharedHealthEndpointRoute(sharedRoute),
                 tenantName: null));
+    }
+
+    [Fact]
+    public void CollisionDetection_ChecksNothing_WhenTheHostHasNoSharedHealthEndpoint()
+    {
+        // A host that has no aggregate health endpoint has nothing for the probe to shadow. The framework
+        // package must not assume one exists on a route it would have to name.
+        ContactCenterProcessHealthApplicationBuilderExtensions.ThrowIfShadowsSharedHealthEndpoint(
+            "/health/live",
+            sharedEndpointRoute: null,
+            tenantName: null);
     }
 
     [Fact]
@@ -214,7 +228,7 @@ public sealed class ContactCenterProcessHealthMiddlewareTests
     {
         ContactCenterProcessHealthApplicationBuilderExtensions.ThrowIfShadowsSharedHealthEndpoint(
             livenessPath,
-            sharedRoute,
+            ContactCenterProcessHealthServiceCollectionExtensions.ResolveSharedHealthEndpointRoute(sharedRoute),
             tenantName: null);
     }
 

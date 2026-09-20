@@ -38,6 +38,7 @@ namespace CrestApps.Core.WebSockets
     public static class WebSocketServiceCollectionExtensions
     {
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreWebSockets(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder AddWebSockets(this CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder builder) { }
     }
     public static class WebSocketsNode
     {

@@ -31,7 +31,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Omnichannel business-hours gate. It is a standalone feature so that work distribution, the outbound dialer, and
 /// automated Omnichannel conversations can each depend on it without depending on one another.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.BusinessHours)]
+[Feature(ContactCenterFeatures.BusinessHours)]
 public sealed class BusinessHoursStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -68,7 +68,7 @@ public sealed class BusinessHoursStartup : StartupBase
 /// <summary>
 /// Registers the deployment step that exports business-hours calendars.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.BusinessHours)]
+[Feature(ContactCenterFeatures.BusinessHours)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class BusinessHoursDeploymentStartup : StartupBase
 {
@@ -82,7 +82,7 @@ public sealed class BusinessHoursDeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe step that imports business-hours calendars.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.BusinessHours)]
+[Feature(ContactCenterFeatures.BusinessHours)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class BusinessHoursRecipesStartup : StartupBase
 {

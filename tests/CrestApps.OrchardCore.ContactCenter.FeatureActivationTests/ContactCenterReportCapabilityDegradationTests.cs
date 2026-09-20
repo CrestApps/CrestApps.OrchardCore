@@ -34,8 +34,8 @@ public sealed class ContactCenterReportCapabilityDegradationTests
     /// </summary>
     private static readonly (string FeatureId, string[] Labels)[] _capabilityOwnedLabels =
     [
-        (ContactCenterConstants.Feature.Voice, ["transfer", "provider"]),
-        (ContactCenterConstants.Feature.Recording, ["record"]),
+        (ContactCenterFeatures.Voice, ["transfer", "provider"]),
+        (ContactCenterFeatures.Recording, ["record"]),
     ];
 
     [Fact]
@@ -47,7 +47,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         {
             Id = "report-capability-contract",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Queues, ReportsConstants.Feature],
+            Features = [ContactCenterFeatures.Queues, ReportsConstants.Feature],
         });
 
         var undeclared = await host.ExecuteInTenantScopeAsync(tenant, serviceProvider =>
@@ -80,7 +80,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         {
             Id = "report-capability-degradation",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Queues, ReportsConstants.Feature],
+            Features = [ContactCenterFeatures.Queues, ReportsConstants.Feature],
         });
 
         var result = await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
@@ -167,7 +167,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         {
             Id = "report-capability-columns",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Queues, ReportsConstants.Feature],
+            Features = [ContactCenterFeatures.Queues, ReportsConstants.Feature],
         });
 
         var result = await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
@@ -251,7 +251,7 @@ public sealed class ContactCenterReportCapabilityDegradationTests
         {
             Id = "report-capability-independence",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Queues, ReportsConstants.Feature],
+            Features = [ContactCenterFeatures.Queues, ReportsConstants.Feature],
         });
 
         var dragged = await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
@@ -263,8 +263,8 @@ public sealed class ContactCenterReportCapabilityDegradationTests
 
             return new[]
             {
-                ContactCenterConstants.Feature.Voice,
-                ContactCenterConstants.Feature.Recording,
+                ContactCenterFeatures.Voice,
+                ContactCenterFeatures.Recording,
             }
             .Where(enabledFeatureIds.Contains)
             .ToArray();

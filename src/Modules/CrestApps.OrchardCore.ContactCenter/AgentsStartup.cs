@@ -36,7 +36,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// their administration screens, and the durable agent presence, availability sessions, heartbeat recovery, and
 /// logout synchronization that track who is working.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Agents)]
+[Feature(ContactCenterFeatures.Agents)]
 public sealed class AgentsStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;
@@ -88,7 +88,7 @@ public sealed class AgentsStartup : StartupBase
 /// <summary>
 /// Registers the deployment steps that export the agent configuration owned by the agents feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Agents)]
+[Feature(ContactCenterFeatures.Agents)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class AgentsDeploymentStartup : StartupBase
 {
@@ -102,7 +102,7 @@ public sealed class AgentsDeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe steps that import the agent configuration owned by the agents feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Agents)]
+[Feature(ContactCenterFeatures.Agents)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class AgentsRecipesStartup : StartupBase
 {
@@ -117,7 +117,7 @@ public sealed class AgentsRecipesStartup : StartupBase
 /// Registers the Set Agent Presence workflow task, available only when both Orchard Core Workflows and the
 /// Agents feature are enabled so the required presence service is always resolvable.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Agents)]
+[Feature(ContactCenterFeatures.Agents)]
 [RequireFeatures("OrchardCore.Workflows")]
 public sealed class ContactCenterAvailabilityWorkflowsStartup : StartupBase
 {

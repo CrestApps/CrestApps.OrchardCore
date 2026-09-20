@@ -227,7 +227,7 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         {
             Id = "search-independence-manifest",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Area],
+            Features = [ContactCenterFeatures.Area],
         });
 
         var violations = await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>

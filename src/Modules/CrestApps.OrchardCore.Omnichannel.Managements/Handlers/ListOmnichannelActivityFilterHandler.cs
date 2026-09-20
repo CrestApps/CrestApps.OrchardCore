@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.Omnichannel.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers;

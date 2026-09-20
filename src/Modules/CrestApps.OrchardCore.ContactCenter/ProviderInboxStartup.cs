@@ -25,7 +25,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// lives in its own dependency-only feature that each ingesting channel depends on, rather than inside Voice,
 /// where an SMS-only tenant could not reach it.
 /// </remarks>
-[Feature(ContactCenterConstants.Feature.ProviderInbox)]
+[Feature(ContactCenterFeatures.ProviderInbox)]
 public sealed class ProviderInboxStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

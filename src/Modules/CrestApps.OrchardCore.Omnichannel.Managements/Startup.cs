@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.AI;
@@ -129,17 +130,10 @@ public sealed class AISubjectFlowStartup : StartupBase
             .AddScoped<IAIChatSessionAccessProvider, OmnichannelAIChatSessionAccessProvider>()
             .AddScoped<IAutomatedVoiceActivitySettingsResolver, AutomatedVoiceActivitySettingsResolver>();
 
-        // The automated-activity processing tunables, and their startup validation.
-        services.Configure<OmnichannelAutomationOptions>(_shellConfiguration.GetSection("CrestApps:Omnichannel:Automation"));
-        services.AddSingleton<IValidateOptions<OmnichannelAutomationOptions>, OmnichannelAutomationOptionsValidator>();
-
-        // One reply in flight per conversation. A singleton inside the tenant container, so it is shared by the
-        // scoped handlers separate inbound webhooks create and isolated from every other tenant.
-        services.AddSingleton<IAutomatedConversationGate, InMemoryAutomatedConversationGate>();
-
-        // The turn a completion records its handoff decision on. Scoped, so the tool and the handler that ran
-        // the completion share one instance and two concurrent conversations cannot see each other's decision.
-        services.TryAddScoped<IOmnichannelHandoffTurn, OmnichannelHandoffTurn>();
+        // The automated-conversation services: the processing tunables and their startup validation, the gate
+        // that keeps one reply in flight per conversation, and the turn a completion records its handoff
+        // decision on.
+        services.AddCoreOmnichannelAutomation(_shellConfiguration.GetSection("CrestApps:Omnichannel:Automation"));
 
         // The transfer-to-agent tool is enabled per-turn by the automated conversation handlers (not admin-
         // selectable), so it is registered but intentionally not marked Selectable.

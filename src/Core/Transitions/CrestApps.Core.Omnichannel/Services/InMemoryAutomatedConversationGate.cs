@@ -22,6 +22,17 @@ public sealed class InMemoryAutomatedConversationGate : IAutomatedConversationGa
 
     private long _lastSweepTicks;
 
+    private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InMemoryAutomatedConversationGate"/> class.
+    /// </summary>
+    /// <param name="timeProvider">The time source the claim retention window is measured against.</param>
+    public InMemoryAutomatedConversationGate(TimeProvider timeProvider)
+    {
+        _timeProvider = timeProvider;
+    }
+
     /// <inheritdoc/>
     public IAutomatedConversationGeneration Begin(string sessionId, CancellationToken hostToken)
     {
@@ -57,7 +68,7 @@ public sealed class InMemoryAutomatedConversationGate : IAutomatedConversationGa
             return true;
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = _timeProvider.GetUtcNow();
 
         SweepExpiredClaims(now);
 

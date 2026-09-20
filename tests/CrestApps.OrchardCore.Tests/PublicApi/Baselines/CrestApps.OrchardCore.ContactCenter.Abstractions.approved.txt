@@ -1,5 +1,25 @@
 namespace CrestApps.OrchardCore.ContactCenter
 {
+    public static class ContactCenterFeatures
+    {
+        public const string AgentEntitlements = "CrestApps.OrchardCore.ContactCenter.AgentEntitlements";
+        public const string AgentServices = "CrestApps.OrchardCore.ContactCenter.AgentServices";
+        public const string Agents = "CrestApps.OrchardCore.ContactCenter.Agents";
+        public const string Area = "CrestApps.OrchardCore.ContactCenter";
+        public const string BusinessHours = "CrestApps.OrchardCore.ContactCenter.BusinessHours";
+        public const string Dialer = "CrestApps.OrchardCore.ContactCenter.Dialer";
+        public const string DialerPaced = "CrestApps.OrchardCore.ContactCenter.Dialer.Paced";
+        public const string InboundVoice = "CrestApps.OrchardCore.ContactCenter.InboundVoice";
+        public const string ProviderInbox = "CrestApps.OrchardCore.ContactCenter.ProviderInbox";
+        public const string Queues = "CrestApps.OrchardCore.ContactCenter.Queues";
+        public const string RealTime = "CrestApps.OrchardCore.ContactCenter.RealTime";
+        public const string Recording = "CrestApps.OrchardCore.ContactCenter.Recording";
+        public const string RecordingCore = "CrestApps.OrchardCore.ContactCenter.Recording.Core";
+        public const string SecureCapture = "CrestApps.OrchardCore.ContactCenter.SecureCapture";
+        public const string Supervision = "CrestApps.OrchardCore.ContactCenter.Supervision";
+        public const string Voice = "CrestApps.OrchardCore.ContactCenter.Voice";
+        public const string VoiceMedia = "CrestApps.OrchardCore.ContactCenter.Voice.Media";
+    }
     public static class ContactCenterPermissions
     {
         public static readonly OrchardCore.Security.Permissions.Permission InitiateSecureCapture;
@@ -21,8 +41,11 @@ namespace CrestApps.OrchardCore.ContactCenter
     }
     public static class ContactCenterProcessHealthServiceCollectionExtensions
     {
+        public const string DefaultSharedHealthEndpointRoute = "/health/live";
+        public const string SharedHealthEndpointConfigurationKey = "OrchardCore_HealthChecks:Url";
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddContactCenterProcessLiveness(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddContactCenterProcessLiveness(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string path) { }
+        public static string ResolveSharedHealthEndpointRoute(string configuredRoute) { }
     }
     public sealed class ContactCenterProcessLivenessPathValidator : Microsoft.Extensions.Hosting.IHostedService
     {

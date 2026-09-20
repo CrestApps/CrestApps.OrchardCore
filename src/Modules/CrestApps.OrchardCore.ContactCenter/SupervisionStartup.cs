@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers the real-time supervisor dashboard, navigation, and monitoring endpoints.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Supervision)]
+[Feature(ContactCenterFeatures.Supervision)]
 public sealed class SupervisionStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

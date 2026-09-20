@@ -68,7 +68,8 @@ public sealed class ContactCenterProcessLivenessPathValidator : IHostedService
 
             ContactCenterProcessHealthApplicationBuilderExtensions.ThrowIfShadowsSharedHealthEndpoint(
                 livenessPath,
-                settings["OrchardCore_HealthChecks:Url"],
+                ContactCenterProcessHealthServiceCollectionExtensions.ResolveSharedHealthEndpointRoute(
+                    settings[ContactCenterProcessHealthServiceCollectionExtensions.SharedHealthEndpointConfigurationKey]),
                 settings.Name);
         }
     }

@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// supervisor, and the recording never see the raw value. The page is anonymous by design: it is authorized only
 /// by the unguessable one-time token, because the customer is not an authenticated platform user.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.SecureCapture)]
+[Feature(ContactCenterFeatures.SecureCapture)]
 [AllowAnonymous]
 public sealed class SecureCaptureController : Controller
 {

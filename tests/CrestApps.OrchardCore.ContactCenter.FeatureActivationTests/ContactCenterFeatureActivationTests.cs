@@ -51,7 +51,7 @@ public sealed class ContactCenterFeatureActivationTests
         // Act
         var profilesWithoutEntryPoints = matrix.TenantProfiles
             .Where(profile => !profile.Features.Contains(
-                ContactCenterConstants.Feature.InboundVoice,
+                ContactCenterFeatures.InboundVoice,
                 StringComparer.Ordinal))
             .Select(profile => profile.Id)
             .ToArray();

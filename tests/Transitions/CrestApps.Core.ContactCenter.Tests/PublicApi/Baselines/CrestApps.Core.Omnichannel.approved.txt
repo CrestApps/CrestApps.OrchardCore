@@ -1,8 +1,13 @@
 namespace CrestApps.Core.Omnichannel
 {
-    public static class OmnichannelChannelEndpointServiceCollectionExtensions
+    public static class ServiceCollectionExtensions
     {
+        public static CrestApps.Core.Builders.CrestAppsOmnichannelBuilder AddAutomation(this CrestApps.Core.Builders.CrestAppsOmnichannelBuilder builder, Microsoft.Extensions.Configuration.IConfigurationSection configuration = null) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddChannelEndpointSource(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, string channel, System.Action<CrestApps.Core.Omnichannel.Models.ChannelEndpointSource> configure) { }
+        public static CrestApps.Core.Builders.CrestAppsOmnichannelBuilder AddChannelEndpoints(this CrestApps.Core.Builders.CrestAppsOmnichannelBuilder builder) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreOmnichannelAutomation(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfigurationSection configuration = null) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreOmnichannelChannelEndpoints(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder AddOmnichannel(this CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder builder, System.Action<CrestApps.Core.Builders.CrestAppsOmnichannelBuilder> configure = null) { }
     }
 }
 namespace CrestApps.Core.Omnichannel.Services
@@ -22,7 +27,7 @@ namespace CrestApps.Core.Omnichannel.Services
     }
     public sealed class InMemoryAutomatedConversationGate : CrestApps.Core.Omnichannel.Services.IAutomatedConversationGate
     {
-        public InMemoryAutomatedConversationGate() { }
+        public InMemoryAutomatedConversationGate(System.TimeProvider timeProvider) { }
         public CrestApps.Core.Omnichannel.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken) { }
         public bool IsGenerating(string sessionId) { }
         public bool TryClaimInboundMessage(string providerMessageId) { }

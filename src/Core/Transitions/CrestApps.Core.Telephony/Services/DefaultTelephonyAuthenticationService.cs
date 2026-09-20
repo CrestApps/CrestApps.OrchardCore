@@ -33,6 +33,8 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
     /// <param name="providerResolver">The telephony provider resolver.</param>
     /// <param name="tokenStore">The user token store.</param>
     /// <param name="userAccessor">The accessor used to identify the current user when serializing token refreshes.</param>
+    /// <param name="userDirectory">The directory used to resolve the user a token belongs to.</param>
+    /// <param name="userProfileStore">The store the user's telephony tokens are persisted through.</param>
     /// <param name="distributedLock">The distributed lock used to serialize concurrent token refreshes per user and provider.</param>
     /// <param name="timeProvider">The time provider used to evaluate token expiration.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates with.</param>
@@ -108,7 +110,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
             {
                 tokens = await GetValidTokensAsync(name, cancellationToken);
             }
-            catch (TelephonyUserPersistenceException)
+            catch (UserPersistenceException)
             {
                 tokens = null;
             }
@@ -195,7 +197,7 @@ public sealed class DefaultTelephonyAuthenticationService : ITelephonyAuthentica
         {
             await _tokenStore.StoreAsync(name, tokens, cancellationToken);
         }
-        catch (TelephonyUserPersistenceException)
+        catch (UserPersistenceException)
         {
             return TelephonyResult.Failed("The telephony connection could not be saved. Please try connecting again.");
         }

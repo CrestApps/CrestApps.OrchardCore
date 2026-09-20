@@ -1,4 +1,5 @@
 using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Hosting.Background;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
@@ -41,7 +42,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// agent-driven activity batch sources, and the mandatory eligibility and suppression compliance gate evaluated
 /// before every outbound dialing attempt.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Dialer)]
+[Feature(ContactCenterFeatures.Dialer)]
 public sealed class DialerStartup : StartupBase
 {
     private readonly IStringLocalizer S;
@@ -57,7 +58,7 @@ public sealed class DialerStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddContactCenterCapability(ContactCenterConstants.Feature.Dialer, ContactCenterCapabilities.Dialer);
+        services.AddContactCenterCapability(ContactCenterFeatures.Dialer, ContactCenterCapabilities.Dialer);
 
         services
             .AddScoped<IDialerProfileStore, DialerProfileStore>()
@@ -146,7 +147,7 @@ public sealed class DialerStartup : StartupBase
 /// <summary>
 /// Registers the deployment steps that export the dialer profiles owned by the dialer feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Dialer)]
+[Feature(ContactCenterFeatures.Dialer)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class DialerDeploymentStartup : StartupBase
 {
@@ -160,7 +161,7 @@ public sealed class DialerDeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe steps that import the dialer profiles owned by the dialer feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Dialer)]
+[Feature(ContactCenterFeatures.Dialer)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class DialerRecipesStartup : StartupBase
 {
@@ -175,7 +176,7 @@ public sealed class DialerRecipesStartup : StartupBase
 /// Registers the Schedule Callback workflow task, available only when both Orchard Core Workflows and the
 /// Dialer feature are enabled so the required callback service is always resolvable.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Dialer)]
+[Feature(ContactCenterFeatures.Dialer)]
 [RequireFeatures("OrchardCore.Workflows")]
 public sealed class ContactCenterDialerWorkflowsStartup : StartupBase
 {

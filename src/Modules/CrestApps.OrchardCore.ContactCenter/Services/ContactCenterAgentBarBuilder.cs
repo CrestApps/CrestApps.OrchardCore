@@ -71,7 +71,7 @@ public sealed class ContactCenterAgentBarBuilder : IContactCenterAgentBarBuilder
                 httpContext,
                 "Index",
                 "AgentWorkspace",
-                new { area = ContactCenterConstants.Feature.Area }),
+                new { area = ContactCenterFeatures.Area }),
             AntiForgeryToken = tokens.RequestToken,
             Dispositions = [.. dispositions.Select(disposition => new AgentBarOption
             {

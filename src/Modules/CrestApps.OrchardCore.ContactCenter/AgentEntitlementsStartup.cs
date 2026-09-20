@@ -20,7 +20,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// enforcing one and adds the entitlement administration screen. When this feature is disabled, the permissive
 /// default stands and any agent may sign in to any queue or campaign with no per-agent setup.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.AgentEntitlements)]
+[Feature(ContactCenterFeatures.AgentEntitlements)]
 public sealed class AgentEntitlementsStartup : StartupBase
 {
     /// <inheritdoc/>
@@ -36,7 +36,7 @@ public sealed class AgentEntitlementsStartup : StartupBase
 /// <summary>
 /// Registers the deployment source and step editor that export agent entitlements.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.AgentEntitlements)]
+[Feature(ContactCenterFeatures.AgentEntitlements)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class AgentEntitlementsDeploymentStartup : StartupBase
 {
@@ -51,7 +51,7 @@ public sealed class AgentEntitlementsDeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe step that imports agent entitlements.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.AgentEntitlements)]
+[Feature(ContactCenterFeatures.AgentEntitlements)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class AgentEntitlementsRecipesStartup : StartupBase
 {

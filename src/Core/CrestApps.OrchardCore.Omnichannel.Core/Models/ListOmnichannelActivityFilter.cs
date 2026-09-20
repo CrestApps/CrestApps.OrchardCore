@@ -1,8 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+﻿using CrestApps.Core.Omnichannel.Models;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using System.Text.Json.Nodes;
 
-namespace CrestApps.Core.Omnichannel.Models;
+namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 /// <summary>
 /// Represents the list omnichannel activity filter.

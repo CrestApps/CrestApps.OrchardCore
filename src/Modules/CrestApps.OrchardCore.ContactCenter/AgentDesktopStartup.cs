@@ -20,9 +20,9 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// provider without in-browser audio (for example Dialpad) still gets the provider-neutral workspace.
 /// </summary>
 [RequireFeatures(
-    ContactCenterConstants.Feature.Agents,
-    ContactCenterConstants.Feature.RealTime,
-    ContactCenterConstants.Feature.Voice,
+    ContactCenterFeatures.Agents,
+    ContactCenterFeatures.RealTime,
+    ContactCenterFeatures.Voice,
     TelephonyFeatures.SoftPhoneCore)]
 public sealed class AgentDesktopStartup : StartupBase
 {

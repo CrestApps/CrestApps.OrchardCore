@@ -14,5 +14,6 @@ namespace CrestApps.Core.PhoneNumbers
     public static class PhoneNumberServiceCollectionExtensions
     {
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCorePhoneNumbers(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder AddPhoneNumbers(this CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder builder) { }
     }
 }

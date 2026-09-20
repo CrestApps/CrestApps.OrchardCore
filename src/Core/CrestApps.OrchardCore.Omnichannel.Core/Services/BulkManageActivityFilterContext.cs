@@ -1,4 +1,5 @@
 using CrestApps.Core.Omnichannel.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;

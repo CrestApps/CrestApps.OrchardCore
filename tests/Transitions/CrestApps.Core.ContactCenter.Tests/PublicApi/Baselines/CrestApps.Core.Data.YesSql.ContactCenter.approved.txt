@@ -50,6 +50,7 @@ namespace CrestApps.Core.Data.YesSql.Telephony
     public static class CoreTelephonyStoresServiceCollectionExtensions
     {
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreTelephonyStoresYesSql(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static CrestApps.Core.Builders.CrestAppsTelephonyBuilder AddYesSqlStores(this CrestApps.Core.Builders.CrestAppsTelephonyBuilder builder) { }
     }
 }
 namespace CrestApps.Core.Data.YesSql.Telephony.Indexes

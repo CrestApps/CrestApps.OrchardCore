@@ -22,8 +22,8 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         OmnichannelConstants.Features.ChannelEndpoints,
-        ContactCenterConstants.Feature.AgentServices,
-        ContactCenterConstants.Feature.ProviderInbox,
+        ContactCenterFeatures.AgentServices,
+        ContactCenterFeatures.ProviderInbox,
         "OrchardCore.Sms",
         "OrchardCore.SignalR",
     ]
@@ -37,6 +37,6 @@ using OrchardCore.Modules.Manifest;
     Dependencies =
     [
         SmsPortalConstants.Feature.Portal,
-        ContactCenterConstants.Feature.Queues,
+        ContactCenterFeatures.Queues,
     ]
 )]

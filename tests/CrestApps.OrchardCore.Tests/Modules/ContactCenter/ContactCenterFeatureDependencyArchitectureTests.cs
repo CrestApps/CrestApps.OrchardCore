@@ -1,5 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel.Services;
+using CrestApps.OrchardCore.ContactCenter;
 using System.Text;
 using System.Text.RegularExpressions;
 using CrestApps.Core.Telephony.Models;
@@ -353,7 +354,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
             ],
             navigationOwner.RequiredFeatureIds.Order(StringComparer.Ordinal));
         Assert.Contains(
-            "Url.Action(\"Index\", \"AgentWorkspace\", new { area = ContactCenterConstants.Feature.Area }) ?? returnUrl",
+            "Url.Action(\"Index\", \"AgentWorkspace\", new { area = ContactCenterFeatures.Area }) ?? returnUrl",
             softPhoneWorkView,
             StringComparison.Ordinal);
     }
@@ -787,7 +788,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
 
     private static string ContactCenterConstantsFeatureArea(string repositoryRoot)
     {
-        return ResolveToken(repositoryRoot, "ContactCenterConstants.Feature.Area");
+        return ResolveToken(repositoryRoot, "ContactCenterFeatures.Area");
     }
 
     private static List<StartupClass> ParseStartupClasses(string repositoryRoot, string relativeStartupPath, string defaultFeatureId)

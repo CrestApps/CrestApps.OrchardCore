@@ -34,7 +34,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Registers the Voice Contact Center Call Router that routes inbound and outbound voice calls while
 /// Telephony providers execute media operations.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Voice)]
+[Feature(ContactCenterFeatures.Voice)]
 public sealed class VoiceStartup : StartupBase
 {
     private readonly IShellConfiguration _shellConfiguration;
@@ -50,7 +50,7 @@ public sealed class VoiceStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddContactCenterCapability(ContactCenterConstants.Feature.Voice, ContactCenterCapabilities.Voice);
+        services.AddContactCenterCapability(ContactCenterFeatures.Voice, ContactCenterCapabilities.Voice);
 
         services
             .AddOptions<ProviderWebhookIngressOptions>()
@@ -167,8 +167,8 @@ public sealed class VoiceStartup : StartupBase
 /// This projection is integration glue that activates whenever Contact Center Voice, Contact Center Real-Time, and the
 /// Telephony soft phone are all enabled, rather than a separately selectable feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Voice)]
-[RequireFeatures(ContactCenterConstants.Feature.RealTime, TelephonyFeatures.SoftPhoneCore)]
+[Feature(ContactCenterFeatures.Voice)]
+[RequireFeatures(ContactCenterFeatures.RealTime, TelephonyFeatures.SoftPhoneCore)]
 public sealed class VoiceSoftPhoneStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
@@ -192,7 +192,7 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
 /// <c>OrchardCore.HealthChecks</c> feature is also enabled so a deployment that does not use health checks never
 /// pays for them.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.Voice)]
+[Feature(ContactCenterFeatures.Voice)]
 [RequireFeatures("OrchardCore.HealthChecks")]
 public sealed class VoiceHealthChecksStartup : StartupBase
 {

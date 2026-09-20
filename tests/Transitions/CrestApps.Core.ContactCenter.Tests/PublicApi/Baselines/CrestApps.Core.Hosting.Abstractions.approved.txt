@@ -1,3 +1,21 @@
+namespace CrestApps.Core.Builders
+{
+    public sealed class CrestAppsContactCenterSuiteBuilder
+    {
+        public CrestAppsContactCenterSuiteBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+    }
+    public sealed class CrestAppsOmnichannelBuilder
+    {
+        public CrestAppsOmnichannelBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+    }
+    public sealed class CrestAppsTelephonyBuilder
+    {
+        public CrestAppsTelephonyBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+    }
+}
 namespace CrestApps.Core.Diagnostics
 {
     public static class LogDataClassifications
@@ -28,6 +46,12 @@ namespace CrestApps.Core.Hosting.Background
         public System.TimeSpan Interval { get; set; }
         public System.TimeSpan LockExpiration { get; set; }
         public System.TimeSpan LockTimeout { get; set; }
+    }
+    public static class BackgroundCycleRegistrationExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBackgroundCycle<TCycle, TImplementation>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+            where TCycle :  class, CrestApps.Core.Hosting.Background.IBackgroundCycle
+            where TImplementation :  class, TCycle { }
     }
     public interface IBackgroundCycle
     {

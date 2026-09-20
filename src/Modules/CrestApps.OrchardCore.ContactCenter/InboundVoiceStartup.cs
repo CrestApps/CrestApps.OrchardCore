@@ -34,7 +34,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// Registers the Contact Center Inbound Voice feature: inbound voice entry-point administration, qualification,
 /// and queue ingress.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.InboundVoice)]
+[Feature(ContactCenterFeatures.InboundVoice)]
 public sealed class InboundVoiceStartup : StartupBase
 {
     private readonly IStringLocalizer S;
@@ -100,7 +100,7 @@ public sealed class InboundVoiceStartup : StartupBase
 /// <summary>
 /// Registers the deployment steps that export the entry points owned by the entry points feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.InboundVoice)]
+[Feature(ContactCenterFeatures.InboundVoice)]
 [RequireFeatures("OrchardCore.Deployment")]
 public sealed class EntryPointsDeploymentStartup : StartupBase
 {
@@ -114,7 +114,7 @@ public sealed class EntryPointsDeploymentStartup : StartupBase
 /// <summary>
 /// Registers the recipe steps that import the entry points owned by the entry points feature.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.InboundVoice)]
+[Feature(ContactCenterFeatures.InboundVoice)]
 [RequireFeatures("OrchardCore.Recipes.Core")]
 public sealed class EntryPointsRecipesStartup : StartupBase
 {

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.Core.ContactCenter;
@@ -9,32 +8,27 @@ namespace CrestApps.Core.ContactCenter;
 /// Adds the process liveness probe to the host pipeline.
 /// </summary>
 /// <remarks>
-/// Liveness must be answered by the process itself, ahead of the Orchard Core pipeline, because it answers
-/// exactly one question: should this process be restarted. A probe mapped inside a tenant shell cannot answer
-/// that. It returns 404 whenever the tenant is disabled, renamed, given a different request URL prefix, or
-/// fails to start — and an orchestrator reads 404 as a probe failure, so a healthy process is restarted for a
-/// tenant-level problem, forever.
+/// Liveness must be answered by the process itself, ahead of the host's own pipeline, because it answers
+/// exactly one question: should this process be restarted. A probe mapped inside one tenant of a multi-tenant
+/// host cannot answer that. It returns 404 whenever the tenant is disabled, renamed, given a different request
+/// URL prefix, or fails to start — and an orchestrator reads 404 as a probe failure, so a healthy process is
+/// restarted for a tenant-level problem, forever.
 /// <para>
 /// This is deliberately a short-circuiting middleware rather than a mapped endpoint. Endpoints registered on a
 /// <see cref="WebApplication"/> are executed by terminal middleware appended after everything the application
-/// added, so an endpoint would be evaluated after the Orchard Core pipeline had already handled the request.
+/// added, so an endpoint would be evaluated after the host's own pipeline had already handled the request.
 /// </para>
 /// </remarks>
 public static class ContactCenterProcessHealthApplicationBuilderExtensions
 {
-    /// <summary>
-    /// The route the <c>OrchardCore.HealthChecks</c> module uses when no route is configured.
-    /// </summary>
-    private const string DefaultSharedHealthEndpointRoute = "/health/live";
-
     /// <summary>
     /// Answers the process liveness probe before the request reaches the Orchard Core pipeline.
     /// </summary>
     /// <param name="app">The application builder to add the middleware to.</param>
     /// <returns>The same <paramref name="app"/> so calls can be chained.</returns>
     /// <remarks>
-    /// Call this before <c>UseOrchardCore</c>. The probe consults nothing: reaching it already proves the
-    /// process is scheduling requests, which is the only claim a liveness probe may make.
+    /// Call this before the host adds its own pipeline. The probe consults nothing: reaching it already proves
+    /// the process is scheduling requests, which is the only claim a liveness probe may make.
     /// <para>
     /// The path is deliberately not a parameter here. It is supplied once to
     /// <c>AddContactCenterProcessLiveness</c>, which is also what validates it against every configured tenant.
@@ -53,11 +47,12 @@ public static class ContactCenterProcessHealthApplicationBuilderExtensions
                 "path is validated against every configured tenant. Without it, a tenant that maps its health " +
                 "endpoint on the same path would be silently shadowed by an unconditional '200 Healthy'.");
 
-        var configuration = app.ApplicationServices.GetService<IConfiguration>();
-
+        // Where the host's own aggregate health endpoint lives is the host's knowledge - which configuration
+        // key names it, and what it falls back to - so the host supplies the answer rather than this package
+        // reading a key it would have to name.
         ThrowIfShadowsSharedHealthEndpoint(
             options.Path,
-            configuration?["OrchardCore_HealthChecks:Url"],
+            options.SharedHealthEndpointRouteResolver?.Invoke(app.ApplicationServices),
             tenantName: null);
 
         var livenessPath = new PathString(options.Path);
@@ -80,10 +75,13 @@ public static class ContactCenterProcessHealthApplicationBuilderExtensions
     }
 
     /// <summary>
-    /// Throws when the liveness path would shadow the <c>OrchardCore.HealthChecks</c> module's endpoint.
+    /// Throws when the liveness path would shadow the host's own shared health endpoint.
     /// </summary>
     /// <param name="livenessPath">The path this middleware will answer.</param>
-    /// <param name="sharedEndpointRoute">The configured shared health endpoint route, if any.</param>
+    /// <param name="sharedEndpointRoute">
+    /// The host's shared health endpoint route, already resolved to the value it will actually serve on. A
+    /// host with no shared health endpoint passes <see langword="null"/>, and nothing is checked.
+    /// </param>
     /// <param name="tenantName">The tenant the route was configured on, or <see langword="null"/> for the host.</param>
     /// <exception cref="InvalidOperationException">The two paths are the same.</exception>
     /// <remarks>
@@ -97,9 +95,12 @@ public static class ContactCenterProcessHealthApplicationBuilderExtensions
         string sharedEndpointRoute,
         string tenantName)
     {
-        var effectiveSharedRoute = string.IsNullOrWhiteSpace(sharedEndpointRoute)
-            ? DefaultSharedHealthEndpointRoute
-            : sharedEndpointRoute.Trim();
+        if (string.IsNullOrWhiteSpace(sharedEndpointRoute))
+        {
+            return;
+        }
+
+        var effectiveSharedRoute = sharedEndpointRoute.Trim();
 
         if (!Normalize(livenessPath).Equals(Normalize(effectiveSharedRoute), StringComparison.OrdinalIgnoreCase))
         {
@@ -112,12 +113,11 @@ public static class ContactCenterProcessHealthApplicationBuilderExtensions
 
         throw new InvalidOperationException(
             $"The Contact Center process liveness probe is configured at '{livenessPath}', which is the same " +
-            $"route as the OrchardCore.HealthChecks module's endpoint ('{effectiveSharedRoute}') in {scope}. " +
-            "Liveness runs " +
+            $"route as the host's shared health endpoint ('{effectiveSharedRoute}') in {scope}. Liveness runs " +
             "as host middleware ahead of routing, so it would shadow that endpoint for every tenant in this " +
             "process — including tenants that do not enable Contact Center — and answer an unconditional " +
             "'200 Healthy' in its place. Move one of them: pass a different path to " +
-            "AddContactCenterProcessLiveness, or set 'OrchardCore_HealthChecks:Url' to another route.");
+            "AddContactCenterProcessLiveness, or configure the shared health endpoint on another route.");
     }
 
     /// <summary>

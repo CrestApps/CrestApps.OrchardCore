@@ -31,24 +31,24 @@ public sealed class ServiceResolutionOrderTests
         {
             "routing-strategies",
             "CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy",
-            [ContactCenterConstants.Feature.Queues]
+            [ContactCenterFeatures.Queues]
         },
         {
             "inbound-priority",
             "CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundPriorityContributor",
-            [ContactCenterConstants.Feature.InboundVoice]
+            [ContactCenterFeatures.InboundVoice]
         },
         {
             "provider-command-executors",
             "CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandTypeExecutor",
             // Voice is EnabledByDependencyOnly, so it has to be pulled in by something that depends
             // on it rather than enabled directly.
-            [ContactCenterConstants.Feature.InboundVoice]
+            [ContactCenterFeatures.InboundVoice]
         },
         {
             "retention-policies",
             "CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.IContactCenterRetentionPolicy",
-            [ContactCenterConstants.Feature.Area]
+            [ContactCenterFeatures.Area]
         },
     };
 
@@ -82,7 +82,7 @@ public sealed class ServiceResolutionOrderTests
             "dialer-strategies",
             "CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerStrategy",
             "Mode",
-            [ContactCenterConstants.Feature.DialerPaced]
+            [ContactCenterFeatures.DialerPaced]
         },
     };
 

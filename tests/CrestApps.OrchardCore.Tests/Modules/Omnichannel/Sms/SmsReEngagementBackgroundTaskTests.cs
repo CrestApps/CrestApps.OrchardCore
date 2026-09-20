@@ -1040,7 +1040,7 @@ public sealed class SmsReEngagementBackgroundTaskTests
 
         public StubBusinessHoursGate BusinessHours { get; } = new();
 
-        public InMemoryAutomatedConversationGate ConversationGate { get; } = new();
+        public InMemoryAutomatedConversationGate ConversationGate { get; } = new(TimeProvider.System);
 
         public List<AIChatSessionPrompt> PromptsFor(string sessionId)
         {

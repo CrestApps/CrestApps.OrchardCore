@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// <summary>
 /// Registers compliance-gated Power and Progressive paced dialing strategies and scheduled pacing.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.DialerPaced)]
+[Feature(ContactCenterFeatures.DialerPaced)]
 public sealed class DialerPacedStartup : StartupBase
 {
     private readonly IStringLocalizer S;
@@ -32,7 +32,7 @@ public sealed class DialerPacedStartup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddContactCenterCapability(ContactCenterConstants.Feature.DialerPaced, ContactCenterCapabilities.DialerPaced);
+        services.AddContactCenterCapability(ContactCenterFeatures.DialerPaced, ContactCenterCapabilities.DialerPaced);
 
         services.AddCoreContactCenterPacedDialing();
 

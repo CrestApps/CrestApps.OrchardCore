@@ -118,8 +118,14 @@ Because the coverage audit is gone, one rule replaces it:
 Those types are unreachable from every integration and feature-activation test here, by design: the
 framework defaults exist for a standalone host, and Orchard binds its own implementations instead.
 They would otherwise carry zero coverage into Phase 2, where they become the only implementation.
-This applies to P0.4's default contact and subject model, P0.8's cycles, and P0.13's
-`ContactPreferenceDoNotCallRegistry`.
+This applies to P0.4's default contact and subject model and to P0.8's cycles.
+
+**Correction (review pass, 2026-09-19).** This paragraph also named P0.13's
+`ContactPreferenceDoNotCallRegistry`. That type was never written: `grep -rn
+"ContactPreferenceDoNotCallRegistry\|FailClosedWithoutNationalRegistry" src tests` returns nothing.
+Neither was the framework default CRM model the same rule covers - `IContactTimeZoneResolver` does not
+exist either, and `IOmnichannelContactSearch` is declared with no implementation and no caller. The rule
+stands; what it applied to is smaller than this said, and D-13 and D-14 are open rather than landed.
 
 ## Deviations from the written plan
 
@@ -134,6 +140,11 @@ This applies to P0.4's default contact and subject model, P0.8's cycles, and P0.
 3. **`IDetachedWorkExecutor`** is not in the plan. `RealtimeCallCompletionRunner` needs work to
    outlive the request that started it, for a reason that is not Orchard-specific, so it became a
    seam rather than staying an Orchard detail.
+   **Correction (review pass, 2026-09-19):** the seam exists and has a framework default and an Orchard
+   adapter, but nothing consumes it. `RealtimeCallCompletionRunner` still injects `IShellHost` and
+   `ShellSettings` directly, so the class the seam was created for never adopted it. Migrating it is
+   part of moving `Omnichannel.Voice.Core`, and until then this row describes a contract rather than a
+   migration.
 4. **Transitions projects created during Phase 0** rather than at the start of Phase 1, so the new
    seam contracts are written once under their final names instead of being renamed later.
 5. **The DI snapshot cannot record registration order.** [04-registration-api.md](04-registration-api.md)

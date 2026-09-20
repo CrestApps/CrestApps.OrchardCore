@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Entities;
+using OrchardCore.Environment.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -24,6 +25,7 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
     private readonly IDialDestinationPolicy _destinationPolicy;
 
     internal readonly IStringLocalizer S;
@@ -38,16 +40,19 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="optionsUpdateNotifier">The notifier that asks the options system to re-read these settings.</param>
     /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterExternalTransferSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IDialDestinationPolicy destinationPolicy,
         IStringLocalizer<ContactCenterExternalTransferSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         _destinationPolicy = destinationPolicy;
         S = stringLocalizer;
     }
@@ -148,6 +153,10 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
         {
             settings.Destinations = destinations;
         }
+
+        // Consumers read these settings as options, which are cached until something says otherwise. This is
+        // what says otherwise, so a change takes effect on the next request rather than on the next restart.
+        _optionsUpdateNotifier.RequestUpdate<ContactCenterExternalTransferSettings>();
 
         return Edit(site, settings, context);
     }

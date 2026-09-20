@@ -12,7 +12,7 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// feature: a deployment can play and audit voicemail (a Voice capability) without enabling full call recording,
 /// while the recording feature reuses the exact same governance rather than duplicating it.
 /// </summary>
-[Feature(ContactCenterConstants.Feature.RecordingCore)]
+[Feature(ContactCenterFeatures.RecordingCore)]
 public sealed class RecordingCoreStartup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)

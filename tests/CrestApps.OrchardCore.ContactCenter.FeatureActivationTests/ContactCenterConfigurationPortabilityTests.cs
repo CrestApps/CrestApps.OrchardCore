@@ -62,10 +62,10 @@ public sealed class ContactCenterConfigurationPortabilityTests
 
     private static readonly string[] _configurationFeatures =
     [
-        ContactCenterConstants.Feature.Agents,
-        ContactCenterConstants.Feature.Queues,
-        ContactCenterConstants.Feature.InboundVoice,
-        ContactCenterConstants.Feature.Dialer,
+        ContactCenterFeatures.Agents,
+        ContactCenterFeatures.Queues,
+        ContactCenterFeatures.InboundVoice,
+        ContactCenterFeatures.Dialer,
         DeploymentFeatureId,
         RecipesFeatureId,
     ];

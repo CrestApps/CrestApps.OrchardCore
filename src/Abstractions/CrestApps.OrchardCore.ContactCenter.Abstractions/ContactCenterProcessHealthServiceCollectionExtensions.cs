@@ -1,4 +1,5 @@
 using CrestApps.Core.ContactCenter;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OrchardCore.Environment.Shell;
@@ -10,6 +11,25 @@ namespace CrestApps.OrchardCore.ContactCenter;
 /// </summary>
 public static class ContactCenterProcessHealthServiceCollectionExtensions
 {
+    /// <summary>
+    /// The configuration key the <c>OrchardCore.HealthChecks</c> module reads its route from.
+    /// </summary>
+    public const string SharedHealthEndpointConfigurationKey = "OrchardCore_HealthChecks:Url";
+
+    /// <summary>
+    /// The route the <c>OrchardCore.HealthChecks</c> module uses when no route is configured.
+    /// </summary>
+    public const string DefaultSharedHealthEndpointRoute = "/health/live";
+
+    /// <summary>
+    /// Resolves the route the shared health endpoint will actually be served on for a host, taking the module's
+    /// default when nothing is configured.
+    /// </summary>
+    /// <param name="configuredRoute">The configured route, which may be <see langword="null"/> or blank.</param>
+    /// <returns>The effective route.</returns>
+    public static string ResolveSharedHealthEndpointRoute(string configuredRoute)
+        => string.IsNullOrWhiteSpace(configuredRoute) ? DefaultSharedHealthEndpointRoute : configuredRoute;
+
     /// <summary>
     /// Registers the process liveness probe on its default path.
     /// </summary>
@@ -54,7 +74,15 @@ public static class ContactCenterProcessHealthServiceCollectionExtensions
 
         // Registered as a concrete singleton rather than through IOptions, because IOptions always resolves to
         // a default instance and could not tell the middleware whether this method had been called at all.
-        services.AddSingleton(new ContactCenterProcessLivenessOptions { Path = path });
+        //
+        // The shared health endpoint's route is supplied here rather than read by the framework package,
+        // because the key it lives under and the route it falls back to are this host's, not the suite's.
+        services.AddSingleton(new ContactCenterProcessLivenessOptions
+        {
+            Path = path,
+            SharedHealthEndpointRouteResolver = static serviceProvider => ResolveSharedHealthEndpointRoute(
+                serviceProvider.GetService<IConfiguration>()?[SharedHealthEndpointConfigurationKey]),
+        });
 
         // The shell settings manager is resolved leniently so the probe can also be hosted outside an Orchard
         // Core application, where there are no tenants to validate.

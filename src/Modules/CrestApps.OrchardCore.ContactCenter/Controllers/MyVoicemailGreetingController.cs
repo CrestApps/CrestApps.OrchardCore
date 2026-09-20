@@ -23,8 +23,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// </summary>
 [Admin]
 [RequireFeatures(
-    ContactCenterConstants.Feature.Agents,
-    ContactCenterConstants.Feature.Voice)]
+    ContactCenterFeatures.Agents,
+    ContactCenterFeatures.Voice)]
 public sealed class MyVoicemailGreetingController : Controller
 {
     // Reject oversized uploads early: Telnyx Media Storage caps media at 20 MB, and a greeting is a few seconds of

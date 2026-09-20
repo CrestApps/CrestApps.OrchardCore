@@ -1,4 +1,3 @@
-using CrestApps.Core.Support;
 using Microsoft.Extensions.Logging;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
@@ -84,7 +83,7 @@ public sealed class DefaultIncomingCallDispatcher : IIncomingCallDispatcher
         {
             var interaction = new TelephonyInteraction
             {
-                InteractionId = IdentifierGenerator.Generate(),
+                InteractionId = UniqueId.GenerateId(),
                 CallId = call.CallId,
                 ProviderName = call.ProviderName,
                 UserId = userId,

@@ -14,7 +14,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="CrestApps.Core.Abstractions" />
     <PackageReference Include="System.Memory.Data" />
   </ItemGroup>

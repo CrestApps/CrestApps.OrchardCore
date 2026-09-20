@@ -23,7 +23,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Controllers;
 /// Provides administration of Contact Center business-hours calendars.
 /// </summary>
 [Admin]
-[Feature(ContactCenterConstants.Feature.BusinessHours)]
+[Feature(ContactCenterFeatures.BusinessHours)]
 public sealed class BusinessHoursCalendarsController : ContactCenterCatalogController<BusinessHoursCalendar>
 {
     /// <summary>

@@ -1,3 +1,5 @@
+using CrestApps.Core.Hosting.Background;
+using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core;
@@ -75,7 +77,7 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()
             .AddScoped<IOmnichannelActivityManager, OmnichannelActivityManager>()
             .AddScoped<IOmnichannelChannelEndpointStore, OmnichannelChannelEndpointStore>()
-            .AddScoped<IOmnichannelChannelEndpointManager, OmnichannelChannelEndpointManager>()
+            .AddCoreOmnichannelChannelEndpoints()
             .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();

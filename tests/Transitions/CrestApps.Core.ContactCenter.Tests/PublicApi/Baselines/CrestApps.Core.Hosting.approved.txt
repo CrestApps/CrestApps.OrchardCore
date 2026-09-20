@@ -33,6 +33,12 @@ namespace CrestApps.Core.Hosting
 }
 namespace CrestApps.Core.Hosting.Background
 {
+    public static class BackgroundCycleServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddBackgroundCycleWorker<TCycle, TImplementation>(this Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+            where TCycle :  class, CrestApps.Core.Hosting.Background.IBackgroundCycle
+            where TImplementation :  class, TCycle { }
+    }
     public sealed class CycleRunner<TCycle> : Microsoft.Extensions.Hosting.BackgroundService
         where TCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle
     {
@@ -56,8 +62,9 @@ namespace CrestApps.Core.Hosting.Locking
 }
 namespace CrestApps.Core
 {
-    public static class ServiceCollectionExtensions
+    public static class HostingServiceCollectionExtensions
     {
+        public static CrestApps.Core.Builders.CrestAppsCoreBuilder AddContactCenterSuite(this CrestApps.Core.Builders.CrestAppsCoreBuilder builder, System.Action<CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder> configure = null) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreHosting(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }
@@ -75,10 +82,6 @@ namespace CrestApps.Core.SignalR
 }
 namespace CrestApps.Core.Support
 {
-    public static class IdentifierGenerator
-    {
-        public static string Generate() { }
-    }
     public static class SanitizedLoggingExtensions
     {
         public static string SanitizeLogValue(this string value) { }

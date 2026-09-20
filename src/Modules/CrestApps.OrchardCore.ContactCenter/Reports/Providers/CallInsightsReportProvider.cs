@@ -50,7 +50,7 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
     /// <inheritdoc/>
     /// <remarks>Every figure in this report counts voice calls, which only the Voice capability creates.</remarks>
     public override IReadOnlyCollection<string> RequiredFeatureIds { get; } = [
-        ContactCenterConstants.Feature.Voice,
+        ContactCenterFeatures.Voice,
     ];
 
     /// <inheritdoc/>

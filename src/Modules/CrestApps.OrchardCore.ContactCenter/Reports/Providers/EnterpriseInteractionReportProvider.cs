@@ -29,10 +29,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     private HashSet<string> _absentFeatureIds = [];
 
     private static readonly string[] _executiveMetricRequirements =
-        [null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording];
+        [null, null, null, null, null, null, null, ContactCenterFeatures.Voice, ContactCenterFeatures.Recording];
 
     private static readonly string[] _interactionDetailRequirements =
-        [null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, null, null, null, ContactCenterConstants.Feature.Voice];
+        [null, null, null, null, null, null, null, ContactCenterFeatures.Voice, null, null, null, ContactCenterFeatures.Voice];
 
     private static readonly string[] _agentPerformanceRequirements =
     [
@@ -40,9 +40,9 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         null,
         null,
         null,
-        ContactCenterConstants.Feature.Voice,
-        ContactCenterConstants.Feature.Recording,
-        ContactCenterConstants.Feature.Recording,
+        ContactCenterFeatures.Voice,
+        ContactCenterFeatures.Recording,
+        ContactCenterFeatures.Recording,
         null,
     ];
 
@@ -54,8 +54,8 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         null,
         null,
         null,
-        ContactCenterConstants.Feature.Voice,
-        ContactCenterConstants.Feature.Recording,
+        ContactCenterFeatures.Voice,
+        ContactCenterFeatures.Recording,
     ];
 
     public EnterpriseInteractionReportProvider(
@@ -103,7 +103,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         // figures are real. What they must not do is publish the capability's columns as zeroes alongside them, so
         // the columns those capabilities feed are dropped instead of rendered empty.
         _absentFeatureIds = [.. await _capabilityGuard.GetMissingFeaturesAsync(
-            [ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording],
+            [ContactCenterFeatures.Voice, ContactCenterFeatures.Recording],
             cancellationToken)];
 
         var range = context.Filter.GetDateRange();

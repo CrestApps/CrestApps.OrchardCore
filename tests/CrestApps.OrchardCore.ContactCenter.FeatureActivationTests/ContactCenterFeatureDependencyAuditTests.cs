@@ -1,4 +1,5 @@
 using CrestApps.Core.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter;
 using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Http;
@@ -141,7 +142,7 @@ public sealed class ContactCenterFeatureDependencyAuditTests
         {
             Id = "manifest-audit",
             ProviderProfile = "none",
-            Features = [ContactCenterConstants.Feature.Area],
+            Features = [ContactCenterFeatures.Area],
         });
 
         return await host.ExecuteInTenantScopeAsync(tenant, async serviceProvider =>
@@ -315,7 +316,7 @@ public sealed class ContactCenterFeatureDependencyAuditTests
     /// after it was written.
     /// </remarks>
     private static string[] GetContactCenterFeatureIds()
-        => typeof(ContactCenterConstants.Feature)
+        => typeof(ContactCenterFeatures)
             .GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
             .Where(field => field is { IsLiteral: true, IsInitOnly: false } && field.FieldType == typeof(string))
             .Select(field => (string)field.GetRawConstantValue())

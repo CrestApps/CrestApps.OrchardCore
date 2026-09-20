@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
+using OrchardCore.Environment.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -21,6 +22,7 @@ public sealed class SecureCaptureSettingsDisplayDriver
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
     internal readonly IStringLocalizer S;
 
@@ -33,14 +35,17 @@ public sealed class SecureCaptureSettingsDisplayDriver
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="optionsUpdateNotifier">The notifier that asks the options system to re-read these settings.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public SecureCaptureSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
+        IOptionsUpdateNotifier optionsUpdateNotifier,
         IStringLocalizer<SecureCaptureSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        _optionsUpdateNotifier = optionsUpdateNotifier;
         S = stringLocalizer;
     }
 
@@ -87,6 +92,10 @@ public sealed class SecureCaptureSettingsDisplayDriver
             SecureCaptureSettings.MinLinkTimeToLiveSeconds,
             SecureCaptureSettings.MaxLinkTimeToLiveSeconds);
         settings.PauseRecordingDuringCapture = model.PauseRecordingDuringCapture;
+
+        // Consumers read these settings as options, which are cached until something says otherwise. This is
+        // what says otherwise, so a change takes effect on the next request rather than on the next restart.
+        _optionsUpdateNotifier.RequestUpdate<SecureCaptureSettings>();
 
         return Edit(site, settings, context);
     }

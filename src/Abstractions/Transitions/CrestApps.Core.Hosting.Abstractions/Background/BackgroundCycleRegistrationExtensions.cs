@@ -1,7 +1,7 @@
-using CrestApps.Core.Hosting.Background;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
-namespace Microsoft.Extensions.DependencyInjection;
+namespace CrestApps.Core.Hosting.Background;
 
 /// <summary>
 /// Provides extension methods for registering background cycles.
@@ -23,6 +23,8 @@ public static class BackgroundCycleRegistrationExtensions
         where TCycle : class, IBackgroundCycle
         where TImplementation : class, TCycle
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         services.TryAddScoped<TCycle, TImplementation>();
 
         return services;

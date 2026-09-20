@@ -89,7 +89,7 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
             var provider = CreateProvider(session, guard, agentManager.Object);
 
             // First request: the voice capability is absent (its columns must drop) and only agent-a is known.
-            guard.MissingFeatures = [ContactCenterConstants.Feature.Voice];
+            guard.MissingFeatures = [ContactCenterFeatures.Voice];
             SetAgents(agentManager, ("agent-a", "Alice"));
             var firstDocument = await provider.RunAsync(CreateContext(_windowAFrom, _windowATo), cancellationToken);
 

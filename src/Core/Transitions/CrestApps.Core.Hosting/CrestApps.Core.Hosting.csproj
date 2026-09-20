@@ -7,8 +7,8 @@
       $(CrestAppsDescription)
 
       Framework defaults for the host seams: an in-process distributed lock, a single-tenant
-      accessor, a service-provider scope executor with an after-commit queue, and an empty user
-      directory. A real host replaces the ones it can do better.
+      accessor, a service-provider scope executor, and a runner for the background cycles a host
+      with no scheduler of its own needs driving. A real host replaces the ones it can do better.
     </Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
