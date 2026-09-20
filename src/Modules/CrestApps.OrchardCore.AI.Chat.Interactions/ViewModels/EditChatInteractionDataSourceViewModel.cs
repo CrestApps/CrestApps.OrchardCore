@@ -1,4 +1,4 @@
-﻿using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
@@ -32,11 +32,6 @@ public class EditChatInteractionDataSourceViewModel
     /// Gets or sets the filter.
     /// </summary>
     public string Filter { get; set; }
-
-    /// <summary>
-    /// Gets or sets the kinds of knowledge to retrieve, comma-separated. Empty means every kind.
-    /// </summary>
-    public string ObjectTypes { get; set; }
 
     /// <summary>
     /// Gets or sets the data sources.

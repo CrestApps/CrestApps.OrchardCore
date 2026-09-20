@@ -93,7 +93,6 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
 
         // The interaction editor saves through the SignalR hub rather than a form POST, so the two
         // indexable-character ceiling needs a settings handler to reach the interaction's metadata.
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IChatInteractionSettingsHandler, ChatInteractionUploadCeilingSettingsHandler>());
 
         // Add Indexing Services.
         services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()

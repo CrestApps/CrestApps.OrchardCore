@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
@@ -57,7 +57,6 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
             model.IsInScope = ragMetadata.IsInScope;
             model.Filter = ragMetadata.Filter;
-            model.ObjectTypes = KnowledgeObjectTypeEditor.Join(ragMetadata.ObjectTypes);
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
         }).Location("Parameters:4#Knowledge;2");
@@ -75,7 +74,6 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
             model.IsInScope = ragMetadata.IsInScope;
             model.Filter = ragMetadata.Filter;
-            model.ObjectTypes = KnowledgeObjectTypeEditor.Join(ragMetadata.ObjectTypes);
 
             model.DataSources = await _dataSourceStore.GetAllAsync();
         }).Location("Parameters:5#Knowledge;2");
@@ -128,21 +126,12 @@ public sealed class ChatInteractionDataSourceDisplayDriver : DisplayDriver<ChatI
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Filter), S["Invalid filter value. It must be a valid OData filter."]);
         }
 
-        var unknownObjectTypes = KnowledgeObjectTypeEditor.FindUnknown(model.ObjectTypes);
-
-        if (unknownObjectTypes.Count > 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ObjectTypes),
-            S["Unknown knowledge kind: {0}. Valid values: {1}.", string.Join(", ", unknownObjectTypes), string.Join(", ", KnowledgeObjectTypeEditor.SupportedObjectTypes)]);
-        }
-
         interaction.Alter<AIDataSourceRagMetadata>(metadata =>
         {
             metadata.Strictness = strictness;
             metadata.TopNDocuments = topN;
             metadata.IsInScope = model.IsInScope;
             metadata.Filter = model.Filter;
-            metadata.ObjectTypes = KnowledgeObjectTypeEditor.Split(model.ObjectTypes);
         });
 
         return Edit(interaction, context);

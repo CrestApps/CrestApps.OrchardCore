@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,10 @@ public sealed class Startup : StartupBase
     {
         services.AddDisplayDriver<AIDataSource, PostgreSQLAIDataSourceDisplayDriver>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, PostgreSQLAIDataSourceSourceHandler>(AIDataSourceSourceTypes.PostgreSQL);
+
+        // This source reads rows it did not shape, and its handler extracts each document by the configured
+        // TitleFieldName and ContentFieldName, so it has to ask which field is which.
+        services.Configure<AIDataSourceFieldMappingOptions>(options => options.Require(AIDataSourceSourceTypes.PostgreSQL));
         services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
             AIDataSourceSourceTypes.PostgreSQL,
             S["PostgreSQL"],

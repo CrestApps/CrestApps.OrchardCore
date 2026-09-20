@@ -30,15 +30,3 @@
     </div>
 </div>
 
-<div class="ocat-wrapper">
-    <label asp-for="ObjectTypes" class="ocat-label">
-        @T["Knowledge kinds"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["An ingested file is stored as separate typed pieces -- its text, its figures, its charts and its tables -- and this limits which of those a search may return. Asking for text also admits rows written before typed knowledge existed, which carry no kind at all."]" aria-label="@T["Help: Knowledge kinds explanation"]">
-            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-        </span>
-    </label>
-    <div class="ocat-end">
-        <input type="text" class="form-control" asp-for="ObjectTypes" placeholder="@T["e.g. figure, chart"]">
-        <span class="hint">@T["Comma-separated. Leave empty to retrieve every kind. Values: document, article, text, figure, chart, table."]</span>
-    </div>
-</div>

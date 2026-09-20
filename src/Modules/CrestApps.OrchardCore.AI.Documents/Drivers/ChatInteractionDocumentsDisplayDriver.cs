@@ -59,7 +59,6 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
 
             var documentsMetadata = interaction.GetOrCreate<DocumentsMetadata>();
             model.DocumentRetrievalMode = documentsMetadata.RetrievalMode;
-            model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
@@ -92,10 +91,11 @@ internal sealed class ChatInteractionDocumentsDisplayDriver : DisplayDriver<Chat
         interaction.Alter<DocumentsMetadata>(metadata =>
         {
             metadata.RetrievalMode = model.DocumentRetrievalMode;
-            // Only the ceiling. The framework's interaction upload endpoint follows the site's own answer
-            // about describing figures whatever the interaction says, so storing one here would be storing
-            // a value nothing reads.
-            metadata.MaxIndexableCharacters = model.MaxIndexableCharacters is null ? null : Math.Max(0, model.MaxIndexableCharacters.Value);
+
+            // An interaction has no ceiling of its own any more -- it uses the site's. Cleared rather than
+            // left alone so an interaction saved under an older build stops overriding the site default
+            // with a value no screen can show or change.
+            metadata.MaxIndexableCharacters = null;
         });
 
         // Documents are uploaded via minimal API endpoints, so we just return the current view

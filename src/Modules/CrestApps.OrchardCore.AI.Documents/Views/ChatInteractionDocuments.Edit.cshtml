@@ -46,26 +46,6 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
     </div>
 </div>
 
-@if (Model.AllowDocumentUploads)
-{
-    @*
-        What an upload costs. Blank means "use the site default".
-
-        Only the ceiling appears here. The framework's interaction upload endpoint deliberately follows the
-        site's own answer about describing figures whatever an interaction says -- an interaction is one
-        conversation, so the recurring cost that choice controls does not arise -- and a control the upload
-        ignores would save, reload and do nothing. That choice lives on the AI profile, where it applies to
-        every session the profile serves.
-    *@
-    <div class="mb-3">
-        <label for="@Html.IdFor(m => m.MaxIndexableCharacters)" class="form-label">@T["Largest document that can be indexed"]</label>
-        <div>
-            <input type="number" class="form-control setting-input" data-setting="maxIndexableCharacters" id="@Html.IdFor(m => m.MaxIndexableCharacters)" name="@Html.NameFor(m => m.MaxIndexableCharacters)" value="@(Model.MaxIndexableCharacters?.ToString(CultureInfo.InvariantCulture))" min="0" step="1" placeholder="@T["Use site default"]" />
-            <div class="form-text">@T["Characters of extracted text. A larger document is refused at upload rather than stored unsearchable. 0 means no limit. Leave empty to use the site default."]</div>
-        </div>
-    </div>
-}
-
 <div class="mb-3">
     <label class="form-label">
         @T["Attached files"]

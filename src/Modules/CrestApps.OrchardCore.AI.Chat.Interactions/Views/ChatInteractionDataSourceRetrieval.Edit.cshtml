@@ -34,13 +34,3 @@
     <input type="number" class="form-control setting-input" data-setting="topNDocuments" asp-for="TopNDocuments" step="1" min="3" max="20">
 </div>
 
-<div class="mb-3">
-    <label asp-for="ObjectTypes" class="form-label">
-        @T["Knowledge kinds"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["An ingested file is stored as separate typed pieces -- its text, its figures, its charts and its tables -- and this limits which of those a search may return. Asking for text also admits rows written before typed knowledge existed, which carry no kind at all."]">
-            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-        </span>
-    </label>
-    <input type="text" class="form-control setting-input" data-setting="objectTypes" asp-for="ObjectTypes" placeholder="@T["e.g. figure, chart"]">
-    <div class="form-text">@T["Comma-separated. Leave empty to retrieve every kind. Values: document, article, text, figure, chart, table."]</div>
-</div>

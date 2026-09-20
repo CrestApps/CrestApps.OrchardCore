@@ -3,29 +3,6 @@
 
 @model EditAIProfileDocumentsViewModel
 
-<div class="ocat-wrapper">
-    <label asp-for="TopN" class="ocat-label">
-        @T["Document Top N"]
-        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Document Top N explanation"]">
-            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
-        </span>
-    </label>
-    <div class="ocat-end">
-        <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
-        <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="DocumentRetrievalMode" class="ocat-label">@T["Document retrieval mode"]</label>
-    <div class="ocat-end">
-        <select asp-for="DocumentRetrievalMode" asp-items="Model.DocumentRetrievalModes" class="form-select">
-            <option value="">@T["Default setting"]</option>
-        </select>
-        <div class="form-text">@T["Chunk keeps chunk-level context. Hierarchical matches on chunks, then injects the full text of the matched documents."]</div>
-    </div>
-</div>
-
 @*
     What an upload costs. Both only apply to documents uploaded into a session, so they follow the
     "Allow session document uploads" switch on the shape above; the script at the foot keeps them in step
@@ -52,6 +29,29 @@
             <option value="false" selected="@(Model.DescribeFiguresInUploads == false)">@T["Do not describe figures"]</option>
         </select>
         <div class="form-text">@T["Describing figures uses a vision model and is the expensive part of ingestion. It needs a deployment in the Vision slot — with none configured nothing is described, and a figure keeps its caption either way."]</div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TopN" class="ocat-label">
+        @T["Document Top N"]
+        <span class="text-muted" data-bs-toggle="tooltip" title="@T["The number of top matching document chunks to include as context for the AI model. Higher values provide more context but may increase costs and response time."]" aria-label="@T["Help: Document Top N explanation"]">
+            <i class="fa-solid fa-circle-question" aria-hidden="true"></i>
+        </span>
+    </label>
+    <div class="ocat-end">
+        <input type="number" class="form-control" name="@Html.NameFor(m => m.TopN)" value="@Model.TopN" min="1" max="20" />
+        <div class="form-text">@T["Default: 3. Recommended range: 1-10."]</div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DocumentRetrievalMode" class="ocat-label">@T["Document retrieval mode"]</label>
+    <div class="ocat-end">
+        <select asp-for="DocumentRetrievalMode" asp-items="Model.DocumentRetrievalModes" class="form-select">
+            <option value="">@T["Default setting"]</option>
+        </select>
+        <div class="form-text">@T["Chunk keeps chunk-level context. Hierarchical matches on chunks, then injects the full text of the matched documents."]</div>
     </div>
 </div>
 

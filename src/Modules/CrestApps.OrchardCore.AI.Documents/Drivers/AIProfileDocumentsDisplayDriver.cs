@@ -104,7 +104,7 @@ internal sealed class AIProfileDocumentsDisplayDriver : DisplayDriver<AIProfile>
             model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
             model.DescribeFiguresInUploads = documentsMetadata.DescribeFiguresInUploads;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
-        }).Location("Content:7#Knowledge;2");
+        }).Location("Content:2.5#Knowledge;2");
 
         var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>
         {

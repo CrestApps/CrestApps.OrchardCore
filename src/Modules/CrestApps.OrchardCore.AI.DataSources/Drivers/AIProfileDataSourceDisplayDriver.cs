@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Services;
@@ -105,14 +105,6 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Filter), S["Invalid filter value. It must be a valid OData filter."]);
         }
 
-        var unknownObjectTypes = KnowledgeObjectTypeEditor.FindUnknown(model.ObjectTypes);
-
-        if (unknownObjectTypes.Count > 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ObjectTypes),
-            S["Unknown knowledge kind: {0}. Valid values: {1}.", string.Join(", ", unknownObjectTypes), string.Join(", ", KnowledgeObjectTypeEditor.SupportedObjectTypes)]);
-        }
-
         profile.Put(metadata);
 
         profile.Alter<AIDataSourceRagMetadata>(t =>
@@ -121,7 +113,6 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
             t.Strictness = model.Strictness;
             t.TopNDocuments = model.TopNDocuments;
             t.IsInScope = model.IsInScope;
-            t.ObjectTypes = KnowledgeObjectTypeEditor.Split(model.ObjectTypes);
         });
 
         return Edit(profile, context);
@@ -137,7 +128,6 @@ internal sealed class AIProfileDataSourceDisplayDriver : DisplayDriver<AIProfile
         model.TopNDocuments = dataSourceSettings.GetTopNDocuments(ragMetadata.TopNDocuments);
         model.IsInScope = ragMetadata.IsInScope;
         model.Filter = ragMetadata.Filter;
-        model.ObjectTypes = KnowledgeObjectTypeEditor.Join(ragMetadata.ObjectTypes);
 
         var metadata = profile.GetOrCreate<DataSourceMetadata>();
         model.DataSourceId = metadata.DataSourceId;

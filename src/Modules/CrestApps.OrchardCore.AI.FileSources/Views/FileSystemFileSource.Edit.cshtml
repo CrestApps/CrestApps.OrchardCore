@@ -3,22 +3,11 @@
 @model FileSystemFileSourceViewModel
 
 <div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <div class="alert alert-info mb-0" role="alert">
-            <h5 class="alert-heading">@T["Where to put the files"]</h5>
-            <p class="mb-1">@T["This tenant reads from one folder and nothing outside it:"]</p>
-            <p class="mb-1"><code>@Model.TenantRootPath</code></p>
-            <p class="mb-0">@T["Drop files there, or in a folder inside it, and name that folder below."]</p>
-        </div>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
     <label asp-for="RootPath" class="ocat-label">@T["Folder"]</label>
     <div class="ocat-end">
-        <input asp-for="RootPath" class="form-control" placeholder="@T["Leave empty to read the folder above"]" />
+        <input asp-for="RootPath" class="form-control" placeholder="@T["Leave empty to read the file-sources folder itself"]" />
         <span asp-validation-for="RootPath" class="text-danger"></span>
-        <span class="hint">@T["A folder inside the one shown above, written relative to it, for example <code>handbooks</code> or <code>handbooks/2026</code>. Leave it empty to read the folder itself."]</span>
+        <span class="hint">@T["The folder must be inside this tenant's <code>file-sources</code> folder, written relative to it, for example <code>handbooks</code> or <code>handbooks/2026</code>. Leave it empty to read <code>file-sources</code> itself."]</span>
 
         @if (Model.IsEmpty)
         {

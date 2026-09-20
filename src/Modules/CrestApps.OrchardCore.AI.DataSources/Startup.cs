@@ -72,6 +72,9 @@ public sealed class Startup : StartupBase
             .AddScoped<IAIDataSourceIndexingService, OrchardAIDataSourceIndexingServiceAdapter>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, SearchIndexProfileAIDataSourceSourceHandler>(AIDataSourceSourceTypes.SearchIndexProfile);
 
+        // This source reads an index it did not shape, so it has to ask which field carries the content.
+        services.Configure<AIDataSourceFieldMappingOptions>(options => options.Require(AIDataSourceSourceTypes.SearchIndexProfile));
+
         services.AddSingleton<IBackgroundTask, DataSourceAlignmentBackgroundTask>();
         services.AddScoped<IDocumentIndexHandler, AIDataSourceDocumentIndexNotificationHandler>();
         services.AddIndexProfileHandler<DataSourceIndexProfileHandler>();

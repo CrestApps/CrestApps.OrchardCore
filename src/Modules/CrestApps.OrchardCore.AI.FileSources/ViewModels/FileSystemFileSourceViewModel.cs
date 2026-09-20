@@ -25,13 +25,6 @@ public class FileSystemFileSourceViewModel
     public int? MaxItems { get; set; }
 
     /// <summary>
-    /// Gets or sets the absolute path of this tenant's file-source folder, shown so a reader knows where to
-    /// put the files.
-    /// </summary>
-    [BindNever]
-    public string TenantRootPath { get; set; }
-
-    /// <summary>
     /// Gets or sets whether the resolved folder currently holds no files.
     /// </summary>
     [BindNever]

@@ -96,7 +96,7 @@ internal sealed class AIProfileTemplateDocumentsDisplayDriver : DisplayDriver<AI
             model.MaxIndexableCharacters = documentsMetadata.MaxIndexableCharacters;
             model.DescribeFiguresInUploads = documentsMetadata.DescribeFiguresInUploads;
             model.DocumentRetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, model.DocumentRetrievalMode);
-        }).Location("Content:7#Knowledge;2")
+        }).Location("Content:2.5#Knowledge;2")
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
 
         var documentsResult = Initialize<EditAIProfileDocumentsViewModel>("AIProfileDocuments_Edit", async model =>

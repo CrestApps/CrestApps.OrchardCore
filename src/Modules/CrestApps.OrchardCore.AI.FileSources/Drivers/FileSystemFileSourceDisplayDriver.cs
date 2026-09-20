@@ -46,8 +46,10 @@ internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<FileSour
 
         return Initialize<FileSystemFileSourceViewModel>("FileSystemFileSource_Edit", model =>
         {
-            // Created on demand, so the path shown to a reader is a folder they can actually drop files in.
-            model.TenantRootPath = _tenantRoot.EnsureRoot();
+            // Created on demand, so the folder a reader is about to name exists to drop files into. The path
+            // itself is not shown -- it is a host path, and what matters to a reader is that their folder
+            // goes inside file-sources.
+            _tenantRoot.EnsureRoot();
 
             if (fileSource.TryGet<FileSystemFileSourceMetadata>(out var metadata))
             {
