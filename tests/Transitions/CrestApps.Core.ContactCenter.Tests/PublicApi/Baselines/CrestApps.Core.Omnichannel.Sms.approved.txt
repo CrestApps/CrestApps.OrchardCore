@@ -1,0 +1,16 @@
+namespace CrestApps.Core.Omnichannel.Sms.Services
+{
+    public interface ISmsOwedReplyRecoveryCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle { }
+    public interface ISmsReEngagementCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle { }
+}
+namespace CrestApps.Core.Omnichannel.Sms.Twilio
+{
+    public sealed class TwilioRequestValidator
+    {
+        public TwilioRequestValidator(string secret) { }
+        public bool Validate(string url, System.Collections.Generic.IDictionary<string, string> parameters, string expected) { }
+        public bool Validate(string url, System.Collections.Specialized.NameValueCollection parameters, string expected) { }
+        public bool Validate(string url, string body, string expected) { }
+        public bool ValidateBody(string rawBody, string expected) { }
+    }
+}

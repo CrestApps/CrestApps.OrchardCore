@@ -4,7 +4,7 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Sms.Twillio;
+using CrestApps.Core.Omnichannel.Sms.Twilio;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
@@ -210,7 +210,7 @@ public static class TwilioWebhookEndpoint
             ? context.Request.Form.ToDictionary(entry => entry.Key, entry => entry.Value.ToString())
             : [];
 
-        var validator = new TwillioRequestValidator(authToken);
+        var validator = new TwilioRequestValidator(authToken);
 
         var isValid = validator.Validate(GetExternalRequestUrl(context, siteBaseUrl), form, twilioSignature.ToString());
 

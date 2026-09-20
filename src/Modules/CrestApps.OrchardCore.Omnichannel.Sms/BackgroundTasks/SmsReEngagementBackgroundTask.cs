@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Sms.Services;
+﻿using CrestApps.Core.Omnichannel.Sms.Services;
+using CrestApps.OrchardCore.Omnichannel.Sms.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.BackgroundTasks;
 
