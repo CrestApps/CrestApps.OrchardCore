@@ -1,6 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Resolves the stable configuration of each kind of subject a tenant has defined.

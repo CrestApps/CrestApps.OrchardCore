@@ -130,13 +130,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
                     OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor,
                     OrchardCore.ContentManagement.IContentManager contentItemManager,
                     OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivityContainer> containerDisplayManager,
-                    OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> activityDisplayManager,
+                    OrchardCore.DisplayManagement.IDisplayManager<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> activityDisplayManager,
                     CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager omnichannelActivityManager,
                     Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService,
                     OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager,
                     OrchardCore.ContentManagement.Display.IContentItemDisplayManager contentItemDisplayManager,
-                    CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionService activityDispositionService,
-                    CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
+                    CrestApps.Core.Omnichannel.Services.IActivityDispositionService activityDispositionService,
+                    CrestApps.Core.Omnichannel.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
                     System.TimeProvider timeProvider,
                     OrchardCore.Modules.ILocalClock localClock,
                     OrchardCore.DisplayManagement.Notify.INotifier notifier,
@@ -363,7 +363,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class SubjectFlowsController : Microsoft.AspNetCore.Mvc.Controller
     {
-        public SubjectFlowsController(CrestApps.Core.Services.ISourceCatalogManager<CrestApps.Core.Omnichannel.Models.SubjectAction> actionManager, CrestApps.Core.Services.ISourceCatalog<CrestApps.Core.Omnichannel.Models.SubjectAction> actionCatalog, CrestApps.Core.Services.INamedCatalog<CrestApps.Core.Omnichannel.Models.OmnichannelDisposition> dispositionsCatalog, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.Core.Omnichannel.Models.SubjectAction> actionDisplayDriver, Microsoft.Extensions.Options.IOptions<CrestApps.Core.Omnichannel.Models.SubjectActionOptions> actionOptions, OrchardCore.DisplayManagement.Notify.INotifier notifier, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.SubjectFlowsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.SubjectFlowsController> stringLocalizer) { }
+        public SubjectFlowsController(CrestApps.Core.Services.ISourceCatalogManager<CrestApps.Core.Omnichannel.Models.SubjectAction> actionManager, CrestApps.Core.Services.ISourceCatalog<CrestApps.Core.Omnichannel.Models.SubjectAction> actionCatalog, CrestApps.Core.Services.INamedCatalog<CrestApps.Core.Omnichannel.Models.OmnichannelDisposition> dispositionsCatalog, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.Core.Omnichannel.Models.SubjectAction> actionDisplayDriver, Microsoft.Extensions.Options.IOptions<CrestApps.Core.Omnichannel.Models.SubjectActionOptions> actionOptions, OrchardCore.DisplayManagement.Notify.INotifier notifier, CrestApps.Core.Omnichannel.Services.ISubjectFlowSettingsService subjectFlowSettingsService, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.SubjectFlowsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.SubjectFlowsController> stringLocalizer) { }
         [OrchardCore.Admin.Admin("omnichannel/subject-flows/{subjectContentType}/actions/create/{source}", "OmnichannelSubjectActionsCreate")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult> CreateAction(string subjectContentType, string source) { }
         [Microsoft.AspNetCore.Mvc.ActionName("CreateAction")]
@@ -441,7 +441,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers
     }
     public sealed class OmnichannelActivityExportDisplayDriver : OrchardCore.DisplayManagement.Handlers.DisplayDriver<CrestApps.OrchardCore.ContentTransfer.ExportRequest>
     {
-        public OmnichannelActivityExportDisplayDriver(CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider contentTypeProvider, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelActivityExportDisplayDriver> stringLocalizer) { }
+        public OmnichannelActivityExportDisplayDriver(CrestApps.Core.Omnichannel.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.OrchardCore.Omnichannel.Managements.Services.OmnichannelContentTypeProvider contentTypeProvider, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.OmnichannelActivityExportDisplayDriver> stringLocalizer) { }
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.ContentTransfer.ExportRequest model, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.ContentTransfer.ExportRequest model, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
@@ -508,10 +508,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes
 {
-    public sealed class OmnichannelActivityIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity>
+    public sealed class OmnichannelActivityIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Omnichannel.Models.OmnichannelActivity>
     {
         public OmnichannelActivityIndexProvider() { }
-        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> context) { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> context) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
@@ -649,7 +649,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Reports
     public static class HandoffContainmentAggregator
     {
         public const string RoutedVoiceReason = "handed_off_routed_voice";
-        public static CrestApps.OrchardCore.Omnichannel.Managements.Reports.HandoffContainmentSummary Compute(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> activities) { }
+        public static CrestApps.OrchardCore.Omnichannel.Managements.Reports.HandoffContainmentSummary Compute(System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> activities) { }
     }
     public sealed class HandoffContainmentReportProvider : CrestApps.OrchardCore.Omnichannel.Managements.Reports.OmnichannelReportBase
     {
@@ -696,18 +696,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
 {
     public sealed class AutomatedActivitiesProcessorCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle, CrestApps.OrchardCore.Omnichannel.Managements.Services.IAutomatedActivitiesProcessorCycle
     {
-        public AutomatedActivitiesProcessorCycle(Microsoft.Extensions.Options.IOptions<CrestApps.Core.Omnichannel.Models.OmnichannelAutomationOptions> options, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.IOmnichannelProcessor> processors, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityScreener> screeners, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivitiesProcessorCycle> logger, YesSql.ISession session, System.TimeProvider timeProvider, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.ContentManagement.IContentManager contentManager) { }
+        public AutomatedActivitiesProcessorCycle(Microsoft.Extensions.Options.IOptions<CrestApps.Core.Omnichannel.Models.OmnichannelAutomationOptions> options, System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Services.IOmnichannelProcessor> processors, System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Services.IAutomatedActivityScreener> screeners, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.AutomatedActivitiesProcessorCycle> logger, YesSql.ISession session, System.TimeProvider timeProvider, CrestApps.Core.Omnichannel.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.ContentManagement.IContentManager contentManager) { }
         public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class AutomatedActivityCompletionService : CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedActivityCompletionService
+    public sealed class AutomatedActivityCompletionService : CrestApps.Core.Omnichannel.Services.IAutomatedActivityCompletionService
     {
-        public AutomatedActivityCompletionService(CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionService activityDispositionService) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> CompleteAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.AutomatedActivityCompletionRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public AutomatedActivityCompletionService(CrestApps.Core.Omnichannel.Services.IActivityDispositionService activityDispositionService) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.ActivityDispositionResult> CompleteAsync(CrestApps.Core.Omnichannel.Models.AutomatedActivityCompletionRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class AutomatedVoiceActivitySettingsResolver : CrestApps.OrchardCore.Omnichannel.Core.Services.IAutomatedVoiceActivitySettingsResolver
+    public sealed class AutomatedVoiceActivitySettingsResolver : CrestApps.Core.Omnichannel.Services.IAutomatedVoiceActivitySettingsResolver
     {
-        public AutomatedVoiceActivitySettingsResolver(CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.Settings.ISiteService siteService) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.AutomatedVoiceActivitySettings> ResolveAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
+        public AutomatedVoiceActivitySettingsResolver(CrestApps.Core.Omnichannel.Services.ISubjectFlowSettingsService subjectFlowSettingsService, OrchardCore.Settings.ISiteService siteService) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.AutomatedVoiceActivitySettings> ResolveAsync(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class BulkActivityAdminFormOptionsProvider
     {
@@ -718,14 +718,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Services
         public DefaultActivityBatchLoadCoordinator(CrestApps.Core.Services.ICatalog<CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatch> catalog, System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Services.IActivityBatchLoader> loaders, CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader defaultLoader, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultActivityBatchLoadCoordinator> logger) { }
         public System.Threading.Tasks.Task LoadAsync(string batchId, string loaderId, string loaderUserName, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class DefaultActivityDispositionService : CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionService
+    public sealed class DefaultActivityDispositionService : CrestApps.Core.Omnichannel.Services.IActivityDispositionService
     {
-        public DefaultActivityDispositionService(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.Core.Services.INamedCatalog<CrestApps.Core.Omnichannel.Models.OmnichannelDisposition> dispositionsCatalog, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectActionExecutor subjectActionExecutor, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IActivityDispositionHandler> handlers, System.TimeProvider timeProvider) { }
-        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionResult> ApplyAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public DefaultActivityDispositionService(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.Core.Services.INamedCatalog<CrestApps.Core.Omnichannel.Models.OmnichannelDisposition> dispositionsCatalog, OrchardCore.ContentManagement.IContentManager contentManager, CrestApps.Core.Omnichannel.Services.ISubjectActionExecutor subjectActionExecutor, CrestApps.Core.Omnichannel.Services.ISubjectFlowSettingsService subjectFlowSettingsService, System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Services.IActivityDispositionHandler> handlers, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.ActivityDispositionResult> ApplyAsync(CrestApps.Core.Omnichannel.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public class DefaultContactActivityBatchLoader : CrestApps.Core.Omnichannel.Services.IActivityBatchLoader
     {
-        public DefaultContactActivityBatchLoader(CrestApps.Core.Services.ICatalog<CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatch> catalog, YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, System.TimeProvider timeProvider, CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Services.IActivityDialerContributor> dialerContributors, Microsoft.Extensions.Options.IOptions<CrestApps.Core.Omnichannel.Models.ActivityBatchSourceOptions> sourceOptions, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader> logger) { }
+        public DefaultContactActivityBatchLoader(CrestApps.Core.Services.ICatalog<CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatch> catalog, YesSql.ISession session, OrchardCore.Modules.ILocalClock localClock, System.TimeProvider timeProvider, CrestApps.Core.Omnichannel.Services.ISubjectFlowSettingsService subjectFlowSettingsService, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, YesSql.IStore store, OrchardCore.Data.IDbConnectionAccessor dbConnectionAccessor, System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Services.IActivityDialerContributor> dialerContributors, Microsoft.Extensions.Options.IOptions<CrestApps.Core.Omnichannel.Models.ActivityBatchSourceOptions> sourceOptions, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Managements.Services.DefaultContactActivityBatchLoader> logger) { }
         public virtual string Source { get; }
         public virtual System.Threading.Tasks.Task LoadAsync(CrestApps.Core.Omnichannel.Models.ActivityBatchLoadContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }

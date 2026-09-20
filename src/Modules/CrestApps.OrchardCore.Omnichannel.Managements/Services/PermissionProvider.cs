@@ -1,4 +1,6 @@
-﻿using CrestApps.OrchardCore.Omnichannel.Core;
+﻿using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using OrchardCore;
 using OrchardCore.Security.Permissions;
 

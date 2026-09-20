@@ -80,6 +80,10 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddIndexProvider<OmnichannelActivityBatchIndexProvider>()
             .AddDataMigration<OmnichannelActivityBatchIndexMigrations>();
 
+        // Every omnichannel document written before the models moved records a type name that no longer
+        // resolves, so this runs before anything tries to read one.
+        services.AddDataMigration<OmnichannelLegacyDocumentTypeNameMigrations>();
+
         // Reusable re-engagement cadences selected on automated loading campaigns.
         services
             .AddYesSqlDocumentCatalog<Cadence, CadenceIndex>(collection: OmnichannelConstants.CollectionName)

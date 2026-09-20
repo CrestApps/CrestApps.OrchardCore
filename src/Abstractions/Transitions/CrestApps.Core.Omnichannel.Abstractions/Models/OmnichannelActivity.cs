@@ -2,7 +2,7 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Models;
 using System.Text.Json.Nodes;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// Represents the omnichannel activity.

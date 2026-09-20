@@ -109,7 +109,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     public sealed class RealtimeVoiceConversationContext
     {
         public RealtimeVoiceConversationContext() { }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelActivity Activity { get; set; }
         public string ContactName { get; set; }
         public System.Threading.CancellationToken EndCallRequested { get; set; }
         public string HandoffInstructions { get; set; }
@@ -142,8 +142,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.Core.AI.Capabilities.IAIDeploymentCapabilityService capabilityService,
                     CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,
                     CrestApps.Core.AI.Profiles.IAIProfileManager profileManager,
-                    CrestApps.OrchardCore.Omnichannel.Core.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
-                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffService> handoffServices,
+                    CrestApps.Core.Omnichannel.Services.ISubjectFlowSettingsService subjectFlowSettingsService,
+                    System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Services.IOmnichannelHandoffService> handoffServices,
                     CrestApps.Core.Telephony.Services.IVoiceAgentMediaProviderResolver mediaResolver,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner realtimeRunner,
                     OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager,
@@ -162,7 +162,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public static bool HasConversation(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
         public static string ResolveNotes(bool hasConversation, string modelSummary) { }
         public static System.Collections.Generic.IReadOnlyList<string> ResolveSubjectDispositionIds(System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.SubjectAction> subjectActions, string subjectContentType) { }
-        public static bool ShouldConclude(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
+        public static bool ShouldConclude(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity) { }
     }
     public sealed class VoiceCallEndTurn : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn
     {

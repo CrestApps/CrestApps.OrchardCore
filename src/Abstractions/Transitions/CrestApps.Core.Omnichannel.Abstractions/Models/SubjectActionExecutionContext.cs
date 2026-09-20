@@ -1,6 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// Context passed to <see cref="Services.ISubjectActionExecutor"/> when processing subject actions.

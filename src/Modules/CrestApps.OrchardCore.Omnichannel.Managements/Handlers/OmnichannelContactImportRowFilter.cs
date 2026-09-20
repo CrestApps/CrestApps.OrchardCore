@@ -1,5 +1,7 @@
 #nullable enable
 
+using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using System.Data;
 using CrestApps.OrchardCore.ContentTransfer;
 using CrestApps.OrchardCore.DncRegistry;

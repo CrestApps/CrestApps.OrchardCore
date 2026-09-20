@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// Represents the final result of an AI-driven automated activity conversation.

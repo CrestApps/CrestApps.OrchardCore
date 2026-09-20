@@ -51,6 +51,27 @@ namespace CrestApps.Core.Omnichannel.Models
         public string DisplayName { get; set; }
         public string ProfileId { get; set; }
     }
+    public sealed class ActivityDispositionRequest
+    {
+        public ActivityDispositionRequest() { }
+        public System.Collections.Generic.IDictionary<string, string> ActionPreparationNotes { get; set; }
+        public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelActivity Activity { get; set; }
+        public string ActorDisplayName { get; set; }
+        public string ActorId { get; set; }
+        public string DispositionId { get; set; }
+        public string Notes { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityDispositionSource Source { get; set; }
+    }
+    public sealed class ActivityDispositionResult
+    {
+        public ActivityDispositionResult() { }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelActivity Activity { get; set; }
+        public string ErrorMessage { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.Omnichannel.Models.ActivityDispositionResult Failure(string errorMessage) { }
+        public static CrestApps.Core.Omnichannel.Models.ActivityDispositionResult Success(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity) { }
+    }
     public enum ActivityDispositionSource
     {
         Agent = 0,
@@ -113,6 +134,18 @@ namespace CrestApps.Core.Omnichannel.Models
         Medium = 3,
         High = 4,
         VeryHigh = 5,
+    }
+    public sealed class AutomatedActivityCompletionRequest
+    {
+        public AutomatedActivityCompletionRequest() { }
+        public string AISessionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> ActionPreparationNotes { get; set; }
+        public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelActivity Activity { get; set; }
+        public string ActorDisplayName { get; set; }
+        public string ActorId { get; set; }
+        public string DispositionId { get; set; }
+        public string Summary { get; set; }
     }
     public sealed class AutomatedVoiceActivitySettings
     {
@@ -250,6 +283,71 @@ namespace CrestApps.Core.Omnichannel.Models
     {
         public OminchannelActivityMetadata() { }
         public string ActivityId { get; set; }
+    }
+    public sealed class OmnichannelActivity : CrestApps.Core.Models.CatalogItem
+    {
+        public OmnichannelActivity() { }
+        public string AIProfileId { get; set; }
+        public string AISessionId { get; set; }
+        public bool AiEscalated { get; set; }
+        public bool AllowAIToUpdateContact { get; set; }
+        public bool AllowAIToUpdateSubject { get; set; }
+        public string AssignedToId { get; set; }
+        public string AssignedToUsername { get; set; }
+        public System.DateTime? AssignedToUtc { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus AssignmentStatus { get; set; }
+        public int Attempts { get; set; }
+        public string BusinessHoursCalendarId { get; set; }
+        public string CadenceId { get; set; }
+        public string CampaignId { get; set; }
+        public string Channel { get; set; }
+        public string ChannelEndpointId { get; set; }
+        public string CompletedById { get; set; }
+        public string CompletedByUsername { get; set; }
+        public System.DateTime? CompletedUtc { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string ContactContentType { get; set; }
+        public System.Collections.Generic.IList<string> ContactResolutionCandidates { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ContactResolutionStatus ContactResolutionStatus { get; set; }
+        public string ContactResolvedById { get; set; }
+        public string ContactResolvedByUsername { get; set; }
+        public System.DateTime? ContactResolvedUtc { get; set; }
+        public string CreatedById { get; set; }
+        public string CreatedByUsername { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DispositionId { get; set; }
+        public long Id { get; set; }
+        public string Instructions { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityInteractionType InteractionType { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityKind Kind { get; set; }
+        public System.DateTime? LastReEngagementUtc { get; set; }
+        public string Notes { get; set; }
+        public string PreferredDestination { get; set; }
+        public int ProcessingAttempts { get; set; }
+        public System.DateTime? PurgedAtUtc { get; set; }
+        public string PurgedById { get; set; }
+        public string PurgedByUsername { get; set; }
+        public int ReEngagementAttempts { get; set; }
+        public System.DateTime? ReservationExpiresUtc { get; set; }
+        public string ReservationId { get; set; }
+        public string ReservedById { get; set; }
+        public string ReservedByUsername { get; set; }
+        public System.DateTime? ReservedUtc { get; set; }
+        public int ResponseDelayJitterSeconds { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelResponseDelayMode ResponseDelayMode { get; set; }
+        public int ResponseDelaySeconds { get; set; }
+        public System.DateTime ScheduledUtc { get; set; }
+        public string Source { get; set; }
+        public string SpeechToTextDeploymentName { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityStatus Status { get; set; }
+        public System.Text.Json.Nodes.JsonObject Subject { get; set; }
+        public string SubjectContentType { get; set; }
+        public string TerminalReasonCode { get; set; }
+        public string TextToSpeechDeploymentName { get; set; }
+        public string TextToSpeechVoiceId { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityUrgencyLevel UrgencyLevel { get; set; }
+        public bool UseCallAmbience { get; set; }
+        public bool TryResolveContact(string contactId, string contactType, string resolvedById, string resolvedByUsername, System.DateTime resolvedUtc) { }
     }
     public sealed class OmnichannelActivityBatch : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IDisplayTextAwareModel, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatch>, System.ICloneable
     {
@@ -429,6 +527,27 @@ namespace CrestApps.Core.Omnichannel.Models
         public string Subject { get; set; }
         public T GetDataFromJson<T>() { }
     }
+    public sealed class OmnichannelHandoffMessage
+    {
+        public OmnichannelHandoffMessage() { }
+        public string Content { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public bool IsInbound { get; set; }
+    }
+    public sealed class OmnichannelHandoffRequest
+    {
+        public OmnichannelHandoffRequest() { }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelActivity Activity { get; set; }
+        public string AiSessionId { get; set; }
+        public string ContactAddress { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public string Reason { get; set; }
+        public string ServiceAddress { get; set; }
+        public string Summary { get; set; }
+        public string TargetQueueId { get; set; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Models.OmnichannelHandoffMessage> Transcript { get; set; }
+    }
     public sealed class OmnichannelHandoffResult
     {
         public OmnichannelHandoffResult() { }
@@ -504,6 +623,14 @@ namespace CrestApps.Core.Omnichannel.Models
         public bool? SetDoNotSms { get; set; }
         public string SubjectContentType { get; set; }
         public CrestApps.Core.Omnichannel.Models.SubjectAction Clone() { }
+    }
+    public sealed class SubjectActionExecutionContext
+    {
+        public SubjectActionExecutionContext() { }
+        public System.Collections.Generic.IDictionary<string, string> ActionPreparationNotes { get; set; }
+        public System.Collections.Generic.IDictionary<string, System.DateTime?> ActionScheduleDates { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelActivity Activity { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelDisposition Disposition { get; set; }
     }
     public sealed class SubjectActionOptions
     {
@@ -603,6 +730,15 @@ namespace CrestApps.Core.Omnichannel.Models
 }
 namespace CrestApps.Core.Omnichannel.Services
 {
+    public sealed class AutomatedActivityScreeningResult
+    {
+        public AutomatedActivityScreeningResult() { }
+        public string Description { get; init; }
+        public bool IsAllowed { get; init; }
+        public string Reason { get; init; }
+        public static CrestApps.Core.Omnichannel.Services.AutomatedActivityScreeningResult Allow() { }
+        public static CrestApps.Core.Omnichannel.Services.AutomatedActivityScreeningResult Deny(string reason, string description) { }
+    }
     public sealed class BusinessHoursCalendarOption : System.IEquatable<CrestApps.Core.Omnichannel.Services.BusinessHoursCalendarOption>
     {
         public BusinessHoursCalendarOption(string Id, string Name) { }
@@ -626,6 +762,29 @@ namespace CrestApps.Core.Omnichannel.Services
         System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor> FindByIdAsync(string profileId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IActivityDispositionHandler
+    {
+        System.Threading.Tasks.Task DispositionedAsync(CrestApps.Core.Omnichannel.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IActivityDispositionService
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.ActivityDispositionResult> ApplyAsync(CrestApps.Core.Omnichannel.Models.ActivityDispositionRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IActivitySubjectWriter
+    {
+        System.Threading.Tasks.Task<bool> ApplyAsync(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetWritableFieldNamesAsync(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, string>> ReadAsync(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAutomatedActivityCompletionService
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.ActivityDispositionResult> CompleteAsync(CrestApps.Core.Omnichannel.Models.AutomatedActivityCompletionRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAutomatedActivityScreener
+    {
+        string Channel { get; }
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Services.AutomatedActivityScreeningResult> ScreenAsync(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IAutomatedConversationGate
     {
         CrestApps.Core.Omnichannel.Services.IAutomatedConversationGeneration Begin(string sessionId, System.Threading.CancellationToken hostToken);
@@ -635,6 +794,10 @@ namespace CrestApps.Core.Omnichannel.Services
     public interface IAutomatedConversationGeneration : System.IDisposable
     {
         System.Threading.CancellationToken Token { get; }
+    }
+    public interface IAutomatedVoiceActivitySettingsResolver
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.AutomatedVoiceActivitySettings> ResolveAsync(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IBusinessHoursGate
     {
@@ -677,6 +840,11 @@ namespace CrestApps.Core.Omnichannel.Services
         System.Threading.Tasks.Task<bool> ApplyAsync(string contactId, CrestApps.Core.Omnichannel.Models.OmnichannelContactChanges changes, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelContact> CreateAsync(CrestApps.Core.Omnichannel.Models.OmnichannelContact contact, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IOmnichannelHandoffService
+    {
+        bool CanHandle(string channel);
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelHandoffResult> RequestHandoffAsync(CrestApps.Core.Omnichannel.Models.OmnichannelHandoffRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IOmnichannelHandoffTurn
     {
         bool HandoffRequested { get; }
@@ -685,15 +853,32 @@ namespace CrestApps.Core.Omnichannel.Services
         void RequestHandoff(string reason);
         void Reset();
     }
+    public interface IOmnichannelProcessor
+    {
+        string Channel { get; }
+        System.Threading.Tasks.Task StartAsync(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, System.Threading.CancellationToken cancellationToken);
+    }
     public interface IOmnichannelSubjectAccessor
     {
         System.Threading.Tasks.Task<bool> ApplyAsync(string subjectId, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelSubject> CreateAsync(string definitionName, string contactId, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelSubject> GetAsync(string subjectId, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISubjectActionExecutor
+    {
+        System.Threading.Tasks.Task ExecuteAsync(CrestApps.Core.Omnichannel.Models.SubjectActionExecutionContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ISubjectDefinitionProvider
     {
         System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.SubjectDefinition> FindAsync(string name, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.Omnichannel.Models.SubjectDefinition>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISubjectFlowSettingsService
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.SubjectFlowSettings> FindConfiguredFlowSettingsAsync(string subjectDefinitionName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Models.SubjectFlowSettings>> GetConfiguredFlowSettingsAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Models.SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Models.SubjectDefinition>> GetConfiguredSubjectDefinitionsAsync(CrestApps.Core.Omnichannel.Models.SubjectDirection direction, System.Threading.CancellationToken cancellationToken = default);
+        bool IsConfigured(CrestApps.Core.Omnichannel.Models.SubjectFlowSettings flowSettings);
     }
 }

@@ -1,7 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Moves an automated (AI-driven) conversation into the human lane when the AI escalates to a live agent.

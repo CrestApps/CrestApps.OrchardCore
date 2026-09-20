@@ -1,4 +1,6 @@
-﻿using CrestApps.Core.Omnichannel;
+﻿using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
+using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Diagnostics;

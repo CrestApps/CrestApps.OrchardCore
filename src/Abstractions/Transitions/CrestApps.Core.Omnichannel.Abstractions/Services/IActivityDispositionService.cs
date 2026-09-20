@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Defines the centralized service for applying dispositions to omnichannel activities.

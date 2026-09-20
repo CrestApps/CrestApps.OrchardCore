@@ -1,3 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using System.Data;
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.ContentTransfer;

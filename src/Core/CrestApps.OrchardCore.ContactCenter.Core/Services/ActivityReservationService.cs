@@ -1,5 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using System.Text.Json;
 using CrestApps.Core.Locking;
 using CrestApps.Core.Support;

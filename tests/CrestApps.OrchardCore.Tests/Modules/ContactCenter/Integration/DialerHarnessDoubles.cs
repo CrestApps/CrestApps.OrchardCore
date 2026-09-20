@@ -1,3 +1,5 @@
+using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using System.Collections.Concurrent;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;

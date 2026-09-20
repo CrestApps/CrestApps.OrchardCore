@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.Users.Models;

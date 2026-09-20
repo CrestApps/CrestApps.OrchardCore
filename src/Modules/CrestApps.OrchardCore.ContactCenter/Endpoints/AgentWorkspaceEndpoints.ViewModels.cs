@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using System.Security.Claims;
 using CrestApps.Core.Security;
 using CrestApps.Core.Support;

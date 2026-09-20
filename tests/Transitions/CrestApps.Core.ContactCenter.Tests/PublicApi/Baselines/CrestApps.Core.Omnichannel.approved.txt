@@ -53,6 +53,10 @@ namespace CrestApps.Core.Omnichannel.Services
         public OmnichannelChannelEndpointManager(CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointStore store, CrestApps.Core.PhoneNumbers.IPhoneNumberService phoneNumberService, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint>> logger) { }
         public System.Threading.Tasks.ValueTask<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public static class OmnichannelContactPreferences
+    {
+        public static bool HasOptedOut(CrestApps.Core.Omnichannel.Models.OmnichannelContact contact, string channel) { }
+    }
     public static class OmnichannelHandoffHelper
     {
         public const string TransferToAgentToolName = "transferToLiveAgent";

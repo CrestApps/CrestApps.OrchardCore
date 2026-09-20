@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// Describes a request to hand an automated (AI-driven) conversation off to a live human agent. It is raised

@@ -248,6 +248,28 @@ rule with a hole in it.
 - `ContactCenterWorkStateAuthorityTests` — scans the new assembly and folder as well.
 - `VoiceIngressLayeringArchitectureTests` — walks both project closures for a Contact Center reference.
 
+### Eight stored types had moved with no rewrite migration (W4.3)
+
+W4.1's first half moved forty-four omnichannel models into the framework in commit `57d65f62`. Seven of
+them are stored documents - `OmnichannelActivityBatch`, `OmnichannelCampaign`,
+`OmnichannelCampaignGroup`, `OmnichannelDisposition`, `OmnichannelChannelEndpoint`, `SubjectAction` and
+`Cadence` - and no type-name rewrite migration went with them. `OmnichannelActivity` makes eight.
+
+YesSql records a document's CLR type as `Namespace.TypeName, AssemblyName` and resolves it on read, so
+as things stood a tenant upgrading onto this branch would have found its activities, the batches that
+loaded them, its campaigns, dispositions, cadences, subject actions and channel endpoints all gone -
+the whole CRM side of the product, silently. Nothing in the suite reported it: the pre-extraction
+snapshot contains four Contact Center types and none of these, and every other test builds its data
+from scratch.
+
+`OmnichannelLegacyDocumentTypeNameMigrations` covers all eight, on the telephony pattern and with the
+same exact-suffix assembly match for the same reason. Its tests name every one of the eight
+individually rather than testing the rule once, so a ninth type moving without a rule is a failing
+test rather than a silent loss.
+
+The lesson generalises: **a commit that moves a stored type and does not touch a rewrite migration is
+incomplete.** W5 moves far more stored types than W4 did.
+
 ### The activity's subject stopped being a content item, and the upgrade test did not cover it (W4.2)
 
 P0.4 left `OmnichannelActivity.Subject` as an Orchard `ContentItem` deliberately, to be closed once the

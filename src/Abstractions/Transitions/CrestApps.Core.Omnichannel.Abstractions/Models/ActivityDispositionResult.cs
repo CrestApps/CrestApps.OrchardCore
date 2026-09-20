@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// Represents the result of applying a disposition to an omnichannel activity.

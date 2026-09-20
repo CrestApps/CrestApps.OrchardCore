@@ -1,3 +1,4 @@
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 namespace CrestApps.Core.Omnichannel.Services;
 

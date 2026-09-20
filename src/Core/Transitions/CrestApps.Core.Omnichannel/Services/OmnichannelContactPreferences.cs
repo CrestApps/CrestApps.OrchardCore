@@ -1,6 +1,7 @@
+using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Whether a contact has asked not to be reached, asked the same way everywhere.
@@ -30,8 +31,8 @@ public static class OmnichannelContactPreferences
             return false;
         }
 
-        return (channel == OmnichannelConstants.Channels.Phone && contact.DoNotCall) ||
-               (channel == OmnichannelConstants.Channels.Sms && contact.DoNotSms) ||
-               (channel == OmnichannelConstants.Channels.Email && contact.DoNotEmail);
+        return (channel == OmnichannelChannels.Phone && contact.DoNotCall) ||
+               (channel == OmnichannelChannels.Sms && contact.DoNotSms) ||
+               (channel == OmnichannelChannels.Email && contact.DoNotEmail);
     }
 }

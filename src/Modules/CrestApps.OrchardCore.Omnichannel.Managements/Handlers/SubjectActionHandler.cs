@@ -1,4 +1,5 @@
 using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Security;
 using System.ComponentModel.DataAnnotations;
 using CrestApps.Core;

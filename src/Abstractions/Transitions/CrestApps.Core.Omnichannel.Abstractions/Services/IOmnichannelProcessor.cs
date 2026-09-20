@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Defines the contract for omnichannel processor.

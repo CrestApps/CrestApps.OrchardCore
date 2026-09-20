@@ -1,5 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 #nullable enable annotations

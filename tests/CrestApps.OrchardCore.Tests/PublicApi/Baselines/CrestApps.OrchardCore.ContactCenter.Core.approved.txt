@@ -2549,8 +2549,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class ContactCenterActivityWriter : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterActivityWriter
     {
         public ContactCenterActivityWriter(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, YesSql.ISession session, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterActivityWriter> logger) { }
-        public System.Threading.Tasks.Task ScheduleUpdateAsync(string activityItemId, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task UpdateAsync(string activityItemId, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task ScheduleUpdateAsync(string activityItemId, System.Action<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task UpdateAsync(string activityItemId, System.Action<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterAgentLegFailureService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAgentLegFailureService
     {
@@ -2826,9 +2826,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public static class ContactCenterWorkStateProjector
     {
-        public static void Apply(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState workState) { }
-        public static bool HasDivergence(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState workState) { }
-        public static void SeedFromActivity(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState workState, CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
+        public static void Apply(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState workState) { }
+        public static bool HasDivergence(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState workState) { }
+        public static void SeedFromActivity(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterWorkState workState, CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity) { }
     }
     public sealed class ContactCenterWorkStateService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService
     {
@@ -2896,7 +2896,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class DialerEligibilityContext
     {
         public DialerEligibilityContext() { }
-        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelActivity Activity { get; set; }
         public bool AttemptAlreadyCounted { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.DialerProfile Profile { get; set; }
     }
@@ -3213,8 +3213,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IContactCenterActivityWriter
     {
-        System.Threading.Tasks.Task ScheduleUpdateAsync(string activityItemId, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task UpdateAsync(string activityItemId, System.Action<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ScheduleUpdateAsync(string activityItemId, System.Action<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task UpdateAsync(string activityItemId, System.Action<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> mutate, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterAgentLegFailureService
     {

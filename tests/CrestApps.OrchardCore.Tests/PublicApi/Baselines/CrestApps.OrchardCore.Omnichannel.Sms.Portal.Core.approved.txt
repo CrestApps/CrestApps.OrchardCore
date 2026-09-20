@@ -336,11 +336,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
         public System.Threading.Tasks.Task<bool> IsAvailableAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsAgentAvailability> SetAvailableAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile agent, bool available, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class SmsAgentHandoffService : CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffService
+    public sealed class SmsAgentHandoffService : CrestApps.Core.Omnichannel.Services.IOmnichannelHandoffService
     {
         public SmsAgentHandoffService(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.ISmsRealTimeNotifier notifier, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsQueuePolicyReader queuePolicyReader, CrestApps.Core.Omnichannel.Services.IOmnichannelChannelEndpointManager endpointManager, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationRouter router, YesSql.ISession session, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsAgentHandoffService> logger) { }
         public bool CanHandle(string channel) { }
-        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelHandoffResult> RequestHandoffAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelHandoffRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelHandoffResult> RequestHandoffAsync(CrestApps.Core.Omnichannel.Models.OmnichannelHandoffRequest request, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class SmsBroadcastCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsBroadcastCycle
     {
