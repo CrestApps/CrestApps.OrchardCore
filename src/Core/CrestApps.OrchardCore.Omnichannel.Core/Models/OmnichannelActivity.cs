@@ -1,6 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Models;
-using OrchardCore.ContentManagement;
+using System.Text.Json.Nodes;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Models;
 
@@ -304,9 +304,17 @@ public sealed class OmnichannelActivity : CatalogItem
     public string SubjectContentType { get; set; }
 
     /// <summary>
-    /// Gets or sets the subject.
+    /// Gets or sets the subject: what this activity is about, as the host stores it.
     /// </summary>
-    public ContentItem Subject { get; set; }
+    /// <remarks>
+    /// A node rather than a typed model, because what a subject is belongs to the host: one host keeps
+    /// subjects as content items, another as rows of its own. The suite never reads this directly - it
+    /// goes through <c>IActivitySubjectWriter</c> and <c>ISubjectDefinitionProvider</c>, which know the
+    /// field shape - so the carrier only has to preserve what was written. A content item and the node
+    /// it serializes to produce the same text in this slot, which is what lets the same stored document
+    /// be read either way.
+    /// </remarks>
+    public JsonObject Subject { get; set; }
 
     /// <summary>
     /// Gets or sets the urgency level.
@@ -333,27 +341,27 @@ public sealed class OmnichannelActivity : CatalogItem
     /// <summary>
     /// Attempts to resolve the activity to the supplied contact while enforcing the persisted candidate set.
     /// </summary>
-    /// <param name="contact">The contact selected for the activity.</param>
+    /// <param name="contactId">The identifier of the contact selected for the activity.</param>
+    /// <param name="contactType">The kind of contact record the identifier belongs to.</param>
     /// <param name="resolvedById">The identifier of the user resolving the contact.</param>
     /// <param name="resolvedByUsername">The username of the user resolving the contact.</param>
     /// <param name="resolvedUtc">The UTC time of the resolution.</param>
     /// <returns><see langword="true"/> when the contact is resolved or was already resolved to the same contact; otherwise <see langword="false"/>.</returns>
     public bool TryResolveContact(
-        ContentItem contact,
+        string contactId,
+        string contactType,
         string resolvedById,
         string resolvedByUsername,
         DateTime resolvedUtc)
     {
-        ArgumentNullException.ThrowIfNull(contact);
-
-        if (string.IsNullOrEmpty(contact.ContentItemId) || string.IsNullOrEmpty(contact.ContentType))
+        if (string.IsNullOrEmpty(contactId) || string.IsNullOrEmpty(contactType))
         {
             return false;
         }
 
         if (ContactResolutionStatus == ContactResolutionStatus.Resolved)
         {
-            return string.Equals(ContactContentItemId, contact.ContentItemId, StringComparison.Ordinal);
+            return string.Equals(ContactContentItemId, contactId, StringComparison.Ordinal);
         }
 
         if (ContactResolutionStatus is not ContactResolutionStatus.Unresolved and not ContactResolutionStatus.Ambiguous)
@@ -362,13 +370,13 @@ public sealed class OmnichannelActivity : CatalogItem
         }
 
         if (ContactResolutionStatus == ContactResolutionStatus.Ambiguous &&
-            !ContactResolutionCandidates.Contains(contact.ContentItemId, StringComparer.Ordinal))
+            !ContactResolutionCandidates.Contains(contactId, StringComparer.Ordinal))
         {
             return false;
         }
 
-        ContactContentItemId = contact.ContentItemId;
-        ContactContentType = contact.ContentType;
+        ContactContentItemId = contactId;
+        ContactContentType = contactType;
         ContactResolutionStatus = ContactResolutionStatus.Resolved;
         ContactResolvedById = resolvedById;
         ContactResolvedByUsername = resolvedByUsername;

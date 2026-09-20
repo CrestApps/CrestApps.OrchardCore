@@ -539,7 +539,7 @@ public sealed class ActivitiesController : Controller
         {
             if (subject is not null)
             {
-                activity.Subject = subject;
+                activity.SetSubjectContentItem(subject);
             }
 
             await _omnichannelActivityManager.CreateAsync(activity);
@@ -653,7 +653,7 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject;
+        var subject = activity.GetSubjectContentItem();
 
         if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
         {
@@ -693,7 +693,7 @@ public sealed class ActivitiesController : Controller
             return Forbid();
         }
 
-        var subject = activity.Subject;
+        var subject = activity.GetSubjectContentItem();
 
         if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
         {
@@ -712,7 +712,7 @@ public sealed class ActivitiesController : Controller
         {
             if (subject is not null)
             {
-                activity.Subject = subject;
+                activity.SetSubjectContentItem(subject);
             }
 
             await _omnichannelActivityManager.UpdateAsync(activity);
@@ -754,7 +754,7 @@ public sealed class ActivitiesController : Controller
             return await AlreadyFinishedAsync(returnUrl);
         }
 
-        var subject = activity.Subject;
+        var subject = activity.GetSubjectContentItem();
 
         if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
         {
@@ -814,7 +814,7 @@ public sealed class ActivitiesController : Controller
             return await AlreadyFinishedAsync(returnUrl);
         }
 
-        var subject = activity.Subject;
+        var subject = activity.GetSubjectContentItem();
 
         if (subject is null && !string.IsNullOrEmpty(activity.SubjectContentType))
         {
@@ -850,7 +850,7 @@ public sealed class ActivitiesController : Controller
             // Disposition the activity through the source-neutral path so the configured subject flow runs.
             if (subject is not null)
             {
-                activity.Subject = subject;
+                activity.SetSubjectContentItem(subject);
             }
 
             var result = await _activityDispositionService.ApplyAsync(new ActivityDispositionRequest

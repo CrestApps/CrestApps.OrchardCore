@@ -29,7 +29,8 @@ public sealed class OmnichannelActivityTests
 
         // Act
         var resolved = activity.TryResolveContact(
-            contact,
+            contact.ContentItemId,
+            contact.ContentType,
             "user-id",
             "Agent User",
             _resolvedUtc);
@@ -66,7 +67,8 @@ public sealed class OmnichannelActivityTests
 
         // Act
         var resolved = activity.TryResolveContact(
-            contact,
+            contact.ContentItemId,
+            contact.ContentType,
             "user-id",
             "Agent User",
             _resolvedUtc);
@@ -102,7 +104,8 @@ public sealed class OmnichannelActivityTests
 
         // Act
         var resolved = activity.TryResolveContact(
-            contact,
+            contact.ContentItemId,
+            contact.ContentType,
             "second-user",
             "Second User",
             _resolvedUtc.AddMinutes(1));
@@ -135,7 +138,8 @@ public sealed class OmnichannelActivityTests
 
         // Act
         var resolved = activity.TryResolveContact(
-            contact,
+            contact.ContentItemId,
+            contact.ContentType,
             "second-user",
             "Second User",
             _resolvedUtc.AddMinutes(1));

@@ -202,7 +202,9 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             model.SubjectContentType = activity.SubjectContentType;
             model.Attempts = activity.Attempts;
 
-            if (string.IsNullOrWhiteSpace(activity.Subject?.DisplayText))
+            var subjectDisplayText = activity.GetSubjectDisplayText();
+
+            if (string.IsNullOrWhiteSpace(subjectDisplayText))
             {
                 if (string.IsNullOrWhiteSpace(activity.SubjectContentType))
                 {
@@ -216,7 +218,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             }
             else
             {
-                model.Subject = activity.Subject.DisplayText;
+                model.Subject = subjectDisplayText;
             }
 
             model.Dispositions = await _dispositionsCatalog.GetAsync(subjectDispositionIds);
@@ -298,7 +300,8 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
 
                     if (contact is null ||
                         !activity.TryResolveContact(
-                            contact,
+                            contact.ContentItemId,
+                            contact.ContentType,
                             _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier),
                             _httpContextAccessor.HttpContext?.User?.Identity?.Name,
                             _timeProvider.GetUtcNow().UtcDateTime))

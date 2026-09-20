@@ -248,6 +248,30 @@ rule with a hole in it.
 - `ContactCenterWorkStateAuthorityTests` — scans the new assembly and folder as well.
 - `VoiceIngressLayeringArchitectureTests` — walks both project closures for a Contact Center reference.
 
+### The activity's subject stopped being a content item, and the upgrade test did not cover it (W4.2)
+
+P0.4 left `OmnichannelActivity.Subject` as an Orchard `ContentItem` deliberately, to be closed once the
+pre-extraction upgrade test was green against a real tenant. It is closed now, and one thing found on
+the way is worth recording: **the snapshot does not contain an activity.** Its manifest lists four
+document types - `ActivityQueue`, `AgentProfile`, `AgentSession`, `QueueItem` - so the test the plan
+named as this change's prerequisite would have passed whatever the change did to an activity.
+
+The evidence is `ActivitySubjectCarrierTests` instead, which measures the two claims the swap rests on
+rather than describing them: a content item and the node it serializes to produce identical text in
+that slot, an absent subject is identical either way, and a stored node deserializes back to a content
+item that is identical again. The field path `ContentItemActivitySubjectWriter` reads is pinned too,
+because that service already read through `(JsonObject)activity.Subject.Content` and now reads the
+node directly.
+
+`Subject` is a `JsonObject`, and `TryResolveContact` takes the contact's id and type rather than a
+content item - the model's last two content-model references. `ActivitySubjectContentItemExtensions`
+in the Orchard core project is the one place that converts, so the controller, driver, export handler
+and SMS handler still work in content items and nothing else has to know.
+
+The snapshot should be regenerated from `a71550af` with an activity in it; the generator is checked in
+beside it. Until that happens, the carrier is covered by the characterization tests and not by a real
+tenant's bytes.
+
 ### D-4 is scoped down: contacts now, subjects and compliance later (W4)
 
 D-4 puts a complete default CRM model in the framework - contacts, subjects, dispositions, campaigns,

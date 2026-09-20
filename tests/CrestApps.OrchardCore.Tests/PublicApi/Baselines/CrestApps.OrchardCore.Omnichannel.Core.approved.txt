@@ -326,14 +326,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
         public string Source { get; set; }
         public string SpeechToTextDeploymentName { get; set; }
         public CrestApps.Core.Omnichannel.Models.ActivityStatus Status { get; set; }
-        public OrchardCore.ContentManagement.ContentItem Subject { get; set; }
+        public System.Text.Json.Nodes.JsonObject Subject { get; set; }
         public string SubjectContentType { get; set; }
         public string TerminalReasonCode { get; set; }
         public string TextToSpeechDeploymentName { get; set; }
         public string TextToSpeechVoiceId { get; set; }
         public CrestApps.Core.Omnichannel.Models.ActivityUrgencyLevel UrgencyLevel { get; set; }
         public bool UseCallAmbience { get; set; }
-        public bool TryResolveContact(OrchardCore.ContentManagement.ContentItem contact, string resolvedById, string resolvedByUsername, System.DateTime resolvedUtc) { }
+        public bool TryResolveContact(string contactId, string contactType, string resolvedById, string resolvedByUsername, System.DateTime resolvedUtc) { }
     }
     public sealed class OmnichannelActivityContainer
     {
@@ -446,6 +446,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Models
 }
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services
 {
+    public static class ActivitySubjectContentItemExtensions
+    {
+        public static OrchardCore.ContentManagement.ContentItem GetSubjectContentItem(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
+        public static string GetSubjectDisplayText(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
+        public static void SetSubjectContentItem(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity, OrchardCore.ContentManagement.ContentItem subject) { }
+        public static OrchardCore.ContentManagement.ContentItem ToContentItem(System.Text.Json.Nodes.JsonObject subject) { }
+        public static System.Text.Json.Nodes.JsonObject ToNode(OrchardCore.ContentManagement.ContentItem subject) { }
+    }
     public sealed class AutomatedActivityScreeningResult
     {
         public AutomatedActivityScreeningResult() { }

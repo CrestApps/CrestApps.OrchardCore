@@ -712,7 +712,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                         if (subjectTextFields.Count > 0)
                         {
-                            subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
+                            subject ??= activity.GetSubjectContentItem() ?? await contentManager.NewAsync(activity.SubjectContentType);
 
                             userPrompt +=
                                 $"""
@@ -751,7 +751,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
                             {
                                 omnichannelActivity ??= await store.FindByIdAsync(activity.ItemId);
 
-                                omnichannelActivity.Subject = subject;
+                                omnichannelActivity.SetSubjectContentItem(subject);
 
                                 // Update the activity with the new subject since the converation may not be concluded.
                                 await store.UpdateAsync(omnichannelActivity);
@@ -812,7 +812,7 @@ internal sealed class SmsOmnichannelEventHandler : IOmnichannelEventHandler
 
                                     await store.UpdateAsync(omnichannelActivity);
 
-                                    subject ??= activity.Subject ?? await contentManager.NewAsync(activity.SubjectContentType);
+                                    subject ??= activity.GetSubjectContentItem() ?? await contentManager.NewAsync(activity.SubjectContentType);
                                     contact ??= await contentManager.GetAsync(activity.ContactContentItemId, VersionOptions.Latest);
 
                                     var dispositionObj = dispositions.FirstOrDefault(d => d.ItemId == result.Result.DispositionId);

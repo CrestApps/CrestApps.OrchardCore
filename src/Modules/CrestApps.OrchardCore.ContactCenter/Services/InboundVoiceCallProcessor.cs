@@ -643,7 +643,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
 
         if (!string.IsNullOrEmpty(activity.SubjectContentType))
         {
-            activity.Subject = await _contentManager.NewAsync(activity.SubjectContentType);
+            activity.SetSubjectContentItem(await _contentManager.NewAsync(activity.SubjectContentType));
         }
 
         // Routing state is created before the activity is persisted so the activity's read model is already

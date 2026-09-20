@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.Core.Omnichannel.Models;
@@ -45,7 +46,9 @@ public sealed class ContentItemActivitySubjectWriter : IActivitySubjectWriter
             return values;
         }
 
-        var content = (JsonObject)activity.Subject.Content;
+        // The activity carries the subject as the node the content item serializes to, so the part and
+        // field shape the definitions describe is read straight off it.
+        var content = activity.Subject;
 
         foreach (var field in fields)
         {
@@ -86,15 +89,19 @@ public sealed class ContentItemActivitySubjectWriter : IActivitySubjectWriter
         }
 
         // Built rather than fetched, because an activity's subject is carried on the activity and may
-        // not exist until the first thing worth recording arrives.
-        var subject = activity.Subject ?? await _contentManager.NewAsync(activity.SubjectContentType);
+        // not exist until the first thing worth recording arrives. It is materialized as a content item
+        // to apply the fields, because that is what this host's subjects are, and written back as the
+        // node the activity stores.
+        var subject = activity.Subject is null
+            ? await _contentManager.NewAsync(activity.SubjectContentType)
+            : activity.Subject.Deserialize<ContentItem>(JOptions.Default);
 
         if (!ContentItemOmnichannelSubjectAccessor.ApplyFields(subject, fieldValues, fields))
         {
             return false;
         }
 
-        activity.Subject = subject;
+        activity.Subject = JsonSerializer.SerializeToNode(subject, JOptions.Default)?.AsObject();
 
         return true;
     }

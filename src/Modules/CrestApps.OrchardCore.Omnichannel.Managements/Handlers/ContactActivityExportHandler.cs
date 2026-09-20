@@ -1,4 +1,5 @@
 using CrestApps.Core.Omnichannel.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using System.Data;
 using System.Globalization;
 using CrestApps.Core.Services;
@@ -196,15 +197,17 @@ public sealed class ContactActivityExportHandler : IContentImportHandler, IConte
 
         // The subject snapshot on the activity is never persisted, so it has no display text; fall back to the
         // subject content type's title.
-        var subjectDisplay = !string.IsNullOrWhiteSpace(activity.Subject?.DisplayText)
-            ? activity.Subject.DisplayText
+        var subjectDisplayText = activity.GetSubjectDisplayText();
+
+        var subjectDisplay = !string.IsNullOrWhiteSpace(subjectDisplayText)
+            ? subjectDisplayText
             : await GetSubjectTypeDisplayNameAsync(part.SubjectContentType);
 
         SetCell(content.Row, SubjectColumn, subjectDisplay);
 
         if (activity.Subject is not null)
         {
-            await ExportSubjectFieldsAsync(content, part.SubjectContentType, activity.Subject);
+            await ExportSubjectFieldsAsync(content, part.SubjectContentType, activity.GetSubjectContentItem());
         }
     }
 

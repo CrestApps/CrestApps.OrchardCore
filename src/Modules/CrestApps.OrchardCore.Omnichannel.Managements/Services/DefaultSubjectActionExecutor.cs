@@ -217,7 +217,7 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return;
         }
 
-        newActivity.Subject = await _contentManager.NewAsync(targetSubjectContentType);
+        newActivity.SetSubjectContentItem(await _contentManager.NewAsync(targetSubjectContentType));
 
         if (flowSettings != null)
         {
