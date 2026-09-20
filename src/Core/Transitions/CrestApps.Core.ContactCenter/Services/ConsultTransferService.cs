@@ -1,13 +1,9 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
-using OrchardCore;
-using OrchardCore.Modules;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.Core.ContactCenter.Services;
 
 /// <summary>
 /// Drives the three phases of an attended transfer against the call session, so the consult is a fact the
@@ -72,7 +68,7 @@ public sealed class ConsultTransferService : IConsultTransferService
         }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-        var consultId = IdGenerator.GenerateId();
+        var consultId = UniqueId.GenerateId();
 
         var result = await transferProvider.BeginConsultAsync(
             BuildRequest(session, consultId, request.TargetAddress, providerLegId: null),

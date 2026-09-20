@@ -693,6 +693,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         services.AddSingleton(Mock.Of<IActivityQueueService>());
         services.AddSingleton(Mock.Of<IInteractionManager>());
         services.AddSingleton(activityManager.Object);
+        services.AddSingleton<ICatalogManager<OmnichannelActivity>>(activityManager.Object);
         services.AddSingleton(availabilityService.Object);
         services.AddSingleton(Mock.Of<IContactCenterEventPublisher>());
         // Production has a shell scope, so the CRM reconciliation is deferred until after the routing

@@ -3,14 +3,12 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Modules;
 using CrestApps.Core.Telephony.Models;
-using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.Services;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.Core.ContactCenter.Services;
 
 /// <summary>
 /// Reconciles routing state when provider truth reports that a queued, offered, or assigned call ended.
@@ -22,7 +20,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     private readonly IQueueItemManager _queueItemManager;
     private readonly IActivityReservationManager _reservationManager;
     private readonly IAgentProfileManager _agentManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IServiceProvider _serviceProvider;
     private readonly TimeProvider _timeProvider;
@@ -47,7 +45,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         IQueueItemManager queueItemManager,
         IActivityReservationManager reservationManager,
         IAgentProfileManager agentManager,
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IContactCenterWorkStateService workStateService,
         IServiceProvider serviceProvider,
         TimeProvider timeProvider,

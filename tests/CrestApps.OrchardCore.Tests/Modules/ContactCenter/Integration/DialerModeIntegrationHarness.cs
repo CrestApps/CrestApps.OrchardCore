@@ -341,6 +341,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         // CRM activities (in-memory).
         services.AddSingleton<InMemoryOmnichannelActivities>();
         services.AddSingleton(sp => sp.GetRequiredService<InMemoryOmnichannelActivities>().BuildManager());
+        services.AddSingleton<ICatalogManager<OmnichannelActivity>>(static sp => sp.GetRequiredService<IOmnichannelActivityManager>());
         services.AddSingleton<IContactCenterActivityWriter, ContactCenterActivityWriter>();
 
         // Harness doubles for the seams outside the agent-state machine.

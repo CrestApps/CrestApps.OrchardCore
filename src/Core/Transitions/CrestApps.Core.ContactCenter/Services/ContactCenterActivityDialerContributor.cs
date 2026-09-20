@@ -2,10 +2,8 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.Core.ContactCenter.Services;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.Core.ContactCenter.Services;
 
 /// <summary>
 /// Contributes Contact Center dialer profiles and queueing to Omnichannel activity management.

@@ -4,7 +4,6 @@ using CrestApps.Core.Hosting.Background;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
@@ -51,7 +50,7 @@ public sealed class ReservationExpiryCycle : IReservationExpiryCycle
     private readonly IQueueItemManager _queueItemManager;
     private readonly IQueueItemStore _queueItemStore;
     private readonly IInteractionManager _interactionManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IInboundVoiceService _inboundVoiceService;
     private readonly TimeProvider _timeProvider;
     private readonly IStoreCommitter _storeCommitter;
@@ -87,7 +86,7 @@ public sealed class ReservationExpiryCycle : IReservationExpiryCycle
         IQueueItemManager queueItemManager,
         IQueueItemStore queueItemStore,
         IInteractionManager interactionManager,
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IEnumerable<IInboundVoiceService> inboundVoiceService,
         TimeProvider timeProvider,
         IStoreCommitter storeCommitter,

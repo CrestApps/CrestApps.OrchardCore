@@ -2,11 +2,10 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.ContactCenter.Services;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -23,7 +22,7 @@ public sealed class CallbackService : ICallbackService
     private static readonly TimeSpan _promotionLease = TimeSpan.FromMinutes(5);
 
     private readonly ICallbackRequestManager _callbackManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IActivityQueueService _queueService;
     private readonly IContactCenterEventPublisher _publisher;
@@ -40,7 +39,7 @@ public sealed class CallbackService : ICallbackService
     /// <param name="timeProvider">The time provider used to stamp callback times.</param>
     public CallbackService(
         ICallbackRequestManager callbackManager,
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IContactCenterWorkStateService workStateService,
         IActivityQueueService queueService,
         IContactCenterEventPublisher publisher,

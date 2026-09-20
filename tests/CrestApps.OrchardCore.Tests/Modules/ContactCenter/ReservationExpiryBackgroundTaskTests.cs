@@ -608,6 +608,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         services.AddSingleton(store.Object);
         services.AddSingleton(interactionManager.Object);
         services.AddSingleton(activityManager.Object);
+        services.AddSingleton<ICatalogManager<OmnichannelActivity>>(activityManager.Object);
         services.AddSingleton(inboundVoiceService.Object);
         services.AddSingleton<TimeProvider>(clock);
         services.AddSingleton(session.Object);

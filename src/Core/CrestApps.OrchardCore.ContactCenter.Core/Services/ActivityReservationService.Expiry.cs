@@ -5,7 +5,6 @@ using CrestApps.Core.Omnichannel.Services;
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;

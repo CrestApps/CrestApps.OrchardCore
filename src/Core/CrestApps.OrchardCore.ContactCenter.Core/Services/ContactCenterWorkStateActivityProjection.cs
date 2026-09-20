@@ -2,10 +2,10 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -17,7 +17,7 @@ public sealed class ContactCenterWorkStateActivityProjection : IContactCenterWor
     private const int MaxProjectionAttempts = 3;
 
     private readonly IContactCenterWorkStateManager _workStateManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly ILogger _logger;
 
@@ -30,7 +30,7 @@ public sealed class ContactCenterWorkStateActivityProjection : IContactCenterWor
     /// <param name="logger">The logger.</param>
     public ContactCenterWorkStateActivityProjection(
         IContactCenterWorkStateManager workStateManager,
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IContactCenterScopeExecutor scopeExecutor,
         ILogger<ContactCenterWorkStateActivityProjection> logger)
     {

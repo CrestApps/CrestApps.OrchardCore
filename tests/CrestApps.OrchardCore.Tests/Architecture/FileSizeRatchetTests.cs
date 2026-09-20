@@ -49,10 +49,9 @@ public sealed class FileSizeRatchetTests
         // needs the framework import alongside the host one. An import is not the accumulation this ratchet
         // exists to stop.
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1318,
-        // 1022 rather than 1020: the omnichannel models moved namespace, then the Contact Center service
-        // contracts did, and this file needs the framework import for each as well as the host one it already
-        // had. A ratchet exists to stop a file accumulating logic; an import is not that.
-        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 1022,
+        // 1021: two framework imports in, one dead host import out, as the Contact Center contracts moved.
+        // A ratchet exists to stop a file accumulating logic; an import is not that.
+        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 1021,
         // 975: this file stopped taking a YesSql session and took the store committer instead, which is one
         // import in place of one it still needs for the concurrency exception it catches. An import is not the
         // accumulation this ratchet exists to stop.

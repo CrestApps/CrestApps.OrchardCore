@@ -133,13 +133,13 @@ public sealed class ContactCenterRetentionCoverageTests
         ["QueueItem"] =
         [
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityQueueService.cs", "DequeueAsync", "queueItem.DequeuedUtc = "),
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceOfferSynchronizationService.cs", "ReconcileEndedOfferAsync", "queueItem.DequeuedUtc = "),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/ProviderVoiceOfferSynchronizationService.cs", "ReconcileEndedOfferAsync", "queueItem.DequeuedUtc = "),
         ],
         ["ActivityReservation"] =
         [
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.Expiry.cs", "ReleaseAsync", "reservation.ModifiedUtc = "),
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.cs", "CompensateAsync", "reservation.ModifiedUtc = "),
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceOfferSynchronizationService.cs", "ReconcileEndedOfferAsync", "reservation.ModifiedUtc = "),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/ProviderVoiceOfferSynchronizationService.cs", "ReconcileEndedOfferAsync", "reservation.ModifiedUtc = "),
         ],
         ["CallbackRequest"] =
         [

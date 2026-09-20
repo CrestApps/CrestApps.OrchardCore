@@ -4,12 +4,11 @@ using CrestApps.Core.Omnichannel.Services;
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
 using CrestApps.Core.Telephony;
-using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.Services;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.Core.ContactCenter.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="IDialerAttemptService"/>. Every attempt runs the
@@ -22,7 +21,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     private readonly IActivityReservationService _reservationService;
     private readonly IDialerAttemptCompensationService _compensationService;
     private readonly IInteractionManager _interactionManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IAgentProfileManager _agentManager;
@@ -53,7 +52,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IActivityReservationService reservationService,
         IDialerAttemptCompensationService compensationService,
         IInteractionManager interactionManager,
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
         IAgentProfileManager agentManager,

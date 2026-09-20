@@ -488,6 +488,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton(Mock.Of<IActivityQueueService>());
         services.AddSingleton(Mock.Of<IInteractionManager>());
         services.AddSingleton(activityManager.Object);
+        services.AddSingleton<ICatalogManager<OmnichannelActivity>>(activityManager.Object);
         services.AddSingleton(availabilityService.Object);
         services.AddSingleton(Mock.Of<IContactCenterEventPublisher>());
         services.AddSingleton(Mock.Of<IContactCenterScopeExecutor>());
@@ -591,6 +592,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton(Mock.Of<IInteractionManager>());
         services.AddSingleton(Mock.Of<IAgentAvailabilityService>());
         services.AddSingleton(activityManager.Object);
+        services.AddSingleton<ICatalogManager<OmnichannelActivity>>(activityManager.Object);
         services.AddSingleton(Mock.Of<IContactCenterEventPublisher>());
         services.AddSingleton(Mock.Of<IContactCenterScopeExecutor>());
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);

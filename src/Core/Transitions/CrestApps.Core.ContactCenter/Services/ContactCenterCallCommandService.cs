@@ -3,13 +3,11 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using System.Text.Json;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using OrchardCore;
-using OrchardCore.Modules;
 using CrestApps.Core.Telephony.Models;
-using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.Services;
+using CrestApps.Core.Support;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.Core.ContactCenter.Services;
 
 /// <summary>
 /// Provides the default implementation of <see cref="IContactCenterCallCommandService"/>. It performs
@@ -21,7 +19,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly IActivityReservationService _reservationService;
     private readonly IActivityReservationManager _reservationManager;
     private readonly IInteractionManager _interactionManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IDialerProfileReader _dialerProfileReader;
     private readonly IDialerAttemptService _dialerAttemptService;
     private readonly IAgentProfileManager _agentManager;
@@ -52,7 +50,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         IActivityReservationService reservationService,
         IActivityReservationManager reservationManager,
         IInteractionManager interactionManager,
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IDialerProfileReader dialerProfileReader,
         IEnumerable<IDialerAttemptService> dialerAttemptServices,
         IAgentProfileManager agentManager,
@@ -158,7 +156,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         }
 
         var commandId = deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd
-            ? IdGenerator.GenerateId()
+            ? UniqueId.GenerateId()
             : null;
 
         if (commandId is not null)

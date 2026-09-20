@@ -1,7 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using YesSql;
@@ -16,7 +15,7 @@ public sealed class ContactCenterActivityWriter : IContactCenterActivityWriter
 {
     private const int MaxActivityWriteAttempts = 3;
 
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IStoreCommitter _storeCommitter;
     private readonly ILogger _logger;
@@ -29,7 +28,7 @@ public sealed class ContactCenterActivityWriter : IContactCenterActivityWriter
     /// <param name="storeCommitter">The commit boundary, used to commit the write on its own.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterActivityWriter(
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IContactCenterScopeExecutor scopeExecutor,
         IStoreCommitter storeCommitter,
         ILogger<ContactCenterActivityWriter> logger)

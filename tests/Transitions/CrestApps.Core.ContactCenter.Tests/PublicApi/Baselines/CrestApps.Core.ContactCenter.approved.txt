@@ -267,6 +267,12 @@ namespace CrestApps.Core.ContactCenter.Services
         public AgentWorkSelector(CrestApps.Core.ContactCenter.Services.IQueueItemStore queueItemStore, CrestApps.Core.ContactCenter.Services.IActivityQueueManager queueManager, System.TimeProvider timeProvider) { }
         public System.Threading.Tasks.Task<string> SelectNextForAgentAsync(CrestApps.Core.ContactCenter.Models.AgentProfile agent, System.Collections.Generic.IReadOnlyCollection<string> excludedQueueIds = null, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class AgentWorkStateHealingService : CrestApps.Core.ContactCenter.Services.IAgentWorkStateHealingService
+    {
+        public AgentWorkStateHealingService(CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, CrestApps.Core.ContactCenter.Services.IActivityReservationManager reservationManager, CrestApps.Core.ContactCenter.Services.IActivityReservationService reservationService, CrestApps.Core.ContactCenter.Services.IQueueItemManager queueItemManager, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> activityManager, CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateService workStateService, System.Lazy<CrestApps.Core.ContactCenter.Services.IProviderCallStateSynchronizationService> synchronizationService, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.AgentWorkStateHealingService> logger) { }
+        public System.Threading.Tasks.Task<int> HealForAvailabilityAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> HealForResetAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class AnswerProviderCommandTypeExecutor : CrestApps.Core.ContactCenter.Services.IProviderCommandTypeExecutor
     {
         public AnswerProviderCommandTypeExecutor(CrestApps.Core.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.Core.Telephony.ITelephonyService telephonyService, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.ICallSessionManager callSessionManager, CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher publisher, System.TimeProvider timeProvider, CrestApps.Core.ContactCenter.Services.ICallControlAuthorizationService callControlAuthorizationService) { }
@@ -282,6 +288,12 @@ namespace CrestApps.Core.ContactCenter.Services
         public BusinessHoursCalendarManager(CrestApps.Core.ContactCenter.Services.IBusinessHoursCalendarStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>> handlers, CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>> logger) { }
         public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class BusinessHoursGate : CrestApps.Core.Omnichannel.Services.IBusinessHoursGate
+    {
+        public BusinessHoursGate(CrestApps.Core.ContactCenter.Services.IBusinessHoursService businessHoursService, CrestApps.Core.ContactCenter.Services.IBusinessHoursCalendarManager calendarManager) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class CallControlAuthorizationService : CrestApps.Core.ContactCenter.Services.ICallControlAuthorizationService
     {
@@ -332,6 +344,21 @@ namespace CrestApps.Core.ContactCenter.Services
         public int Order { get; }
         public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.Core.ContactCenter.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ConsultTransferService : CrestApps.Core.ContactCenter.Services.IConsultTransferService
+    {
+        public ConsultTransferService(CrestApps.Core.ContactCenter.Services.ICallSessionManager callSessionManager, CrestApps.Core.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ConsultTransferService> logger) { }
+        public System.Threading.Tasks.Task<bool> CancelAsync(string callSessionId, string consultId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> CompleteAsync(string callSessionId, string consultId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> MarkConnectedAsync(string callSessionId, string consultId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ConsultCall> StartAsync(CrestApps.Core.ContactCenter.Models.ConsultTransferRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterActivityDialerContributor : CrestApps.Core.Omnichannel.Services.IActivityDialerContributor
+    {
+        public ContactCenterActivityDialerContributor(CrestApps.Core.ContactCenter.Services.IDialerProfileManager dialerProfileManager, CrestApps.Core.ContactCenter.Services.IActivityQueueService activityQueueService) { }
+        public System.Threading.Tasks.Task EnqueueAsync(string activityId, string campaignId, CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor profile, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor> FindByIdAsync(string profileId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IEnumerable<CrestApps.Core.Omnichannel.Models.ActivityDialerProfileDescriptor>> GetProfilesAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ContactCenterAgentLegFailureService : CrestApps.Core.ContactCenter.Services.IContactCenterAgentLegFailureService
     {
         public ContactCenterAgentLegFailureService(CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.ICallSessionManager callSessionManager, CrestApps.Core.Telephony.ITelephonyService telephonyService, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ContactCenterAgentLegFailureService> logger) { }
@@ -344,6 +371,12 @@ namespace CrestApps.Core.ContactCenter.Services
         public bool IsAvailable { get; }
         public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.DispositionSuggestion> SuggestDispositionAsync(CrestApps.Core.ContactCenter.Models.AssistContext context, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> SummarizeAsync(CrestApps.Core.ContactCenter.Models.AssistContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterCallCommandService : CrestApps.Core.ContactCenter.Services.IContactCenterCallCommandService
+    {
+        public ContactCenterCallCommandService(CrestApps.Core.ContactCenter.Services.IActivityReservationService reservationService, CrestApps.Core.ContactCenter.Services.IActivityReservationManager reservationManager, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> activityManager, CrestApps.Core.ContactCenter.Services.IDialerProfileReader dialerProfileReader, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IDialerAttemptService> dialerAttemptServices, CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, CrestApps.Core.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.Core.ContactCenter.Services.ICallSessionManager callSessionManager, CrestApps.Core.ContactCenter.Services.IProviderCommandStateService providerCommandStateService, CrestApps.Core.ContactCenter.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher publisher, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallCommandResult> AcceptInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class ContactCenterClaimKeys
     {
@@ -546,6 +579,11 @@ namespace CrestApps.Core.ContactCenter.Services
     {
         public DialerAttemptCompensationService(CrestApps.Core.ContactCenter.Services.IActivityReservationService reservationService) { }
         public System.Threading.Tasks.Task CompensateAsync(CrestApps.Core.ContactCenter.Models.ActivityReservation reservation, bool removeFromQueue, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerAttemptService : CrestApps.Core.ContactCenter.Services.IDialerAttemptService
+    {
+        public DialerAttemptService(CrestApps.Core.ContactCenter.Services.IDialerEligibilityService eligibilityService, CrestApps.Core.ContactCenter.Services.IActivityReservationService reservationService, CrestApps.Core.ContactCenter.Services.IDialerAttemptCompensationService compensationService, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> activityManager, CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateService workStateService, CrestApps.Core.ContactCenter.Services.IContactCenterActivityWriter activityWriter, CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, CrestApps.Core.ContactCenter.Services.IVoiceContactCenterCallRouter voiceCallRouter, CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher publisher, CrestApps.Core.ContactCenter.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.Core.ContactCenter.Services.IProviderCommandStateService providerCommandStateService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.DialerAttemptService> logger) { }
+        public System.Threading.Tasks.Task<bool> TryDialAsync(CrestApps.Core.ContactCenter.Models.DialerProfile profile, CrestApps.Core.ContactCenter.Models.ActivityReservation reservation, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class DialerPacingCycle : CrestApps.Core.ContactCenter.Services.IDialerPacingCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
     {
@@ -850,6 +888,11 @@ namespace CrestApps.Core.ContactCenter.Services
     {
         public ProviderVoiceEventSink(CrestApps.Core.ContactCenter.Services.IProviderVoiceEventService providerVoiceEventService) { }
         public System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.Core.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderVoiceOfferSynchronizationService : CrestApps.Core.ContactCenter.Services.IProviderVoiceOfferSynchronizationService
+    {
+        public ProviderVoiceOfferSynchronizationService(CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.ICallSessionManager callSessionManager, CrestApps.Core.ContactCenter.Services.IQueueItemManager queueItemManager, CrestApps.Core.ContactCenter.Services.IActivityReservationManager reservationManager, CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> activityManager, CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateService workStateService, System.IServiceProvider serviceProvider, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ProviderVoiceOfferSynchronizationService> logger) { }
+        public System.Threading.Tasks.Task ReconcileEndedOfferAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ProviderWebhookInboxCycle : CrestApps.Core.ContactCenter.Services.IProviderWebhookInboxCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
     {

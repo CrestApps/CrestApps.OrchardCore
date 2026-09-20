@@ -445,6 +445,39 @@ The marker is still staged rather than committed - `CreateAsync` calls the same
 `Session.SaveAsync(record, checkConcurrency: false, ...)` the service called - so it still lands
 atomically with the handler effect it guards, which is the property the whole mechanism rests on.
 
+### D-4 was smaller than it looked: nine services wanted the catalog manager (W5.2b)
+
+Twelve Contact Center files depended on `CrestApps.OrchardCore.Omnichannel.Core.Services`, which is
+the D-4 blocker W4 recorded: `IOmnichannelActivityManager` carries four paging methods typed on the
+host's administration filter models, so the contract could not move.
+
+Counting what the Contact Center actually calls on it settles it. Across nine services the calls are
+`FindByIdAsync` (ten), `UpdateAsync` (two), `NewAsync` and `CreateAsync` - every one of them a member
+of `ICatalogManager<OmnichannelActivity>`, which is already a framework contract over a model that
+already moved. Not one call touches the paging methods. So the nine take the generic contract, and
+the host forwards it:
+
+    services.AddScoped<ICatalogManager<OmnichannelActivity>>(
+        static sp => sp.GetRequiredService<IOmnichannelActivityManager>());
+
+Forwarding rather than letting the open generic `CatalogManager<>` answer is the point: the open
+generic would construct a second manager, with its own handler pipeline, and two managers writing the
+same activities is exactly the kind of divergence this suite has architecture tests for. The
+dependency-injection snapshots confirm the closed registration is the only descriptor at that key.
+
+Nothing resolved `ICatalogManager<OmnichannelActivity>` before this, so the forwarder changes nobody
+else's answer.
+
+### Twenty-one imports were describing a dependency that had already gone (W5.2b)
+
+With the manager repointed, a sweep for imports whose namespace contributes no name the file uses
+removed twenty-one host imports across seventeen files, and the build stayed clean. Seven services
+came out of it with no Orchard or YesSql dependency at all and moved.
+
+This is the same lesson as the dead telephony import, at larger scale: a stale `using` reads as a
+dependency to any sweep, and it fails in the direction that makes an extraction look less finished
+than it is. It is worth running the dead-import sweep before, not after, deciding what is blocked.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All

@@ -75,6 +75,12 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
             .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
             .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()
             .AddScoped<IOmnichannelActivityManager, OmnichannelActivityManager>()
+            // The framework reads activities through the generic catalog manager, because everything it
+            // does with one - find, create, update - is on that contract; the paging methods the host adds
+            // are the administration list's, and are typed on the host's own filter models. Forwarding
+            // rather than letting the open generic answer is what keeps both sides on the one manager,
+            // with its handlers, instead of two that disagree.
+            .AddScoped<ICatalogManager<OmnichannelActivity>>(static sp => sp.GetRequiredService<IOmnichannelActivityManager>())
             .AddScoped<IOmnichannelChannelEndpointStore, OmnichannelChannelEndpointStore>()
             .AddCoreOmnichannelChannelEndpoints()
             .AddScoped<ICatalogEntryHandler<OmnichannelActivityBatch>, OmnichannelActivityBatchHandler>()

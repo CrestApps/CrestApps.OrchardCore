@@ -4,7 +4,6 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using System.Data.Common;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.Modules;
 using YesSql;
 using CrestApps.Core.Services;
@@ -20,7 +19,7 @@ public sealed class ActivityQueueService : IActivityQueueService
 
     private readonly IQueueItemManager _queueItemManager;
     private readonly IActivityQueueManager _queueManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IBusinessHoursService _businessHours;
     private readonly IContactCenterEventPublisher _publisher;
@@ -45,7 +44,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     public ActivityQueueService(
         IQueueItemManager queueItemManager,
         IActivityQueueManager queueManager,
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IContactCenterWorkStateService workStateService,
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,

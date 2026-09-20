@@ -105,6 +105,7 @@ CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.Omnichannel.Models.O
 CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.Omnichannel.Models.SubjectAction> #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Handlers.SubjectActionHandler
 CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.TimeZones.Models.TimeZoneMap> #0 Scoped -> type:CrestApps.OrchardCore.TimeZones.Handlers.TimeZoneMapHandler
 CrestApps.Core.Services.ICatalogManager<> #0 Scoped -> type:CrestApps.Core.Services.CatalogManager<>
+CrestApps.Core.Services.ICatalogManager<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> #0 Scoped -> factory
 CrestApps.Core.Services.INamedCatalog<> #0 Scoped -> type:CrestApps.OrchardCore.Core.Services.NamedCatalog<>
 CrestApps.Core.Services.INamedCatalogManager<> #0 Scoped -> type:CrestApps.Core.Services.NamedCatalogManager<>
 CrestApps.Core.Services.INamedSourceCatalog<> #0 Scoped -> type:CrestApps.OrchardCore.Core.Services.NamedSourceCatalog<>

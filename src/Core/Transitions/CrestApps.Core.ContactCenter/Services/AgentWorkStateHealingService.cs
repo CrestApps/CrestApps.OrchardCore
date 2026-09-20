@@ -2,13 +2,11 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Modules;
+using CrestApps.Core.Services;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
+namespace CrestApps.Core.ContactCenter.Services;
 
 /// <summary>
 /// Repairs inconsistent agent routing state after restarts, partial failures, or user-initiated resets so
@@ -21,7 +19,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
     private readonly IActivityReservationService _reservationService;
     private readonly IQueueItemManager _queueItemManager;
     private readonly IInteractionManager _interactionManager;
-    private readonly IOmnichannelActivityManager _activityManager;
+    private readonly ICatalogManager<OmnichannelActivity> _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly Lazy<IProviderCallStateSynchronizationService> _synchronizationService;
     private readonly TimeProvider _timeProvider;
@@ -51,7 +49,7 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
         IActivityReservationService reservationService,
         IQueueItemManager queueItemManager,
         IInteractionManager interactionManager,
-        IOmnichannelActivityManager activityManager,
+        ICatalogManager<OmnichannelActivity> activityManager,
         IContactCenterWorkStateService workStateService,
         Lazy<IProviderCallStateSynchronizationService> synchronizationService,
         TimeProvider timeProvider,
