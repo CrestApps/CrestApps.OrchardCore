@@ -478,6 +478,37 @@ This is the same lesson as the dead telephony import, at larger scale: a stale `
 dependency to any sweep, and it fails in the direction that makes an extraction look less finished
 than it is. It is worth running the dead-import sweep before, not after, deciding what is blocked.
 
+### The concurrency exception is settled, in the other repository (W5.2c)
+
+The decision on the `ConcurrencyException` blocker was to publish a store-neutral exception from
+`CrestApps.Core` rather than stage one here. That is done, on the `ma/store-concurrency-exception`
+branch of `CrestApps.Core`:
+
+- `CrestApps.Core.Services.StoreConcurrencyException` in the abstractions package, next to
+  `IStoreCommitter`.
+- `YesSqlStoreCommitter` translates YesSql's `ConcurrencyException`; `EntityCoreStoreCommitter`
+  translates Entity Framework's `DbUpdateConcurrencyException`. Both keep the original as the inner
+  exception, and neither touches any other failure.
+- Four tests, one of which drives a real lost race - a scope holds a row, the row is deleted
+  underneath it, the update affects no rows - rather than a substituted failure.
+- The changelog records it as a breaking change, because a `catch` around `CommitAsync` looking for
+  the store's own exception stops firing.
+
+**This repository cannot consume it yet.** `CrestApps.Core` arrives here as a NuGet package from the
+Cloudsmith preview feed, so the sequence is: merge the Core branch, let a preview publish, bump
+`CrestAppsCoreVersion`, and only then do the work below.
+
+When the preview lands:
+
+1. Change the fourteen services' `catch (ConcurrencyException)` to
+   `catch (StoreConcurrencyException)`. Thirteen of them are held in the host project by nothing else.
+2. `ConcurrentDocumentCatalog` stages writes rather than flushing them, so the exception surfaces at
+   the commit boundary the committer already translates. Check each catch site before moving it:
+   `CallbackService` catches around `_callbackManager.UpdateAsync`, which stages, so that catch may
+   already be dead code - worth confirming rather than translating.
+3. Move the services, and the four features they were holding back onto
+   `CrestAppsContactCenterBuilder`.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All
