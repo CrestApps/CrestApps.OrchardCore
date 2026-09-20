@@ -1,7 +1,7 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Locking;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.Core.Telephony.Services;
@@ -11,6 +11,8 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.StateAuthority;
 

@@ -1,0 +1,73 @@
+using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Data.YesSql.Services;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
+using CrestApps.Core.ContactCenter.Models;
+using YesSql;
+
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Services;
+
+/// <summary>
+/// Provides a YesSql-based implementation of <see cref="IContactCenterOutboxStore"/>.
+/// </summary>
+public sealed class ContactCenterOutboxStore : ConcurrentDocumentCatalog<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>, IContactCenterOutboxStore
+{
+    /// <inheritdoc/>
+    protected override bool CheckConcurrency => true;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactCenterOutboxStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session.</param>
+    public ContactCenterOutboxStore(ISession session)
+        : base(session)
+    {
+        CollectionName = ContactCenterStorage.CollectionName;
+    }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterOutboxMessage> FindByEventIdAsync(string eventId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(eventId);
+
+        return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+            index => index.EventId == eventId,
+            collection: ContactCenterStorage.CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<ContactCenterOutboxMessage>> GetDueAsync(DateTime nowUtc, int maxCount, CancellationToken cancellationToken = default)
+    {
+        var take = maxCount <= 0 ? 100 : maxCount;
+
+        var due = await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+            index => (index.Status == OutboxMessageStatus.Pending || index.Status == OutboxMessageStatus.Claimed) &&
+                index.NextAttemptUtc <= nowUtc,
+            collection: ContactCenterStorage.CollectionName)
+            .OrderBy(index => index.NextAttemptUtc)
+            .Take(take)
+            .ListAsync(cancellationToken);
+
+        return due.ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> CountByStatusAsync(OutboxMessageStatus status, CancellationToken cancellationToken = default)
+    {
+        return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+            index => index.Status == status,
+            collection: ContactCenterStorage.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> CountOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default)
+    {
+        return await Session.Query<ContactCenterOutboxMessage, ContactCenterOutboxMessageIndex>(
+            index => (index.Status == OutboxMessageStatus.Pending || index.Status == OutboxMessageStatus.Claimed) &&
+                index.NextAttemptUtc <= nowUtc,
+            collection: ContactCenterStorage.CollectionName)
+            .CountAsync(cancellationToken);
+    }
+}

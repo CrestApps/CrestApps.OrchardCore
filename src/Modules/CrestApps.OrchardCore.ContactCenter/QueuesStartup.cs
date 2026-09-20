@@ -6,8 +6,7 @@ using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.Core.ContactCenter.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
@@ -35,6 +34,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Recipes;
 using OrchardCore.Workflows.Helpers;
 using CrestApps.OrchardCore.ContactCenter.Core;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 

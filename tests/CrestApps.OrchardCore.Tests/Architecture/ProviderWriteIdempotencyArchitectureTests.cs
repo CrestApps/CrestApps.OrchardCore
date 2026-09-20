@@ -106,7 +106,7 @@ public sealed class ProviderWriteIdempotencyArchitectureTests
     private static readonly Type[] _assemblyAnchors =
     [
         typeof(IProviderWebhookInboxHandler),
-        typeof(CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderVoiceEventInboxHandler),
+        typeof(CrestApps.Core.ContactCenter.Services.ProviderVoiceEventInboxHandler),
         typeof(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsInboundInboxHandler),
         typeof(CrestApps.OrchardCore.Telnyx.Services.TelnyxWebhookInboxHandler),
         typeof(CrestApps.OrchardCore.Dialpad.Services.DialpadWebhookInboxHandler),
@@ -121,7 +121,9 @@ public sealed class ProviderWriteIdempotencyArchitectureTests
             .GetAssemblies()
             .Concat(anchored)
             .Distinct()
-            .Where(assembly => assembly.GetName().Name?.StartsWith("CrestApps.OrchardCore", StringComparison.Ordinal) == true)
+            // Both prefixes: a handler that has moved into the framework packages is still a handler, and a
+            // scan that only knew the host prefix would report it as "not there" rather than as unchecked.
+            .Where(assembly => assembly.GetName().Name?.StartsWith("CrestApps.", StringComparison.Ordinal) == true)
             .SelectMany(GetLoadableTypes)
             .Where(type => type is { IsClass: true, IsAbstract: false }
                 && typeof(IProviderWebhookInboxHandler).IsAssignableFrom(type))

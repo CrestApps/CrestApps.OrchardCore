@@ -2,10 +2,11 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

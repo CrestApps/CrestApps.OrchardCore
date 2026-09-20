@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Recipes.Models;

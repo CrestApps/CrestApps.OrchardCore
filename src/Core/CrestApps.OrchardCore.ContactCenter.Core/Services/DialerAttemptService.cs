@@ -4,11 +4,11 @@ using CrestApps.Core.Omnichannel.Services;
 using System.Text.Json;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Logging;
 using CrestApps.Core.Telephony;
+using CrestApps.Core.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 

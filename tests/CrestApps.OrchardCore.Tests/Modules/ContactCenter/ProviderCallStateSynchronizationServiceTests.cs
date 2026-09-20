@@ -2,7 +2,7 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -13,6 +13,7 @@ using Moq;
 using OrchardCore.Modules;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

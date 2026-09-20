@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Asterisk;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.TenantIsolation;

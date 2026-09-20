@@ -10,6 +10,7 @@ using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
 using CrestApps.Core.Telephony;
+using CrestApps.Core.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 

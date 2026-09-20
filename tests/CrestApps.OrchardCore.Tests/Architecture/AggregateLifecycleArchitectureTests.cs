@@ -34,6 +34,11 @@ public sealed class AggregateLifecycleArchitectureTests
     private static readonly string[] _guardedRoots =
     [
         "src/Core/CrestApps.OrchardCore.ContactCenter.Core",
+        // The framework packages carry half of these writers now, and a root list that named only the host
+        // would scan a shrinking share of the code while still reporting a pass.
+        "src/Core/Transitions/CrestApps.Core.ContactCenter",
+        "src/Core/Transitions/CrestApps.Core.Telephony",
+        "src/Core/Transitions/CrestApps.Core.Omnichannel",
         "src/Modules/CrestApps.OrchardCore.ContactCenter",
         "src/Modules/CrestApps.OrchardCore.Telephony",
         "src/Modules/CrestApps.OrchardCore.Asterisk",
@@ -179,7 +184,7 @@ public sealed class AggregateLifecycleArchitectureTests
         var expected = new HashSet<string>(StringComparer.Ordinal)
         {
             "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs",
-            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterWorkStateProjector.cs",
+            "src/Core/Transitions/CrestApps.Core.ContactCenter/Services/ContactCenterWorkStateProjector.cs",
         };
 
         var callers = new SortedSet<string>(StringComparer.Ordinal);

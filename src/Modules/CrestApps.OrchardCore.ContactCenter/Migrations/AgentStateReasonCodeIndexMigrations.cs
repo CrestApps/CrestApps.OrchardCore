@@ -1,5 +1,5 @@
 using CrestApps.Core.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using OrchardCore.Data.Migration;
 using OrchardCore.Recipes;
 using OrchardCore.Recipes.Services;

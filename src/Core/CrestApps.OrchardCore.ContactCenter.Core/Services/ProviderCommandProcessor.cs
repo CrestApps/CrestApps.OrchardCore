@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
 using CrestApps.Core.Telephony;
+using CrestApps.Core.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 

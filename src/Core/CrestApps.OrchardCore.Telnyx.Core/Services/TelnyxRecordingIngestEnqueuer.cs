@@ -2,7 +2,7 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;

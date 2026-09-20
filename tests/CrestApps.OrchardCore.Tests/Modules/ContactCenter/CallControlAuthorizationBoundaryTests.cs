@@ -1,5 +1,5 @@
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -7,6 +7,7 @@ using OrchardCore.Modules;
 using System.Text.Json;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

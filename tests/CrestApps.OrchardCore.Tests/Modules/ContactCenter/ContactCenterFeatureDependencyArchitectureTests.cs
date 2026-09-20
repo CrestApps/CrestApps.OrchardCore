@@ -756,7 +756,7 @@ public sealed class ContactCenterFeatureDependencyArchitectureTests
         var repositoryRoot = FindRepositoryRoot();
         var sourceFiles = new[]
         {
-            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/DefaultContactCenterEventPublisher.cs",
+            "src/Core/Transitions/CrestApps.Core.ContactCenter/Services/DefaultContactCenterEventPublisher.cs",
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/ContactCenterRealTimeEventHandler.cs",
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Handlers/OfferQueuedVoiceWorkOnAvailabilityHandler.cs",
             "src/Modules/CrestApps.OrchardCore.ContactCenter/Hubs/ContactCenterHub.cs",

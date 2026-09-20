@@ -45,12 +45,17 @@ public sealed class FileSizeRatchetTests
     private static readonly Dictionary<string, int> _existing = new(StringComparer.OrdinalIgnoreCase)
     {
         ["src/Core/Transitions/CrestApps.Core.Telephony/Hubs/TelephonyHubBase.cs"] = 1339,
-        ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1317,
-        // 1021 rather than 1020: the omnichannel models moved namespace, and this file needs the framework
-        // import as well as the host one it already had. A ratchet exists to stop a file accumulating
-        // logic; an import is not that.
-        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 1021,
-        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 974,
+        // 1318 rather than 1317: the Contact Center services moved into the framework package, so this file
+        // needs the framework import alongside the host one. An import is not the accumulation this ratchet
+        // exists to stop.
+        ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/EnterpriseInteractionReportProvider.cs"] = 1318,
+        // 1022 rather than 1020: the omnichannel models moved namespace, then the Contact Center service
+        // contracts did, and this file needs the framework import for each as well as the host one it already
+        // had. A ratchet exists to stop a file accumulating logic; an import is not that.
+        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 1022,
+        // 975 rather than 974: the Contact Center service contracts moved into the framework package and this
+        // file needs the import. An import is not the accumulation this ratchet exists to stop.
+        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 975,
         // 956 rather than 955: the omnichannel indexes moved namespace and this file needs the framework
         // import as well. An import is not the accumulation this ratchet exists to stop.
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Controllers/AdminController.cs"] = 956,

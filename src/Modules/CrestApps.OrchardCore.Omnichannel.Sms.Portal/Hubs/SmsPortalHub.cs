@@ -1,5 +1,5 @@
 using CrestApps.Core.Hosting;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Hubs;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using Microsoft.AspNetCore.Authorization;

@@ -1,7 +1,7 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Dialpad;
 using CrestApps.OrchardCore.Dialpad.Endpoints;
 using CrestApps.OrchardCore.Dialpad.Models;
@@ -20,6 +20,7 @@ using OrchardCore.Modules;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.Dialpad;
 

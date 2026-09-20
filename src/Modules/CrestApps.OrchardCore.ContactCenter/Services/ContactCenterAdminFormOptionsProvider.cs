@@ -5,7 +5,7 @@ using System.Globalization;
 using CrestApps.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.PhoneNumbers;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Users;

@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

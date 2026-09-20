@@ -3,8 +3,8 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.ContactCenter.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -29,6 +29,9 @@ using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Modules;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 

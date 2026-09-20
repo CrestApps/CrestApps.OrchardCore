@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.Tests.Doubles;
 using System.Security.Claims;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.AspNetCore.Authorization;
 using Moq;

@@ -4,7 +4,7 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Locking;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +18,7 @@ using System.Text.Json;
 using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

@@ -1,0 +1,77 @@
+using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Data.YesSql.Services;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
+using CrestApps.Core.ContactCenter.Models;
+using YesSql;
+
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Services;
+
+/// <summary>
+/// Provides a YesSql-based implementation of <see cref="IAgentProfileStore"/>.
+/// </summary>
+public sealed class AgentProfileStore : ConcurrentDocumentCatalog<AgentProfile, AgentProfileIndex>, IAgentProfileStore
+{
+    /// <inheritdoc/>
+    protected override bool CheckConcurrency => true;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentProfileStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session.</param>
+    public AgentProfileStore(ISession session)
+        : base(session)
+    {
+        CollectionName = ContactCenterStorage.CollectionName;
+    }
+
+    /// <inheritdoc/>
+    public async Task<AgentProfile> FindByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(userId);
+
+        return await Session.Query<AgentProfile, AgentProfileIndex>(
+            index => index.UserId == userId,
+            collection: ContactCenterStorage.CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentProfile>> GetAvailableForQueueAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        var normalizedQueueId = queueId.ToLowerInvariant();
+        var available = await Session.Query<AgentProfile, AgentQueueMembershipIndex>(
+            index => index.QueueId == normalizedQueueId && index.PresenceStatus == AgentPresenceStatus.Available,
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return available.ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentProfile>> GetMembersForQueueAsync(string queueId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(queueId);
+
+        var normalizedQueueId = queueId.ToLowerInvariant();
+        var members = await Session.Query<AgentProfile, AgentAllowedQueueIndex>(
+            index => index.QueueId == normalizedQueueId,
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return members.ToArray();
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<AgentProfile>> GetByPresenceAsync(
+        AgentPresenceStatus presenceStatus,
+        CancellationToken cancellationToken = default)
+    {
+        return (await Session.Query<AgentProfile, AgentProfileIndex>(
+            index => index.PresenceStatus == presenceStatus,
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken)).ToArray();
+    }
+}

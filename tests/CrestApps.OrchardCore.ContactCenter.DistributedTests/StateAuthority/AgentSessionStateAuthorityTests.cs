@@ -1,9 +1,10 @@
 using System.Data.Common;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using YesSql;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.StateAuthority;
 

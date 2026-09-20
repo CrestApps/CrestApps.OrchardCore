@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.Core.PhoneNumbers;
 using CrestApps.Core.Telephony.Services;
+using CrestApps.Core.ContactCenter;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

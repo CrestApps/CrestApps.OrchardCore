@@ -1,6 +1,6 @@
 using CrestApps.Core;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;
 using OrchardCore.Modules;
 

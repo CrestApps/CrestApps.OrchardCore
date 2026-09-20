@@ -1,6 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using System.Collections.Concurrent;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 

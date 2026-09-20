@@ -1,0 +1,122 @@
+using CrestApps.Core.ContactCenter.Security;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
+using CrestApps.Core.ContactCenter.Models;
+using CrestApps.Core.Telephony.Services;
+using Microsoft.AspNetCore.Authorization;
+
+namespace CrestApps.Core.ContactCenter.Services;
+
+/// <summary>
+/// Default transfer destination resolver that fails closed for unsafe or unapproved external targets.
+/// External transfers are resolved exclusively from the tenant's server-side approved-destination
+/// catalog; callers supply only an opaque catalog entry identifier, never a raw phone number.
+/// </summary>
+public sealed class TransferDestinationResolver : ITransferDestinationResolver
+{
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IAgentProfileManager _agentManager;
+    private readonly IActivityQueueManager _queueManager;
+    private readonly IOptionsMonitor<ContactCenterExternalTransferSettings> _settings;
+    private readonly IDialDestinationPolicy _destinationPolicy;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TransferDestinationResolver"/> class.
+    /// </summary>
+    /// <param name="authorizationService">The authorization service used for external transfer RBAC.</param>
+    /// <param name="agentManager">The agent profile manager used to resolve agent destinations.</param>
+    /// <param name="queueManager">The queue manager used to resolve queue destinations.</param>
+    /// <param name="settings">The tenant-scoped approved-destination catalog.</param>
+    /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
+    public TransferDestinationResolver(
+        IAuthorizationService authorizationService,
+        IAgentProfileManager agentManager,
+        IActivityQueueManager queueManager,
+        IOptionsMonitor<ContactCenterExternalTransferSettings> settings,
+        IDialDestinationPolicy destinationPolicy)
+    {
+        _authorizationService = authorizationService;
+        _agentManager = agentManager;
+        _queueManager = queueManager;
+        _settings = settings;
+        _destinationPolicy = destinationPolicy;
+    }
+
+    /// <inheritdoc/>
+    public async Task<TransferDestinationResolutionResult> ResolveAsync(
+        TransferRequest request,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.TargetId))
+        {
+            return TransferDestinationResolutionResult.Denied();
+        }
+
+        return request.TargetType switch
+        {
+            InteractionTransferTargetType.Agent => await ResolveAgentAsync(request.TargetId, cancellationToken),
+            InteractionTransferTargetType.Queue => await ResolveQueueAsync(request.TargetId, cancellationToken),
+            InteractionTransferTargetType.EntryPoint => ResolveEntryPoint(request.TargetId),
+            InteractionTransferTargetType.External => await ResolveExternalAsync(request.TargetId, principal),
+            _ => TransferDestinationResolutionResult.Denied(),
+        };
+    }
+
+    private async Task<TransferDestinationResolutionResult> ResolveAgentAsync(
+        string agentId,
+        CancellationToken cancellationToken)
+    {
+        var agent = await _agentManager.FindByIdAsync(agentId, cancellationToken);
+
+        return agent is null
+            ? TransferDestinationResolutionResult.Denied()
+            : TransferDestinationResolutionResult.Success(InteractionTransferTargetType.Agent, agent.ItemId, agent.UserId);
+    }
+
+    private async Task<TransferDestinationResolutionResult> ResolveQueueAsync(
+        string queueId,
+        CancellationToken cancellationToken)
+    {
+        var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
+
+        return queue is null || !queue.Enabled
+            ? TransferDestinationResolutionResult.Denied()
+            : TransferDestinationResolutionResult.Success(InteractionTransferTargetType.Queue, queue.ItemId);
+    }
+
+    private static TransferDestinationResolutionResult ResolveEntryPoint(string entryPointId)
+    {
+        return string.IsNullOrWhiteSpace(entryPointId)
+            ? TransferDestinationResolutionResult.Denied()
+            : TransferDestinationResolutionResult.Success(InteractionTransferTargetType.EntryPoint, entryPointId.Trim());
+    }
+
+    private async Task<TransferDestinationResolutionResult> ResolveExternalAsync(
+        string targetId,
+        ClaimsPrincipal principal)
+    {
+        if (principal is null ||
+            !(await _authorizationService.AuthorizeAsync(principal, targetId, ContactCenterOperations.TransferExternally)).Succeeded)
+        {
+            return TransferDestinationResolutionResult.Denied();
+        }
+
+        var entry = _settings.CurrentValue.Destinations
+            .FirstOrDefault(d => string.Equals(d.Id, targetId, StringComparison.OrdinalIgnoreCase));
+
+        if (entry is null || !entry.Enabled)
+        {
+            return TransferDestinationResolutionResult.Denied();
+        }
+
+        if (!_destinationPolicy.Evaluate(entry.E164Address, new DialDestinationContext { Operation = DialDestinationOperation.Transfer }).IsAllowed)
+        {
+            return TransferDestinationResolutionResult.Denied();
+        }
+
+        return TransferDestinationResolutionResult.Success(InteractionTransferTargetType.External, entry.E164Address);
+    }
+}

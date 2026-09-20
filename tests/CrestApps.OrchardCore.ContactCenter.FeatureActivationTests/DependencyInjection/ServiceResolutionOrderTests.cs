@@ -30,24 +30,24 @@ public sealed class ServiceResolutionOrderTests
     {
         {
             "routing-strategies",
-            "CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy",
+            "CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy",
             [ContactCenterFeatures.Queues]
         },
         {
             "inbound-priority",
-            "CrestApps.OrchardCore.ContactCenter.Core.Services.IInboundPriorityContributor",
+            "CrestApps.Core.ContactCenter.Services.IInboundPriorityContributor",
             [ContactCenterFeatures.InboundVoice]
         },
         {
             "provider-command-executors",
-            "CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandTypeExecutor",
+            "CrestApps.Core.ContactCenter.Services.IProviderCommandTypeExecutor",
             // Voice is EnabledByDependencyOnly, so it has to be pulled in by something that depends
             // on it rather than enabled directly.
             [ContactCenterFeatures.InboundVoice]
         },
         {
             "retention-policies",
-            "CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.IContactCenterRetentionPolicy",
+            "CrestApps.Core.ContactCenter.Services.Retention.IContactCenterRetentionPolicy",
             [ContactCenterFeatures.Area]
         },
     };
@@ -80,7 +80,7 @@ public sealed class ServiceResolutionOrderTests
             // The pacing strategies, picked by the mode a campaign asks for. Two claiming one mode would make
             // a campaign quietly dial at the other one's pace.
             "dialer-strategies",
-            "CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerStrategy",
+            "CrestApps.Core.ContactCenter.Services.IDialerStrategy",
             "Mode",
             [ContactCenterFeatures.DialerPaced]
         },

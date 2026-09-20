@@ -1,6 +1,6 @@
 using System.Reflection;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;

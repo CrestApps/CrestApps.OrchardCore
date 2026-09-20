@@ -28,6 +28,10 @@ public sealed class PhoneNumberCanonicalizationArchitectureTests
         "src/Abstractions/CrestApps.OrchardCore.DncRegistry.Abstractions",
         "src/Abstractions/CrestApps.OrchardCore.Telephony.Abstractions",
         "src/Core/CrestApps.OrchardCore.ContactCenter.Core",
+        // The Contact Center services that canonicalize a number live in the framework package now, so the
+        // scan has to reach it or the rule would quietly cover less code each time something moves.
+        "src/Core/Transitions/CrestApps.Core.ContactCenter",
+        "src/Core/Transitions/CrestApps.Core.Omnichannel",
         "src/Core/Transitions/CrestApps.Core.Telephony",
         "src/Modules/CrestApps.OrchardCore.ContactCenter",
         "src/Modules/CrestApps.OrchardCore.DncRegistry",

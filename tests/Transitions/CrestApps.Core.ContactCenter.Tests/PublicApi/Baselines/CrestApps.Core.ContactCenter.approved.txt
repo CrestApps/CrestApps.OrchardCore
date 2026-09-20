@@ -1,0 +1,808 @@
+namespace CrestApps.Core.ContactCenter
+{
+    public static class AgentMembershipIds
+    {
+        public static System.Collections.Generic.IList<string> Normalize(System.Collections.Generic.IEnumerable<string> values) { }
+    }
+    public static class AgentOfferKindHelper
+    {
+        public static CrestApps.Core.ContactCenter.Models.AgentOfferKind FromActivitySource(string activitySource) { }
+    }
+    public static class DialerActivitySourceHelper
+    {
+        public static string GetActivitySource(CrestApps.Core.ContactCenter.Models.DialerMode mode) { }
+        public static bool IsDialerSource(string source) { }
+    }
+    [System.Obsolete("Use IDialDestinationPolicy from CrestApps.Core.Telephony.Services. This type is k" +
+        "ept for one release and will be removed.")]
+    public static class ExternalDestinationPolicy
+    {
+        public static bool IsAllowed(CrestApps.Core.PhoneNumbers.PhoneNumber phoneNumber) { }
+        public static bool IsAllowed(string address) { }
+        public static bool IsEmergencyNumber(string digits) { }
+        public static bool IsPremiumNumber(string digits) { }
+    }
+}
+namespace CrestApps.Core.ContactCenter.Services
+{
+    public sealed class ActivityQueueGroupManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>, CrestApps.Core.ContactCenter.Services.IActivityQueueGroupManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>
+    {
+        public ActivityQueueGroupManager(CrestApps.Core.ContactCenter.Services.IActivityQueueGroupStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ActivityQueueManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ActivityQueue>, CrestApps.Core.ContactCenter.Services.IActivityQueueManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.ActivityQueue>
+    {
+        public ActivityQueueManager(CrestApps.Core.ContactCenter.Services.IActivityQueueStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.ActivityQueue>> handlers, CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ActivityQueue>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ActivityQueue> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ActivityQueue>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ActivityReservationManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ActivityReservation>, CrestApps.Core.ContactCenter.Services.IActivityReservationManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.ActivityReservation>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.ActivityReservation>
+    {
+        public ActivityReservationManager(CrestApps.Core.ContactCenter.Services.IActivityReservationStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.ActivityReservation>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ActivityReservation>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ActivityReservation>> GetActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ActivityReservation>> GetActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ExpiredReservationPage> GetExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ActivityRoutingService : CrestApps.Core.ContactCenter.Services.IActivityRoutingService
+    {
+        public ActivityRoutingService(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy> strategies) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ActivityRoutingDecision> SelectAgentAsync(CrestApps.Core.ContactCenter.Models.ActivityQueue queue, CrestApps.Core.ContactCenter.Models.QueueItem queueItem, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.AgentAvailability> availability, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentAvailabilityRecoveryCycle : CrestApps.Core.ContactCenter.Services.IAgentAvailabilityRecoveryCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public AgentAvailabilityRecoveryCycle(CrestApps.Core.ContactCenter.Services.IAgentAvailabilityRecoveryService recoveryService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.AgentAvailabilityRecoveryCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentAvailabilityRecoveryService : CrestApps.Core.ContactCenter.Services.IAgentAvailabilityRecoveryService
+    {
+        public AgentAvailabilityRecoveryService(CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.IAgentPresenceManager presenceManager, Microsoft.Extensions.Options.IOptions<CrestApps.Core.ContactCenter.Models.AgentAvailabilityOptions> options, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.AgentAvailabilityRecoveryService> logger) { }
+        public System.Threading.Tasks.Task<int> RecoverAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentAvailabilityService : CrestApps.Core.ContactCenter.Services.IAgentAvailabilityService
+    {
+        public AgentAvailabilityService(CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, CrestApps.Core.ContactCenter.Services.IAgentSessionManager sessionManager, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, Microsoft.Extensions.Options.IOptions<CrestApps.Core.ContactCenter.Models.AgentAvailabilityOptions> options, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentAvailability> GetAsync(string agentId, string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentAvailability> GetForDirectAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentAvailability>> GetForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentEntitlementDeniedException : System.Exception
+    {
+        public AgentEntitlementDeniedException(string userId) { }
+        public string UserId { get; }
+    }
+    public sealed class AgentPresenceManagerService : CrestApps.Core.ContactCenter.Services.IAgentPresenceManager
+    {
+        public AgentPresenceManagerService(CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IAgentSessionManager> sessionManagers, CrestApps.Core.ContactCenter.Services.IAgentWorkStateHealingService agentWorkStateHealingService, CrestApps.Core.ContactCenter.Services.IAgentEntitlementPolicy entitlementPolicy, CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher publisher, CrestApps.Core.Locking.IDistributedLockProvider distributedLock, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.AgentPresenceManagerService> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> ApplyManagedConfigurationAsync(string agentId, CrestApps.Core.ContactCenter.Models.AgentManagedConfiguration configuration, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> CompleteWorkAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> MarkOfflineAsync(string userId, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> SetPresenceAsync(string userId, CrestApps.Core.ContactCenter.Models.AgentPresenceStatus status, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> SignInAsync(string userId, System.Collections.Generic.IEnumerable<string> queueIds, System.Collections.Generic.IEnumerable<string> campaignIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> SignOutAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> StartWrapUpAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> UpdateEntitlementsAsync(string agentId, CrestApps.Core.ContactCenter.Models.AgentEntitlements entitlements, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> UpdateMembershipsAsync(string userId, System.Collections.Generic.IEnumerable<string> queueIds, System.Collections.Generic.IEnumerable<string> campaignIds, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentProfileManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.AgentProfile>, CrestApps.Core.ContactCenter.Services.IAgentProfileManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.AgentProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.AgentProfile>
+    {
+        public AgentProfileManager(CrestApps.Core.ContactCenter.Services.IAgentProfileStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.AgentProfile>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.AgentProfile>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentProfile>> GetAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentProfile>> GetByPresenceAsync(CrestApps.Core.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentProfile>> GetMembersForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentQueueMembershipReader : CrestApps.Core.ContactCenter.Services.IAgentQueueMembershipReader
+    {
+        public AgentQueueMembershipReader(CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentProfileManager, CrestApps.Core.ContactCenter.Services.IAgentEntitlementPolicy entitlementPolicy) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetAgentIdsForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetQueueIdsForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsMemberAsync(string agentId, string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentRecordingControlService : CrestApps.Core.ContactCenter.Services.IAgentRecordingControlService
+    {
+        public AgentRecordingControlService(CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.ICallControlAuthorizationService callControlAuthorizationService, CrestApps.Core.ContactCenter.Services.IContactCenterRecordingService recordingService, CrestApps.Core.ContactCenter.Services.IContactCenterMonitoringService monitoringService, CrestApps.Core.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, Microsoft.Extensions.Options.IOptionsMonitor<CrestApps.Core.ContactCenter.Models.ContactCenterRecordingSettings> settings, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.IContactCenterRealTimeNotifier> realTimeNotifiers, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentRecordingControlResult> PauseAsync(string interactionId, string userId, System.Security.Claims.ClaimsPrincipal principal, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentRecordingControlResult> ResumeAsync(string interactionId, string userId, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentSessionCleanupCycle : CrestApps.Core.ContactCenter.Services.IAgentSessionCleanupCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public AgentSessionCleanupCycle(CrestApps.Core.ContactCenter.Services.IAgentSessionService sessionService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.AgentSessionCleanupCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentSessionManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.AgentSession>, CrestApps.Core.ContactCenter.Services.IAgentSessionManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.AgentSession>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.AgentSession>
+    {
+        public AgentSessionManager(CrestApps.Core.ContactCenter.Services.IAgentSessionStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.AgentSession>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.AgentSession>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentSession> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentSession>> GetByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentSession>> GetStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentStateReasonCodeManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>, CrestApps.Core.ContactCenter.Services.IAgentStateReasonCodeManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>
+    {
+        public AgentStateReasonCodeManager(CrestApps.Core.ContactCenter.Services.IAgentStateReasonCodeStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentWorkSelector : CrestApps.Core.ContactCenter.Services.IAgentWorkSelector
+    {
+        public AgentWorkSelector(CrestApps.Core.ContactCenter.Services.IQueueItemStore queueItemStore, CrestApps.Core.ContactCenter.Services.IActivityQueueManager queueManager, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<string> SelectNextForAgentAsync(CrestApps.Core.ContactCenter.Models.AgentProfile agent, System.Collections.Generic.IReadOnlyCollection<string> excludedQueueIds = null, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class BusinessHoursCalendarManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>, CrestApps.Core.ContactCenter.Services.IBusinessHoursCalendarManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>
+    {
+        public BusinessHoursCalendarManager(CrestApps.Core.ContactCenter.Services.IBusinessHoursCalendarStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>> handlers, CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class CallControlAuthorizationService : CrestApps.Core.ContactCenter.Services.ICallControlAuthorizationService
+    {
+        public CallControlAuthorizationService(CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, CrestApps.Core.ContactCenter.Services.ICallSessionManager callSessionManager, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallControlAuthorizationResult> AuthorizeAsync(CrestApps.Core.ContactCenter.Models.CallControlAuthorizationContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class CallSessionManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.CallSession>, CrestApps.Core.ContactCenter.Services.ICallSessionManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.CallSession>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.CallSession>
+    {
+        public CallSessionManager(CrestApps.Core.ContactCenter.Services.ICallSessionStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.CallSession>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.CallSession>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallSession> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallSession> FindByProviderCallIdAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallSession> FindByProviderCallIdAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class CallTopologyProjector
+    {
+        public static void AdvanceConsult(CrestApps.Core.ContactCenter.Models.CallSession session, string consultId, CrestApps.Core.ContactCenter.Models.ConsultCallStatus status, System.DateTime utcNow) { }
+        public static void ApplyReportedParticipation(CrestApps.Core.ContactCenter.Models.CallSession session, bool? isConference, int? participantCount, System.DateTime utcNow) { }
+        public static void DestroyBridge(CrestApps.Core.ContactCenter.Models.CallSession session, System.DateTime destroyedUtc) { }
+        public static void EndLeg(CrestApps.Core.ContactCenter.Models.CallSession session, string providerLegId, System.DateTime endedUtc, CrestApps.Core.Telephony.Models.HangupCause? hangupCause = default) { }
+        public static bool EndMonitorSession(CrestApps.Core.ContactCenter.Models.CallSession session, string supervisorUserId, System.DateTime endedUtc) { }
+        public static void EndRemainingLegs(CrestApps.Core.ContactCenter.Models.CallSession session, System.DateTime endedUtc) { }
+        public static void EndRemainingMonitorSessions(CrestApps.Core.ContactCenter.Models.CallSession session, System.DateTime endedUtc) { }
+        public static CrestApps.Core.ContactCenter.Models.Bridge EnsureBridge(CrestApps.Core.ContactCenter.Models.CallSession session, string providerBridgeId, System.DateTime utcNow) { }
+        public static void Join(CrestApps.Core.ContactCenter.Models.CallSession session, string providerLegId, CrestApps.Core.ContactCenter.Models.CallPartyRole role, System.DateTime joinedUtc, string agentId = null, string address = null) { }
+        public static void Leave(CrestApps.Core.ContactCenter.Models.CallSession session, string providerLegId, System.DateTime leftUtc) { }
+        public static void Relate(CrestApps.Core.ContactCenter.Models.CallSession session, CrestApps.Core.ContactCenter.Models.CallRelationshipKind kind, System.DateTime establishedUtc, string relatedCallSessionId = null, string relatedInteractionId = null, string relatedProviderCallId = null) { }
+        public static CrestApps.Core.ContactCenter.Models.ConsultCall StartConsult(CrestApps.Core.ContactCenter.Models.CallSession session, string consultId, string initiatedByAgentId, CrestApps.Core.ContactCenter.Models.InteractionTransferTargetType targetType, string targetId, string targetAddress, System.DateTime startedUtc, string providerLegId = null) { }
+        public static CrestApps.Core.ContactCenter.Models.MonitorSession StartMonitorSession(CrestApps.Core.ContactCenter.Models.CallSession session, string monitorSessionId, string supervisorUserId, string supervisorAgentId, CrestApps.Core.ContactCenter.Models.MonitorMode mode, System.DateTime startedUtc, string providerLegId = null) { }
+        public static CrestApps.Core.ContactCenter.Models.CallLeg UpsertLeg(CrestApps.Core.ContactCenter.Models.CallSession session, string providerLegId, CrestApps.Core.ContactCenter.Models.CallPartyRole role, CrestApps.Core.ContactCenter.Models.CallLegStatus status, System.DateTime utcNow, string address = null, string agentId = null) { }
+    }
+    public sealed class CallbackDispatchCycle : CrestApps.Core.ContactCenter.Services.ICallbackDispatchCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public CallbackDispatchCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, CrestApps.Core.ContactCenter.Services.ICallbackService callbackService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.CallbackDispatchCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class CallbackRequestManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.CallbackRequest>, CrestApps.Core.ContactCenter.Services.ICallbackRequestManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.CallbackRequest>
+    {
+        public CallbackRequestManager(CrestApps.Core.ContactCenter.Services.ICallbackRequestStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.CallbackRequest>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.CallbackRequest>> logger) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.CallbackRequest>> GetDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class CampaignRoutingQueue
+    {
+        public static CrestApps.Core.ContactCenter.Models.ActivityQueue Create(string queueId) { }
+    }
+    public sealed class CapacityRoutingStrategy : CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy
+    {
+        public CapacityRoutingStrategy() { }
+        public int Order { get; }
+        public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.Core.ContactCenter.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterAssistService : CrestApps.Core.ContactCenter.Services.IContactCenterAssistService
+    {
+        public ContactCenterAssistService(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IContactCenterAssistProvider> providers) { }
+        public bool IsAvailable { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.DispositionSuggestion> SuggestDispositionAsync(CrestApps.Core.ContactCenter.Models.AssistContext context, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<string> SummarizeAsync(CrestApps.Core.ContactCenter.Models.AssistContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class ContactCenterClaimKeys
+    {
+        public static string BuildEventIdempotencyClaim(string idempotencyKey, string itemId) { }
+        public static string BuildProviderCallClaim(string providerName, string providerCallId, string itemId) { }
+        public static string BuildProviderDomainEventIdempotencyKey(string providerEventKey, string eventType) { }
+        public static string BuildProviderEventIdempotencyKey(string providerName, string idempotencyKey) { }
+    }
+    public sealed class ContactCenterConfigurationCache : CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationCache
+    {
+        public ContactCenterConfigurationCache(CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationChangeNotifier changeNotifier) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<T>> GetEnabledAsync<T>(System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<T>>> factory, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task InvalidateEnabledAsync<T>() { }
+    }
+    public sealed class ContactCenterConfigurationCacheInvalidationHandler<T> : CrestApps.Core.Handlers.CatalogEntryHandlerBase<T>
+        where T :  class
+    {
+        public ContactCenterConfigurationCacheInvalidationHandler(CrestApps.Core.Hosting.IAfterCommitTaskQueue afterCommitTaskQueue) { }
+        public override System.Threading.Tasks.Task CreatedAsync(CrestApps.Core.Models.CreatedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task DeletedAsync(CrestApps.Core.Models.DeletedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task UpdatedAsync(CrestApps.Core.Models.UpdatedContext<T> context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterCoordinationOptionsValidator : Microsoft.Extensions.Options.IValidateOptions<CrestApps.Core.ContactCenter.Models.ContactCenterCoordinationOptions>
+    {
+        public ContactCenterCoordinationOptionsValidator() { }
+        public Microsoft.Extensions.Options.ValidateOptionsResult Validate(string name, CrestApps.Core.ContactCenter.Models.ContactCenterCoordinationOptions options) { }
+    }
+    public static class ContactCenterDataGovernanceCatalog
+    {
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.ContactCenterDataCategory> Categories { get; }
+        public static bool TryGet(string key, out CrestApps.Core.ContactCenter.Models.ContactCenterDataCategory category) { }
+    }
+    public sealed class ContactCenterEntryPointManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>, CrestApps.Core.ContactCenter.Services.IContactCenterEntryPointManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>
+    {
+        public ContactCenterEntryPointManager(CrestApps.Core.ContactCenter.Services.IContactCenterEntryPointStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>> handlers, CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterEventDispatchContext
+    {
+        public ContactCenterEventDispatchContext(CrestApps.Core.ContactCenter.Services.IInteractionEventStore eventStore, CrestApps.Core.ContactCenter.Services.IContactCenterOutbox outbox, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ContactCenterEventDispatchContext> logger) { }
+        public System.Threading.Tasks.Task DispatchAsync(string eventId) { }
+    }
+    public sealed class ContactCenterHubConnectionRegistry
+    {
+        public ContactCenterHubConnectionRegistry() { }
+        public void Activate() { }
+        public void Quiesce() { }
+        public bool Register(Microsoft.AspNetCore.SignalR.HubCallerContext context) { }
+        public void Unregister(string connectionId) { }
+    }
+    public static class ContactCenterMetricDateKey
+    {
+        public const string Format = "yyyy-MM-dd";
+        public static string From(System.DateTime occurredUtc) { }
+        public static System.DateTime Parse(string dateKey) { }
+    }
+    public sealed class ContactCenterMetricRollupCycle : CrestApps.Core.ContactCenter.Services.IContactCenterMetricRollupCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public ContactCenterMetricRollupCycle(CrestApps.Core.ContactCenter.Services.IContactCenterMetricRollupService rollupService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ContactCenterMetricRollupCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterMetricsProjectionMaintenanceService : CrestApps.Core.ContactCenter.Services.IContactCenterMetricsProjectionMaintenanceService
+    {
+        public ContactCenterMetricsProjectionMaintenanceService(CrestApps.Core.ContactCenter.Services.IInteractionEventStore eventStore, CrestApps.Core.ContactCenter.Services.IContactCenterMetricStore metricStore, CrestApps.Core.ContactCenter.Services.IContactCenterMetricDeltaStore deltaStore, CrestApps.Core.ContactCenter.Services.IContactCenterProjectionCheckpointStore checkpointStore, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionDrift>> DetectDriftAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> RebuildAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterMetricsService : CrestApps.Core.ContactCenter.Services.IContactCenterMetricsService
+    {
+        public ContactCenterMetricsService(CrestApps.Core.ContactCenter.Services.IContactCenterMetricStore store, CrestApps.Core.ContactCenter.Services.IContactCenterMetricDeltaStore deltaStore, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, long>> GetSummaryAsync(System.DateOnly fromDate, System.DateOnly toDate, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordAsync(string eventType, System.DateTime occurredUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterRetentionCycle : CrestApps.Core.ContactCenter.Services.IContactCenterRetentionCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public ContactCenterRetentionCycle(CrestApps.Core.ContactCenter.Services.IContactCenterRetentionService retentionService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ContactCenterRetentionCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterSkillManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>, CrestApps.Core.ContactCenter.Services.IContactCenterSkillManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>
+    {
+        public ContactCenterSkillManager(CrestApps.Core.ContactCenter.Services.IContactCenterSkillStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>> handlers, CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterSkill> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterTopologyState
+    {
+        public ContactCenterTopologyState() { }
+        public bool IsAdmissible { get; }
+        public CrestApps.Core.ContactCenter.Models.ContactCenterTopologyValidationResult Result { get; }
+        public void Record(CrestApps.Core.ContactCenter.Models.ContactCenterTopologyValidationResult result) { }
+    }
+    public sealed class ContactCenterVoiceMediaProviderResolver : CrestApps.Core.ContactCenter.IContactCenterVoiceMediaProviderResolver
+    {
+        public ContactCenterVoiceMediaProviderResolver(CrestApps.Core.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.IContactCenterVoiceMediaProvider> mediaProviders) { }
+        public CrestApps.Core.ContactCenter.IContactCenterVoiceMediaProvider Get(string technicalName = null) { }
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.IContactCenterVoiceMediaProvider> GetAll() { }
+    }
+    public sealed class ContactCenterVoiceProjection : CrestApps.Core.Telephony.Services.INormalizedVoiceEventHandler
+    {
+        public ContactCenterVoiceProjection(CrestApps.Core.ContactCenter.IProviderVoiceEventSink providerVoiceEventSink, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ContactCenterVoiceProjection> logger) { }
+        public int Order { get; }
+        public System.Threading.Tasks.Task<bool> HandleAsync(CrestApps.Core.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterWorkStateManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>, CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>
+    {
+        public ContactCenterWorkStateManager(CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>> GetByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class ContactCenterWorkStateProjector
+    {
+        public static void Apply(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, CrestApps.Core.ContactCenter.Models.ContactCenterWorkState workState) { }
+        public static bool HasDivergence(CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity, CrestApps.Core.ContactCenter.Models.ContactCenterWorkState workState) { }
+        public static void SeedFromActivity(CrestApps.Core.ContactCenter.Models.ContactCenterWorkState workState, CrestApps.Core.Omnichannel.Models.OmnichannelActivity activity) { }
+    }
+    public sealed class ContactCenterWorkStateService : CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateService
+    {
+        public ContactCenterWorkStateService(CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateManager workStateManager, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateActivityProjection> activityProjections, CrestApps.Core.ContactCenter.Services.IContactCenterScopeExecutor scopeExecutor, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState> GetAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState> MutateAsync(string activityItemId, System.Action<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState> mutate, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultBusinessHoursService : CrestApps.Core.ContactCenter.Services.IBusinessHoursService
+    {
+        public DefaultBusinessHoursService(CrestApps.Core.ContactCenter.Services.IBusinessHoursCalendarManager calendarManager, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<bool?> EvaluateAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default) { }
+        public static bool IsOpen(CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar calendar, System.DateTime utcInstant) { }
+        public static bool IsOpen(CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar calendar, System.DateTime utcInstant, string timeZoneId) { }
+    }
+    public sealed class DefaultContactCenterEventPublisher : CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher
+    {
+        public DefaultContactCenterEventPublisher(CrestApps.Core.ContactCenter.Services.IInteractionEventStore eventStore, CrestApps.Core.ContactCenter.Services.IContactCenterOutbox outbox, CrestApps.Core.ContactCenter.Services.IContactCenterScopeExecutor scopeExecutor, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.DefaultContactCenterEventPublisher> logger) { }
+        public System.Threading.Tasks.Task PublishAsync(CrestApps.Core.ContactCenter.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultDialerAbandonmentPolicyService : CrestApps.Core.ContactCenter.Services.IDialerAbandonmentPolicyService
+    {
+        public DefaultDialerAbandonmentPolicyService(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IDialerAbandonmentStatisticsProvider> statisticsProviders, Microsoft.Extensions.Options.IOptions<CrestApps.Core.ContactCenter.Models.ContactCenterComplianceOptions> options) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.DialerAbandonmentEvaluation> EvaluateAsync(CrestApps.Core.ContactCenter.Models.DialerProfile profile, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DefaultInteractionEventUpcastService : CrestApps.Core.ContactCenter.Services.IInteractionEventUpcastService
+    {
+        public DefaultInteractionEventUpcastService(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IInteractionEventUpcaster> upcasters) { }
+        public DefaultInteractionEventUpcastService(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IInteractionEventUpcaster> upcasters, int currentVersion) { }
+        public void Upcast(CrestApps.Core.ContactCenter.Models.InteractionEvent interactionEvent) { }
+    }
+    public sealed class DialerAttemptCompensationService : CrestApps.Core.ContactCenter.Services.IDialerAttemptCompensationService
+    {
+        public DialerAttemptCompensationService(CrestApps.Core.ContactCenter.Services.IActivityReservationService reservationService) { }
+        public System.Threading.Tasks.Task CompensateAsync(CrestApps.Core.ContactCenter.Models.ActivityReservation reservation, bool removeFromQueue, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerPacingCycle : CrestApps.Core.ContactCenter.Services.IDialerPacingCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public DialerPacingCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, CrestApps.Core.ContactCenter.Services.IDialerProfileManager dialerManager, CrestApps.Core.ContactCenter.Services.IDialerService dialerService, CrestApps.Core.ContactCenter.Services.IQueueItemStore queueItemStore, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.DialerPacingCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerProfileManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.DialerProfile>, CrestApps.Core.ContactCenter.Services.IDialerProfileManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.DialerProfile>
+    {
+        public DialerProfileManager(CrestApps.Core.ContactCenter.Services.IDialerProfileStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.DialerProfile>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.DialerProfile>> logger) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerProfileManagerReader : CrestApps.Core.ContactCenter.Services.IDialerProfileReader
+    {
+        public DialerProfileManagerReader(CrestApps.Core.ContactCenter.Services.IDialerProfileManager manager) { }
+        public System.Threading.Tasks.ValueTask<CrestApps.Core.ContactCenter.Models.DialerProfile> FindByIdAsync(string itemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerService : CrestApps.Core.ContactCenter.Services.IDialerService
+    {
+        public DialerService(CrestApps.Core.ContactCenter.Services.IVoiceContactCenterCallRouter voiceCallRouter, CrestApps.Core.ContactCenter.Services.IDialerStrategyResolver strategyResolver, CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.DialerService> logger) { }
+        public System.Threading.Tasks.Task<int> RunCycleAsync(CrestApps.Core.ContactCenter.Models.DialerProfile profile, string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public abstract class DialerStrategyBase : CrestApps.Core.ContactCenter.Services.IDialerStrategy
+    {
+        protected DialerStrategyBase(CrestApps.Core.ContactCenter.Services.IActivityAssignmentService assignmentService, CrestApps.Core.ContactCenter.Services.IDialerAttemptService attemptService) { }
+        public abstract CrestApps.Core.ContactCenter.Models.DialerMode Mode { get; }
+        protected abstract System.Threading.Tasks.Task<int> GetMaxAttemptsPerCycleAsync(CrestApps.Core.ContactCenter.Models.DialerProfile profile, System.Threading.CancellationToken cancellationToken);
+        public System.Threading.Tasks.Task<int> RunCycleAsync(CrestApps.Core.ContactCenter.Models.DialerProfile profile, string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerStrategyResolver : CrestApps.Core.ContactCenter.Services.IDialerStrategyResolver
+    {
+        public DialerStrategyResolver(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IDialerStrategy> strategies) { }
+        public CrestApps.Core.ContactCenter.Services.IDialerStrategy Resolve(CrestApps.Core.ContactCenter.Models.DialerMode mode) { }
+    }
+    public sealed class DirectRingTimeoutCycle : CrestApps.Core.ContactCenter.Services.IDirectRingTimeoutCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public DirectRingTimeoutCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IDirectHoldTimeoutService> directHoldTimeoutServices, CrestApps.Core.ContactCenter.Services.IContactCenterScopeExecutor scopeExecutor, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.DirectRingTimeoutCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EntryPointFlowResolver : CrestApps.Core.ContactCenter.Services.IEntryPointFlowResolver
+    {
+        public const string EntryPointMetadataKey = "ivrEntryPointId";
+        public EntryPointFlowResolver(CrestApps.Core.ContactCenter.Services.IContactCenterEntryPointManager entryPointManager) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.IvrFlow> FindFlowAsync(CrestApps.Core.ContactCenter.Models.Interaction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EntryPointResolver : CrestApps.Core.ContactCenter.Services.IEntryPointResolver
+    {
+        public EntryPointResolver(CrestApps.Core.ContactCenter.Services.IContactCenterEntryPointManager entryPointManager, CrestApps.Core.ContactCenter.Services.IBusinessHoursService businessHours) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint> FindByDialedNumberAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.EntryPointRoutingPlan> ResolveAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class EntryPointResolverChain : CrestApps.Core.ContactCenter.Services.IEntryPointResolver
+    {
+        public EntryPointResolverChain(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IEntryPointResolver> resolvers) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint> FindByDialedNumberAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.EntryPointRoutingPlan> ResolveAsync(string dialedNumber, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class EntryPointRoutingPlanner
+    {
+        public static CrestApps.Core.ContactCenter.Models.EntryPointRoutingPlan CreatePlan(CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint entryPoint, bool isOpen) { }
+    }
+    public static class EstimatedWaitTimeCalculator
+    {
+        public static System.TimeSpan? Estimate(int position, int availableAgents, System.TimeSpan averageHandleTime, CrestApps.Core.ContactCenter.Models.QueueTreatmentSettings options) { }
+    }
+    public sealed class InboundPriorityResolver : CrestApps.Core.ContactCenter.Services.IInboundPriorityResolver
+    {
+        public InboundPriorityResolver(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Services.IInboundPriorityContributor> contributors) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.InteractionPriority> ResolveAsync(CrestApps.Core.ContactCenter.Models.InboundPriorityContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class InboundVoiceDigitsSink : CrestApps.Core.ContactCenter.Services.IInboundVoiceDigitsSink
+    {
+        public InboundVoiceDigitsSink(CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.IEntryPointFlowResolver flowResolver, CrestApps.Core.ContactCenter.Services.IIvrExecutionService ivrExecutionService, CrestApps.Core.ContactCenter.Services.IActivityQueueService queueService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.InboundVoiceDigitsSink> logger) { }
+        public System.Threading.Tasks.Task<bool> HandleDigitsAsync(CrestApps.Core.ContactCenter.Services.InboundVoiceDigitsEvent digitsEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class InboundVoiceEventSink : CrestApps.Core.ContactCenter.IInboundVoiceEventSink
+    {
+        public InboundVoiceEventSink(CrestApps.Core.ContactCenter.Services.IVoiceContactCenterCallRouter voiceCallRouter) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.InboundVoiceRouteOutcome> RouteAsync(CrestApps.Core.ContactCenter.Models.InboundVoiceEvent inboundEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class InboundVoiceInteractionProbe : CrestApps.Core.ContactCenter.IInboundVoiceInteractionProbe
+    {
+        public InboundVoiceInteractionProbe(CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager) { }
+        public System.Threading.Tasks.Task<bool> HasActiveInteractionAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class InteractionManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.Interaction>, CrestApps.Core.ContactCenter.Services.IInteractionManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.Interaction>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.Interaction>
+    {
+        public InteractionManager(CrestApps.Core.ContactCenter.Services.IInteractionStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.Interaction>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.Interaction>> logger) { }
+        public System.Threading.Tasks.Task<int> CountActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> CountActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindByCorrelationIdAsync(string correlationId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindByProviderInteractionIdAsync(string providerName, string providerInteractionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.Core.ContactCenter.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.Core.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class IvrExecutionService : CrestApps.Core.ContactCenter.Services.IIvrExecutionService
+    {
+        public const string StateMetadataKey = "ivrFlowState";
+        public IvrExecutionService(CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.IIvrProvider ivrProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.IvrExecutionService> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.IvrStep> HandleDigitsAsync(CrestApps.Core.ContactCenter.Models.Interaction interaction, CrestApps.Core.ContactCenter.Models.IvrFlow flow, string digits, string deliveryId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.IvrStep> StartAsync(CrestApps.Core.ContactCenter.Models.Interaction interaction, CrestApps.Core.ContactCenter.Models.IvrFlow flow, System.Threading.CancellationToken cancellationToken = default) { }
+        public static CrestApps.Core.ContactCenter.Models.IvrFlowState ReadState(CrestApps.Core.ContactCenter.Models.Interaction interaction) { }
+    }
+    public static class IvrFlowStateMachine
+    {
+        public static CrestApps.Core.ContactCenter.Models.IvrStep Advance(CrestApps.Core.ContactCenter.Models.IvrFlow flow, CrestApps.Core.ContactCenter.Models.IvrFlowState state, string digits, string deliveryId, string forNodeId = null) { }
+        public static CrestApps.Core.ContactCenter.Models.IvrStep Start(CrestApps.Core.ContactCenter.Models.IvrFlow flow, CrestApps.Core.ContactCenter.Models.IvrFlowState state) { }
+    }
+    public static class IvrFlowValidator
+    {
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.IvrFlowValidationError> Validate(CrestApps.Core.ContactCenter.Models.IvrFlow flow) { }
+    }
+    public sealed class LeastBusyRoutingStrategy : CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy
+    {
+        public LeastBusyRoutingStrategy() { }
+        public int Order { get; }
+        public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.Core.ContactCenter.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class LongestIdleRoutingStrategy : CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy
+    {
+        public LongestIdleRoutingStrategy() { }
+        public int Order { get; }
+        public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.Core.ContactCenter.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class MaskingSecureCaptureTokenSink : CrestApps.Core.ContactCenter.ISecureCaptureTokenSink
+    {
+        public MaskingSecureCaptureTokenSink() { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureTokenResult> TokenizeAsync(CrestApps.Core.ContactCenter.Models.SecureCaptureField field, string rawValue, string idempotencyKey, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NoAgentWorkStateHealingService : CrestApps.Core.ContactCenter.Services.IAgentWorkStateHealingService
+    {
+        public NoAgentWorkStateHealingService() { }
+        public System.Threading.Tasks.Task<int> HealForAvailabilityAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> HealForResetAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NoCallbackService : CrestApps.Core.ContactCenter.Services.ICallbackService
+    {
+        public NoCallbackService() { }
+        public System.Threading.Tasks.Task<int> PromoteDueAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallbackRequest> ScheduleAsync(CrestApps.Core.ContactCenter.Models.CallbackRequest callback, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NoIvrProvider : CrestApps.Core.ContactCenter.Services.IIvrProvider
+    {
+        public NoIvrProvider() { }
+        public System.Threading.Tasks.Task<bool> PromptAsync(string providerCallId, string text, string mediaId, string validDigits, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NoProviderCallStateSynchronizationService : CrestApps.Core.ContactCenter.Services.IProviderCallStateSynchronizationService
+    {
+        public NoProviderCallStateSynchronizationService(Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.NoProviderCallStateSynchronizationService> logger) { }
+        public System.Threading.Tasks.Task<int> ReconcileActiveInteractionsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> ReconcileProviderInteractionsAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> RefreshInteractionAsync(CrestApps.Core.ContactCenter.Models.Interaction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NoQueueTreatmentProvider : CrestApps.Core.ContactCenter.Services.IQueueTreatmentProvider
+    {
+        public NoQueueTreatmentProvider() { }
+        public System.Threading.Tasks.Task OfferChoiceAsync(string providerCallId, string text, string acceptKey, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task SpeakAsync(string providerCallId, string text, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StartHoldMusicAsync(string providerCallId, string mediaId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StopHoldMusicAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NoQueuedVoiceWorkOfferService : CrestApps.Core.ContactCenter.Services.IQueuedVoiceWorkOfferService
+    {
+        public NoQueuedVoiceWorkOfferService() { }
+        public System.Threading.Tasks.Task<int> OfferForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> OfferForUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NoWaitingCallVoicemailSink : CrestApps.Core.ContactCenter.Services.IWaitingCallVoicemailSink
+    {
+        public NoWaitingCallVoicemailSink() { }
+        public System.Threading.Tasks.Task<bool> SendToVoicemailAsync(CrestApps.Core.ContactCenter.Models.QueueItem item, string reasonCode, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class NullDialerProfileReader : CrestApps.Core.ContactCenter.Services.IDialerProfileReader
+    {
+        public NullDialerProfileReader() { }
+        public System.Threading.Tasks.ValueTask<CrestApps.Core.ContactCenter.Models.DialerProfile> FindByIdAsync(string itemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class OrphanedActivityRecoveryCycle : CrestApps.Core.ContactCenter.Services.IOrphanedActivityRecoveryCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public OrphanedActivityRecoveryCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, CrestApps.Core.ContactCenter.Services.IOrphanedActivityRecoveryService recoveryService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.OrphanedActivityRecoveryCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class OutboxDispatchCycle : CrestApps.Core.ContactCenter.Services.IOutboxDispatchCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public OutboxDispatchCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, CrestApps.Core.ContactCenter.Services.IContactCenterOutbox outbox, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.OutboxDispatchCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class OverflowScheduler
+    {
+        public static System.DateTime? GetNextDueUtc(CrestApps.Core.ContactCenter.Models.QueueItem item, CrestApps.Core.ContactCenter.Models.ActivityQueue queue) { }
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.QueueOverflowTarget> GetOrderedTargets(CrestApps.Core.ContactCenter.Models.ActivityQueue queue) { }
+        public static bool HasAnyTarget(CrestApps.Core.ContactCenter.Models.ActivityQueue queue) { }
+        public static string SelectFirstEligibleTarget(CrestApps.Core.ContactCenter.Models.QueueItem item, CrestApps.Core.ContactCenter.Models.ActivityQueue queue) { }
+        public static string SelectNextTarget(CrestApps.Core.ContactCenter.Models.QueueItem item, CrestApps.Core.ContactCenter.Models.ActivityQueue queue, System.DateTime nowUtc) { }
+    }
+    public sealed class PowerDialerStrategy : CrestApps.Core.ContactCenter.Services.DialerStrategyBase
+    {
+        public const int MaxCallsPerAgent = 3;
+        public PowerDialerStrategy(CrestApps.Core.ContactCenter.Services.IActivityAssignmentService assignmentService, CrestApps.Core.ContactCenter.Services.IDialerAttemptService attemptService) { }
+        public override CrestApps.Core.ContactCenter.Models.DialerMode Mode { get; }
+        protected override System.Threading.Tasks.Task<int> GetMaxAttemptsPerCycleAsync(CrestApps.Core.ContactCenter.Models.DialerProfile profile, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public static class PredictiveDialerPacing
+    {
+        public const int MaxCallsPerAgent = 3;
+        public const double ThrottleThreshold = 0.5D;
+        public static int CalculatePace(CrestApps.Core.ContactCenter.Models.DialerProfile profile, int availableAgents, double measuredAbandonmentPercent) { }
+    }
+    public sealed class PredictiveDialerStrategy : CrestApps.Core.ContactCenter.Services.DialerStrategyBase
+    {
+        public PredictiveDialerStrategy(CrestApps.Core.ContactCenter.Services.IActivityAssignmentService assignmentService, CrestApps.Core.ContactCenter.Services.IDialerAttemptService attemptService, CrestApps.Core.ContactCenter.Services.IDialerAbandonmentPolicyService abandonmentPolicy) { }
+        public override CrestApps.Core.ContactCenter.Models.DialerMode Mode { get; }
+        protected override System.Threading.Tasks.Task<int> GetMaxAttemptsPerCycleAsync(CrestApps.Core.ContactCenter.Models.DialerProfile profile, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class PreferredSkillsRoutingStrategy : CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy
+    {
+        public PreferredSkillsRoutingStrategy() { }
+        public int Order { get; }
+        public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.Core.ContactCenter.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProgressiveDialerStrategy : CrestApps.Core.ContactCenter.Services.DialerStrategyBase
+    {
+        public const int MaxCallsPerCycle = 100;
+        public ProgressiveDialerStrategy(CrestApps.Core.ContactCenter.Services.IActivityAssignmentService assignmentService, CrestApps.Core.ContactCenter.Services.IDialerAttemptService attemptService) { }
+        public override CrestApps.Core.ContactCenter.Models.DialerMode Mode { get; }
+        protected override System.Threading.Tasks.Task<int> GetMaxAttemptsPerCycleAsync(CrestApps.Core.ContactCenter.Models.DialerProfile profile, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ProviderCallStateReconciler : CrestApps.Core.ContactCenter.IProviderCallStateReconciler
+    {
+        public ProviderCallStateReconciler(CrestApps.Core.ContactCenter.Services.IProviderCallStateSynchronizationService synchronizationService) { }
+        public System.Threading.Tasks.Task<int> ReconcileAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderCallStateReconciliationCycle : CrestApps.Core.ContactCenter.Services.IProviderCallStateReconciliationCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public ProviderCallStateReconciliationCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, CrestApps.Core.ContactCenter.Services.IVoiceLifecycleReconciler participant, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ProviderCallStateReconciliationCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderCommandFenceException : System.InvalidOperationException
+    {
+        public ProviderCommandFenceException(string commandId, long expectedFenceToken, long providedFenceToken) { }
+        public string CommandId { get; }
+        public long ExpectedFenceToken { get; }
+        public long ProvidedFenceToken { get; }
+    }
+    public sealed class ProviderCommandManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ProviderCommand>, CrestApps.Core.ContactCenter.Services.IProviderCommandManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.ProviderCommand>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.ProviderCommand>
+    {
+        public ProviderCommandManager(CrestApps.Core.ContactCenter.Services.IProviderCommandStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.ProviderCommand>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.ProviderCommand>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ProviderCommand> FindByCommandIdAsync(string commandId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ProviderCommand>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ProviderCommand>> GetReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderCommandRecoveryCycle : CrestApps.Core.ContactCenter.Services.IProviderCommandRecoveryCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public ProviderCommandRecoveryCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, CrestApps.Core.ContactCenter.Services.IProviderCommandProcessor processor, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ProviderCommandRecoveryCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderCommandTransitionException : System.InvalidOperationException
+    {
+        public ProviderCommandTransitionException(string commandId, CrestApps.Core.ContactCenter.Models.ProviderCommandStatus from, CrestApps.Core.ContactCenter.Models.ProviderCommandStatus to) { }
+        public string CommandId { get; }
+        public CrestApps.Core.ContactCenter.Models.ProviderCommandStatus From { get; }
+        public CrestApps.Core.ContactCenter.Models.ProviderCommandStatus To { get; }
+    }
+    public sealed class ProviderVoiceEventInboxHandler : CrestApps.Core.ContactCenter.IProviderWebhookInboxHandler
+    {
+        public const string HandlerTechnicalName = "provider-voice-event";
+        public ProviderVoiceEventInboxHandler(CrestApps.Core.ContactCenter.Services.IProviderVoiceEventService providerVoiceEventService) { }
+        public CrestApps.Core.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
+        public string TechnicalName { get; }
+        public System.Threading.Tasks.Task HandleAsync(string payload, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderVoiceEventSink : CrestApps.Core.ContactCenter.IProviderVoiceEventSink
+    {
+        public ProviderVoiceEventSink(CrestApps.Core.ContactCenter.Services.IProviderVoiceEventService providerVoiceEventService) { }
+        public System.Threading.Tasks.Task<bool> IngestAsync(CrestApps.Core.Telephony.Models.ProviderVoiceEvent providerEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderWebhookInboxCycle : CrestApps.Core.ContactCenter.Services.IProviderWebhookInboxCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public ProviderWebhookInboxCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, CrestApps.Core.ContactCenter.IProviderWebhookInbox inbox, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ProviderWebhookInboxCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderWebhookIngressLimiter : CrestApps.Core.ContactCenter.IProviderWebhookIngressLimiter, System.IDisposable
+    {
+        public ProviderWebhookIngressLimiter(Microsoft.Extensions.Options.IOptions<CrestApps.Core.ContactCenter.Models.ProviderWebhookIngressOptions> options, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.ValueTask<CrestApps.Core.ContactCenter.Models.ProviderWebhookIngressLease> AcquireConcurrencyAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.ValueTask<CrestApps.Core.ContactCenter.Models.ProviderWebhookIngressLease> AcquireRateAsync(string provider, System.Threading.CancellationToken cancellationToken = default) { }
+        public void Dispose() { }
+        public bool IsFresh(System.DateTime? occurredUtc) { }
+    }
+    public sealed class QueueItemManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.QueueItem>, CrestApps.Core.ContactCenter.Services.IQueueItemManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.QueueItem>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.QueueItem>
+    {
+        public QueueItemManager(CrestApps.Core.ContactCenter.Services.IQueueItemStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.QueueItem>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.QueueItem>> logger) { }
+        public System.Threading.Tasks.Task<int> CountWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> CountWaitingByQueueIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> queueIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> CountWaitingOlderThanAsync(string queueId, System.DateTime thresholdUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.QueueItem> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.QueueItem> FindLongestWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.QueueItem> FindNextWaitingAsync(CrestApps.Core.ContactCenter.Models.ActivityQueue queue, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class QueueItemPrioritizer
+    {
+        public static int GetEffectivePriority(CrestApps.Core.ContactCenter.Models.QueueItem item, CrestApps.Core.ContactCenter.Models.ActivityQueue queue, System.DateTime utcNow) { }
+        public static CrestApps.Core.ContactCenter.Models.QueueItem SelectNext(System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.QueueItem> waiting, CrestApps.Core.ContactCenter.Models.ActivityQueue queue, System.DateTime utcNow) { }
+    }
+    public sealed class QueueLimitService : CrestApps.Core.ContactCenter.Services.IQueueLimitService
+    {
+        public QueueLimitService(CrestApps.Core.ContactCenter.Services.IQueueItemManager queueItemManager, CrestApps.Core.ContactCenter.Services.IActivityQueueManager queueManager, CrestApps.Core.ContactCenter.Services.IActivityQueueService queueService, CrestApps.Core.ContactCenter.Services.IWaitingCallVoicemailSink voicemailSink, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.QueueLimitService> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.QueueAdmissionDecision> AdmitAsync(CrestApps.Core.ContactCenter.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> EnforceMaxWaitAsync(CrestApps.Core.ContactCenter.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class QueueTreatmentCycle : CrestApps.Core.ContactCenter.Services.IQueueTreatmentCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public QueueTreatmentCycle(CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.QueueTreatmentCycle> logger, CrestApps.Core.ContactCenter.Services.IContactCenterScopeExecutor scopeExecutor) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class QueueTreatmentPolicy
+    {
+        public static CrestApps.Core.ContactCenter.Models.QueueTreatmentStep GetNextStep(CrestApps.Core.ContactCenter.Models.QueueItem item, CrestApps.Core.ContactCenter.Models.QueueTreatmentSettings options, System.DateTime nowUtc) { }
+    }
+    public sealed class QueueTreatmentService : CrestApps.Core.ContactCenter.Services.IQueueTreatmentService
+    {
+        public QueueTreatmentService(CrestApps.Core.ContactCenter.Services.IQueueItemManager queueItemManager, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.IQueueTreatmentProvider treatmentProvider, CrestApps.Core.ContactCenter.Services.IAgentAvailabilityService availabilityService, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.QueueTreatmentService> logger) { }
+        public System.Threading.Tasks.Task<int> RunDueAsync(CrestApps.Core.ContactCenter.Models.ActivityQueue queue, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StartHoldMusicAsync(CrestApps.Core.ContactCenter.Models.ActivityQueue queue, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class QueuedCallbackService : CrestApps.Core.ContactCenter.Services.IQueuedCallbackService
+    {
+        public QueuedCallbackService(CrestApps.Core.ContactCenter.Services.ICallbackService callbackService, CrestApps.Core.ContactCenter.Services.IQueueItemManager queueItemManager, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.QueuedCallbackService> logger) { }
+        public System.Threading.Tasks.Task<bool> AcceptAsync(CrestApps.Core.ContactCenter.Models.QueueItem item, string destination, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class RecordingAccessGovernanceService : CrestApps.Core.ContactCenter.Services.IRecordingAccessGovernanceService
+    {
+        public RecordingAccessGovernanceService(CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.ICallSessionManager callSessionManager, CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher publisher, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.RecordingErasureDecision> EraseAsync(string interactionId, string actorId, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> RecordAccessAsync(string interactionId, string actorId, string purpose, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class RecordingGovernancePolicy : CrestApps.Core.ContactCenter.Services.IRecordingGovernancePolicy
+    {
+        public RecordingGovernancePolicy(Microsoft.Extensions.Options.IOptionsMonitor<CrestApps.Core.ContactCenter.Models.ContactCenterRecordingSettings> settings, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.RecordingGovernanceDecision> EvaluateStartAsync(CrestApps.Core.ContactCenter.Models.Interaction interaction, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class RepeatCallerPriorityContributor : CrestApps.Core.ContactCenter.Services.IInboundPriorityContributor
+    {
+        public static readonly System.TimeSpan RepeatWindow;
+        public RepeatCallerPriorityContributor(System.TimeProvider timeProvider) { }
+        public int Order { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.InteractionPriority?> ContributeAsync(CrestApps.Core.ContactCenter.Models.InboundPriorityContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class RequiredSkillsRoutingStrategy : CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy
+    {
+        public RequiredSkillsRoutingStrategy(System.TimeProvider timeProvider) { }
+        public int Order { get; }
+        public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.Core.ContactCenter.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class RetentionCutoffCalculator
+    {
+        public static bool TryComputeCutoff(System.DateTime nowUtc, CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options, out System.DateTime cutoffUtc) { }
+        public static bool TryComputeCutoff(System.DateTime nowUtc, double retentionDays, double minimumRetentionDays, out System.DateTime cutoffUtc) { }
+    }
+    public sealed class ReturningCallbackPriorityContributor : CrestApps.Core.ContactCenter.Services.IInboundPriorityContributor
+    {
+        public ReturningCallbackPriorityContributor() { }
+        public int Order { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.InteractionPriority?> ContributeAsync(CrestApps.Core.ContactCenter.Models.InboundPriorityContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class RoundRobinRoutingStrategy : CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy
+    {
+        public RoundRobinRoutingStrategy() { }
+        public int Order { get; }
+        public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.Core.ContactCenter.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class SecureCaptureAccessToken
+    {
+        [return: System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "RawToken",
+                "Hash"})]
+        public static System.ValueTuple<string, string> Create() { }
+        public static string Hash(string rawToken) { }
+    }
+    public sealed class SecureCaptureExpiryCycle : CrestApps.Core.ContactCenter.Services.ISecureCaptureExpiryCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public SecureCaptureExpiryCycle(CrestApps.Core.ContactCenter.Services.ISecureCaptureService secureCaptureService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.SecureCaptureExpiryCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SecureCaptureService : CrestApps.Core.ContactCenter.Services.ISecureCaptureService
+    {
+        public SecureCaptureService(CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.ISecureCaptureSessionManager sessionManager, CrestApps.Core.ContactCenter.Services.ICallControlAuthorizationService callControlAuthorizationService, CrestApps.Core.ContactCenter.ISecureCaptureTokenSink tokenSink, CrestApps.Core.ContactCenter.Services.IContactCenterRecordingService recordingService, CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher publisher, Microsoft.Extensions.Options.IOptionsMonitor<CrestApps.Core.ContactCenter.Models.SecureCaptureSettings> settings, System.TimeProvider timeProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.SecureCaptureService> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureBeginResult> BeginAsync(string interactionId, string userId, System.Security.Claims.ClaimsPrincipal principal, System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.SecureCaptureField> fields, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureActionResult> CancelAsync(string sessionId, string userId, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> ExpireDueAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureSession> GetForCustomerAsync(string rawAccessToken, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> RecoverRecordingResumesAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureActionResult> SubmitAsync(string rawAccessToken, System.Collections.Generic.IReadOnlyDictionary<CrestApps.Core.ContactCenter.Models.SecureCaptureField, string> values, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SecureCaptureSessionManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>, CrestApps.Core.ContactCenter.Services.ISecureCaptureSessionManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>
+    {
+        public SecureCaptureSessionManager(CrestApps.Core.ContactCenter.Services.ISecureCaptureSessionStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureSession> FindActiveByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureSession> FindByAccessTokenHashAsync(string accessTokenHash, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>> GetExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SecurePauseAutoResumeCycle : CrestApps.Core.ContactCenter.Services.ISecurePauseAutoResumeCycle, CrestApps.Core.Hosting.Background.IBackgroundCycle
+    {
+        public SecurePauseAutoResumeCycle(CrestApps.Core.ContactCenter.Services.ISecurePauseAutoResumeService autoResumeService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.SecurePauseAutoResumeCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SecurePauseAutoResumeService : CrestApps.Core.ContactCenter.Services.ISecurePauseAutoResumeService
+    {
+        public SecurePauseAutoResumeService(Microsoft.Extensions.Options.IOptionsMonitor<CrestApps.Core.ContactCenter.Models.ContactCenterRecordingSettings> settings, CrestApps.Core.ContactCenter.Services.IInteractionManager interactionManager, CrestApps.Core.ContactCenter.Services.IContactCenterRecordingService recordingService, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.IContactCenterRealTimeNotifier> realTimeNotifiers, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<int> ResumeExpiredAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class SkillMatching
+    {
+        public static int GetProficiency(CrestApps.Core.ContactCenter.Models.AgentProfile agent, string skillId) { }
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.QueueSkillRequirement> GetRequirements(CrestApps.Core.ContactCenter.Models.ActivityQueue queue) { }
+        public static bool IsRelaxed(CrestApps.Core.ContactCenter.Models.QueueSkillRequirement requirement, System.TimeSpan waited) { }
+    }
+    public sealed class StickyAgentRoutingStrategy : CrestApps.Core.ContactCenter.Services.IActivityRoutingStrategy
+    {
+        public StickyAgentRoutingStrategy() { }
+        public int Order { get; }
+        public System.Threading.Tasks.ValueTask ApplyAsync(CrestApps.Core.ContactCenter.Models.ActivityRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SupervisorQueueAuthorizationService : CrestApps.Core.ContactCenter.Services.ISupervisorQueueAuthorizationService
+    {
+        public SupervisorQueueAuthorizationService(Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager) { }
+        public System.Threading.Tasks.Task<bool> IsAuthorizedAsync(System.Security.Claims.ClaimsPrincipal principal, string userId, string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class TransferDestinationResolver : CrestApps.Core.ContactCenter.Services.ITransferDestinationResolver
+    {
+        public TransferDestinationResolver(Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.Core.ContactCenter.Services.IAgentProfileManager agentManager, CrestApps.Core.ContactCenter.Services.IActivityQueueManager queueManager, Microsoft.Extensions.Options.IOptionsMonitor<CrestApps.Core.ContactCenter.Models.ContactCenterExternalTransferSettings> settings, CrestApps.Core.Telephony.Services.IDialDestinationPolicy destinationPolicy) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.TransferDestinationResolutionResult> ResolveAsync(CrestApps.Core.ContactCenter.Models.TransferRequest request, System.Security.Claims.ClaimsPrincipal principal, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class UnconfiguredSecureCaptureTokenSink : CrestApps.Core.ContactCenter.ISecureCaptureTokenSink
+    {
+        public UnconfiguredSecureCaptureTokenSink() { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureTokenResult> TokenizeAsync(CrestApps.Core.ContactCenter.Models.SecureCaptureField field, string rawValue, string idempotencyKey, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class VoiceMediaItemManager : CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>, CrestApps.Core.ContactCenter.Services.IVoiceMediaItemManager, CrestApps.Core.Services.ICatalogManager<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>
+    {
+        public VoiceMediaItemManager(CrestApps.Core.ContactCenter.Services.IVoiceMediaItemStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>> logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace CrestApps.Core.ContactCenter.Services.Retention
+{
+    public sealed class ContactCenterRetentionBatchException : System.Exception
+    {
+        public ContactCenterRetentionBatchException(string entityName, int stagedBeforeFailure, System.Exception innerException) { }
+        public string EntityName { get; }
+        public int StagedBeforeFailure { get; }
+    }
+}

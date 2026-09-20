@@ -3,7 +3,7 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.Core.Telephony.Services;
@@ -17,6 +17,7 @@ using OrchardCore.Modules;
 using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

@@ -1,0 +1,58 @@
+using CrestApps.Core.ContactCenter;
+using CrestApps.Core.ContactCenter.Models;
+using Microsoft.Extensions.Options;
+
+namespace CrestApps.Core.ContactCenter.Services;
+
+/// <summary>
+/// Provides the default, fail-closed implementation of <see cref="IRecordingGovernancePolicy"/> that evaluates the
+/// tenant recording governance settings.
+/// </summary>
+public sealed class RecordingGovernancePolicy : IRecordingGovernancePolicy
+{
+    private readonly IOptionsMonitor<ContactCenterRecordingSettings> _settings;
+    private readonly TimeProvider _timeProvider;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RecordingGovernancePolicy"/> class.
+    /// </summary>
+    /// <param name="settings">The tenant recording governance settings.</param>
+    /// <param name="timeProvider">The time provider used to resolve the recording retention window.</param>
+    public RecordingGovernancePolicy(
+        IOptionsMonitor<ContactCenterRecordingSettings> settings,
+        TimeProvider timeProvider)
+    {
+        _settings = settings;
+        _timeProvider = timeProvider;
+    }
+
+    /// <inheritdoc/>
+    public Task<RecordingGovernanceDecision> EvaluateStartAsync(Interaction interaction, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        var settings = _settings.CurrentValue;
+
+        if (!settings.RecordingEnabled)
+        {
+            return Task.FromResult(RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.RecordingDisabled));
+        }
+
+        // Fail closed for any consent model that is not explicitly single-party (including an undefined persisted
+        // value): when explicit consent is required and none has been captured, recording is denied.
+        if (settings.RequireExplicitConsent &&
+            settings.ConsentModel != RecordingConsentModel.SingleParty &&
+            interaction.RecordingConsentCapturedUtc is null)
+        {
+            return Task.FromResult(RecordingGovernanceDecision.Deny(ContactCenterConstants.RecordingGovernanceDenyReason.ConsentRequired));
+        }
+
+        var retentionDays = Math.Clamp(settings.RetentionDays, 0, ContactCenterRecordingSettings.MaxRetentionDays);
+
+        var retainUntilUtc = retentionDays > 0
+            ? _timeProvider.GetUtcNow().UtcDateTime.AddDays(retentionDays)
+            : (DateTime?)null;
+
+        return Task.FromResult(RecordingGovernanceDecision.Allow(retainUntilUtc, settings.LegalHoldByDefault));
+    }
+}

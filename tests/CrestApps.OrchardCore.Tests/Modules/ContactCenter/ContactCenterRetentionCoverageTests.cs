@@ -1,9 +1,10 @@
 using CrestApps.Core.ContactCenter.Models;
 using System.Linq.Expressions;
 using System.Reflection;
-using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
-using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
+using CrestApps.Core.ContactCenter.Services.Retention;
 using YesSql.Indexes;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -123,11 +124,11 @@ public sealed class ContactCenterRetentionCoverageTests
         ],
         ["InteractionEvent"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/DefaultContactCenterEventPublisher.cs", "PublishAsync", "interactionEvent.OccurredUtc = "),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/DefaultContactCenterEventPublisher.cs", "PublishAsync", "interactionEvent.OccurredUtc = "),
         ],
         ["CallSession"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/CallTopologyProjector.cs", "EndMonitorSession", "live.EndedUtc = "),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/CallTopologyProjector.cs", "EndMonitorSession", "live.EndedUtc = "),
         ],
         ["QueueItem"] =
         [
@@ -170,7 +171,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ],
         ["ContactCenterEventMetricDelta"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterMetricsService.cs", "RecordAsync", "CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,"),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/ContactCenterMetricsService.cs", "RecordAsync", "CreatedUtc = _timeProvider.GetUtcNow().UtcDateTime,"),
         ],
         ["ContactCenterProcessedEvent"] =
         [
@@ -178,13 +179,13 @@ public sealed class ContactCenterRetentionCoverageTests
         ],
         ["ContactCenterWorkState"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterWorkStateService.cs", "MutateAsync", "workState.ModifiedUtc = "),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/ContactCenterWorkStateService.cs", "MutateAsync", "workState.ModifiedUtc = "),
         ],
         ["SecureCaptureSession"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/SecureCaptureService.cs", "SubmitAsync", "session.ModifiedUtc = "),
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/SecureCaptureService.cs", "CancelAsync", "session.ModifiedUtc = "),
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/SecureCaptureService.cs", "ExpireDueAsync", "session.ModifiedUtc = "),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/SecureCaptureService.cs", "SubmitAsync", "session.ModifiedUtc = "),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/SecureCaptureService.cs", "CancelAsync", "session.ModifiedUtc = "),
+            ("src/Core/Transitions/CrestApps.Core.ContactCenter/Services/SecureCaptureService.cs", "ExpireDueAsync", "session.ModifiedUtc = "),
         ],
     };
 
@@ -752,7 +753,7 @@ public sealed class ContactCenterRetentionCoverageTests
     private static List<Type> DiscoverIndexes()
         => typeof(CallSessionIndex).Assembly.GetTypes()
             .Where(type => !type.IsAbstract && typeof(IIndex).IsAssignableFrom(type))
-            .Where(type => type.Namespace is not null && type.Namespace.EndsWith("ContactCenter.Core.Indexes", StringComparison.Ordinal))
+            .Where(type => type.Namespace is not null && type.Namespace.EndsWith("ContactCenter.Indexes", StringComparison.Ordinal))
             .OrderBy(type => type.Name, StringComparer.Ordinal)
             .ToList();
 
@@ -760,7 +761,10 @@ public sealed class ContactCenterRetentionCoverageTests
     {
         var policies = new List<IContactCenterRetentionPolicy>();
 
-        var candidates = typeof(IContactCenterRetentionPolicy).Assembly.GetTypes()
+        // Anchored on a policy rather than on the contract: the contract is published from the abstractions
+        // package, which declares no policy at all, so anchoring there discovers nothing and the coverage
+        // assertion below would pass over an empty set.
+        var candidates = typeof(CallSessionRetentionPolicy).Assembly.GetTypes()
             .Where(type => !type.IsAbstract && typeof(IContactCenterRetentionPolicy).IsAssignableFrom(type))
             .OrderBy(type => type.Name, StringComparer.Ordinal);
 

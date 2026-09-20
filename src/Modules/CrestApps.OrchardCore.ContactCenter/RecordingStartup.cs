@@ -2,7 +2,7 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
@@ -20,6 +20,7 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter;
 

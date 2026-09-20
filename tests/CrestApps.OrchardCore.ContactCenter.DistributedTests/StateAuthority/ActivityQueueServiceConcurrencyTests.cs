@@ -3,7 +3,6 @@ using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.DistributedTests.Infrastructure;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Services;
@@ -14,6 +13,8 @@ using Moq;
 using OrchardCore.Modules;
 using System.Data.Common;
 using YesSql;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.StateAuthority;
 

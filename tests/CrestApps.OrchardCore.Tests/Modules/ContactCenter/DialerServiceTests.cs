@@ -1,5 +1,5 @@
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging;
 using Moq;

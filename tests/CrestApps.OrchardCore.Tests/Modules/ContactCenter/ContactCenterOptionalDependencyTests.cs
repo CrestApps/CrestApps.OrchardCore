@@ -1,6 +1,6 @@
 using System.Reflection;
 using System.Text;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Handlers;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;

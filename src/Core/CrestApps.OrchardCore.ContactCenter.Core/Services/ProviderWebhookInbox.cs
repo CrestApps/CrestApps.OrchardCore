@@ -5,6 +5,7 @@ using CrestApps.Core.Locking;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.Telephony.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore;
@@ -26,12 +27,12 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     /// <summary>
     /// The maximum number of due messages processed in one background pass.
     /// </summary>
-    public const int MaxBatchSize = 100;
+    public const int MaxBatchSize = ContactCenterStorage.WebhookInboxBatchSize;
 
     /// <summary>
     /// The maximum number of processed tombstones purged in one cleanup pass.
     /// </summary>
-    public const int MaxTombstoneCleanupBatchSize = 100;
+    public const int MaxTombstoneCleanupBatchSize = ContactCenterStorage.WebhookInboxTombstoneCleanupBatchSize;
 
     /// <summary>
     /// The maximum provider-scoped delivery identifier length supported by the durable index.
@@ -50,7 +51,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     /// within this window is recognised as a duplicate purely because the row still exists, so retention must
     /// never delete one sooner.
     /// </summary>
-    public const double TombstoneRetentionDays = 7;
+    public const double TombstoneRetentionDays = ContactCenterStorage.WebhookInboxTombstoneRetentionDays;
 
     private const int BaseBackoffSeconds = 15;
     private const int MaxBackoffSeconds = 1800;

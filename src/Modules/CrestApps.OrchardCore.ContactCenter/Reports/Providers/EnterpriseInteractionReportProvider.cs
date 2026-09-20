@@ -1,9 +1,9 @@
 using CrestApps.Core.ContactCenter;
 using System.Globalization;
 using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
@@ -12,6 +12,7 @@ using Microsoft.Extensions.Localization;
 using OrchardCore.Security.Permissions;
 using YesSql;
 using static CrestApps.OrchardCore.ContactCenter.Reports.Services.InteractionMetricsCalculator;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 

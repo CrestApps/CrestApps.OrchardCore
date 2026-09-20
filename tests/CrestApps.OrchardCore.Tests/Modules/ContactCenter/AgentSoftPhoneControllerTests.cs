@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Controllers;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

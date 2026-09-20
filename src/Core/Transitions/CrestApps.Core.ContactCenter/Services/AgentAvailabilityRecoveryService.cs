@@ -1,0 +1,99 @@
+using CrestApps.Core.Support;
+using CrestApps.Core.ContactCenter.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+
+namespace CrestApps.Core.ContactCenter.Services;
+
+/// <summary>
+/// Recovers agent capacity when after-call work is orphaned or exceeds the configured deadline.
+/// </summary>
+public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecoveryService
+{
+    private readonly IAgentProfileManager _agentManager;
+    private readonly IInteractionManager _interactionManager;
+    private readonly IAgentPresenceManager _presenceManager;
+    private readonly AgentAvailabilityOptions _options;
+    private readonly TimeProvider _timeProvider;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AgentAvailabilityRecoveryService"/> class.
+    /// </summary>
+    /// <param name="agentManager">The agent profile manager.</param>
+    /// <param name="interactionManager">The interaction manager.</param>
+    /// <param name="presenceManager">The agent presence manager.</param>
+    /// <param name="options">The availability policy.</param>
+    /// <param name="timeProvider">The time provider.</param>
+    /// <param name="logger">The logger.</param>
+    public AgentAvailabilityRecoveryService(
+        IAgentProfileManager agentManager,
+        IInteractionManager interactionManager,
+        IAgentPresenceManager presenceManager,
+        IOptions<AgentAvailabilityOptions> options,
+        TimeProvider timeProvider,
+        ILogger<AgentAvailabilityRecoveryService> logger)
+    {
+        _agentManager = agentManager;
+        _interactionManager = interactionManager;
+        _presenceManager = presenceManager;
+        _options = options.Value;
+        _timeProvider = timeProvider;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> RecoverAsync(CancellationToken cancellationToken = default)
+    {
+        var agents = await _agentManager.GetByPresenceAsync(AgentPresenceStatus.WrapUp, cancellationToken);
+        var recovered = 0;
+
+        foreach (var agent in agents)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var interactions = await _interactionManager.GetPendingWrapUpsByAgentAsync(agent.ItemId, cancellationToken);
+
+            if (interactions.Any(interaction =>
+                interaction.WrapUpStartedUtc.HasValue &&
+                interaction.WrapUpStartedUtc.Value + _options.MaximumWrapUpDuration > _timeProvider.GetUtcNow().UtcDateTime))
+            {
+                continue;
+            }
+
+            foreach (var interaction in interactions)
+            {
+                interaction.WrapUpCompletedUtc = _timeProvider.GetUtcNow().UtcDateTime;
+                await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+            }
+
+            AgentProfile updated;
+
+            try
+            {
+                updated = await _presenceManager.CompleteWorkAsync(agent.ItemId, cancellationToken);
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Skipped availability recovery for contended Contact Center agent '{AgentId}'.",
+                    agent.ItemId.SanitizeLogValue());
+
+                continue;
+            }
+
+            if (updated is null)
+            {
+                continue;
+            }
+
+            recovered++;
+            _logger.LogWarning(
+                "Recovered expired or orphaned after-call work for Contact Center agent '{AgentId}'.",
+                agent.ItemId.SanitizeLogValue());
+        }
+
+        return recovered;
+    }
+}

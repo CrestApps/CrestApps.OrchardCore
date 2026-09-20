@@ -2,7 +2,7 @@ using CrestApps.Core.ContactCenter;
 using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Telephony;

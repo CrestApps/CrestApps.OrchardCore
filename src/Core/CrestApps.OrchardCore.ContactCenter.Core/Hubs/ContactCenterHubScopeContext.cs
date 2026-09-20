@@ -1,5 +1,5 @@
 using CrestApps.Core.Security;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Hubs;

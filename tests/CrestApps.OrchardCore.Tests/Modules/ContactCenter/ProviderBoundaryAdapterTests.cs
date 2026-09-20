@@ -1,5 +1,5 @@
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Moq;
 using CrestApps.Core.Telephony.Models;
 

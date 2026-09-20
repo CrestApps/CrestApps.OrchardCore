@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

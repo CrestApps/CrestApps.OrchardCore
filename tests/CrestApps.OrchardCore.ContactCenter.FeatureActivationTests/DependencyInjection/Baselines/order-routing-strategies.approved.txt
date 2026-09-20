@@ -1,7 +1,7 @@
-CrestApps.OrchardCore.ContactCenter.Core.Services.RequiredSkillsRoutingStrategy
-CrestApps.OrchardCore.ContactCenter.Core.Services.PreferredSkillsRoutingStrategy
-CrestApps.OrchardCore.ContactCenter.Core.Services.CapacityRoutingStrategy
-CrestApps.OrchardCore.ContactCenter.Core.Services.StickyAgentRoutingStrategy
-CrestApps.OrchardCore.ContactCenter.Core.Services.LongestIdleRoutingStrategy
-CrestApps.OrchardCore.ContactCenter.Core.Services.RoundRobinRoutingStrategy
-CrestApps.OrchardCore.ContactCenter.Core.Services.LeastBusyRoutingStrategy
+CrestApps.Core.ContactCenter.Services.RequiredSkillsRoutingStrategy
+CrestApps.Core.ContactCenter.Services.PreferredSkillsRoutingStrategy
+CrestApps.Core.ContactCenter.Services.CapacityRoutingStrategy
+CrestApps.Core.ContactCenter.Services.StickyAgentRoutingStrategy
+CrestApps.Core.ContactCenter.Services.LongestIdleRoutingStrategy
+CrestApps.Core.ContactCenter.Services.RoundRobinRoutingStrategy
+CrestApps.Core.ContactCenter.Services.LeastBusyRoutingStrategy

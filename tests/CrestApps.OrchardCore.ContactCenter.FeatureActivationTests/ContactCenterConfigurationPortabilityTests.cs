@@ -8,7 +8,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;

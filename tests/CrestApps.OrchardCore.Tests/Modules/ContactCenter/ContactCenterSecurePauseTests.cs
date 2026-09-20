@@ -1,7 +1,7 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -14,6 +14,7 @@ using System.Security.Claims;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 

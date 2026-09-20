@@ -1,5 +1,6 @@
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.Core.ContactCenter.Services.Retention;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;

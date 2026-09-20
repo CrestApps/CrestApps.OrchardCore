@@ -1,6 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using OrchardCore.Workflows.Services;
 

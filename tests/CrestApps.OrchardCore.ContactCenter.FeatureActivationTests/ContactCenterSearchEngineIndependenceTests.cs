@@ -5,7 +5,7 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using System.Text;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -94,6 +94,7 @@ public sealed class ContactCenterSearchEngineIndependenceTests
     /// </summary>
     private static readonly string[] _expectedShippedAssemblies =
     [
+        "CrestApps.Core.ContactCenter",
         "CrestApps.Core.ContactCenter.Abstractions",
         "CrestApps.Core.Data.YesSql.ContactCenter",
         "CrestApps.Core.Telephony",

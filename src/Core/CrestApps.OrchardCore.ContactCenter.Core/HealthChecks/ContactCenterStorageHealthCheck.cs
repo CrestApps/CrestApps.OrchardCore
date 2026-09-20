@@ -1,6 +1,6 @@
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;

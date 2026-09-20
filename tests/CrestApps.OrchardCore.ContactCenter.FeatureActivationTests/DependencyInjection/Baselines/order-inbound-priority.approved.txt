@@ -1,2 +1,2 @@
-CrestApps.OrchardCore.ContactCenter.Core.Services.ReturningCallbackPriorityContributor
-CrestApps.OrchardCore.ContactCenter.Core.Services.RepeatCallerPriorityContributor
+CrestApps.Core.ContactCenter.Services.ReturningCallbackPriorityContributor
+CrestApps.Core.ContactCenter.Services.RepeatCallerPriorityContributor

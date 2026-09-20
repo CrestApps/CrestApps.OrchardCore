@@ -1,3 +1,613 @@
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Indexes
+{
+    public sealed class ActivityQueueGroupIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ActivityQueueGroupIndex() { }
+        public long DocumentId { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class ActivityQueueIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ActivityQueueIndex() { }
+        public long DocumentId { get; set; }
+        public bool Enabled { get; set; }
+        public string Name { get; set; }
+        public string QueueGroupId { get; set; }
+    }
+    public sealed class ActivityReservationIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ActivityReservationIndex() { }
+        public string ActivityClaimKey { get; set; }
+        public string ActivityItemId { get; set; }
+        public string AgentClaimKey { get; set; }
+        public string AgentId { get; set; }
+        public long DocumentId { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ReservationStatus Status { get; set; }
+    }
+    public sealed class AgentAllowedQueueIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public AgentAllowedQueueIndex() { }
+        public long DocumentId { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class AgentProfileIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public AgentProfileIndex() { }
+        public long DocumentId { get; set; }
+        public string Name { get; set; }
+        public CrestApps.Core.ContactCenter.Models.AgentPresenceStatus PresenceStatus { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AgentQueueMembershipIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public AgentQueueMembershipIndex() { }
+        public long DocumentId { get; set; }
+        public int MaxConcurrentInteractions { get; set; }
+        public CrestApps.Core.ContactCenter.Models.AgentPresenceStatus PresenceStatus { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class AgentSessionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public AgentSessionIndex() { }
+        public long DocumentId { get; set; }
+        public bool IsOnline { get; set; }
+        public System.DateTime? LastHeartbeatUtc { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AgentStateReasonCodeIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public AgentStateReasonCodeIndex() { }
+        public long DocumentId { get; set; }
+        public bool Enabled { get; set; }
+        public string Name { get; set; }
+        public int SortOrder { get; set; }
+    }
+    public sealed class BusinessHoursCalendarIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public BusinessHoursCalendarIndex() { }
+        public long DocumentId { get; set; }
+        public bool Enabled { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class CallSessionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public CallSessionIndex() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public long DocumentId { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public string InteractionId { get; set; }
+        public string ProviderCallClaimKey { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public string QueueId { get; set; }
+        public CrestApps.Core.Telephony.Models.VoiceCallState State { get; set; }
+    }
+    public sealed class CallbackRequestIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public CallbackRequestIndex() { }
+        public long DocumentId { get; set; }
+        public System.DateTime? LeaseExpiresUtc { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.DateTime ScheduledUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallbackRequestStatus Status { get; set; }
+    }
+    public sealed class ContactCenterEntryPointIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterEntryPointIndex() { }
+        public long DocumentId { get; set; }
+        public bool Enabled { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class ContactCenterEventMetricDeltaIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterEventMetricDeltaIndex() { }
+        public long Count { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime Date { get; set; }
+        public string DateKey { get; set; }
+        public long DocumentId { get; set; }
+        public string EventType { get; set; }
+    }
+    public sealed class ContactCenterEventMetricIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterEventMetricIndex() { }
+        public System.DateTime Date { get; set; }
+        public string DateKey { get; set; }
+        public long DocumentId { get; set; }
+        public string EventType { get; set; }
+    }
+    public sealed class ContactCenterOutboxMessageIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterOutboxMessageIndex() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public long DocumentId { get; set; }
+        public string EventId { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.OutboxMessageStatus Status { get; set; }
+    }
+    public sealed class ContactCenterProcessedEventIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterProcessedEventIndex() { }
+        public long DocumentId { get; set; }
+        public string EventId { get; set; }
+        public string HandlerId { get; set; }
+        public System.DateTime ProcessedUtc { get; set; }
+    }
+    public sealed class ContactCenterProjectionCheckpointIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterProjectionCheckpointIndex() { }
+        public long DocumentId { get; set; }
+        public string HandlerId { get; set; }
+        public int Version { get; set; }
+    }
+    public sealed class ContactCenterSkillIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterSkillIndex() { }
+        public long DocumentId { get; set; }
+        public bool Enabled { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class ContactCenterWorkStateIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ContactCenterWorkStateIndex() { }
+        public string ActivityItemId { get; set; }
+        public string AssignedToId { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus AssignmentStatus { get; set; }
+        public long DocumentId { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string ReservationId { get; set; }
+        public string ReservedById { get; set; }
+    }
+    public sealed class DialerProfileIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public DialerProfileIndex() { }
+        public long DocumentId { get; set; }
+        public bool Enabled { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class InteractionEventIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public InteractionEventIndex() { }
+        public string AggregateId { get; set; }
+        public string AggregateType { get; set; }
+        public string CorrelationId { get; set; }
+        public long DocumentId { get; set; }
+        public string EventType { get; set; }
+        public string IdempotencyClaimKey { get; set; }
+        public string IdempotencyKey { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime OccurredUtc { get; set; }
+    }
+    public sealed class InteractionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public InteractionIndex() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionChannel Channel { get; set; }
+        public string CorrelationId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionDirection Direction { get; set; }
+        public long DocumentId { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public string ProviderInteractionId { get; set; }
+        public string ProviderLegId { get; set; }
+        public string ProviderName { get; set; }
+        public string QueueId { get; set; }
+        public bool RecordingLegalHold { get; set; }
+        public System.DateTime? RecordingPausedUtc { get; set; }
+        public CrestApps.Core.Telephony.Models.RecordingState RecordingState { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionStatus Status { get; set; }
+        public System.DateTime? WrapUpCompletedUtc { get; set; }
+        public System.DateTime? WrapUpStartedUtc { get; set; }
+    }
+    public sealed class ProviderCommandIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ProviderCommandIndex() { }
+        public string CommandId { get; set; }
+        public System.DateTime? CompletedUtc { get; set; }
+        public long DocumentId { get; set; }
+        public long FenceToken { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime LeaseExpiresUtc { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public string ProviderName { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ProviderCommandStatus Status { get; set; }
+    }
+    public sealed class ProviderWebhookInboxMessageIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public ProviderWebhookInboxMessageIndex() { }
+        public string DeliveryId { get; set; }
+        public long DocumentId { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public System.DateTime? ProcessedUtc { get; set; }
+        public string ProviderName { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxStatus Status { get; set; }
+    }
+    public sealed class QueueItemIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public QueueItemIndex() { }
+        public string ActivityClaimKey { get; set; }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public System.DateTime? DequeuedUtc { get; set; }
+        public long DocumentId { get; set; }
+        public System.DateTime EnqueuedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionPriority Priority { get; set; }
+        public string QueueId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.QueueItemStatus Status { get; set; }
+    }
+    public sealed class SecureCaptureSessionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public SecureCaptureSessionIndex() { }
+        public string AccessTokenHash { get; set; }
+        public string AgentId { get; set; }
+        public long DocumentId { get; set; }
+        public bool EngagedRecordingPause { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public bool RecordingResumed { get; set; }
+        public CrestApps.Core.ContactCenter.Models.SecureCaptureState State { get; set; }
+    }
+    public sealed class VoiceMediaItemIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public VoiceMediaItemIndex() { }
+        public long DocumentId { get; set; }
+        public string Name { get; set; }
+    }
+}
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Services
+{
+    public sealed class ActivityQueueGroupStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ActivityQueueGroupIndex>, CrestApps.Core.ContactCenter.Services.IActivityQueueGroupStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>
+    {
+        public ActivityQueueGroupStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ActivityQueueStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ActivityQueue, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ActivityQueueIndex>, CrestApps.Core.ContactCenter.Services.IActivityQueueStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ActivityQueue>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ActivityQueue>
+    {
+        public ActivityQueueStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ActivityQueue> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ActivityQueue>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ActivityReservationStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ActivityReservation, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ActivityReservationIndex>, CrestApps.Core.ContactCenter.Services.IActivityReservationStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ActivityReservation>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ActivityReservation>
+    {
+        public ActivityReservationStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ActivityReservation> FindPendingByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ActivityReservation>> GetActiveByActivityAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ActivityReservation>> GetActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ExpiredReservationPage> GetExpiredAsync(System.DateTime utcNow, System.DateTime? afterExpiresUtc, long afterDocumentId, int maxResults, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentProfileStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.AgentProfile, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.AgentProfileIndex>, CrestApps.Core.ContactCenter.Services.IAgentProfileStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.AgentProfile>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.AgentProfile>
+    {
+        public AgentProfileStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentProfile> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentProfile>> GetAvailableForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentProfile>> GetByPresenceAsync(CrestApps.Core.ContactCenter.Models.AgentPresenceStatus presenceStatus, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentProfile>> GetMembersForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentSessionStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.AgentSession, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.AgentSessionIndex>, CrestApps.Core.ContactCenter.Services.IAgentSessionStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.AgentSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.AgentSession>
+    {
+        public const int MaxStaleSessionsPerPass = 500;
+        public AgentSessionStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentSession> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentSession>> GetByUserIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> userIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentSession>> GetStaleAsync(System.DateTime heartbeatCutoffUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AgentStateReasonCodeStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.AgentStateReasonCodeIndex>, CrestApps.Core.ContactCenter.Services.IAgentStateReasonCodeStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>
+    {
+        public AgentStateReasonCodeStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.AgentStateReasonCode>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class BusinessHoursCalendarStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.BusinessHoursCalendarIndex>, CrestApps.Core.ContactCenter.Services.IBusinessHoursCalendarStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>
+    {
+        public BusinessHoursCalendarStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.BusinessHoursCalendar>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class CallSessionStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.CallSession, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.CallSessionIndex>, CrestApps.Core.ContactCenter.Services.ICallSessionStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.CallSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.CallSession>
+    {
+        public CallSessionStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<int> CountActiveAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallSession> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallSession> FindByProviderCallIdAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallSession> FindByProviderCallIdAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+        protected override System.Threading.Tasks.ValueTask SavingAsync(CrestApps.Core.ContactCenter.Models.CallSession record) { }
+    }
+    public sealed class CallbackRequestStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.CallbackRequest, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.CallbackRequestIndex>, CrestApps.Core.ContactCenter.Services.ICallbackRequestStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.CallbackRequest>
+    {
+        public CallbackRequestStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.CallbackRequest>> GetDueAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterEntryPointStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterEntryPointIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterEntryPointStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>
+    {
+        public ContactCenterEntryPointStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterMetricDeltaStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetricDelta, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterEventMetricDeltaIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterMetricDeltaStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetricDelta>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetricDelta>
+    {
+        public const int MaxPendingContributionsPerRead = 10000;
+        public ContactCenterMetricDeltaStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetricDelta>> GetBatchAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetricDelta>> GetByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.ContactCenterMetricContribution>> GetContributionsAfterAsync(long afterDocumentId, int count, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterMetricStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetric, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterEventMetricIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterMetricStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetric>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetric>
+    {
+        public ContactCenterMetricStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetric> FindAsync(string dateKey, string eventType, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetric>> GetByDateRangeAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterOutboxStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterOutboxMessage, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterOutboxMessageIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterOutboxStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterOutboxMessage>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterOutboxMessage>
+    {
+        public ContactCenterOutboxStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.Core.ContactCenter.Models.OutboxMessageStatus status, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> CountOverdueAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterOutboxMessage> FindByEventIdAsync(string eventId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterOutboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterProcessedEventStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterProcessedEventIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterProcessedEventStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent>
+    {
+        public ContactCenterProcessedEventStore(YesSql.ISession session) { }
+    }
+    public sealed class ContactCenterProjectionCheckpointStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterProjectionCheckpointIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterProjectionCheckpointStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint>
+    {
+        public ContactCenterProjectionCheckpointStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint> FindByHandlerAsync(string handlerId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterSkillStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterSkill, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterSkillIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterSkillStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>
+    {
+        public ContactCenterSkillStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterSkill> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterSkill>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterWorkStateStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterWorkStateIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>
+    {
+        public ContactCenterWorkStateStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState>> GetByActivityIdsAsync(System.Collections.Generic.IEnumerable<string> activityItemIds, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class DialerProfileStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.DialerProfile, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.DialerProfileIndex>, CrestApps.Core.ContactCenter.Services.IDialerProfileStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.DialerProfile>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.DialerProfile>
+    {
+        public DialerProfileStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.DialerProfile>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class InteractionEventStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.InteractionEvent, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.InteractionEventIndex>, CrestApps.Core.ContactCenter.Services.IInteractionEventStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.InteractionEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.InteractionEvent>
+    {
+        public InteractionEventStore(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IInteractionEventUpcastService upcastService) { }
+        public System.Threading.Tasks.Task<bool> ExistsByIdempotencyKeyAsync(string idempotencyKey, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.InteractionEvent>> GetByAggregateTypeAsync(string aggregateType, System.Collections.Generic.IEnumerable<string> eventTypes, System.DateTime occurredThroughUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.InteractionEvent>> GetByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.InteractionEvent>> GetOlderThanAsync(System.DateTime cutoffUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.InteractionEvent>> GetOrderedPageAsync(int skip, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        protected override System.Threading.Tasks.ValueTask LoadingAsync(CrestApps.Core.ContactCenter.Models.InteractionEvent record) { }
+    }
+    public static class InteractionQueries
+    {
+        public static string AgentIdParameterName(int index) { }
+        public static string BuildActiveCountByAgentSql(YesSql.IConfiguration configuration, int agentIdCount) { }
+    }
+    public sealed class InteractionStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.Interaction, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.InteractionIndex>, CrestApps.Core.ContactCenter.Services.IInteractionStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.Interaction>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.Interaction>
+    {
+        public InteractionStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<int> CountActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> CountActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindActiveByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindByCorrelationIdAsync(string correlationId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindByProviderInteractionIdAsync(string providerInteractionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.Interaction> FindByProviderInteractionIdAsync(string providerName, string providerInteractionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetActiveByAgentIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetActiveWithProviderCallIdAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetActiveWithProviderCallIdAsync(string providerName, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetPausedRecordingsOlderThanAsync(System.DateTime pausedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.Core.ContactCenter.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.Core.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderCommandStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ProviderCommand, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ProviderCommandIndex>, CrestApps.Core.ContactCenter.Services.IProviderCommandStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ProviderCommand>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ProviderCommand>
+    {
+        public const int DefaultBatchSize = 100;
+        public ProviderCommandStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ProviderCommand> FindByCommandIdAsync(string commandId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ProviderCommand>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ProviderCommand>> GetReclaimableAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ProviderWebhookInboxStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxMessage, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ProviderWebhookInboxMessageIndex>, CrestApps.Core.ContactCenter.Services.IProviderWebhookInboxStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxMessage>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxMessage>
+    {
+        public ProviderWebhookInboxStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<int> CountByStatusAsync(CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxStatus status, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> CountOverdueAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxMessage> FindByDeliveryAsync(string providerName, string deliveryId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxMessage>> GetProcessedBeforeAsync(System.DateTime processedBeforeUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class QueueItemQueries
+    {
+        public static string BuildWaitingCountByQueueSql(YesSql.IConfiguration configuration, int queueIdCount) { }
+        public static string QueueIdParameterName(int index) { }
+    }
+    public sealed class QueueItemStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.QueueItem, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.QueueItemIndex>, CrestApps.Core.ContactCenter.Services.IQueueItemStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.QueueItem>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.QueueItem>
+    {
+        public QueueItemStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<int> CountAllWaitingAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> CountWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> CountWaitingByQueueIdsAsync(System.Collections.Generic.IReadOnlyCollection<string> queueIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<int> CountWaitingOlderThanAsync(string queueId, System.DateTime thresholdUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.QueueItem> FindByActivityIdAsync(string activityItemId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.QueueItem> FindLongestWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.QueueItem> FindNextWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.QueueItem>> GetHeadWaitingByQueueAsync(System.Collections.Generic.IEnumerable<string> queueIds, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.QueueItem>> GetWaitingAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<string>> GetWaitingQueueIdsAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class SecureCaptureSessionStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.SecureCaptureSession, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.SecureCaptureSessionIndex>, CrestApps.Core.ContactCenter.Services.ISecureCaptureSessionStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>
+    {
+        public SecureCaptureSessionStore(YesSql.ISession session) { }
+        protected override bool CheckConcurrency { get; }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureSession> FindActiveByInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.SecureCaptureSession> FindByAccessTokenHashAsync(string accessTokenHash, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>> GetExpiredAsync(System.DateTime utcNow, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.SecureCaptureSession>> GetPendingRecordingResumeAsync(int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class VoiceMediaItemStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.VoiceMediaItem, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.VoiceMediaItemIndex>, CrestApps.Core.ContactCenter.Services.IVoiceMediaItemStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>
+    {
+        public VoiceMediaItemStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.VoiceMediaItem> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.VoiceMediaItem>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+}
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention
+{
+    public sealed class ActivityReservationRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.ActivityReservation, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ActivityReservationIndex>
+    {
+        public ActivityReservationRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IActivityReservationStore reservationStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ActivityReservationIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class AgentSessionRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.AgentSession, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.AgentSessionIndex>
+    {
+        public AgentSessionRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IAgentSessionStore agentSessionStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.AgentSessionIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class CallSessionRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.CallSession, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.CallSessionIndex>
+    {
+        public CallSessionRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.ICallSessionStore callSessionStore) { }
+        public override string EntityName { get; }
+        protected override bool IsSubjectToLegalHold { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.CallSessionIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class CallbackRequestRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.CallbackRequest, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.CallbackRequestIndex>
+    {
+        public CallbackRequestRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.ICallbackRequestStore callbackRequestStore) { }
+        public override string EntityName { get; }
+        protected override bool IsSubjectToLegalHold { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.CallbackRequestIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class ContactCenterEventMetricDeltaRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetricDelta, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterEventMetricDeltaIndex>
+    {
+        public ContactCenterEventMetricDeltaRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IContactCenterMetricDeltaStore deltaStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterEventMetricDeltaIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class ContactCenterEventMetricRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.ContactCenterEventMetric, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterEventMetricIndex>
+    {
+        public ContactCenterEventMetricRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IContactCenterMetricStore metricStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterEventMetricIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class ContactCenterOutboxMessageRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.ContactCenterOutboxMessage, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterOutboxMessageIndex>
+    {
+        public ContactCenterOutboxMessageRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IContactCenterOutboxStore outboxStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterOutboxMessageIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class ContactCenterProcessedEventRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterProcessedEventIndex>
+    {
+        public ContactCenterProcessedEventRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IContactCenterProcessedEventStore processedEventStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterProcessedEventIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetEntityFloorDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public abstract class ContactCenterRetentionPolicyBase<TModel, TIndex> : CrestApps.Core.ContactCenter.Services.Retention.IContactCenterRetentionPolicy
+        where TModel : CrestApps.Core.Models.CatalogItem
+        where TIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        protected ContactCenterRetentionPolicyBase(YesSql.ISession session, CrestApps.Core.Services.ICatalog<TModel> catalog) { }
+        public abstract string EntityName { get; }
+        public System.Type IndexType { get; }
+        protected virtual bool IsSubjectToLegalHold { get; }
+        protected virtual bool IsSubjectToReplayHorizon { get; }
+        public System.Type ModelType { get; }
+        protected abstract System.Linq.Expressions.Expression<System.Func<TIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc);
+        protected virtual double GetEntityFloorDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+        public System.Linq.Expressions.LambdaExpression GetExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected abstract double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options);
+        public System.Threading.Tasks.Task<int> PurgeBatchAsync(System.DateTime cutoffUtc, int batchSize, System.Threading.CancellationToken cancellationToken = default) { }
+        public bool TryGetCutoff(System.DateTime nowUtc, CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options, out System.DateTime cutoffUtc) { }
+        protected virtual System.Threading.Tasks.Task<bool> TryPrepareForDeletionAsync(TModel record, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ContactCenterWorkStateRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.ContactCenterWorkState, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterWorkStateIndex>
+    {
+        public ContactCenterWorkStateRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IContactCenterWorkStateStore workStateStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterWorkStateIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class InteractionEventRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.InteractionEvent, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.InteractionEventIndex>
+    {
+        public InteractionEventRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IInteractionEventStore eventStore) { }
+        public override string EntityName { get; }
+        protected override bool IsSubjectToLegalHold { get; }
+        protected override bool IsSubjectToReplayHorizon { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.InteractionEventIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class InteractionRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.Interaction, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.InteractionIndex>
+    {
+        public InteractionRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IInteractionStore interactionStore, CrestApps.Core.ContactCenter.Services.ICallSessionManager callSessionManager, CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher publisher) { }
+        public override string EntityName { get; }
+        protected override bool IsSubjectToLegalHold { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.InteractionIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+        protected override System.Threading.Tasks.Task<bool> TryPrepareForDeletionAsync(CrestApps.Core.ContactCenter.Models.Interaction record, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ProviderCommandRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.ProviderCommand, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ProviderCommandIndex>
+    {
+        public ProviderCommandRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IProviderCommandStore commandStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ProviderCommandIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class ProviderWebhookInboxMessageRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxMessage, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ProviderWebhookInboxMessageIndex>
+    {
+        public ProviderWebhookInboxMessageRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IProviderWebhookInboxStore inboxStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ProviderWebhookInboxMessageIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetEntityFloorDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class QueueItemRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.QueueItem, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.QueueItemIndex>
+    {
+        public QueueItemRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.IQueueItemStore queueItemStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.QueueItemIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class SecureCaptureSessionRetentionPolicy : CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.Core.ContactCenter.Models.SecureCaptureSession, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.SecureCaptureSessionIndex>
+    {
+        public SecureCaptureSessionRetentionPolicy(YesSql.ISession session, CrestApps.Core.ContactCenter.Services.ISecureCaptureSessionStore secureCaptureSessionStore) { }
+        public override string EntityName { get; }
+        protected override bool IsSubjectToLegalHold { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.Core.Data.YesSql.ContactCenter.Indexes.SecureCaptureSessionIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.Core.ContactCenter.Models.ContactCenterRetentionOptions options) { }
+    }
+}
 namespace CrestApps.Core.Data.YesSql.Migrations
 {
     public interface ISchemaMigration

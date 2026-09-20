@@ -236,6 +236,71 @@ controller's was. The recorded sizes went up by one. A ratchet exists to stop a 
 logic; a namespace move is not that, and pretending otherwise would mean splitting four large files
 inside a relocation commit.
 
+### The store implementations never needed the Orchard catalog (W5.1b)
+
+The twenty-five moved stores derived from `DocumentCatalog<T, TIndex>` in the Orchard
+`YesSql.Core` project, which exists only to give the framework's `ConcurrentDocumentCatalog` an
+Orchard-shaped name and adds two constructors and nothing else. They now derive from the framework
+base directly, so the store package references no Orchard assembly. The behaviour is identical,
+because there was never any behaviour in between.
+
+### Three things the stores reached into the host for (W5.1b)
+
+The stores compiled against constants that lived on host services, which is the wrong direction:
+persistence asking the dispatcher how many rows to read. All three moved to `ContactCenterStorage`,
+where both sides can see them, and the host constants now read from there so there is one value:
+
+- `ProviderWebhookInbox.MaxBatchSize` -> `ContactCenterStorage.WebhookInboxBatchSize`.
+- `ProviderWebhookInbox.MaxTombstoneCleanupBatchSize` -> `ContactCenterStorage.WebhookInboxTombstoneCleanupBatchSize`.
+- `ProviderWebhookInbox.TombstoneRetentionDays` -> `ContactCenterStorage.WebhookInboxTombstoneRetentionDays`.
+  This one is load-bearing: retention deletes the row that makes a redelivery a duplicate, so the
+  floor has to be visible to the policy that deletes, not only to the dispatcher that wrote it.
+
+`QueueItemQueries` and `InteractionQueries` build raw SQL against YesSql index tables and moved into
+the store package with the stores that execute them. The query-plan gates follow them, which is the
+point of those two classes existing separately at all.
+
+### The retention policies are persistence, and moved with it (W5.1b)
+
+Sixteen classes declared the framework namespace `CrestApps.Core.ContactCenter.Services.Retention`
+while sitting in the Orchard host project. Every one of them takes an `ISession` and builds an
+`Expression<Func<TIndex, bool>>`, so they are YesSql code: they are now
+`CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention` in the store package. Their contract,
+`IContactCenterRetentionPolicy`, stays in the abstractions, which is what lets a host that stores
+its Contact Center data elsewhere write its own.
+
+The coverage gate had been anchored on that contract's assembly to discover policies. Once the
+contract was in the abstractions - which declares no policy - discovery returned zero and the
+coverage assertion passed over an empty set while reporting success. It is anchored on a policy now,
+and the "at least twelve policies" floor is what caught it.
+
+### Twenty-six files had no reason to be in the host at all (W5.1b)
+
+Sweeping the host project for files whose only non-framework imports were the two stale Orchard
+usings turned up twenty-six: nineteen services, three cycles and four helpers, none of which
+referenced an Orchard or YesSql type. They are in the framework package now. Two of them,
+`RequiredSkillsRoutingStrategy` and `RepeatCallerPriorityContributor`, were the last members of
+chains whose other members had already moved - the kind of straggler that is invisible in a build
+and shows up only as a reordered snapshot.
+
+Health checks and hubs also came back clean on that sweep and were deliberately left: they need
+ASP.NET references the services package does not carry, and they have their own W5 items.
+
+### What the snapshots said, and what they meant (W5.1b)
+
+Every approved surface moved, so each one had to be read rather than accepted:
+
+- The three framework public-API baselines are pure additions. Nothing was removed from any of them.
+- The host baseline lost 2,193 lines. Every type declaration among them was checked against the
+  host's own new surface and the framework baselines: none vanished, all moved.
+- The DI snapshots are sorted by type name, so a namespace change reorders them without any
+  registration changing. Each diff was compared with namespaces stripped; after the two stragglers
+  moved, the only remaining difference is `ContactCenterVoiceProjection` sorting ahead of
+  `TelephonyCallHistoryVoiceEventHandler`, which is the sort and not the chain.
+- `ServiceResolutionOrderTests` is the gate that pins real resolution order, and all four of its
+  chains resolved in the same order throughout. Its baselines were rewritten name-for-name in place,
+  so a reorder could not hide inside the rename.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All

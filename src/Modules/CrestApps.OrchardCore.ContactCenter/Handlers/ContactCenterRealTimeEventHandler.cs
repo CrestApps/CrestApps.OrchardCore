@@ -4,7 +4,7 @@ using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Security;
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;

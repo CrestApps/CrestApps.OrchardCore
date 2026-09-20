@@ -3,11 +3,12 @@ using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.ContactCenter.Models.Reports;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Options;
 using YesSql;
 

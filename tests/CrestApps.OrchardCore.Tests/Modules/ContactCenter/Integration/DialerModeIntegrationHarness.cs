@@ -4,9 +4,9 @@ using CrestApps.Core.Locking;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -25,6 +25,8 @@ using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 

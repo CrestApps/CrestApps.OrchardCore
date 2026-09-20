@@ -3,6 +3,7 @@ using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Support;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using YesSql;
 

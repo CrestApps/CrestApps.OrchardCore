@@ -1,0 +1,35 @@
+using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.ContactCenter;
+using CrestApps.Core.Data.YesSql.Services;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
+using CrestApps.Core.ContactCenter.Models;
+using YesSql;
+
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Services;
+
+/// <summary>
+/// Provides a YesSql-based implementation of <see cref="IDialerProfileStore"/>.
+/// </summary>
+public sealed class DialerProfileStore : ConcurrentDocumentCatalog<DialerProfile, DialerProfileIndex>, IDialerProfileStore
+{
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DialerProfileStore"/> class.
+    /// </summary>
+    /// <param name="session">The YesSql session.</param>
+    public DialerProfileStore(ISession session)
+        : base(session)
+    {
+        CollectionName = ContactCenterStorage.CollectionName;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyCollection<DialerProfile>> GetEnabledAsync(CancellationToken cancellationToken = default)
+    {
+        var profiles = await Session.Query<DialerProfile, DialerProfileIndex>(
+            index => index.Enabled,
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return profiles.ToArray();
+    }
+}

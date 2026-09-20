@@ -3,17 +3,19 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Hosting.Background;
-using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services;
 using CrestApps.Core.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
+using CrestApps.Core.ContactCenter.Services.Retention;
 using CrestApps.OrchardCore.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.Telephony.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core;
 

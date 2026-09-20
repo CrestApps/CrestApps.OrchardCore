@@ -1,7 +1,7 @@
 using CrestApps.Core.ContactCenter;
 using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
+using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.Core.ContactCenter.Models;
 using YesSql;

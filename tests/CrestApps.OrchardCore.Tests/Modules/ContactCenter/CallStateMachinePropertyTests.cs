@@ -9,7 +9,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 /// <summary>
 /// Property tests for the Contact Center call state machine (W5.6). Each test generates many reproducible
 /// lifecycles, corrupts their delivery order with reordering, duplication and replay, ingests them through
-/// the production <see cref="CrestApps.OrchardCore.ContactCenter.Core.Services.ProviderVoiceEventService"/>,
+/// the production <see cref="CrestApps.Core.ContactCenter.Services.ProviderVoiceEventService"/>,
 /// and asserts a property that must hold for every sequence rather than for one hand-picked example.
 /// </summary>
 public sealed class CallStateMachinePropertyTests
