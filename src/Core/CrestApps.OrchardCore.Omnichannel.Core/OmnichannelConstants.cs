@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core;
 /// </summary>
 public static class OmnichannelConstants
 {
-    public const string CollectionName = "Omnichannel";
+    public const string CollectionName = OmnichannelCollections.Name;
 
     public const string AgentRole = "Agent";
 

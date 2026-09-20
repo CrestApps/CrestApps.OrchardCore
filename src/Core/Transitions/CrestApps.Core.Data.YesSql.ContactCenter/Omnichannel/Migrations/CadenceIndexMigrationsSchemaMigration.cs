@@ -1,13 +1,15 @@
+using CrestApps.Core.Omnichannel;
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Data.YesSql.Migrations;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.Omnichannel.Migrations;
 
 /// <summary>
 /// Creates the schema for the cadence index table that lists the re-engagement cadences a campaign can pick.
 /// </summary>
-internal sealed class CadenceIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class CadenceIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>
@@ -28,7 +30,7 @@ internal sealed class CadenceIndexMigrationsSchemaMigration : ISchemaMigration
             .Column<string>("DisplayText", column => column.WithLength(255))
             .Column<bool>("Enabled")
             .Column<DateTime>("CreatedUtc"),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         await builder.AlterIndexTableAsync<CadenceIndex>(table => table
@@ -37,7 +39,7 @@ internal sealed class CadenceIndexMigrationsSchemaMigration : ISchemaMigration
                 "DisplayText",
                 "ItemId"
             ),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         return 1;

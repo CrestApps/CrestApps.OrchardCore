@@ -1,10 +1,10 @@
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Data.YesSql.Indexes;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+namespace CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 
 /// <summary>
-/// Represents the index over <see cref="Models.Cadence"/> for listing and lookup.
+/// Represents the index over <see cref="Cadence"/> for listing and lookup.
 /// </summary>
 public sealed class CadenceIndex : CatalogItemIndex
 {

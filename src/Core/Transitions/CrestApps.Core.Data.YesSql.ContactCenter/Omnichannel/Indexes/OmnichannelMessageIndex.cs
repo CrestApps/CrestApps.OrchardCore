@@ -1,6 +1,7 @@
-﻿using YesSql.Indexes;
+﻿using CrestApps.Core.Omnichannel.Models;
+using YesSql.Indexes;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+namespace CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 
 /// <summary>
 /// Represents the omnichannel message index.

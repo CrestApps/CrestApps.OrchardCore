@@ -1,7 +1,7 @@
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Data.YesSql.Indexes;
 
-namespace CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+namespace CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 
 /// <summary>
 /// Represents the omnichannel activity batch index.

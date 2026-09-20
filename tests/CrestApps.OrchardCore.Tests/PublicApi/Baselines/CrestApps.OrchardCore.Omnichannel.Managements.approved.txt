@@ -506,14 +506,6 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Handlers
         public System.Threading.Tasks.Task FilteringAsync(CrestApps.OrchardCore.Omnichannel.Core.Services.ListOmnichannelActivityFilterContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
-namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes
-{
-    public sealed class OmnichannelActivityIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Omnichannel.Models.OmnichannelActivity>
-    {
-        public OmnichannelActivityIndexProvider() { }
-        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> context) { }
-    }
-}
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
 {
     public sealed class ContactMethodMigrations : OrchardCore.Data.Migration.DataMigration

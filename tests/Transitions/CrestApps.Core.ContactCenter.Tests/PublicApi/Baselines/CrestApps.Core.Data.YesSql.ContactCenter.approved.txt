@@ -17,6 +17,99 @@ namespace CrestApps.Core.Data.YesSql.Migrations
         public System.Collections.Generic.Dictionary<string, int> AppliedVersions { get; init; }
     }
 }
+namespace CrestApps.Core.Data.YesSql.Omnichannel
+{
+    public static class CoreOmnichannelStoresServiceCollectionExtensions
+    {
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreOmnichannelStoresYesSql(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static CrestApps.Core.Builders.CrestAppsOmnichannelBuilder AddYesSqlStores(this CrestApps.Core.Builders.CrestAppsOmnichannelBuilder builder) { }
+    }
+}
+namespace CrestApps.Core.Data.YesSql.Omnichannel.Indexes
+{
+    public sealed class CadenceIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public CadenceIndex() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DisplayText { get; set; }
+        public bool Enabled { get; set; }
+    }
+    public sealed class CadenceIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Omnichannel.Models.Cadence>
+    {
+        public CadenceIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Omnichannel.Models.Cadence> context) { }
+    }
+    public sealed class OmnichannelActivityBatchIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public OmnichannelActivityBatchIndex() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DisplayText { get; set; }
+        public string Source { get; set; }
+        public CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatchStatus Status { get; set; }
+    }
+    public sealed class OmnichannelActivityBatchIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatch>
+    {
+        public OmnichannelActivityBatchIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Omnichannel.Models.OmnichannelActivityBatch> context) { }
+    }
+    public sealed class OmnichannelActivityIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public OmnichannelActivityIndex() { }
+        public bool AiEscalated { get; set; }
+        public string AssignedToId { get; set; }
+        public System.DateTime? AssignedToUtc { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus AssignmentStatus { get; set; }
+        public int Attempts { get; set; }
+        public string CampaignId { get; set; }
+        public string Channel { get; set; }
+        public string ChannelEndpointId { get; set; }
+        public System.DateTime? CompletedUtc { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string ContactContentType { get; set; }
+        public string CreatedById { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DispositionId { get; set; }
+        public long DocumentId { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityInteractionType InteractionType { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityKind Kind { get; set; }
+        public string PreferredDestination { get; set; }
+        public System.DateTime? ReservationExpiresUtc { get; set; }
+        public string ReservationId { get; set; }
+        public string ReservedById { get; set; }
+        public System.DateTime? ReservedUtc { get; set; }
+        public System.DateTime ScheduledUtc { get; set; }
+        public string Source { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityStatus Status { get; set; }
+        public string SubjectContentType { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityUrgencyLevel UrgencyLevel { get; set; }
+    }
+    public sealed class OmnichannelActivityIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Omnichannel.Models.OmnichannelActivity>
+    {
+        public OmnichannelActivityIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Omnichannel.Models.OmnichannelActivity> context) { }
+    }
+    public sealed class OmnichannelMessageIndex : YesSql.Indexes.MapIndex
+    {
+        public OmnichannelMessageIndex() { }
+        public string Channel { get; set; }
+        public string ConversationId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string CustomerAddress { get; set; }
+        public bool IsInbound { get; set; }
+        public string ProviderMessageId { get; set; }
+        public string ServiceAddress { get; set; }
+    }
+}
+namespace CrestApps.Core.Data.YesSql.Omnichannel.Migrations
+{
+    public sealed class CadenceIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public CadenceIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+}
 namespace CrestApps.Core.Data.YesSql.Services
 {
     public class ConcurrentDocumentCatalog<T, TIndex> : CrestApps.Core.Services.ICatalog<T>, CrestApps.Core.Services.IReadCatalog<T>

@@ -1,6 +1,7 @@
+using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Data.YesSql.Migrations;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using YesSql;
 using YesSql.Sql;
@@ -74,7 +75,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
             .Column<ActivityStatus>("Status")
             .Column<ActivityInteractionType>("InteractionType")
             .Column<bool>("AiEscalated"),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         // This SQL index is for locating incoming message from Omnichannel (Incoming SMS, Email, etc).
@@ -85,7 +86,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
         "ChannelEndpointId",
         "PreferredDestination",
         "ScheduledUtc"),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         // This SQL index is for locating activities assigned to a specific user (My Activities view).
@@ -97,7 +98,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
         "AssignmentStatus",
         "InteractionType",
         "ScheduledUtc"),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         // This SQL index is for locating duplicate activities during batch loading.
@@ -107,7 +108,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
         "ContactContentItemId",
         "Status",
         "DocumentId"),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         await builder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
@@ -117,7 +118,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
         "ReservedById",
         "ScheduledUtc",
         "DocumentId"),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         return 6;
@@ -181,7 +182,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
                 _store,
                 typeof(OmnichannelActivityIndex),
                 indexName,
-                OmnichannelConstants.CollectionName);
+                OmnichannelCollections.Name);
 
             if (qualifiedIndexName is null)
             {
@@ -211,41 +212,41 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
 
         await tolerantSchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(
             table => table.DropIndex("IDX_OmnichannelActivityMyActivities_DocumentId"),
-            collection: OmnichannelConstants.CollectionName);
+            collection: OmnichannelCollections.Name);
 
         await tolerantSchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(
             table => table.DropIndex("IDX_OmnichannelActivityMyActivities_BatchLoading"),
-            collection: OmnichannelConstants.CollectionName);
+            collection: OmnichannelCollections.Name);
 
         await tolerantSchemaBuilder.AlterIndexTableAsync<OmnichannelActivityIndex>(
             table => table.DropIndex("IDX_OmnichannelActivity_Assignment"),
-            collection: OmnichannelConstants.CollectionName);
+            collection: OmnichannelCollections.Name);
 
         await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityKind>(
             builder,
             _store,
             "Kind",
-            OmnichannelConstants.CollectionName);
+            OmnichannelCollections.Name);
         await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityAssignmentStatus>(
             builder,
             _store,
             "AssignmentStatus",
-            OmnichannelConstants.CollectionName);
+            OmnichannelCollections.Name);
         await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityUrgencyLevel>(
             builder,
             _store,
             "UrgencyLevel",
-            OmnichannelConstants.CollectionName);
+            OmnichannelCollections.Name);
         await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityStatus>(
             builder,
             _store,
             "Status",
-            OmnichannelConstants.CollectionName);
+            OmnichannelCollections.Name);
         await IndexColumnRebuild.RebuildAsEnumColumnAsync<OmnichannelActivityIndex, ActivityInteractionType>(
             builder,
             _store,
             "InteractionType",
-            OmnichannelConstants.CollectionName);
+            OmnichannelCollections.Name);
 
         await builder.AlterIndexTableAsync<OmnichannelActivityIndex>(table =>
         {
@@ -268,7 +269,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
                 "ScheduledUtc",
                 "DocumentId");
         },
-        collection: OmnichannelConstants.CollectionName);
+        collection: OmnichannelCollections.Name);
 
         return 5;
     }
@@ -296,7 +297,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
             table.AddColumn<DateTime>("ReservedUtc");
             table.AddColumn<DateTime>("ReservationExpiresUtc");
         },
-        collection: OmnichannelConstants.CollectionName);
+        collection: OmnichannelCollections.Name);
 
         await builder.AlterIndexTableAsync<OmnichannelActivityIndex>(table => table
             .CreateIndex("IDX_OmnichannelActivity_Assignment",
@@ -305,7 +306,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
                 "ReservedById",
                 "ScheduledUtc",
                 "DocumentId"),
-            collection: OmnichannelConstants.CollectionName);
+            collection: OmnichannelCollections.Name);
 
         return 2;
     }
@@ -344,7 +345,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
             table.DropColumn("AssignedToUsername");
             table.DropColumn("CreatedByUsername");
         },
-        collection: OmnichannelConstants.CollectionName);
+        collection: OmnichannelCollections.Name);
 
         return 4;
     }
@@ -381,7 +382,7 @@ internal sealed class OmnichannelActivityIndexMigrationsSchemaMigration : ISchem
         {
             table.AddColumn<bool>("AiEscalated");
         },
-        collection: OmnichannelConstants.CollectionName);
+        collection: OmnichannelCollections.Name);
 
         return 6;
     }

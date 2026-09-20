@@ -1,3 +1,4 @@
+using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -546,8 +547,8 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "src/Core/CrestApps.OrchardCore.Omnichannel.Core/Migrations/OmnichannelActivityBatchIndexMigrationsSchemaMigration.cs",
             "OmnichannelActivityBatchIndexMigrationsSchemaMigration",
             "ColumnExistsAsync",
-            "9e007b0b420cf9fe",
-            "The same read-only column existence probe as OmnichannelIndexMigration, carried into the framework step because the Orchard base class it used to inherit from stays behind: that base is also inherited by the content migrations, which do not move. Both branches only read metadata: SQLite runs 'PRAGMA table_info' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS'. Neither statement can create, alter, or drop any object."),
+            "97b95986ca70f418",
+            "The same read-only column existence probe as OmnichannelIndexMigration, carried into the framework step because the Orchard base class it used to inherit from stays behind: that base is also inherited by the content migrations, which do not move. Re-reviewed when the omnichannel collection name moved to the framework's OmnichannelCollections: the probe's own statement is unchanged, only the constant naming the collection it reads about. Both branches only read metadata: SQLite runs 'PRAGMA table_info' and every other dialect runs a parameterized 'SELECT COUNT(1) FROM INFORMATION_SCHEMA.COLUMNS'. Neither statement can create, alter, or drop any object."),
     ];
 
     /// <summary>

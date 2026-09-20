@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.Omnichannel.Models;
+﻿using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Omnichannel.Core;

@@ -1,11 +1,10 @@
-﻿using CrestApps.Core.Omnichannel.Models;
+﻿using CrestApps.Core.Omnichannel;
+using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
-using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using YesSql.Indexes;
 
-namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
+namespace CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 
 /// <summary>
 /// Provides omnichannel activity index functionality.
@@ -17,7 +16,7 @@ public sealed class OmnichannelActivityIndexProvider : IndexProvider<Omnichannel
     /// </summary>
     public OmnichannelActivityIndexProvider()
     {
-        CollectionName = OmnichannelConstants.CollectionName;
+        CollectionName = OmnichannelCollections.Name;
     }
 
     public override void Describe(DescribeContext<OmnichannelActivity> context)

@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Omnichannel.Abstractions\CrestApps.Core.Omnichannel.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.Core.Telephony\CrestApps.Core.Telephony.csproj" />
   </ItemGroup>
 

@@ -1,3 +1,4 @@
+using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Migrations;
 using OrchardCore.Data.Migration;
 using YesSql;

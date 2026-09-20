@@ -10,6 +10,10 @@ namespace CrestApps.Core.Omnichannel
         public const string Phone = "Phone";
         public const string Sms = "SMS";
     }
+    public static class OmnichannelCollections
+    {
+        public const string Name = "Omnichannel";
+    }
 }
 namespace CrestApps.Core.Omnichannel.Models
 {

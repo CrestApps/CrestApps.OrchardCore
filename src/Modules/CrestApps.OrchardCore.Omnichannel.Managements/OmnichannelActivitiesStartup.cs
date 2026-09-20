@@ -1,3 +1,4 @@
+using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Services;

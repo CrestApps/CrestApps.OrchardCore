@@ -1,19 +1,19 @@
+using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
-using CrestApps.OrchardCore.Omnichannel.Core;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using YesSql.Indexes;
 
-namespace CrestApps.OrchardCore.Omnichannel.Managements.Indexes;
+namespace CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 
-internal sealed class CadenceIndexProvider : IndexProvider<Cadence>
+public sealed class CadenceIndexProvider : IndexProvider<Cadence>
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="CadenceIndexProvider"/> class.
     /// </summary>
     public CadenceIndexProvider()
     {
-        CollectionName = OmnichannelConstants.CollectionName;
+        CollectionName = OmnichannelCollections.Name;
     }
 
     public override void Describe(DescribeContext<Cadence> context)

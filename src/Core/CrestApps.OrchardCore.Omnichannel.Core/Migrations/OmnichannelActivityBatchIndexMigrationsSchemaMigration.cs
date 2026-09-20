@@ -1,7 +1,8 @@
+using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Models;
 using System.Data.Common;
 using CrestApps.Core.Data.YesSql.Migrations;
-using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Data;
@@ -62,7 +63,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrationsSchemaMigration : I
             .Column<string>("Source", column => column.WithLength(50))
             .Column<OmnichannelActivityBatchStatus>("Status")
             .Column<DateTime>("CreatedUtc"),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         // This SQL index is for locating incoming message from Omnichannel (Incoming SMS, Email, etc).
@@ -72,7 +73,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrationsSchemaMigration : I
         "DisplayText",
         "ItemId"
         ),
-        collection: OmnichannelConstants.CollectionName
+        collection: OmnichannelCollections.Name
         );
 
         return 4;
@@ -101,13 +102,13 @@ internal sealed class OmnichannelActivityBatchIndexMigrationsSchemaMigration : I
                 // this step verifies each column and adds only the ones that are missing, so the activity
                 // batches screen can order by 'CreatedUtc' again.
                 await EnsureColumnExistsAsync<OmnichannelActivityBatchIndex>(
-                    OmnichannelConstants.CollectionName,
+                    OmnichannelCollections.Name,
                     "Source",
                     table => table.AddColumn<string>("Source", column => column.WithLength(50)),
                     "ensure the 'Source' column exists on the omnichannel activity batch index");
 
                 await EnsureColumnExistsAsync<OmnichannelActivityBatchIndex>(
-                    OmnichannelConstants.CollectionName,
+                    OmnichannelCollections.Name,
                     "CreatedUtc",
                     table => table.AddColumn<DateTime>("CreatedUtc"),
                     "ensure the 'CreatedUtc' column exists on the omnichannel activity batch index");
@@ -285,7 +286,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrationsSchemaMigration : I
                     await ApplyIsolatedSchemaChangeAsync(connection,
                         isolatedBuilder => isolatedBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
                             table.AddColumn<string>("Source", column => column.WithLength(50)),
-                            collection: OmnichannelConstants.CollectionName),
+                            collection: OmnichannelCollections.Name),
                         "add the 'Source' column to the omnichannel activity batch index");
 
                     return 2;
@@ -311,7 +312,7 @@ internal sealed class OmnichannelActivityBatchIndexMigrationsSchemaMigration : I
                     await ApplyIsolatedSchemaChangeAsync(connection,
                         isolatedBuilder => isolatedBuilder.AlterIndexTableAsync<OmnichannelActivityBatchIndex>(table =>
                             table.AddColumn<DateTime>("CreatedUtc"),
-                            collection: OmnichannelConstants.CollectionName),
+                            collection: OmnichannelCollections.Name),
                         "add the 'CreatedUtc' column to the omnichannel activity batch index");
 
                     return 3;
