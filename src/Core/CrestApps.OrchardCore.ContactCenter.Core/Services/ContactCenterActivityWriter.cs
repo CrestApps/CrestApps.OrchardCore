@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -17,7 +18,7 @@ public sealed class ContactCenterActivityWriter : IContactCenterActivityWriter
 
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -25,17 +26,17 @@ public sealed class ContactCenterActivityWriter : IContactCenterActivityWriter
     /// </summary>
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="scopeExecutor">The executor used to defer and retry the write outside the routing scope.</param>
-    /// <param name="session">The YesSql session used to commit the write on its own.</param>
+    /// <param name="storeCommitter">The commit boundary, used to commit the write on its own.</param>
     /// <param name="logger">The logger.</param>
     public ContactCenterActivityWriter(
         IOmnichannelActivityManager activityManager,
         IContactCenterScopeExecutor scopeExecutor,
-        ISession session,
+        IStoreCommitter storeCommitter,
         ILogger<ContactCenterActivityWriter> logger)
     {
         _activityManager = activityManager;
         _scopeExecutor = scopeExecutor;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _logger = logger;
     }
 
@@ -105,7 +106,7 @@ public sealed class ContactCenterActivityWriter : IContactCenterActivityWriter
 
         if (save)
         {
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
         }
     }
 

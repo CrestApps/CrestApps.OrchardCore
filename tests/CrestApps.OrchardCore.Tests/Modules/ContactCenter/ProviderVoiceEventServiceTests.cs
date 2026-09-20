@@ -19,6 +19,7 @@ using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -2549,7 +2550,7 @@ public sealed class ProviderVoiceEventServiceTests
             providerIdentityResolver,
             providerCommandStateService,
             scopeExecutor,
-            session,
+            new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance),
             new VoiceIngressGate(distributedLock),
             clock,
             logger);

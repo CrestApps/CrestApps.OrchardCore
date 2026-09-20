@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -33,7 +34,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IDistributedLockProvider _distributedLock;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly TimeProvider _timeProvider;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ILogger _logger;
@@ -54,7 +55,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     /// <param name="providerCommandStateServices">The optional durable provider-command service used for voice-specific timeout actions.</param>
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
     /// <param name="distributedLock">The distributed lock used to serialize agent and reservation transitions.</param>
-    /// <param name="session">The YesSql session used to commit reservation state atomically.</param>
+    /// <param name="storeCommitter">The commit boundary, used to commit reservation state atomically.</param>
     /// <param name="timeProvider">The time provider used to stamp reservation times.</param>
     /// <param name="logger">The logger.</param>
     public ActivityReservationService(
@@ -71,7 +72,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         IEnumerable<IProviderCommandStateService> providerCommandStateServices,
         IContactCenterScopeExecutor scopeExecutor,
         IDistributedLockProvider distributedLock,
-        ISession session,
+        IStoreCommitter storeCommitter,
         TimeProvider timeProvider,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<ActivityReservationService> logger)
@@ -89,7 +90,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         _providerCommandStateService = providerCommandStateServices.FirstOrDefault();
         _scopeExecutor = scopeExecutor;
         _distributedLock = distributedLock;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _timeProvider = timeProvider;
         _coordinationOptions = coordinationOptions.Value;
         _logger = logger;

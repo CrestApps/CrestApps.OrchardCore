@@ -8,6 +8,7 @@ using Moq;
 using OrchardCore.Modules;
 using YesSql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -330,7 +331,7 @@ public sealed class ActivityAssignmentServiceTests
             businessHours.Object,
             new Mock<IContactCenterEventPublisher>().Object,
             distributedLock.Object,
-            (session ?? new Mock<ISession>()).Object,
+            new YesSqlStoreCommitter((session ?? new Mock<ISession>()).Object, NullLogger<YesSqlStoreCommitter>.Instance),
             clock,
             CoordinationOptions(),
             NullLogger<ActivityAssignmentService>.Instance);

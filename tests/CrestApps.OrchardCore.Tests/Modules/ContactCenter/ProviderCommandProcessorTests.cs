@@ -18,6 +18,7 @@ using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -1022,7 +1023,7 @@ public sealed class ProviderCommandProcessorTests
                 Mock.Of<IHostApplicationLifetime>()),
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
-            session.Object,
+            new YesSqlStoreCommitter(session.Object, NullLogger<YesSqlStoreCommitter>.Instance),
             clock,
             NullLogger<ProviderCommandProcessor>.Instance);
         scopeExecutor

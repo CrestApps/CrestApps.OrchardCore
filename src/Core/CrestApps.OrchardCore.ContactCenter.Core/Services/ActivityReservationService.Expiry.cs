@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Locking.Distributed;
+using CrestApps.Core.Services;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -331,7 +332,7 @@ public sealed partial class ActivityReservationService
     {
         try
         {
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
         }
         catch (ConcurrencyException)
         {

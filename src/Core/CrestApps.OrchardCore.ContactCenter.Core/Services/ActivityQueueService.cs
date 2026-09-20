@@ -7,6 +7,7 @@ using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -23,7 +24,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IBusinessHoursService _businessHours;
     private readonly IContactCenterEventPublisher _publisher;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IQueueTreatmentProvider _treatmentProvider;
     private readonly IInteractionManager _interactionManager;
@@ -38,7 +39,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="businessHours">The business-hours service used to evaluate after-hours overflow.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
-    /// <param name="session">The YesSql session used to make newly queued work visible to immediate routing queries.</param>
+    /// <param name="storeCommitter">The commit boundary, used to make newly queued work visible to immediate routing queries.</param>
     /// <param name="scopeExecutor">The executor used to retry idempotent enqueue conflicts in a fresh scope.</param>
     /// <param name="timeProvider">The time provider used to stamp queue times.</param>
     public ActivityQueueService(
@@ -48,7 +49,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         IContactCenterWorkStateService workStateService,
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,
-        ISession session,
+        IStoreCommitter storeCommitter,
         IContactCenterScopeExecutor scopeExecutor,
         IQueueTreatmentProvider treatmentProvider,
         IInteractionManager interactionManager,
@@ -60,7 +61,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         _workStateService = workStateService;
         _businessHours = businessHours;
         _publisher = publisher;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _scopeExecutor = scopeExecutor;
         _treatmentProvider = treatmentProvider;
         _interactionManager = interactionManager;
@@ -126,7 +127,7 @@ public sealed class ActivityQueueService : IActivityQueueService
                 cancellationToken);
         }
 
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         await _publisher.PublishAsync(new InteractionEvent
         {

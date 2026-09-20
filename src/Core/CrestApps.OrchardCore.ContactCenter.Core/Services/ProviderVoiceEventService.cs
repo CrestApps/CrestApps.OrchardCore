@@ -10,6 +10,7 @@ using OrchardCore.Modules;
 using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -31,7 +32,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     private readonly IProviderIdentityResolver _providerIdentityResolver;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly IVoiceIngressGate _ingressGate;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
@@ -50,7 +51,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
     /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases before keying.</param>
     /// <param name="providerCommandStateService">The service used to persist outbound bridge intent.</param>
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
-    /// <param name="session">The YesSql session used to commit provider truth before releasing the ingestion lock.</param>
+    /// <param name="storeCommitter">The commit boundary, used to commit provider truth before releasing the ingestion lock.</param>
     /// <param name="ingressGate">The provider-neutral gate that serializes each provider call stream.</param>
     /// <param name="timeProvider">The time provider used to stamp times.</param>
     /// <param name="logger">The logger instance.</param>
@@ -66,7 +67,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         IProviderIdentityResolver providerIdentityResolver,
         IProviderCommandStateService providerCommandStateService,
         IContactCenterScopeExecutor scopeExecutor,
-        ISession session,
+        IStoreCommitter storeCommitter,
         IVoiceIngressGate ingressGate,
         TimeProvider timeProvider,
         ILogger<ProviderVoiceEventService> logger)
@@ -82,7 +83,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         _providerIdentityResolver = providerIdentityResolver;
         _providerCommandStateService = providerCommandStateService;
         _scopeExecutor = scopeExecutor;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _ingressGate = ingressGate;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -232,7 +233,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
             if (providerNameCanonicalized)
             {
-                await _session.SaveChangesAsync(cancellationToken);
+                await _storeCommitter.CommitAsync(cancellationToken);
             }
 
             return (!string.IsNullOrWhiteSpace(providerEvent.ProviderName)
@@ -253,7 +254,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                 "Refused provider voice event for call '{ProviderCallId}' because the interaction-matched session is already bound to a different call.",
                 providerEvent.ProviderCallId.SanitizeLogValue());
 
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
 
             return null;
         }
@@ -272,7 +273,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
                     now);
             }
 
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
 
             return session;
         }
@@ -354,7 +355,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             await StageAnsweredOutboundBridgeAsync(session, interaction, cancellationToken);
         }
 
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return session;
     }

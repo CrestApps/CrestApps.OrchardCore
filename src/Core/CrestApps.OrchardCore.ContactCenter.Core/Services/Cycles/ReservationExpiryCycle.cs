@@ -9,6 +9,7 @@ using CrestApps.Core.ContactCenter.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -53,7 +54,7 @@ public sealed class ReservationExpiryCycle : IReservationExpiryCycle
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IInboundVoiceService _inboundVoiceService;
     private readonly TimeProvider _timeProvider;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -74,7 +75,7 @@ public sealed class ReservationExpiryCycle : IReservationExpiryCycle
     /// <param name="activityManager">The activity manager.</param>
     /// <param name="inboundVoiceService">The inbound voice service.</param>
     /// <param name="timeProvider">The time provider.</param>
-    /// <param name="session">The session.</param>
+    /// <param name="storeCommitter">The commit boundary.</param>
     /// <param name="logger">The logger.</param>
     public ReservationExpiryCycle(
         IContactCenterFeatureWorkManager workManager,
@@ -89,7 +90,7 @@ public sealed class ReservationExpiryCycle : IReservationExpiryCycle
         IOmnichannelActivityManager activityManager,
         IEnumerable<IInboundVoiceService> inboundVoiceService,
         TimeProvider timeProvider,
-        ISession session,
+        IStoreCommitter storeCommitter,
         ILogger<ReservationExpiryCycle> logger)
     {
         _workManager = workManager;
@@ -104,7 +105,7 @@ public sealed class ReservationExpiryCycle : IReservationExpiryCycle
         _activityManager = activityManager;
         _inboundVoiceService = inboundVoiceService.FirstOrDefault();
         _timeProvider = timeProvider;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _logger = logger;
     }
 
@@ -210,7 +211,7 @@ public sealed class ReservationExpiryCycle : IReservationExpiryCycle
                             break;
                         }
 
-                        await _session.SaveChangesAsync(runToken);
+                        await _storeCommitter.CommitAsync(runToken);
                         voiceWorkBlockedGenericAssignment = attempt == MaxVoiceOffersPerQueue - 1;
                     }
                 }

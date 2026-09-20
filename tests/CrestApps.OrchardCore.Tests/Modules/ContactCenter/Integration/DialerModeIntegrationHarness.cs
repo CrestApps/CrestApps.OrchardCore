@@ -27,6 +27,7 @@ using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 
@@ -305,6 +306,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddLogging();
 
         services.AddSingleton(session);
+        services.AddSingleton<IStoreCommitter>(new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance));
         services.AddSingleton(clock);
         services.AddSingleton<TimeProvider>(clock);
         services.AddSingleton(CreateAlwaysGrantingLock());

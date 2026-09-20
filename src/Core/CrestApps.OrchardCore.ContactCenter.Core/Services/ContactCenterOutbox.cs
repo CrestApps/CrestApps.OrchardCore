@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -37,7 +38,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     private readonly IInteractionEventStore _eventStore;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
@@ -49,7 +50,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
     /// <param name="eventStore">The durable interaction event store used to reload events for retry.</param>
     /// <param name="scopeExecutor">The executor used to isolate each due message in a fresh child scope.</param>
     /// <param name="workManager">The feature work manager used to fence dispatch during feature quiescence.</param>
-    /// <param name="session">The tenant session used to commit claims before handler execution.</param>
+    /// <param name="storeCommitter">The commit boundary, used to commit claims before handler execution.</param>
     /// <param name="timeProvider">The time provider used to schedule retries.</param>
     /// <param name="logger">The logger instance.</param>
     public ContactCenterOutbox(
@@ -58,7 +59,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         IInteractionEventStore eventStore,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
-        ISession session,
+        IStoreCommitter storeCommitter,
         TimeProvider timeProvider,
         ILogger<ContactCenterOutbox> logger)
     {
@@ -67,7 +68,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         _eventStore = eventStore;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -303,7 +304,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         }
 
         await ScheduleRetryAsync(message, error, !handlerUnavailable, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return false;
     }
@@ -356,7 +357,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         message.NextAttemptUtc = now.Add(_claimLease);
         message.ModifiedUtc = now;
         await _outboxStore.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return true;
     }
@@ -544,7 +545,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         // this path, so that redelivery replays every handler and is safe only because handlers are required to be
         // idempotent; the checkpoint exists to avoid replay after a *failed* dispatch, which is persisted.
         await _outboxStore.DeleteAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
     }
 
     private async Task DeadLetterAsync(ContactCenterOutboxMessage message, string reason, CancellationToken cancellationToken)
@@ -556,7 +557,7 @@ public sealed class ContactCenterOutbox : IContactCenterOutbox
         ContactCenterDiagnostics.RecordOutboxDeadLettered("unrecoverable");
 
         await _outboxStore.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         _logger.LogError("Dead-lettered Contact Center outbox message '{MessageId}': {Reason}", message.ItemId.SanitizeLogValue(), reason);
     }

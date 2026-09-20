@@ -19,6 +19,7 @@ using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -69,7 +70,7 @@ public sealed class MessageClaimFencingPersistenceTests
                 new Mock<IInteractionEventStore>().Object,
                 new Mock<IContactCenterScopeExecutor>().Object,
                 new TestContactCenterFeatureWorkManager(),
-                settlementSession,
+                new YesSqlStoreCommitter(settlementSession, NullLogger<YesSqlStoreCommitter>.Instance),
                 CreateClock(),
                 NullLogger<ContactCenterOutbox>.Instance);
             var exception = await Record.ExceptionAsync(() => settlement.SettleClaimAsync(
@@ -133,7 +134,7 @@ public sealed class MessageClaimFencingPersistenceTests
                 new Mock<IInteractionEventStore>().Object,
                 new Mock<IContactCenterScopeExecutor>().Object,
                 new TestContactCenterFeatureWorkManager(),
-                settlementSession,
+                new YesSqlStoreCommitter(settlementSession, NullLogger<YesSqlStoreCommitter>.Instance),
                 CreateClock(),
                 NullLogger<ContactCenterOutbox>.Instance);
 
@@ -252,7 +253,7 @@ public sealed class MessageClaimFencingPersistenceTests
             var settlement = new ProviderWebhookInbox(
                 [],
                 new ProviderWebhookInboxStore(settlementSession),
-                settlementSession,
+                new YesSqlStoreCommitter(settlementSession, NullLogger<YesSqlStoreCommitter>.Instance),
                 new Mock<IDistributedLockProvider>().Object,
                 new ProviderIdentityResolver([]),
                 new Mock<IContactCenterScopeExecutor>().Object,

@@ -13,6 +13,8 @@ using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.Core.Data.YesSql.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -319,7 +321,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                 await new ContactCenterMetricRollupService(
                     new ContactCenterMetricDeltaStore(rollupSession),
                     new ContactCenterMetricStore(rollupSession),
-                    rollupSession,
+                    new YesSqlStoreCommitter(rollupSession, NullLogger<YesSqlStoreCommitter>.Instance),
                     clock).RollupAsync(TestContext.Current.CancellationToken);
             }
 
@@ -399,7 +401,7 @@ public sealed class ContactCenterMetricsProjectionMaintenanceTests
                 await new ContactCenterMetricRollupService(
                     new ContactCenterMetricDeltaStore(rollupSession),
                     new ContactCenterMetricStore(rollupSession),
-                    rollupSession,
+                    new YesSqlStoreCommitter(rollupSession, NullLogger<YesSqlStoreCommitter>.Instance),
                     clock).RollupAsync(TestContext.Current.CancellationToken);
             }
 

@@ -20,6 +20,7 @@ using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -464,7 +465,7 @@ public sealed class VoiceEventFanOutIntegrationTests
                 new ProviderIdentityResolver([]),
                 new Mock<IProviderCommandStateService>().Object,
                 scopeExecutor.Object,
-                new Mock<ISession>().Object,
+                new YesSqlStoreCommitter(new Mock<ISession>().Object, NullLogger<YesSqlStoreCommitter>.Instance),
                 ingressGate,
                 clock,
                 NullLogger<ProviderVoiceEventService>.Instance);

@@ -13,6 +13,7 @@ using OrchardCore.Modules;
 using YesSql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.StateAuthority;
 
@@ -67,7 +68,7 @@ public sealed class ProviderWebhookInboxTombstoneTests
         return new ProviderWebhookInbox(
             [handler],
             new ProviderWebhookInboxStore(session),
-            session,
+            new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance),
             CreateDistributedLock(),
             new ProviderIdentityResolver([]),
             scopeExecutor,

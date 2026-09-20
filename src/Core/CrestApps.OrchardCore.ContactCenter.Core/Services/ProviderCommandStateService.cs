@@ -4,6 +4,7 @@ using CrestApps.Core.ContactCenter.Services;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -33,7 +34,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         };
 
     private readonly IProviderCommandManager _manager;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly IDistributedLockProvider _distributedLock;
     private readonly TimeProvider _timeProvider;
 
@@ -41,17 +42,17 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     /// Initializes a new instance of the <see cref="ProviderCommandStateService"/> class.
     /// </summary>
     /// <param name="manager">The provider command manager used to read and persist commands.</param>
-    /// <param name="session">The tenant YesSql session used to commit each transition.</param>
+    /// <param name="storeCommitter">The commit boundary, used to commit each transition.</param>
     /// <param name="distributedLock">The distributed lock used to serialize command registration by idempotency key.</param>
     /// <param name="timeProvider">The time provider used to stamp transition times.</param>
     public ProviderCommandStateService(
         IProviderCommandManager manager,
-        ISession session,
+        IStoreCommitter storeCommitter,
         IDistributedLockProvider distributedLock,
         TimeProvider timeProvider)
     {
         _manager = manager;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _distributedLock = distributedLock;
         _timeProvider = timeProvider;
     }
@@ -103,7 +104,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         command.ModifiedUtc = now;
 
         await _manager.CreateAsync(command, cancellationToken: cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return command;
     }
@@ -198,7 +199,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     public async Task<ProviderCommand> ConfirmSentAsync(string commandId, ProviderCommandClaim claim, string providerReference = null, CancellationToken cancellationToken = default)
     {
         var command = await StageConfirmSentAsync(commandId, claim, providerReference, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return command;
     }
@@ -223,7 +224,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     public async Task<ProviderCommand> MarkOutcomeUnknownAsync(string commandId, ProviderCommandClaim claim, string reason = null, CancellationToken cancellationToken = default)
     {
         var command = await StageOutcomeUnknownAsync(commandId, claim, reason, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return command;
     }
@@ -329,7 +330,7 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
         CancellationToken cancellationToken = default)
     {
         var command = await StageConfirmFromReconciliationAsync(commandId, claim, providerReference, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return command;
     }
@@ -570,6 +571,6 @@ public sealed class ProviderCommandStateService : IProviderCommandStateService
     private async Task PersistAsync(ProviderCommand command, CancellationToken cancellationToken)
     {
         await _manager.UpdateAsync(command, cancellationToken: cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
     }
 }

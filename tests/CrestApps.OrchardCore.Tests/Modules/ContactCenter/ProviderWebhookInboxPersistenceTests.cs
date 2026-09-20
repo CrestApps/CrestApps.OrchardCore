@@ -17,6 +17,7 @@ using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -95,7 +96,7 @@ public sealed class ProviderWebhookInboxPersistenceTests
         return new ProviderWebhookInbox(
             [],
             new ProviderWebhookInboxStore(session),
-            session,
+            new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance),
             distributedLock,
             new ProviderIdentityResolver([]),
             new Mock<IContactCenterScopeExecutor>().Object,

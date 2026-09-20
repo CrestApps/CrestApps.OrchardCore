@@ -3,6 +3,7 @@ using CrestApps.Core.ContactCenter.Services;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -16,7 +17,7 @@ public sealed class ContactCenterMetricRollupService : IContactCenterMetricRollu
 
     private readonly IContactCenterMetricDeltaStore _deltaStore;
     private readonly IContactCenterMetricStore _metricStore;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -24,17 +25,17 @@ public sealed class ContactCenterMetricRollupService : IContactCenterMetricRollu
     /// </summary>
     /// <param name="deltaStore">The store holding the appended contributions.</param>
     /// <param name="metricStore">The store holding the daily totals.</param>
-    /// <param name="session">The YesSql session, used to commit each batch on its own.</param>
+    /// <param name="storeCommitter">The commit boundary, used to commit each batch on its own.</param>
     /// <param name="timeProvider">The time provider used to stamp the totals.</param>
     public ContactCenterMetricRollupService(
         IContactCenterMetricDeltaStore deltaStore,
         IContactCenterMetricStore metricStore,
-        ISession session,
+        IStoreCommitter storeCommitter,
         TimeProvider timeProvider)
     {
         _deltaStore = deltaStore;
         _metricStore = metricStore;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _timeProvider = timeProvider;
     }
 
@@ -66,7 +67,7 @@ public sealed class ContactCenterMetricRollupService : IContactCenterMetricRollu
 
             // Each batch is committed on its own so a long fold never accumulates one unbounded transaction,
             // and so an interrupted run keeps the batches it had already folded.
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
 
             folded += deltas.Count;
 

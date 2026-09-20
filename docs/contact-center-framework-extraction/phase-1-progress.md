@@ -386,6 +386,53 @@ different package.
 Three composition tests exercise the new builder, because the builder is the part of the package no
 Orchard startup runs - the host calls the `AddCore*` methods underneath it.
 
+### Eleven services took a YesSql session to call one method on it (W5.2a)
+
+The thing keeping the base feature, work distribution, agent presence and the provider inbox in the
+host was a constructor parameter. Eleven services took `ISession` and used it for exactly one thing:
+`SaveChangesAsync`. Core already publishes the seam for that - `IStoreCommitter`, with a YesSql
+implementation and an EntityCore one - so all eleven now take the commit boundary instead, and the
+host registers `YesSqlStoreCommitter` behind it.
+
+`AddCoreContactCenter` registers it with `TryAdd`, because a tenant running another CrestApps module
+has one already and two descriptors for one contract resolve by "last one wins". The registration
+sits in the host for now and follows the base feature when that moves.
+
+The per-feature dependency-injection snapshots gained exactly one descriptor each, and nothing else
+in them changed - which is the evidence that eleven constructors changed shape and no behaviour did.
+
+### What is still holding the last services: a YesSql exception type (W5.2a)
+
+Ten Contact Center services catch YesSql's `ConcurrencyException`, so nine of them still import
+YesSql for nothing but that one `catch`. `IStoreCommitter` hands a caller a commit boundary but says
+nothing about how a commit fails, so a service that has to distinguish "someone else wrote this row"
+from any other failure has to name the store's own exception.
+
+This is a Core decision rather than something to settle here, and it is the last mechanical blocker
+for those services. The options are roughly:
+
+- Core publishes a store-neutral concurrency exception, and each store package translates its own.
+  Every store's write path gains a catch-and-rethrow.
+- `IStoreCommitter` grows a documented failure contract that includes it.
+- The services stop distinguishing the case, which they should not: the ones that catch it are the
+  ones that retry rather than fail, and losing that turns a retryable write into a lost one.
+
+Until then those nine services stay in the host. They no longer take a session, so what is left is a
+`using` and a `catch` rather than a dependency on where the data lives.
+
+### The remaining blockers, counted (W5.2a)
+
+Thirty-two files are still in the Orchard Contact Center project, and the reasons now divide cleanly:
+
+- Nine wait on the concurrency exception above.
+- Twelve reference `CrestApps.OrchardCore.Omnichannel.Core.Services` or `.Models`, which is D-4:
+  the activity contracts that are typed on the MVC filter models and could not move with W4.
+- Four are genuinely the host's: the shell-scope executor, the cache-signal notifier, the topology
+  evaluator and the diagnostics source.
+- Three query YesSql directly - reporting, deduplication and orphan recovery - and belong in the
+  store package rather than the services package.
+- The rest are the registration file and assembly info.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All

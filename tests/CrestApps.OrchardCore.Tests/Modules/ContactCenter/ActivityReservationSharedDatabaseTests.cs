@@ -23,6 +23,7 @@ using YesSql.Sql;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -493,6 +494,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);
         services.AddSingleton(distributedLock);
         services.AddSingleton(session);
+        services.AddSingleton<IStoreCommitter>(new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance));
         services.AddSingleton<TimeProvider>(clock);
         services.AddLogging();
         services.AddSingleton<IContactCenterWorkStateStore>(new ContactCenterWorkStateStore(session));
@@ -594,6 +596,7 @@ public sealed class ActivityReservationSharedDatabaseTests
         services.AddSingleton<IEnumerable<ITelephonyService>>([]);
         services.AddSingleton(distributedLock);
         services.AddSingleton(session);
+        services.AddSingleton<IStoreCommitter>(new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance));
         services.AddSingleton<TimeProvider>(clock);
         services.AddLogging();
         services.AddSingleton<IContactCenterWorkStateStore>(new ContactCenterWorkStateStore(session));

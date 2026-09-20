@@ -112,6 +112,7 @@ CrestApps.Core.Services.INamedSourceCatalogManager<> #0 Scoped -> type:CrestApps
 CrestApps.Core.Services.ISourceCatalog<> #0 Scoped -> type:CrestApps.OrchardCore.Core.Services.SourceCatalog<>
 CrestApps.Core.Services.ISourceCatalog<CrestApps.Core.Omnichannel.Models.SubjectAction> #0 Scoped -> type:CrestApps.OrchardCore.Omnichannel.Managements.Services.SubjectActionCatalog
 CrestApps.Core.Services.ISourceCatalogManager<> #0 Scoped -> type:CrestApps.Core.Services.SourceCatalogManager<>
+CrestApps.Core.Services.IStoreCommitter #0 Scoped -> type:CrestApps.Core.Data.YesSql.Services.YesSqlStoreCommitter
 CrestApps.Core.Telephony.Services.IProviderIdentityResolver #0 Singleton -> type:CrestApps.Core.Telephony.Services.ProviderIdentityResolver
 CrestApps.OrchardCore.ContactCenter.Services.ContactCenterFeatureLifecycleCoordinator #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Services.ContactCenterFeatureLifecycleCoordinator
 CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver #0 Scoped -> type:CrestApps.OrchardCore.ContentFields.Drivers.PhoneFieldDisplayDriver

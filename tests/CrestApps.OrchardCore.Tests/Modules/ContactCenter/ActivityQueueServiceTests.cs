@@ -13,6 +13,8 @@ using OrchardCore.Modules;
 using System.Text.Json.Nodes;
 using YesSql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -443,7 +445,7 @@ public sealed class ActivityQueueServiceTests
             new FakeContactCenterWorkStateService(activityManager.Object),
             businessHours.Object,
             publisher.Object,
-            session.Object,
+            new YesSqlStoreCommitter(session.Object, NullLogger<YesSqlStoreCommitter>.Instance),
             scopeExecutor.Object,
             TreatmentProvider.Object,
             InteractionManagerForDequeue.Object,

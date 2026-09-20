@@ -18,6 +18,7 @@ using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -196,7 +197,7 @@ public sealed class ContactCenterEventOutboxPersistenceTests
             eventStore,
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
-            session,
+            new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance),
             clock,
             NullLogger<ContactCenterOutbox>.Instance);
 

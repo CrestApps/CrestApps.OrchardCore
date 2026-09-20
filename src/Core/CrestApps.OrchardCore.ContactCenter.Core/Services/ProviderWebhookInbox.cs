@@ -11,6 +11,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -59,7 +60,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     private readonly IReadOnlyList<IProviderWebhookInboxHandler> _handlers;
     private readonly ContactCenterRetentionOptions _retentionOptions;
     private readonly IProviderWebhookInboxStore _store;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly IDistributedLockProvider _distributedLock;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
@@ -71,7 +72,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     /// </summary>
     /// <param name="handlers">The feature-scoped normalized payload handlers.</param>
     /// <param name="store">The durable inbox message store.</param>
-    /// <param name="session">The tenant YesSql session used to commit acceptance and processing state.</param>
+    /// <param name="storeCommitter">The commit boundary, used to commit acceptance and processing state.</param>
     /// <param name="distributedLock">The distributed lock used for idempotent acceptance and single-message dispatch.</param>
     /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases before keying deliveries.</param>
     /// <param name="scopeExecutor">The executor used to isolate each due message in a fresh child scope.</param>
@@ -80,7 +81,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     public ProviderWebhookInbox(
         IEnumerable<IProviderWebhookInboxHandler> handlers,
         IProviderWebhookInboxStore store,
-        ISession session,
+        IStoreCommitter storeCommitter,
         IDistributedLockProvider distributedLock,
         IProviderIdentityResolver providerIdentityResolver,
         IContactCenterScopeExecutor scopeExecutor,
@@ -90,7 +91,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
     {
         _handlers = ValidateHandlers(handlers);
         _store = store;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _distributedLock = distributedLock;
         _providerIdentityResolver = providerIdentityResolver;
         _scopeExecutor = scopeExecutor;
@@ -198,7 +199,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         };
 
         await _store.CreateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return new ProviderWebhookInboxAcceptanceResult
         {
@@ -246,7 +247,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         message.NextAttemptUtc = now.Add(_claimLease);
         message.ModifiedUtc = now;
         await _store.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
         var ownerToken = message.OwnerToken;
         var fenceToken = message.FenceToken;
 
@@ -261,7 +262,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
             message.NextAttemptUtc = _timeProvider.GetUtcNow().UtcDateTime.Add(_missingHandlerDelay);
             message.ModifiedUtc = _timeProvider.GetUtcNow().UtcDateTime;
             await _store.UpdateAsync(message, cancellationToken);
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
 
             _logger.LogError(
                 "No provider webhook inbox handler named '{HandlerName}' is registered for message '{MessageId}'.",
@@ -374,7 +375,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         message.NextAttemptUtc = message.ProcessedUtc.Value;
         message.ModifiedUtc = message.ProcessedUtc;
         await _store.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
 
         return true;
     }
@@ -451,7 +452,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
 
         if (count > 0)
         {
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
         }
 
         return count;
@@ -505,7 +506,7 @@ public sealed class ProviderWebhookInbox : IProviderWebhookInbox
         }
 
         await _store.UpdateAsync(message, cancellationToken);
-        await _session.SaveChangesAsync(cancellationToken);
+        await _storeCommitter.CommitAsync(cancellationToken);
     }
 
     private static string GetDeliveryLockKey(string providerName, string deliveryId)

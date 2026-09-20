@@ -18,6 +18,7 @@ using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -150,7 +151,7 @@ public sealed class ProviderCommandStateServiceTests
         clock.SetUtcNow(_now);
         var service = new ProviderCommandStateService(
             manager.Object,
-            session.Object,
+            new YesSqlStoreCommitter(session.Object, NullLogger<YesSqlStoreCommitter>.Instance),
             new Mock<IDistributedLockProvider>().Object,
             clock);
 
@@ -872,7 +873,7 @@ public sealed class ProviderCommandStateServiceTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((null, true));
 
-        return new ProviderCommandStateService(manager, session, distributedLock.Object, clock);
+        return new ProviderCommandStateService(manager, new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance), distributedLock.Object, clock);
     }
 
     private static ProviderCommandRegistration CreateRegistration(string commandId = "command-1")

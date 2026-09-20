@@ -9,6 +9,7 @@ using Moq;
 using OrchardCore.Modules;
 using YesSql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -664,7 +665,7 @@ public sealed class ContactCenterOutboxTests
             eventStore.Object,
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
-            session.Object,
+            new YesSqlStoreCommitter(session.Object, NullLogger<YesSqlStoreCommitter>.Instance),
             clock,
             NullLogger<ContactCenterOutbox>.Instance);
 

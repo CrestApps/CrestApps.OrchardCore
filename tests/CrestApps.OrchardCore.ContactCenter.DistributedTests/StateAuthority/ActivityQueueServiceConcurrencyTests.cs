@@ -15,6 +15,7 @@ using System.Data.Common;
 using YesSql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.DistributedTests.StateAuthority;
 
@@ -148,7 +149,7 @@ public sealed class ActivityQueueServiceConcurrencyTests
             Mock.Of<IContactCenterWorkStateService>(),
             Mock.Of<IBusinessHoursService>(),
             Mock.Of<IContactCenterEventPublisher>(),
-            Mock.Of<ISession>(),
+            new YesSqlStoreCommitter(Mock.Of<ISession>(), NullLogger<YesSqlStoreCommitter>.Instance),
             countingExecutor,
             Mock.Of<IQueueTreatmentProvider>(),
             Mock.Of<IInteractionManager>(),
@@ -176,7 +177,7 @@ public sealed class ActivityQueueServiceConcurrencyTests
             Mock.Of<IContactCenterWorkStateService>(),
             Mock.Of<IBusinessHoursService>(),
             Mock.Of<IContactCenterEventPublisher>(),
-            session,
+            new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance),
             new NoRetryScopeExecutor(),
             Mock.Of<IQueueTreatmentProvider>(),
             Mock.Of<IInteractionManager>(),

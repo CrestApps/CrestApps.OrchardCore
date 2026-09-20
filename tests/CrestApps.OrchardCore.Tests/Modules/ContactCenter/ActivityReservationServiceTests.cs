@@ -20,6 +20,8 @@ using OrchardCore.Modules;
 using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -1930,7 +1932,7 @@ public sealed class ActivityReservationServiceTests
             providerCommandStateService is null ? [] : [providerCommandStateService.Object],
             (scopeExecutor ?? new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict)).Object,
             distributedLock.Object,
-            session.Object,
+            new YesSqlStoreCommitter(session.Object, NullLogger<YesSqlStoreCommitter>.Instance),
             clock,
             CoordinationOptions(),
             new Mock<ILogger<ActivityReservationService>>().Object);

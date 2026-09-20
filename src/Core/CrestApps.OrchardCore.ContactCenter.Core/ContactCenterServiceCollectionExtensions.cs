@@ -16,6 +16,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention;
+using CrestApps.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core;
 
@@ -185,6 +187,12 @@ public static class ContactCenterServiceCollectionExtensions
             .AddScoped<IContactCenterRetentionPolicy, ContactCenterWorkStateRetentionPolicy>()
             .AddScoped<IContactCenterWorkStateManager, ContactCenterWorkStateManager>()
             .AddScoped<IContactCenterWorkStateService, ContactCenterWorkStateService>();
+
+        // The commit boundary the services flush through instead of taking a YesSql session. TryAdd because a
+        // tenant that also runs another CrestApps module has one already, and two descriptors for one contract
+        // resolve by "last one wins". It is registered here rather than in the store package because the base
+        // feature has not moved yet; it follows the feature.
+        services.TryAddScoped<IStoreCommitter, YesSqlStoreCommitter>();
 
         // The call-session index and its migration canonicalize provider identity, and this feature does not
         // depend on Telephony, so the resolver must also be available without the Telephony module.

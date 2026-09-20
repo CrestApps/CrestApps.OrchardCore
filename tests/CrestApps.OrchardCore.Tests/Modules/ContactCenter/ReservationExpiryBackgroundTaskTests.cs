@@ -17,6 +17,9 @@ using OrchardCore.Modules;
 using YesSql;
 using System.Reflection;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -608,6 +611,7 @@ public sealed class ReservationExpiryBackgroundTaskTests
         services.AddSingleton(inboundVoiceService.Object);
         services.AddSingleton<TimeProvider>(clock);
         services.AddSingleton(session.Object);
+        services.AddSingleton<IStoreCommitter>(new YesSqlStoreCommitter(session.Object, NullLogger<YesSqlStoreCommitter>.Instance));
         services.AddSingleton<IContactCenterFeatureWorkManager>(workManager ?? new TestContactCenterFeatureWorkManager());
         services.AddLogging();
 

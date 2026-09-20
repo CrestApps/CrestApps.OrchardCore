@@ -18,6 +18,7 @@ using YesSql.Provider.Sqlite;
 using YesSql.Sql;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -195,7 +196,7 @@ public sealed class RecordingErasurePersistenceTests
             eventStore,
             scopeExecutor.Object,
             new TestContactCenterFeatureWorkManager(),
-            session,
+            new YesSqlStoreCommitter(session, NullLogger<YesSqlStoreCommitter>.Instance),
             new FakeTimeProvider(_erasedUtc),
             NullLogger<ContactCenterOutbox>.Instance);
 

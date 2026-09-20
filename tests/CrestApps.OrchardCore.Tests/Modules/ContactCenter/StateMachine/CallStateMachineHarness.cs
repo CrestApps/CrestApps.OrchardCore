@@ -13,6 +13,7 @@ using System.Text.Json.Nodes;
 using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.Core.Data.YesSql.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.StateMachine;
 
@@ -143,7 +144,7 @@ public sealed class CallStateMachineHarness
             new ProviderIdentityResolver([]),
             new Mock<IProviderCommandStateService>().Object,
             scopeExecutor.Object,
-            new Mock<ISession>().Object,
+            new YesSqlStoreCommitter(new Mock<ISession>().Object, NullLogger<YesSqlStoreCommitter>.Instance),
             new VoiceIngressGate(distributedLock.Object),
             clock,
             NullLogger<ProviderVoiceEventService>.Instance);

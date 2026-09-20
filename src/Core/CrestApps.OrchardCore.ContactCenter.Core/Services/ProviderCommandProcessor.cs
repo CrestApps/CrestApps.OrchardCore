@@ -6,6 +6,7 @@ using OrchardCore.Modules;
 using YesSql;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -29,7 +30,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
@@ -44,7 +45,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="scopeExecutor">The executor used to isolate each recovery transition in a fresh shell scope.</param>
     /// <param name="workManager">The feature work manager used to fence dispatch during Voice quiescence.</param>
-    /// <param name="session">The tenant YesSql session used to commit outcome projections.</param>
+    /// <param name="storeCommitter">The commit boundary, used to commit outcome projections.</param>
     /// <param name="timeProvider">The time provider used to determine recovery windows.</param>
     /// <param name="logger">The logger instance.</param>
     public ProviderCommandProcessor(
@@ -56,7 +57,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         ITelephonyCommandExecutor commandExecutor,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
-        ISession session,
+        IStoreCommitter storeCommitter,
         TimeProvider timeProvider,
         ILogger<ProviderCommandProcessor> logger)
     {
@@ -68,7 +69,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
         _commandExecutor = commandExecutor;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -234,7 +235,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
                 await executor.ProjectSuccessAsync(confirmed, result, cancellationToken);
             }
 
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
 
             return confirmed;
         }
@@ -265,7 +266,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
                     cancellationToken);
             }
 
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
 
             return outcomeUnknown;
         }
@@ -319,7 +320,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
                 await executor.ProjectSuccessAsync(confirmed, syntheticResult, cancellationToken);
             }
 
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
 
             return confirmed;
         }
@@ -366,7 +367,7 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
                     cancellationToken);
             }
 
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
 
             if (_logger.IsEnabled(LogLevel.Information))
             {

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
 using YesSql;
+using CrestApps.Core.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -27,7 +28,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     private readonly IBusinessHoursService _businessHours;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IDistributedLockProvider _distributedLock;
-    private readonly ISession _session;
+    private readonly IStoreCommitter _storeCommitter;
     private readonly TimeProvider _timeProvider;
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly ILogger _logger;
@@ -43,7 +44,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// <param name="businessHours">The business-hours service used to pause assignment while the queue is closed.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="distributedLock">The distributed lock used to serialize assignment per queue.</param>
-    /// <param name="session">The YesSql session used to persist each reservation before assigning more queue work.</param>
+    /// <param name="storeCommitter">The commit boundary, used to persist each reservation before assigning more queue work.</param>
     /// <param name="timeProvider">The time provider used to evaluate SLA aging and business hours.</param>
     /// <param name="logger">The logger.</param>
     public ActivityAssignmentService(
@@ -55,7 +56,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,
         IDistributedLockProvider distributedLock,
-        ISession session,
+        IStoreCommitter storeCommitter,
         TimeProvider timeProvider,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         ILogger<ActivityAssignmentService> logger)
@@ -68,7 +69,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         _businessHours = businessHours;
         _publisher = publisher;
         _distributedLock = distributedLock;
-        _session = session;
+        _storeCommitter = storeCommitter;
         _timeProvider = timeProvider;
         _coordinationOptions = coordinationOptions.Value;
         _logger = logger;
@@ -132,7 +133,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         while (await AssignNextCoreAsync(queueId, cancellationToken) is not null)
         {
             count++;
-            await _session.SaveChangesAsync(cancellationToken);
+            await _storeCommitter.CommitAsync(cancellationToken);
         }
 
         return count;
