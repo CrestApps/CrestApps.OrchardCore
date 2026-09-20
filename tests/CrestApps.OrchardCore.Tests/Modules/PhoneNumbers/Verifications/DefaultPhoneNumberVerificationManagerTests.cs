@@ -195,26 +195,37 @@ public sealed class DefaultPhoneNumberVerificationManagerTests
             SelectedProvider = selectedProvider,
         };
 
-        var site = new Mock<ISite>();
-        site.Setup(s => s.GetOrCreate<PhoneNumberVerificationsSettings>())
-            .Returns(settings);
-
-        var siteService = new Mock<ISiteService>();
-        siteService.Setup(s => s.GetSiteSettingsAsync())
-            .ReturnsAsync(site.Object);
-
         var clock = new FakeTimeProvider();
         clock.SetUtcNow(_now);
 
         return new DefaultPhoneNumberVerificationManager(
             serviceProvider,
             Options.Create(options),
-            siteService.Object,
+            new StaticOptionsMonitor<PhoneNumberVerificationsSettings>(settings),
             [],
             handlers ?? [],
             new DefaultPhoneNumberService(),
             clock,
             NullLogger<DefaultPhoneNumberVerificationManager>.Instance);
+    }
+
+    /// <summary>
+    /// The smallest monitor that answers with one fixed value, for a manager that reads
+    /// <see cref="IOptionsMonitor{TOptions}.CurrentValue"/> rather than a snapshot.
+    /// </summary>
+    /// <typeparam name="TOptions">The options type.</typeparam>
+    private sealed class StaticOptionsMonitor<TOptions> : IOptionsMonitor<TOptions>
+    {
+        public StaticOptionsMonitor(TOptions value)
+        {
+            CurrentValue = value;
+        }
+
+        public TOptions CurrentValue { get; }
+
+        public TOptions Get(string name) => CurrentValue;
+
+        public IDisposable OnChange(Action<TOptions, string> listener) => null;
     }
 
     private sealed class FakeVerificationProvider : IPhoneNumberVerificationProvider

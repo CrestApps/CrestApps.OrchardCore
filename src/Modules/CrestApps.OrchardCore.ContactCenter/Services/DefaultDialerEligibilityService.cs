@@ -9,6 +9,7 @@ using CrestApps.Core.PhoneNumbers;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -27,6 +28,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     private readonly IBusinessHoursService _businessHoursService;
     private readonly IDialerAbandonmentPolicyService _abandonmentPolicyService;
     private readonly IEnumerable<INationalDoNotCallRegistry> _doNotCallRegistries;
+    private readonly IOptionsMonitor<ContactCenterComplianceOptions> _complianceOptions;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger _logger;
 
@@ -40,6 +42,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     /// <param name="businessHoursService">The business-hours service used to evaluate calling calendars.</param>
     /// <param name="abandonmentPolicyService">The policy service used to evaluate the rolling abandonment-rate cap.</param>
     /// <param name="doNotCallRegistries">The registered national do-not-call registries, if any.</param>
+    /// <param name="complianceOptions">The compliance options, which decide what an unscreenable attempt means.</param>
     /// <param name="timeProvider">The time provider used to evaluate cool-down and calling-window timing.</param>
     /// <param name="logger">The logger used to record why an attempt could not be screened.</param>
     public DefaultDialerEligibilityService(
@@ -50,6 +53,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         IBusinessHoursService businessHoursService,
         IDialerAbandonmentPolicyService abandonmentPolicyService,
         IEnumerable<INationalDoNotCallRegistry> doNotCallRegistries,
+        IOptionsMonitor<ContactCenterComplianceOptions> complianceOptions,
         TimeProvider timeProvider,
         ILogger<DefaultDialerEligibilityService> logger)
     {
@@ -60,6 +64,7 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
         _businessHoursService = businessHoursService;
         _abandonmentPolicyService = abandonmentPolicyService;
         _doNotCallRegistries = doNotCallRegistries;
+        _complianceOptions = complianceOptions;
         _timeProvider = timeProvider;
         _logger = logger;
     }
@@ -254,6 +259,16 @@ public sealed class DefaultDialerEligibilityService : IDialerEligibilityService
     {
         if (!_doNotCallRegistries.Any())
         {
+            // Nothing to ask. Reporting "not listed" is an answer this check did not earn, so a deployment
+            // that would rather place no call than place an unscreened one says so and gets a refusal.
+            if (_complianceOptions.CurrentValue.FailClosedWithoutNationalRegistry)
+            {
+                _logger.LogWarning(
+                    "Refusing an outbound attempt because no national do-not-call registry is configured and 'CrestApps:ContactCenter:Compliance:FailClosedWithoutNationalRegistry' is enabled.");
+
+                return true;
+            }
+
             return false;
         }
 

@@ -12,6 +12,7 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Modules;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -239,6 +240,70 @@ public sealed class DialerEligibilityServiceTests
         Assert.Equal(DialerSuppressionReason.NationalDoNotCallRegistry, result.Reason);
     }
 
+    /// <summary>
+    /// With no registry configured there is nothing to ask, so the screening step has no answer.
+    /// </summary>
+    /// <remarks>
+    /// The default is to let the call through, which is what every deployment already does. A deployment that
+    /// would rather place no call than place an unscreened one turns the flag on and gets a refusal instead -
+    /// and that refusal is the whole point of the flag, so it is pinned here.
+    /// </remarks>
+    [Fact]
+    public async Task EvaluateAsync_WhenNoRegistryIsConfigured_IsEligibleByDefault()
+    {
+        // Arrange
+        var harness = new Harness();
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+14255551212" };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.True(result.IsEligible);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenNoRegistryIsConfiguredAndFailClosedIsEnabled_SuppressesRegistry()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Compliance.FailClosedWithoutNationalRegistry = true;
+
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+14255551212" };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.False(result.IsEligible);
+        Assert.Equal(DialerSuppressionReason.NationalDoNotCallRegistry, result.Reason);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_WhenARegistryIsConfigured_FailClosedChangesNothing()
+    {
+        // Arrange
+        // The flag is about the absence of a registry. With one present the registry's answer decides, and a
+        // clean number is still eligible - otherwise turning the flag on would stop all dialing everywhere.
+        var harness = new Harness();
+        harness.Compliance.FailClosedWithoutNationalRegistry = true;
+
+        var registry = new Mock<INationalDoNotCallRegistry>();
+        registry
+            .Setup(r => r.GetRegisteredNumbersAsync(It.IsAny<IEnumerable<PhoneNumber>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        harness.Registries.Add(registry.Object);
+
+        var activity = new OmnichannelActivity { ItemId = "act1", PreferredDestination = "+14255551212" };
+
+        // Act
+        var result = await harness.EvaluateAsync(Profile(), activity);
+
+        // Assert
+        Assert.True(result.IsEligible);
+    }
+
     [Fact]
     public async Task EvaluateAsync_WhenAbandonmentCapExceeded_SuppressesAbandonment()
     {
@@ -426,6 +491,12 @@ public sealed class DialerEligibilityServiceTests
 
         public List<INationalDoNotCallRegistry> Registries { get; } = [];
 
+        /// <summary>
+        /// The compliance options this harness's service reads. A test that cares sets a flag on it before
+        /// acting; every harness gets its own, so one test's flag cannot reach another.
+        /// </summary>
+        public ContactCenterComplianceOptions Compliance { get; } = new();
+
         public Harness()
         {
             AbandonmentPolicyService
@@ -452,6 +523,7 @@ public sealed class DialerEligibilityServiceTests
                 BusinessHoursService.Object,
                 AbandonmentPolicyService.Object,
                 Registries,
+                new SettableOptionsMonitor<ContactCenterComplianceOptions>(Compliance),
                 clock,
                 NullLogger<DefaultDialerEligibilityService>.Instance);
 
@@ -462,5 +534,23 @@ public sealed class DialerEligibilityServiceTests
                 AttemptAlreadyCounted = attemptAlreadyCounted,
             }, CancellationToken.None);
         }
+    }
+
+    /// <summary>
+    /// An options monitor whose value a test can replace.
+    /// </summary>
+    /// <typeparam name="TOptions">The options type.</typeparam>
+    private sealed class SettableOptionsMonitor<TOptions> : IOptionsMonitor<TOptions>
+    {
+        public SettableOptionsMonitor(TOptions value)
+        {
+            CurrentValue = value;
+        }
+
+        public TOptions CurrentValue { get; set; }
+
+        public TOptions Get(string name) => CurrentValue;
+
+        public IDisposable OnChange(Action<TOptions, string> listener) => null;
     }
 }

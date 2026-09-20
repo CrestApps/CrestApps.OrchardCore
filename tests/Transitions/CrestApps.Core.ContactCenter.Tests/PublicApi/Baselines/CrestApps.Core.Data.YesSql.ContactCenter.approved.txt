@@ -319,6 +319,13 @@ namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations
         public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
         public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
     }
+    public sealed class AgentStateReasonCodeIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public AgentStateReasonCodeIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
     public sealed class BusinessHoursCalendarIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
     {
         public BusinessHoursCalendarIndexMigrationsSchemaMigration() { }
@@ -931,6 +938,13 @@ namespace CrestApps.Core.Data.YesSql.Omnichannel.Migrations
     public sealed class CadenceIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
     {
         public CadenceIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class OmnichannelMessageIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public OmnichannelMessageIndexMigrationsSchemaMigration() { }
         public string Name { get; }
         public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
         public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }

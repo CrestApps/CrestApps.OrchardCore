@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 using CrestApps.Core.PhoneNumbers;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Core.Services;
@@ -15,7 +14,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly PhoneNumberVerificationProviderOptions _providerOptions;
-    private readonly ISiteService _siteService;
+    private readonly IOptionsMonitor<PhoneNumberVerificationsSettings> _settings;
     private readonly IEnumerable<IPhoneNumberVerificationProviderConfiguration> _providerConfigurations;
     private readonly IEnumerable<IPhoneNumberVerificationHandler> _handlers;
     private readonly IPhoneNumberService _phoneNumberService;
@@ -27,7 +26,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     /// </summary>
     /// <param name="serviceProvider">The scoped service provider used to resolve providers by key.</param>
     /// <param name="providerOptions">The registered provider descriptors.</param>
-    /// <param name="siteService">The site service used to read module settings.</param>
+    /// <param name="settings">The module settings, read as options so this manager does not depend on where a host keeps them.</param>
     /// <param name="providerConfigurations">The provider enabled-state configurations.</param>
     /// <param name="handlers">The verification lifecycle handlers.</param>
     /// <param name="phoneNumberService">The phone number formatting service.</param>
@@ -36,7 +35,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     public DefaultPhoneNumberVerificationManager(
         IServiceProvider serviceProvider,
         IOptions<PhoneNumberVerificationProviderOptions> providerOptions,
-        ISiteService siteService,
+        IOptionsMonitor<PhoneNumberVerificationsSettings> settings,
         IEnumerable<IPhoneNumberVerificationProviderConfiguration> providerConfigurations,
         IEnumerable<IPhoneNumberVerificationHandler> handlers,
         IPhoneNumberService phoneNumberService,
@@ -45,7 +44,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
     {
         _serviceProvider = serviceProvider;
         _providerOptions = providerOptions.Value;
-        _siteService = siteService;
+        _settings = settings;
         _providerConfigurations = providerConfigurations;
         _handlers = handlers;
         _phoneNumberService = phoneNumberService;
@@ -103,7 +102,7 @@ public sealed class DefaultPhoneNumberVerificationManager : IPhoneNumberVerifica
             return null;
         }
 
-        var settings = await _siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
+        var settings = _settings.CurrentValue;
 
         if (!string.IsNullOrEmpty(settings.SelectedProvider)
             && enabledProviders.Any(provider => string.Equals(provider.Key, settings.SelectedProvider, StringComparison.OrdinalIgnoreCase)))

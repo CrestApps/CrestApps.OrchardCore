@@ -266,3 +266,51 @@ Phase 1.
 The exception is P0.4's open item. It changes a stored shape and a shape tenants can see, and it
 wants the pre-extraction upgrade test green against a real tenant first. It is one adapter and one
 property, and it should be the first thing Phase 1 does rather than something Phase 1 discovers.
+
+## Closing out the unblocked items (2026-09-20)
+
+Driven by an independent audit that checked every numbered workstream against the repository rather than
+against this file.
+
+### P0.11 is two conversions, not three
+
+The audit counted three unconverted schema migrations. One of the three,
+`OmnichannelIndexMigration`, is an abstract base class, and `ContactMethodMigrations` is a content-type
+migration that correctly stays with the host. The real set was two, and both are converted:
+
+- `AgentStateReasonCodeIndexMigrations` splits: the table goes to a framework step, the recipe seed stays
+  here, because a recipe is an Orchard concept. Both still run under one version, so a tenant sees no
+  difference.
+- `OmnichannelMessageIndexMigrations` delegates all three of its versions.
+
+`OminchannelActivityAIChatSessionIndexMigrations` also stays: its index is module-resident and not in the
+moving set.
+
+### P0.6 is done, and two of its three "violations" were not violations
+
+The three remaining `ISiteService` readers were not equivalent. `SettingsPhoneNumberVerificationProviderConfiguration`
+and `TelnyxSmsOptionsConfiguration` are `IConfigureOptions<T>` bridges - they are the seam P0.6 asks for, not
+a breach of it, and they belong on the host side by construction.
+
+The real one was `DefaultPhoneNumberVerificationManager`, a manager reading site settings directly. It takes
+`IOptionsMonitor<PhoneNumberVerificationsSettings>` now, bound through the existing
+`AddSiteSettingsOptions<T>` helper - which already carries the change-token source, so a saved setting is
+not cached forever.
+
+### The fail-open compliance path is now a choice (P0.13)
+
+`DefaultDialerEligibilityService.IsOnNationalRegistryAsync` returns `false` when no registry is registered,
+so a deployment with no DNC registry dials with no suppression check and no way to say that is
+unacceptable. `ContactCenterComplianceOptions.FailClosedWithoutNationalRegistry` makes it refusable.
+
+The default is off, deliberately: on would stop outbound dialing for every deployment that has no registry
+configured, which is a behaviour change no upgrade should impose silently. Three tests pin all of it -
+the default, the flag, and that the flag changes nothing when a registry *is* present.
+
+### `ContactPreferenceDoNotCallRegistry` has a dependency the audit did not see
+
+It cannot be written yet. `INationalDoNotCallRegistry` answers by phone number, and the contact
+communication preferences are indexed by content item id, so a preference-backed registry needs the
+number-to-contact lookup - which is `ContentItemOmnichannelContactSearch`, itself an unbuilt P0.4 item.
+P0.4 has to land first.
+

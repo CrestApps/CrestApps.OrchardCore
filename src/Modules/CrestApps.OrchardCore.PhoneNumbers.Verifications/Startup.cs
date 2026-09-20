@@ -41,6 +41,9 @@ public sealed class Startup : StartupBase
     {
         services.AddCoreHostSeams();
 
+        // The manager reads its module settings as options, so the host is what decides where those
+        // settings live. The change-token source is what keeps a saved setting from being cached forever.
+        services.AddSiteSettingsOptions<PhoneNumberVerificationsSettings>();
         services.AddScoped<IPhoneNumberVerificationManager, DefaultPhoneNumberVerificationManager>();
 
         services.AddSiteDisplayDriver<PhoneNumberVerificationsSettingsDisplayDriver>();
