@@ -26,7 +26,23 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 /// Eight stored types moved: <c>OmnichannelActivity</c>, <c>OmnichannelActivityBatch</c>,
 /// <c>OmnichannelCampaign</c>, <c>OmnichannelCampaignGroup</c>, <c>OmnichannelDisposition</c>,
 /// <c>OmnichannelChannelEndpoint</c>, <c>SubjectAction</c> and <c>Cadence</c>. They came from one namespace in
-/// one assembly and landed in one namespace in one assembly, so a single rule covers them.
+/// one assembly and landed in one namespace in one assembly, so a single replacement rule covers them.
+/// </para>
+/// <para>
+/// They are not all stored the same way, and that is what the first version of this migration got wrong. A
+/// store that writes one document per record - <c>OmnichannelActivity</c>, <c>OmnichannelActivityBatch</c> and
+/// <c>Cadence</c> - records the type as <c>Namespace.TypeName, Assembly</c>. A catalog backed by
+/// <c>IDocumentManager</c> keeps the whole set in one document, and records the nested type of that wrapper:
+/// <c>CrestApps.OrchardCore.Models.DictionaryDocument`1[[Namespace.TypeName, Assembly, Version=..., ...]],
+/// CrestApps.OrchardCore.Abstractions</c>. The other five types are stored that way, either through an
+/// explicit <c>Catalog&lt;T&gt;</c> or through the open-generic registration.
+/// </para>
+/// <para>
+/// The replacement itself works on both shapes, because it rewrites substrings. Only the match had to change:
+/// it anchored the namespace to the start of the value and the assembly to the end, which is true of the flat
+/// shape and of neither nested one. The inner name's <c>Version=</c> segment is deliberately left alone - the
+/// data layer computes the same segment when it reads, and every assembly in this repository carries the one
+/// version set by <c>VersionPrefix</c>, so the value that comes out is the value a read looks for.
 /// </para>
 /// <para>
 /// The assembly is matched exactly rather than by prefix, for the reason the telephony rewrite records: the
@@ -96,8 +112,7 @@ internal sealed class OmnichannelLegacyDocumentTypeNameMigrations : DataMigratio
 
             foreach (var (legacyNamespacePrefix, legacyAssemblyName, currentNamespacePrefix, currentAssemblyName) in _legacyTypeNameReplacements)
             {
-                var whereClause =
-                    $"{quotedTypeColumnName} LIKE '{legacyNamespacePrefix}%' AND {quotedTypeColumnName} LIKE '%, {legacyAssemblyName}'";
+                var whereClause = BuildWhereClause(quotedTypeColumnName, legacyNamespacePrefix, legacyAssemblyName);
 
                 var count = await connection.ExecuteScalarAsync<int>(
                     $"SELECT COUNT(*) FROM {quotedTableName} WHERE {whereClause}");
@@ -154,6 +169,24 @@ internal sealed class OmnichannelLegacyDocumentTypeNameMigrations : DataMigratio
     }
 
     /// <summary>
+    /// Builds the match for one replacement rule, covering both shapes a moved type can be stored in.
+    /// </summary>
+    /// <remarks>
+    /// The namespace is matched anywhere rather than at the start, because in a nested
+    /// <c>DictionaryDocument`1[[...]]</c> value it is not at the start. The assembly is still matched exactly:
+    /// it must be followed by the end of the value or by a comma, so an assembly whose name merely starts with
+    /// this one is not rewritten into a type that never existed.
+    /// </remarks>
+    /// <param name="quotedTypeColumnName">The quoted type column.</param>
+    /// <param name="legacyNamespacePrefix">The legacy namespace prefix.</param>
+    /// <param name="legacyAssemblyName">The legacy assembly name.</param>
+    /// <returns>The SQL predicate.</returns>
+    private static string BuildWhereClause(string quotedTypeColumnName, string legacyNamespacePrefix, string legacyAssemblyName)
+        => $"{quotedTypeColumnName} LIKE '%{legacyNamespacePrefix}%' AND (" +
+           $"{quotedTypeColumnName} LIKE '%, {legacyAssemblyName}' OR " +
+           $"{quotedTypeColumnName} LIKE '%, {legacyAssemblyName},%')";
+
+    /// <summary>
     /// Applies the same replacements the SQL above applies, to one recorded type name.
     /// </summary>
     /// <remarks>
@@ -171,15 +204,26 @@ internal sealed class OmnichannelLegacyDocumentTypeNameMigrations : DataMigratio
 
         foreach (var (legacyNamespacePrefix, legacyAssemblyName, currentNamespacePrefix, currentAssemblyName) in _legacyTypeNameReplacements)
         {
-            if (!typeName.StartsWith(legacyNamespacePrefix, StringComparison.Ordinal) ||
-                !typeName.EndsWith(", " + legacyAssemblyName, StringComparison.Ordinal))
+            if (!typeName.Contains(legacyNamespacePrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            // The assembly still has to match exactly, so it must be followed by the end of the value (the flat
+            // shape) or by a comma (the nested shape, where the version segment follows). Matching it loosely
+            // would rewrite a document belonging to an assembly whose name merely starts with this one, and the
+            // legacy assembly names are prefixes of one another.
+            var assemblySuffix = ", " + legacyAssemblyName;
+
+            if (!typeName.EndsWith(assemblySuffix, StringComparison.Ordinal) &&
+                !typeName.Contains(assemblySuffix + ",", StringComparison.Ordinal))
             {
                 continue;
             }
 
             return typeName
                 .Replace(legacyNamespacePrefix, currentNamespacePrefix, StringComparison.Ordinal)
-                .Replace(", " + legacyAssemblyName, ", " + currentAssemblyName, StringComparison.Ordinal);
+                .Replace(assemblySuffix, ", " + currentAssemblyName, StringComparison.Ordinal);
         }
 
         return typeName;

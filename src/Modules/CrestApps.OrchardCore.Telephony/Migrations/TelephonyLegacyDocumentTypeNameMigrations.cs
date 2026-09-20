@@ -103,8 +103,7 @@ internal sealed class TelephonyLegacyDocumentTypeNameMigrations : DataMigration
 
             foreach (var (legacyNamespacePrefix, legacyAssemblyName, currentNamespacePrefix, currentAssemblyName) in _legacyTypeNameReplacements)
             {
-                var whereClause =
-                    $"{quotedTypeColumnName} LIKE '{legacyNamespacePrefix}%' AND {quotedTypeColumnName} LIKE '%, {legacyAssemblyName}'";
+                var whereClause = BuildWhereClause(quotedTypeColumnName, legacyNamespacePrefix, legacyAssemblyName);
 
                 var count = await connection.ExecuteScalarAsync<int>(
                     $"SELECT COUNT(*) FROM {quotedTableName} WHERE {whereClause}");
@@ -161,6 +160,24 @@ internal sealed class TelephonyLegacyDocumentTypeNameMigrations : DataMigration
     }
 
     /// <summary>
+    /// Builds the match for one replacement rule, covering both shapes a moved type can be stored in.
+    /// </summary>
+    /// <remarks>
+    /// Every store behind this module writes one document per record, so today only the flat
+    /// <c>Namespace.TypeName, Assembly</c> shape occurs. The nested <c>DictionaryDocument`1[[...]]</c> shape is
+    /// matched anyway: a type that later moves to a catalog-backed store would otherwise be skipped silently,
+    /// which is exactly how the omnichannel rewrite came to miss five of the eight types it claimed.
+    /// </remarks>
+    /// <param name="quotedTypeColumnName">The quoted type column.</param>
+    /// <param name="legacyNamespacePrefix">The legacy namespace prefix.</param>
+    /// <param name="legacyAssemblyName">The legacy assembly name.</param>
+    /// <returns>The SQL predicate.</returns>
+    private static string BuildWhereClause(string quotedTypeColumnName, string legacyNamespacePrefix, string legacyAssemblyName)
+        => $"{quotedTypeColumnName} LIKE '%{legacyNamespacePrefix}%' AND (" +
+           $"{quotedTypeColumnName} LIKE '%, {legacyAssemblyName}' OR " +
+           $"{quotedTypeColumnName} LIKE '%, {legacyAssemblyName},%')";
+
+    /// <summary>
     /// Applies the same replacements the SQL above applies, to one recorded type name.
     /// </summary>
     /// <remarks>
@@ -178,15 +195,26 @@ internal sealed class TelephonyLegacyDocumentTypeNameMigrations : DataMigration
 
         foreach (var (legacyNamespacePrefix, legacyAssemblyName, currentNamespacePrefix, currentAssemblyName) in _legacyTypeNameReplacements)
         {
-            if (!typeName.StartsWith(legacyNamespacePrefix, StringComparison.Ordinal) ||
-                !typeName.EndsWith(", " + legacyAssemblyName, StringComparison.Ordinal))
+            if (!typeName.Contains(legacyNamespacePrefix, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            // The assembly still has to match exactly, so it must be followed by the end of the value (the flat
+            // shape) or by a comma (the nested shape, where the version segment follows). Matching it loosely
+            // would rewrite a document belonging to an assembly whose name merely starts with this one, and the
+            // legacy assembly names are prefixes of one another.
+            var assemblySuffix = ", " + legacyAssemblyName;
+
+            if (!typeName.EndsWith(assemblySuffix, StringComparison.Ordinal) &&
+                !typeName.Contains(assemblySuffix + ",", StringComparison.Ordinal))
             {
                 continue;
             }
 
             return typeName
                 .Replace(legacyNamespacePrefix, currentNamespacePrefix, StringComparison.Ordinal)
-                .Replace(", " + legacyAssemblyName, ", " + currentAssemblyName, StringComparison.Ordinal);
+                .Replace(assemblySuffix, ", " + currentAssemblyName, StringComparison.Ordinal);
         }
 
         return typeName;

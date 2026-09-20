@@ -509,6 +509,69 @@ When the preview lands:
 3. Move the services, and the four features they were holding back onto
    `CrestAppsContactCenterBuilder`.
 
+### The rewrite skipped five of the eight types it claimed (W5.2d)
+
+An independent audit found this, and it is the worst defect of the extraction so far: merged code that
+loses data on upgrade.
+
+`OmnichannelLegacyDocumentTypeNameMigrations` matched the namespace at the start of the recorded type
+and the assembly at the end. That describes a type stored one document per record. It does not
+describe a type stored through a catalog: `Catalog<T>` persists through
+`IDocumentManager<DictionaryDocument<T>>`, so the document records the wrapper, as
+`CrestApps.OrchardCore.Models.DictionaryDocument`1[[Namespace.TypeName, Assembly, Version=...]],
+CrestApps.OrchardCore.Abstractions` - a value that neither starts with the namespace nor ends with the
+assembly.
+
+Five of the eight types it names are stored that way: `OmnichannelCampaign`,
+`OmnichannelCampaignGroup` and `OmnichannelDisposition` through the open-generic registration,
+`OmnichannelChannelEndpoint` through an explicit `Catalog<T>`, and `SubjectAction` through
+`SourceCatalog<T>`. On upgrade each would have been skipped, the new code would have asked for the new
+nested name, found nothing, and been handed a fresh empty document. Campaigns, campaign groups,
+dispositions, channel endpoints - which is inbound number to queue routing - and subject actions, all
+gone.
+
+`Cadence` is safe, contrary to the audit: it is registered through `AddYesSqlDocumentCatalog`, which is
+one document per record.
+
+The replacement itself was always right, because it rewrites substrings. Only the match was wrong, and
+only the match changed. The inner `Version=` segment is deliberately left alone: the data layer
+computes the same segment when it resolves a type, and every assembly here carries the one version set
+by `VersionPrefix`, so what comes out is what a read looks for. Verified against the real values in the
+checked-in snapshot database rather than assumed.
+
+The Contact Center and Telephony rewrites were checked and are unaffected - every store behind them is
+a `ConcurrentDocumentCatalog`. They got the same widened match anyway, so the next type to move to a
+catalog-backed store is not skipped in silence.
+
+### Why nothing caught it, and what now does (W5.2d)
+
+Three separate reasons, all worth remembering:
+
+- The only test exercised a C# mirror of the rules, never the SQL, and every case in it was a flat name.
+- The pre-extraction snapshot database has an **empty** `Omnichannel_Document` table, so the upgrade
+  test had nothing to lose.
+- `appendix-b` names this exact case - generic documents "need a nested REPLACE like
+  `AIDeploymentIndexMigrations` does" - and that module already does it. The checklist existed; nobody
+  was assigned to run it.
+
+`LegacyDocumentTypeNameRewriteSqlTests` now seeds both shapes into SQLite and runs the migration's own
+predicate, fetched by reflection so the test cannot drift from the statement that executes. Against the
+old predicate, six of its thirteen cases fail; that was confirmed by reverting the fix and re-running,
+not assumed.
+
+### Appendix B checks 1 and 3, run and recorded (W5.2d)
+
+They had no owner in any workstream. Both are now run:
+
+- **Check 1 (collections):** the three flat omnichannel types are written into the `Omnichannel`
+  collection; the five catalog-backed ones land in the default collection. The rewrite iterates both,
+  so both are covered.
+- **Check 3 (CLR names inside JSON):** the only persisted-name comparison in the moving set is
+  `ContactCenterOutbox.TryResolveCompletedCheckpoint`, which matches a legacy checkpoint against the
+  handler's runtime `FullName`. All nine `IContactCenterEventHandler` implementations are
+  module-resident and none changed namespace, so the alias still resolves. Everything else the sweep
+  found is an in-memory cache key or a log message.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All
