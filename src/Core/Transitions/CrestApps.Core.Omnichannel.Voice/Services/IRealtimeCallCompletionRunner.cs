@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.Core.Omnichannel.Voice.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// Runs the work a finished live call left behind, away from the scope the call ran in.

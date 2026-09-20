@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// Carries the model's decision that an automated call is over from the end-call tool back to the session

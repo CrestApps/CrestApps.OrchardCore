@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Voice;
+namespace CrestApps.Core.Omnichannel.Voice;
 
 public static class OmnichannelVoiceConstants
 {

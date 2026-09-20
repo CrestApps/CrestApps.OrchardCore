@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// The scoped <see cref="IVoiceCallEndTurn"/>: one instance per call, holding whatever the end-call tool

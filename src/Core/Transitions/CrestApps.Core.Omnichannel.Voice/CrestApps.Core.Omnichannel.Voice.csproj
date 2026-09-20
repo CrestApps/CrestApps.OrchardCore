@@ -13,12 +13,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CrestApps.Core" />
+    <PackageReference Include="CrestApps.Core.AI" />
+    <PackageReference Include="CrestApps.Core.AI.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CrestApps.Core.Omnichannel\CrestApps.Core.Omnichannel.csproj" />
+    <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.ContactCenter.Abstractions\CrestApps.Core.ContactCenter.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />
   </ItemGroup>
 

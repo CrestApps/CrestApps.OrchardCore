@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
+using CrestApps.Core.Omnichannel.Voice.Tools;
 
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// Guidance every automated call gives the model, whichever way the call is being held.
@@ -11,7 +11,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// stops the two drifting apart -- which they had: only the realtime session was ever told it could end the call,
 /// so a turn-based call said goodbye and then sat there until the customer gave up and hung up.
 /// </remarks>
-internal static class VoiceCallGuidance
+public static class VoiceCallGuidance
 {
     /// <summary>
     /// Tells the model that hanging up is its job, and when to do it.

@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Models;
+namespace CrestApps.Core.Omnichannel.Voice.Models;
 
 /// <summary>
 /// A call event in the only terms the automated conversation needs: what happened, on which call, for which

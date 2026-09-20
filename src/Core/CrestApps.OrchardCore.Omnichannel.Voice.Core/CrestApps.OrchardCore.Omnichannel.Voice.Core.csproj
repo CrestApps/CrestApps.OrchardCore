@@ -27,6 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../Transitions/CrestApps.Core.Omnichannel.Voice/CrestApps.Core.Omnichannel.Voice.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Telephony.Abstractions/CrestApps.OrchardCore.Telephony.Abstractions.csproj" />
     <ProjectReference Include="..\..\Abstractions\Transitions\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />

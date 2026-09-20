@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Voice;
+namespace CrestApps.Core.Omnichannel.Voice;
 
 /// <summary>
 /// The prompt templates the automated voice module ships, by the id they are discovered under.

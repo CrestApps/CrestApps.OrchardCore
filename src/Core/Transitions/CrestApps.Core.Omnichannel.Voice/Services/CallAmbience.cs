@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// Generates the quiet room an agent would be sitting in — faint room tone, and the sound of someone typing while

@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Omnichannel.Voice.Models;
+using CrestApps.Core.Omnichannel.Voice.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// Drives an automated voice conversation from the events a telephony provider reports.

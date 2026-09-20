@@ -1,7 +1,7 @@
 ﻿using System.Buffers.Binary;
 using CrestApps.Core.ContactCenter.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// Translates between the audio a phone call carries and the audio a realtime model speaks.

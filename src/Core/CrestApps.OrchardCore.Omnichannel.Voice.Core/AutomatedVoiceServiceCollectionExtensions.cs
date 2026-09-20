@@ -1,4 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
+using CrestApps.Core.Omnichannel.Voice;
+using CrestApps.Core.Omnichannel.Voice.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

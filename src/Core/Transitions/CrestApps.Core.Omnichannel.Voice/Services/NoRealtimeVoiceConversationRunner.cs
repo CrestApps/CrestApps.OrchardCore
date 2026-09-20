@@ -1,4 +1,4 @@
-﻿namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+﻿namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// The realtime runner for a tenant that cannot carry live call audio. It reports that no session ran, so the

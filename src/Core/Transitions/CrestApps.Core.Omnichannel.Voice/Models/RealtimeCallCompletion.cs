@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Models;
+namespace CrestApps.Core.Omnichannel.Voice.Models;
 
 /// <summary>
 /// What a finished live session left for somebody else to carry out: hand the caller to an agent, or hang up.

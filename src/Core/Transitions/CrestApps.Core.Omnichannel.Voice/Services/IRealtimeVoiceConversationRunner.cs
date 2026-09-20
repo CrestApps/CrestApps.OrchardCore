@@ -1,9 +1,8 @@
 ﻿using CrestApps.Core.AI.Models;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
-using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
+namespace CrestApps.Core.Omnichannel.Voice.Services;
 
 /// <summary>
 /// Runs an automated phone conversation as a live speech-to-speech session rather than as a loop of

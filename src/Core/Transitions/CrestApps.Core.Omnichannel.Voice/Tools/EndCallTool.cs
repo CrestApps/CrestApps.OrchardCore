@@ -1,11 +1,11 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
-using CrestApps.OrchardCore.Omnichannel.Voice.Services;
+using CrestApps.Core.Omnichannel.Voice.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Tools;
+namespace CrestApps.Core.Omnichannel.Voice.Tools;
 
 /// <summary>
 /// The AI tool a live automated call invokes when the conversation has reached its end, so the platform hangs up

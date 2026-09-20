@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Models;
+namespace CrestApps.Core.Omnichannel.Voice.Models;
 
 /// <summary>
 /// A durable marker stored on the automated voice activity's property bag when the model invokes the

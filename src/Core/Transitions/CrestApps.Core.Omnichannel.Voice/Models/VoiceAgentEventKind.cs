@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Voice.Models;
+namespace CrestApps.Core.Omnichannel.Voice.Models;
 
 /// <summary>
 /// The four moments in a call the automated conversation reacts to. A provider translates its own event names
