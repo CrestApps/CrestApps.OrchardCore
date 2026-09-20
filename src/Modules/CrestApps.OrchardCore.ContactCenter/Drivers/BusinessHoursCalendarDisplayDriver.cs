@@ -1,5 +1,5 @@
 using System.Globalization;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;

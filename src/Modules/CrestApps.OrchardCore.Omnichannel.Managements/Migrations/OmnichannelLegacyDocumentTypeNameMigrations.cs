@@ -1,3 +1,5 @@
+using System.Data.Common;
+using CrestApps.Core.Omnichannel;
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -35,8 +37,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations;
 internal sealed class OmnichannelLegacyDocumentTypeNameMigrations : DataMigration
 {
     /// <summary>
-    /// The replacements to apply, as legacy namespace prefix, legacy assembly, current namespace prefix and
-    /// current assembly.
+    /// The collections omnichannel documents were written into.
+    /// </summary>
+    private static readonly string[] _collections = [OmnichannelCollections.Name, string.Empty];
+
+    /// <summary>
+    /// The replacements to apply, as legacy namespace prefix, legacy assembly, current namespace
+    /// prefix and current assembly.
     /// </summary>
     private static readonly (string LegacyNamespacePrefix, string LegacyAssemblyName, string CurrentNamespacePrefix, string CurrentAssemblyName)[] _legacyTypeNameReplacements =
     [
@@ -66,9 +73,6 @@ internal sealed class OmnichannelLegacyDocumentTypeNameMigrations : DataMigratio
         var logger = scope.GetRequiredService<ILogger<OmnichannelLegacyDocumentTypeNameMigrations>>();
 
         var dialect = store.Configuration.SqlDialect;
-        var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable();
-        var table = $"{store.Configuration.TablePrefix}{documentTableName}";
-        var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
         var quotedTypeColumnName = dialect.QuoteForColumnName(nameof(Document.Type));
 
         await using var connection = dbConnectionAccessor.CreateConnection();
@@ -76,38 +80,76 @@ internal sealed class OmnichannelLegacyDocumentTypeNameMigrations : DataMigratio
 
         var totalUpdated = 0;
 
-        foreach (var (legacyNamespacePrefix, legacyAssemblyName, currentNamespacePrefix, currentAssemblyName) in _legacyTypeNameReplacements)
+        // Every collection, not only the default one. A document written into a named collection lives in
+        // that collection's own table, so a rewrite that reads GetDocumentTable() with no argument silently
+        // leaves exactly the rows this migration exists for.
+        foreach (var collection in _collections)
         {
-            var whereClause =
-                $"{quotedTypeColumnName} LIKE '{legacyNamespacePrefix}%' AND {quotedTypeColumnName} LIKE '%, {legacyAssemblyName}'";
+            var documentTableName = store.Configuration.TableNameConvention.GetDocumentTable(collection);
+            var table = $"{store.Configuration.TablePrefix}{documentTableName}";
+            var quotedTableName = dialect.QuoteForTableName(table, store.Configuration.Schema);
 
-            var count = await connection.ExecuteScalarAsync<int>(
-                $"SELECT COUNT(*) FROM {quotedTableName} WHERE {whereClause}");
-
-            if (count == 0)
+            if (!await TableExistsAsync(connection, quotedTableName))
             {
                 continue;
             }
 
-            totalUpdated += await connection.ExecuteAsync(
-                $"""
-                UPDATE {quotedTableName}
+            foreach (var (legacyNamespacePrefix, legacyAssemblyName, currentNamespacePrefix, currentAssemblyName) in _legacyTypeNameReplacements)
+            {
+                var whereClause =
+                    $"{quotedTypeColumnName} LIKE '{legacyNamespacePrefix}%' AND {quotedTypeColumnName} LIKE '%, {legacyAssemblyName}'";
 
-                SET {quotedTypeColumnName} = REPLACE(
-                REPLACE({quotedTypeColumnName}, '{legacyNamespacePrefix}', '{currentNamespacePrefix}'),
-                ', {legacyAssemblyName}',
-                ', {currentAssemblyName}')
+                var count = await connection.ExecuteScalarAsync<int>(
+                    $"SELECT COUNT(*) FROM {quotedTableName} WHERE {whereClause}");
 
-                WHERE {whereClause}
-                """);
+                if (count == 0)
+                {
+                    continue;
+                }
+
+                totalUpdated += await connection.ExecuteAsync(
+                    $"""
+                    UPDATE {quotedTableName}
+
+                    SET {quotedTypeColumnName} = REPLACE(
+                    REPLACE({quotedTypeColumnName}, '{legacyNamespacePrefix}', '{currentNamespacePrefix}'),
+                    ', {legacyAssemblyName}',
+                    ', {currentAssemblyName}')
+
+                    WHERE {whereClause}
+                    """);
+            }
         }
 
         if (totalUpdated > 0 && logger.IsEnabled(LogLevel.Information))
         {
             logger.LogInformation(
-                "Updated {Count} legacy omnichannel document type names in {TableName} to the current CrestApps.Core assemblies.",
-                totalUpdated,
-                table);
+                "Updated {Count} legacy omnichannel document type names to the current CrestApps.Core assemblies.",
+                totalUpdated);
+        }
+    }
+
+    /// <summary>
+    /// Whether a collection's document table is present.
+    /// </summary>
+    /// <remarks>
+    /// A tenant that never used a collection has no table for it, and asking is cheaper than deciding which
+    /// collections a given tenant happens to have enabled.
+    /// </remarks>
+    /// <param name="connection">The open connection.</param>
+    /// <param name="quotedTableName">The quoted table name.</param>
+    /// <returns><see langword="true"/> when the table exists.</returns>
+    private static async Task<bool> TableExistsAsync(DbConnection connection, string quotedTableName)
+    {
+        try
+        {
+            await connection.ExecuteScalarAsync<int>($"SELECT COUNT(*) FROM {quotedTableName} WHERE 1 = 0");
+
+            return true;
+        }
+        catch (DbException)
+        {
+            return false;
         }
     }
 

@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using YesSql;
 using YesSql.Sql;
 using YesSql.Utils;

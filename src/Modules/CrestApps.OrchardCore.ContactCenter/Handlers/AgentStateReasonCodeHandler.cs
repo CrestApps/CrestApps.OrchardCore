@@ -2,9 +2,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.Core.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Deployments;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Modules;
 

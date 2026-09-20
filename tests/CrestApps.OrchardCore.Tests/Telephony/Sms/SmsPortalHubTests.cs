@@ -1,6 +1,6 @@
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using System.Security.Claims;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Hubs;

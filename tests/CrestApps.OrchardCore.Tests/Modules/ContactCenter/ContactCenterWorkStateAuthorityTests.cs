@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Data.YesSql.Omnichannel.Indexes;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Locking;
@@ -5,10 +6,9 @@ using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
-using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;

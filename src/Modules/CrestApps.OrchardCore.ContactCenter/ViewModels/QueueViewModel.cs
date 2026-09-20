@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.Core.ContactCenter.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 

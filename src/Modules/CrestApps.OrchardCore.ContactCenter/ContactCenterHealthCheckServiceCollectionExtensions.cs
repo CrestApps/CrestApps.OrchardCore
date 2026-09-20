@@ -1,6 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

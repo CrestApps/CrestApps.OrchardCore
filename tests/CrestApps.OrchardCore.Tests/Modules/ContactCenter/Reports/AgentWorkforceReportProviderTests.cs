@@ -1,6 +1,5 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 

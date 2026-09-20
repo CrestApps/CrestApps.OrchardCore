@@ -1,5 +1,5 @@
 using CrestApps.Core.Locking;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;

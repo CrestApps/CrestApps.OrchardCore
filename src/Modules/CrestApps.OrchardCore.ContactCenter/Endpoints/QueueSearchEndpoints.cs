@@ -45,7 +45,7 @@ public static class QueueSearchEndpoints
     {
         var queues = await queueManager.GetEnabledAsync(cancellationToken);
 
-        IEnumerable<Core.Models.ActivityQueue> matches = queues;
+        IEnumerable<CrestApps.Core.ContactCenter.Models.ActivityQueue> matches = queues;
 
         if (!string.IsNullOrWhiteSpace(query))
         {

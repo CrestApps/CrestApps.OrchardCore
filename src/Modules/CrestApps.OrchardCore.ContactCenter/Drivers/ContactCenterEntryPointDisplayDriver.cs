@@ -1,7 +1,6 @@
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.ContactCenter;
 using System.Text.Json;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Deployments;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;

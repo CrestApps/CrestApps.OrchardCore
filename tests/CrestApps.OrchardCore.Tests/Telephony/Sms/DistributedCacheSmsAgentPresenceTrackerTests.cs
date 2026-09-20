@@ -1,5 +1,5 @@
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;

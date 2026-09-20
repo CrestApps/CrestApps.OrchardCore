@@ -1,6 +1,5 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Time.Testing;

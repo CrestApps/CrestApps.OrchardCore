@@ -1,7 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;

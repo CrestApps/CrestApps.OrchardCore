@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using System.Globalization;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;

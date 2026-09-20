@@ -1,7 +1,7 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Drivers;

@@ -1,7 +1,6 @@
 using System.Text.RegularExpressions;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -41,6 +40,10 @@ public sealed class CallTopologyAuthorityTests
 
     private static readonly string[] _sourceProjectFolders =
     [
+        // CallSession itself now lives in the extracted abstractions, so the rule has to look there or it
+        // scans every consumer and never finds the declaration it exists to police.
+        Path.Combine("Abstractions", "Transitions", "CrestApps.Core.ContactCenter.Abstractions"),
+        Path.Combine("Core", "Transitions", "CrestApps.Core.ContactCenter"),
         Path.Combine("Core", "CrestApps.OrchardCore.ContactCenter.Core"),
         Path.Combine("Modules", "CrestApps.OrchardCore.ContactCenter"),
         Path.Combine("Modules", "CrestApps.OrchardCore.Telephony"),

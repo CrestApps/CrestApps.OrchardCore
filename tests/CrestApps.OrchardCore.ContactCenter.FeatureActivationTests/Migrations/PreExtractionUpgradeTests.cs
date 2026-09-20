@@ -1,5 +1,5 @@
 using System.Text.Json;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Data.Migration.Records;
 using YesSql;
@@ -58,10 +58,13 @@ public sealed class PreExtractionUpgradeTests
                 var session = serviceProvider.GetRequiredService<ISession>();
                 var collection = manifest.CollectionName;
 
-                loaded[typeof(ActivityQueue).FullName] = await CountAsync<ActivityQueue>(session, collection);
-                loaded[typeof(AgentProfile).FullName] = await CountAsync<AgentProfile>(session, collection);
-                loaded[typeof(AgentSession).FullName] = await CountAsync<AgentSession>(session, collection);
-                loaded[typeof(QueueItem).FullName] = await CountAsync<QueueItem>(session, collection);
+                // Keyed by the name the snapshot recorded, not the name the type has now. The manifest is a
+                // record of what a tenant wrote before the extraction, so it speaks in the old names; the
+                // point of this gate is that those rows come back, whatever the type is called today.
+                loaded[LegacyNameOf(nameof(ActivityQueue))] = await CountAsync<ActivityQueue>(session, collection);
+                loaded[LegacyNameOf(nameof(AgentProfile))] = await CountAsync<AgentProfile>(session, collection);
+                loaded[LegacyNameOf(nameof(AgentSession))] = await CountAsync<AgentSession>(session, collection);
+                loaded[LegacyNameOf(nameof(QueueItem))] = await CountAsync<QueueItem>(session, collection);
             });
 
             // Assert
@@ -88,6 +91,20 @@ public sealed class PreExtractionUpgradeTests
             TryDelete(restored);
         }
     }
+
+    /// <summary>
+    /// The full type name the snapshot recorded for a Contact Center model.
+    /// </summary>
+    /// <remarks>
+    /// Every one of these lived in <c>CrestApps.OrchardCore.ContactCenter.Core.Models</c> when the snapshot
+    /// was taken and lives in <c>CrestApps.Core.ContactCenter.Models</c> now. Spelling the old namespace out
+    /// here rather than deriving it keeps this gate honest: it asserts against what was actually written,
+    /// not against whatever the code currently calls itself.
+    /// </remarks>
+    /// <param name="typeName">The simple type name.</param>
+    /// <returns>The full type name as the snapshot recorded it.</returns>
+    private static string LegacyNameOf(string typeName)
+        => "CrestApps.OrchardCore.ContactCenter.Core.Models." + typeName;
 
     [Fact]
     public async Task ATenantWrittenBeforeTheExtraction_DoesNotRerunItsMigrations()

@@ -5,7 +5,7 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter.BackgroundTasks;
 using CrestApps.OrchardCore.ContactCenter.Core.HealthChecks;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services.Retention;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Drivers;
@@ -94,6 +94,10 @@ public sealed class Startup : StartupBase
             .AddDataMigration<VoiceMediaItemIndexMigrations>();
 
         services.AddNavigationProvider<ContactCenterVoiceMediaAdminMenu>();
+
+        // Every Contact Center document written before the models moved records a type name that no longer
+        // resolves, so this runs before anything tries to read one.
+        services.AddDataMigration<ContactCenterLegacyDocumentTypeNameMigrations>();
 
         services
             .AddIndexProvider<ContactCenterEventMetricIndexProvider>()

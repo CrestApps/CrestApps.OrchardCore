@@ -171,12 +171,12 @@ public sealed class SmsBroadcastsController : Controller
             .ToList();
     }
 
-    private Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile> GetCurrentAgentAsync()
+    private Task<CrestApps.Core.ContactCenter.Models.AgentProfile> GetCurrentAgentAsync()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
         return string.IsNullOrEmpty(userId)
-            ? Task.FromResult<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentProfile>(null)
+            ? Task.FromResult<CrestApps.Core.ContactCenter.Models.AgentProfile>(null)
             : _agentProfileManager.FindByUserIdAsync(userId);
     }
 }

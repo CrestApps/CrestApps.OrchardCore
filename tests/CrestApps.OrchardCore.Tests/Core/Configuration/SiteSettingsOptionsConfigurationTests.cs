@@ -1,5 +1,5 @@
 using System.Reflection;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.Core.Configuration;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;

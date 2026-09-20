@@ -19,6 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      The contact centre orchestrates work recorded against a customer record, so its work-state and
+      report models are typed in terms of the omnichannel activity. That is the layer boundary the plan
+      draws, not a leak: CRM owns the work item, the contact centre owns what happens to it.
+    -->
+    <ProjectReference Include="..\CrestApps.Core.Omnichannel.Abstractions\CrestApps.Core.Omnichannel.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.Core.Telephony.Abstractions\CrestApps.Core.Telephony.Abstractions.csproj" />
   </ItemGroup>
 

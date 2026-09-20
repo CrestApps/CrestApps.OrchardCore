@@ -3,9 +3,8 @@ using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel.Models;
 using System.Text.Json;
 using CrestApps.Core.Locking;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -497,7 +496,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
 
     private async Task TerminalizeInboundAsync(
         OmnichannelActivity activity,
-        Core.Models.Interaction interaction,
+        CrestApps.Core.ContactCenter.Models.Interaction interaction,
         ActivityStatus activityStatus,
         InteractionStatus interactionStatus,
         string reasonCode,
@@ -662,7 +661,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         return activity;
     }
 
-    private async Task<Core.Models.Interaction> CreateInteractionAsync(
+    private async Task<CrestApps.Core.ContactCenter.Models.Interaction> CreateInteractionAsync(
         InboundVoiceEvent inboundEvent,
         OmnichannelActivity activity,
         string queueId,

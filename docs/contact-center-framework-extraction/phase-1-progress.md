@@ -248,6 +248,29 @@ rule with a hole in it.
 - `ContactCenterWorkStateAuthorityTests` — scans the new assembly and folder as well.
 - `VoiceIngressLayeringArchitectureTests` — walks both project closures for a Contact Center reference.
 
+### The rewrite migrations were rewriting the wrong table (W5.1a)
+
+Moving the Contact Center models made the pre-extraction upgrade test fail, which is the first time that
+gate has had anything to say. Chasing it found a defect in the rewrite pattern itself, not in the move:
+the migration resolved its target with `TableNameConvention.GetDocumentTable()` and no argument, which is
+the **default** collection's document table. Contact Center documents live in the `ContactCenter`
+collection, and omnichannel documents in `Omnichannel` - in `<prefix>_ContactCenter_Document` and
+`<prefix>_Omnichannel_Document`. The rewrite ran, reported nothing to do, and left every row it existed
+for untouched.
+
+The telephony rewrite shipped with the same defect. It passed only because no test has telephony
+documents in a restored tenant; a real tenant's call history and extension directory would have gone the
+same way.
+
+All three now iterate the collections their documents were written into, skipping a collection whose
+table a tenant never created. The upgrade test proves it against a real database rather than against the
+rules: four documents written before the extraction are read back through the new type names.
+
+Two lessons worth keeping. A rewrite rule that is unit-tested against strings proves the *rules*, not
+that the statement reached the rows - only a restored tenant does that. And the snapshot covers four
+types out of the thirty-three that have now moved, so it should be regenerated with one document per
+stored type; today it would not have caught this for omnichannel.
+
 ### Eight stored types had moved with no rewrite migration (W4.3)
 
 W4.1's first half moved forty-four omnichannel models into the framework in commit `57d65f62`. Seven of

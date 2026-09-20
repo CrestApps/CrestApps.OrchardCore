@@ -1,6 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

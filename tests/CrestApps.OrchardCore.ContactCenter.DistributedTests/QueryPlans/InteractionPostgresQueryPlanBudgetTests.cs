@@ -1,11 +1,11 @@
+using CrestApps.Core.ContactCenter;
 using System.Data.Common;
 using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
-using CrestApps.Core.ContactCenter.Models;
 using Npgsql;
 using YesSql;
 using YesSql.Provider.PostgreSql;

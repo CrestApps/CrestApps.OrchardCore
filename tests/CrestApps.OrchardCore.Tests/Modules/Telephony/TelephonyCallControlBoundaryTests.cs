@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Doubles;

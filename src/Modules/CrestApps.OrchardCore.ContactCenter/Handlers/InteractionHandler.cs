@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using Microsoft.AspNetCore.Http;
 using OrchardCore;
 using OrchardCore.Modules;

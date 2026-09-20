@@ -1,5 +1,5 @@
 using CrestApps.Core.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using OrchardCore.AuditTrail.Services;

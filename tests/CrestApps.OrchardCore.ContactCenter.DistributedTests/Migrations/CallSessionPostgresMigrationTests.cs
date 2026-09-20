@@ -1,3 +1,4 @@
+using CrestApps.Core.ContactCenter;
 using System.Data.Common;
 using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Core.Migrations;

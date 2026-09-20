@@ -1,8 +1,7 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;

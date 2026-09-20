@@ -294,6 +294,14 @@ namespace CrestApps.Core.ContactCenter
         public string Path { get; set; }
         public System.Func<System.IServiceProvider, string> SharedHealthEndpointRouteResolver { get; set; }
     }
+    public static class ContactCenterStorage
+    {
+        public const string CollectionName = "ContactCenter";
+        public const int CurrentEventSchemaVersion = 1;
+        public const string MetricsProjectionHandlerId = "ContactCenter/MetricsProjection/v1";
+        public const int MetricsProjectionVersion = 1;
+        public const int ProviderNameLength = 128;
+    }
     public interface IContactCenterFeatureLifecycleParticipant
     {
         string Capability { get; }
@@ -438,6 +446,172 @@ namespace CrestApps.Core.ContactCenter
 }
 namespace CrestApps.Core.ContactCenter.Models
 {
+    public sealed class ActivityQueue : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public ActivityQueue() { }
+        public CrestApps.Core.ContactCenter.Models.QueueAfterHoursAction AfterHoursAction { get; set; }
+        public string BusinessHoursCalendarId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionPriority DefaultPriority { get; set; }
+        public string Description { get; set; }
+        public bool EnableSlaAging { get; set; }
+        public bool Enabled { get; set; }
+        public int FirstResponseTargetSeconds { get; set; }
+        public string InboundChannelEndpointId { get; set; }
+        public int MaxQueueSize { get; set; }
+        public CrestApps.Core.ContactCenter.Models.QueueMaxWaitAction MaxWaitAction { get; set; }
+        public int MaxWaitSeconds { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public int OverflowAfterSeconds { get; set; }
+        public string OverflowQueueId { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.QueueOverflowTarget> OverflowTargets { get; set; }
+        public bool PreferStickyAgent { get; set; }
+        public CrestApps.Core.ContactCenter.Models.QueueMaxWaitAction QueueFullAction { get; set; }
+        public string QueueGroupId { get; set; }
+        public System.Collections.Generic.IList<string> RequiredSkills { get; set; }
+        public int ReservationTimeoutSeconds { get; set; }
+        public CrestApps.Core.ContactCenter.Models.QueueRoutingStrategy RoutingStrategy { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.QueueSkillRequirement> SkillRequirements { get; set; }
+        public int SlaThresholdSeconds { get; set; }
+        public CrestApps.Core.ContactCenter.Models.QueueTreatmentSettings Treatment { get; set; }
+        public CrestApps.Core.ContactCenter.Models.UnansweredOfferAction UnansweredOfferAction { get; set; }
+    }
+    public sealed class ActivityQueueGroup : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public ActivityQueueGroup() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class ActivityReservation : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public ActivityReservation() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DialerProfileId { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        [System.Text.Json.Serialization.JsonInclude]
+        public int ExtensionCount { get; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsResolved { get; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string QueueId { get; set; }
+        public string QueueItemId { get; set; }
+        [System.Text.Json.Serialization.JsonInclude]
+        public CrestApps.Core.ContactCenter.Models.ReservationStatus Status { get; }
+        public bool CanTransitionTo(CrestApps.Core.ContactCenter.Models.ReservationStatus status) { }
+        public bool Extend(System.TimeSpan extension, int maximumExtensions, System.DateTime nowUtc) { }
+        public CrestApps.Core.ContactCenter.Models.ActivityReservation RestorePersistedStatus(CrestApps.Core.ContactCenter.Models.ReservationStatus status) { }
+        public void TransitionTo(CrestApps.Core.ContactCenter.Models.ReservationStatus status) { }
+    }
+    public sealed class ActivityRoutingCandidate
+    {
+        public ActivityRoutingCandidate(CrestApps.Core.ContactCenter.Models.AgentAvailability availability) { }
+        public ActivityRoutingCandidate(CrestApps.Core.ContactCenter.Models.AgentProfile agent) { }
+        public CrestApps.Core.ContactCenter.Models.AgentProfile Agent { get; }
+        public CrestApps.Core.ContactCenter.Models.AgentAvailability Availability { get; }
+        public bool IsEligible { get; set; }
+        public System.Collections.Generic.IList<string> Reasons { get; }
+        public double Score { get; set; }
+        public void AddReason(string reason) { }
+    }
+    public sealed class ActivityRoutingCandidateDecisionData
+    {
+        public ActivityRoutingCandidateDecisionData() { }
+        public string AgentId { get; set; }
+        public bool IsEligible { get; set; }
+        public System.Collections.Generic.IList<string> Reasons { get; set; }
+        public double Score { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class ActivityRoutingContext
+    {
+        public ActivityRoutingContext(CrestApps.Core.ContactCenter.Models.ActivityQueue queue, CrestApps.Core.ContactCenter.Models.QueueItem queueItem, System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.ActivityRoutingCandidate> candidates) { }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.ActivityRoutingCandidate> Candidates { get; }
+        public CrestApps.Core.ContactCenter.Models.ActivityQueue Queue { get; }
+        public CrestApps.Core.ContactCenter.Models.QueueItem QueueItem { get; }
+    }
+    public sealed class ActivityRoutingDecision
+    {
+        public ActivityRoutingDecision() { }
+        public CrestApps.Core.ContactCenter.Models.AgentProfile Agent { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.ActivityRoutingCandidate> Candidates { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ActivityQueue Queue { get; set; }
+        public CrestApps.Core.ContactCenter.Models.QueueItem QueueItem { get; set; }
+        public string Reason { get; set; }
+        public bool Succeeded { get; set; }
+    }
+    public sealed class ActivityRoutingDecisionEventData
+    {
+        public ActivityRoutingDecisionEventData() { }
+        public string ActivityItemId { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.ActivityRoutingCandidateDecisionData> Candidates { get; set; }
+        public string QueueId { get; set; }
+        public string QueueItemId { get; set; }
+        public string Reason { get; set; }
+        public string SelectedAgentId { get; set; }
+        public bool Succeeded { get; set; }
+    }
+    public sealed class AgentAvailability
+    {
+        public AgentAvailability() { }
+        public int ActiveInteractionCount { get; set; }
+        public CrestApps.Core.ContactCenter.Models.AgentProfile Agent { get; set; }
+        public System.DateTime LastHeartbeatUtc { get; set; }
+        public int RemainingCapacity { get; }
+    }
+    public sealed class AgentAvailabilityOptions
+    {
+        public AgentAvailabilityOptions() { }
+        public System.TimeSpan HeartbeatTimeout { get; set; }
+        public System.TimeSpan MaximumWrapUpDuration { get; set; }
+    }
+    public sealed class AgentDesktopSnapshot
+    {
+        public AgentDesktopSnapshot() { }
+        public string ActiveReservationId { get; set; }
+        public System.Collections.Generic.IList<string> CampaignIds { get; set; }
+        public string DisplayName { get; set; }
+        public bool HasProfile { get; set; }
+        public bool IsOnline { get; set; }
+        public System.DateTime? LastHeartbeatUtc { get; set; }
+        public string PresenceReason { get; set; }
+        public string PresenceStatus { get; set; }
+        public System.Collections.Generic.IList<string> QueueIds { get; set; }
+        public string RequestedPresenceStatus { get; set; }
+        public System.DateTime ServerTimeUtc { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AgentEntitlements
+    {
+        public AgentEntitlements() { }
+        public System.Collections.Generic.IEnumerable<string> AllowedCampaignIds { get; init; }
+        public System.Collections.Generic.IEnumerable<string> AllowedQueueIds { get; init; }
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.AgentQueueMembership> QueueMemberships { get; init; }
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.AgentSkill> SkillProficiencies { get; init; }
+    }
+    public sealed class AgentEntitlementsChangedEventData
+    {
+        public AgentEntitlementsChangedEventData() { }
+        public System.Collections.Generic.IList<string> AllowedCampaignIds { get; set; }
+        public System.Collections.Generic.IList<string> AllowedQueueIds { get; set; }
+        public System.Collections.Generic.IList<string> RemovedCampaignIds { get; set; }
+        public System.Collections.Generic.IList<string> RemovedQueueIds { get; set; }
+    }
+    public sealed class AgentManagedConfiguration
+    {
+        public AgentManagedConfiguration() { }
+        public System.Collections.Generic.IEnumerable<string> AllowedCampaignIds { get; init; }
+        public System.Collections.Generic.IEnumerable<string> AllowedQueueIds { get; init; }
+        public string DisplayName { get; init; }
+        public int MaxConcurrentInteractions { get; init; }
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.AgentQueueMembership> QueueMemberships { get; init; }
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.AgentSkill> SkillProficiencies { get; init; }
+        public System.Collections.Generic.IEnumerable<string> Skills { get; init; }
+    }
     [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
     public enum AgentOfferKind
     {
@@ -476,6 +650,17 @@ namespace CrestApps.Core.ContactCenter.Models
         Released = 1,
         Accepted = 2,
     }
+    public sealed class AgentPresenceChangedEventData
+    {
+        public AgentPresenceChangedEventData() { }
+        public System.Collections.Generic.IList<string> CampaignIds { get; set; }
+        public System.DateTime ChangedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.AgentPresenceStatus CurrentStatus { get; set; }
+        public CrestApps.Core.ContactCenter.Models.AgentPresenceStatus PreviousStatus { get; set; }
+        public System.Collections.Generic.IList<string> QueueIds { get; set; }
+        public string Reason { get; set; }
+        public CrestApps.Core.ContactCenter.Models.AgentPresenceStatus? RequestedStatus { get; set; }
+    }
     public sealed class AgentPresenceNotification
     {
         public AgentPresenceNotification() { }
@@ -503,6 +688,339 @@ namespace CrestApps.Core.ContactCenter.Models
         Training = 10,
         AfterHoursUnavailable = 11,
     }
+    public sealed class AgentProfile : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public AgentProfile() { }
+        public string ActiveReservationId { get; set; }
+        public System.Collections.Generic.IList<string> AllowedCampaignIds { get; set; }
+        public System.Collections.Generic.IList<string> AllowedQueueIds { get; set; }
+        public System.Collections.Generic.IList<string> CampaignIds { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DisplayName { get; set; }
+        public System.DateTime? IdleSinceUtc { get; set; }
+        public System.DateTime? LastAssignedUtc { get; set; }
+        public System.DateTime? LastWorkCompletedUtc { get; set; }
+        public int MaxConcurrentInteractions { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public string OutboundCallerId { get; set; }
+        public System.DateTime? PresenceChangedUtc { get; set; }
+        public string PresenceReason { get; set; }
+        public CrestApps.Core.ContactCenter.Models.AgentPresenceStatus PresenceStatus { get; set; }
+        public System.Collections.Generic.IList<string> QueueIds { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.AgentQueueMembership> QueueMemberships { get; set; }
+        public CrestApps.Core.ContactCenter.Models.AgentPresenceStatus? RequestedPresenceStatus { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.AgentSkill> SkillProficiencies { get; set; }
+        public System.Collections.Generic.IList<string> Skills { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+        public string VoicemailGreetingMediaName { get; set; }
+        public string VoicemailGreetingMediaUrl { get; set; }
+        public string VoicemailGreetingText { get; set; }
+    }
+    public sealed class AgentQueueMembership
+    {
+        public AgentQueueMembership() { }
+        public int DelaySeconds { get; set; }
+        public int Priority { get; set; }
+        public string QueueId { get; set; }
+    }
+    public sealed class AgentRecordingControlResult
+    {
+        public AgentRecordingControlResult() { }
+        public bool IsPaused { get; set; }
+        public bool OutcomeUnknown { get; set; }
+        public string Reason { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.AgentRecordingControlResult Failure(string reason) { }
+        public static CrestApps.Core.ContactCenter.Models.AgentRecordingControlResult Success(bool isPaused) { }
+        public static CrestApps.Core.ContactCenter.Models.AgentRecordingControlResult Unknown(string reason) { }
+    }
+    public sealed class AgentSession : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public AgentSession() { }
+        public System.Collections.Generic.IList<string> CampaignIds { get; set; }
+        public System.DateTime? ConnectedUtc { get; set; }
+        public System.Collections.Generic.IList<string> ConnectionIds { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DisplayName { get; set; }
+        public bool IsOnline { get; set; }
+        public System.DateTime? LastDisconnectedUtc { get; set; }
+        public System.DateTime? LastHeartbeatUtc { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.Collections.Generic.IList<string> QueueIds { get; set; }
+        public string UserId { get; set; }
+        public string UserName { get; set; }
+    }
+    public sealed class AgentSkill
+    {
+        public const int DefaultProficiency = 3;
+        public const int MaximumProficiency = 5;
+        public const int MinimumProficiency = 1;
+        public AgentSkill() { }
+        public int Proficiency { get; set; }
+        public string SkillId { get; set; }
+    }
+    public sealed class AgentStateReasonCode : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public AgentStateReasonCode() { }
+        public CrestApps.Core.ContactCenter.Models.AgentPresenceStatus AppliesTo { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public bool Enabled { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public int SortOrder { get; set; }
+    }
+    public sealed class AssistContext
+    {
+        public AssistContext() { }
+        public string ActivityItemId { get; set; }
+        public string InteractionId { get; set; }
+        public string Notes { get; set; }
+        public string SubjectContentType { get; set; }
+        public string Transcript { get; set; }
+    }
+    public sealed class BaseVoiceVerificationOptions
+    {
+        public BaseVoiceVerificationOptions() { }
+        public bool AudioVerificationAcknowledged { get; set; }
+        public string AudioVerificationEvidenceReference { get; set; }
+    }
+    public sealed class Bridge
+    {
+        public Bridge() { }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.BridgeParticipant> ActiveParticipants { get; }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime? DestroyedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.BridgeKind Kind { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.BridgeParticipant> Participants { get; set; }
+        public string ProviderBridgeId { get; set; }
+        public int? ReportedParticipantCount { get; set; }
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.BridgeParticipant> ParticipantsAt(System.DateTime instant) { }
+    }
+    public enum BridgeKind
+    {
+        Unknown = 0,
+        TwoParty = 1,
+        Conference = 2,
+    }
+    public sealed class BridgeParticipant
+    {
+        public BridgeParticipant() { }
+        public string Address { get; set; }
+        public string AgentId { get; set; }
+        public System.DateTime JoinedUtc { get; set; }
+        public System.DateTime? LeftUtc { get; set; }
+        public string ProviderLegId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallPartyRole Role { get; set; }
+    }
+    public sealed class BusinessHoursCalendar : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public BusinessHoursCalendar() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public bool Enabled { get; set; }
+        public System.Collections.Generic.IList<System.DateOnly> Holidays { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public string TimeZoneId { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.BusinessHoursDay> WeeklySchedule { get; set; }
+    }
+    public sealed class BusinessHoursDay
+    {
+        public BusinessHoursDay() { }
+        public int CloseMinute { get; set; }
+        public System.DayOfWeek Day { get; set; }
+        public bool IsOpen { get; set; }
+        public int OpenMinute { get; set; }
+    }
+    public sealed class CallCommandResult
+    {
+        public CallCommandResult() { }
+        public string CallSessionId { get; set; }
+        public string InteractionId { get; set; }
+        public string Reason { get; set; }
+        public bool RequiresDeviceAnswer { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.CallCommandResult Failure(string reason) { }
+        public static CrestApps.Core.ContactCenter.Models.CallCommandResult Success(string reason, bool requiresDeviceAnswer) { }
+    }
+    public sealed class CallControlAuthorizationContext
+    {
+        public CallControlAuthorizationContext() { }
+        public CrestApps.Core.ContactCenter.Models.CallControlInitiator Initiator { get; set; }
+        public string InteractionId { get; set; }
+        public System.Security.Claims.ClaimsPrincipal Principal { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public bool SupervisorOperation { get; set; }
+        public string UserId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallControlVerb Verb { get; set; }
+    }
+    public sealed class CallControlAuthorizationResult
+    {
+        public CallControlAuthorizationResult() { }
+        public string AgentId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallSession CallSession { get; set; }
+        public string FailureReason { get; set; }
+        public string ProviderCallId { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.CallControlAuthorizationResult Denied() { }
+        public static CrestApps.Core.ContactCenter.Models.CallControlAuthorizationResult Success(string agentId, CrestApps.Core.ContactCenter.Models.CallSession session) { }
+        public static CrestApps.Core.ContactCenter.Models.CallControlAuthorizationResult Success(string agentId, string providerCallId) { }
+    }
+    public enum CallControlInitiator
+    {
+        Agent = 0,
+        System = 1,
+    }
+    public enum CallControlVerb
+    {
+        Accept = 0,
+        Decline = 1,
+        Hangup = 2,
+        Hold = 3,
+        Resume = 4,
+        Mute = 5,
+        Unmute = 6,
+        Dtmf = 7,
+        Transfer = 8,
+        Merge = 9,
+        Dial = 10,
+        Voicemail = 11,
+        SupervisorEngage = 12,
+        RecordingControl = 13,
+    }
+    public sealed class CallLeg
+    {
+        public CallLeg() { }
+        public string Address { get; set; }
+        public string AgentId { get; set; }
+        public System.DateTime? AnsweredUtc { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public CrestApps.Core.Telephony.Models.HangupCause? HangupCause { get; set; }
+        public string ProviderLegId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallPartyRole Role { get; set; }
+        public System.DateTime StartedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallLegStatus Status { get; set; }
+    }
+    public enum CallLegStatus
+    {
+        Unknown = 0,
+        Dialing = 1,
+        Ringing = 2,
+        Answered = 3,
+        OnHold = 4,
+        Ended = 5,
+        Failed = 6,
+    }
+    public enum CallPartyRole
+    {
+        Unknown = 0,
+        Customer = 1,
+        Agent = 2,
+        Consult = 3,
+        Supervisor = 4,
+        External = 5,
+    }
+    public sealed class CallRelationship
+    {
+        public CallRelationship() { }
+        public System.DateTime EstablishedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallRelationshipKind Kind { get; set; }
+        public string RelatedCallSessionId { get; set; }
+        public string RelatedInteractionId { get; set; }
+        public string RelatedProviderCallId { get; set; }
+    }
+    public enum CallRelationshipKind
+    {
+        TransferredFrom = 0,
+        TransferredTo = 1,
+        ConsultOf = 2,
+        ConferencedWith = 3,
+        CallbackOf = 4,
+    }
+    public sealed class CallSession : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public CallSession() { }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.MonitorSession> ActiveMonitorSessions { get; }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public string AgentSessionId { get; set; }
+        public System.DateTime? AnsweredUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.Bridge Bridge { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.ConsultCall> Consults { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.VoiceProviderDeliveryModel DeliveryModel { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionDirection Direction { get; set; }
+        public string DurableCommandId { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public string FromAddress { get; set; }
+        public CrestApps.Core.Telephony.Models.HangupCause? HangupCause { get; set; }
+        public long? HighWaterSequence { get; set; }
+        public double HoldSeconds { get; set; }
+        public string InteractionId { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsConference { get; }
+        public bool IsMuted { get; set; }
+        public bool IsOnHold { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsTerminal { get; }
+        public System.DateTime? LastProviderEventUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.CallLeg> Legs { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.MonitorSession> MonitorSessions { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public int ParticipantCount { get; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Bridge> PriorBridges { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public string QueueId { get; set; }
+        public string RecordingId { get; set; }
+        public string RecordingReference { get; set; }
+        public CrestApps.Core.Telephony.Models.RecordingState RecordingState { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.CallRelationship> Relationships { get; set; }
+        public System.DateTime? StartedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonInclude]
+        public CrestApps.Core.Telephony.Models.VoiceCallState State { get; }
+        public double TalkSeconds { get; set; }
+        public string ToAddress { get; set; }
+        public bool CanTransitionTo(CrestApps.Core.Telephony.Models.VoiceCallState state) { }
+        public void MirrorProviderState(CrestApps.Core.Telephony.Models.VoiceCallState state) { }
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.ContactCenter.Models.BridgeParticipant> ParticipantsAt(System.DateTime instant) { }
+        public CrestApps.Core.ContactCenter.Models.CallSession RestorePersistedState(CrestApps.Core.Telephony.Models.VoiceCallState state) { }
+        public void TransitionTo(CrestApps.Core.Telephony.Models.VoiceCallState state) { }
+    }
+    public static class CallSessionLifecycle
+    {
+        public static bool CanTransition(CrestApps.Core.Telephony.Models.VoiceCallState from, CrestApps.Core.Telephony.Models.VoiceCallState to) { }
+        public static bool IsTerminal(CrestApps.Core.Telephony.Models.VoiceCallState state) { }
+    }
+    public sealed class CallbackRequest : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public CallbackRequest() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public int Attempts { get; set; }
+        public string CampaignId { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string ContactContentType { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Destination { get; set; }
+        public long FenceToken { get; set; }
+        public System.DateTime? LeaseExpiresUtc { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Notes { get; set; }
+        public string OwnerToken { get; set; }
+        public string QueueId { get; set; }
+        public System.DateTime RequestedUtc { get; set; }
+        public System.DateTime ScheduledUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallbackRequestStatus Status { get; set; }
+    }
     public enum CallbackRequestStatus
     {
         Pending = 0,
@@ -511,6 +1029,38 @@ namespace CrestApps.Core.ContactCenter.Models
         Completed = 3,
         Canceled = 4,
         Failed = 5,
+    }
+    public sealed class ConsultCall
+    {
+        public ConsultCall() { }
+        public System.DateTime? ConnectedUtc { get; set; }
+        public string ConsultId { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public string InitiatedByAgentId { get; set; }
+        public string ProviderLegId { get; set; }
+        public System.DateTime StartedUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ConsultCallStatus Status { get; set; }
+        public string TargetAddress { get; set; }
+        public string TargetId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionTransferTargetType TargetType { get; set; }
+    }
+    public enum ConsultCallStatus
+    {
+        Initiated = 0,
+        Ringing = 1,
+        Connected = 2,
+        Completed = 3,
+        Cancelled = 4,
+        Failed = 5,
+    }
+    public sealed class ConsultTransferRequest
+    {
+        public ConsultTransferRequest() { }
+        public string CallSessionId { get; set; }
+        public string InitiatedByAgentId { get; set; }
+        public string TargetAddress { get; set; }
+        public string TargetId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionTransferTargetType TargetType { get; set; }
     }
     public sealed class ContactCenterCallAssignmentRequest
     {
@@ -521,6 +1071,11 @@ namespace CrestApps.Core.ContactCenter.Models
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string ProviderCallId { get; set; }
         public string QueueId { get; set; }
+    }
+    public sealed class ContactCenterComplianceOptions
+    {
+        public ContactCenterComplianceOptions() { }
+        public int AbandonmentRollingWindowMinutes { get; set; }
     }
     public sealed class ContactCenterConnectRequest
     {
@@ -533,6 +1088,38 @@ namespace CrestApps.Core.ContactCenter.Models
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string ProviderCallId { get; set; }
         public string QueueId { get; set; }
+    }
+    public sealed class ContactCenterCoordinationOptions
+    {
+        public ContactCenterCoordinationOptions() { }
+        public System.TimeSpan AssignmentLockExpiration { get; set; }
+        public System.TimeSpan AssignmentLockTimeout { get; set; }
+        public int ExpiryPageSize { get; set; }
+        public System.TimeSpan InboundLockExpiration { get; set; }
+        public System.TimeSpan InboundLockTimeout { get; set; }
+        public System.TimeSpan QueuedWorkSyncFallbackInterval { get; set; }
+        public System.TimeSpan QueuedWorkSyncLease { get; set; }
+        public System.TimeSpan ReclaimLockWait { get; set; }
+        public System.TimeSpan ReservationLockExpiration { get; set; }
+        public System.TimeSpan ReservationLockTimeout { get; set; }
+    }
+    public sealed class ContactCenterDataCategory
+    {
+        public ContactCenterDataCategory() { }
+        public bool ContainsPersonalData { get; }
+        public required bool ContainsRecordingReference { get; init; }
+        public required string Description { get; init; }
+        public required string DisplayName { get; init; }
+        public required CrestApps.Core.ContactCenter.Models.ContactCenterErasureStrategy ErasureStrategy { get; init; }
+        public required string Key { get; init; }
+        public required string RetentionBasis { get; init; }
+        public required CrestApps.Core.ContactCenter.Models.ContactCenterDataSensitivity Sensitivity { get; init; }
+    }
+    public enum ContactCenterDataSensitivity
+    {
+        NonPersonal = 0,
+        Personal = 1,
+        SensitivePersonal = 2,
     }
     public sealed class ContactCenterDialRequest
     {
@@ -548,6 +1135,138 @@ namespace CrestApps.Core.ContactCenter.Models
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public string QueueId { get; set; }
     }
+    public sealed class ContactCenterEntityRetentionResult
+    {
+        public ContactCenterEntityRetentionResult() { }
+        public System.DateTime? CutoffUtc { get; set; }
+        public string EntityName { get; set; }
+        public bool IsEnabled { get; set; }
+        public int PurgedCount { get; set; }
+        public bool WorkRemains { get; set; }
+    }
+    public sealed class ContactCenterEntryPoint : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public ContactCenterEntryPoint() { }
+        public string BusinessHoursCalendarId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.EntryPointClosedAction ClosedAction { get; set; }
+        public string ClosedMessage { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public System.Collections.Generic.IList<string> DialedNumbers { get; set; }
+        public bool Enabled { get; set; }
+        public CrestApps.Core.ContactCenter.Models.IvrFlow IvrFlow { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public string OverflowQueueId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionPriority Priority { get; set; }
+        public int RingTimeoutSeconds { get; set; }
+        public string TargetAgentId { get; set; }
+        public string TargetQueueId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.EntryPointTargetType TargetType { get; set; }
+        public bool VoicemailEnabled { get; set; }
+        public string VoicemailGreetingText { get; set; }
+        public string WelcomeMessage { get; set; }
+    }
+    public enum ContactCenterErasureStrategy
+    {
+        NotApplicable = 0,
+        RetentionExpiry = 1,
+        Anonymize = 2,
+        CascadeWithInteraction = 3,
+        ExternalStore = 4,
+    }
+    public sealed class ContactCenterEventMetric : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public ContactCenterEventMetric() { }
+        public long Count { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime Date { get; set; }
+        public string DateKey { get; set; }
+        public string EventType { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+    }
+    public sealed class ContactCenterEventMetricDelta : CrestApps.Core.Models.CatalogItem
+    {
+        public ContactCenterEventMetricDelta() { }
+        public long Count { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime Date { get; set; }
+        public string DateKey { get; set; }
+        public string EventType { get; set; }
+    }
+    public sealed class ContactCenterExternalDestination
+    {
+        public ContactCenterExternalDestination() { }
+        public string DisplayName { get; set; }
+        public string E164Address { get; set; }
+        public bool Enabled { get; set; }
+        public string Id { get; set; }
+    }
+    public sealed class ContactCenterExternalTransferSettings
+    {
+        public ContactCenterExternalTransferSettings() { }
+        public System.Collections.Generic.List<CrestApps.Core.ContactCenter.Models.ContactCenterExternalDestination> Destinations { get; set; }
+    }
+    public sealed class ContactCenterHealthCheckOptions
+    {
+        public ContactCenterHealthCheckOptions() { }
+        public int ConsecutiveFailuresBeforeUnready { get; set; }
+        public int ConsecutiveSuccessesBeforeReady { get; set; }
+        public int DeadLetterDegradedThreshold { get; set; }
+        public int DeadLetterUnhealthyThreshold { get; set; }
+        public bool EnableNodeServingGate { get; set; }
+        public int OverdueBacklogDegradedThreshold { get; set; }
+        public int OverdueBacklogUnhealthyThreshold { get; set; }
+        public void Normalize() { }
+    }
+    public sealed class ContactCenterMetricContribution : System.IEquatable<CrestApps.Core.ContactCenter.Models.ContactCenterMetricContribution>
+    {
+        public ContactCenterMetricContribution(long DocumentId, string DateKey, string EventType, long Count) { }
+        public long Count { get; init; }
+        public string DateKey { get; init; }
+        public long DocumentId { get; init; }
+        public string EventType { get; init; }
+    }
+    public sealed class ContactCenterOutboxMessage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public ContactCenterOutboxMessage() { }
+        public int AttemptCount { get; set; }
+        public System.Collections.Generic.IList<string> CompletedHandlerTypes { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string EventId { get; set; }
+        public string EventType { get; set; }
+        public System.Collections.Generic.IList<string> ExpectedHandlerIds { get; set; }
+        public long FenceToken { get; set; }
+        public string LastError { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public string OwnerToken { get; set; }
+        public CrestApps.Core.ContactCenter.Models.OutboxMessageStatus Status { get; set; }
+    }
+    public sealed class ContactCenterProcessedEvent : CrestApps.Core.Models.CatalogItem
+    {
+        public ContactCenterProcessedEvent() { }
+        public string EventId { get; set; }
+        public string HandlerId { get; set; }
+        public System.DateTime ProcessedUtc { get; set; }
+    }
+    public sealed class ContactCenterProjectionCheckpoint : CrestApps.Core.Models.CatalogItem
+    {
+        public ContactCenterProjectionCheckpoint() { }
+        public string HandlerId { get; set; }
+        public string LastEventId { get; set; }
+        public System.DateTime LastOccurredUtc { get; set; }
+        public System.DateTime? RebuiltUtc { get; set; }
+        public int Version { get; set; }
+    }
+    public sealed class ContactCenterProjectionDrift
+    {
+        public ContactCenterProjectionDrift() { }
+        public long ActualCount { get; init; }
+        public string DateKey { get; init; }
+        public string EventType { get; init; }
+        public long ExpectedCount { get; init; }
+    }
     public sealed class ContactCenterQueueCallRequest
     {
         public ContactCenterQueueCallRequest() { }
@@ -557,6 +1276,109 @@ namespace CrestApps.Core.ContactCenter.Models
         public int Priority { get; set; }
         public string ProviderCallId { get; set; }
         public string QueueId { get; set; }
+    }
+    public sealed class ContactCenterRecordingSettings
+    {
+        public const int MaxRetentionDays = 36500;
+        public const int MaxSecurePauseSecondsLimit = 86400;
+        public ContactCenterRecordingSettings() { }
+        public bool AllowAgentSecurePause { get; set; }
+        public CrestApps.Core.ContactCenter.Models.RecordingConsentModel ConsentModel { get; set; }
+        public bool LegalHoldByDefault { get; set; }
+        public int MaxSecurePauseSeconds { get; set; }
+        public bool RecordingEnabled { get; set; }
+        public bool RequireExplicitConsent { get; set; }
+        public bool RequirePauseReason { get; set; }
+        public int RetentionDays { get; set; }
+    }
+    public sealed class ContactCenterReportingOptions
+    {
+        public ContactCenterReportingOptions() { }
+        public System.TimeSpan MaximumReportRange { get; set; }
+    }
+    public sealed class ContactCenterRetentionOptions
+    {
+        public const int DefaultMaxPurgeBatchesPerCycle = 10000;
+        public const int DefaultPurgeBatchSize = 500;
+        public ContactCenterRetentionOptions() { }
+        public int ActivityReservationRetentionDays { get; set; }
+        public int AgentSessionRetentionDays { get; set; }
+        public int CallSessionRetentionDays { get; set; }
+        public int CallbackRequestRetentionDays { get; set; }
+        public int EventMetricRetentionDays { get; set; }
+        public int InteractionEventRetentionDays { get; set; }
+        public int InteractionRetentionDays { get; set; }
+        public int LegalHoldMinimumDays { get; set; }
+        public int MaxPurgeBatchesPerCycle { get; set; }
+        public int OutboxMessageRetentionDays { get; set; }
+        public double ProcessedEventDeliveryEnvelopeDays { get; set; }
+        public int ProcessedEventRetentionDays { get; set; }
+        public int ProjectionReplayHorizonDays { get; set; }
+        public int ProviderCommandRetentionDays { get; set; }
+        public int PurgeBatchSize { get; set; }
+        public int QueueItemRetentionDays { get; set; }
+        public int SecureCaptureRetentionDays { get; set; }
+        public int WebhookInboxMessageRetentionDays { get; set; }
+        public int WorkStateRetentionDays { get; set; }
+    }
+    public sealed class ContactCenterRetentionReport
+    {
+        public ContactCenterRetentionReport() { }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.ContactCenterEntityRetentionResult> Entities { get; }
+        public int TotalPurged { get; }
+        public bool WorkRemains { get; }
+    }
+    public sealed class ContactCenterSkill : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public ContactCenterSkill() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public bool Enabled { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+    }
+    public sealed class ContactCenterTopologyObservations
+    {
+        public ContactCenterTopologyObservations() { }
+        public string DatabaseProvider { get; init; }
+        public string DeclaredProfileId { get; init; }
+        public bool DistributedLockIsProcessLocal { get; init; }
+        public bool IsProductionHostEnvironment { get; init; }
+        public bool RedisFeatureEnabled { get; init; }
+        public bool RedisLockFeatureEnabled { get; init; }
+        public bool SignalRRedisBackplaneFeatureEnabled { get; init; }
+    }
+    public sealed class ContactCenterTopologyOptions
+    {
+        public ContactCenterTopologyOptions() { }
+        public string ProfileId { get; set; }
+    }
+    public sealed class ContactCenterTopologyProfile
+    {
+        public ContactCenterTopologyProfile() { }
+        public required string Id { get; init; }
+        public required bool IsProduction { get; init; }
+        public required int MaximumApplicationNodes { get; init; }
+        public required int MinimumApplicationNodes { get; init; }
+        public required bool RequiresRedisBackplane { get; init; }
+        public required bool RequiresRedisDistributedLock { get; init; }
+        public required bool RequiresSharedRelationalDatabase { get; init; }
+    }
+    public static class ContactCenterTopologyProfiles
+    {
+        public const string SingleNodeDevelopmentId = "single-node-development";
+        public const string SingleNodeDistributedId = "single-node-distributed";
+        public const string SingleRegionMultiNodeId = "single-region-multi-node";
+        public static System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterTopologyProfile> All { get; }
+        public static CrestApps.Core.ContactCenter.Models.ContactCenterTopologyProfile Find(string id) { }
+    }
+    public sealed class ContactCenterTopologyValidationResult
+    {
+        public ContactCenterTopologyValidationResult() { }
+        public string DeclaredProfileId { get; init; }
+        public System.Collections.Generic.IReadOnlyList<string> Failures { get; init; }
+        public bool IsProductionTopology { get; init; }
+        public bool IsSatisfied { get; }
     }
     public sealed class ContactCenterVoiceAttendedTransferRequest
     {
@@ -676,6 +1498,44 @@ namespace CrestApps.Core.ContactCenter.Models
         public CrestApps.Core.ContactCenter.Models.InteractionTransferTargetType TargetType { get; set; }
         public CrestApps.Core.ContactCenter.Models.InteractionTransferType TransferType { get; set; }
     }
+    public sealed class ContactCenterWorkState : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public ContactCenterWorkState() { }
+        public string ActivityItemId { get; set; }
+        public string AssignedToId { get; set; }
+        public string AssignedToUsername { get; set; }
+        public System.DateTime? AssignedToUtc { get; set; }
+        [System.Text.Json.Serialization.JsonInclude]
+        public CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus AssignmentStatus { get; }
+        public int Attempts { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.DateTime? ReservationExpiresUtc { get; set; }
+        public string ReservationId { get; set; }
+        public string ReservedById { get; set; }
+        public string ReservedByUsername { get; set; }
+        public System.DateTime? ReservedUtc { get; set; }
+        public void AdoptActivityAssignmentStatus(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus status) { }
+        public bool CanTransitionTo(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus status) { }
+        public CrestApps.Core.ContactCenter.Models.ContactCenterWorkState RestorePersistedAssignmentStatus(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus status) { }
+        public void TransitionTo(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus status) { }
+    }
+    public sealed class DialerAbandonmentEvaluation
+    {
+        public string Description { get; }
+        public bool IsPermitted { get; }
+        public double RatePercent { get; }
+        public long SampleSize { get; }
+        public bool StatisticsAvailable { get; }
+        public static CrestApps.Core.ContactCenter.Models.DialerAbandonmentEvaluation Permitted(bool statisticsAvailable, double ratePercent, long sampleSize, string description) { }
+        public static CrestApps.Core.ContactCenter.Models.DialerAbandonmentEvaluation Suppressed(bool statisticsAvailable, double ratePercent, long sampleSize, string description) { }
+    }
+    public sealed class DialerAbandonmentStatistics
+    {
+        public DialerAbandonmentStatistics() { }
+        public long AbandonedCalls { get; set; }
+        public long LiveAnswers { get; set; }
+    }
     public enum DialerMode
     {
         Manual = 0,
@@ -689,6 +1549,42 @@ namespace CrestApps.Core.ContactCenter.Models
         public static bool IsAutomated(this CrestApps.Core.ContactCenter.Models.DialerMode mode) { }
         public static bool RequiresPacedDialerFeature(this CrestApps.Core.ContactCenter.Models.DialerMode mode) { }
     }
+    public sealed class DialerProfile : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public DialerProfile() { }
+        public int AbandonmentSampleFloor { get; set; }
+        public string CallerId { get; set; }
+        public string CallingCalendarId { get; set; }
+        public int CallsPerAgent { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DefaultRegionCode { get; set; }
+        public string Description { get; set; }
+        public bool Enabled { get; set; }
+        public bool EnforceAbandonmentCap { get; set; }
+        public bool EnforceCallingWindow { get; set; }
+        public double MaxAbandonmentRatePercent { get; set; }
+        public int MaxAttempts { get; set; }
+        public int MaxPreviewExtensions { get; set; }
+        public CrestApps.Core.ContactCenter.Models.DialerMode Mode { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public int PreviewExtensionSeconds { get; set; }
+        public string ProviderName { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> RegionalCallingCalendarIds { get; set; }
+        public bool RespectDoNotCall { get; set; }
+        public int RetryDelayMinutes { get; set; }
+        public bool SafeHarborEnabled { get; set; }
+        public string SafeHarborMessage { get; set; }
+    }
+    public sealed class DialerSuppressionEventData
+    {
+        public DialerSuppressionEventData() { }
+        public string ActivityItemId { get; set; }
+        public string Description { get; set; }
+        public string Destination { get; set; }
+        public string ProfileItemId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.DialerSuppressionReason Reason { get; set; }
+    }
     public enum DialerSuppressionReason
     {
         None = 0,
@@ -701,6 +1597,14 @@ namespace CrestApps.Core.ContactCenter.Models
         AbandonmentRateExceeded = 7,
         ComplianceScreeningUnavailable = 8,
     }
+    public sealed class DispositionSuggestion
+    {
+        public DispositionSuggestion() { }
+        public double Confidence { get; set; }
+        public string DisplayName { get; set; }
+        public string DispositionId { get; set; }
+        public string Rationale { get; set; }
+    }
     public enum EntryPointClosedAction
     {
         HoldInQueue = 0,
@@ -708,10 +1612,44 @@ namespace CrestApps.Core.ContactCenter.Models
         Overflow = 2,
         Reject = 3,
     }
+    public sealed class EntryPointRoutingPlan
+    {
+        public EntryPointRoutingPlan() { }
+        public CrestApps.Core.ContactCenter.Models.EntryPointClosedAction ClosedAction { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint EntryPoint { get; set; }
+        public bool IsOpen { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionPriority Priority { get; set; }
+        public int RingTimeoutSeconds { get; set; }
+        public bool RouteToAgent { get; set; }
+        public bool ShouldQueue { get; set; }
+        public string TargetAgentId { get; set; }
+        public string TargetQueueId { get; set; }
+        public string VoicemailGreetingText { get; set; }
+    }
     public enum EntryPointTargetType
     {
         Queue = 0,
         Agent = 1,
+    }
+    public sealed class ExpiredReservationPage
+    {
+        public ExpiredReservationPage(System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.ActivityReservation> reservations, System.DateTime? nextAfterExpiresUtc, long nextAfterDocumentId) { }
+        public bool HasMore { get; }
+        public long NextAfterDocumentId { get; }
+        public System.DateTime? NextAfterExpiresUtc { get; }
+        public System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.ActivityReservation> Reservations { get; }
+    }
+    public sealed class InboundPriorityContext
+    {
+        public InboundPriorityContext() { }
+        public string CampaignId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionPriority ConfiguredPriority { get; set; }
+        public string ContactContentItemId { get; set; }
+        public string CustomerAddress { get; set; }
+        public bool IsReturningCallback { get; set; }
+        public System.DateTime? LastInboundUtc { get; set; }
+        public string QueueId { get; set; }
+        public string ServiceAddress { get; set; }
     }
     public sealed class InboundVoiceEvent
     {
@@ -730,6 +1668,69 @@ namespace CrestApps.Core.ContactCenter.Models
         public bool HasInteraction { get; }
         public string InteractionId { get; set; }
     }
+    public sealed class InboundVoiceRoutingResult
+    {
+        public InboundVoiceRoutingResult() { }
+        public string ActivityItemId { get; set; }
+        public string AgentUserId { get; set; }
+        public string InteractionId { get; set; }
+        public string QueueId { get; set; }
+        public bool Queued { get; set; }
+        public string Reason { get; set; }
+        public string ReasonCode { get; set; }
+        public bool Routed { get; set; }
+    }
+    public sealed class Interaction : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public Interaction() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public System.DateTime? AnsweredUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionChannel Channel { get; set; }
+        public string CorrelationId { get; set; }
+        public string CreatedById { get; set; }
+        public string CreatedByUserName { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string CustomerAddress { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionDirection Direction { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public System.Text.Json.Nodes.JsonObject EntityProperties { get; set; }
+        public string HandoffAiSessionId { get; set; }
+        public string HandoffReason { get; set; }
+        public string HandoffSummary { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsSettled { get; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.InteractionParticipant> Participants { get; set; }
+        public string ProviderCorrelationId { get; set; }
+        public string ProviderInteractionId { get; set; }
+        public string ProviderLegId { get; set; }
+        public string ProviderName { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.InteractionQueueHistoryEntry> QueueHistory { get; set; }
+        public string QueueId { get; set; }
+        public System.DateTime? RecordingConsentCapturedUtc { get; set; }
+        public string RecordingConsentJurisdiction { get; set; }
+        public System.DateTime? RecordingErasedUtc { get; set; }
+        public bool RecordingLegalHold { get; set; }
+        public string RecordingPauseReason { get; set; }
+        public System.DateTime? RecordingPausedUtc { get; set; }
+        public string RecordingReference { get; set; }
+        public System.DateTime? RecordingRetainUntilUtc { get; set; }
+        public CrestApps.Core.Telephony.Models.RecordingState RecordingState { get; set; }
+        public System.DateTime? StartedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonInclude]
+        public CrestApps.Core.ContactCenter.Models.InteractionStatus Status { get; }
+        public System.Collections.Generic.IDictionary<string, object> TechnicalMetadata { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.InteractionTransferHistoryEntry> TransferHistory { get; set; }
+        public System.DateTime? WrapUpCompletedUtc { get; set; }
+        public System.DateTime? WrapUpStartedUtc { get; set; }
+        public bool CanTransitionTo(CrestApps.Core.ContactCenter.Models.InteractionStatus status) { }
+        public void MirrorSessionStatus(CrestApps.Core.ContactCenter.Models.InteractionStatus status) { }
+        public void Reoffer() { }
+        public void Requeue() { }
+        public CrestApps.Core.ContactCenter.Models.Interaction RestorePersistedStatus(CrestApps.Core.ContactCenter.Models.InteractionStatus status) { }
+        public void TransitionTo(CrestApps.Core.ContactCenter.Models.InteractionStatus status) { }
+    }
     public enum InteractionChannel
     {
         Voice = 0,
@@ -741,6 +1742,47 @@ namespace CrestApps.Core.ContactCenter.Models
     {
         Inbound = 0,
         Outbound = 1,
+    }
+    public sealed class InteractionEvent : CrestApps.Core.Models.CatalogItem
+    {
+        public InteractionEvent() { }
+        public string ActorId { get; set; }
+        public string AggregateId { get; set; }
+        public string AggregateType { get; set; }
+        public string CausationId { get; set; }
+        public string CorrelationId { get; set; }
+        public string Data { get; set; }
+        public System.Text.Json.Nodes.JsonObject EntityProperties { get; set; }
+        public string EventType { get; set; }
+        public string IdempotencyKey { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime OccurredUtc { get; set; }
+        public int SchemaVersion { get; set; }
+        public string SourceComponent { get; set; }
+        public T GetData<T>() { }
+        public void SetData<T>(T payload) { }
+    }
+    public static class InteractionExtensions
+    {
+        public static T GetOrCreate<T>(this CrestApps.Core.ContactCenter.Models.Interaction interaction)
+            where T : new() { }
+        public static CrestApps.Core.ContactCenter.Models.Interaction Put<T>(this CrestApps.Core.ContactCenter.Models.Interaction interaction, T aspect) { }
+        public static bool TryGet<T>(this CrestApps.Core.ContactCenter.Models.Interaction interaction, out T aspect) { }
+    }
+    public static class InteractionLifecycle
+    {
+        public static bool CanTransition(CrestApps.Core.ContactCenter.Models.InteractionStatus from, CrestApps.Core.ContactCenter.Models.InteractionStatus to) { }
+        public static bool IsSettled(CrestApps.Core.ContactCenter.Models.InteractionStatus status) { }
+    }
+    public sealed class InteractionParticipant
+    {
+        public InteractionParticipant() { }
+        public string Address { get; set; }
+        public string DisplayName { get; set; }
+        public string Identifier { get; set; }
+        public System.DateTime? JoinedUtc { get; set; }
+        public System.DateTime? LeftUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionParticipantRole Role { get; set; }
     }
     public enum InteractionParticipantRole
     {
@@ -757,6 +1799,14 @@ namespace CrestApps.Core.ContactCenter.Models
         Normal = 2,
         High = 3,
         Highest = 4,
+    }
+    public sealed class InteractionQueueHistoryEntry
+    {
+        public InteractionQueueHistoryEntry() { }
+        public System.DateTime EnteredUtc { get; set; }
+        public string ExitReason { get; set; }
+        public System.DateTime? ExitedUtc { get; set; }
+        public string QueueId { get; set; }
     }
     public enum InteractionStatus
     {
@@ -775,6 +1825,16 @@ namespace CrestApps.Core.ContactCenter.Models
         public static readonly System.Collections.Immutable.ImmutableArray<CrestApps.Core.ContactCenter.Models.InteractionStatus> Settled;
         public static readonly System.Collections.Immutable.ImmutableArray<CrestApps.Core.ContactCenter.Models.InteractionStatus> Unsettled;
     }
+    public sealed class InteractionTransferHistoryEntry
+    {
+        public InteractionTransferHistoryEntry() { }
+        public System.DateTime? CompletedUtc { get; set; }
+        public string FromParticipantId { get; set; }
+        public System.DateTime RequestedUtc { get; set; }
+        public string Result { get; set; }
+        public string TargetType { get; set; }
+        public string ToParticipantId { get; set; }
+    }
     public enum InteractionTransferTargetType
     {
         Agent = 0,
@@ -787,11 +1847,252 @@ namespace CrestApps.Core.ContactCenter.Models
         Blind = 0,
         Consultative = 1,
     }
+    public sealed class InvalidStateTransitionException : System.InvalidOperationException
+    {
+        public InvalidStateTransitionException(string message) { }
+        public InvalidStateTransitionException(string message, System.Exception innerException) { }
+        public InvalidStateTransitionException(string aggregateName, object from, object to) { }
+        public string AggregateName { get; }
+        public object From { get; }
+        public object To { get; }
+    }
+    public sealed class IvrAction
+    {
+        public IvrAction() { }
+        public CrestApps.Core.ContactCenter.Models.IvrActionKind Kind { get; set; }
+        public string TargetId { get; set; }
+    }
+    public enum IvrActionKind
+    {
+        RouteToQueue = 0,
+        RouteToAgent = 1,
+        Voicemail = 2,
+        ExternalTransfer = 3,
+        Repeat = 4,
+        SubMenu = 5,
+    }
+    public sealed class IvrFlow
+    {
+        public IvrFlow() { }
+        public CrestApps.Core.ContactCenter.Models.IvrAction FallbackAction { get; set; }
+        public int MaxRetries { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.IvrNode> Nodes { get; set; }
+        public string RootNodeId { get; set; }
+    }
+    public sealed class IvrFlowState
+    {
+        public IvrFlowState() { }
+        public System.Collections.Generic.IList<string> AppliedDeliveryIds { get; set; }
+        public int Attempts { get; set; }
+        public string CurrentNodeId { get; set; }
+    }
+    public sealed class IvrFlowValidationError
+    {
+        public IvrFlowValidationError(CrestApps.Core.ContactCenter.Models.IvrFlowValidationErrorKind kind, string nodeId = null, string digit = null, string targetId = null) { }
+        public string Digit { get; }
+        public CrestApps.Core.ContactCenter.Models.IvrFlowValidationErrorKind Kind { get; }
+        public string NodeId { get; }
+        public string TargetId { get; }
+    }
+    public enum IvrFlowValidationErrorKind
+    {
+        RootNodeMissing = 0,
+        RootNodeNotFound = 1,
+        NodeIdMissing = 2,
+        NodeIdDuplicate = 3,
+        NodePromptMissing = 4,
+        NodeHasNoOptions = 5,
+        OptionDigitInvalid = 6,
+        OptionDigitDuplicate = 7,
+        OptionActionMissing = 8,
+        ActionTargetMissing = 9,
+        SubMenuNotFound = 10,
+        MaxRetriesInvalid = 11,
+    }
+    public sealed class IvrNode
+    {
+        public IvrNode() { }
+        public string NodeId { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.IvrOption> Options { get; set; }
+        public string Prompt { get; set; }
+        public string PromptMediaId { get; set; }
+    }
+    public sealed class IvrOption
+    {
+        public IvrOption() { }
+        public CrestApps.Core.ContactCenter.Models.IvrAction Action { get; set; }
+        public string Digit { get; set; }
+    }
+    public readonly struct IvrStep : System.IEquatable<CrestApps.Core.ContactCenter.Models.IvrStep>
+    {
+        public IvrStep(CrestApps.Core.ContactCenter.Models.IvrStepKind Kind, string NodeId, string Prompt, string PromptMediaId, string TargetId) { }
+        public CrestApps.Core.ContactCenter.Models.IvrStepKind Kind { get; init; }
+        public string NodeId { get; init; }
+        public string Prompt { get; init; }
+        public string PromptMediaId { get; init; }
+        public string TargetId { get; init; }
+        public static CrestApps.Core.ContactCenter.Models.IvrStep Done { get; }
+        public static CrestApps.Core.ContactCenter.Models.IvrStep Ignored { get; }
+    }
+    public enum IvrStepKind
+    {
+        Ignored = 0,
+        Prompt = 1,
+        RouteToQueue = 2,
+        RouteToAgent = 3,
+        Voicemail = 4,
+        ExternalTransfer = 5,
+        Done = 6,
+    }
+    public sealed class ManualDialSuppressionEventData
+    {
+        public ManualDialSuppressionEventData() { }
+        public string Description { get; set; }
+        public string Destination { get; set; }
+        public CrestApps.Core.ContactCenter.Models.DialerSuppressionReason Reason { get; set; }
+    }
+    public sealed class ManualDialingComplianceOptions
+    {
+        public ManualDialingComplianceOptions() { }
+        public string CallingCalendarId { get; set; }
+        public string DefaultRegionCode { get; set; }
+        public bool EnforceCallingWindow { get; set; }
+        public bool RespectDoNotCall { get; set; }
+    }
     public enum MonitorMode
     {
         Monitor = 0,
         Whisper = 1,
         Barge = 2,
+    }
+    public sealed class MonitorSession
+    {
+        public MonitorSession() { }
+        public System.DateTime? EndedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsActive { get; }
+        public CrestApps.Core.ContactCenter.Models.MonitorMode Mode { get; set; }
+        public string MonitorSessionId { get; set; }
+        public string ProviderLegId { get; set; }
+        public System.DateTime StartedUtc { get; set; }
+        public string SupervisorAgentId { get; set; }
+        public string SupervisorUserId { get; set; }
+        public string TargetAgentId { get; set; }
+    }
+    public sealed class OfferDeclinedEventData
+    {
+        public OfferDeclinedEventData() { }
+        public string QueueId { get; set; }
+    }
+    public enum OutboxMessageStatus
+    {
+        Pending = 0,
+        Claimed = 1,
+        Completed = 2,
+        DeadLettered = 3,
+    }
+    public sealed class PendingIncomingCallOffer
+    {
+        public PendingIncomingCallOffer() { }
+        public CrestApps.Core.Telephony.Models.TelephonyCall Call { get; set; }
+        public CrestApps.Core.Telephony.Models.IncomingCallContext Context { get; set; }
+        public System.DateTime? ExpiresUtc { get; set; }
+        public System.DateTime ServerTimeUtc { get; set; }
+    }
+    public sealed class ProviderAnswerCommandRequest
+    {
+        public ProviderAnswerCommandRequest() { }
+        public string ActivityId { get; set; }
+        public string AgentId { get; set; }
+        public string AgentUserId { get; set; }
+        public string InteractionId { get; set; }
+        public string ProviderCallId { get; set; }
+        public string QueueId { get; set; }
+        public bool ReofferOnFailure { get; set; }
+    }
+    public sealed class ProviderCallActionCommandRequest
+    {
+        public ProviderCallActionCommandRequest() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public string AgentUserId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.CallControlInitiator Initiator { get; set; }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<string, object> Metadata { get; set; }
+        public string ProviderCallId { get; set; }
+        public string QueueId { get; set; }
+        public bool ReofferOnFailure { get; set; }
+    }
+    public sealed class ProviderCommand : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public ProviderCommand() { }
+        public string ActivityItemId { get; set; }
+        public int AttemptCount { get; set; }
+        public string CommandId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ProviderCommandType CommandType { get; set; }
+        public System.DateTime? CompletedUtc { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DialerProfileId { get; set; }
+        public long FenceToken { get; set; }
+        public string InteractionId { get; set; }
+        public bool IsTerminal { get; }
+        public string LastError { get; set; }
+        public System.DateTime LeaseExpiresUtc { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public string OwnerToken { get; set; }
+        public string ProviderName { get; set; }
+        public string ProviderReference { get; set; }
+        public int ReconcileCount { get; set; }
+        public bool RemoveReservationFromQueueOnFailure { get; set; }
+        public string RequestPayload { get; set; }
+        public string ReservationId { get; set; }
+        public System.DateTime? SentUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ProviderCommandStatus Status { get; set; }
+    }
+    public sealed class ProviderCommandClaim
+    {
+        public ProviderCommandClaim() { }
+        public string CommandId { get; set; }
+        public long FenceToken { get; set; }
+        public System.DateTime LeaseExpiresUtc { get; set; }
+        public string OwnerToken { get; set; }
+    }
+    public sealed class ProviderCommandRegistration
+    {
+        public ProviderCommandRegistration() { }
+        public string ActivityItemId { get; set; }
+        public string CommandId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ProviderCommandType CommandType { get; set; }
+        public string DialerProfileId { get; set; }
+        public string InteractionId { get; set; }
+        public string ProviderName { get; set; }
+        public bool RemoveReservationFromQueueOnFailure { get; set; }
+        public string RequestPayload { get; set; }
+        public string ReservationId { get; set; }
+    }
+    public enum ProviderCommandStatus
+    {
+        Pending = 0,
+        Claimed = 1,
+        Sent = 2,
+        OutcomeUnknown = 3,
+        Confirmed = 4,
+        Compensating = 5,
+        Compensated = 6,
+        Failed = 7,
+        Paused = 8,
+    }
+    public enum ProviderCommandType
+    {
+        Dial = 0,
+        Answer = 1,
+        Hangup = 2,
+        Transfer = 3,
+        Hold = 4,
+        Resume = 5,
+        Reject = 6,
+        SendToVoicemail = 7,
     }
     public sealed class ProviderWebhookInboxAcceptanceResult
     {
@@ -813,6 +2114,30 @@ namespace CrestApps.Core.ContactCenter.Models
         public string Payload { get; set; }
         public string ProviderName { get; set; }
     }
+    public sealed class ProviderWebhookInboxMessage : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public ProviderWebhookInboxMessage() { }
+        public int AttemptCount { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string DeliveryId { get; set; }
+        public long FenceToken { get; set; }
+        public string HandlerName { get; set; }
+        public string LastError { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public string OwnerToken { get; set; }
+        public string Payload { get; set; }
+        public System.DateTime? ProcessedUtc { get; set; }
+        public string ProviderName { get; set; }
+        public CrestApps.Core.ContactCenter.Models.ProviderWebhookInboxStatus Status { get; set; }
+    }
+    public enum ProviderWebhookInboxStatus
+    {
+        Pending = 0,
+        Claimed = 1,
+        Completed = 2,
+        DeadLettered = 3,
+    }
     public sealed class ProviderWebhookIngressLease : System.IDisposable
     {
         public ProviderWebhookIngressLease(System.Threading.RateLimiting.RateLimitLease lease) { }
@@ -820,10 +2145,68 @@ namespace CrestApps.Core.ContactCenter.Models
         public System.TimeSpan? RetryAfter { get; }
         public void Dispose() { }
     }
+    public sealed class ProviderWebhookIngressOptions
+    {
+        public ProviderWebhookIngressOptions() { }
+        public int ConcurrencyPermitLimit { get; set; }
+        public int MaximumDeliveryAgeSeconds { get; set; }
+        public int MaximumFutureSkewSeconds { get; set; }
+        public int RatePeriodSeconds { get; set; }
+        public int RatePermitLimit { get; set; }
+    }
+    public sealed class QueueAdmissionDecision
+    {
+        public bool IsQueued { get; }
+        public CrestApps.Core.ContactCenter.Models.QueueAdmissionOutcome Outcome { get; }
+        public string QueueId { get; }
+        public static CrestApps.Core.ContactCenter.Models.QueueAdmissionDecision Admit(string queueId) { }
+        public static CrestApps.Core.ContactCenter.Models.QueueAdmissionDecision Overflow(string overflowQueueId) { }
+        public static CrestApps.Core.ContactCenter.Models.QueueAdmissionDecision SendToVoicemail() { }
+    }
+    public enum QueueAdmissionOutcome
+    {
+        Admitted = 0,
+        Overflowed = 1,
+        Voicemail = 2,
+    }
     public enum QueueAfterHoursAction
     {
         HoldInQueue = 0,
         Overflow = 1,
+    }
+    public sealed class QueueItem : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public QueueItem() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public System.DateTime? CallbackAcceptedUtc { get; set; }
+        public System.DateTime? CallbackOfferedUtc { get; set; }
+        public System.DateTime? DequeuedUtc { get; set; }
+        public string DialerProfileId { get; set; }
+        public System.DateTime EnqueuedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool IsSettled { get; }
+        public System.DateTime? LastTreatmentUtc { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.DateTime? OverflowDueUtc { get; set; }
+        public System.Collections.Generic.IList<string> OverflowHistory { get; set; }
+        public string OverflowedFromQueueId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionPriority Priority { get; set; }
+        public System.DateTime QueueEnteredUtc { get; set; }
+        public string QueueId { get; set; }
+        public string ReservationId { get; set; }
+        [System.Text.Json.Serialization.JsonInclude]
+        public CrestApps.Core.ContactCenter.Models.QueueItemStatus Status { get; }
+        public string StickyAgentUserId { get; set; }
+        public int TreatmentStepsPlayed { get; set; }
+        public bool CanTransitionTo(CrestApps.Core.ContactCenter.Models.QueueItemStatus status) { }
+        public CrestApps.Core.ContactCenter.Models.QueueItem RestorePersistedStatus(CrestApps.Core.ContactCenter.Models.QueueItemStatus status) { }
+        public void TransitionTo(CrestApps.Core.ContactCenter.Models.QueueItemStatus status) { }
+    }
+    public static class QueueItemLifecycle
+    {
+        public static bool CanTransition(CrestApps.Core.ContactCenter.Models.QueueItemStatus from, CrestApps.Core.ContactCenter.Models.QueueItemStatus to) { }
+        public static bool IsSettled(CrestApps.Core.ContactCenter.Models.QueueItemStatus status) { }
     }
     public enum QueueItemStatus
     {
@@ -833,11 +2216,31 @@ namespace CrestApps.Core.ContactCenter.Models
         Completed = 3,
         Removed = 4,
     }
+    public enum QueueMaxWaitAction
+    {
+        None = 0,
+        Voicemail = 1,
+        Overflow = 2,
+    }
+    public sealed class QueueOverflowTarget
+    {
+        public QueueOverflowTarget() { }
+        public int AfterSeconds { get; set; }
+        public string QueueId { get; set; }
+    }
     public enum QueueRoutingStrategy
     {
         LongestIdle = 0,
         RoundRobin = 1,
         LeastBusy = 2,
+    }
+    public sealed class QueueSkillRequirement
+    {
+        public QueueSkillRequirement() { }
+        public int MinimumProficiency { get; set; }
+        public int? RelaxAfterSeconds { get; set; }
+        public bool Required { get; set; }
+        public string SkillId { get; set; }
     }
     public sealed class QueueStatsNotification
     {
@@ -845,6 +2248,101 @@ namespace CrestApps.Core.ContactCenter.Models
         public System.DateTime ChangedUtc { get; set; }
         public string QueueId { get; set; }
         public int WaitingCount { get; set; }
+    }
+    public sealed class QueueTreatmentSettings
+    {
+        public QueueTreatmentSettings() { }
+        public bool AnnounceEstimatedWait { get; set; }
+        public bool AnnouncePosition { get; set; }
+        public int AnnouncementIntervalSeconds { get; set; }
+        public int AverageHandleTimeSeconds { get; set; }
+        public string CallbackDtmfKey { get; set; }
+        public int CallbackOfferAfterSeconds { get; set; }
+        public string HoldMusicMediaId { get; set; }
+        public int MaximumEstimateSeconds { get; set; }
+        public int MinimumEstimateSeconds { get; set; }
+        public string WelcomeMessage { get; set; }
+    }
+    public readonly struct QueueTreatmentStep : System.IEquatable<CrestApps.Core.ContactCenter.Models.QueueTreatmentStep>
+    {
+        public QueueTreatmentStep(CrestApps.Core.ContactCenter.Models.QueueTreatmentStepKind Kind, string Text, string DtmfKey) { }
+        public string DtmfKey { get; init; }
+        public CrestApps.Core.ContactCenter.Models.QueueTreatmentStepKind Kind { get; init; }
+        public string Text { get; init; }
+        public static CrestApps.Core.ContactCenter.Models.QueueTreatmentStep None { get; }
+    }
+    public enum QueueTreatmentStepKind
+    {
+        None = 0,
+        Welcome = 1,
+        Announcement = 2,
+        CallbackOffer = 3,
+        HoldMusic = 4,
+    }
+    public sealed class RecordingAccessedEventData
+    {
+        public RecordingAccessedEventData() { }
+        public string ActorId { get; set; }
+        public string Purpose { get; set; }
+        public string RecordingReference { get; set; }
+    }
+    public sealed class RecordingCommandResult
+    {
+        public RecordingCommandResult() { }
+        public bool OutcomeUnknown { get; set; }
+        public string Reason { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.RecordingCommandResult Failure(string reason) { }
+        public static CrestApps.Core.ContactCenter.Models.RecordingCommandResult Success(string reason = null) { }
+        public static CrestApps.Core.ContactCenter.Models.RecordingCommandResult Unknown(string reason) { }
+    }
+    public enum RecordingConsentModel
+    {
+        AllParties = 0,
+        SingleParty = 1,
+    }
+    public sealed class RecordingDeniedEventData
+    {
+        public RecordingDeniedEventData() { }
+        public string DenyReasonCode { get; set; }
+    }
+    public sealed class RecordingErasedEventData
+    {
+        public RecordingErasedEventData() { }
+        public string ActorId { get; set; }
+        public string Reason { get; set; }
+        public string RecordingReference { get; set; }
+    }
+    public sealed class RecordingErasureDecision
+    {
+        public RecordingErasureDecision() { }
+        public string DenyReasonCode { get; }
+        public bool Erased { get; }
+        public static CrestApps.Core.ContactCenter.Models.RecordingErasureDecision Deny(string denyReasonCode) { }
+        public static CrestApps.Core.ContactCenter.Models.RecordingErasureDecision Erase() { }
+    }
+    public sealed class RecordingErasureDeniedEventData
+    {
+        public RecordingErasureDeniedEventData() { }
+        public string ActorId { get; set; }
+        public string DenyReasonCode { get; set; }
+    }
+    public sealed class RecordingGovernanceDecision
+    {
+        public RecordingGovernanceDecision() { }
+        public bool Allowed { get; }
+        public string DenyReasonCode { get; }
+        public bool LegalHold { get; }
+        public System.DateTime? RetainUntilUtc { get; }
+        public static CrestApps.Core.ContactCenter.Models.RecordingGovernanceDecision Allow(System.DateTime? retainUntilUtc, bool legalHold) { }
+        public static CrestApps.Core.ContactCenter.Models.RecordingGovernanceDecision Deny(string denyReasonCode) { }
+    }
+    public sealed class RecordingMediaDeletedEventData
+    {
+        public RecordingMediaDeletedEventData() { }
+        public string ActorId { get; set; }
+        public string Reason { get; set; }
+        public string RecordingReference { get; set; }
     }
     public sealed class RecordingStateNotification
     {
@@ -856,6 +2354,11 @@ namespace CrestApps.Core.ContactCenter.Models
         public System.DateTime ServerTimeUtc { get; set; }
         public string UserId { get; set; }
     }
+    public static class ReservationLifecycle
+    {
+        public static bool CanTransition(CrestApps.Core.ContactCenter.Models.ReservationStatus from, CrestApps.Core.ContactCenter.Models.ReservationStatus to) { }
+        public static bool IsResolved(CrestApps.Core.ContactCenter.Models.ReservationStatus status) { }
+    }
     public enum ReservationStatus
     {
         Pending = 0,
@@ -863,6 +2366,25 @@ namespace CrestApps.Core.ContactCenter.Models
         Rejected = 2,
         Expired = 3,
         Canceled = 4,
+    }
+    public sealed class SecureCaptureActionResult
+    {
+        public SecureCaptureActionResult() { }
+        public string Reason { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.SecureCaptureActionResult Failure(string reason) { }
+        public static CrestApps.Core.ContactCenter.Models.SecureCaptureActionResult Success() { }
+    }
+    public sealed class SecureCaptureBeginResult
+    {
+        public SecureCaptureBeginResult() { }
+        public string AccessToken { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public string Reason { get; set; }
+        public string SessionId { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.SecureCaptureBeginResult Failure(string reason) { }
+        public static CrestApps.Core.ContactCenter.Models.SecureCaptureBeginResult Success(string sessionId, string accessToken, System.DateTime expiresUtc) { }
     }
     public enum SecureCaptureField
     {
@@ -872,6 +2394,34 @@ namespace CrestApps.Core.ContactCenter.Models
         BankAccountNumber = 3,
         NationalId = 4,
         Custom = 5,
+    }
+    public sealed class SecureCaptureSession : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
+    {
+        public SecureCaptureSession() { }
+        public string AccessTokenHash { get; set; }
+        public string AgentId { get; set; }
+        public System.DateTime? CancelledUtc { get; set; }
+        public System.DateTime? CompletedUtc { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public bool EngagedRecordingPause { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public string InteractionId { get; set; }
+        public System.Collections.Generic.IDictionary<CrestApps.Core.ContactCenter.Models.SecureCaptureField, string> MaskedValues { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public bool RecordingResumed { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.SecureCaptureField> RequestedFields { get; set; }
+        public CrestApps.Core.ContactCenter.Models.SecureCaptureState State { get; set; }
+        public System.Collections.Generic.IDictionary<CrestApps.Core.ContactCenter.Models.SecureCaptureField, string> TokenReferences { get; set; }
+    }
+    public sealed class SecureCaptureSettings
+    {
+        public const int DefaultLinkTimeToLiveSeconds = 300;
+        public const int MaxLinkTimeToLiveSeconds = 3600;
+        public const int MinLinkTimeToLiveSeconds = 30;
+        public SecureCaptureSettings() { }
+        public bool Enabled { get; set; }
+        public int LinkTimeToLiveSeconds { get; set; }
+        public bool PauseRecordingDuringCapture { get; set; }
     }
     public enum SecureCaptureState
     {
@@ -892,16 +2442,256 @@ namespace CrestApps.Core.ContactCenter.Models
         public static CrestApps.Core.ContactCenter.Models.SecureCaptureTokenResult Success(string token, string maskedValue) { }
         public static CrestApps.Core.ContactCenter.Models.SecureCaptureTokenResult SuccessNonRetainable() { }
     }
+    public readonly struct SkillTag : System.IEquatable<CrestApps.Core.ContactCenter.Models.SkillTag>
+    {
+        public bool HasValue { get; }
+        public string Value { get; }
+        public bool Equals(CrestApps.Core.ContactCenter.Models.SkillTag other) { }
+        public override int GetHashCode() { }
+        public override string ToString() { }
+        public static CrestApps.Core.ContactCenter.Models.SkillTag Create(string name) { }
+        public static System.Collections.Generic.IReadOnlyList<CrestApps.Core.ContactCenter.Models.SkillTag> CreateAll(System.Collections.Generic.IEnumerable<string> names) { }
+        public static bool IsSkillName([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string name) { }
+        public static System.Collections.Generic.IList<string> NormalizeAll(System.Collections.Generic.IEnumerable<string> names) { }
+        public static bool TryCreate(string name, out CrestApps.Core.ContactCenter.Models.SkillTag skillTag) { }
+    }
+    public sealed class SupervisorEngagementResult
+    {
+        public SupervisorEngagementResult() { }
+        public bool OutcomeUnknown { get; set; }
+        public string Reason { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.SupervisorEngagementResult Failure(string reason) { }
+        public static CrestApps.Core.ContactCenter.Models.SupervisorEngagementResult Success() { }
+        public static CrestApps.Core.ContactCenter.Models.SupervisorEngagementResult Unknown(string reason) { }
+    }
+    public sealed class TransferDestinationResolutionResult
+    {
+        public TransferDestinationResolutionResult() { }
+        public string FailureReason { get; set; }
+        public string ProviderEndpointUserId { get; set; }
+        public string ResolvedTarget { get; set; }
+        public bool Succeeded { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionTransferTargetType TargetType { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.TransferDestinationResolutionResult Denied() { }
+        public static CrestApps.Core.ContactCenter.Models.TransferDestinationResolutionResult Success(CrestApps.Core.ContactCenter.Models.InteractionTransferTargetType targetType, string resolvedTarget, string providerEndpointUserId = null) { }
+    }
+    public sealed class TransferRequest
+    {
+        public TransferRequest() { }
+        public string InitiatedByAgentId { get; set; }
+        public string InitiatedByUserId { get; set; }
+        public string InteractionId { get; set; }
+        public System.Security.Claims.ClaimsPrincipal Principal { get; set; }
+        public string TargetId { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionTransferTargetType TargetType { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionTransferType Type { get; set; }
+    }
+    public sealed class TransferResult
+    {
+        public TransferResult() { }
+        public bool OutcomeUnknown { get; set; }
+        public string Reason { get; set; }
+        public bool Succeeded { get; set; }
+        public static CrestApps.Core.ContactCenter.Models.TransferResult Failure(string reason) { }
+        public static CrestApps.Core.ContactCenter.Models.TransferResult Success(string reason = null) { }
+        public static CrestApps.Core.ContactCenter.Models.TransferResult Unknown(string reason) { }
+    }
     public enum UnansweredOfferAction
     {
         Requeue = 0,
         Voicemail = 1,
         Reject = 2,
     }
+    public sealed class VoiceMediaItem : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
+    {
+        public VoiceMediaItem() { }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Description { get; set; }
+        public string Format { get; set; }
+        public string MediaReference { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public string Name { get; set; }
+        public string ProviderName { get; set; }
+    }
     public enum VoiceProviderDeliveryModel
     {
         AgentDeviceNative = 0,
         ServerSideAcd = 1,
+    }
+    public static class WorkAssignmentLifecycle
+    {
+        public static bool CanTransition(CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus from, CrestApps.Core.Omnichannel.Models.ActivityAssignmentStatus to) { }
+    }
+}
+namespace CrestApps.Core.ContactCenter.Models.Reports
+{
+    public sealed class ActivityProgressCounts
+    {
+        public ActivityProgressCounts() { }
+        public long Cancelled { get; set; }
+        public long Completed { get; set; }
+        public double CompletionRate { get; }
+        public long Failed { get; set; }
+        public long InProgress { get; set; }
+        public long Pending { get; set; }
+        public long Total { get; set; }
+        public long TotalAttempts { get; set; }
+    }
+    public sealed class AgentProductivityReport
+    {
+        public AgentProductivityReport() { }
+        public System.DateTime FromUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.AgentProductivityRow> Rows { get; set; }
+        public System.DateTime ToUtc { get; set; }
+    }
+    public sealed class AgentProductivityRow
+    {
+        public AgentProductivityRow() { }
+        public long ActivitiesCompleted { get; set; }
+        public string AgentId { get; set; }
+        public double AverageHandleTimeSeconds { get; set; }
+        public double AverageWrapUpTimeSeconds { get; set; }
+        public string DisplayName { get; set; }
+        public long InboundHandled { get; set; }
+        public long InteractionsHandled { get; set; }
+        public long OutboundHandled { get; set; }
+        public double TotalTalkTimeSeconds { get; set; }
+        public double TotalWrapUpTimeSeconds { get; set; }
+        public string UserName { get; set; }
+    }
+    public sealed class CallInsightsDailyPoint
+    {
+        public CallInsightsDailyPoint() { }
+        public long Abandoned { get; set; }
+        public long Answered { get; set; }
+        public System.DateOnly Date { get; set; }
+        public long Total { get; set; }
+    }
+    public sealed class CallInsightsReport
+    {
+        public CallInsightsReport() { }
+        public long Abandoned { get; set; }
+        public double AbandonmentRate { get; }
+        public double AnswerRate { get; }
+        public long Answered { get; set; }
+        public double AverageHandleTimeSeconds { get; set; }
+        public double AverageSpeedOfAnswerSeconds { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.ContactCenterReportCount> ByChannel { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.ContactCenterReportCount> ByStatus { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.CallInsightsDailyPoint> Daily { get; set; }
+        public long Failed { get; set; }
+        public System.DateTime FromUtc { get; set; }
+        public long Inbound { get; set; }
+        public long Outbound { get; set; }
+        public System.DateTime ToUtc { get; set; }
+        public long Total { get; set; }
+        public double TotalTalkTimeSeconds { get; set; }
+        public double TotalWrapUpTimeSeconds { get; set; }
+    }
+    public sealed class CampaignGroupSummaryRow
+    {
+        public CampaignGroupSummaryRow() { }
+        public string CampaignGroupId { get; set; }
+        public string CampaignGroupName { get; set; }
+        public CrestApps.Core.ContactCenter.Models.Reports.ActivityProgressCounts Counts { get; set; }
+    }
+    public sealed class CampaignSummaryReport
+    {
+        public CampaignSummaryReport() { }
+        public System.DateTime FromUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.CampaignGroupSummaryRow> GroupRows { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.CampaignSummaryRow> Rows { get; set; }
+        public System.DateTime ToUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.Reports.ActivityProgressCounts Totals { get; set; }
+    }
+    public sealed class CampaignSummaryRow
+    {
+        public CampaignSummaryRow() { }
+        public string CampaignId { get; set; }
+        public string CampaignName { get; set; }
+        public CrestApps.Core.ContactCenter.Models.Reports.ActivityProgressCounts Counts { get; set; }
+    }
+    public sealed class ContactCenterReportCount
+    {
+        public ContactCenterReportCount() { }
+        public long Count { get; set; }
+        public string Label { get; set; }
+    }
+    public sealed class ContactCenterReportCriteria
+    {
+        public ContactCenterReportCriteria() { }
+        public string ActivitySource { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ActivityStatus? ActivityStatus { get; set; }
+        public string AgentId { get; set; }
+        public string CampaignGroupId { get; set; }
+        public string CampaignId { get; set; }
+        public System.Collections.Generic.IReadOnlySet<string> CampaignIds { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionChannel? Channel { get; set; }
+        public CrestApps.Core.ContactCenter.Models.InteractionDirection? Direction { get; set; }
+        public string QueueGroupId { get; set; }
+        public string QueueId { get; set; }
+        public System.Collections.Generic.IReadOnlySet<string> QueueIds { get; set; }
+    }
+    public sealed class QueueGroupUsageRow
+    {
+        public QueueGroupUsageRow() { }
+        public long Abandoned { get; set; }
+        public long Answered { get; set; }
+        public double AverageHandleTimeSeconds { get; set; }
+        public double AverageSpeedOfAnswerSeconds { get; set; }
+        public int CurrentWaiting { get; set; }
+        public long InteractionsHandled { get; set; }
+        public string QueueGroupId { get; set; }
+        public string QueueGroupName { get; set; }
+    }
+    public sealed class QueueUsageReport
+    {
+        public QueueUsageReport() { }
+        public System.DateTime FromUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.QueueGroupUsageRow> GroupRows { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.QueueUsageRow> Rows { get; set; }
+        public System.DateTime ToUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.Reports.QueueUsageTotals Totals { get; set; }
+    }
+    public sealed class QueueUsageRow
+    {
+        public QueueUsageRow() { }
+        public long Abandoned { get; set; }
+        public long Answered { get; set; }
+        public double AverageHandleTimeSeconds { get; set; }
+        public double AverageSpeedOfAnswerSeconds { get; set; }
+        public int CurrentWaiting { get; set; }
+        public long InteractionsHandled { get; set; }
+        public string QueueGroupId { get; set; }
+        public string QueueGroupName { get; set; }
+        public string QueueId { get; set; }
+        public string QueueName { get; set; }
+        public int SlaThresholdSeconds { get; set; }
+    }
+    public sealed class QueueUsageTotals
+    {
+        public QueueUsageTotals() { }
+        public long Abandoned { get; set; }
+        public long Answered { get; set; }
+        public double AverageHandleTimeSeconds { get; set; }
+        public double AverageSpeedOfAnswerSeconds { get; set; }
+        public int CurrentWaiting { get; set; }
+        public long InteractionsHandled { get; set; }
+    }
+    public sealed class SubjectInventoryReport
+    {
+        public SubjectInventoryReport() { }
+        public System.DateTime FromUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.ContactCenter.Models.Reports.SubjectInventoryRow> Rows { get; set; }
+        public System.DateTime ToUtc { get; set; }
+        public CrestApps.Core.ContactCenter.Models.Reports.ActivityProgressCounts Totals { get; set; }
+    }
+    public sealed class SubjectInventoryRow
+    {
+        public SubjectInventoryRow() { }
+        public CrestApps.Core.ContactCenter.Models.Reports.ActivityProgressCounts Counts { get; set; }
+        public string SubjectContentType { get; set; }
     }
 }
 namespace CrestApps.Core.ContactCenter.Security

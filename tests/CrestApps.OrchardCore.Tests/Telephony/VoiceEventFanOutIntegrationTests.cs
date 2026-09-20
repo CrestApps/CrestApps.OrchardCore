@@ -1,9 +1,8 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.SignalR;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.Core.Telephony.Services;

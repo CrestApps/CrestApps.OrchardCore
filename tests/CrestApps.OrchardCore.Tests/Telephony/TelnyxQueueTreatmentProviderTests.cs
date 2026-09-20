@@ -1,7 +1,7 @@
 using System.Net;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using Moq;
 using Microsoft.Extensions.Logging.Abstractions;

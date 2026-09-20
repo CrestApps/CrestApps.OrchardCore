@@ -1,8 +1,7 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Endpoints;
-using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Antiforgery;

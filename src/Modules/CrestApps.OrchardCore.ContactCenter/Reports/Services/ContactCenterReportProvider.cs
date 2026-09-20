@@ -1,6 +1,6 @@
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Providers;

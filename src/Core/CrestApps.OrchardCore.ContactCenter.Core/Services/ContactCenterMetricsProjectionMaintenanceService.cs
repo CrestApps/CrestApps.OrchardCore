@@ -1,4 +1,5 @@
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
+using CrestApps.Core.ContactCenter;
 using OrchardCore;
 using OrchardCore.Modules;
 

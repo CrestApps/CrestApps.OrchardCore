@@ -1,7 +1,6 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Telephony.Services;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;

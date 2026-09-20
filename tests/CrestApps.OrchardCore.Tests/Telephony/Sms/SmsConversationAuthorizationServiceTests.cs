@@ -2,7 +2,7 @@ using CrestApps.Core.Omnichannel.Sms.Portal.Security;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using System.Security.Claims;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core;
 using CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models;

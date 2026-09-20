@@ -5,7 +5,7 @@ using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel;
 using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.Core.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Sources;
 using CrestApps.OrchardCore.ContactCenter.Deployments.Steps;
