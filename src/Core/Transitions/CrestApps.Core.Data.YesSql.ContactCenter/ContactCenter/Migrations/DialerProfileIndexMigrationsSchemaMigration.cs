@@ -1,40 +1,40 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
-using CrestApps.Core.ContactCenter.Models;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
-/// Creates the schema for the <see cref="AgentProfileIndex"/>.
+/// Creates the schema for the <see cref="DialerProfileIndex"/>. A dialer profile is reusable dialing settings:
+/// it does not own a campaign or queue (those are chosen when inventory is loaded), so the index carries only the
+/// name and enabled flag used to list and pace profiles.
 /// </summary>
-internal sealed class AgentProfileIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class DialerProfileIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>
     /// The stored name is the Orchard migration class's own name, so a database migrated under either
     /// host agrees on which version has already been applied.
     /// </remarks>
-    public string Name => "AgentProfileIndexMigrations";
+    public string Name => "DialerProfileIndexMigrations";
 
     /// <summary>
-    /// Creates the agent profile index table.
+    /// Creates the dialer profile index table.
     /// </summary>
     /// <param name="builder">The schema builder.</param>
     /// <returns>The migration version number.</returns>
     public async Task<int> CreateAsync(ISchemaBuilder builder)
     {
-        await builder.CreateMapIndexTableAsync<AgentProfileIndex>(table => table
+        await builder.CreateMapIndexTableAsync<DialerProfileIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.WithLength(255))
-            .Column<string>("UserId", column => column.WithLength(26))
-            .Column<AgentPresenceStatus>("PresenceStatus"),
+            .Column<bool>("Enabled"),
             collection: ContactCenterStorage.CollectionName
         );
 
-        await builder.AlterIndexTableAsync<AgentProfileIndex>(table => table
-            .CreateIndex("IDX_AgentProfileIndex_DocumentId", "DocumentId", "ItemId", "UserId", "PresenceStatus"),
+        await builder.AlterIndexTableAsync<DialerProfileIndex>(table => table
+            .CreateIndex("IDX_DialerProfileIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
             collection: ContactCenterStorage.CollectionName
         );
 

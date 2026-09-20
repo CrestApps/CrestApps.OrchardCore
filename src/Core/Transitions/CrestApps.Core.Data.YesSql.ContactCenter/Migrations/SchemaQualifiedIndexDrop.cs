@@ -1,7 +1,7 @@
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.YesSql.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.Migrations;
 
 /// <summary>
 /// Decides whether dropping an index needs a schema-qualified name because the engine resolves an index by name

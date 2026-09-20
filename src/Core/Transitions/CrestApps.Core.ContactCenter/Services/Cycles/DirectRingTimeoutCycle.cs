@@ -8,7 +8,7 @@ namespace CrestApps.Core.ContactCenter.Services;
 /// <summary>
 /// Enforces agent ring windows at a fine granularity. Reservation expiry and the direct-to-agent hold timeout
 /// (which sends an unanswered caller to the agent's voicemail once the configured ring window elapses) are also
-/// swept by <see cref="ReservationExpiryBackgroundTask"/>, but that task runs on the one-minute background-task
+/// swept by the host's reservation-expiry background task, but that task runs on the one-minute background-task
 /// schedule, which cannot honour a sub-minute ring window: a 30-second window could otherwise wait up to a full
 /// minute for the next sweep, and the caller frequently hangs up first, so the call never reaches voicemail.
 /// <para>

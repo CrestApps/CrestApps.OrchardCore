@@ -5,12 +5,12 @@ using CrestApps.Core.ContactCenter.Models;
 using YesSql.Sql;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="InteractionIndex"/>.
 /// </summary>
-internal sealed class InteractionIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class InteractionIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>

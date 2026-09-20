@@ -2,16 +2,15 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Omnichannel.Models;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
-using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="ContactCenterWorkStateIndex"/>.
 /// </summary>
-internal sealed class ContactCenterWorkStateIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class ContactCenterWorkStateIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private readonly IStore _store;
 

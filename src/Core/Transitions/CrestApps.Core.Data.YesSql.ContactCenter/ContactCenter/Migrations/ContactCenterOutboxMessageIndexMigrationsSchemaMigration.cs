@@ -2,16 +2,15 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Models;
-using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="ContactCenterOutboxMessageIndex"/>.
 /// </summary>
-internal sealed class ContactCenterOutboxMessageIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class ContactCenterOutboxMessageIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private readonly IStore _store;
 

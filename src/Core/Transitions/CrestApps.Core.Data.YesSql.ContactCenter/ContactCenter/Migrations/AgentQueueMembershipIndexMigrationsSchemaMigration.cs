@@ -1,38 +1,45 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
+using CrestApps.Core.ContactCenter.Models;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
-/// Creates the schema for the <see cref="ContactCenterSkillIndex"/>.
+/// Creates the schema for the <see cref="AgentQueueMembershipIndex"/>.
 /// </summary>
-internal sealed class ContactCenterSkillIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class AgentQueueMembershipIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>
     /// The stored name is the Orchard migration class's own name, so a database migrated under either
     /// host agrees on which version has already been applied.
     /// </remarks>
-    public string Name => "ContactCenterSkillIndexMigrations";
+    public string Name => "AgentQueueMembershipIndexMigrations";
 
     /// <summary>
-    /// Creates the skill index table.
+    /// Creates the agent queue membership index table.
     /// </summary>
     /// <param name="builder">The schema builder.</param>
     /// <returns>The migration version number.</returns>
     public async Task<int> CreateAsync(ISchemaBuilder builder)
     {
-        await builder.CreateMapIndexTableAsync<ContactCenterSkillIndex>(table => table
+        await builder.CreateMapIndexTableAsync<AgentQueueMembershipIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
-            .Column<string>("Name", column => column.WithLength(255))
-            .Column<bool>("Enabled"),
+            .Column<string>("QueueId", column => column.WithLength(26))
+            .Column<AgentPresenceStatus>("PresenceStatus")
+            .Column<int>("MaxConcurrentInteractions"),
             collection: ContactCenterStorage.CollectionName
         );
 
-        await builder.AlterIndexTableAsync<ContactCenterSkillIndex>(table => table
-            .CreateIndex("IDX_ContactCenterSkillIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
+        await builder.AlterIndexTableAsync<AgentQueueMembershipIndex>(table => table
+            .CreateIndex(
+                "IDX_AgentQueueMembershipIndex_Queue",
+                "DocumentId",
+                "QueueId",
+                "PresenceStatus",
+                "ItemId"),
             collection: ContactCenterStorage.CollectionName
         );
 

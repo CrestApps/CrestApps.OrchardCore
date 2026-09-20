@@ -1,17 +1,16 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
-using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="ContactCenterProcessedEventIndex"/> and enforces per-handler
 /// event idempotency through a composite unique constraint.
 /// </summary>
-internal sealed class ContactCenterProcessedEventIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class ContactCenterProcessedEventIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private readonly IStore _store;
 

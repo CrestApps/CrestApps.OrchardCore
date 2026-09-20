@@ -3,38 +3,36 @@ using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
-/// Creates the schema for the <see cref="DialerProfileIndex"/>. A dialer profile is reusable dialing settings:
-/// it does not own a campaign or queue (those are chosen when inventory is loaded), so the index carries only the
-/// name and enabled flag used to list and pace profiles.
+/// Creates the schema for the <see cref="BusinessHoursCalendarIndex"/>.
 /// </summary>
-internal sealed class DialerProfileIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class BusinessHoursCalendarIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>
     /// The stored name is the Orchard migration class's own name, so a database migrated under either
     /// host agrees on which version has already been applied.
     /// </remarks>
-    public string Name => "DialerProfileIndexMigrations";
+    public string Name => "BusinessHoursCalendarIndexMigrations";
 
     /// <summary>
-    /// Creates the dialer profile index table.
+    /// Creates the business-hours calendar index table.
     /// </summary>
     /// <param name="builder">The schema builder.</param>
     /// <returns>The migration version number.</returns>
     public async Task<int> CreateAsync(ISchemaBuilder builder)
     {
-        await builder.CreateMapIndexTableAsync<DialerProfileIndex>(table => table
+        await builder.CreateMapIndexTableAsync<BusinessHoursCalendarIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.WithLength(255))
             .Column<bool>("Enabled"),
             collection: ContactCenterStorage.CollectionName
         );
 
-        await builder.AlterIndexTableAsync<DialerProfileIndex>(table => table
-            .CreateIndex("IDX_DialerProfileIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
+        await builder.AlterIndexTableAsync<BusinessHoursCalendarIndex>(table => table
+            .CreateIndex("IDX_BusinessHoursCalendarIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
             collection: ContactCenterStorage.CollectionName
         );
 

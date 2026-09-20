@@ -3,16 +3,15 @@ using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Models;
 using CrestApps.Core.Telephony.Services;
-using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the provider webhook inbox index schema and enforces canonical provider-delivery uniqueness.
 /// </summary>
-internal sealed class ProviderWebhookInboxMessageIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class ProviderWebhookInboxMessageIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private readonly IStore _store;
 

@@ -1,38 +1,40 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
+using CrestApps.Core.ContactCenter.Models;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
-/// Creates the schema for the <see cref="ContactCenterEntryPointIndex"/>.
+/// Creates the schema for the <see cref="AgentProfileIndex"/>.
 /// </summary>
-internal sealed class ContactCenterEntryPointIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class AgentProfileIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>
     /// The stored name is the Orchard migration class's own name, so a database migrated under either
     /// host agrees on which version has already been applied.
     /// </remarks>
-    public string Name => "ContactCenterEntryPointIndexMigrations";
+    public string Name => "AgentProfileIndexMigrations";
 
     /// <summary>
-    /// Creates the entry point index table.
+    /// Creates the agent profile index table.
     /// </summary>
     /// <param name="builder">The schema builder.</param>
     /// <returns>The migration version number.</returns>
     public async Task<int> CreateAsync(ISchemaBuilder builder)
     {
-        await builder.CreateMapIndexTableAsync<ContactCenterEntryPointIndex>(table => table
+        await builder.CreateMapIndexTableAsync<AgentProfileIndex>(table => table
             .Column<string>("ItemId", column => column.WithLength(26))
             .Column<string>("Name", column => column.WithLength(255))
-            .Column<bool>("Enabled"),
+            .Column<string>("UserId", column => column.WithLength(26))
+            .Column<AgentPresenceStatus>("PresenceStatus"),
             collection: ContactCenterStorage.CollectionName
         );
 
-        await builder.AlterIndexTableAsync<ContactCenterEntryPointIndex>(table => table
-            .CreateIndex("IDX_ContactCenterEntryPointIndex_DocumentId", "DocumentId", "ItemId", "Enabled"),
+        await builder.AlterIndexTableAsync<AgentProfileIndex>(table => table
+            .CreateIndex("IDX_AgentProfileIndex_DocumentId", "DocumentId", "ItemId", "UserId", "PresenceStatus"),
             collection: ContactCenterStorage.CollectionName
         );
 

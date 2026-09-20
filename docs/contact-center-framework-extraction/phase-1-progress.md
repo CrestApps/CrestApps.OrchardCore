@@ -301,6 +301,40 @@ Every approved surface moved, so each one had to be read rather than accepted:
   chains resolved in the same order throughout. Its baselines were rewritten name-for-name in place,
   so a reorder could not hide inside the rename.
 
+### The migrations moved without changing what a database has applied (W5.1c)
+
+All twenty-seven Contact Center schema migrations are in the store package now. Nothing about a
+tenant's applied state changed, and that is by construction rather than by luck: `ISchemaMigration`
+carries a `Name` that is the original Orchard migration class's name, and `SchemaVersion` is keyed by
+that name rather than by CLR type. A database migrated under either host agrees on which version it
+is at, whatever assembly the step lives in now.
+
+They became `public` on the way. The Orchard `DataMigration` wrappers construct them directly, and
+`internal` only worked because of an `InternalsVisibleTo` that does not survive the move to a
+package. The migrations already moved in earlier workstreams are public for the same reason.
+
+`SchemaQualifiedIndexDrop` and `IndexStringColumnRebuild` went with them. Both are pure YesSql, both
+lived in the Orchard `YesSql.Core` project, and after the migrations moved they had no consumer left
+there. They are staged under `CrestApps.Core.Data.YesSql.Migrations` in the store package, the way
+`ConcurrentDocumentCatalog` is staged under `CrestApps.Core.Data.YesSql.Services` - the namespace
+they belong to is in a Core package this repository does not build.
+
+`CrestApps.OrchardCore.YesSql.Core` has no approved public-API baseline, so the two types leaving it
+was not gated by anything. Worth adding one.
+
+### The migration gates read directories, and the directory moved (W5.1c)
+
+Four gates take a path rather than a type: `MigrationAdditiveOnlyGuardTests` pins each authorized
+destructive step and each reviewed dynamic-SQL site by file, and
+`ContactCenterRetentionCoverageTests` scans a migrations folder four separate times. Pointed at the
+old folder they reported zero migrations found - which their own "this gate is not reading the files
+it is meant to check" floors caught, and which is the only reason the move did not silently disarm
+them.
+
+`ContactCenterMigrationSql`'s reviewed-SQL fingerprint moved with it. The file was diffed against its
+previous contents before the new fingerprint was recorded: two lines, the namespace and the
+accessibility, and no statement.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All

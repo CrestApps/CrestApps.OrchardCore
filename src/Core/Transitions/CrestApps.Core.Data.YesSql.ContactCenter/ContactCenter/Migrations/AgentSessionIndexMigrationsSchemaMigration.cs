@@ -4,12 +4,12 @@ using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="AgentSessionIndex"/>.
 /// </summary>
-internal sealed class AgentSessionIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class AgentSessionIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private readonly IStore _store;
 

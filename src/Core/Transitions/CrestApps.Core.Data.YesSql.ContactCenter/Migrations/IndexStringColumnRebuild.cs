@@ -1,7 +1,7 @@
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.YesSql.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.Migrations;
 
 /// <summary>
 /// Widens the declared length of a text index column, preserving the values already stored in it.

@@ -4,12 +4,12 @@ using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Services;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="AgentAllowedQueueIndex"/>.
 /// </summary>
-internal sealed class AgentAllowedQueueIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class AgentAllowedQueueIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>

@@ -3,16 +3,15 @@ using System.Globalization;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Models;
-using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="CallbackRequestIndex"/>.
 /// </summary>
-internal sealed class CallbackRequestIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class CallbackRequestIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private static readonly string _terminalStatusValues = string.Join(
         ", ",

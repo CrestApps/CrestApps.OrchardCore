@@ -3,12 +3,12 @@ using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="ContactCenterEventMetricDeltaIndex"/>.
 /// </summary>
-internal sealed class ContactCenterEventMetricDeltaIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class ContactCenterEventMetricDeltaIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>

@@ -28,7 +28,7 @@ public sealed class AgentPresenceManagerService : IAgentPresenceManager
     /// </summary>
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="sessionManagers">The optional real-time agent session managers.</param>
-    /// <param name="agentWorkStateHealingServices">The optional agent state healers.</param>
+    /// <param name="agentWorkStateHealingService">The agent work-state healer.</param>
     /// <param name="entitlementPolicy">The policy that decides which queues and campaigns an agent may join. The
     /// permissive default imposes no restriction; the Agent Entitlements feature replaces it with an enforcing one.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>

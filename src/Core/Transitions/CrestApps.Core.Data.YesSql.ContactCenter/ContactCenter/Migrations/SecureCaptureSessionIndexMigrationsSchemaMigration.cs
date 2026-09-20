@@ -3,12 +3,12 @@ using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="SecureCaptureSessionIndex"/>.
 /// </summary>
-internal sealed class SecureCaptureSessionIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class SecureCaptureSessionIndexMigrationsSchemaMigration : ISchemaMigration
 {
     /// <inheritdoc/>
     /// <remarks>

@@ -4,13 +4,13 @@ using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="ContactCenterProjectionCheckpointIndex"/> and enforces a single
 /// checkpoint per projection handler through a unique constraint.
 /// </summary>
-internal sealed class ContactCenterProjectionCheckpointIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class ContactCenterProjectionCheckpointIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private readonly IStore _store;
 

@@ -3,13 +3,13 @@ using YesSql;
 using YesSql.Sql;
 using YesSql.Utils;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Provides shared, dialect-portable SQL helpers used by Contact Center index migrations to preflight
 /// legacy rows and create unique constraints.
 /// </summary>
-internal static class ContactCenterMigrationSql
+public static class ContactCenterMigrationSql
 {
     /// <summary>
     /// Gets the quoted, prefixed index table name for the specified index type.

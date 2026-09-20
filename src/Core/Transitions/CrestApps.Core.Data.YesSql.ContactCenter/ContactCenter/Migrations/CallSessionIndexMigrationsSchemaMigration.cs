@@ -2,18 +2,17 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.Telephony.Services;
-using CrestApps.OrchardCore.YesSql.Core.Migrations;
 using YesSql;
 using YesSql.Sql;
 using CrestApps.Core.Telephony.Models;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="CallSessionIndex"/> and enforces one call session per canonical
 /// provider-call identity.
 /// </summary>
-internal sealed class CallSessionIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class CallSessionIndexMigrationsSchemaMigration : ISchemaMigration
 {
     // The provider technical name is a canonical internal slug and stays bounded. The provider call identifier
     // is supplied verbatim by an external switch (a SIP Call-ID can be long), so the original 128 was too short

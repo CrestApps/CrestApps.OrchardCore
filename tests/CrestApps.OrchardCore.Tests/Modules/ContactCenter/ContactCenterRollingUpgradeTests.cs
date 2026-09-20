@@ -3,7 +3,7 @@ using Microsoft.Extensions.Time.Testing;
 using System.Data.Common;
 using System.Globalization;
 using System.Reflection;
-using CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+using CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.Core.Telephony.Services;

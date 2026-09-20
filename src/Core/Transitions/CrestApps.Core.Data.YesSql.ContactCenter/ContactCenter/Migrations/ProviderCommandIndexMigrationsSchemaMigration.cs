@@ -3,17 +3,16 @@ using System.Globalization;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Models;
-using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="ProviderCommandIndex"/>, including the unique idempotency key that
 /// guarantees one provider command per key per tenant.
 /// </summary>
-internal sealed class ProviderCommandIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class ProviderCommandIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private static readonly string _terminalStatusValues = string.Join(
         ", ",

@@ -4,13 +4,13 @@ using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="InteractionEventIndex"/> and enforces database-backed
 /// idempotency-key uniqueness.
 /// </summary>
-internal sealed class InteractionEventIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class InteractionEventIndexMigrationsSchemaMigration : ISchemaMigration
 {
     private readonly IStore _store;
 

@@ -3,16 +3,15 @@ using System.Globalization;
 using CrestApps.Core.Data.YesSql.Migrations;
 using CrestApps.Core.Data.YesSql.ContactCenter.Indexes;
 using CrestApps.Core.ContactCenter.Models;
-using OrchardCore.Modules;
 using YesSql;
 using YesSql.Sql;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Migrations;
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations;
 
 /// <summary>
 /// Creates the schema for the <see cref="ActivityReservationIndex"/>.
 /// </summary>
-internal sealed class ActivityReservationIndexMigrationsSchemaMigration : ISchemaMigration
+public sealed class ActivityReservationIndexMigrationsSchemaMigration : ISchemaMigration
 {
     // YesSql persists the ReservationStatus enum as its underlying integer, so rows written under the former
     // string column hold that integer as text ("0", "1", ...). These invariant numeric strings match the stored

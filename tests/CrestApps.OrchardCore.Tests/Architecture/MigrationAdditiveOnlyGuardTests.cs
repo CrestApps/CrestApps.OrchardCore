@@ -303,7 +303,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "The rename retires the temporary name the replacement column was created under in this same step, and gives the column back the name callers use. The temporary name is never read by any node, so no version loses an object it depends on.",
             "AddColumn"),
         new MigrationContractEntry(
-            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexStringColumnRebuild.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/Migrations/IndexStringColumnRebuild.cs",
             "IndexStringColumnRebuild",
             "WidenAsync",
             "DropColumn",
@@ -314,7 +314,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "The narrow column is dropped only after a wider replacement holding its values has been added, and the replacement takes its name in the same step, so the column exists under the same name at a wider length before and after. SQLite has no ALTER COLUMN, so add, copy, drop and rename is the only widening available on every supported engine.",
             "RenameColumn"),
         new MigrationContractEntry(
-            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexStringColumnRebuild.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/Migrations/IndexStringColumnRebuild.cs",
             "IndexStringColumnRebuild",
             "WidenAsync",
             "RenameColumn",
@@ -325,7 +325,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "The rename retires the temporary name the wider replacement column was created under in this same step, and gives the column back the name callers use. The temporary name is never read by any node, so no version loses an object it depends on.",
             "AddColumn"),
         new MigrationContractEntry(
-            "src/Core/CrestApps.OrchardCore.YesSql.Core/Migrations/IndexStringColumnRebuild.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/Migrations/IndexStringColumnRebuild.cs",
             "IndexStringColumnRebuild",
             "WidenAsync",
             "raw SQL",
@@ -337,7 +337,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "AddColumn",
             "(anonymous)"),
         new MigrationContractEntry(
-            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/ContactCenter/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
             "CallSessionIndexMigrationsSchemaMigration",
             "UpdateFrom3Async",
             "raw SQL",
@@ -349,7 +349,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "CreateIndex",
             "UQ_CallSessionIndex_ProviderCallClaimKey;IDX_CallSessionIndex_DocumentId"),
         new MigrationContractEntry(
-            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/ContactCenter/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
             "CallSessionIndexMigrationsSchemaMigration",
             "UpdateFrom3Async",
             "DropIndex",
@@ -360,7 +360,7 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "SQLite refuses to drop a column an index refers to, so the unique claim index comes down before the claim column is widened and is recreated over the widened column in the same step. The claim column is widened, not re-typed, so the uniqueness it enforces is unchanged.",
             "CreateIndex"),
         new MigrationContractEntry(
-            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/ContactCenter/Migrations/CallSessionIndexMigrationsSchemaMigration.cs",
             "CallSessionIndexMigrationsSchemaMigration",
             "UpdateFrom3Async",
             "DropIndex",
@@ -517,25 +517,30 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "Timestamp of the chat opt-out, shipped in stable 2.0.0 and dropped in 3.0.0 alongside the column it dates. It records when a preference no channel can act on was taken, and no released version read it, so a customer upgrading from 2.0.0 loses nothing; the original timestamp survives in the contact's own document because only the projection is dropped."),
     ];
 
+    // ContactCenterMigrationSql's fingerprint moved from 4179923c87cc7344 to a6a34b944336dabf when the
+    // Contact Center migrations moved into the framework store package. The file was re-read against its
+    // previous contents: the only differences are the namespace line and `internal static class` becoming
+    // `public static class`, which the Orchard migration wrappers now need to see it across an assembly
+    // boundary. Not one statement changed, so each approval below still covers the statement it approved.
     private static readonly ReviewedDynamicSqlEntry[] _reviewedDynamicSqlSites =
     [
         new ReviewedDynamicSqlEntry(
-            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/ContactCenterMigrationSql.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExistsAsync",
-            "4179923c87cc7344",
+            "a6a34b944336dabf",
             "Shared existence probe whose statement arrives as a parameter. Every caller in the scanned surface passes a literal SELECT, and the helper only reads a scalar, so it cannot alter schema regardless of the caller."),
         new ReviewedDynamicSqlEntry(
-            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/ContactCenterMigrationSql.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "ExecuteAsync",
-            "4179923c87cc7344",
+            "a6a34b944336dabf",
             "Shared set-based statement runner whose statement arrives as a parameter. The helper adds nothing to the text it is given, so what it executes is decided at its call sites, and each of those is scanned in its own right."),
         new ReviewedDynamicSqlEntry(
-            "src/Core/CrestApps.OrchardCore.ContactCenter.Core/Migrations/ContactCenterMigrationSql.cs",
+            "src/Core/Transitions/CrestApps.Core.Data.YesSql.ContactCenter/ContactCenter/Migrations/ContactCenterMigrationSql.cs",
             "ContactCenterMigrationSql",
             "CreateUniqueIndexAsync",
-            "4179923c87cc7344",
+            "a6a34b944336dabf",
             "Builds a CREATE UNIQUE INDEX statement from the dialect, table prefix, index name, and column names. The statement is additive by construction: it only ever creates an index and never drops or alters an existing object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",

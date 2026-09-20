@@ -260,6 +260,205 @@ namespace CrestApps.Core.Data.YesSql.ContactCenter.Indexes
         public string Name { get; set; }
     }
 }
+namespace CrestApps.Core.Data.YesSql.ContactCenter.Migrations
+{
+    public sealed class ActivityQueueGroupIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ActivityQueueGroupIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ActivityQueueIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ActivityQueueIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ActivityReservationIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ActivityReservationIndexMigrationsSchemaMigration(YesSql.IStore store, System.TimeProvider timeProvider) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class AgentAllowedQueueIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public AgentAllowedQueueIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class AgentProfileIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public AgentProfileIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class AgentQueueMembershipIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public AgentQueueMembershipIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class AgentSessionIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public AgentSessionIndexMigrationsSchemaMigration(YesSql.IStore store) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class BusinessHoursCalendarIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public BusinessHoursCalendarIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class CallSessionIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public CallSessionIndexMigrationsSchemaMigration(YesSql.IStore store, CrestApps.Core.Telephony.Services.IProviderIdentityResolver providerIdentityResolver) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class CallbackRequestIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public CallbackRequestIndexMigrationsSchemaMigration(YesSql.IStore store, System.TimeProvider timeProvider) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ContactCenterEntryPointIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ContactCenterEntryPointIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ContactCenterEventMetricDeltaIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ContactCenterEventMetricDeltaIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ContactCenterEventMetricIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ContactCenterEventMetricIndexMigrationsSchemaMigration(YesSql.IStore store) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public static class ContactCenterMigrationSql
+    {
+        public static System.Threading.Tasks.Task AddRetentionColumnAsync(YesSql.Sql.ISchemaBuilder schemaBuilder, YesSql.IStore store, System.Type indexType, string columnName, System.DateTime backfillUtc, string settledRowsFilter = null) { }
+        public static string BuildConcat(YesSql.ISqlDialect dialect, params string[] fragments) { }
+        public static string BuildCreateUniqueIndexStatement(YesSql.ISqlDialect dialect, string tablePrefix, string quotedTableName, string indexName, params string[] columnNames) { }
+        public static System.Threading.Tasks.Task CreateUniqueIndexAsync(YesSql.Sql.ISchemaBuilder schemaBuilder, YesSql.IStore store, System.Type indexType, string indexName, params string[] columnNames) { }
+        public static System.Threading.Tasks.Task ExecuteAsync(YesSql.Sql.ISchemaBuilder schemaBuilder, string commandText, [System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Name",
+                "Value"})] params System.ValueTuple<string, object>[] parameters) { }
+        public static System.Threading.Tasks.Task<bool> ExistsAsync(YesSql.Sql.ISchemaBuilder schemaBuilder, string commandText, [System.Runtime.CompilerServices.TupleElementNames(new string[] {
+                "Name",
+                "Value"})] params System.ValueTuple<string, object>[] parameters) { }
+        public static string GetQuotedTableName(YesSql.Sql.ISchemaBuilder schemaBuilder, YesSql.IStore store, System.Type indexType) { }
+    }
+    public sealed class ContactCenterOutboxMessageIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ContactCenterOutboxMessageIndexMigrationsSchemaMigration(YesSql.IStore store, System.TimeProvider timeProvider) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ContactCenterProcessedEventIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ContactCenterProcessedEventIndexMigrationsSchemaMigration(YesSql.IStore store, System.TimeProvider timeProvider) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ContactCenterProjectionCheckpointIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ContactCenterProjectionCheckpointIndexMigrationsSchemaMigration(YesSql.IStore store) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ContactCenterSkillIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ContactCenterSkillIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ContactCenterWorkStateIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ContactCenterWorkStateIndexMigrationsSchemaMigration(YesSql.IStore store, System.TimeProvider timeProvider) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class DialerProfileIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public DialerProfileIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class InteractionEventIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public InteractionEventIndexMigrationsSchemaMigration(YesSql.IStore store) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class InteractionIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public InteractionIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ProviderCommandIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ProviderCommandIndexMigrationsSchemaMigration(YesSql.IStore store, System.TimeProvider timeProvider) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class ProviderWebhookInboxMessageIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public ProviderWebhookInboxMessageIndexMigrationsSchemaMigration(YesSql.IStore store, CrestApps.Core.Telephony.Services.IProviderIdentityResolver providerIdentityResolver, System.TimeProvider timeProvider) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class QueueItemIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public QueueItemIndexMigrationsSchemaMigration(YesSql.IStore store, System.TimeProvider timeProvider) { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class SecureCaptureSessionIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public SecureCaptureSessionIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class VoiceMediaItemIndexMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public VoiceMediaItemIndexMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+}
 namespace CrestApps.Core.Data.YesSql.ContactCenter.Services
 {
     public sealed class ActivityQueueGroupStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ActivityQueueGroupIndex>, CrestApps.Core.ContactCenter.Services.IActivityQueueGroupStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ActivityQueueGroup>
@@ -616,10 +815,18 @@ namespace CrestApps.Core.Data.YesSql.Migrations
         System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder);
         System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder);
     }
+    public static class IndexStringColumnRebuild
+    {
+        public static System.Threading.Tasks.Task WidenAsync<TIndex>(YesSql.Sql.ISchemaBuilder schemaBuilder, YesSql.IStore store, string columnName, int length, bool isNotNull, object defaultValue, string collection) { }
+    }
     public sealed class SchemaMigrationRunner
     {
         public SchemaMigrationRunner(YesSql.IStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration> migrations, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Data.YesSql.Migrations.SchemaMigrationRunner> logger) { }
         public System.Threading.Tasks.Task<int> RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class SchemaQualifiedIndexDrop
+    {
+        public static string TryGetQualifiedIndexName(YesSql.Sql.ISchemaBuilder schemaBuilder, YesSql.IStore store, System.Type indexType, string indexName, string collection) { }
     }
     public sealed class SchemaVersion
     {

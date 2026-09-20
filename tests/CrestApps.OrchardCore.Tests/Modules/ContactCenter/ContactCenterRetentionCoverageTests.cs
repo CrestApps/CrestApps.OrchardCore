@@ -429,7 +429,7 @@ public sealed class ContactCenterRetentionCoverageTests
         // others. Where it is read as a literal, a filter such as "Status" IN (2, 3) compares the constant text
         // "Status" to two numbers, matches nothing, and the statement succeeds having touched zero rows. Nothing
         // fails, so the entire pre-upgrade backlog stays immortal. Every identifier must come from the dialect.
-        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Core", "CrestApps.OrchardCore.ContactCenter.Core", "Migrations");
+        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Core", "Transitions", "CrestApps.Core.Data.YesSql.ContactCenter", "ContactCenter", "Migrations");
         var rawSqlFiles = new List<string>();
         var failures = new List<string>();
 
@@ -477,7 +477,7 @@ public sealed class ContactCenterRetentionCoverageTests
         // The purge selects a batch by settlement time with no ordering, so without an index leading with that
         // column every terminating batch is a full scan. At steady state that is a scan of the largest tables in
         // the schema on every cycle, which is the condition retention exists to prevent.
-        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Core", "CrestApps.OrchardCore.ContactCenter.Core", "Migrations");
+        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Core", "Transitions", "CrestApps.Core.Data.YesSql.ContactCenter", "ContactCenter", "Migrations");
 
         var sources = Directory.EnumerateFiles(migrationsPath, "*IndexMigrationsSchemaMigration.cs")
             .Select(File.ReadAllText)
@@ -526,7 +526,7 @@ public sealed class ContactCenterRetentionCoverageTests
         // Every predicate starts by rejecting nulls, which would make the pre-upgrade backlog immortal while the
         // cycle reported success.
         var settlementColumns = _settlementColumns.Values.ToHashSet(StringComparer.Ordinal);
-        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Core", "CrestApps.OrchardCore.ContactCenter.Core", "Migrations");
+        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Core", "Transitions", "CrestApps.Core.Data.YesSql.ContactCenter", "ContactCenter", "Migrations");
         var failures = new List<string>();
 
         // Act
@@ -565,7 +565,7 @@ public sealed class ContactCenterRetentionCoverageTests
     {
         // Arrange
         var settlementColumns = _settlementColumns.Values.ToHashSet(StringComparer.Ordinal);
-        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Core", "CrestApps.OrchardCore.ContactCenter.Core", "Migrations");
+        var migrationsPath = Path.Combine(RepositoryRoot(), "src", "Core", "Transitions", "CrestApps.Core.Data.YesSql.ContactCenter", "ContactCenter", "Migrations");
 
         // Act
         var covered = Directory.EnumerateFiles(migrationsPath, "*IndexMigrationsSchemaMigration.cs")
