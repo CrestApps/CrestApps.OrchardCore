@@ -1,5 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.ContactCenter.Services;
+using CrestApps.Core.Data.YesSql.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Services;
@@ -30,7 +31,8 @@ public sealed class AgentServicesStartup : StartupBase
         // registers the same collection; the registration is idempotent).
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(ContactCenterStorage.CollectionName));
 
-        services.AddCoreContactCenterAgentServices();
+        services.AddCoreContactCenterAgentDirectory()
+            .AddCoreContactCenterAgentDirectoryStoresYesSql();
 
         services
             .AddIndexProvider<AgentProfileIndexProvider>()

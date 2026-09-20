@@ -20,8 +20,14 @@ using CrestApps.Core.Data.YesSql.ContactCenter.Services.Retention;
 namespace CrestApps.OrchardCore.ContactCenter.Core;
 
 /// <summary>
-/// Registers the Contact Center's services, independently of the host they run in.
+/// Registers the Contact Center features that cannot yet be registered from the framework packages.
 /// </summary>
+/// <remarks>
+/// Each of the four features left here registers at least one service that takes a YesSql session directly,
+/// so registering them from <c>CrestApps.Core.ContactCenter</c> would drag a persistence choice in with them.
+/// They follow the rest once those services read through a store contract instead. The features that had no
+/// such service are on <c>CrestAppsContactCenterBuilder</c>.
+/// </remarks>
 public static class ContactCenterServiceCollectionExtensions
 {
     /// <summary>
@@ -307,33 +313,6 @@ public static class ContactCenterServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Adds the agent directory: who the agents are, what they are entitled to, and which queues they serve.
-    /// </summary>
-    /// <remarks>
-    /// Separate from the agents feature because a host that runs only a messaging channel still needs to know
-    /// who its agents are, without taking on presence and sessions.
-    /// </remarks>
-    /// <param name="services">The services.</param>
-    /// <returns>The same service collection, so calls can be chained.</returns>
-    public static IServiceCollection AddCoreContactCenterAgentServices(this IServiceCollection services)
-    {
-        services
-            .AddScoped<IAgentProfileStore, AgentProfileStore>()
-            .AddScoped<IAgentProfileManager, AgentProfileManager>();
-
-        // The permissive default: no entitlement restriction. A host that enforces entitlements replaces this.
-        // It lives with the directory rather than the agents administration because every consumer of agent
-        // identity needs it, including a host that runs only a messaging channel.
-        services.TryAddScoped<IAgentEntitlementPolicy, PermissiveAgentEntitlementPolicy>();
-
-        // Queue membership expressed over the agent directory alone, so a channel that groups agents by queue
-        // does not need the work-distribution feature to resolve who serves what.
-        services.TryAddScoped<IAgentQueueMembershipReader, AgentQueueMembershipReader>();
-
-        return services;
-    }
-
-    /// <summary>
     /// Adds the durable inbox a provider's webhook deliveries are taken into, and the work that drains it.
     /// </summary>
     /// <param name="services">The services.</param>
@@ -346,49 +325,6 @@ public static class ContactCenterServiceCollectionExtensions
             .AddScoped<IContactCenterRetentionPolicy, ProviderWebhookInboxMessageRetentionPolicy>();
 
         services.AddBackgroundCycle<IProviderWebhookInboxCycle, ProviderWebhookInboxCycle>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds the governance that decides who may reach a recording.
-    /// </summary>
-    /// <param name="services">The services.</param>
-    /// <returns>The same service collection, so calls can be chained.</returns>
-    public static IServiceCollection AddCoreContactCenterRecordingGovernance(this IServiceCollection services)
-    {
-        services.AddScoped<IRecordingAccessGovernanceService, RecordingAccessGovernanceService>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds the resolver that picks which provider plays a piece of voice media.
-    /// </summary>
-    /// <param name="services">The services.</param>
-    /// <returns>The same service collection, so calls can be chained.</returns>
-    public static IServiceCollection AddCoreContactCenterVoiceMedia(this IServiceCollection services)
-    {
-        services.AddScoped<IContactCenterVoiceMediaProviderResolver, ContactCenterVoiceMediaProviderResolver>();
-
-        return services;
-    }
-
-    /// <summary>
-    /// Adds the paced dialing strategies and the sweep that paces them.
-    /// </summary>
-    /// <param name="services">The services.</param>
-    /// <returns>The same service collection, so calls can be chained.</returns>
-    public static IServiceCollection AddCoreContactCenterPacedDialing(this IServiceCollection services)
-    {
-        services
-            .AddScoped<IDialerStrategy, PowerDialerStrategy>()
-            .AddScoped<IDialerStrategy, ProgressiveDialerStrategy>()
-            // Predictive is not blocked: its pacing is gated by the abandonment policy, which fails closed when
-            // the rate cannot be proven.
-            .AddScoped<IDialerStrategy, PredictiveDialerStrategy>();
-
-        services.AddBackgroundCycle<IDialerPacingCycle, DialerPacingCycle>();
 
         return services;
     }

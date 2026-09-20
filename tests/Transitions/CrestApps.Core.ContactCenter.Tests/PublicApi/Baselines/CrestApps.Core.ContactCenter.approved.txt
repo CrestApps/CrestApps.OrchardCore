@@ -22,6 +22,18 @@ namespace CrestApps.Core.ContactCenter
         public static bool IsEmergencyNumber(string digits) { }
         public static bool IsPremiumNumber(string digits) { }
     }
+    public static class ServiceCollectionExtensions
+    {
+        public static CrestApps.Core.Builders.CrestAppsContactCenterBuilder AddAgentDirectory(this CrestApps.Core.Builders.CrestAppsContactCenterBuilder builder) { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder AddContactCenter(this CrestApps.Core.Builders.CrestAppsContactCenterSuiteBuilder builder, System.Action<CrestApps.Core.Builders.CrestAppsContactCenterBuilder> configure = null) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterAgentDirectory(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterPacedDialing(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterRecordingGovernance(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterVoiceMedia(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterBuilder AddPacedDialing(this CrestApps.Core.Builders.CrestAppsContactCenterBuilder builder) { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterBuilder AddRecordingGovernance(this CrestApps.Core.Builders.CrestAppsContactCenterBuilder builder) { }
+        public static CrestApps.Core.Builders.CrestAppsContactCenterBuilder AddVoiceMedia(this CrestApps.Core.Builders.CrestAppsContactCenterBuilder builder) { }
+    }
 }
 namespace CrestApps.Core.ContactCenter.HealthChecks
 {

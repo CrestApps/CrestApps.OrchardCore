@@ -1,5 +1,10 @@
 namespace CrestApps.Core.Builders
 {
+    public sealed class CrestAppsContactCenterBuilder
+    {
+        public CrestAppsContactCenterBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+        public Microsoft.Extensions.DependencyInjection.IServiceCollection Services { get; }
+    }
     public sealed class CrestAppsContactCenterSuiteBuilder
     {
         public CrestAppsContactCenterSuiteBuilder(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }

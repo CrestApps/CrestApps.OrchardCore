@@ -1,5 +1,8 @@
 using CrestApps.Core.Builders;
 using CrestApps.Core.Data.YesSql.Telephony;
+using CrestApps.Core.Data.YesSql.ContactCenter;
+using CrestApps.Core.Data.YesSql.ContactCenter.Services;
+using CrestApps.Core.ContactCenter.Services;
 using CrestApps.Core.Hosting;
 using CrestApps.Core.Hosting.Locking;
 using CrestApps.Core.Hosting.Background;
@@ -297,6 +300,75 @@ public sealed class ContactCenterSuiteCompositionTests
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IPhoneNumberService));
         Assert.Single(services, descriptor => descriptor.ServiceType == typeof(IWebSocketConnectionRegistry));
         Assert.Equal(2, services.Count(descriptor => descriptor.ServiceType == typeof(IIndexProvider)));
+    }
+
+    [Fact]
+    public void AddContactCenter_RegistersOnlyTheFeaturesTheHostNamed()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+
+        // Act
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddContactCenterSuite(suite => suite
+                .AddContactCenter(contactCenter => contactCenter.AddAgentDirectory())));
+
+        // Assert
+        AssertRegistered<IAgentProfileManager, AgentProfileManager>(services, ServiceLifetime.Scoped);
+        AssertRegistered<IAgentEntitlementPolicy, PermissiveAgentEntitlementPolicy>(services, ServiceLifetime.Scoped);
+        AssertRegistered<IAgentQueueMembershipReader, AgentQueueMembershipReader>(services, ServiceLifetime.Scoped);
+
+        // The features that were not named.
+        AssertNotRegistered<IRecordingAccessGovernanceService>(services);
+        AssertNotRegistered<IContactCenterVoiceMediaProviderResolver>(services);
+        AssertNotRegistered<IDialerStrategy>(services);
+    }
+
+    /// <summary>
+    /// Pins that asking for the contact centre is not asking for a feature of it.
+    /// </summary>
+    [Fact]
+    public void AddContactCenter_WithoutNamingAFeature_RegistersNothing()
+    {
+        // Arrange
+        var services = new ServiceCollection();
+        var baseline = new ServiceCollection();
+
+        baseline.AddCrestAppsCore(crestApps => crestApps.AddContactCenterSuite());
+
+        // Act
+        services.AddCrestAppsCore(crestApps => crestApps
+            .AddContactCenterSuite(suite => suite.AddContactCenter()));
+
+        // Assert
+        Assert.Equal(baseline.Count, services.Count);
+    }
+
+    /// <summary>
+    /// Pins that the contact centre's persistence is a separate choice from the services that read through it,
+    /// the same way telephony's is.
+    /// </summary>
+    [Fact]
+    public void AddAgentDirectoryYesSqlStores_IsWhatBringsTheAgentStoreIn()
+    {
+        // Arrange
+        var withoutStores = new ServiceCollection();
+        var withStores = new ServiceCollection();
+
+        // Act
+        withoutStores.AddCrestAppsCore(crestApps => crestApps
+            .AddContactCenterSuite(suite => suite
+                .AddContactCenter(contactCenter => contactCenter.AddAgentDirectory())));
+
+        withStores.AddCrestAppsCore(crestApps => crestApps
+            .AddContactCenterSuite(suite => suite
+                .AddContactCenter(contactCenter => contactCenter
+                    .AddAgentDirectory()
+                    .AddAgentDirectoryYesSqlStores())));
+
+        // Assert
+        AssertNotRegistered<IAgentProfileStore>(withoutStores);
+        AssertRegistered<IAgentProfileStore, AgentProfileStore>(withStores, ServiceLifetime.Scoped);
     }
 
     private static void AssertRegistered<TService, TImplementation>(IServiceCollection services, ServiceLifetime lifetime)

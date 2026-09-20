@@ -359,6 +359,33 @@ The alternative - separate `.Hubs` and `.HealthChecks` packages - would keep the
 free of ASP.NET, but it would also be the only component in the suite split that way. Consistency
 with telephony wins; if the split is wanted it should be made for both at once.
 
+### The contact centre has a builder, and four of its eight features are on it (W5.2)
+
+`CrestAppsContactCenterBuilder` exists now, and `AddContactCenter` hangs off the suite builder the way
+`AddTelephony` and `AddOmnichannel` do. Four features moved onto it - the agent directory, recording
+governance, voice media and paced dialing - each as a builder method that is sugar over an
+`AddCoreContactCenter*` method a host can call directly.
+
+The other four - the base feature, work distribution, agent presence and the provider inbox - stayed
+in the host. The reason was measured rather than assumed: of the 44 implementations the base feature
+registers, six are services that still take a YesSql session directly, and work distribution has five
+more, agent presence one, the provider inbox one. Registering any of those four from the framework
+package would mean the package deciding where a tenant's records live, which is the one thing the
+split exists to avoid. They follow when those thirteen services read through a store contract
+instead - the same blocker that keeps thirty-two files in the host project.
+
+`AddAgentDirectoryYesSqlStores` is the first Contact Center store method, and it is deliberately per
+feature rather than one method for the whole component. Several stores come with a retention policy,
+and a policy registered for a feature the host did not enable is a purge aimed at a table that was
+never created - so "register every store, it is free" is not free here.
+
+The activation suite is what proves the split changed nothing: the per-feature dependency-injection
+snapshots are byte-identical, so every feature registers exactly what it registered before, from a
+different package.
+
+Three composition tests exercise the new builder, because the builder is the part of the package no
+Orchard startup runs - the host calls the `AddCore*` methods underneath it.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All

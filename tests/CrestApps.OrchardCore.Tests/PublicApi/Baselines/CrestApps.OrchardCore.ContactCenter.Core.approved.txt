@@ -6,13 +6,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core
     public static class ContactCenterServiceCollectionExtensions
     {
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenter(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterAgentServices(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterAgents(this Microsoft.Extensions.DependencyInjection.IServiceCollection services, Microsoft.Extensions.Configuration.IConfiguration configuration) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterPacedDialing(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterProviderInbox(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
         public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterQueues(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterRecordingGovernance(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
-        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterVoiceMedia(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
 }
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services

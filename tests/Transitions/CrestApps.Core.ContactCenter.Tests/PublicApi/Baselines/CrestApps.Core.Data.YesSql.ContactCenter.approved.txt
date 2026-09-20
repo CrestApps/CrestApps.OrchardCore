@@ -1,3 +1,11 @@
+namespace CrestApps.Core.Data.YesSql.ContactCenter
+{
+    public static class CoreContactCenterStoresServiceCollectionExtensions
+    {
+        public static CrestApps.Core.Builders.CrestAppsContactCenterBuilder AddAgentDirectoryYesSqlStores(this CrestApps.Core.Builders.CrestAppsContactCenterBuilder builder) { }
+        public static Microsoft.Extensions.DependencyInjection.IServiceCollection AddCoreContactCenterAgentDirectoryStoresYesSql(this Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
 namespace CrestApps.Core.Data.YesSql.ContactCenter.Indexes
 {
     public sealed class ActivityQueueGroupIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
