@@ -13,8 +13,6 @@ using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.Core.Telephony.Services;

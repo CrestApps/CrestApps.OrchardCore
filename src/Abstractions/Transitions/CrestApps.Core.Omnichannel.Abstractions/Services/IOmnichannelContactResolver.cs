@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Finds the contact behind an identifier or a way of reaching them.

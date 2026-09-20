@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// One field a subject of a given kind carries.

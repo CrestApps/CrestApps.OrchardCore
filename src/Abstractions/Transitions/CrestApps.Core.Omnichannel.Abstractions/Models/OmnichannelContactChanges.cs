@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// What to change about a contact.

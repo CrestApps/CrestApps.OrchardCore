@@ -1,7 +1,7 @@
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Pages through contacts.

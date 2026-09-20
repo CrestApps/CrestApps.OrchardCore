@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// The well-known kinds of phone number a contact can carry.

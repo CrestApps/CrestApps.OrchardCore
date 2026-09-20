@@ -1,7 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Services;
+using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using OrchardCore.ContentManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;

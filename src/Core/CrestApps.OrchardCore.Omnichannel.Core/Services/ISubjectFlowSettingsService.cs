@@ -1,5 +1,4 @@
 using CrestApps.Core.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 

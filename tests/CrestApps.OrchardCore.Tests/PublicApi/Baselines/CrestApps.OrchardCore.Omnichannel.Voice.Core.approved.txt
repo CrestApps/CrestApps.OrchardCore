@@ -148,7 +148,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner realtimeRunner,
                     OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager,
                     OrchardCore.ContentManagement.IContentManager contentManager,
-                    CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactResolver contactResolver,
+                    CrestApps.Core.Omnichannel.Services.IOmnichannelContactResolver contactResolver,
                     CrestApps.Core.Hosting.IAfterCommitTaskQueue afterCommitTaskQueue,
                     System.TimeProvider timeProvider,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> logger) { }

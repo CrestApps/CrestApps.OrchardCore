@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace CrestApps.OrchardCore.Omnichannel.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// What one conversation with a contact is about.

@@ -1,7 +1,5 @@
 using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Services;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.AI;

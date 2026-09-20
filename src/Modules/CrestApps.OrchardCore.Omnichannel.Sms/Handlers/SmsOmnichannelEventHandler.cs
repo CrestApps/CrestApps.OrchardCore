@@ -1,8 +1,6 @@
 ﻿using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.Omnichannel;
 using CrestApps.Core.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Services;
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Nodes;

@@ -248,6 +248,27 @@ rule with a hole in it.
 - `ContactCenterWorkStateAuthorityTests` — scans the new assembly and folder as well.
 - `VoiceIngressLayeringArchitectureTests` — walks both project closures for a Contact Center reference.
 
+### D-4 is scoped down: contacts now, subjects and compliance later (W4)
+
+D-4 puts a complete default CRM model in the framework - contacts, subjects, dispositions, campaigns,
+cadences - so a host with no content model can manage all of it. That is net-new code rather than
+extraction: Orchard registers content-item implementations of the same contracts and will never
+resolve any of it, so nothing in this repository exercises it and its only coverage is the unit tests
+written alongside it.
+
+Decided 2026-09-19: build the **contacts** half now and defer the rest.
+
+- **Now:** `OmnichannelContact` and `ContactDefinition` - store, manager, catalog handler, YesSql
+  indexes under distinct table names, and `AddCoreOmnichannelContacts()`. Contacts are what the SMS
+  and voice paths actually resolve against, so a standalone host without them has no working channel.
+- **Deferred to Phase 4:** the subject half (`SubjectDefinition`, `OmnichannelSubject` and their
+  stores), the do-not-call registry (D-13) and the contact time-zone resolver (D-14). The plan already
+  puts the national DNC registries in Phase 4, and subjects are only reached through
+  `ISubjectFlowSettingsService`, which a standalone host can implement against its own model.
+
+The contracts for all of it move regardless, so deferring the implementations costs a host nothing but
+the default; it is the difference between shipping a contract and shipping a product.
+
 ## Review pass against the Core repository (2026-09-19)
 
 An independent review read the extracted projects beside `CrestApps.Core` and asked one question of

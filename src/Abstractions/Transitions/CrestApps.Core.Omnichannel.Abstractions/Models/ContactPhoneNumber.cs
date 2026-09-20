@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// A phone number a contact can be reached on.

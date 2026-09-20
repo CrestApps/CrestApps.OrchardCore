@@ -1,4 +1,4 @@
-namespace CrestApps.OrchardCore.Omnichannel.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// What a tenant has decided about one kind of contact: which preferences it tracks, and whether a

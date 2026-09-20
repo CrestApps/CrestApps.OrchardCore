@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.ContentFields.Fields;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Models;
-using CrestApps.OrchardCore.Omnichannel.Services;
+using CrestApps.Core.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Services;
 using CrestApps.Core.PhoneNumbers;
 using OrchardCore.ContentFields.Fields;
 using OrchardCore.ContentManagement;

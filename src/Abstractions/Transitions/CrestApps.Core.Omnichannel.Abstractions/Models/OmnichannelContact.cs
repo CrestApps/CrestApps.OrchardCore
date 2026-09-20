@@ -1,6 +1,6 @@
 using System.Text.Json.Nodes;
 
-namespace CrestApps.OrchardCore.Omnichannel.Models;
+namespace CrestApps.Core.Omnichannel.Models;
 
 /// <summary>
 /// A person the organization talks to.

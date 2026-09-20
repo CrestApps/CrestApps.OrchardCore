@@ -386,7 +386,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
     }
     public sealed class SmsConversationService : CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationService
     {
-        public SmsConversationService(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher dispatcher, CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactResolver contactLookup, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsContactResolver contactResolver, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.ISmsRealTimeNotifier notifier, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationAuthorizationService conversationAuthorizationService, YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsFirstResponseSlaService slaService, System.TimeProvider timeProvider, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsConversationService> logger) { }
+        public SmsConversationService(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher dispatcher, CrestApps.Core.Omnichannel.Services.IOmnichannelContactResolver contactLookup, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsContactResolver contactResolver, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Notifications.ISmsRealTimeNotifier notifier, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsConversationAuthorizationService conversationAuthorizationService, YesSql.ISession session, CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsFirstResponseSlaService slaService, System.TimeProvider timeProvider, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsConversationService> logger) { }
         public System.Threading.Tasks.Task<bool> ApplyDeliveryReceiptAsync(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsDeliveryReceipt receipt, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsSendResult> AssignAsync(string conversationId, string targetAgentId, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsSendResult> ClaimAsync(string conversationId, string actingAgentId, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default) { }
@@ -455,8 +455,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services
                     CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsFirstResponseSlaService slaService,
                     CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher dispatcher,
                     Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsKeywordReplySettings> keywordReplySettings,
-                    CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactResolver contactLookup,
-                    CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactWriter contactWriter,
+                    CrestApps.Core.Omnichannel.Services.IOmnichannelContactResolver contactLookup,
+                    CrestApps.Core.Omnichannel.Services.IOmnichannelContactWriter contactWriter,
                     CrestApps.Core.Locking.IDistributedLockProvider distributedLock,
                     Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Models.SmsPortalOptions> options,
                     YesSql.ISession session,
@@ -553,7 +553,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.Routers
 {
     public sealed class AutoReplyRouter : CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.ISmsInboundRouter
     {
-        public AutoReplyRouter(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher dispatcher, CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelContactResolver contactResolver, System.TimeProvider timeProvider) { }
+        public AutoReplyRouter(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Services.ISmsDispatcher dispatcher, CrestApps.Core.Omnichannel.Services.IOmnichannelContactResolver contactResolver, System.TimeProvider timeProvider) { }
         public int Order { get; }
         public System.Threading.Tasks.Task<bool> TryRouteAsync(CrestApps.OrchardCore.Omnichannel.Sms.Portal.Core.Services.SmsRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }

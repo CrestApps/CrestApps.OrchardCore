@@ -7,7 +7,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Separate from <see cref="CrestApps.OrchardCore.Omnichannel.Services.IOmnichannelSubjectAccessor"/>
+/// Separate from <see cref="CrestApps.Core.Omnichannel.Services.IOmnichannelSubjectAccessor"/>
 /// because an activity's subject has no identifier to look it up by: it is carried on the activity
 /// itself, and may not exist until something writes to it.
 /// </para>

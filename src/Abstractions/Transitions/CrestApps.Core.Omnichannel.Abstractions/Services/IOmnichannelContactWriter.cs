@@ -1,6 +1,6 @@
-using CrestApps.OrchardCore.Omnichannel.Models;
+using CrestApps.Core.Omnichannel.Models;
 
-namespace CrestApps.OrchardCore.Omnichannel.Services;
+namespace CrestApps.Core.Omnichannel.Services;
 
 /// <summary>
 /// Creates a contact, and records what an interaction learned about one.

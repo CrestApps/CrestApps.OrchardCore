@@ -171,12 +171,59 @@ namespace CrestApps.Core.Omnichannel.Models
         public ChannelEndpointSourceOptions() { }
         public System.Collections.Generic.Dictionary<string, CrestApps.Core.Omnichannel.Models.ChannelEndpointSource> Sources { get; }
     }
+    public sealed class ContactDefinition
+    {
+        public ContactDefinition() { }
+        public string DisplayText { get; set; }
+        public string Name { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ContactDefinitionSettings Settings { get; set; }
+    }
+    public sealed class ContactDefinitionSettings
+    {
+        public ContactDefinitionSettings() { }
+        public bool AutoDetectTimeZone { get; set; }
+        public bool RequireTimeZone { get; set; }
+        public bool UseDoNotCall { get; set; }
+        public bool UseDoNotEmail { get; set; }
+        public bool UseDoNotSms { get; set; }
+    }
+    public sealed class ContactEmail
+    {
+        public ContactEmail() { }
+        public string Email { get; set; }
+    }
+    public sealed class ContactPhoneNumber
+    {
+        public ContactPhoneNumber() { }
+        public string Extension { get; set; }
+        public string Number { get; set; }
+        public string Type { get; set; }
+    }
+    public static class ContactPhoneNumberType
+    {
+        public const string Cell = "Cell";
+        public const string Home = "Home";
+        public const string Work = "Work";
+    }
     public enum ContactResolutionStatus
     {
         Unknown = 0,
         Unresolved = 1,
         Resolved = 2,
         Ambiguous = 3,
+    }
+    public sealed class ContactSearchQuery
+    {
+        public ContactSearchQuery() { }
+        public System.Collections.Generic.IList<string> DefinitionNames { get; set; }
+        public bool? DoNotCall { get; set; }
+        public bool? DoNotEmail { get; set; }
+        public bool? DoNotSms { get; set; }
+        public string Email { get; set; }
+        public int Page { get; set; }
+        public int PageSize { get; set; }
+        public string PhoneNumber { get; set; }
+        public string Term { get; set; }
     }
     public sealed class DispositionMetadata
     {
@@ -322,6 +369,42 @@ namespace CrestApps.Core.Omnichannel.Models
         public string Value { get; set; }
         public CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint Clone() { }
     }
+    public sealed class OmnichannelContact
+    {
+        public OmnichannelContact() { }
+        public string DefinitionName { get; set; }
+        public string DisplayText { get; set; }
+        public bool DoNotCall { get; set; }
+        public System.DateTime? DoNotCallUtc { get; set; }
+        public bool DoNotEmail { get; set; }
+        public System.DateTime? DoNotEmailUtc { get; set; }
+        public bool DoNotSms { get; set; }
+        public System.DateTime? DoNotSmsUtc { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.Omnichannel.Models.ContactEmail> Emails { get; set; }
+        public string FirstName { get; set; }
+        public string Id { get; set; }
+        public string LastName { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.Omnichannel.Models.ContactPhoneNumber> PhoneNumbers { get; set; }
+        public System.Text.Json.Nodes.JsonObject Properties { get; set; }
+        public string TimeZoneId { get; set; }
+        public string GetPrimaryEmail() { }
+        public CrestApps.Core.Omnichannel.Models.ContactPhoneNumber GetPrimaryPhoneNumber() { }
+        public void SetDoNotCall(bool value, System.DateTime utcNow) { }
+        public void SetDoNotEmail(bool value, System.DateTime utcNow) { }
+        public void SetDoNotSms(bool value, System.DateTime utcNow) { }
+    }
+    public sealed class OmnichannelContactChanges
+    {
+        public OmnichannelContactChanges() { }
+        public bool? DoNotCall { get; set; }
+        public bool? DoNotEmail { get; set; }
+        public bool? DoNotSms { get; set; }
+        public string Email { get; set; }
+        public string FirstName { get; set; }
+        public string LastName { get; set; }
+        public CrestApps.Core.Omnichannel.Models.ContactPhoneNumber PhoneNumber { get; set; }
+        public string TimeZoneId { get; set; }
+    }
     public sealed class OmnichannelDisposition : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel, CrestApps.Core.Services.ICloneable<CrestApps.Core.Omnichannel.Models.OmnichannelDisposition>, System.ICloneable
     {
         public OmnichannelDisposition() { }
@@ -390,6 +473,16 @@ namespace CrestApps.Core.Omnichannel.Models
         Fixed = 1,
         Random = 2,
     }
+    public sealed class OmnichannelSubject
+    {
+        public OmnichannelSubject() { }
+        public string ContactId { get; set; }
+        public string DefinitionName { get; set; }
+        public string DisplayText { get; set; }
+        public System.Text.Json.Nodes.JsonObject Fields { get; set; }
+        public string Id { get; set; }
+        public System.Text.Json.Nodes.JsonObject Properties { get; set; }
+    }
     public enum PhoneNumberMatchType
     {
         Exact = 0,
@@ -440,10 +533,36 @@ namespace CrestApps.Core.Omnichannel.Models
         public Microsoft.Extensions.Localization.LocalizedString DisplayName { get; set; }
         public string Type { get; }
     }
+    public sealed class SubjectDefinition
+    {
+        public SubjectDefinition() { }
+        public string DisplayText { get; set; }
+        public System.Collections.Generic.IList<CrestApps.Core.Omnichannel.Models.SubjectFieldDefinition> Fields { get; set; }
+        public string Name { get; set; }
+    }
     public enum SubjectDirection
     {
         Outbound = 0,
         Inbound = 1,
+    }
+    public sealed class SubjectFieldDefinition
+    {
+        public SubjectFieldDefinition() { }
+        public bool AllowAIUpdate { get; set; }
+        public string DisplayText { get; set; }
+        public string Name { get; set; }
+        public System.Collections.Generic.IList<string> Options { get; set; }
+        public bool Required { get; set; }
+        public CrestApps.Core.Omnichannel.Models.SubjectFieldType Type { get; set; }
+    }
+    public enum SubjectFieldType
+    {
+        Text = 0,
+        MultilineText = 1,
+        Boolean = 2,
+        Number = 3,
+        Date = 4,
+        Options = 5,
     }
     public sealed class SubjectFlowSettings
     {
@@ -522,6 +641,11 @@ namespace CrestApps.Core.Omnichannel.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Services.BusinessHoursCalendarOption>> GetCalendarOptionsAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> IsOpenAsync(string calendarId, System.DateTime utcInstant, string timeZoneId, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactDefinitionProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.ContactDefinition> FindAsync(string name, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.Omnichannel.Models.ContactDefinition>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IHandoffQueueOptionsProvider
     {
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Omnichannel.Services.HandoffQueueOption>> GetQueuesAsync(System.Threading.CancellationToken cancellationToken = default);
@@ -534,9 +658,24 @@ namespace CrestApps.Core.Omnichannel.Services
     {
         System.Threading.Tasks.ValueTask<CrestApps.Core.Omnichannel.Models.OmnichannelChannelEndpoint> GetByServiceAddressAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IOmnichannelContactResolver
+    {
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.Omnichannel.Models.OmnichannelContact>> FindByEmailAsync(string email, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelContact> FindByIdAsync(string contactId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.Omnichannel.Models.OmnichannelContact>> FindByPhoneNumberAsync(string phoneNumber, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOmnichannelContactSearch
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.Core.Omnichannel.Models.OmnichannelContact>> SearchAsync(CrestApps.Core.Omnichannel.Models.ContactSearchQuery query, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IOmnichannelContactTypeProvider
     {
         System.Threading.Tasks.ValueTask<System.Collections.Generic.IReadOnlyCollection<string>> GetContactContentTypesAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IOmnichannelContactWriter
+    {
+        System.Threading.Tasks.Task<bool> ApplyAsync(string contactId, CrestApps.Core.Omnichannel.Models.OmnichannelContactChanges changes, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelContact> CreateAsync(CrestApps.Core.Omnichannel.Models.OmnichannelContact contact, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IOmnichannelHandoffTurn
     {
@@ -545,5 +684,16 @@ namespace CrestApps.Core.Omnichannel.Services
         string Reason { get; }
         void RequestHandoff(string reason);
         void Reset();
+    }
+    public interface IOmnichannelSubjectAccessor
+    {
+        System.Threading.Tasks.Task<bool> ApplyAsync(string subjectId, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelSubject> CreateAsync(string definitionName, string contactId, System.Collections.Generic.IReadOnlyDictionary<string, string> fieldValues, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.OmnichannelSubject> GetAsync(string subjectId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ISubjectDefinitionProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Omnichannel.Models.SubjectDefinition> FindAsync(string name, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.Omnichannel.Models.SubjectDefinition>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default);
     }
 }
