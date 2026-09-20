@@ -382,6 +382,11 @@ namespace CrestApps.Core.ContactCenter.Services
         public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint> FindByNameAsync(string name, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterEntryPoint>> GetEnabledAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContactCenterEventDeduplicationService : CrestApps.Core.ContactCenter.Services.IContactCenterEventDeduplicationService
+    {
+        public ContactCenterEventDeduplicationService(CrestApps.Core.ContactCenter.Services.IContactCenterProcessedEventStore store, System.TimeProvider timeProvider) { }
+        public System.Threading.Tasks.Task<bool> TryBeginAsync(string handlerId, string eventId, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ContactCenterEventDispatchContext
     {
         public ContactCenterEventDispatchContext(CrestApps.Core.ContactCenter.Services.IInteractionEventStore eventStore, CrestApps.Core.ContactCenter.Services.IContactCenterOutbox outbox, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.ContactCenter.Services.ContactCenterEventDispatchContext> logger) { }

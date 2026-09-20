@@ -114,11 +114,6 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallCommandResult> AcceptInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.CallCommandResult> DeclineInboundOfferAsync(string reservationId, string agentUserId, System.Threading.CancellationToken cancellationToken = default) { }
     }
-    public sealed class ContactCenterEventDeduplicationService : CrestApps.Core.ContactCenter.Services.IContactCenterEventDeduplicationService
-    {
-        public ContactCenterEventDeduplicationService(YesSql.ISession session, System.TimeProvider timeProvider) { }
-        public System.Threading.Tasks.Task<bool> TryBeginAsync(string handlerId, string eventId, System.Threading.CancellationToken cancellationToken = default) { }
-    }
     public sealed class ContactCenterMetricRollupService : CrestApps.Core.ContactCenter.Services.IContactCenterMetricRollupService
     {
         public ContactCenterMetricRollupService(CrestApps.Core.ContactCenter.Services.IContactCenterMetricDeltaStore deltaStore, CrestApps.Core.ContactCenter.Services.IContactCenterMetricStore metricStore, CrestApps.Core.Services.IStoreCommitter storeCommitter, System.TimeProvider timeProvider) { }

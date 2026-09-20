@@ -21,4 +21,19 @@ public sealed class ContactCenterProcessedEventStore : ConcurrentDocumentCatalog
     {
         CollectionName = ContactCenterStorage.CollectionName;
     }
+
+    /// <inheritdoc/>
+    public async Task<ContactCenterProcessedEvent> FindByHandlerAndEventAsync(
+        string handlerId,
+        string eventId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(handlerId);
+        ArgumentException.ThrowIfNullOrEmpty(eventId);
+
+        return await Session.Query<ContactCenterProcessedEvent, ContactCenterProcessedEventIndex>(
+            index => index.HandlerId == handlerId && index.EventId == eventId,
+            collection: ContactCenterStorage.CollectionName)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

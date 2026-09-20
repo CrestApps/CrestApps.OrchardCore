@@ -74,7 +74,7 @@ CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationCache #0 Single
 CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationChangeNotifier #0 Singleton -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.SignalContactCenterConfigurationChangeNotifier
 CrestApps.Core.ContactCenter.Services.IContactCenterEntryPointManager #0 Scoped -> type:CrestApps.Core.ContactCenter.Services.ContactCenterEntryPointManager
 CrestApps.Core.ContactCenter.Services.IContactCenterEntryPointStore #0 Scoped -> type:CrestApps.Core.Data.YesSql.ContactCenter.Services.ContactCenterEntryPointStore
-CrestApps.Core.ContactCenter.Services.IContactCenterEventDeduplicationService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterEventDeduplicationService
+CrestApps.Core.ContactCenter.Services.IContactCenterEventDeduplicationService #0 Scoped -> type:CrestApps.Core.ContactCenter.Services.ContactCenterEventDeduplicationService
 CrestApps.Core.ContactCenter.Services.IContactCenterEventHandler #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Handlers.ContactCenterMetricsProjectionHandler
 CrestApps.Core.ContactCenter.Services.IContactCenterEventHandler #1 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Handlers.ContactCenterRealTimeEventHandler
 CrestApps.Core.ContactCenter.Services.IContactCenterEventHandler #2 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Handlers.ContactCenterVoiceOfferReconciliationHandler

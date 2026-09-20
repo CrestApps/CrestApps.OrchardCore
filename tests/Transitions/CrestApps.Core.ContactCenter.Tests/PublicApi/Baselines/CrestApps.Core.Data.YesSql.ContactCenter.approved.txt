@@ -567,6 +567,7 @@ namespace CrestApps.Core.Data.YesSql.ContactCenter.Services
     public sealed class ContactCenterProcessedEventStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterProcessedEventIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterProcessedEventStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent>
     {
         public ContactCenterProcessedEventStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent> FindByHandlerAndEventAsync(string handlerId, string eventId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterProjectionCheckpointStore : CrestApps.Core.Data.YesSql.Services.ConcurrentDocumentCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint, CrestApps.Core.Data.YesSql.ContactCenter.Indexes.ContactCenterProjectionCheckpointIndex>, CrestApps.Core.ContactCenter.Services.IContactCenterProjectionCheckpointStore, CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint>
     {

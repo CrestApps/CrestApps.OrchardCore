@@ -3095,7 +3095,10 @@ namespace CrestApps.Core.ContactCenter.Services
         System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterOutboxMessage> FindByEventIdAsync(string eventId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.ContactCenter.Models.ContactCenterOutboxMessage>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
     }
-    public interface IContactCenterProcessedEventStore : CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent> { }
+    public interface IContactCenterProcessedEventStore : CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent>
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterProcessedEvent> FindByHandlerAndEventAsync(string handlerId, string eventId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactCenterProjectionCheckpointStore : CrestApps.Core.Services.ICatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint>, CrestApps.Core.Services.IReadCatalog<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint>
     {
         System.Threading.Tasks.Task<CrestApps.Core.ContactCenter.Models.ContactCenterProjectionCheckpoint> FindByHandlerAsync(string handlerId, System.Threading.CancellationToken cancellationToken = default);

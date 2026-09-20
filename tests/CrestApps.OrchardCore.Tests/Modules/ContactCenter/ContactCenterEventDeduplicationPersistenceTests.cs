@@ -34,7 +34,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         {
             await using (var failedSession = store.CreateSession())
             {
-                var deduplication = new ContactCenterEventDeduplicationService(failedSession, CreateClock());
+                var deduplication = new ContactCenterEventDeduplicationService(new ContactCenterProcessedEventStore(failedSession), CreateClock());
                 var metrics = new ContactCenterMetricsService(
                     new ContactCenterMetricStore(failedSession),
                     new ContactCenterMetricDeltaStore(failedSession),
@@ -71,7 +71,7 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
 
             await using (var retrySession = store.CreateSession())
             {
-                var deduplication = new ContactCenterEventDeduplicationService(retrySession, CreateClock());
+                var deduplication = new ContactCenterEventDeduplicationService(new ContactCenterProcessedEventStore(retrySession), CreateClock());
                 var metrics = new ContactCenterMetricsService(
                     new ContactCenterMetricStore(retrySession),
                     new ContactCenterMetricDeltaStore(retrySession),
@@ -115,8 +115,8 @@ public sealed class ContactCenterEventDeduplicationPersistenceTests
         {
             await using var firstSession = store.CreateSession();
             await using var secondSession = store.CreateSession();
-            var first = new ContactCenterEventDeduplicationService(firstSession, CreateClock());
-            var second = new ContactCenterEventDeduplicationService(secondSession, CreateClock());
+            var first = new ContactCenterEventDeduplicationService(new ContactCenterProcessedEventStore(firstSession), CreateClock());
+            var second = new ContactCenterEventDeduplicationService(new ContactCenterProcessedEventStore(secondSession), CreateClock());
 
             Assert.True(await first.TryBeginAsync("handler/v1", "event-1", TestContext.Current.CancellationToken));
             Assert.True(await second.TryBeginAsync("handler/v1", "event-1", TestContext.Current.CancellationToken));

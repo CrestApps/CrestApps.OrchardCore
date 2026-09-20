@@ -433,6 +433,18 @@ Thirty-two files are still in the Orchard Contact Center project, and the reason
   store package rather than the services package.
 - The rest are the registration file and assembly info.
 
+### Deduplication asked the session a question its store should answer (W5.2a)
+
+`ContactCenterEventDeduplicationService` composed its own YesSql query - handler id and event id over
+the processed-event index - and staged the marker with `Session.SaveAsync`, while
+`IContactCenterProcessedEventStore` sat next to it doing nothing but `ICatalog<T>`. The pair is what
+deduplication asks about, so `FindByHandlerAndEventAsync` is on the store now, the service reads
+through it, and the service is in the framework package.
+
+The marker is still staged rather than committed - `CreateAsync` calls the same
+`Session.SaveAsync(record, checkConcurrency: false, ...)` the service called - so it still lands
+atomically with the handler effect it guards, which is the property the whole mechanism rests on.
+
 ## Guards that had to be repointed (W3.2)
 
 Four architecture tests name the telephony primitive by path or assembly rather than by type. All

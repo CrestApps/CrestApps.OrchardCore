@@ -52,7 +52,7 @@ CrestApps.Core.ContactCenter.Services.IContactCenterActivityWriter #0 Scoped -> 
 CrestApps.Core.ContactCenter.Services.IContactCenterAssistService #0 Scoped -> type:CrestApps.Core.ContactCenter.Services.ContactCenterAssistService
 CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationCache #0 Singleton -> type:CrestApps.Core.ContactCenter.Services.ContactCenterConfigurationCache
 CrestApps.Core.ContactCenter.Services.IContactCenterConfigurationChangeNotifier #0 Singleton -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.SignalContactCenterConfigurationChangeNotifier
-CrestApps.Core.ContactCenter.Services.IContactCenterEventDeduplicationService #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterEventDeduplicationService
+CrestApps.Core.ContactCenter.Services.IContactCenterEventDeduplicationService #0 Scoped -> type:CrestApps.Core.ContactCenter.Services.ContactCenterEventDeduplicationService
 CrestApps.Core.ContactCenter.Services.IContactCenterEventHandler #0 Scoped -> type:CrestApps.OrchardCore.ContactCenter.Handlers.ContactCenterMetricsProjectionHandler
 CrestApps.Core.ContactCenter.Services.IContactCenterEventPublisher #0 Scoped -> type:CrestApps.Core.ContactCenter.Services.DefaultContactCenterEventPublisher
 CrestApps.Core.ContactCenter.Services.IContactCenterMetricDeltaStore #0 Scoped -> type:CrestApps.Core.Data.YesSql.ContactCenter.Services.ContactCenterMetricDeltaStore
