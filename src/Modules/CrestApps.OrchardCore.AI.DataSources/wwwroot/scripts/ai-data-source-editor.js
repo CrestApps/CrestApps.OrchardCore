@@ -117,6 +117,17 @@
     var apiKeyValue = section.getAttribute('data-ai-data-source-elasticsearch-api-key-value');
     var base64ApiKeyValue = section.getAttribute('data-ai-data-source-elasticsearch-base64-api-key-value');
     var keyIdAndKeyValue = section.getAttribute('data-ai-data-source-elasticsearch-key-id-and-key-value');
+
+    // The checkbox is only rendered when a connection is configured for the application.
+    var useDefaultConnection = section.querySelector('[data-ai-data-source-elasticsearch-use-default-connection]');
+    var connectionSettings = section.querySelector('[data-ai-data-source-elasticsearch-connection-settings]');
+    function updateConnectionVisibility() {
+      connectionSettings.hidden = useDefaultConnection.checked;
+    }
+    if (useDefaultConnection && connectionSettings) {
+      useDefaultConnection.addEventListener('change', updateConnectionVisibility);
+      updateConnectionVisibility();
+    }
     function updateVisibility() {
       var isCloudHosted = environmentType.value === cloudHostedValue;
       var isBasic = authenticationType.value === basicValue;
@@ -132,6 +143,22 @@
     }
     environmentType.addEventListener('change', updateVisibility);
     authenticationType.addEventListener('change', updateVisibility);
+    updateVisibility();
+  }
+  function initializePostgreSQL(form) {
+    var section = form.querySelector('[data-ai-data-source-postgresql]');
+    if (!section) {
+      return;
+    }
+    var useDefaultConnection = section.querySelector('[data-ai-data-source-postgresql-use-default-connection]');
+    var connectionStringSettings = section.querySelector('[data-ai-data-source-postgresql-connection-string-settings]');
+    if (!useDefaultConnection || !connectionStringSettings) {
+      return;
+    }
+    function updateVisibility() {
+      connectionStringSettings.hidden = useDefaultConnection.checked;
+    }
+    useDefaultConnection.addEventListener('change', updateVisibility);
     updateVisibility();
   }
   function initializeAzureAiSearch(form) {
@@ -165,6 +192,7 @@
     updateSections(root);
     initializeSearchIndexProfile(form);
     initializeElasticsearch(form);
+    initializePostgreSQL(form);
     initializeAzureAiSearch(form);
   }
   document.addEventListener('DOMContentLoaded', function () {

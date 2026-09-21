@@ -1,9 +1,11 @@
 using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Drivers;
+using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Models;
 using CrestApps.OrchardCore.AI.DataSources.PostgreSQL.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Modules;
 
@@ -27,11 +29,12 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
+        services.AddTransient<IConfigureOptions<PostgreSQLDataSourceOptions>, PostgreSQLDataSourceOptionsConfiguration>();
         services.AddDisplayDriver<AIDataSource, PostgreSQLAIDataSourceDisplayDriver>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, PostgreSQLAIDataSourceSourceHandler>(AIDataSourceSourceTypes.PostgreSQL);
         services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
             AIDataSourceSourceTypes.PostgreSQL,
             S["PostgreSQL"],
-            S["Read source documents from a PostgreSQL table using explicit connection settings."]));
+            S["Read source documents from a PostgreSQL table using explicit or globally configured connection settings."]));
     }
 }

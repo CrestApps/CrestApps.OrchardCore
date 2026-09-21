@@ -1,8 +1,10 @@
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.ViewModels;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Mvc.ModelBinding;
@@ -12,6 +14,7 @@ namespace CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Drivers;
 internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
     private readonly IDataProtectionProvider _dataProtectionProvider;
+    private readonly ElasticsearchDataSourceOptions _options;
 
     internal readonly IStringLocalizer S;
 
@@ -19,12 +22,15 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
     /// Initializes a new instance of the <see cref="ElasticsearchAIDataSourceDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataProtectionProvider">The data protection provider.</param>
+    /// <param name="options">The global Elasticsearch data source options.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ElasticsearchAIDataSourceDisplayDriver(
         IDataProtectionProvider dataProtectionProvider,
+        IOptions<ElasticsearchDataSourceOptions> options,
         IStringLocalizer<ElasticsearchAIDataSourceDisplayDriver> stringLocalizer)
     {
         _dataProtectionProvider = dataProtectionProvider;
+        _options = options.Value;
         S = stringLocalizer;
     }
 
@@ -52,6 +58,8 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
             model.HasPassword = !string.IsNullOrWhiteSpace(metadata.Password);
             model.HasApiKey = !string.IsNullOrWhiteSpace(metadata.ApiKey);
             model.HasBase64ApiKey = !string.IsNullOrWhiteSpace(metadata.Base64ApiKey);
+            model.HasDefaultConnection = _options.HasConnection;
+            model.UseDefaultConnection = _options.HasConnection && !HasStoredConnection(metadata);
         }).Location("Content:11");
     }
 
@@ -68,6 +76,23 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
         var model = new EditElasticsearchAIDataSourceViewModel();
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        // When a connection is configured globally, the operator can opt into it and only the index
+        // name is stored on the data source.
+        if (_options.HasConnection && model.UseDefaultConnection)
+        {
+            if (string.IsNullOrWhiteSpace(model.IndexName))
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.IndexName), S["Elasticsearch index name is required."]);
+            }
+
+            dataSource.Put(new ElasticsearchSourceMetadata
+            {
+                IndexName = model.IndexName?.Trim(),
+            });
+
+            return Edit(dataSource, context);
+        }
 
         var environmentType = NormalizeEnvironmentType(model.EnvironmentType);
         var authenticationType = NormalizeAuthenticationType(model.AuthenticationType);
@@ -176,6 +201,9 @@ internal sealed class ElasticsearchAIDataSourceDisplayDriver : DisplayDriver<AID
 
         return Edit(dataSource, context);
     }
+
+    private static bool HasStoredConnection(ElasticsearchSourceMetadata metadata)
+        => !string.IsNullOrWhiteSpace(metadata.Url) || !string.IsNullOrWhiteSpace(metadata.CloudId);
 
     private static string NormalizeEnvironmentType(string environmentType)
     {

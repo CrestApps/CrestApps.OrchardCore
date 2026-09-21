@@ -18,8 +18,20 @@ public class EditPostgreSQLAIDataSourceViewModel
     public string TableName { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the globally configured connection string should be used
+    /// instead of one stored on this data source.
+    /// </summary>
+    public bool UseDefaultConnectionString { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether a connection string is already stored.
     /// </summary>
     [BindNever]
     public bool HasConnectionString { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a connection string is configured globally.
+    /// </summary>
+    [BindNever]
+    public bool HasDefaultConnectionString { get; set; }
 }

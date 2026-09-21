@@ -2,11 +2,24 @@
 
 @model EditPostgreSQLAIDataSourceViewModel
 
-<div data-ai-data-source-section="PostgreSQL" hidden>
+<div data-ai-data-source-section="PostgreSQL"
+     data-ai-data-source-postgresql
+     hidden>
     <fieldset class="ocat-wrapper">
         <legend class="ocat-label">@T["PostgreSQL Connection"]</legend>
         <div class="ocat-end">
-            <div class="mb-3">
+            @if (Model.HasDefaultConnectionString)
+            {
+                <div class="mb-3 form-check">
+                    <input class="form-check-input" type="checkbox" asp-for="UseDefaultConnectionString" data-ai-data-source-postgresql-use-default-connection />
+                    <label class="form-check-label" asp-for="UseDefaultConnectionString">
+                        @T["Use the globally configured connection"]
+                    </label>
+                    <span class="hint dashed">@T["Connects using the PostgreSQL connection string configured for the application instead of storing one on this data source."]</span>
+                </div>
+            }
+
+            <div class="mb-3" data-ai-data-source-postgresql-connection-string-settings>
                 <label asp-for="ConnectionString" class="form-label">@T["Connection string"]</label>
                 <input asp-for="ConnectionString" class="form-control" type="password" placeholder="@(Model.HasConnectionString ? T["Leave empty to keep the saved connection string"].Value : string.Empty)" />
                 <span asp-validation-for="ConnectionString" class="text-danger"></span>
