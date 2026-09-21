@@ -8,12 +8,24 @@
     var realtimeVoicesUrl = Url.Action("Voices", "Realtime", new { area = "CrestApps.OrchardCore.AI.Chat" });
 }
 
+@* The chat mode comes first: it decides whether the conversation and voice fields below it apply at all.
+   The chat deployment no longer does -- it is the text model, and a profile that speaks still types. *@
 <div class="ocat-wrapper profile-type profile-type-chat" id="chatModeSelectorGroup">
     <label asp-for="ChatMode" class="ocat-label">@T["Chat mode"]</label>
     <div class="ocat-end">
         <select asp-for="ChatMode" asp-items="Model.AvailableModes" class="form-select" id="chatModeSelector">
         </select>
-        <span class="hint">@T["Controls how users interact with this chat profile. Audio input adds a microphone for dictation. Conversation enables two-way voice (speech-to-text + text-to-speech). A realtime chat deployment speaks natively and ignores this."]</span>
+        <span class="hint">@T["Text input only, microphone dictation, or a two-way voice conversation the user can switch on and off while typing."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper profile-type profile-type-chat" id="chatModeConversationDeploymentGroup" style="display: none;">
+    <label asp-for="ConversationDeploymentName" class="ocat-label">@T["Conversation deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="ConversationDeploymentName" asp-items="Model.AvailableConversationDeployments" class="form-select" id="chatModeConversationDeploymentSelect">
+            <option value="">@T["Use the site's default realtime deployment"]</option>
+        </select>
+        <span class="hint">@T["The model that carries the voice conversation. Leave this empty to inherit the site default. With no realtime deployment available, conversation mode falls back to speech-to-text plus text-to-speech."]</span>
     </div>
 </div>
 
@@ -24,7 +36,7 @@
                 data-voice-name="@Model.VoiceName">
             <option value="">@T["Default voice"]</option>
         </select>
-        <span class="hint">@T["Select a voice for Conversation (text-to-speech) or for a realtime chat deployment (speech-to-speech). Realtime voices come from the selected chat deployment. Leave empty to use the default voice."]</span>
+        <span class="hint">@T["The voice this profile speaks with. Leave this empty to use the site's default voice."]</span>
     </div>
 </div>
 
@@ -42,15 +54,14 @@
     (function () {
         function init() {
             var chatModeSelect = document.getElementById('chatModeSelector');
-            var chatModeGroup = document.getElementById('chatModeSelectorGroup');
+            var conversationDeploymentGroup = document.getElementById('chatModeConversationDeploymentGroup');
+            var conversationDeploymentSelect = document.getElementById('chatModeConversationDeploymentSelect');
             var voiceSelector = document.getElementById('chatModeVoiceSelector');
             var voiceSelect = document.getElementById('chatModeVoiceSelect');
             var ttsPlaybackGroup = document.getElementById('chatModeTtsPlaybackGroup');
 
-            // Realtime is a property of the selected chat deployment, not a separate mode or field. That
-            // selector lives in its own shape, which is why it is found by id rather than passed in.
-            var chatDeploymentSelect = document.getElementById('profileChatDeploymentSelect');
             var realtimeDeploymentNames = @Html.Raw(JsonSerializer.Serialize(Model.RealtimeDeploymentNames ?? []));
+            var defaultRealtimeDeploymentName = @Html.Raw(JsonSerializer.Serialize(Model.DefaultRealtimeDeploymentName ?? string.Empty));
 
             if (!chatModeSelect || !voiceSelector) {
                 return;
@@ -60,11 +71,25 @@
             var voicesUrl = '@realtimeVoicesUrl';
             var selectedVoice = voiceSelect ? (voiceSelect.getAttribute('data-voice-name') || '') : '';
 
-            // The text-to-speech voices rendered on the server, restored when leaving a realtime deployment.
+            // The text-to-speech voices rendered on the server, restored when the conversation falls back to
+            // the speech-to-text plus text-to-speech cascade.
             var ttsOptionsHtml = voiceSelect ? voiceSelect.innerHTML : '';
 
-            function isRealtime() {
-                return !!chatDeploymentSelect && realtimeDeploymentNames.indexOf(chatDeploymentSelect.value) >= 0;
+            function isConversationMode() {
+                return chatModeSelect.value === conversationMode;
+            }
+
+            // Mirrors the realtime slot's chain on the server: the profile's own choice, then the site
+            // default, then the first realtime-capable deployment. Empty means the conversation falls back to
+            // the speech-to-text plus text-to-speech cascade, which uses a different set of voices.
+            function resolvedConversationDeploymentName() {
+                if (!isConversationMode()) {
+                    return '';
+                }
+
+                return (conversationDeploymentSelect && conversationDeploymentSelect.value)
+                    || defaultRealtimeDeploymentName
+                    || (realtimeDeploymentNames.length ? realtimeDeploymentNames[0] : '');
             }
 
             function setVoiceOptions(html) {
@@ -74,12 +99,11 @@
                 }
             }
 
-            async function loadRealtimeVoices() {
+            async function loadRealtimeVoices(deploymentName) {
                 if (!voiceSelect || !voicesUrl) {
                     return;
                 }
 
-                var deploymentName = chatDeploymentSelect ? chatDeploymentSelect.value : '';
                 var html = '<option value="">@T["Default voice"]</option>';
 
                 try {
@@ -109,35 +133,44 @@
             }
 
             function apply() {
-                var realtime = isRealtime();
-                var isConversation = chatModeSelect.value === conversationMode;
+                var conversation = isConversationMode();
 
-                // The chat mode layers speech-to-text and text-to-speech over a text model, so it applies
-                // only when the selected deployment is not already a speech-to-speech one.
-                if (chatModeGroup) {
-                    chatModeGroup.style.display = realtime ? 'none' : '';
+                // The chat mode is the control that decides all of this, so it always stays visible for a
+                // chat profile. The chat deployment does too -- a profile that speaks still answers typed
+                // messages.
+
+                // The conversation deployment qualifies conversation mode and means nothing without it.
+                if (conversationDeploymentGroup) {
+                    conversationDeploymentGroup.style.display = conversation ? '' : 'none';
                 }
 
-                // Voice applies to a realtime deployment (its own voices) and to conversation mode (the
-                // text-to-speech voices).
-                voiceSelector.style.display = (realtime || isConversation) ? '' : 'none';
+                // One voice question, whichever path answers it: a realtime deployment's own voices, or the
+                // text-to-speech voices when the conversation runs as the cascade.
+                voiceSelector.style.display = conversation ? '' : 'none';
 
-                // A realtime deployment speaks its answer, so playing the assistant text back adds nothing.
+                // Playback reads an assistant message aloud on demand, which is a text-chat affordance, so it
+                // applies whatever the conversation is carried by.
                 if (ttsPlaybackGroup) {
-                    ttsPlaybackGroup.style.display = realtime ? 'none' : '';
+                    ttsPlaybackGroup.style.display = '';
                 }
 
-                if (realtime) {
-                    loadRealtimeVoices();
-                } else if (isConversation) {
+                if (!conversation) {
+                    return;
+                }
+
+                var resolved = resolvedConversationDeploymentName();
+
+                if (resolved) {
+                    loadRealtimeVoices(resolved);
+                } else {
                     setVoiceOptions(ttsOptionsHtml);
                 }
             }
 
             chatModeSelect.addEventListener('change', apply);
 
-            if (chatDeploymentSelect) {
-                chatDeploymentSelect.addEventListener('change', apply);
+            if (conversationDeploymentSelect) {
+                conversationDeploymentSelect.addEventListener('change', apply);
             }
 
             apply();

@@ -2,6 +2,7 @@
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -51,12 +52,18 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         async ValueTask PopulateAsync(EditChatInteractionConnectionViewModel model)
         {
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
-            // The chat picker asks "what can this interaction talk to", so it lists the text-capable
-            // deployments and the realtime (speech-to-speech) ones together.
-            var chatDeployments = (await _deploymentManager.GetConversationalDeploymentsAsync()).ToList();
+            var site = await _siteService.GetSiteSettingsAsync();
+
+            // The chat deployment is the text model this interaction talks to, so the picker offers the chat
+            // slot only -- a speech-to-speech model cannot answer a typed turn. The model that carries a
+            // spoken conversation is named separately, below.
+            var chatDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat)).ToList();
 
             model.ChatDeploymentName = interaction.ChatDeploymentName;
             model.UtilityDeploymentName = interaction.UtilityDeploymentName;
+            model.ConversationDeploymentName = interaction.ConversationDeploymentName;
+            model.ConversationDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Realtime);
+            model.ConversationModeEnabled = site.GetOrCreate<ChatInteractionChatModeSettings>().ChatMode == ChatMode.Conversation;
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
             model.ChatDeployments = chatDeployments.ToSelectList();
@@ -74,8 +81,13 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         return Combine(
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionChatConnection_Edit", PopulateAsync)
                 .Location("Parameters:3#Settings;1"),
-            // The voice belongs to the chat deployment, so it sits with it rather than beside the chat's
-            // send controls. Hidden until the client sees that the selected deployment is realtime-capable.
+            // The model that speaks, separate from the text model above. Naming one is how an interaction
+            // opts into a spoken conversation, so it sits directly beneath the deployment it is not.
+            Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionConversationDeployment_Edit", PopulateAsync)
+                .Location("Parameters:3.4#Settings;1"),
+            // The voice belongs to whatever carries the conversation, so it sits with the conversation
+            // deployment rather than beside the chat's send controls. Hidden until the client sees that a
+            // realtime deployment actually resolves.
             View("ChatInteractionRealtimeVoice_Edit", interaction)
                 .Location("Parameters:3.5#Settings;1"),
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionUtilityConnection_Edit", PopulateAsync)
@@ -90,6 +102,12 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
 
         interaction.ChatDeploymentName = model.ChatDeploymentName;
         interaction.UtilityDeploymentName = model.UtilityDeploymentName;
+
+        // Never written with the resolved value. Empty means "use the site default", and storing what that
+        // resolved to today would pin the interaction to a model the operator has since replaced.
+        interaction.ConversationDeploymentName = string.IsNullOrWhiteSpace(model.ConversationDeploymentName)
+            ? null
+            : model.ConversationDeploymentName.Trim();
 
         return Edit(interaction, context);
     }
