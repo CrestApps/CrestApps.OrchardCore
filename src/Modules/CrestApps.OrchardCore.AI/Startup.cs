@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
@@ -326,6 +326,7 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
         services.AddNavigationProvider<AISiteSettingsAdminMenu>();
 
+        services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
     }
 }
 
