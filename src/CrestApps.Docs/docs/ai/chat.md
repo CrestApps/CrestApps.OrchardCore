@@ -335,8 +335,16 @@ The **Visitor Identity** section controls how anonymous widget visitors are trac
 | --- | --- | --- |
 | Visitor cookie name | `crestapps-ai-visitor` | Stable first-party cookie used to identify anonymous visitors across chat sessions. |
 | Cookie lifetime (days) | `180` | How long the anonymous visitor cookie remains valid before a new visitor identity is issued. Must be between `1` and `3650`. |
+| Allow cross-site embedding | Off | Writes the cookie `SameSite=None; Secure` so it survives inside a frame on another site. See below. |
+| Partition the cookie per embedding site | On | Adds the `Partitioned` attribute (CHIPS) while cross-site embedding is on. |
 | Remote address storage mode | `Hashed` | How the remote address is captured. See the modes below. |
 | Remote address hash salt | `CrestApps.Core.AI.VisitorIdentity` | Application-specific salt used when hashing remote addresses for abuse controls. Required for the `Hashed` and `Encrypted` modes. |
+
+Turn **Allow cross-site embedding** on only when the chat is embedded in a frame on another site, such as the external chat widget. The cookie is otherwise written `SameSite=Lax`, which a browser refuses in a third-party context and reports as "Cookie 'crestapps-ai-visitor' has been rejected because it is in a cross-site context". Every request from inside the frame then looks like a brand new visitor: the conversation does not survive a page load, and the visitor rate-limit partition never accumulates, so throttling falls back to the coarser network-address, session, and connection keys. The cookie stays `HttpOnly` either way, and it identifies a visitor rather than authenticating one, so it grants no privilege of its own.
+
+`SameSite=None` is only legal together with `Secure`, and a `Secure` cookie never reaches a plain HTTP page, so a request that did not arrive over HTTPS keeps the `SameSite=Lax` cookie rather than losing it altogether.
+
+Leave **Partition the cookie per embedding site** on unless a deployment needs one identifier across sites. `SameSite` is not part of a cookie's identity key, so without partitioning the cookie written inside a frame replaces the first-party cookie of the same name and downgrades that one to `SameSite=None` everywhere. Partitioning also keeps the cookie working in browsers that are phasing out unrestricted third-party cookies, and gives a visitor a separate identifier per embedding site, which is what per-site abuse control wants.
 
 The **Remote address storage mode** supports the following values:
 
