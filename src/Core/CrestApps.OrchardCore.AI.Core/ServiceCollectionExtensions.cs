@@ -1,5 +1,6 @@
 ﻿using CrestApps.Core;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Connections;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Markdown;
 using CrestApps.Core.AI.Models;
@@ -104,6 +105,43 @@ public static class ServiceCollectionExtensions
     }
 
     /// <summary>
+    /// Points the <see cref="AIProviderConnection"/> and <see cref="AIDeployment"/> catalogs back at the
+    /// multi-source stores.
+    /// </summary>
+    /// <remarks>
+    /// The YesSql store registrations bind these catalogs straight to the document store, which only knows
+    /// about rows in the database. Anything resolving a catalog rather than
+    /// <see cref="IAIProviderConnectionStore"/> or <see cref="IAIDeploymentStore"/> then misses the entries
+    /// that come from configuration, so a connection declared in appsettings.json never reaches the admin
+    /// pickers even though the runtime resolves it fine. The multi-source stores read every source and still
+    /// delegate writes to the database, so they are safe to use everywhere.
+    /// Call this after the YesSql stores are registered.
+    /// </remarks>
+    /// <param name="services">The services.</param>
+    public static IServiceCollection AddMultiSourceAICatalogs(this IServiceCollection services)
+    {
+        UseMultiSourceCatalog<AIProviderConnection, IAIProviderConnectionStore>(services);
+        UseMultiSourceCatalog<AIDeployment, IAIDeploymentStore>(services);
+
+        return services;
+    }
+
+    private static void UseMultiSourceCatalog<TModel, TStore>(IServiceCollection services)
+        where TModel : INameAwareModel, ISourceAwareModel
+        where TStore : class, INamedSourceCatalog<TModel>
+    {
+        services.RemoveAll<ICatalog<TModel>>();
+        services.RemoveAll<INamedCatalog<TModel>>();
+        services.RemoveAll<ISourceCatalog<TModel>>();
+        services.RemoveAll<INamedSourceCatalog<TModel>>();
+
+        services.AddScoped<ICatalog<TModel>>(sp => sp.GetRequiredService<TStore>());
+        services.AddScoped<INamedCatalog<TModel>>(sp => sp.GetRequiredService<TStore>());
+        services.AddScoped<ISourceCatalog<TModel>>(sp => sp.GetRequiredService<TStore>());
+        services.AddScoped<INamedSourceCatalog<TModel>>(sp => sp.GetRequiredService<TStore>());
+    }
+
+    /// <summary>
     /// Replaces core CrestApps.Core.AI configuration-backed services that inject
     /// <see cref="Microsoft.Extensions.Configuration.IConfiguration"/> (host-level) with
     /// factory-based registrations that provide <see cref="IShellConfiguration"/>
@@ -145,19 +183,62 @@ public static class ServiceCollectionExtensions
     private static void ReplaceService<TService, TImplementation>(
         IServiceCollection services,
         ServiceLifetime lifetime,
-        Func<IServiceProvider, TService> factory)
+        Func<IServiceProvider, TImplementation> factory)
         where TService : class
         where TImplementation : class, TService
     {
-        var descriptor = services.FirstOrDefault(d =>
-            d.ServiceType == typeof(TService) &&
-            d.ImplementationType == typeof(TImplementation));
-
-        if (descriptor != null)
+        // The core registers these sources with TryAddEnumerable, so several features asking for the
+        // AI services each get a chance to add one. Remove every host-configuration registration, not
+        // just the first, or the replaced source runs alongside one that can never see the tenant.
+        for (var i = services.Count - 1; i >= 0; i--)
         {
-            services.Remove(descriptor);
+            var existing = services[i];
+
+            if (existing.ServiceType == typeof(TService) &&
+                GetImplementationType(existing) == typeof(TImplementation))
+            {
+                services.RemoveAt(i);
+            }
         }
 
-        services.Add(new ServiceDescriptor(typeof(TService), (sp) => factory(sp), lifetime));
+        // Describe the replacement through the typed factory overloads. That keeps the delegate's
+        // runtime type as Func<IServiceProvider, TImplementation>, which is what TryAddEnumerable reads
+        // to decide whether the pair is already registered. A Func<IServiceProvider, object> hides the
+        // implementation type, and the next feature to call into the core adds the host-configuration
+        // source back.
+        services.Add(lifetime switch
+        {
+            ServiceLifetime.Singleton => ServiceDescriptor.Singleton<TService, TImplementation>(factory),
+            ServiceLifetime.Transient => ServiceDescriptor.Transient<TService, TImplementation>(factory),
+            _ => ServiceDescriptor.Scoped<TService, TImplementation>(factory),
+        });
+    }
+
+    /// <summary>
+    /// Returns the implementation type a descriptor resolves to, mirroring how
+    /// <see cref="ServiceCollectionDescriptorExtensions.TryAddEnumerable(IServiceCollection, ServiceDescriptor)"/>
+    /// identifies a registration.
+    /// </summary>
+    /// <param name="descriptor">The descriptor.</param>
+    private static Type GetImplementationType(ServiceDescriptor descriptor)
+    {
+        if (descriptor.ImplementationType is not null)
+        {
+            return descriptor.ImplementationType;
+        }
+
+        if (descriptor.ImplementationInstance is not null)
+        {
+            return descriptor.ImplementationInstance.GetType();
+        }
+
+        if (descriptor.ImplementationFactory is not null)
+        {
+            var typeArguments = descriptor.ImplementationFactory.GetType().GenericTypeArguments;
+
+            return typeArguments.Length == 2 ? typeArguments[1] : null;
+        }
+
+        return null;
     }
 }
