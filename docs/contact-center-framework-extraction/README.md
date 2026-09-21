@@ -1,7 +1,8 @@
 # Contact Center Suite extraction plan
 
 **Status:** in progress. Written 2026-09-05 as a proposal; Phase 0 and Phase 1 are being executed now.
-**Branch:** all Phase 0 and Phase 1 work lands on `ma/contact-center-framework-extraction`, off `main`.
+**Branch:** all Phase 0 and Phase 1 work lands on `ma/contact-center-framework-extraction`, off `main`,
+tracked by draft PR [#677](https://github.com/CrestApps/CrestApps.OrchardCore/pull/677).
 **Owner:** Mike Alhayek. **Executor:** an AI coding agent working workstream by workstream, with a manual
 review gate between phases.
 

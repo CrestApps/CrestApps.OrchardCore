@@ -1,6 +1,8 @@
 # Phase 1 progress
 
-**Branch:** `ma/contact-center-framework-extraction`, branched from `main`. Every Phase 0 and Phase 1
+**Branch:** `ma/contact-center-framework-extraction`, branched from `main`.
+**Pull request:** [#677 Contact Center Suite extraction: Phase 0 and Phase 1](https://github.com/CrestApps/CrestApps.OrchardCore/pull/677),
+open as a draft against `main` and staying a draft until Phase 1 is finished. Every Phase 0 and Phase 1
 commit referenced in this file is on that branch and nowhere else; nothing has merged to `main` yet, and
 the whole of Phase 1 is meant to land as one reviewable branch. The one piece of this work that lives
 outside it is the store-neutral concurrency exception, which belongs to the `CrestApps.Core` repository
