@@ -57,36 +57,62 @@ embedding picker and nowhere else.
 See [Model Capabilities](../model-capabilities.md) for the full registry, the slot table, and how a legacy
 `Purpose` is projected onto capabilities when it is read.
 
-When configuring connections through `appsettings.json`, each connection can define a `Deployments` array.
-The legacy `Purpose` key is still accepted and projected onto capabilities, so existing configuration keeps
-working:
+When configuring through `appsettings.json`, connections and deployments are two sibling arrays under
+`OrchardCore:CrestApps:AI`. A deployment names the connection it uses through `ConnectionName` and declares
+its capabilities under `Properties.AIDeploymentMetadata.Features`:
 
 ```json
 {
-  "Connections": {
-    "my-connection": {
-      "ApiKey": "your-api-key",
-      "Deployments": [
-        {
-          "Name": "chat-default",
-          "ModelName": "gpt-4o",
-          "Purpose": "Chat"
-        },
-        {
-          "Name": "utility-default",
-          "ModelName": "gpt-4.1-mini",
-          "Purpose": "Utility"
-        },
-        {
-          "Name": "embedding-default",
-          "ModelName": "text-embedding-3-large",
-          "Purpose": "Embedding"
-        }
-      ]
+  "OrchardCore": {
+    "CrestApps": {
+      "AI": {
+        "Connections": [
+          {
+            "Name": "my-connection",
+            "ClientName": "OpenAI",
+            "ApiKey": "your-api-key"
+          }
+        ],
+        "Deployments": [
+          {
+            "Name": "chat-default",
+            "ClientName": "OpenAI",
+            "ConnectionName": "my-connection",
+            "ModelName": "gpt-4o",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textGeneration", "toolCalling", "streaming" ]
+              }
+            }
+          },
+          {
+            "Name": "embedding-default",
+            "ClientName": "OpenAI",
+            "ConnectionName": "my-connection",
+            "ModelName": "text-embedding-3-large",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textEmbedding" ]
+              }
+            }
+          }
+        ]
+      }
     }
   }
 }
 ```
+
+:::note
+The older shape — a `Providers` section with connections nested under each provider, and a `Purpose`,
+`Capability` or `Type` key on each deployment — is still read so existing configuration keeps working. Both
+are projected onto capabilities. Use the arrays above for anything new.
+:::
+
+Each entry in `Connections` is addressed by its position, so a value supplied from somewhere with a higher
+precedence than your `appsettings.json` — an environment variable such as
+`OrchardCore__CrestApps__AI__Connections__0__Name`, for instance — replaces the connection in that slot
+rather than adding one beside it.
 
 Assign deployments directly on profiles and interactions when you need explicit model selection. For tenant-wide fallbacks, configure **Settings -> Artificial Intelligence -> Default Deployments**.
 

@@ -181,30 +181,34 @@ To enable image generation, create an `AIDeployment` record with the `Image` pur
   "OrchardCore": {
     "CrestApps": {
       "AI": {
-        "Providers": {
-          "OpenAI": {
-            "Connections": {
-              "default": {
-                "Deployments": [
-                  {
-                    "Name": "gpt-4o",
-                    "Purpose": "Chat"
-                  },
-                  {
-                    "Name": "gpt-4o-mini",
-                    "Purpose": "Utility"
-                  },
-                  {
-                    "Name": "dall-e-3",
-                    "Purpose": "Image"
-                  }
-                ]
+        "Deployments": [
+          {
+            "Name": "gpt-4o",
+            "ClientName": "OpenAI",
+            "ConnectionName": "default",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textGeneration", "toolCalling", "streaming" ]
+              }
+            }
+          },
+          {
+            "Name": "dall-e-3",
+            "ClientName": "OpenAI",
+            "ConnectionName": "default",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "imageOutput" ]
               }
             }
           }
-        }
+        ]
       }
     }
   }
 }
 ```
+
+The image deployment is the one declaring `imageOutput`. Assign it to the `image` slot under
+**Configuration** -> **Artificial Intelligence** -> **Settings** so image generation picks it up. See
+[Model capabilities](model-capabilities.md) for the full list of features and slots.
