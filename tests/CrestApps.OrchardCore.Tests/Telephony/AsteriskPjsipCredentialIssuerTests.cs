@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Caching.Distributed;
@@ -8,6 +8,7 @@ using Moq;
 using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony.Asterisk.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

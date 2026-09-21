@@ -13,14 +13,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <!-- Data protection for the browser credentials, and web utilities for the ARI query strings. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Microsoft.Extensions.Compliance.Redaction" />
+    <PackageReference Include="YesSql.Abstractions" />
+    <PackageReference Include="YesSql.Core" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CrestApps.Core.Telephony\CrestApps.Core.Telephony.csproj" />
     <ProjectReference Include="..\..\..\Abstractions\Transitions\CrestApps.Core.ContactCenter.Abstractions\CrestApps.Core.ContactCenter.Abstractions.csproj" />
+    <ProjectReference Include="..\CrestApps.Core.Data.YesSql.ContactCenter\CrestApps.Core.Data.YesSql.ContactCenter.csproj" />
   </ItemGroup>
 
 </Project>

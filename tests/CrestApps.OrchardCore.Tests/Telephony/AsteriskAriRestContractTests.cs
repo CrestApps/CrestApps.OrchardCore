@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
+using CrestApps.Core.Telephony.Asterisk.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

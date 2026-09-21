@@ -5,8 +5,7 @@ using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.Core.ContactCenter.Models;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.WebUtilities;
@@ -14,6 +13,10 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
+using CrestApps.Core.Telephony.Asterisk;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Migrations;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 

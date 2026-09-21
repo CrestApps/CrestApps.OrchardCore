@@ -328,6 +328,11 @@ public sealed partial class ContactCenterOperationalLogPrivacyTests
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Telephony"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Asterisk"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Dialpad"),
+            // Each provider package is a SIBLING of "CrestApps.Core.Telephony", not a child, so a root that
+            // names the neutral package does not reach it. Named individually for that reason.
+            Path.Combine(repositoryRoot, "src", "Core", "Transitions", "CrestApps.Core.Telephony.Asterisk"),
+            Path.Combine(repositoryRoot, "src", "Core", "Transitions", "CrestApps.Core.Telephony.Dialpad"),
+            Path.Combine(repositoryRoot, "src", "Core", "Transitions", "CrestApps.Core.Telephony.Telnyx"),
             Path.Combine(repositoryRoot, "src", "Modules", "CrestApps.OrchardCore.Omnichannel.Sms"),
             // The SMS Portal is where message bodies and contact numbers actually flow, so it is the tree this
             // guard most needs to cover; it was outside the scan while the automation module was inside it.

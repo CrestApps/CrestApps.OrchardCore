@@ -1,9 +1,12 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.Core.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
+using CrestApps.Core.Telephony.Asterisk;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Migrations;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 

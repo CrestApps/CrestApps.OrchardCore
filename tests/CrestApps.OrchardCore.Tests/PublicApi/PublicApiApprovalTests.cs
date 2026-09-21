@@ -427,9 +427,10 @@ public sealed class PublicApiApprovalTests
     /// Contact Center, Telephony or Omnichannel families starts being governed the moment something compiles against
     /// it, rather than the moment somebody notices.
     /// <para>
-    /// Projects under a <c>Transitions</c> folder are governed by the framework test project instead, which is the
-    /// only one that references them. Their surface is the package surface, and it is recorded beside the code that
-    /// will carry it rather than beside the host it is leaving.
+    /// Projects under a <c>Transitions</c> folder are governed by the framework test project instead. Their surface
+    /// is the package surface, and it is recorded beside the code that will carry it rather than beside the host it
+    /// is leaving. This project may still reference one of them - it does, for the Asterisk package, until W12 moves
+    /// those tests - which is why the rule is where a project lives rather than who compiles against it.
     /// </para>
     /// </remarks>
     private static List<string> GetGovernedAssemblyNames()

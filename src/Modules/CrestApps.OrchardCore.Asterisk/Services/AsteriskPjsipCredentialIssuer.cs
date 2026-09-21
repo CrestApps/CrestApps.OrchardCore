@@ -2,13 +2,17 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core.Locking;
-using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Environment.Cache;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
+using CrestApps.Core.Telephony.Asterisk;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Migrations;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 

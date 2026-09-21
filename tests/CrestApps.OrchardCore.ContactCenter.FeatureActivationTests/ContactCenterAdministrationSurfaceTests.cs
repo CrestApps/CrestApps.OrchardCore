@@ -11,6 +11,7 @@ using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Navigation;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.Core.Telephony.Asterisk;
 
 namespace CrestApps.OrchardCore.ContactCenter.FeatureActivationTests;
 
@@ -59,7 +60,7 @@ public sealed class ContactCenterAdministrationSurfaceTests
 
     [Theory]
     [InlineData(
-        AsteriskConstants.Feature.Area,
+        AsteriskFeatures.Area,
         "CrestApps.OrchardCore.Asterisk.Drivers.AsteriskSettingsDisplayDriver")]
     [InlineData(
         DialpadConstants.Feature.Area,

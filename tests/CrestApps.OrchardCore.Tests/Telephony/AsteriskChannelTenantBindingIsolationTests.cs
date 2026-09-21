@@ -1,13 +1,14 @@
 using System.Reflection;
-using CrestApps.OrchardCore.Asterisk.Indexes;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.Asterisk.Migrations;
-using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using YesSql;
 using YesSql.Provider.Sqlite;
 using YesSql.Sql;
+using CrestApps.Core.Telephony.Asterisk.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

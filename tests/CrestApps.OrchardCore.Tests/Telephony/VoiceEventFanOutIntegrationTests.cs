@@ -21,6 +21,7 @@ using CrestApps.Core.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.Core.Data.YesSql.Services;
+using CrestApps.Core.Telephony.Asterisk.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

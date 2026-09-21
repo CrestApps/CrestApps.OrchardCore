@@ -2,6 +2,8 @@ using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Asterisk.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using OrchardCore.Environment.Shell;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

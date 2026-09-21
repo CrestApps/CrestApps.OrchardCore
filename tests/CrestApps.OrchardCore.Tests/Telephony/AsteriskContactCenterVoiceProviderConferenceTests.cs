@@ -1,6 +1,6 @@
 using CrestApps.Core.ContactCenter;
 using CrestApps.OrchardCore.Asterisk;
-using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
@@ -12,6 +12,8 @@ using Microsoft.Extensions.Time.Testing;
 using Moq;
 using OrchardCore.Modules;
 using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

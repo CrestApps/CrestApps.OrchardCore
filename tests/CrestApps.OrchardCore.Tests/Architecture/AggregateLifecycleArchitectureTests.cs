@@ -38,6 +38,8 @@ public sealed class AggregateLifecycleArchitectureTests
         // would scan a shrinking share of the code while still reporting a pass.
         "src/Core/Transitions/CrestApps.Core.ContactCenter",
         "src/Core/Transitions/CrestApps.Core.Telephony",
+        // A sibling of the line above, not a child of it.
+        "src/Core/Transitions/CrestApps.Core.Telephony.Asterisk",
         "src/Core/Transitions/CrestApps.Core.Omnichannel",
         "src/Modules/CrestApps.OrchardCore.ContactCenter",
         "src/Modules/CrestApps.OrchardCore.Telephony",

@@ -444,7 +444,13 @@ public sealed class ContactCenterFeatureActivationHost : IAsyncDisposable
 
             await setupService.SetupAsync(setupContext);
 
-            Assert.Empty(errors);
+            // Setup keys its errors by whatever raised them - a module id, a recipe step name - and the message is
+            // the only thing that says what went wrong. Asserting the dictionary is empty prints the keys and drops
+            // the messages, which turns a real setup failure into a name and no reason.
+            Assert.True(
+                errors.Count == 0,
+                $"Setting up tenant '{settings.Name}' reported {errors.Count} error(s): " +
+                string.Join("; ", errors.Select(error => $"{error.Key}: {error.Value}")));
             httpContextAccessor.HttpContext = null;
         });
     }

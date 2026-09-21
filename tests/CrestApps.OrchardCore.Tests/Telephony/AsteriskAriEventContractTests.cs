@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Tests.Telephony.ProviderContracts;
 using CrestApps.Core.Telephony.Models;
+using CrestApps.Core.Telephony.Asterisk.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 
@@ -16,7 +17,7 @@ namespace CrestApps.OrchardCore.Tests.Telephony;
 public sealed class AsteriskAriEventContractTests
 {
     private const string ProviderName = "asterisk";
-    private const string MapperSourcePath = "src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskRealtimeVoiceEventMapper.cs";
+    private const string MapperSourcePath = "src/Core/Transitions/CrestApps.Core.Telephony.Asterisk/Services/AsteriskRealtimeVoiceEventMapper.cs";
 
     private static readonly Regex _handledEventTypePattern = new(
         @"string\.Equals\(\s*eventType\s*,\s*""(?<eventType>[A-Za-z]+)""",

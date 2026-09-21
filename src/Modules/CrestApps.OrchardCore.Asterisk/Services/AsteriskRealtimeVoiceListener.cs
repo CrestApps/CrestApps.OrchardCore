@@ -3,13 +3,17 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading.Channels;
 using CrestApps.Core.Support;
-using CrestApps.OrchardCore.Asterisk.Models;
-using CrestApps.OrchardCore.Asterisk.Telemetry;
+using CrestApps.Core.Telephony.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
+using CrestApps.Core.Telephony.Asterisk;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Migrations;
 
 namespace CrestApps.OrchardCore.Asterisk.Services;
 

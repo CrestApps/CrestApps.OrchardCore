@@ -1,5 +1,5 @@
 using System.Diagnostics.Metrics;
-using CrestApps.OrchardCore.Asterisk.Telemetry;
+using CrestApps.Core.Telephony.Asterisk.Telemetry;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

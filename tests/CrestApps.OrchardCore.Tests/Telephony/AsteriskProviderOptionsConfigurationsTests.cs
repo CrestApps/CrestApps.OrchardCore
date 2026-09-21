@@ -1,10 +1,11 @@
 using CrestApps.OrchardCore.Asterisk;
-using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Options;
 using CrestApps.Core.Telephony;
+using CrestApps.Core.Telephony.Asterisk;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

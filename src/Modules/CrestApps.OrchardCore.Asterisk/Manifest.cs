@@ -2,6 +2,7 @@ using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.Asterisk;
 using CrestApps.OrchardCore.Telephony;
 using OrchardCore.Modules.Manifest;
+using CrestApps.Core.Telephony.Asterisk;
 
 [assembly: Module(
     Name = "Asterisk",
@@ -13,7 +14,7 @@ using OrchardCore.Modules.Manifest;
 )]
 
 [assembly: Feature(
-    Id = AsteriskConstants.Feature.Area,
+    Id = AsteriskFeatures.Area,
     Name = "Asterisk",
     Description = "Provides the Asterisk telephony provider and its settings. When Contact Center Voice is also enabled, the Asterisk provider automatically participates in contact center call orchestration and, when Contact Center Voice Media is enabled, in bidirectional RTP media sessions.",
     Category = "Telephony",

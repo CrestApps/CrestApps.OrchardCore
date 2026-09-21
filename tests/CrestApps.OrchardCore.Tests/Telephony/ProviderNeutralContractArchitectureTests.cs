@@ -33,6 +33,15 @@ public sealed partial class ProviderNeutralContractArchitectureTests
         "attendedTransferConsultChannelId",
     ];
 
+    // The Asterisk provider spans two folders since the framework extraction: the Orchard module and the
+    // OrchardCore-free package its implementation was extracted into. Both halves are that one provider's own
+    // code, so both count as inside the owner; every other project under src/ is still outside it.
+    private static readonly string[] _owningProviderRoots =
+    [
+        Path.Combine("src", "Modules", "CrestApps.OrchardCore.Asterisk"),
+        Path.Combine("src", "Core", "Transitions", "CrestApps.Core.Telephony.Asterisk"),
+    ];
+
     [Fact]
     public void ProviderNeutralProjects_DeclareNoProviderSpecificVocabulary()
     {
@@ -62,8 +71,6 @@ public sealed partial class ProviderNeutralContractArchitectureTests
     public void ProviderPrivateMetadataKeys_AreReferencedOnlyInsideTheirOwningProviderModule()
     {
         // Arrange
-        var owningModule = Path.Combine("src", "Modules", "CrestApps.OrchardCore.Asterisk") + Path.DirectorySeparatorChar;
-
         // Act
         var violations = new List<string>();
 
@@ -71,7 +78,7 @@ public sealed partial class ProviderNeutralContractArchitectureTests
         {
             var relative = RelativePath(file);
 
-            if (relative.StartsWith(owningModule, StringComparison.Ordinal))
+            if (IsOwnedByTheProvider(relative))
             {
                 continue;
             }
@@ -96,10 +103,7 @@ public sealed partial class ProviderNeutralContractArchitectureTests
     {
         // Arrange: without this floor the previous test would pass vacuously if the keys were simply deleted
         // rather than relocated, and the relocation would stop being proven.
-        var owningModule = Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Asterisk");
-        var sources = Directory
-            .EnumerateFiles(owningModule, "*.cs", SearchOption.AllDirectories)
-            .Where(file => !IsGenerated(file))
+        var sources = EnumerateOwningProviderSources()
             .Select(File.ReadAllText)
             .ToList();
 
@@ -134,6 +138,36 @@ public sealed partial class ProviderNeutralContractArchitectureTests
 
         // Assert
         Assert.True(matches.Length >= 4, $"The forbidden vocabulary matched only {matches.Length} distinct terms in the provider module.");
+    }
+
+    private static bool IsOwnedByTheProvider(string relativePath)
+        => Array.Exists(
+            _owningProviderRoots,
+            root => relativePath.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.Ordinal));
+
+    private static IEnumerable<string> EnumerateOwningProviderSources()
+    {
+        var root = FindRepositoryRoot();
+
+        foreach (var providerRoot in _owningProviderRoots)
+        {
+            var fullPath = Path.Combine(root, providerRoot);
+
+            // A root that has been renamed away has to fail here rather than quietly scan nothing, which is the
+            // way this gate stopped covering the provider when the extraction moved most of it out of the module.
+            if (!Directory.Exists(fullPath))
+            {
+                throw new InvalidOperationException($"The owning provider root '{providerRoot}' was not found.");
+            }
+
+            foreach (var file in Directory.EnumerateFiles(fullPath, "*.cs", SearchOption.AllDirectories))
+            {
+                if (!IsGenerated(file))
+                {
+                    yield return file;
+                }
+            }
+        }
     }
 
     private static IEnumerable<string> EnumerateProviderNeutralSources()

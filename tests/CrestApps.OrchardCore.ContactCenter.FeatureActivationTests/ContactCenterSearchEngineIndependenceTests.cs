@@ -99,6 +99,7 @@ public sealed class ContactCenterSearchEngineIndependenceTests
         "CrestApps.Core.Data.YesSql.ContactCenter",
         "CrestApps.Core.Telephony",
         "CrestApps.Core.Telephony.Abstractions",
+        "CrestApps.Core.Telephony.Asterisk",
         "CrestApps.OrchardCore.Asterisk",
         "CrestApps.OrchardCore.ContactCenter",
         "CrestApps.OrchardCore.ContactCenter.Abstractions",

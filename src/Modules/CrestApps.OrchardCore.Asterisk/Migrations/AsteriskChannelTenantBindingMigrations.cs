@@ -1,5 +1,9 @@
-using CrestApps.OrchardCore.Asterisk.Migrations.Steps;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Migrations;
 using OrchardCore.Data.Migration;
+using CrestApps.Core.Telephony.Asterisk;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes;
 
 namespace CrestApps.OrchardCore.Asterisk.Migrations;
 

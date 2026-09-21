@@ -1,5 +1,5 @@
 using CrestApps.Core.ContactCenter;
-using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.Core.ContactCenter.Models;
@@ -38,6 +38,10 @@ public sealed class ContactCenterOptionsValidationTests
         typeof(TelephonyCommandOptions),
         typeof(TelephonyHub),
         typeof(DefaultAsteriskOptions),
+        // The options live in the provider package and the startup that binds and validates them lives in the
+        // module, so both assemblies have to be named. Marking only the options assembly discovered no startup
+        // at all, and every Asterisk option quietly stopped being governed.
+        typeof(CrestApps.OrchardCore.Asterisk.Startup),
     ];
 
     /// <summary>

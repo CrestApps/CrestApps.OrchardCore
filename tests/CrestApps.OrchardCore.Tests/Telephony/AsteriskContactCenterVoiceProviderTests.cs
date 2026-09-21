@@ -11,6 +11,8 @@ using Moq;
 using OrchardCore.Modules;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Models;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

@@ -103,7 +103,7 @@ public sealed class ServiceResolutionOrderTests
             // Four reconcilers, each recovering a different kind of call the provider and this platform
             // have come to disagree about. Losing one leaves that kind of call stranded indefinitely.
             "asterisk-state-reconcilers",
-            "CrestApps.OrchardCore.Asterisk.Services.IAsteriskProviderStateReconciler",
+            "CrestApps.Core.Telephony.Asterisk.Services.IAsteriskProviderStateReconciler",
             "asterisk-ga-core"
         },
     };

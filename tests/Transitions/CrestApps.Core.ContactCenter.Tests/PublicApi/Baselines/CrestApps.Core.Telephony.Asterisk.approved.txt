@@ -1,0 +1,804 @@
+namespace CrestApps.Core.Telephony.Asterisk
+{
+    public static class AsteriskConstants
+    {
+        public const string AnswerDetectionVariableName = "AMDSTATUS";
+        public const string BrowserMediaAdapterName = "sipjs";
+        public const string ConferenceBridgeVariableName = "CRESTAPPS_CONFERENCE_BRIDGE_ID";
+        public const string ContactCenterMediaWorkPartition = "CrestApps.OrchardCore.Asterisk.ContactCenterMedia";
+        public const string ContactCenterVoiceWorkPartition = "CrestApps.OrchardCore.Asterisk.ContactCenterVoice";
+        public const string CoordinationConfigurationSectionPath = "CrestApps:Asterisk:Coordination";
+        public const string DefaultConfigurationSectionPath = "CrestApps:Asterisk:Default";
+        public const string DefaultIceTransportPolicy = "all";
+        public const int DefaultPjsipContactExpirationSeconds = 120;
+        public const int DefaultPjsipCredentialLifetimeMinutes = 15;
+        public const string DefaultProviderTechnicalName = "Default Asterisk";
+        public const int DefaultTimeoutSeconds = 30;
+        public const string DefaultWebRtcCodecs = "opus,g722,ulaw";
+        public const string ExternalMediaBindAddressMetadataKey = "bindAddress";
+        public const string ExternalMediaBindPortMetadataKey = "bindPort";
+        public const string ExternalMediaHostMetadataKey = "externalHost";
+        public const string HoldStateVariableName = "CRESTAPPS_STATE_ONHOLD";
+        public const string HoldingBridgePrefix = "crestapps-holding-";
+        public const string HttpClientName = "Asterisk";
+        public const string InteractionChannelVariableName = "CRESTAPPS_INTERACTION_ID";
+        public const int MaxRealtimeEventBufferCapacity = 100000;
+        public const int MaxRealtimeMessageBytesCeiling = 67108864;
+        public const string MuteStateVariableName = "CRESTAPPS_STATE_MUTED";
+        public const string OriginationMarkerVariableName = "CRESTAPPS_ORIGINATED";
+        public const string ProtectorName = "Asterisk";
+        public const string ProviderTechnicalName = "Asterisk";
+        public const int RealtimeCloseHandshakeTimeoutSeconds = 5;
+        public const string SuggestedApplicationName = "crestapps-telephony";
+    }
+}
+namespace CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes
+{
+    public sealed class AsteriskChannelTenantBindingIndex : YesSql.Indexes.MapIndex
+    {
+        public AsteriskChannelTenantBindingIndex() { }
+        public string ChannelId { get; set; }
+        public long DocumentId { get; set; }
+        public string InteractionId { get; set; }
+        public string PeerChannelId { get; set; }
+        public string ProviderName { get; set; }
+    }
+    public sealed class AsteriskChannelTenantBindingIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelTenantBinding>
+    {
+        public AsteriskChannelTenantBindingIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelTenantBinding> context) { }
+    }
+    public sealed class AsteriskPjsipCredentialLeaseIndex : YesSql.Indexes.MapIndex
+    {
+        public AsteriskPjsipCredentialLeaseIndex() { }
+        public string AuthorizationUser { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public bool Revoked { get; set; }
+        public string SessionId { get; set; }
+        public string TenantName { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AsteriskPjsipCredentialLeaseIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>
+    {
+        public AsteriskPjsipCredentialLeaseIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease> context) { }
+    }
+    public sealed class AsteriskRecordingIngestJobIndex : YesSql.Indexes.MapIndex
+    {
+        public AsteriskRecordingIngestJobIndex() { }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public string RecordingName { get; set; }
+        public CrestApps.Core.Telephony.Asterisk.Models.RecordingIngestJobStatus Status { get; set; }
+    }
+    public sealed class AsteriskRecordingIngestJobIndexProvider : YesSql.Indexes.IndexProvider<CrestApps.Core.Telephony.Asterisk.Models.AsteriskRecordingIngestJob>
+    {
+        public AsteriskRecordingIngestJobIndexProvider() { }
+        public override void Describe(YesSql.Indexes.DescribeContext<CrestApps.Core.Telephony.Asterisk.Models.AsteriskRecordingIngestJob> context) { }
+    }
+}
+namespace CrestApps.Core.Telephony.Asterisk.Data.YesSql.Migrations
+{
+    public sealed class AsteriskChannelTenantBindingMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public AsteriskChannelTenantBindingMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+        public static System.Threading.Tasks.Task UninstallAsync(YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class AsteriskPjsipCredentialLeaseMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public AsteriskPjsipCredentialLeaseMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+    public sealed class AsteriskRecordingIngestJobMigrationsSchemaMigration : CrestApps.Core.Data.YesSql.Migrations.ISchemaMigration
+    {
+        public AsteriskRecordingIngestJobMigrationsSchemaMigration() { }
+        public string Name { get; }
+        public System.Threading.Tasks.Task<int> CreateAsync(YesSql.Sql.ISchemaBuilder builder) { }
+        public System.Threading.Tasks.Task<int> UpdateFromAsync(int version, YesSql.Sql.ISchemaBuilder builder) { }
+    }
+}
+namespace CrestApps.Core.Telephony.Asterisk.Models
+{
+    public sealed class AsteriskAriBridge
+    {
+        public AsteriskAriBridge() { }
+        [System.Text.Json.Serialization.JsonPropertyName("bridge_type")]
+        public string BridgeType { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("channels")]
+        public System.Collections.Generic.IList<string> Channels { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; }
+    }
+    public sealed class AsteriskAriChannel
+    {
+        public AsteriskAriChannel() { }
+        [System.Text.Json.Serialization.JsonPropertyName("id")]
+        public string Id { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; }
+    }
+    public sealed class AsteriskAriLiveRecording
+    {
+        public AsteriskAriLiveRecording() { }
+        [System.Text.Json.Serialization.JsonPropertyName("duration")]
+        public int? Duration { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("format")]
+        public string Format { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; }
+    }
+    public sealed class AsteriskAriOriginateRequest
+    {
+        public AsteriskAriOriginateRequest() { }
+        public string App { get; set; }
+        public System.Collections.Generic.IReadOnlyList<string> AppArgs { get; set; }
+        public string CallerId { get; set; }
+        public string ChannelId { get; set; }
+        public string Endpoint { get; set; }
+        public int TimeoutSeconds { get; set; }
+        public System.Collections.Generic.IReadOnlyDictionary<string, string> Variables { get; set; }
+    }
+    public sealed class AsteriskAriStoredRecording
+    {
+        public AsteriskAriStoredRecording() { }
+        [System.Text.Json.Serialization.JsonPropertyName("duration")]
+        public int? Duration { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("format")]
+        public string Format { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("name")]
+        public string Name { get; set; }
+    }
+    public sealed class AsteriskAriStoredRecordingContent : System.IAsyncDisposable, System.IDisposable
+    {
+        public AsteriskAriStoredRecordingContent(System.IO.Stream content, string contentType, System.IDisposable owner) { }
+        public System.IO.Stream Content { get; }
+        public string ContentType { get; }
+        public void Dispose() { }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+    }
+    public enum AsteriskChannelBindingState
+    {
+        Connected = 0,
+        Pending = 1,
+        Terminating = 2,
+        Offering = 3,
+        Joining = 4,
+        Participating = 5,
+    }
+    public static class AsteriskChannelBindingStateExtensions
+    {
+        public static bool IsProvisioning(this CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelBindingState state) { }
+    }
+    public sealed class AsteriskChannelTenantBinding
+    {
+        public AsteriskChannelTenantBinding() { }
+        public string BridgeId { get; set; }
+        public bool CallerDetached { get; set; }
+        public string ChannelId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string InteractionId { get; set; }
+        public string PeerChannelId { get; set; }
+        public CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelBindingState? PreTeardownState { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelBindingState State { get; set; }
+    }
+    public class AsteriskConnectionSettings
+    {
+        public AsteriskConnectionSettings() { }
+        public virtual string ApplicationName { get; set; }
+        public virtual string BaseUrl { get; set; }
+        public virtual string EndpointTemplate { get; set; }
+        public virtual string IceTransportPolicy { get; set; }
+        public virtual string OutboundCallerId { get; set; }
+        public virtual int PjsipContactExpirationSeconds { get; set; }
+        public virtual int PjsipCredentialLifetimeMinutes { get; set; }
+        public virtual string PjsipRealtimeConnectionString { get; set; }
+        public virtual string PjsipRealtimeProviderInvariantName { get; set; }
+        public virtual string PjsipRealtimeTablePrefix { get; set; }
+        public virtual string SipDomain { get; set; }
+        public virtual int TimeoutSeconds { get; set; }
+        public virtual string TurnSharedSecret { get; set; }
+        public virtual string TurnUrls { get; set; }
+        public virtual string UserName { get; set; }
+        public virtual string VoicemailContext { get; set; }
+        public virtual string VoicemailExtensionTemplate { get; set; }
+        public virtual int VoicemailPriority { get; set; }
+        public virtual string WebRtcCodecs { get; set; }
+        public virtual string WebSocketUrl { get; set; }
+    }
+    public sealed class AsteriskCoordinationOptions
+    {
+        public AsteriskCoordinationOptions() { }
+        public System.TimeSpan ChannelBindingCreateLockTimeout { get; set; }
+        public System.TimeSpan CredentialLockExpiration { get; set; }
+        public System.TimeSpan CredentialLockTimeout { get; set; }
+        public System.TimeSpan HttpAttemptTimeout { get; set; }
+        public System.TimeSpan HttpTotalRequestTimeout { get; set; }
+        public int MaxRealtimeMessageBytes { get; set; }
+        public System.TimeSpan PendingReclamationThreshold { get; set; }
+        public System.TimeSpan RealtimeEventBackpressureTimeout { get; set; }
+        public int RealtimeEventBufferCapacity { get; set; }
+    }
+    public sealed class AsteriskPjsipCredentialLease
+    {
+        public AsteriskPjsipCredentialLease() { }
+        public string AuthorizationUser { get; set; }
+        public System.DateTime ExpiresUtc { get; set; }
+        public long Id { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime IssuedUtc { get; set; }
+        public string RevocationReason { get; set; }
+        public System.DateTime? RevokedUtc { get; set; }
+        public string SessionId { get; set; }
+        public string TenantName { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AsteriskRecordingIngestJob
+    {
+        public AsteriskRecordingIngestJob() { }
+        public int AttemptCount { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public string Format { get; set; }
+        public long Id { get; set; }
+        public string InteractionId { get; set; }
+        public string LastError { get; set; }
+        public string MediaReference { get; set; }
+        public bool MediaStored { get; set; }
+        public System.DateTime? ModifiedUtc { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public string RecordingName { get; set; }
+        public CrestApps.Core.Telephony.Asterisk.Models.RecordingIngestJobStatus Status { get; set; }
+    }
+    public sealed class AsteriskSettings : CrestApps.Core.Telephony.Asterisk.Models.AsteriskConnectionSettings
+    {
+        public AsteriskSettings() { }
+        public bool IsEnabled { get; set; }
+        public string Password { get; set; }
+    }
+    public sealed class DefaultAsteriskOptions : CrestApps.Core.Telephony.Asterisk.Models.AsteriskConnectionSettings
+    {
+        public DefaultAsteriskOptions() { }
+        public bool IsEnabled { get; set; }
+        public string Password { get; set; }
+    }
+    public enum RecordingIngestJobStatus
+    {
+        Pending = 0,
+        Completed = 1,
+        DeadLettered = 2,
+        Cancelled = 3,
+    }
+}
+namespace CrestApps.Core.Telephony.Asterisk.Services
+{
+    public sealed class AsteriskAgentChannelReadyBridge : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskRealtimeVoiceEventBridge
+    {
+        public AsteriskAgentChannelReadyBridge(CrestApps.Core.Telephony.Asterisk.Services.IAsteriskAgentChannelReadySignal agentChannelReadySignal) { }
+        public System.Threading.Tasks.Task<bool> TryHandleAsync(CrestApps.Core.Telephony.Asterisk.Services.AsteriskRealtimeVoiceEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public enum AsteriskAgentChannelReadyOutcome
+    {
+        Ready = 0,
+        NotReady = 1,
+        Canceled = 2,
+    }
+    public sealed class AsteriskAgentChannelReadySignal : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskAgentChannelReadySignal
+    {
+        public AsteriskAgentChannelReadySignal() { }
+        public CrestApps.Core.Telephony.Asterisk.Services.IAsteriskAgentChannelReadyRegistration Register(string channelId) { }
+        public void Signal(string channelId) { }
+    }
+    public sealed class AsteriskAriApplicationOwnershipRegistry : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskAriApplicationOwnershipRegistry
+    {
+        public AsteriskAriApplicationOwnershipRegistry(Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Asterisk.Services.AsteriskAriApplicationOwnershipRegistry> logger) { }
+        public bool IsOwnedByAnotherTenant(string baseUrl, string applicationName, string tenantName) { }
+        public void Release(string ownershipToken) { }
+        public bool TryClaim(string baseUrl, string applicationName, string tenantName, string ownershipToken) { }
+    }
+    public static class AsteriskAriConstants
+    {
+        public const int AgentAnswerTimeoutSeconds = 30;
+        public const string AgentBridgePrefix = "crestapps-bridge-";
+        public const string AgentChannelMetadataKey = "asteriskAgentChannelId";
+        public const string AgentChannelPrefix = "crestapps-agent-";
+        public const string AttendedConsultChannelPrefix = "crestapps-consult-agent-";
+        public const string ConferenceParticipantChannelPrefix = "crestapps-conf-agent-";
+        public const string HoldingBridgeType = "holding";
+        public const string MixingBridgeType = "mixing";
+        public const string OriginationMarkerValue = "true";
+        public const string PjsipEndpointTechnology = "PJSIP";
+        public const string RecordingFormat = "wav";
+        public const string RecordingIfExistsOverwrite = "overwrite";
+        public const int RecordingIngestBaseBackoffSeconds = 30;
+        public const int RecordingIngestBatchSize = 25;
+        public const int RecordingIngestMaxAttempts = 10;
+        public const int RecordingIngestMaxBackoffMinutes = 60;
+        public const string RecordingNamePrefix = "crestapps-recording-";
+        public const string RecordingPausedState = "paused";
+        public const string RecordingTerminateOnNone = "none";
+        public const string SnoopSpyBoth = "both";
+        public const string SnoopWhisperNone = "none";
+        public const string SnoopWhisperOut = "out";
+        public const string StoredRecordingRetrievalPathPrefix = "recordings/stored/";
+        public const int SupervisorAnswerTimeoutSeconds = 30;
+        public const string SupervisorBridgePrefix = "crestapps-super-bridge-";
+        public const string SupervisorChannelPrefix = "crestapps-super-";
+        public const string SupervisorSnoopPrefix = "crestapps-snoop-";
+        public const string TransferAgentChannelPrefix = "crestapps-xfer-agent-";
+    }
+    public sealed class AsteriskAriException : System.Exception
+    {
+        public AsteriskAriException() { }
+        public AsteriskAriException(string message) { }
+        public AsteriskAriException(string message, System.Exception innerException) { }
+        public AsteriskAriException(string operation, System.Net.HttpStatusCode? statusCode, string message) { }
+        public AsteriskAriException(string operation, System.Net.HttpStatusCode? statusCode, string message, System.Exception innerException) { }
+        public string Operation { get; }
+        public System.Net.HttpStatusCode? StatusCode { get; }
+    }
+    public static class AsteriskAriOutcomeClassifier
+    {
+        public static bool IsProvisioningOutcomeAmbiguous(System.Exception exception) { }
+    }
+    public sealed class AsteriskCallTeardownService : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskCallTeardownService
+    {
+        public AsteriskCallTeardownService(CrestApps.Core.Telephony.Asterisk.Services.IAsteriskChannelTenantBindingStore bindingStore, CrestApps.Core.Telephony.Asterisk.Services.IAsteriskAriClient ariClient, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Asterisk.Services.AsteriskCallTeardownService> logger) { }
+        public System.Threading.Tasks.Task ReleaseAsync(CrestApps.Core.Telephony.Asterisk.Services.AsteriskRealtimeVoiceEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskChannelBindingCreateTimeoutException : System.Exception
+    {
+        public AsteriskChannelBindingCreateTimeoutException() { }
+        public AsteriskChannelBindingCreateTimeoutException(string message) { }
+        public AsteriskChannelBindingCreateTimeoutException(string channelId, System.TimeSpan timeout) { }
+        public AsteriskChannelBindingCreateTimeoutException(string message, System.Exception innerException) { }
+        public string ChannelId { get; }
+        public System.TimeSpan Timeout { get; }
+    }
+    public sealed class AsteriskChannelOwnershipGuard : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskChannelOwnershipGuard
+    {
+        public AsteriskChannelOwnershipGuard(CrestApps.Core.Telephony.Asterisk.Services.IAsteriskChannelTenantBindingStore bindingStore) { }
+        public System.Threading.Tasks.Task<bool> IsOwnedByCurrentTenantAsync(string channelId) { }
+    }
+    public sealed class AsteriskChannelTeardownClaim
+    {
+        public AsteriskChannelTeardownClaim() { }
+        public CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelTenantBinding Binding { get; init; }
+        public CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelBindingState PreviousState { get; init; }
+    }
+    public sealed class AsteriskContactCenterFeatureLifecycleParticipant : CrestApps.Core.ContactCenter.IContactCenterFeatureLifecycleParticipant
+    {
+        public AsteriskContactCenterFeatureLifecycleParticipant(string featureId, string partitionKey, CrestApps.Core.ContactCenter.IContactCenterFeatureWorkManager workManager, Microsoft.Extensions.Options.IOptions<CrestApps.Core.ContactCenter.ContactCenterFeatureLifecycleOptions> options) { }
+        public string Capability { get; }
+        public System.Threading.Tasks.Task DrainAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task QuiesceAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskContactCenterProviderStateReconciler : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskProviderStateReconciler
+    {
+        public AsteriskContactCenterProviderStateReconciler(CrestApps.Core.ContactCenter.IProviderCallStateReconciler reconciler) { }
+        public System.Threading.Tasks.Task ReconcileAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskContactCenterVoiceMediaSession : CrestApps.Core.ContactCenter.IContactCenterVoiceMediaSession, System.IAsyncDisposable
+    {
+        public AsteriskContactCenterVoiceMediaSession(string sessionId, string providerCallId, System.Net.Sockets.UdpClient udpClient, System.Net.IPEndPoint asteriskMediaEndpoint, CrestApps.Core.ContactCenter.IContactCenterFeatureWorkLease workLease, System.Func<System.Threading.CancellationToken, System.Threading.Tasks.Task> stop) { }
+        public CrestApps.Core.ContactCenter.Models.ContactCenterVoiceMediaFormat IncomingFormat { get; }
+        public CrestApps.Core.ContactCenter.Models.ContactCenterVoiceMediaFormat OutgoingFormat { get; }
+        public string ProviderCallId { get; }
+        public string SessionId { get; }
+        public System.Threading.Tasks.ValueTask DisposeAsync() { }
+        [System.Runtime.CompilerServices.AsyncIteratorStateMachine(typeof(CrestApps.Core.Telephony.Asterisk.Services.AsteriskContactCenterVoiceMediaSession.<ReadIncomingAsync>d__26))]
+        public System.Collections.Generic.IAsyncEnumerable<CrestApps.Core.ContactCenter.Models.ContactCenterVoiceMediaFrame> ReadIncomingAsync([System.Runtime.CompilerServices.EnumeratorCancellation] System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task StopAsync(System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.ValueTask WriteOutgoingAsync(CrestApps.Core.ContactCenter.Models.ContactCenterVoiceMediaFrame frame, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class AsteriskHangupCauseMapper
+    {
+        public static CrestApps.Core.Telephony.Models.HangupCause FromCauseCode(int causeCode, bool wasAnswered) { }
+        public static CrestApps.Core.Telephony.Models.HangupCause Resolve(int? causeCode, string causeText, bool wasAnswered, bool answeringMachineDetected) { }
+    }
+    public sealed class AsteriskInboundReconciliationCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle, CrestApps.Core.Telephony.Asterisk.Services.IAsteriskInboundReconciliationCycle
+    {
+        public AsteriskInboundReconciliationCycle(System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.Asterisk.Services.IAsteriskProviderStateReconciler> reconcilers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Asterisk.Services.AsteriskInboundReconciliationCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskPendingCallerTerminationReconciler : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskProviderStateReconciler
+    {
+        public AsteriskPendingCallerTerminationReconciler(CrestApps.Core.Telephony.Asterisk.Services.IAsteriskPendingCallerTerminationRegistry registry, CrestApps.Core.Telephony.Asterisk.Services.IAsteriskChannelTenantBindingStore bindingStore, CrestApps.Core.Telephony.Asterisk.Services.IAsteriskAriClient ariClient, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Asterisk.Services.AsteriskPendingCallerTerminationReconciler> logger) { }
+        public System.Threading.Tasks.Task ReconcileAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskPjsipCredential
+    {
+        public AsteriskPjsipCredential() { }
+        public string AuthorizationUser { get; set; }
+        public string EndpointName { get; set; }
+        public System.DateTime ExpiresAtUtc { get; set; }
+        public string Password { get; set; }
+        public string SessionId { get; set; }
+        public string SipUri { get; set; }
+        public string TenantName { get; set; }
+    }
+    public sealed class AsteriskPjsipCredentialCleanupCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle, CrestApps.Core.Telephony.Asterisk.Services.IAsteriskPjsipCredentialCleanupCycle
+    {
+        public AsteriskPjsipCredentialCleanupCycle(CrestApps.Core.Telephony.Asterisk.Services.IAsteriskPjsipCredentialIssuer credentialIssuer, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Asterisk.Services.AsteriskPjsipCredentialCleanupCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskPjsipCredentialIssueRequest
+    {
+        public AsteriskPjsipCredentialIssueRequest() { }
+        public System.Collections.Generic.IReadOnlyList<string> Codecs { get; set; }
+        public System.TimeSpan ContactExpiration { get; set; }
+        public System.TimeSpan CredentialLifetime { get; set; }
+        public string DisplayName { get; set; }
+        public string InteractionId { get; set; }
+        public string SessionId { get; set; }
+        public string SipDomain { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AsteriskPjsipCredentialLeaseStore : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskPjsipCredentialLeaseStore
+    {
+        public AsteriskPjsipCredentialLeaseStore(YesSql.IStore store) { }
+        public System.Threading.Tasks.Task CreateAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease lease, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task DeleteAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease lease, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease> GetByAuthorizationUserAsync(string authorizationUser, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>> ListByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>> ListExpiredOrRevokedAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>> ListLiveBySessionAsync(string sessionId, System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>> ListLiveByUserAsync(string userId, System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task UpdateAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease lease, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskPjsipCredentialRecord
+    {
+        public AsteriskPjsipCredentialRecord() { }
+        public string AuthorizationUser { get; set; }
+        public string EndpointName { get; set; }
+        public System.DateTime ExpiresAtUtc { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime IssuedAtUtc { get; set; }
+        public string RevocationReason { get; set; }
+        public System.DateTime? RevokedAtUtc { get; set; }
+        public string SessionId { get; set; }
+        public string TenantName { get; set; }
+        public string UserId { get; set; }
+    }
+    public sealed class AsteriskPjsipRealtimeCredential
+    {
+        public AsteriskPjsipRealtimeCredential() { }
+        public string AuthorizationUser { get; set; }
+        public System.Collections.Generic.IReadOnlyList<string> Codecs { get; set; }
+        public System.TimeSpan ContactExpiration { get; set; }
+        public string DisplayName { get; set; }
+        public string EndpointName { get; set; }
+        public System.DateTime ExpiresAtUtc { get; set; }
+        public string Password { get; set; }
+        public string SessionId { get; set; }
+        public string TenantName { get; set; }
+    }
+    public static class AsteriskPjsipRealtimeTablePrefixValidator
+    {
+        public static string EnsureValid(string prefix) { }
+        public static bool IsValid(string prefix) { }
+    }
+    public sealed class AsteriskProviderIdentityProvider : CrestApps.Core.Telephony.IProviderIdentityProvider
+    {
+        public AsteriskProviderIdentityProvider() { }
+        public System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.Models.ProviderIdentity> GetIdentities() { }
+    }
+    public static class AsteriskRealtimeIngestionDrainer
+    {
+        public static System.Threading.Tasks.Task DrainAsync(System.Threading.Tasks.Task worker, System.Threading.Channels.ChannelReader<string> reader, System.Threading.CancellationTokenSource workerCancellation, System.TimeSpan progressWindow, System.TimeSpan maxDrainDuration, string providerName, Microsoft.Extensions.Logging.ILogger logger, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public enum AsteriskRealtimeIngestionWriteResult
+    {
+        Written = 0,
+        BackpressureTimedOut = 1,
+    }
+    public sealed class AsteriskRealtimeIngestionWriter
+    {
+        public AsteriskRealtimeIngestionWriter(System.Threading.Channels.ChannelWriter<string> writer, System.Threading.Channels.ChannelReader<string> reader, string providerName, System.TimeSpan backpressureTimeout, Microsoft.Extensions.Logging.ILogger logger) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Services.AsteriskRealtimeIngestionWriteResult> WriteAsync(string payload, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class AsteriskRealtimeVoiceEvent
+    {
+        public AsteriskRealtimeVoiceEvent() { }
+        public string CallId { get; set; }
+        public string CallerNumber { get; set; }
+        public string ChannelId { get; set; }
+        public string DialedNumber { get; set; }
+        public string EventType { get; set; }
+        public string FromAddress { get; set; }
+        public CrestApps.Core.Telephony.Models.HangupCause? HangupCause { get; set; }
+        public string IdempotencyKey { get; set; }
+        public string InteractionCorrelationId { get; set; }
+        public bool? IsConference { get; set; }
+        public bool IsInbound { get; set; }
+        public bool? IsMuted { get; set; }
+        public bool IsOnHold { get; set; }
+        public bool IsOwnedOrigination { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public System.DateTime? OccurredUtc { get; set; }
+        public string ParentChannelId { get; set; }
+        public int? ParticipantCount { get; set; }
+        public string ProviderName { get; set; }
+        public CrestApps.Core.Telephony.Models.CallState State { get; set; }
+        public string ToAddress { get; set; }
+    }
+    public sealed class AsteriskRealtimeVoiceEventDispatcher
+    {
+        public AsteriskRealtimeVoiceEventDispatcher(System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.Asterisk.Services.IAsteriskRealtimeVoiceEventBridge> voiceEventBridges, System.Collections.Generic.IEnumerable<CrestApps.Core.Telephony.Asterisk.Services.IAsteriskCallTeardownService> callTeardownServices, CrestApps.Core.Telephony.Services.INormalizedVoiceEventIngestor normalizedVoiceEventIngestor, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Asterisk.Services.AsteriskRealtimeVoiceEventDispatcher> logger) { }
+        public System.Threading.Tasks.Task HandleAsync(CrestApps.Core.Telephony.Asterisk.Services.AsteriskRealtimeVoiceEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class AsteriskRealtimeVoiceEventMapper
+    {
+        public static bool TryMap(string providerName, string payload, out CrestApps.Core.Telephony.Asterisk.Services.AsteriskRealtimeVoiceEvent voiceEvent) { }
+    }
+    public sealed class AsteriskRecordingIngestCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle, CrestApps.Core.Telephony.Asterisk.Services.IAsteriskRecordingIngestCycle
+    {
+        public AsteriskRecordingIngestCycle(CrestApps.Core.Telephony.Asterisk.Services.IAsteriskRecordingIngestService ingestService, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Telephony.Asterisk.Services.AsteriskRecordingIngestCycle> logger) { }
+        public System.Threading.Tasks.Task RunAsync(System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskRecordingIngestJobStore : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskRecordingIngestJobStore
+    {
+        public AsteriskRecordingIngestJobStore(YesSql.IStore store) { }
+        public System.Threading.Tasks.Task EnqueueAsync(string interactionId, string recordingName, string format, System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskRecordingIngestJob> GetByRecordingNameAsync(string recordingName, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskRecordingIngestJob>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task UpdateAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskRecordingIngestJob job, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class AsteriskResolvedSettings
+    {
+        public AsteriskResolvedSettings() { }
+        public string ApplicationName { get; set; }
+        public string BaseUrl { get; set; }
+        public string EndpointTemplate { get; set; }
+        public string IceTransportPolicy { get; set; }
+        public bool IsEnabled { get; set; }
+        public string OutboundCallerId { get; set; }
+        public string Password { get; set; }
+        public int PjsipContactExpirationSeconds { get; set; }
+        public int PjsipCredentialLifetimeMinutes { get; set; }
+        public string PjsipRealtimeConnectionString { get; set; }
+        public string PjsipRealtimeProviderInvariantName { get; set; }
+        public string PjsipRealtimeTablePrefix { get; set; }
+        public string ProviderName { get; set; }
+        public string SipDomain { get; set; }
+        public int TimeoutSeconds { get; set; }
+        public string TurnSharedSecret { get; set; }
+        public string TurnUrls { get; set; }
+        public string UserName { get; set; }
+        public string VoicemailContext { get; set; }
+        public string VoicemailExtensionTemplate { get; set; }
+        public int VoicemailPriority { get; set; }
+        public string WebRtcCodecs { get; set; }
+        public string WebSocketUrl { get; set; }
+    }
+    public static class AsteriskRtpPacketCodec
+    {
+        public static byte[] CreatePacket(System.ReadOnlySpan<byte> payload, ushort sequenceNumber, uint timestamp, uint synchronizationSource) { }
+        public static bool TryReadPayload(System.ReadOnlyMemory<byte> packet, out ushort sequenceNumber, out System.ReadOnlyMemory<byte> payload) { }
+    }
+    public static class AsteriskSettingsUtilities
+    {
+        public static void ApplyDefaults(CrestApps.Core.Telephony.Asterisk.Models.AsteriskConnectionSettings settings) { }
+        public static void ApplyDefaults(CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings settings) { }
+        public static string BuildHostDefaultApplicationName(string configuredApplicationName, string shellName) { }
+        public static System.Uri CreateEventsUri(CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings settings) { }
+        public static System.Uri CreateEventsUriForLogging(CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings settings) { }
+        public static bool HasRequiredConfiguration(CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings settings) { }
+        public static bool HasRequiredConfiguration(CrestApps.Core.Telephony.Asterisk.Models.AsteriskConnectionSettings settings, string password) { }
+        public static bool HasRequiredWebRtcConfiguration(CrestApps.Core.Telephony.Asterisk.Models.AsteriskConnectionSettings settings) { }
+        public static bool HasRequiredWebRtcConfiguration(CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings settings) { }
+        public static bool HasVoicemailConfiguration(CrestApps.Core.Telephony.Asterisk.Models.AsteriskConnectionSettings settings) { }
+        public static bool HasVoicemailConfiguration(CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings settings) { }
+        public static bool IsImmediateConnectionEndpoint(string endpoint) { }
+        public static string NormalizeBaseUrl(string baseUrl) { }
+        public static System.Collections.Generic.IReadOnlyList<string> ParseDelimitedValues(string value) { }
+        public static string ResolveEndpoint(string endpointTemplate, string destination) { }
+        public static string ToInvariantString(int value) { }
+        public static bool TryGetImmediateConnectionRoute(string endpoint, out string extension, out string context) { }
+    }
+    public sealed class AsteriskSoftPhoneCredentialRevoker : CrestApps.Core.Telephony.ISoftPhoneCredentialRevoker
+    {
+        public AsteriskSoftPhoneCredentialRevoker(CrestApps.Core.Telephony.Asterisk.Services.IAsteriskPjsipCredentialIssuer credentialIssuer) { }
+        public string ProviderName { get; }
+        public System.Threading.Tasks.Task<int> RevokeForUserAsync(string userId, string reason, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class AsteriskSupervisorEngagementLock
+    {
+        public static System.Threading.Tasks.Task<System.IDisposable> AcquireAsync(string engagementKey, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class AsteriskTelephonyProviderStateReconciler : CrestApps.Core.Telephony.Asterisk.Services.IAsteriskProviderStateReconciler
+    {
+        public AsteriskTelephonyProviderStateReconciler(CrestApps.Core.Telephony.ITelephonyInteractionSynchronizationService synchronizationService) { }
+        public System.Threading.Tasks.Task ReconcileAsync(string providerName, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public static class AsteriskTerminalVoiceEvents
+    {
+        public static bool IsChannelGone(string eventType) { }
+    }
+    public static class AsteriskVoiceResultMetadata
+    {
+        public const string AttendedTransferBridgeId = "attendedTransferBridgeId";
+        public const string AttendedTransferConsultChannelId = "attendedTransferConsultChannelId";
+        public const string ConferenceBridgeId = "conferenceBridgeId";
+        public const string ConferenceParticipantChannelId = "conferenceParticipantChannelId";
+        public const string MonitoringMode = "mode";
+        public const string SnoopChannelId = "snoopChannelId";
+        public const string SupervisorBridgeId = "supervisorBridgeId";
+        public const string SupervisorChannelId = "supervisorChannelId";
+        public const string TransferBridgeId = "transferBridgeId";
+        public const string TransferNewChannelId = "transferNewChannelId";
+    }
+    public sealed class DefaultAsteriskOptionsValidator : Microsoft.Extensions.Options.IValidateOptions<CrestApps.Core.Telephony.Asterisk.Models.DefaultAsteriskOptions>
+    {
+        public DefaultAsteriskOptionsValidator(Microsoft.Extensions.Hosting.IHostEnvironment hostEnvironment) { }
+        public Microsoft.Extensions.Options.ValidateOptionsResult Validate(string name, CrestApps.Core.Telephony.Asterisk.Models.DefaultAsteriskOptions options) { }
+    }
+    public interface IAsteriskAgentChannelReadyRegistration : System.IDisposable
+    {
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Services.AsteriskAgentChannelReadyOutcome> WaitAsync(System.TimeSpan timeout, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IAsteriskAgentChannelReadySignal
+    {
+        CrestApps.Core.Telephony.Asterisk.Services.IAsteriskAgentChannelReadyRegistration Register(string channelId);
+        void Signal(string channelId);
+    }
+    public interface IAsteriskAriApplicationGate
+    {
+        bool IsAvailable(CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings settings);
+        void ReleaseGeneration();
+        bool TryAcquire(CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings settings);
+    }
+    public interface IAsteriskAriApplicationOwnershipRegistry
+    {
+        bool IsOwnedByAnotherTenant(string baseUrl, string applicationName, string tenantName);
+        void Release(string ownershipToken);
+        bool TryClaim(string baseUrl, string applicationName, string tenantName, string ownershipToken);
+    }
+    public interface IAsteriskAriClient
+    {
+        System.Threading.Tasks.Task AddChannelToBridgeAsync(string bridgeId, string channelId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task AnswerAsync(string channelId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<bool> ChannelExistsAsync(string channelId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskAriBridge> CreateBridgeAsync(string bridgeId, string bridgeType, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task DeleteStoredRecordingAsync(string recordingName, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task DestroyBridgeAsync(string bridgeId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskAriStoredRecordingContent> DownloadStoredRecordingAsync(string recordingName, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task HangupAsync(string channelId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task HoldChannelAsync(string channelId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskAriChannel> OriginateAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskAriOriginateRequest request, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task PauseBridgeRecordingAsync(string recordingName, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task RemoveChannelFromBridgeAsync(string bridgeId, string channelId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskAriChannel> SnoopChannelAsync(string channelId, string spy, string whisper, string snoopId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskAriLiveRecording> StartBridgeRecordingAsync(string bridgeId, string recordingName, string format, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskAriStoredRecording> StopBridgeRecordingAsync(string recordingName, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task UnholdChannelAsync(string channelId, System.Threading.CancellationToken cancellationToken);
+        System.Threading.Tasks.Task UnpauseBridgeRecordingAsync(string recordingName, System.Threading.CancellationToken cancellationToken);
+    }
+    public interface IAsteriskCallTeardownService
+    {
+        System.Threading.Tasks.Task ReleaseAsync(CrestApps.Core.Telephony.Asterisk.Services.AsteriskRealtimeVoiceEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAsteriskChannelOwnershipGuard
+    {
+        System.Threading.Tasks.Task<bool> IsOwnedByCurrentTenantAsync(string channelId);
+    }
+    public interface IAsteriskChannelTenantBindingStore
+    {
+        System.Threading.Tasks.Task<bool> CreateAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelTenantBinding binding);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelTenantBinding>> FindAllByPeerChannelIdAsync(string peerChannelId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelTenantBinding> FindByChannelIdAsync(string channelId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.Core.Telephony.Asterisk.Models.AsteriskChannelTenantBinding>> GetAllAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> HasAnyAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> MarkCallerDetachedAsync(string channelId);
+        System.Threading.Tasks.Task<bool> MarkConnectedAsync(string channelId);
+        System.Threading.Tasks.Task<bool> PromoteParticipantToConnectedOwnerAsync(string participantChannelId, string previousAgentChannelId);
+        void ReleaseTerminationClaim(string channelId);
+        System.Threading.Tasks.Task RemoveByChannelIdAsync(string channelId);
+        System.Threading.Tasks.Task<bool> SwapConnectedOwnerAsync(string newAgentChannelId, string previousAgentChannelId);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Services.AsteriskChannelTeardownClaim> TryBeginTeardownAsync(string channelId);
+        System.Threading.Tasks.Task<bool> TryClaimChannelForTerminationAsync(string channelId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> TryClaimProvisionalLegForTeardownAsync(string channelId);
+        System.Threading.Tasks.Task<bool> TryHandOffBridgeOwnershipAsync(string bridgeId, string departingOwnerChannelId);
+        System.Threading.Tasks.Task<bool> TryPromoteJoiningToParticipatingAsync(string channelId);
+        System.Threading.Tasks.Task<bool> TryPromoteOfferingAsync(string channelId);
+    }
+    public interface IAsteriskInboundReconciliationCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle { }
+    public interface IAsteriskPendingCallerTerminationRegistry
+    {
+        void Enqueue(string channelId);
+        System.Collections.Generic.IReadOnlyCollection<string> GetPending();
+        bool HasTerminationClaim(string channelId);
+        void PlantTerminationClaim(string channelId);
+        void RemoveTerminationClaim(string channelId);
+        void Resolve(string channelId);
+    }
+    public interface IAsteriskPjsipCredentialCleanupCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle { }
+    public interface IAsteriskPjsipCredentialIssuer
+    {
+        System.Threading.Tasks.Task<int> CleanupExpiredAsync(System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Services.AsteriskPjsipCredential> IssueAsync(CrestApps.Core.Telephony.Asterisk.Services.AsteriskPjsipCredentialIssueRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RevokeAsync(string authorizationUser, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<int> RevokeUserAsync(string userId, string reason, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Services.AsteriskPjsipCredential> RotateAsync(CrestApps.Core.Telephony.Asterisk.Services.AsteriskPjsipCredentialIssueRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAsteriskPjsipCredentialLeaseStore
+    {
+        System.Threading.Tasks.Task CreateAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease lease, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task DeleteAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease lease, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease> GetByAuthorizationUserAsync(string authorizationUser, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>> ListByUserAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>> ListExpiredOrRevokedAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>> ListLiveBySessionAsync(string sessionId, System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease>> ListLiveByUserAsync(string userId, System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task UpdateAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskPjsipCredentialLease lease, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAsteriskPjsipDialogTerminator
+    {
+        System.Threading.Tasks.Task TerminateAsync(string authorizationUser, string reason, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAsteriskPjsipRealtimeCredentialStore
+    {
+        System.Threading.Tasks.Task DeleteAsync(string authorizationUser, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task UpsertAsync(CrestApps.Core.Telephony.Asterisk.Services.AsteriskPjsipRealtimeCredential credential, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAsteriskProviderStateReconciler
+    {
+        System.Threading.Tasks.Task ReconcileAsync(string providerName, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAsteriskRealtimeVoiceEventBridge
+    {
+        System.Threading.Tasks.Task<bool> TryHandleAsync(CrestApps.Core.Telephony.Asterisk.Services.AsteriskRealtimeVoiceEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAsteriskRealtimeVoiceListener
+    {
+        System.Threading.Tasks.Task StartAsync(System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Services.AsteriskResolvedSettings> listeners);
+        System.Threading.Tasks.Task StopAsync();
+    }
+    public interface IAsteriskRecordingIngestCycle : CrestApps.Core.Hosting.Background.IBackgroundCycle { }
+    public interface IAsteriskRecordingIngestJobStore
+    {
+        System.Threading.Tasks.Task EnqueueAsync(string interactionId, string recordingName, string format, System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.Core.Telephony.Asterisk.Models.AsteriskRecordingIngestJob> GetByRecordingNameAsync(string recordingName, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.Core.Telephony.Asterisk.Models.AsteriskRecordingIngestJob>> GetDueAsync(System.DateTime nowUtc, int maxCount, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task UpdateAsync(CrestApps.Core.Telephony.Asterisk.Models.AsteriskRecordingIngestJob job, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAsteriskRecordingIngestService
+    {
+        System.Threading.Tasks.Task<int> ProcessDueAsync(System.Threading.CancellationToken cancellationToken = default);
+    }
+    public sealed class LeadingByteStream : System.IO.Stream
+    {
+        public LeadingByteStream(byte leadingByte, System.IO.Stream inner) { }
+        public override bool CanRead { get; }
+        public override bool CanSeek { get; }
+        public override bool CanWrite { get; }
+        public override long Length { get; }
+        public override long Position { get; set; }
+        public override void Flush() { }
+        public override int Read(System.Span<byte> buffer) { }
+        public override int Read(byte[] buffer, int offset, int count) { }
+        public override System.Threading.Tasks.ValueTask<int> ReadAsync(System.Memory<byte> buffer, System.Threading.CancellationToken cancellationToken = default) { }
+        public override System.Threading.Tasks.Task<int> ReadAsync(byte[] buffer, int offset, int count, System.Threading.CancellationToken cancellationToken) { }
+        public override long Seek(long offset, System.IO.SeekOrigin origin) { }
+        public override void SetLength(long value) { }
+        public override void Write(byte[] buffer, int offset, int count) { }
+    }
+}
+namespace CrestApps.Core.Telephony.Asterisk.Telemetry
+{
+    public static class AsteriskDiagnostics
+    {
+        public const string MeterName = "CrestApps.OrchardCore.Asterisk";
+        public static void RecordRealtimeConnected(string providerName) { }
+        public static void RecordRealtimeIngestionSaturated(string providerName) { }
+        public static void RecordRealtimeReconnectAttempted(string providerName) { }
+    }
+}

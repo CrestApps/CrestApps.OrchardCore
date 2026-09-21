@@ -1,4 +1,4 @@
-using CrestApps.OrchardCore.Asterisk.Indexes;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.Asterisk.Migrations;
 using YesSql;
 using YesSql.Provider.Sqlite;

@@ -292,7 +292,7 @@ Provider operation results carry a metadata dictionary. It is tempting to declar
 The rule the codebase enforces is:
 
 - **Shared contracts** hold keys the platform itself supplies or consumes. `ContactCenterConstants.TransferMetadata.AgentUserId`, `ConferenceMetadata.AgentUserId`, and `AttendedTransferMetadata.AgentUserId` are shared because the platform passes them *into* every provider. `RecordingMetadata.ProviderRecordingId` and `RecordingMetadata.RecordingUrl` are shared because neutral recording and governance code reads them back out.
-- **Provider-private keys** live in your own module. The Asterisk adapter keeps its channel, snoop, and bridge identifiers in `AsteriskVoiceResultMetadata`, an `internal` class inside `CrestApps.OrchardCore.Asterisk`. Nothing outside that module can reference them, which is exactly right: nothing outside that module knows what they mean.
+- **Provider-private keys** live in your own module. The Asterisk adapter keeps its channel, snoop, and bridge identifiers in `AsteriskVoiceResultMetadata`, a class inside the provider's own `CrestApps.Core.Telephony.Asterisk` package. Nothing outside that module can reference them, which is exactly right: nothing outside that module knows what they mean.
 
 Provider-neutral projects must also avoid vendor vocabulary in the names they declare. Use platform words for platform concepts — a call session's joined media is `MediaTopologyId`, not a vendor's word for its own grouping primitive. Prose in comments and docs may still name a provider as a concrete example; it is the declared identifiers and metadata key literals that must stay neutral. `ProviderNeutralContractArchitectureTests` fails the build when either rule is broken.
 

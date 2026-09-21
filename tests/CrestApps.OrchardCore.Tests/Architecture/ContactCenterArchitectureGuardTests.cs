@@ -56,7 +56,7 @@ public sealed class ContactCenterArchitectureGuardTests
             "Global Orchard permission-template cache; it does not hold tenant data."),
         new ArchitectureAllowlistEntry(
             StaticMutableStateRule,
-            "src/Modules/CrestApps.OrchardCore.Asterisk/Services/AsteriskAriApplicationOwnershipRegistry.cs",
+            "src/Core/Transitions/CrestApps.Core.Telephony.Asterisk/Services/AsteriskAriApplicationOwnershipRegistry.cs",
             "_ownership",
             "Process-wide ARI (BaseUrl, ApplicationName) to owning-tenant guard on a single node; prevents cross-tenant Stasis event delivery and holds no tenant data."),
     ];

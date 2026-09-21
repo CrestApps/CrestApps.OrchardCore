@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 using CrestApps.OrchardCore.Asterisk.Services;
 using Microsoft.Extensions.DependencyInjection;
+using CrestApps.Core.Telephony.Asterisk.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

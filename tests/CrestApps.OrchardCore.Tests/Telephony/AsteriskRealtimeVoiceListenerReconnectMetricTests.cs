@@ -1,13 +1,14 @@
 using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Sockets;
-using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.Asterisk.Telemetry;
+using CrestApps.Core.Telephony.Asterisk.Telemetry;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.Environment.Shell;
+using CrestApps.Core.Telephony.Asterisk.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

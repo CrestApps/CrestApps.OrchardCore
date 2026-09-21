@@ -1,8 +1,9 @@
 using System.Diagnostics.Metrics;
 using System.Threading.Channels;
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.Asterisk.Telemetry;
+using CrestApps.Core.Telephony.Asterisk.Telemetry;
 using Microsoft.Extensions.Logging.Abstractions;
+using CrestApps.Core.Telephony.Asterisk.Services;
 
 namespace CrestApps.OrchardCore.Tests.Telephony;
 

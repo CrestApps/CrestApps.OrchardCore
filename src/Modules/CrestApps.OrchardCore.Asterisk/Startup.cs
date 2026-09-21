@@ -2,13 +2,11 @@ using CrestApps.Core.ContactCenter;
 using CrestApps.Core.Hosting.Background;
 using CrestApps.OrchardCore.Asterisk.BackgroundTasks;
 using CrestApps.OrchardCore.Asterisk.Drivers;
-using CrestApps.OrchardCore.Asterisk.Indexes;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Indexes;
 using CrestApps.OrchardCore.Asterisk.Migrations;
-using CrestApps.OrchardCore.Asterisk.Models;
+using CrestApps.Core.Telephony.Asterisk.Models;
 using CrestApps.OrchardCore.Asterisk.Services;
-using CrestApps.OrchardCore.Configuration;
 using CrestApps.OrchardCore.ContactCenter;
-using CrestApps.OrchardCore.Core;
 using CrestApps.Core.Diagnostics;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.Extensions.Compliance.Redaction;
@@ -26,6 +24,11 @@ using OrchardCore.Modules;
 using Polly;
 using CrestApps.Core.Telephony;
 using CrestApps.Core.Telephony.Extensions;
+using CrestApps.OrchardCore.Configuration;
+using CrestApps.OrchardCore.Core;
+using CrestApps.Core.Telephony.Asterisk;
+using CrestApps.Core.Telephony.Asterisk.Services;
+using CrestApps.Core.Telephony.Asterisk.Data.YesSql.Migrations;
 
 namespace CrestApps.OrchardCore.Asterisk;
 
@@ -47,7 +50,7 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddContactCenterCapability(AsteriskConstants.Feature.Area, AsteriskConstants.ProviderTechnicalName);
+        services.AddContactCenterCapability(AsteriskFeatures.Area, AsteriskConstants.ProviderTechnicalName);
 
         services.AddCoreHostSeams();
 
@@ -135,6 +138,10 @@ public sealed class Startup : StartupBase
 
         services.AddIndexProvider<AsteriskPjsipCredentialLeaseIndexProvider>();
         services.AddDataMigration<AsteriskPjsipCredentialLeaseMigrations>();
+
+        // Registered on the base feature, which every other Asterisk feature depends on, so a tenant that
+        // enables any of them rewrites the type names its documents were written under exactly once.
+        services.AddDataMigration<AsteriskLegacyDocumentTypeNameMigrations>();
 
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
 
