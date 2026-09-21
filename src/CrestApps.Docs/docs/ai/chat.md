@@ -331,6 +331,8 @@ Each override is optional and independent: an unset field always falls back to t
 
 The **Visitor Identity** section controls how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage. Anonymous visitors receive a stable first-party cookie during page load so repeat visits are recognized as the same visitor instead of a new one for each chat session.
 
+That identity is also what a visitor's chat history is listed by: an anonymous visitor sees the sessions their own cookie owns, exactly as a signed-in user sees theirs. A visitor whose cookie has not been issued yet, or whose browser refuses it, has no history to list.
+
 | Setting | Default | Description |
 | --- | --- | --- |
 | Visitor cookie name | `crestapps-ai-visitor` | Stable first-party cookie used to identify anonymous visitors across chat sessions. |

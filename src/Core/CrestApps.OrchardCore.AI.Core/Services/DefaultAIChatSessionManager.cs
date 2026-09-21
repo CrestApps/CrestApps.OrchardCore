@@ -115,13 +115,25 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     }
 
     /// <summary>
-    /// Returns a paginated list of chat sessions belonging to the current authenticated user.
+    /// Returns a paginated list of chat sessions belonging to the caller: the signed-in user, or the
+    /// anonymous visitor identified by <see cref="IAIVisitorIdentityResolver"/>.
     /// </summary>
     /// <param name="page">The one-based page number.</param>
     /// <param name="pageSize">The number of sessions per page.</param>
     /// <param name="context">The query context containing optional filters such as profile ID and name.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <returns>An <see cref="AIChatSessionResult"/> containing the total count and the requested page of sessions.</returns>
+    /// <remarks>
+    /// An anonymous visitor owns sessions through <see cref="AIChatSession.ClientId"/>, which
+    /// <see cref="FindAsync"/> already honours when one is opened by id. This method used to answer an
+    /// empty list instead, so a chat that serves anonymous visitors -- an embedded widget, most of all --
+    /// showed them no history at all even though their own sessions were right there.
+    /// <para>
+    /// <see cref="AIChatSessionIndex"/> carries no client column, so the query narrows on the columns it
+    /// does carry and the owner is matched on the loaded documents. The method already lists and pages in
+    /// memory, so this adds a filter rather than a second pass over the data.
+    /// </para>
+    /// </remarks>
     public async Task<AIChatSessionResult> PageAsync(
         int page,
         int pageSize,
@@ -131,8 +143,12 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         ArgumentNullException.ThrowIfNull(context);
 
         var user = _httpContextAccessor.HttpContext?.User;
+        var isAuthenticated = user?.Identity?.IsAuthenticated == true;
+        var visitorId = isAuthenticated
+            ? null
+            : _visitorIdentityResolver.Resolve().VisitorId;
 
-        if (user?.Identity?.IsAuthenticated is null || user.Identity.IsAuthenticated == false)
+        if (!isAuthenticated && string.IsNullOrWhiteSpace(visitorId))
         {
             return new AIChatSessionResult
             {
@@ -141,9 +157,20 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
             };
         }
 
-        var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        IQuery<AIChatSession, AIChatSessionIndex> query;
 
-        var query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId, collection: _yesSqlStoreOptions.AICollectionName);
+        if (isAuthenticated)
+        {
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == userId, collection: _yesSqlStoreOptions.AICollectionName);
+        }
+        else
+        {
+            // A session owned by a visitor never carries a user, so this leaves out every signed-in
+            // visitor's sessions before the client is matched below.
+            query = _session.Query<AIChatSession, AIChatSessionIndex>(i => i.UserId == null, collection: _yesSqlStoreOptions.AICollectionName);
+        }
 
         if (!string.IsNullOrEmpty(context.ProfileId))
         {
@@ -152,6 +179,11 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 
         var sessions = (await query.ListAsync(cancellationToken))
             .Where(session => session.ProfileId is not null);
+
+        if (!isAuthenticated)
+        {
+            sessions = sessions.Where(session => string.Equals(session.ClientId, visitorId, StringComparison.Ordinal));
+        }
 
         if (!string.IsNullOrEmpty(context.Name))
         {
