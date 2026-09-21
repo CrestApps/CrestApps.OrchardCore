@@ -63,6 +63,18 @@ public class EditElasticsearchAIDataSourceViewModel
     public string CertificateFingerprint { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the globally configured connection should be used
+    /// instead of connection settings stored on this data source.
+    /// </summary>
+    public bool UseDefaultConnection { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a connection is configured globally.
+    /// </summary>
+    [BindNever]
+    public bool HasDefaultConnection { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether a password is already stored.
     /// </summary>
     [BindNever]

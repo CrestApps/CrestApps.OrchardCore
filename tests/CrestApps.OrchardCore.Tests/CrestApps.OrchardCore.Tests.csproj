@@ -38,6 +38,7 @@
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources/CrestApps.OrchardCore.AI.DataSources.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources.AzureAI/CrestApps.OrchardCore.AI.DataSources.AzureAI.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources.Elasticsearch/CrestApps.OrchardCore.AI.DataSources.Elasticsearch.csproj" />
+    <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.DataSources.PostgreSQL/CrestApps.OrchardCore.AI.DataSources.PostgreSQL.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.FileSources/CrestApps.OrchardCore.AI.FileSources.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.WebCrawlers/CrestApps.OrchardCore.AI.WebCrawlers.csproj" />
     <ProjectReference Include="../../src/Modules/CrestApps.OrchardCore.AI.Documents/CrestApps.OrchardCore.AI.Documents.csproj" />
