@@ -1,8 +1,14 @@
 # Phase 1 progress
 
-What has actually landed on `ma/contact-center-framework-extraction`, and the decisions that were
-made while landing it that the plan did not anticipate. The plan in
-[05](05-phase-1-transition.md) says what Phase 1 intends; this file says what it did.
+**Branch:** `ma/contact-center-framework-extraction`, branched from `main`. Every Phase 0 and Phase 1
+commit referenced in this file is on that branch and nowhere else; nothing has merged to `main` yet, and
+the whole of Phase 1 is meant to land as one reviewable branch. The one piece of this work that lives
+outside it is the store-neutral concurrency exception, which belongs to the `CrestApps.Core` repository
+(see "The concurrency exception is settled, in the other repository" below).
+
+What has actually landed on that branch, and the decisions that were made while landing it that the plan
+did not anticipate. The plan in [05](05-phase-1-transition.md) says what Phase 1 intends; this file says
+what it did.
 
 Every entry below passed the same gate before it was committed: the Release build with
 `TreatWarningsAsErrors=true`, the main suite, the framework suite, the feature-activation suite, and
@@ -26,6 +32,28 @@ a reviewed diff of every approval baseline that moved.
 | W4.1 (second half) | `d42653e3` | The eleven Omnichannel contracts that name no content type and no persistence. |
 | W4.2 (first half) | `1f791056` | The nine Omnichannel services that name no content type, into `CrestApps.Core.Omnichannel`. |
 | W5.1 | `6f86b698` | The Contact Center contracts: 102 files into `CrestApps.Core.ContactCenter.Abstractions`. |
+| (bookkeeping) | `84ec31e0` | Records the commit the Contact Center contracts landed in. |
+| (review pass) | `217e7da6` | Brings the extracted projects in line with the Core repository. |
+| W4.1 (CRM) | `3cdf444e` | The customer-record contracts. |
+| W4.2 | `c57217a8` | The activity's subject stops being a content item. |
+| W4.3 | `92e11c3e` | The activity contracts, and the rewrite migration that was missing. |
+| W4.4 | `fbacc06a` | The omnichannel indexes and their schema into the store package. |
+| W4.6 | `d3cab2fc`, `cd5a19e6` | The automated voice primitive, then the SMS primitive. |
+| W5.1a | `f2847584` | The Contact Center models, and a rewrite that was missing every row. |
+| W5.1b | `c5de0fce` | The Contact Center services, and four gates that had stopped looking. |
+| W5.1c | `a974e103` | The Contact Center migrations, and the gates that read a folder. |
+| W5.1d | `2621b5ba` | The hub, the health checks, and a dead `using` worth thirteen files. |
+| W5.2 | `4b2462a9` | A Contact Center builder, and a measurement of what cannot be on it yet. |
+| W5.2a | `f11a001a`, `89ba11ca` | Eleven services stop taking a YesSql session; deduplication reads through its store. |
+| W5.2b | `91bc2fa6` | D-4 was smaller than it looked, and twenty-one imports were stale. |
+| W5.2c | `316e4514` | Records the concurrency decision and what it unblocks. |
+| W5.2d | `4cf0b008` | Fixes a rewrite that skipped five of the eight types it claimed. |
+| Phase 0 closeout | `a818a47b` | The Phase 0 items nothing was blocking. |
+| S14 | `e248c305` | The startup-check seam three workstreams were waiting on. |
+
+The table had stopped at W5.1 while twenty commits landed behind it. Several of those commits are
+described in the prose below and were simply never given a row; W4.6 was neither. W5.2e through W5.2k
+have no commit and have not been started.
 
 ## Decisions the plan did not make
 
@@ -595,6 +623,123 @@ Two decisions worth recording:
   knowledge, and the check takes two properties.
 
 The guard earning its keep on a first attempt is the argument for having it.
+
+## W8.1: the Asterisk provider (in flight)
+
+Ninety-one `.cs` files moved from `src/Modules/CrestApps.OrchardCore.Asterisk` into
+`src/Core/Transitions/CrestApps.Core.Telephony.Asterisk`, leaving thirty-seven in the module: the manifest,
+the startup, the settings display driver and its view model, the views, the three Orchard `DataMigration`
+wrappers, the three `IBackgroundTask` wrappers, and the services that still name an Orchard type. The
+package has no `OrchardCore.*` reference.
+
+Two deviations from the plan text in [05](05-phase-1-transition.md), both deliberate:
+
+- **`AsteriskSettings` moved**, although the plan lists it among the files that stay. It is a plain settings
+  record; what makes it an Orchard site document is the display driver and the registration, and both of
+  those stayed.
+- **`AsteriskRealtimeVoiceTenantEvents` has not been converted onto S14** and is still a
+  `ModularTenantEvents`. The seam it was waiting on landed in `e248c305`, so this is unblocked work that is
+  simply not done yet. It is the one W8.1 item still open.
+
+### A namespace sweep rewrote four string literals that are identifiers (W8.1)
+
+The bulk namespace rewrite that moved the files also edited quoted strings, and four of them were stable
+identifiers rather than type names:
+
+| Constant | Was | Sweep made it |
+| --- | --- | --- |
+| `AsteriskConstants.Feature.Area` | `CrestApps.OrchardCore.Asterisk` | `CrestApps.Core.Telephony.Asterisk` |
+| `ContactCenterVoiceWorkPartition` | `CrestApps.OrchardCore.Asterisk.ContactCenterVoice` | `CrestApps.Core.Telephony.Asterisk.ContactCenterVoice` |
+| `ContactCenterMediaWorkPartition` | `CrestApps.OrchardCore.Asterisk.ContactCenterMedia` | `CrestApps.Core.Telephony.Asterisk.ContactCenterMedia` |
+| `AsteriskDiagnostics.MeterName` | `CrestApps.OrchardCore.Asterisk` | `CrestApps.Core.Telephony.Asterisk` |
+
+The first is the Orchard feature id. Renaming it does not rename a feature: it makes the feature every
+existing tenant has enabled disappear, and it makes the shipped `contact-center-asterisk-ga-core` recipe
+enable a feature id that no longer exists, which Orchard skips in silence. There is no fallback to the module id
+either: OrchardCore documents that when an assembly declares at least one `[assembly: Feature]`, the module
+default feature is ignored and only the declared features exist. The module declares exactly one, so the
+old id would simply have stopped existing rather than surviving as a default.
+
+The two partition keys carry an XML comment two lines above them saying the value is "intentionally kept
+equal to the former feature identifier so partitioned leases and provider-command recovery survive the
+upgrade". The sweep broke exactly the invariant the comment names. The meter name carries a comment saying
+it must not change without a documented migration.
+
+All four are restored, and the comments now also say why the value does not follow the namespace of the
+package it sits in. The feature id itself did not simply revert: it follows the W3.1 precedent and moved to
+the host as `AsteriskFeatures.Area` in `src/Modules/CrestApps.OrchardCore.Asterisk`, modelled on
+`TelephonyFeatures`, so there is no longer a feature id inside a framework package for a sweep to reach.
+
+**Why nothing caught it at the source.** `TransitionsNameNoHostTests` strips string literals before looking
+for the host name, deliberately, because data-protection purposes and feature ids must keep their exact text
+(see "The no-host gate ignores string literals (W0)"). That is the right call, and it means this class of
+damage has to be caught another way. What caught it was the feature-activation suite refusing to find the
+feature. The check that exists for it now is cheap: compare every `const string` whose value contains
+`CrestApps` between `main` and the branch, and look at anything whose value changed. Run against the whole
+branch it reports three names, all of them new constants rather than rewrites, so the committed workstreams
+are clean and only W8 was affected.
+
+### The document type names needed a rewrite migration, and did not have one (W8.1)
+
+Appendix B.2 requires one per move. `AsteriskChannelTenantBinding`, `AsteriskPjsipCredentialLease` and
+`AsteriskRecordingIngestJob` are YesSql documents saved through the ambient session, so their recorded
+`Document.Type` still named `CrestApps.OrchardCore.Asterisk.Models.*, CrestApps.OrchardCore.Asterisk` and
+none of them would have resolved after the move: an inbound call already in flight would not find the tenant
+that owns it, a registered soft phone would lose the credential it authenticated with, and a recording
+waiting to be fetched would never be ingested.
+
+`AsteriskLegacyDocumentTypeNameMigrations` now does it, derived from the telephony one and registered on the
+base feature so that a tenant enabling any Asterisk feature rewrites exactly once.
+`AsteriskLegacyDocumentTypeNameRewriteSqlTests` seeds both stored shapes into SQLite and runs the migration
+predicate itself, which is the form these tests take since W5.2d.
+
+### Three internal helpers became public, and the package ships no friend declaration (W8.1)
+
+The move first kept the three `internal static` helpers alive with an `AssemblyInfo.cs` granting
+`InternalsVisibleTo` to `CrestApps.OrchardCore.Tests`. That is the pattern W5.1c already ruled out for the
+migrations: a friend declaration does not survive the move to a package, and it writes the name of the host
+into the metadata of the shipped assembly, where the no-host gate cannot see it because the gate strips
+string literals. `AsteriskHangupCauseMapper`, `AsteriskRtpPacketCodec` and `AsteriskTerminalVoiceEvents` are
+public now and the `AssemblyInfo.cs` is gone. No Transitions project carries a friend declaration.
+
+`AsteriskVoiceResultMetadata` became public for a different reason: the four consumers that read its keys
+stayed in the module, so it is now read across an assembly boundary. Its keys are therefore no longer
+compiler-private to the provider, and the architecture gate below is what keeps them provider-private.
+
+### Gates that stopped looking, again (W8.1)
+
+The same failure mode as W5.1b and W5.1c, and worth stating as a rule: **a gate with a hardcoded root list
+does not fail when code moves out from under it, it passes over less code.** Every check of the form "the
+roots I scan exist" still passed, because the module directory still exists with thirty-seven files in it.
+
+The trap specific to this workstream is that `CrestApps.Core.Telephony.Asterisk` is a **sibling** of
+`CrestApps.Core.Telephony`, not a child, so root lists that had already grown a `CrestApps.Core.Telephony`
+entry during W3 did not pick the provider package up by prefix.
+
+| Gate | What it stopped covering |
+| --- | --- |
+| `ContactCenterOperationalLogPrivacyTests` | Eight moved files, fifteen logger call sites. The moved code complies, so the gate passed while enforcing nothing there. It now also names the Dialpad and Telnyx packages, which had the same gap waiting for them. |
+| `AggregateLifecycleArchitectureTests` | Ninety-one of one hundred twenty-eight Asterisk files. |
+| `ContactCenterWorkStateAuthorityTests` | The same, across both of its parallel lists. |
+| `CallTopologyAuthorityTests` | The same. |
+| `ProviderNeutralContractArchitectureTests` | It defined the owning provider as one folder. It now takes two roots, because a provider spans a module and a package. |
+| `ContactCenterArchitectureGuardTests` | An allowlist entry pointing at a path that no longer exists, so the exemption had become unreachable. |
+| `ContactCenterOptionsValidationTests` | `typeof(DefaultAsteriskOptions)` resolved into the package, which has no `StartupBase`, so every Asterisk option silently stopped being governed. |
+
+**Still open, and bigger than W8.**
+`CallTopologyAuthorityTests.EveryProjectThatCanSeeTheCallSession_IsScannedByTheAuthorityGate` is the
+meta-gate whose stated job is to force that root list to stay complete. It discovers projects at
+`src/<group>/<project>/*.csproj`, exactly two levels under `src`. Every Transitions project lives at
+`src/Core/Transitions/<project>`, three levels down, so **no Transitions project has ever been evaluated by
+it**. Making the discovery recurse is a two-line change, but it will then name several framework projects
+that can reach `CallSession` and have never been in the list, so it is a backlog to triage rather than a fix
+to land inside W8. Recorded here so it is not rediscovered a third time.
+
+### What W8 still owes
+
+- W8.1: convert `AsteriskRealtimeVoiceTenantEvents` onto the S14 seam.
+- W8.2: Dialpad. Forty files, untouched; its framework project is still empty.
+- W8.3: the Asterisk tests, deferred to W12 with the rest, following the W3.9 precedent.
 
 ## Guards that had to be repointed (W3.2)
 

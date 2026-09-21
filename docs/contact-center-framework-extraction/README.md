@@ -1,6 +1,13 @@
 # Contact Center Suite extraction plan
 
-**Status:** proposal, written 2026-09-05. **Owner:** Mike Alhayek. **Executor:** an AI coding agent working workstream by workstream, with a manual review gate between phases.
+**Status:** in progress. Written 2026-09-05 as a proposal; Phase 0 and Phase 1 are being executed now.
+**Branch:** all Phase 0 and Phase 1 work lands on `ma/contact-center-framework-extraction`, off `main`.
+**Owner:** Mike Alhayek. **Executor:** an AI coding agent working workstream by workstream, with a manual
+review gate between phases.
+
+What has actually landed, and the decisions taken while landing it, are in
+[phase-0-progress.md](phase-0-progress.md) and [phase-1-progress.md](phase-1-progress.md). This file stays
+the plan.
 
 ## Goal
 
