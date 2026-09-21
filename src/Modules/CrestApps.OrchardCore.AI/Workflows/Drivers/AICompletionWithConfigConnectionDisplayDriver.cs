@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Orchestration;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -58,10 +59,8 @@ public sealed class AICompletionWithConfigConnectionDisplayDriver : DisplayDrive
                     .ToArray();
             }
 
-            model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat));
-            model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility));
+            model.ChatDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Chat);
+            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
         }).Location("Content:2#Content;1");
     }
 
@@ -82,29 +81,4 @@ public sealed class AICompletionWithConfigConnectionDisplayDriver : DisplayDrive
         return Edit(activity, context);
     }
 
-    private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
-    {
-        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
-
-        return deployments
-            .OrderBy(d => d.ConnectionName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(d =>
-            {
-                var groupKey = d.ConnectionName;
-                SelectListGroup group = null;
-
-                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
-                {
-                    group = new SelectListGroup { Name = groupKey };
-                    groups[groupKey] = group;
-                }
-
-                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                    ? d.Name
-                    : $"{d.Name} ({d.ModelName})";
-
-                return new SelectListItem(label, d.Name) { Group = group };
-            });
-    }
 }

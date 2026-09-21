@@ -175,7 +175,7 @@ Enable one of the following provider modules to get started:
 - `CrestApps.OrchardCore.AI.DataSources.AzureAI`
 - `CrestApps.OrchardCore.AI.DataSources.PostgreSQL`
 
-Or enable the **[Web Crawlers](web-crawlers.md)** module (`CrestApps.OrchardCore.AI.DataSources.WebCrawlers`) to scrape public websites into a **Web** data source.
+Or enable the **[Web Crawlers](web-crawlers.md)** module (`CrestApps.OrchardCore.AI.WebCrawlers`) to scrape public websites into a **Web** data source.
 
 ## Keeping the AI KB index in sync
 

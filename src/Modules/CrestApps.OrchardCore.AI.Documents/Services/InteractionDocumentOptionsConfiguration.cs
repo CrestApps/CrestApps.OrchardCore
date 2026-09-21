@@ -31,5 +31,11 @@ internal sealed class InteractionDocumentOptionsConfiguration : IConfigureOption
         options.RetrievalMode = settings.RetrievalMode;
         options.AllowDocumentUploads = settings.AllowDocumentUploads;
         options.AllowImageUploads = settings.AllowImageUploads;
+
+        // Anything not copied here is dead: the settings screen saves and reloads it, while the processing
+        // service reads the options type and keeps seeing its compiled-in default. A parity test guards the
+        // two types against the next setting arriving the same way.
+        options.MaxIndexableCharacters = settings.MaxIndexableCharacters;
+        options.DescribeFiguresInUploads = settings.DescribeFiguresInUploads;
     }
 }

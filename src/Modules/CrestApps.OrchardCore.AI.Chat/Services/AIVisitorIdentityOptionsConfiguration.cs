@@ -27,6 +27,8 @@ internal sealed class AIVisitorIdentityOptionsConfiguration : IConfigureOptions<
 
         options.CookieName = settings.CookieName;
         options.CookieLifetime = settings.CookieLifetime;
+        options.AllowCrossSiteEmbedding = settings.AllowCrossSiteEmbedding;
+        options.UsePartitionedCookie = settings.UsePartitionedCookie;
         options.RemoteAddressMode = settings.RemoteAddressMode;
         options.RemoteAddressHashSalt = settings.RemoteAddressHashSalt;
     }

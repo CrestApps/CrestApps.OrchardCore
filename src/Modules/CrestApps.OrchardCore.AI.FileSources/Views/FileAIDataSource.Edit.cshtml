@@ -1,0 +1,16 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIDataSource>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="alert alert-info mb-0" role="alert">
+            <h5 class="alert-heading">@T["File data source"]</h5>
+            <p class="mb-1">@T["This data source has no connection settings of its own. It is a target bucket that aggregates every enabled file source pointing at it."]</p>
+            <p class="mb-0">
+                @T["After you save, configure the folders and file servers to read under <strong>Artificial Intelligence &gt; File Sources</strong>. Each file is stored as separate typed pieces -- its text, figures, charts and tables -- so a search can return a chart on its own."]
+            </p>
+        </div>
+    </div>
+</div>

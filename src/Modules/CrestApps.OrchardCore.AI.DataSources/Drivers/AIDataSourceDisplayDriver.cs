@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -17,6 +18,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
 {
     private readonly IIndexProfileStore _indexProfileStore;
     private readonly IndexingOptions _indexingOptions;
+    private readonly AIDataSourceFieldMappingOptions _fieldMappingOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -29,10 +31,12 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
     public AIDataSourceDisplayDriver(
         IIndexProfileStore indexProfileStore,
         IOptions<IndexingOptions> indexingOptions,
+        IOptions<AIDataSourceFieldMappingOptions> fieldMappingOptions,
         IStringLocalizer<AIDataSourceDisplayDriver> stringLocalizer)
     {
         _indexProfileStore = indexProfileStore;
         _indexingOptions = indexingOptions.Value;
+        _fieldMappingOptions = fieldMappingOptions.Value;
         S = stringLocalizer;
     }
 
@@ -73,7 +77,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
             context.Updater.ModelState.AddModelError(Prefix, nameof(sharedModel.AIKnowledgeBaseIndexProfileName), S["The destination index is required."]);
         }
 
-        var requiresFieldMapping = AIDataSourceDriverHelper.RequiresFieldMapping(AIDataSourceDriverHelper.GetSourceType(dataSource));
+        var requiresFieldMapping = _fieldMappingOptions.IsRequired(AIDataSourceDriverHelper.GetSourceType(dataSource));
 
         if (requiresFieldMapping && string.IsNullOrWhiteSpace(sharedModel.ContentFieldName))
         {
@@ -160,7 +164,7 @@ internal sealed class AIDataSourceDisplayDriver : DisplayDriver<AIDataSource>
         model.TitleFieldName = dataSource.TitleFieldName;
         model.ContentFieldName = dataSource.ContentFieldName;
         model.IsConfigurationLocked = isConfigurationLocked;
-        model.ShowFieldMapping = AIDataSourceDriverHelper.RequiresFieldMapping(sourceType);
+        model.ShowFieldMapping = _fieldMappingOptions.IsRequired(sourceType);
 
         var allIndexes = await _indexProfileStore.GetAllAsync();
         var knowledgeBaseIndexes = allIndexes

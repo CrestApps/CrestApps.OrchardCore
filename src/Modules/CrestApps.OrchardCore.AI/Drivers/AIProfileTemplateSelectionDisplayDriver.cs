@@ -2,6 +2,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.ViewModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.DisplayManagement.Handlers;
 
@@ -12,14 +13,19 @@ namespace CrestApps.OrchardCore.AI.Drivers;
 internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly IAIProfileTemplateManager _templateManager;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileTemplateSelectionDisplayDriver"/> class.
     /// </summary>
     /// <param name="templateManager">The template manager.</param>
-    public AIProfileTemplateSelectionDisplayDriver(IAIProfileTemplateManager templateManager)
+    /// <param name="httpContextAccessor">The http context accessor.</param>
+    public AIProfileTemplateSelectionDisplayDriver(
+        IAIProfileTemplateManager templateManager,
+        IHttpContextAccessor httpContextAccessor)
     {
         _templateManager = templateManager;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
@@ -31,6 +37,12 @@ internal sealed class AIProfileTemplateSelectionDisplayDriver : DisplayDriver<AI
 
         return Initialize<AIProfileTemplateSelectionViewModel>("AIProfileTemplateSelection_Edit", async model =>
         {
+            // Applying a template reloads the page with ?templateId=, and the reloaded select has to come
+            // back with that template chosen. Without it the select renders on its empty option, the POST
+            // carries no template, and the document-clone path that reads this value off the form never
+            // runs -- so a profile built from a template arrives with none of the template's files.
+            model.TemplateId = _httpContextAccessor.HttpContext?.Request?.Query["templateId"].ToString();
+
             var templates = await _templateManager.GetAsync(AITemplateSources.Profile);
 
             var groups = new Dictionary<string, SelectListGroup>();
