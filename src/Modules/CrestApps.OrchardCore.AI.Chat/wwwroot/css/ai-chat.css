@@ -63,6 +63,32 @@
     line-height: 0;
 }
 
+/* A markdown table is rendered with the host framework's table classes, which do the bulk of the
+   styling. These rules only add what those classes leave out, and are scoped to the message list
+   rather than to a wrapper element, because a table is emitted as a direct child of the message. */
+.ai-chat-messages table {
+    margin: 0.75rem 0;
+    font-size: 0.9em;
+}
+
+.ai-chat-messages table th,
+.ai-chat-messages table td {
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+/* A right-aligned column in the source markdown is almost always numeric, so the alignment the author
+   asked for is honored rather than flattened to the default. */
+.ai-chat-messages table th[align="right"],
+.ai-chat-messages table td[align="right"] {
+    text-align: right;
+}
+
+.ai-chat-messages table th[align="center"],
+.ai-chat-messages table td[align="center"] {
+    text-align: center;
+}
+
 .ai-chat-messages .ai-chat-citation-list {
     margin: 0.75rem 0 0;
     padding-left: 1.25rem;
@@ -407,6 +433,71 @@
 .ai-chat-notification-error .ai-chat-notification-icon,
 .ai-chat-notification-connection-lost .ai-chat-notification-icon {
     color: var(--bs-danger, #dc3545);
+}
+
+/* ── Embedded and generated images ── */
+/* The renderer writes an inline max-width in pixels, which bounds a picture across but not down: an
+   ingested page scan stays inside that width and still runs thousands of pixels tall, pushing the rest
+   of the conversation off screen. A pixel width also overflows any panel narrower than it. Both axes are
+   capped relative to the container instead, so a picture is bounded whatever its proportions and
+   wherever it is shown. !important is needed because the width it overrides is written inline. */
+.generated-image-container {
+    /* The wrapper is a span so a figure marker written mid-sentence does not close the paragraph it
+       sits in. Inline-block restores the box behaviour the layout below assumes, and a top margin
+       keeps a figure off the line of text it follows. */
+    display: inline-block;
+    vertical-align: top;
+    margin-top: 0.5rem;
+}
+
+.generated-image-container img {
+    max-width: 100% !important;
+    max-height: 60vh;
+    height: auto;
+    object-fit: contain;
+}
+
+/* ── Tables ── */
+/* Scoped to .ai-chat-message-item rather than the message body, because the surfaces disagree on
+   the body: the shared script renders .ai-chat-message-body while the MVC chat-interaction page
+   renders a bare .lh-base. The item wrapper is the one element all of them share. */
+/* A markdown table arrives as a bare <table> with no classes, so by default it has no rules, no padding
+   and a width that shrinks to its content -- an ingested table renders as run-together text. The width
+   trio is the responsive-table idiom rather than a plain width: max-content lets a wide table keep its
+   columns legible, min-width fills the message when it is narrow, and max-width with overflow-x means a
+   table wider than the panel scrolls itself instead of stretching the conversation sideways. Colours come
+   from Bootstrap's variables so the table follows the host's theme, with literal fallbacks for a host that
+   does not define them. */
+.ai-chat-message-item table {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+}
+
+.ai-chat-message-item table th,
+.ai-chat-message-item table td {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    text-align: left;
+    vertical-align: top;
+}
+
+.ai-chat-message-item table thead th {
+    background-color: var(--bs-secondary-bg, #e9ecef);
+    font-weight: 600;
+    border-bottom: 2px solid var(--bs-border-color, #dee2e6);
+    white-space: nowrap;
+}
+
+/* Banding earns its place on an ingested table, which is often twenty-odd rows of similar-looking numbers
+   where losing your place costs the reader the row. */
+.ai-chat-message-item table tbody tr:nth-child(even) {
+    background-color: var(--bs-tertiary-bg, #f8f9fa);
 }
 
 /*# sourceMappingURL=ai-chat.css.map */

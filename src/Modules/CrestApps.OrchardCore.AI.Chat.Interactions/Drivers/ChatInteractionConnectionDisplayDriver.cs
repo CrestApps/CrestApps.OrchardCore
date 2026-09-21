@@ -1,8 +1,9 @@
 ﻿using CrestApps.Core;
-using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -58,7 +59,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
             model.UtilityDeploymentName = interaction.UtilityDeploymentName;
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
-            model.ChatDeployments = BuildGroupedDeploymentItems(chatDeployments);
+            model.ChatDeployments = chatDeployments.ToSelectList();
             // Vision is the imageInput capability, which is opt-in: a genuinely vision-capable model declares
             // it rather than being inferred from a flag nobody remembered to tick.
             model.DeploymentVisionSupport = chatDeployments
@@ -67,8 +68,7 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
             model.DefaultChatDeploymentSupportsVision = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat) is { } defaultChatDeployment
                 && SupportsVision(defaultChatDeployment);
 
-            model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility));
+            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
         }
 
         return Combine(
@@ -99,30 +99,4 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         => deployment.TryGet<AIDeploymentMetadata>(out var metadata) &&
             metadata.SupportsFeature(AIDeploymentFeatureNames.ImageInput);
 
-    private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
-    {
-        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
-
-        return deployments
-            .OrderBy(d => d.ConnectionName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(d =>
-            {
-                var groupKey = d.ConnectionName;
-                SelectListGroup group = null;
-
-                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
-                {
-                    group = new SelectListGroup { Name = groupKey };
-
-                    groups[groupKey] = group;
-                }
-
-                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                ? d.Name
-                : $"{d.Name} ({d.ModelName})";
-
-                return new SelectListItem(label, d.Name) { Group = group };
-            });
-    }
 }

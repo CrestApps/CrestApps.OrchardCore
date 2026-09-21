@@ -52,26 +52,13 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
             model.DefaultTextToSpeechDeploymentName = await NormalizeDeploymentSelectorAsync(settings.DefaultTextToSpeechDeploymentName);
             model.DefaultTextToSpeechVoiceId = settings.DefaultTextToSpeechVoiceId;
 
-            var chatModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat);
-            model.ChatDeployments = BuildGroupedDeploymentItems(chatModels);
-
-            var utilities = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility);
-            model.UtilityDeployments = BuildGroupedDeploymentItems(utilities);
-
-            var embeddingModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Embedding);
-            model.EmbeddingDeployments = BuildGroupedDeploymentItems(embeddingModels);
-
-            var imageModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Image);
-            model.ImageDeployments = BuildGroupedDeploymentItems(imageModels);
-
-            var visionModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Vision);
-            model.VisionDeployments = BuildGroupedDeploymentItems(visionModels);
-
-            var speechToTextModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.SpeechToText);
-            model.SpeechToTextDeployments = BuildGroupedDeploymentItems(speechToTextModels);
-
-            var textToSpeechModels = await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.TextToSpeech);
-            model.TextToSpeechDeployments = BuildGroupedDeploymentItems(textToSpeechModels);
+            model.ChatDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Chat);
+            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
+            model.EmbeddingDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Embedding);
+            model.ImageDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Image);
+            model.VisionDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Vision);
+            model.SpeechToTextDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.SpeechToText);
+            model.TextToSpeechDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.TextToSpeech);
         }).Location("Content:2%Default Deployments;1")
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
@@ -98,34 +85,6 @@ public sealed class DefaultAIDeploymentSettingsDisplayDriver : SiteDisplayDriver
         settings.DefaultTextToSpeechVoiceId = model.DefaultTextToSpeechVoiceId?.Trim();
 
         return Edit(site, settings, context);
-    }
-
-    private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
-    {
-        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
-
-        return deployments
-            .OrderBy(d => d.ConnectionName ?? string.Empty, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(d =>
-            {
-                SelectListGroup group = null;
-
-                var groupKey = d.ConnectionName;
-
-                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
-                {
-                    group = new SelectListGroup { Name = groupKey };
-
-                    groups[groupKey] = group;
-                }
-
-                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                    ? d.Name
-                    : $"{d.Name} ({d.ModelName})";
-
-                return new SelectListItem(label, d.Name) { Group = group };
-            });
     }
 
     private async Task<string> NormalizeDeploymentSelectorAsync(string selector)

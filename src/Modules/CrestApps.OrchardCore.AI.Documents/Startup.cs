@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Documents;
 using CrestApps.Core.AI.Documents.Endpoints;
 using CrestApps.Core.AI.Documents.Models;
+using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Services;
@@ -70,7 +71,13 @@ public sealed class Startup : StartupBase
 
     public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
     {
-        routes.AddDownloadAIDocumentEndpoint();
+        routes
+            .AddDownloadAIDocumentEndpoint()
+            // An answer that mentions a figure writes [fig:N], which the chat surfaces expand into an
+            // image pointing here. The endpoint looks the figure up on the document rather than trusting
+            // the id in the address, and applies the same rule the document download applies -- whoever
+            // may manage the owning interaction, session or profile may see its figures.
+            .AddDownloadAIDocumentFigureEndpoint();
     }
 }
 
@@ -83,6 +90,9 @@ public sealed class ChatInteractionDocumentsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddDisplayDriver<ChatInteraction, ChatInteractionDocumentsDisplayDriver>();
+
+        // The interaction editor saves through the SignalR hub rather than a form POST, so the two
+        // indexable-character ceiling needs a settings handler to reach the interaction's metadata.
 
         // Add Indexing Services.
         services.AddScoped<ICatalogEntryHandler<ChatInteraction>, ChatInteractionIndexingHandler>()
