@@ -9,14 +9,6 @@
 <form method="post" enctype="multipart/form-data" class="no-multisubmit">
     @Html.ValidationSummary()
 
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <div class="alert alert-warning mb-0" role="alert">
-                @T["After creating a data source, the source index, knowledge base index, and field mappings can't be changed."]
-            </div>
-        </div>
-    </div>
-
     @await DisplayAsync(Model.Editor)
 
     <div class="ocat-wrapper">

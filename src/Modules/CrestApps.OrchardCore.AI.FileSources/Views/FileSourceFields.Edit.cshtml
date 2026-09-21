@@ -79,19 +79,31 @@
 <div class="ocat-wrapper">
     <label asp-for="VisionDeploymentName" class="ocat-label">@T["Vision deployment"]</label>
     <div class="ocat-end">
-        <select asp-for="VisionDeploymentName" asp-items="Model.Deployments" class="form-select">
+        <select asp-for="VisionDeploymentName" asp-items="Model.VisionDeployments" class="form-select">
             <option value="">@T["Use the deployment in the Vision slot"]</option>
         </select>
-        <span class="hint">@T["The deployment that describes figures. A deployment that cannot read a picture is not a cheaper choice, it is a setting that describes nothing."]</span>
+        @if (!Model.HasVisionDeployments)
+        {
+            <div class="alert alert-warning mt-2 mb-0">
+                @T["No deployment can describe a figure. Add a deployment with the Image input (vision) capability, or figures are left undescribed whatever is chosen here."]
+            </div>
+        }
+        <span class="hint">@T["The deployment that describes figures. Only deployments that can read a picture are listed: a deployment that cannot is not a cheaper choice, it is a setting that describes nothing."]</span>
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="UtilityDeploymentName" class="ocat-label">@T["Utility deployment"]</label>
     <div class="ocat-end">
-        <select asp-for="UtilityDeploymentName" asp-items="Model.Deployments" class="form-select">
+        <select asp-for="UtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
             <option value="">@T["Use the deployment in the Utility slot"]</option>
         </select>
+        @if (!Model.HasUtilityDeployments)
+        {
+            <div class="alert alert-warning mt-2 mb-0">
+                @T["No deployment can fill the Utility slot. Add one before relying on the short prompts ingestion runs."]
+            </div>
+        }
         <span class="hint">@T["The deployment that answers the short prompts ingestion runs, such as reading a document's front matter."]</span>
     </div>
 </div>

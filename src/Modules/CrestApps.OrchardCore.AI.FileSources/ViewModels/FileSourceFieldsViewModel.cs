@@ -73,10 +73,28 @@ public class FileSourceFieldsViewModel
     public bool HasDataSources { get; set; }
 
     /// <summary>
-    /// Gets or sets the deployments that can be chosen for the vision and utility roles.
+    /// Gets or sets the deployments that can fill the Vision slot, the only ones able to describe a figure.
     /// </summary>
     [BindNever]
-    public IEnumerable<SelectListItem> Deployments { get; set; } = [];
+    public IEnumerable<SelectListItem> VisionDeployments { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the deployments that can fill the Utility slot.
+    /// </summary>
+    [BindNever]
+    public IEnumerable<SelectListItem> UtilityDeployments { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets whether any deployment can fill the Vision slot.
+    /// </summary>
+    [BindNever]
+    public bool HasVisionDeployments { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether any deployment can fill the Utility slot.
+    /// </summary>
+    [BindNever]
+    public bool HasUtilityDeployments { get; set; }
 
     /// <summary>
     /// Gets or sets the figure modes.

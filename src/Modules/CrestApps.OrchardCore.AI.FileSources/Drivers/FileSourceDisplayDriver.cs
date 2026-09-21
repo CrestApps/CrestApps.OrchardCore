@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Ingestion;
 using CrestApps.Core.AI.FileSources;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.FileSources.Services;
 using CrestApps.OrchardCore.AI.FileSources.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -26,7 +27,7 @@ namespace CrestApps.OrchardCore.AI.FileSources.Drivers;
 internal sealed class FileSourceDisplayDriver : DisplayDriver<FileSource>
 {
     private readonly IAIDataSourceStore _dataSourceStore;
-    private readonly IAIDeploymentStore _deploymentStore;
+    private readonly IAIDeploymentManager _deploymentManager;
 
     internal readonly IStringLocalizer S;
 
@@ -34,15 +35,15 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<FileSource>
     /// Initializes a new instance of the <see cref="FileSourceDisplayDriver"/> class.
     /// </summary>
     /// <param name="dataSourceStore">The AI data source store.</param>
-    /// <param name="deploymentStore">The AI deployment store.</param>
+    /// <param name="deploymentManager">The AI deployment manager.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public FileSourceDisplayDriver(
         IAIDataSourceStore dataSourceStore,
-        IAIDeploymentStore deploymentStore,
+        IAIDeploymentManager deploymentManager,
         IStringLocalizer<FileSourceDisplayDriver> stringLocalizer)
     {
         _dataSourceStore = dataSourceStore;
-        _deploymentStore = deploymentStore;
+        _deploymentManager = deploymentManager;
         S = stringLocalizer;
     }
 
@@ -82,10 +83,14 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<FileSource>
 
             model.HasDataSources = model.DataSources.Any();
 
-            model.Deployments = (await _deploymentStore.GetAllAsync())
-                .OrderBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(deployment => new SelectListItem(deployment.Name, deployment.Name))
-                .ToArray();
+            // Each menu is filtered to the slot its role needs. Offering every deployment let a model
+            // that cannot read a picture be chosen as the one that describes figures, which is not a
+            // cheaper setting -- it is one that describes nothing.
+            model.VisionDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Vision);
+            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
+
+            model.HasVisionDeployments = model.VisionDeployments.Any();
+            model.HasUtilityDeployments = model.UtilityDeployments.Any();
 
             model.FigureModes =
             [
