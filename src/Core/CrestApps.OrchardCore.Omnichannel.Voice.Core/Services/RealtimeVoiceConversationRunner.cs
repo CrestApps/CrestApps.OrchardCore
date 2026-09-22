@@ -43,8 +43,14 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private const int AssistantSilenceHoldoffMilliseconds = 200;
 
     /// <summary>
-    /// When the assistant last wrote audio, so the bed can stay out of its way.
+    /// When the assistant's audio will have finished playing to the caller, so the bed can stay out of its way and
+    /// the closing watchdog waits for the goodbye to be heard.
     /// </summary>
+    /// <remarks>
+    /// In the future for as long as speech is still queued on the line. The model speaks faster than real time, so
+    /// the moment audio arrives is not the moment the caller hears the end of it: see
+    /// <see cref="ExtendAssistantPlayback(int)"/>.
+    /// </remarks>
     private long _lastAssistantAudioTicks;
 
     /// <summary>
@@ -477,6 +483,32 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             // A prompt that cannot be sent must not take the call down with it.
             _logger.LogWarning(ex, "Could not ask whether the caller is still there during a realtime voice session.");
         }
+    }
+
+    /// <summary>
+    /// Pushes the end of the assistant's playback out by the length of audio just written to the line.
+    /// </summary>
+    /// <remarks>
+    /// The clock used to be stamped with the time each piece of audio arrived. The model delivers speech faster than
+    /// it plays -- a seven-second goodbye arrived in under three -- so "the assistant has gone quiet" was measured
+    /// from seconds before the caller had heard the last of it, and the call was hung up on its final words. Heard
+    /// live. Audio queues on the line and plays in order, so each piece ends one duration after whichever is later:
+    /// now, or the end of what is already queued.
+    /// </remarks>
+    /// <param name="pcmByteCount">The length of the audio, in bytes of 16-bit PCM at the realtime rate.</param>
+    private void ExtendAssistantPlayback(int pcmByteCount)
+    {
+        var duration = pcmByteCount * TimeSpan.TicksPerSecond / (RealtimeAudioConverter.RealtimeSampleRate * 2L);
+        var now = DateTime.UtcNow.Ticks;
+        long queuedUntil;
+        long playsUntil;
+
+        do
+        {
+            queuedUntil = Interlocked.Read(ref _lastAssistantAudioTicks);
+            playsUntil = Math.Max(queuedUntil, now) + duration;
+        }
+        while (Interlocked.CompareExchange(ref _lastAssistantAudioTicks, playsUntil, queuedUntil) != queuedUntil);
     }
 
     private async Task CloseWhenConversationEndsAsync(CancellationTokenSource callScope, CancellationToken endCallRequested)

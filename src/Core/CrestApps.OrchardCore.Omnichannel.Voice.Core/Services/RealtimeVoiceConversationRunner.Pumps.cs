@@ -168,8 +168,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                         {
                             // Stamped for two readers: the bed pump, which must stay quiet while the assistant is
                             // talking or the room doubles, and the closing watchdog, which waits for the goodbye
-                            // to actually finish before it hangs up.
-                            Interlocked.Exchange(ref _lastAssistantAudioTicks, DateTime.UtcNow.Ticks);
+                            // to actually finish before it hangs up. Both mean "finished playing", not "arrived".
+                            ExtendAssistantPlayback(speech.Length);
                         }
 
                         if (ambience is not null && !speech.IsEmpty)

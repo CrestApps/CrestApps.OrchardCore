@@ -374,6 +374,49 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task TheGoodbyeIsNotCutOff_WhileItIsStillPlaying_ThoughItArrivedFasterThanItPlays()
+    {
+        // Arrange
+        // The model delivers speech far faster than it plays: on a live call a seven-second goodbye arrived in
+        // under three seconds, the end-call tool fired, and the line was closed four seconds after the last audio
+        // *arrived* -- with the final second of the goodbye still queued, unheard. The test above streams audio
+        // slower than it plays, so it could never see this. Here the whole closing line lands at once.
+        const int ClosingLineSeconds = 6;
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        // Act
+        var run = harness.RunAsync();
+        var spokenAt = DateTime.UtcNow;
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantAudioDelta,
+
+            // Sixteen-bit PCM at the realtime rate: two bytes per sample.
+            Audio = new byte[RealtimeAudioConverter.RealtimeSampleRate * 2 * ClosingLineSeconds],
+        });
+
+        // The goodbye has been handed over in full before the tool call lands, as it was on the live call.
+        await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+        await endCall.CancelAsync();
+
+        // Assert
+        // Still up while the goodbye is playing: nothing may close the line before the caller has heard it out.
+        var stillPlayingUntil = spokenAt.AddSeconds(ClosingLineSeconds - 1) - DateTime.UtcNow;
+        await Task.Delay(stillPlayingUntil, TestContext.Current.CancellationToken);
+        Assert.False(run.IsCompleted, "The call was closed while the goodbye was still playing to the caller.");
+
+        // And it still ends once the goodbye and the caller's moment after it are over.
+        var completed = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        Assert.Same(run, completed);
+        await run;
+    }
+
+    [Fact]
     public async Task TheAssistantOpensTheCall_EvenOnASessionThatAnswersByItself()
     {
         // Arrange
