@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.AI;
@@ -22,6 +23,11 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// </summary>
 public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 {
+    private static readonly PropertyInfo[] _copiedSessionProperties = typeof(AIChatSession)
+        .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+        .Where(property => property.CanRead && property.CanWrite && property.GetIndexParameters().Length == 0)
+        .ToArray();
+
     private readonly IClock _clock;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIVisitorIdentityResolver _visitorIdentityResolver;
@@ -273,15 +279,36 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     }
 
     /// <summary>
-    /// Persists the specified chat session to the data store.
+    /// Persists the specified chat session, updating the stored document with the same session id if one exists.
     /// </summary>
     /// <param name="chatSession">The chat session to save.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
-    public Task SaveAsync(AIChatSession chatSession, CancellationToken cancellationToken = default)
+    /// <remarks>
+    /// Voice mode re-saves one instance after each commit; without this lookup YesSql inserts a duplicate.
+    /// </remarks>
+    public async Task SaveAsync(AIChatSession chatSession, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(chatSession);
 
-        return _session.SaveAsync(chatSession, collection: _yesSqlStoreOptions.AICollectionName, cancellationToken: cancellationToken);
+        AIChatSession storedSession = null;
+
+        if (!string.IsNullOrEmpty(chatSession.SessionId))
+        {
+            storedSession = await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == chatSession.SessionId, collection: _yesSqlStoreOptions.AICollectionName).FirstOrDefaultAsync(cancellationToken);
+        }
+
+        if (storedSession is not null && !ReferenceEquals(storedSession, chatSession))
+        {
+            // Copy all properties so new AIChatSession fields are never dropped.
+            foreach (var property in _copiedSessionProperties)
+            {
+                property.SetValue(storedSession, property.GetValue(chatSession));
+            }
+
+            chatSession = storedSession;
+        }
+
+        await _session.SaveAsync(chatSession, collection: _yesSqlStoreOptions.AICollectionName, cancellationToken: cancellationToken);
     }
 
     /// <summary>
