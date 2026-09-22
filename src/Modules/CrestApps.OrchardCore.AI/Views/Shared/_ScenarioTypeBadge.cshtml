@@ -1,0 +1,18 @@
+@using CrestApps.Core.AI.Models
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model ProfileScenarioCardViewModel
+
+@if (Model.ProfileType.HasValue)
+{
+    var label = Model.ProfileType.Value switch
+    {
+        AIProfileType.Chat => T["Chat"],
+        AIProfileType.Utility => T["Utility"],
+        AIProfileType.TemplatePrompt => T["Template prompt"],
+        AIProfileType.Agent => T["Agent"],
+        _ => T[Model.ProfileType.Value.ToString()],
+    };
+
+    <span class="badge rounded-pill bg-body-secondary text-body-emphasis border fw-normal" title="@T["Profile type"]">@label</span>
+}

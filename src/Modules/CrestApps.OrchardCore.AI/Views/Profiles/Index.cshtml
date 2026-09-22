@@ -1,5 +1,6 @@
 @using CrestApps.Core.AI.Models
 @using CrestApps.Core.Models
+@using CrestApps.OrchardCore.AI.ViewModels
 @using CrestApps.OrchardCore.Core.Models
 @using Microsoft.AspNetCore.Mvc.Localization
 @using OrchardCore.DisplayManagement
@@ -29,7 +30,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" asp-action="Create">@T["Add Profile"]</a>
+                    <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#newProfileModal">@T["Add Profile"]</button>
                 </div>
             </div>
         </div>
@@ -90,10 +91,21 @@
                 </li>
             }
         }
-        else
+        else if (!string.IsNullOrEmpty(Model.Options?.Search))
         {
             <li class="list-group-item list-group-item-info text-center ignore-elements">
-                @T["<strong>Nothing here!</strong> There are no profiles at the moment."]
+                @T["No profiles match your search."]
+            </li>
+        }
+        else
+        {
+            <li class="list-group-item text-center py-5 ignore-elements">
+                <div class="mb-3 text-primary" aria-hidden="true">
+                    <i class="fa-solid fa-wand-magic-sparkles fa-2x"></i>
+                </div>
+                <h2 class="h5">@T["Create your first profile"]</h2>
+                <p class="text-body-secondary mb-3">@T["A profile is an AI assistant or task with its own instructions. Pick what you want to build and it is set up for you."]</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newProfileModal">@T["Choose a starting point"]</button>
             </li>
         }
     </ul>
@@ -103,5 +115,7 @@
     </div>
 
 </form>
+
+@await Html.PartialAsync("_NewProfileModal", ViewData[ProfileScenarioPickerViewModel.ViewDataKey] as ProfileScenarioPickerViewModel ?? new ProfileScenarioPickerViewModel())
 
 <script asp-name="list-management-ui" at="Foot"></script>

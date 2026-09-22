@@ -22,7 +22,7 @@ The screencast below creates a chat-type AI profile on the `gpt-4.1-mini` deploy
 
 The **AI Chat** feature adds profile-driven chat capabilities to **AI Services**. Once enabled, any chat-type AI profile with the **Show On Admin Menu** option appears under **Artificial Intelligence** in the admin menu.
 
-AI profiles are source-agnostic in the admin UI. When you click **Add Profile**, Orchard Core opens the profile editor directly, and the selected chat and utility deployments determine which client and model are used.
+AI profiles are source-agnostic in the admin UI. When you click **Add Profile**, Orchard Core offers a **New AI Profile** picker: choose **Blank profile** to open the profile editor directly, or a starting point to create the profile from a template (see [Creating a profile from a starting point](profile-templates#creating-a-profile-from-a-starting-point)). Either way, the selected chat and utility deployments determine which client and model are used.
 
 ### AI Profile and Template Editor Layout
 

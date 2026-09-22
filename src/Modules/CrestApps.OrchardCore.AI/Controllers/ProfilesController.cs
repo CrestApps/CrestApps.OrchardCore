@@ -2,6 +2,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Services;
+using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -120,6 +121,15 @@ public sealed class ProfilesController : Controller
         [
             new SelectListItem(S["Delete"], nameof(CatalogEntryAction.Remove)),
         ];
+
+        // "Add Profile" opens the "New AI profile" picker over this list. The catalog is internal to this
+        // module, so it is resolved here rather than injected into this public controller.
+        var scenarioCatalog = HttpContext.RequestServices.GetRequiredService<ProfileScenarioCatalog>();
+
+        ViewData[ProfileScenarioPickerViewModel.ViewDataKey] = new ProfileScenarioPickerViewModel
+        {
+            Scenarios = await scenarioCatalog.GetPickerScenariosAsync(),
+        };
 
         return View(viewModel);
     }
