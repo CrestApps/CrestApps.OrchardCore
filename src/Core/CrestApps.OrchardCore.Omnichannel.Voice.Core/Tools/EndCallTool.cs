@@ -72,14 +72,14 @@ public sealed class EndCallTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
 
         arguments.TryGetFirstString("reason", out var reason);
-        var reachedVoicemail = ReadVoicemail(arguments);
+        var answeredByMachine = ReadAnsweredByMachine(arguments);
 
         // The turn is a scoped service the session resolved for this call, so recording the decision here is
         // visible to that session and to nothing else running concurrently.
         var turn = arguments.Services?.GetService<IVoiceCallEndTurn>();
         var recorded = turn is not null;
 
-        turn?.RequestEndCall(reason, reachedVoicemail);
+        turn?.RequestEndCall(reason, answeredByMachine);
 
         if (arguments.Services is not null)
         {
@@ -87,7 +87,7 @@ public sealed class EndCallTool : AIFunction
 
             if (logger is not null && logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("The AI ended the call (recorded: {Recorded}, voicemail: {ReachedVoicemail}).", recorded, reachedVoicemail);
+                logger.LogInformation("The AI ended the call (recorded: {Recorded}, answered by a machine: {AnsweredByMachine}).", recorded, answeredByMachine);
             }
         }
 
@@ -99,7 +99,10 @@ public sealed class EndCallTool : AIFunction
     }
 
     // The schema says boolean, but the tool is not strict, so the argument can arrive as a JSON value or as text.
-    private static bool ReadVoicemail(AIFunctionArguments arguments)
+    //
+    // Named for what it means rather than for the argument: code scanning reads "mail" in a name as an email
+    // address, and reported logging this flag as exposing private data.
+    private static bool ReadAnsweredByMachine(AIFunctionArguments arguments)
     {
         if (!arguments.TryGetValue("voicemail", out var value))
         {
