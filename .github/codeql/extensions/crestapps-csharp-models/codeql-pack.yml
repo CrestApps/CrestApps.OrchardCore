@@ -1,0 +1,9 @@
+# Models the analysis cannot infer from the code itself. Code scanning picks up every model pack under
+# .github/codeql/extensions automatically, in default and advanced setup alike.
+name: crestapps/csharp-models
+version: 0.0.1
+library: true
+extensionTargets:
+  codeql/csharp-all: "*"
+dataExtensions:
+  - models/**/*.yml
