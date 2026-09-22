@@ -37,6 +37,13 @@ defect crossed a seam, the test has to cross it too.
 | Contact preferences | `Modules/Omnichannel/Managements/DefaultSubjectActionExecutorTests` | A disposition that sets do-not-call actually writes the contact, and publishes it, because the lists that decide who gets dialled query published contacts |
 | Call outcome | `VoiceCallConclusionPolicyTests` | Dispositions come from the subject's own actions; a disposition the model invented is refused; a silent call is never given an invented summary; an escalated call is left for the agent |
 | Voicemail access | `VoicemailMediaEndpointTests` | An agent can play and delete a voicemail addressed by the soft phone's own row id, and cannot reach one belonging to somebody else |
+| Permission to make contact | `Modules/Telephony/OutboundCallScreeningTests`, `Modules/ContactCenter/ManualCallScreenerTests` | The question is asked immediately before the call goes out, not when the batch was loaded: a denial never reaches the provider, the first refusal wins, and a screener that cannot answer — an unreachable registry, a number it cannot canonicalize — refuses rather than allows |
+| The same question on every path | `AutomatedActivitiesProcessorBackgroundTaskTests`, `Modules/Omnichannel/Sms/SmsOmnichannelProcessorTests`, `SmsReEngagementBackgroundTaskTests` | Somebody who opted out after their activity was created is neither called nor messaged — held separately at each of the three paths that used to skip the question: the automated voice call, the SMS processor that is the last code before the carrier, and the cadence that would otherwise nudge them on a schedule for days |
+| Who a batch admits | `Managements/Services/DefaultContactActivityBatchLoaderTests` | The per-channel "include do-not-calls" flags decide what they claim to: unticked excludes the people who asked to be left alone, on manual sheets as well as automated ones, and ticking one is an operator overriding that on purpose |
+| Business hours on a nudge | `SmsReEngagementBackgroundTaskTests` | The cadence is judged in the contact's time zone rather than against the server clock, and a calendar it cannot evaluate closes the window rather than opening it |
+| The SMS outcome | `Modules/Omnichannel/Sms/SmsConclusionDispositionTests` | A conversation with no disposition chosen is never handed to the executor that rejects it, so it cannot be left open with no outcome, no notes and no follow-up |
+| The voice outcome, wired up | `Modules/Omnichannel/Voice/VoiceCallConclusionWiringTests` | End to end rather than by policy alone: the chosen outcome reaches the subject's actions, an invented one does not, a silent call gets the policy's note, and a customer's email is written back only where the activity allows it |
+| What a bulk action says it will touch | `Managements/Handlers/BulkManageActivityFilterHandlerSqlTests` | The count shown before a bulk complete or purge is the real one — every filter value is bound rather than inlined, the do-not-call flag is compared as a boolean so PostgreSQL does not refuse the query outright, and a contact behind several index rows is counted once |
 
 ## Proven on a live call
 
@@ -62,6 +69,15 @@ defect crossed a seam, the test has to cross it too.
   the contact's Do Not Call preference was applied in memory and never saved, so the customer stayed dialable.
   That is fixed and unit-tested; what is still owed is one live call showing the disposition and the account flag
   land together, and the contact then missing from the next inventory load.
+
+  The scope of that call has since grown. The preference is now asked for again immediately before each contact
+  rather than only when the batch was loaded, and three paths that never asked at all — the SMS processor, the
+  re-engagement cadence and the automated voice call — now go through the same screening an agent's call does.
+  Each of those is held by tests, and none has been watched refuse a real person. The single most useful live
+  call is therefore the one that opts out and then waits: the disposition and the flag land together, the next
+  inventory load no longer contains them, and a cadence step that was already due for them passes in silence.
+  Note that there are three channels to prove, not four — the chat opt-out was withdrawn, because there is no
+  chat channel on this platform and the preference was read by nothing.
 - **Answering-machine detection.** Nothing tells a call whether a person or a machine picked up. A call that
   reaches voicemail is answered by the assistant introducing itself to the recording, and it will keep talking to
   it. Seen live; the assistant behaved sensibly on what it could hear, which is the point — it is the platform
