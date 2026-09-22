@@ -90,7 +90,7 @@ internal static class TwilioWebhookEndpoint
         {
             // Log the Twilio MessageSid (the correlation key used throughout the flow) and the length, never the raw
             // phone numbers or body content, so the trace carries no customer PII.
-            logger.LogInformation("Inbound Twilio SMS received. MessageSid: {MessageSid}, Length: {Length}.", messageSid, body?.Length ?? 0);
+            logger.LogInformation("Inbound Twilio SMS received. MessageSid: {MessageSid}, Length: {Length}.", messageSid.SanitizeLogValue(), body?.Length ?? 0);
         }
 
         var omnichannelMessage = new OmnichannelMessage
@@ -140,7 +140,7 @@ internal static class TwilioWebhookEndpoint
             // customer's exchange can be followed end to end even when many conversations are interleaved in the log.
             using var logScope = scopedLogger.BeginScope(new Dictionary<string, object>
             {
-                ["MessageSid"] = messageSid,
+                ["MessageSid"] = messageSid.SanitizeLogValue(),
                 ["Channel"] = channel,
             });
 
@@ -168,7 +168,7 @@ internal static class TwilioWebhookEndpoint
             }
             catch (Exception ex)
             {
-                scopedLogger.LogError(ex, "Failed to process inbound SMS event {MessageSid} in the background.", messageSid);
+                scopedLogger.LogError(ex, "Failed to process inbound SMS event {MessageSid} in the background.", messageSid.SanitizeLogValue());
             }
         });
 

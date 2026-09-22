@@ -52,7 +52,7 @@ internal static class DialpadWebhookEndpoint
             logger.LogInformation(
                 "Received Dialpad webhook request. TraceIdentifier: {TraceIdentifier}, Request: {RequestSummary}",
                 httpContext.TraceIdentifier,
-                FormatRequest(httpContext.Request));
+                FormatRequest(httpContext.Request).SanitizeLogValue());
         }
 
         if (!settings.IsEnabled)
