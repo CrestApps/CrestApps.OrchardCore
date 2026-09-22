@@ -17,11 +17,6 @@ public static class SanitizedLoggingExtensions
             return value;
         }
 
-        // The line breaks are replaced explicitly although the pass below replaces them too. Static analysis
-        // recognizes a line-break replacement as the log-forging sanitizer and cannot see through the character
-        // loop, so without these calls every value passed through here is still reported as forgeable.
-        value = value.Replace("\r", " ").Replace("\n", " ");
-
         return string.Create(value.Length, value, static (span, source) =>
         {
             for (var i = 0; i < source.Length; i++)
