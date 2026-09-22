@@ -55,24 +55,32 @@ internal static class AIProfileTemplateApplicator
             profile.OrchestratorName = templateMetadata.OrchestratorName;
         }
 
-        // A template written before realtime became a model capability named its speech-to-speech model in a
-        // separate field. That model is now simply the model the profile converses with, so it supplies the
-        // chat deployment -- and the template's own chat deployment, which such a profile could only ever
-        // reach for background work, moves to the utility slot when the template has not named one. This
-        // mirrors how AIProfile folds the same pair of stored values.
+        // The chat deployment is the text model the profile talks to; the conversation deployment names the
+        // model that carries a spoken conversation. A template written before that split named its
+        // speech-to-speech model in a separate field, which is the conversation deployment now.
 #pragma warning disable CS0618 // Type or member is obsolete - an existing template still applies.
-        var legacyRealtimeDeploymentName = templateMetadata.RealtimeDeploymentName;
+        var conversationDeploymentName = !string.IsNullOrEmpty(templateMetadata.ConversationDeploymentName)
+            ? templateMetadata.ConversationDeploymentName
+            : templateMetadata.RealtimeDeploymentName;
 #pragma warning restore CS0618
 
-        if (!string.IsNullOrEmpty(legacyRealtimeDeploymentName) &&
-            !string.Equals(legacyRealtimeDeploymentName, profile.ChatDeploymentName, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(conversationDeploymentName))
         {
-            if (string.IsNullOrEmpty(profile.UtilityDeploymentName))
-            {
-                profile.UtilityDeploymentName = profile.ChatDeploymentName;
-            }
+            // A template edited through the chat mode editor carries its own ChatModeProfileSettings, copied
+            // onto the profile above, and the mode it holds is the author's choice.
+            var templateChoseChatMode = template.Properties?.ContainsKey(nameof(ChatModeProfileSettings)) == true;
 
-            profile.ChatDeploymentName = legacyRealtimeDeploymentName;
+            profile.AlterSettings<ChatModeProfileSettings>(chatModeSettings =>
+            {
+                chatModeSettings.ConversationDeploymentName = conversationDeploymentName;
+
+                // A template that names a model to speak with is asking for a spoken conversation. Without
+                // this the profile would carry the deployment and never use it.
+                if (!templateChoseChatMode)
+                {
+                    chatModeSettings.ChatMode = ChatMode.Conversation;
+                }
+            });
         }
 
         if (templateMetadata.TitleType.HasValue)

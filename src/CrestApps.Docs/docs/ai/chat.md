@@ -71,12 +71,12 @@ AI Chat supports three chat modes that control how users interact with the AI. T
 | --- | --- | --- |
 | **Text Only** (default) | Standard text-based chat. Users type prompts and receive text responses. | — |
 | **Audio Input** | Adds a microphone button (🎤) for speech-to-text dictation. Users speak their prompts, review the transcribed text, and click send manually. | Microphone button |
-| **Conversation** | Persistent two-way voice interaction like ChatGPT voice mode. A continuous audio stream stays open — the user speaks, the AI responds with both text and voice simultaneously. | Headset button |
+| **Conversation** | Two-way voice interaction the user switches on and off beside an ordinary message box. Starting a session hands the turn to speech; ending it gives the message box back, and both kinds of turn land in the same thread. | Soundwave button |
 
 #### Prerequisites
 
 - **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
-- **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
+- **Conversation** is carried by a realtime (speech-to-speech) deployment when one resolves — the profile's own **Conversation deployment**, then the site's default realtime deployment, then the first realtime-capable deployment. See [Realtime Voice](realtime-voice.md). When none resolves it falls back to the client-driven speech-to-text plus text-to-speech cascade, which requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment**.
 - Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
 - If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
 
@@ -84,8 +84,10 @@ AI Chat supports three chat modes that control how users interact with the AI. T
 
 1. Navigate to the AI Profile editor (or AI Profile Template editor for Profile source templates).
 2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears for **Chat** profile types and when the required default deployments are configured.
-3. When **Conversation** is selected, a **Voice** dropdown appears. Available voices are fetched from the configured text-to-speech provider. If no voice is selected, the default voice from site settings (or the provider's default) is used.
+3. When **Conversation** is selected, a **Conversation deployment** picker and a **Voice** dropdown appear. Leave the deployment empty to inherit the site's default realtime deployment. The voices are fetched from the model that will speak — the resolved realtime deployment's own voices, or the text-to-speech provider's when the conversation runs as the cascade. If no voice is selected, the default voice from site settings (or the provider's default) is used.
 4. Save the profile.
+
+The **Chat deployment** is a separate question: it names the text model the profile talks to, and it answers typed messages including those typed during a voice conversation. Its picker lists text-capable deployments only.
 
 Once configured, the selected chat mode applies to all chat UIs associated with that profile:
 - Admin session chat
@@ -103,14 +105,16 @@ Once configured, the selected chat mode applies to all chat UIs associated with 
 
 #### How Conversation Mode Works
 
-1. Click the **headset** button to start conversation mode.
-2. The microphone button, send button, and text input are hidden — a persistent audio stream opens to the server.
+1. Click the **soundwave** button to start a voice session.
+2. The message box and send button give way to the voice settings for the duration of the session, and the **End Conversation** button takes the width they leave. The dictation microphone is hidden too — the session already owns the microphone.
 3. Speak naturally — your speech is continuously streamed to the server and transcribed in real time.
 4. When a complete utterance is recognized, it is automatically displayed as a user message in the chat and sent to the AI.
 5. The AI response streams to the chat as text **and** is simultaneously synthesized to speech — you see the text appear while hearing it read aloud.
 6. If you start speaking while the AI is still responding, the AI's current response (both text and audio) is interrupted, and your new prompt is processed instead.
 7. The stream stays open for continuous back-and-forth conversation — no need to click send between turns.
-8. Click the headset button again to end the conversation. The microphone, send button, and text input are restored.
+8. Click the button again to end the conversation. The message box, send button, and microphone come straight back, and typing continues the same thread.
+
+Typing is never taken away permanently. Sending a typed message ends any live voice session first and is sent as an ordinary text turn into the same thread, so the two kinds of turn take turns rather than overlapping.
 
 :::info
 If the speech-to-text service encounters an error (e.g., authentication failure), the error is reported immediately and the recording stops automatically — the microphone button resets so you can try again.

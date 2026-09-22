@@ -1,9 +1,10 @@
 @using CrestApps.OrchardCore.AI.Chat.Interactions.Core
 
-@* The voice the assistant speaks with belongs to the chat deployment, so it is edited beside it rather
-   than beside the chat's send controls. Hidden until the chat app sees that the selected deployment is
-   realtime-capable, and populated from that deployment's voices. Both are driven from the chat shape,
-   which finds this control by the shared element ids. *@
+@* The voice the assistant speaks with belongs to whatever carries the conversation, so it is edited beside
+   the conversation deployment rather than beside the chat's send controls. Hidden until the chat app sees
+   that a realtime deployment actually resolves -- the interaction's own choice, the site default, or the
+   first realtime-capable one -- and populated from that deployment's voices. Both are driven from the chat
+   shape, which finds this control by the shared element ids. *@
 <div class="mb-3 d-none" id="@ChatInteractionsConstants.ElementIds.RealtimeVoiceGroup">
     <label class="form-label" for="@ChatInteractionsConstants.ElementIds.RealtimeVoiceSelect">
         @T["Voice"]

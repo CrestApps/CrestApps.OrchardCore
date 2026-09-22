@@ -21,12 +21,27 @@ public static class ChatInteractionsConstants
     /// Element ids shared between the chat interaction editor shapes and the chat app that drives them.
     /// </summary>
     /// <remarks>
-    /// The realtime voice picker is rendered by the settings panel, beside the deployment it applies to,
-    /// while the chat app that populates and reads it is configured from the chat shape. A page shows one
-    /// interaction, so fixed ids let the two shapes agree without one having to derive the other's prefix.
+    /// The conversation deployment and realtime voice pickers are rendered by the settings panel, beside the
+    /// deployment they apply to, while the chat app that populates and reads them is configured from the chat
+    /// shape. A page shows one interaction, so fixed ids let the two shapes agree without one having to
+    /// derive the other's prefix.
     /// </remarks>
     public static class ElementIds
     {
+        /// <summary>
+        /// The picker naming the deployment that carries a spoken conversation.
+        /// </summary>
+        /// <remarks>
+        /// The chat app watches this rather than the chat deployment picker: the chat deployment is the text
+        /// model the interaction talks to, and whether the interaction can speak follows from this one.
+        /// </remarks>
+        public const string ConversationDeploymentSelect = "conversation-deployment-select";
+
+        /// <summary>
+        /// The container holding the conversation deployment picker, revealed only in conversation mode.
+        /// </summary>
+        public const string ConversationDeploymentGroup = "conversation-deployment-group";
+
         /// <summary>
         /// The container that is revealed once a realtime-capable deployment is selected.
         /// </summary>
