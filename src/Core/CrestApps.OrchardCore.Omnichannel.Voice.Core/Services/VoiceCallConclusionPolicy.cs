@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -99,6 +100,42 @@ public static class VoiceCallConclusionPolicy
             .Select(action => action.DispositionId)
             .Distinct(StringComparer.Ordinal)
             .ToList();
+    }
+
+    /// <summary>
+    /// The disposition to record for a call nobody spoke on.
+    /// </summary>
+    /// <remarks>
+    /// There is no conversation for the model to judge, so it is not asked, and taking the first outcome on offer
+    /// instead recorded a call that rang out unanswered as "Done" -- finished, and never tried again. The subject's
+    /// own workflow already says which outcome schedules another attempt, so an unanswered call takes the one its
+    /// try-again action is wired to. A subject with no such action falls back to the first choice, as before.
+    /// </remarks>
+    /// <param name="choices">The dispositions the call may be concluded as.</param>
+    /// <param name="subjectActions">Every configured subject action.</param>
+    /// <param name="subjectContentType">The subject content type of the call being concluded.</param>
+    public static OmnichannelDisposition ChooseUnansweredDisposition(
+        IEnumerable<OmnichannelDisposition> choices,
+        IEnumerable<SubjectAction> subjectActions,
+        string subjectContentType)
+    {
+        var offered = choices as IList<OmnichannelDisposition> ?? choices?.ToList();
+
+        if (offered is null || offered.Count == 0)
+        {
+            return null;
+        }
+
+        var retriedDispositionIds = (subjectActions ?? [])
+            .Where(action => action is not null &&
+                string.Equals(action.Source, OmnichannelConstants.ActionTypes.TryAgain, StringComparison.Ordinal) &&
+                string.Equals(action.SubjectContentType, subjectContentType, StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrEmpty(action.DispositionId))
+            .Select(action => action.DispositionId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        return offered.FirstOrDefault(disposition => disposition is not null && retriedDispositionIds.Contains(disposition.ItemId))
+            ?? ChooseDisposition(offered, modelChoiceId: null);
     }
 
     /// <summary>

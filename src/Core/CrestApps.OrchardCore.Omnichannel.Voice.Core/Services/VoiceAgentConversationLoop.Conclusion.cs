@@ -184,7 +184,10 @@ public sealed partial class VoiceAgentConversationLoop
         }
 
         // Decide the disposition and summary from the (read-only) analysis before touching the activity.
-        var disposition = VoiceCallConclusionPolicy.ChooseDisposition(dispositions, result?.DispositionId);
+        // A call nobody spoke on is not the model's to judge, and takes the outcome that tries again later.
+        var disposition = hasConversation
+            ? VoiceCallConclusionPolicy.ChooseDisposition(dispositions, result?.DispositionId)
+            : VoiceCallConclusionPolicy.ChooseUnansweredDisposition(dispositions, allActions, activity.SubjectContentType);
         var dispositionId = disposition?.ItemId;
 
         var notes = VoiceCallConclusionPolicy.ResolveNotes(hasConversation, result?.Summary);

@@ -1,4 +1,5 @@
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using Microsoft.Extensions.AI;
@@ -302,5 +303,59 @@ public sealed class VoiceCallConclusionPolicyTests
         // Nothing configured anywhere. There is no honest answer here, and picking one would be fabrication.
         Assert.Null(VoiceCallConclusionPolicy.ChooseDisposition([], "interested"));
         Assert.Null(VoiceCallConclusionPolicy.ChooseDisposition(null, "interested"));
+    }
+
+    [Fact]
+    public void AnUnansweredCall_TakesTheOutcomeTheSubjectTriesAgainOn()
+    {
+        // Arrange
+        var done = new OmnichannelDisposition { ItemId = "done" };
+        var noAnswer = new OmnichannelDisposition { ItemId = "no-answer" };
+        SubjectAction[] actions =
+        [
+            new() { SubjectContentType = "Lead", DispositionId = "done", Source = OmnichannelConstants.ActionTypes.Finish },
+            new() { SubjectContentType = "Lead", DispositionId = "no-answer", Source = OmnichannelConstants.ActionTypes.TryAgain },
+        ];
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseUnansweredDisposition([done, noAnswer], actions, "Lead");
+
+        // Assert
+        Assert.Same(noAnswer, chosen);
+    }
+
+    [Fact]
+    public void AnotherSubjectsTryAgain_DoesNotDecideThisSubjectsUnansweredCall()
+    {
+        // Arrange
+        // The same disposition can mean different things on different subjects, so only this subject's own
+        // try-again action says which outcome retries a call about it.
+        var done = new OmnichannelDisposition { ItemId = "done" };
+        var noAnswer = new OmnichannelDisposition { ItemId = "no-answer" };
+        SubjectAction[] actions =
+        [
+            new() { SubjectContentType = "OtherSubject", DispositionId = "no-answer", Source = OmnichannelConstants.ActionTypes.TryAgain },
+        ];
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseUnansweredDisposition([done, noAnswer], actions, "Lead");
+
+        // Assert
+        Assert.Same(done, chosen);
+    }
+
+    [Fact]
+    public void AnUnansweredCallOnASubjectThatNeverRetries_StillGetsAnOutcome()
+    {
+        // Arrange
+        // A concluded call with no disposition is invisible to every report that counts outcomes.
+        var done = new OmnichannelDisposition { ItemId = "done" };
+
+        // Act
+        var chosen = VoiceCallConclusionPolicy.ChooseUnansweredDisposition([done], [], "Lead");
+
+        // Assert
+        Assert.Same(done, chosen);
+        Assert.Null(VoiceCallConclusionPolicy.ChooseUnansweredDisposition([], [], "Lead"));
     }
 }

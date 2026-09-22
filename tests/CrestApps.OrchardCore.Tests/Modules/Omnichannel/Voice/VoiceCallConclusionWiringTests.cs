@@ -111,6 +111,28 @@ public sealed class VoiceCallConclusionWiringTests
     }
 
     [Fact]
+    public async Task ACallNobodySpokeOn_IsGivenTheOutcomeThatTriesAgain_SoTheContactIsAttemptedLater()
+    {
+        // Arrange
+        // With no conversation to judge, the call used to take the first outcome on offer. Live, that was "Done":
+        // a call that rang out unanswered was recorded as finished and the contact was never tried again. The
+        // subject's own workflow says which outcome schedules another attempt, so an unanswered call takes that.
+        var harness = new ConclusionHarness();
+        harness.NobodySpoke();
+        harness.Offers("disposition-done", "Done");
+        harness.Offers("disposition-no-answer", "No answer", OmnichannelConstants.ActionTypes.TryAgain);
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal(0, harness.Model.Requests);
+        Assert.Equal("disposition-no-answer", harness.WrittenActivity.DispositionId);
+        var run = Assert.Single(harness.Executor.Runs);
+        Assert.Equal("disposition-no-answer", run.Disposition.ItemId);
+    }
+
+    [Fact]
     public async Task AnOutcomeTheModelInvented_NeverReachesTheSubjectsActions()
     {
         // Arrange
@@ -488,7 +510,7 @@ public sealed class VoiceCallConclusionWiringTests
         /// <summary>
         /// Configures a disposition the subject's workflow acts on, which is what puts it in front of the model.
         /// </summary>
-        public void Offers(string dispositionId, string name)
+        public void Offers(string dispositionId, string name, string actionType = OmnichannelConstants.ActionTypes.Finish)
         {
             Dispositions.Add(new OmnichannelDisposition
             {
@@ -499,7 +521,7 @@ public sealed class VoiceCallConclusionWiringTests
             SubjectActions.Add(new SubjectAction
             {
                 ItemId = $"action-for-{dispositionId}",
-                Source = OmnichannelConstants.ActionTypes.Finish,
+                Source = actionType,
                 SubjectContentType = Activity.SubjectContentType,
                 DispositionId = dispositionId,
             });
