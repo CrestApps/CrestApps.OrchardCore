@@ -90,7 +90,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                     new SelectListItem(S["API key"], nameof(McpServerAuthenticationType.ApiKey)),
                     new SelectListItem(S["None (Anonymous access)"], nameof(McpServerAuthenticationType.None)),
                 ];
-            }).Location("Content:1%MCP Server;1")
+            }).Location("Content:10%MCP Server;1")
             .OnGroup(SettingsGroupId),
         };
 
@@ -110,7 +110,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                         Description = entry.Value.Description,
                         IsSelected = selected.Contains(entry.Key),
                     }).OrderBy(entry => entry.DisplayText).ToArray());
-            }).Location("Content:1%MCP Server;5")
+            }).Location("Content:10%MCP Server;5")
             .OnGroup(SettingsGroupId));
         }
 
@@ -129,7 +129,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                     })
                     .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
-            }).Location("Content:1%MCP Server;10")
+            }).Location("Content:10%MCP Server;10")
             .OnGroup(SettingsGroupId));
         }
 

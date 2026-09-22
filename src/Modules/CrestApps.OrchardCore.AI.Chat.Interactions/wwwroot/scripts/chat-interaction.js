@@ -22,7 +22,25 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
-window.chatInteractionManager = function () {
+/*
+ * Figure markers: the short labels the model writes, turned into pictures by the host.
+ *
+ * Retrieval hands the model a label -- [fig:1] -- and keeps the picture's real link in the message's reference
+ * map, the same way a text citation keeps its source behind "[doc:1]". A model asked to reproduce a long opaque
+ * identifier does not reproduce it: it copies the shape and substitutes ordinals, so links to figures that were
+ * never in the results came back as 404s. A label short enough to be written exactly, with the link put back
+ * here where the model cannot reach it, is what stops that.
+ *
+ * It sits on window rather than inside the manager below so the host can reach it, and so its rules can be
+ * exercised in a bare sandbox with no browser and no DOM -- see tests/realtime-client/figure-markers.test.js --
+ * exactly as window.CoreAIRealtime exposes the microphone gate's rules.
+ *
+ * The same block sits at the top of ai-chat.js: the two chat clients are separate bundles that share no
+ * module of their own, and both render the same markdown. Change one, change the other.
+ */
+// CoreAIChatMarkers lives in chat-markers.js, which every chat surface loads before this file.
+
+window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIChatMar2, _window$CoreAIChatMar3, _window$CoreAIChatMar4, _window$CoreAIChatMar5, _window$CoreAIChatMar6, _window$CoreAIChatMar7, _window$CoreAIChatMar8, _window$CoreAIChatMar9, _window$CoreAIChatMar0) {
   // Defaults (can be overridden by instanceConfig)
   var defaultConfig = {
     // UI defaults for generated media
@@ -99,7 +117,7 @@ window.chatInteractionManager = function () {
     return observer;
   }
   function normalizeReference(reference) {
-    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference, _normalized$isGenerat;
+    var _ref, _normalized$index, _ref2, _normalized$text, _ref3, _normalized$title, _ref4, _normalized$link, _ref5, _normalized$reference, _normalized$isGenerat, _normalized$isImage;
     if (!reference || _typeof(reference) !== 'object') {
       return null;
     }
@@ -110,6 +128,7 @@ window.chatInteractionManager = function () {
     normalized.link = sanitizeUrl((_ref4 = (_normalized$link = normalized.link) !== null && _normalized$link !== void 0 ? _normalized$link : normalized.Link) !== null && _ref4 !== void 0 ? _ref4 : null);
     normalized.referenceType = (_ref5 = (_normalized$reference = normalized.referenceType) !== null && _normalized$reference !== void 0 ? _normalized$reference : normalized.ReferenceType) !== null && _ref5 !== void 0 ? _ref5 : null;
     normalized.isGenerated = ((_normalized$isGenerat = normalized.isGenerated) !== null && _normalized$isGenerat !== void 0 ? _normalized$isGenerat : normalized.IsGenerated) === true;
+    normalized.isImage = ((_normalized$isImage = normalized.isImage) !== null && _normalized$isImage !== void 0 ? _normalized$isImage : normalized.IsImage) === true;
     return normalized;
   }
   function isDownloadCitationReference(reference) {
@@ -138,11 +157,38 @@ window.chatInteractionManager = function () {
     }
     return normalized;
   }
+
+  // Installed at the top of this file so it can be unit tested without a browser; see the comment there.
+  var expandImageMarkers = window.CoreAIChatMarkers.expandImageMarkers;
   function getCitationLabel(reference, key) {
     return reference.title || reference.text || key;
   }
+
+  // Which references are one citation, and how a repeated marker reads, are statements about strings and
+  // live in chat-markers.js so every chat surface numbers them the same way. Without the module each
+  // reference keeps an identity of its own and nothing merges, which is the numbering this script had
+  // before it.
+  var unmergedCitationCount = 0;
+  var citationIdentity = (_window$CoreAIChatMar = (_window$CoreAIChatMar2 = window.CoreAIChatMarkers) === null || _window$CoreAIChatMar2 === void 0 ? void 0 : _window$CoreAIChatMar2.citationIdentity) !== null && _window$CoreAIChatMar !== void 0 ? _window$CoreAIChatMar : function () {
+    return "unmerged-".concat(++unmergedCitationCount);
+  };
+  var splitCombinedCitations = (_window$CoreAIChatMar3 = (_window$CoreAIChatMar4 = window.CoreAIChatMarkers) === null || _window$CoreAIChatMar4 === void 0 ? void 0 : _window$CoreAIChatMar4.splitCombinedCitations) !== null && _window$CoreAIChatMar3 !== void 0 ? _window$CoreAIChatMar3 : function (content) {
+    return content;
+  };
+  var collapseRepeatedCitations = (_window$CoreAIChatMar5 = (_window$CoreAIChatMar6 = window.CoreAIChatMarkers) === null || _window$CoreAIChatMar6 === void 0 ? void 0 : _window$CoreAIChatMar6.collapseRepeatedCitations) !== null && _window$CoreAIChatMar5 !== void 0 ? _window$CoreAIChatMar5 : function (html) {
+    return html;
+  };
+  var separateAdjacentCitations = (_window$CoreAIChatMar7 = (_window$CoreAIChatMar8 = window.CoreAIChatMarkers) === null || _window$CoreAIChatMar8 === void 0 ? void 0 : _window$CoreAIChatMar8.separateAdjacentCitations) !== null && _window$CoreAIChatMar7 !== void 0 ? _window$CoreAIChatMar7 : function (html) {
+    return html;
+  };
+  var citationMarkerHtml = (_window$CoreAIChatMar9 = (_window$CoreAIChatMar0 = window.CoreAIChatMarkers) === null || _window$CoreAIChatMar0 === void 0 ? void 0 : _window$CoreAIChatMar0.citationMarkerHtml) !== null && _window$CoreAIChatMar9 !== void 0 ? _window$CoreAIChatMar9 : function (displayIndex) {
+    return "<sup>".concat(displayIndex, "</sup>");
+  };
   function buildCitationDisplay(content, references) {
-    var processedContent = (content || '').trim();
+    // Before anything looks for a reference key, the combined form the model tends to write is split into
+    // the keys it means. A key that is not found is not replaced, and an unreplaced key reaches the reader
+    // as a raw marker mid-sentence.
+    var processedContent = splitCombinedCitations((content || '').trim());
     var messageReferences = normalizeReferences(references);
     var referenceEntries = Object.entries(messageReferences);
     if (!referenceEntries.length) {
@@ -183,6 +229,8 @@ window.chatInteractionManager = function () {
       return a.index - b.index;
     });
     var citations = [];
+    var citationsByIdentity = new Map();
+    var placeholders = [];
     var displayIndex = 1;
     var _iterator = _createForOfIteratorHelper(citedRefs),
       _step;
@@ -191,28 +239,48 @@ window.chatInteractionManager = function () {
         var _step$value = _slicedToArray(_step.value, 2),
           key = _step$value[0],
           value = _step$value[1];
-        var placeholder = "__CITE_".concat(displayIndex, "_").concat(value.index || displayIndex, "__");
+        var label = getCitationLabel(value, key);
+        var link = value.link || null;
+        var identity = citationIdentity(label, link);
+        var citation = citationsByIdentity.get(identity);
+
+        // Every reference still has its key replaced, so the text never keeps a raw key; what the merge
+        // changes is only how many numbers the reader is given for them.
+        if (!citation) {
+          citation = {
+            referenceKey: key,
+            referenceKeys: [],
+            displayIndex: displayIndex++,
+            label: label,
+            link: link,
+            isDownload: isDownloadCitationReference(value)
+          };
+          citationsByIdentity.set(identity, citation);
+          citations.push(citation);
+        }
+        citation.referenceKeys.push(key);
+        var placeholder = "__CITE_".concat(citation.displayIndex, "_").concat(value.index || citation.displayIndex, "__");
         processedContent = processedContent.replaceAll(key, placeholder);
-        citations.push({
-          referenceKey: key,
-          displayIndex: displayIndex,
-          label: getCitationLabel(value, key),
-          link: value.link || null,
-          isDownload: isDownloadCitationReference(value),
-          placeholder: placeholder
+        placeholders.push({
+          placeholder: placeholder,
+          displayIndex: citation.displayIndex,
+          label: citation.label
         });
-        displayIndex++;
       }
     } catch (err) {
       _iterator.e(err);
     } finally {
       _iterator.f();
     }
-    for (var _i2 = 0, _citations = citations; _i2 < _citations.length; _i2++) {
-      var citation = _citations[_i2];
-      processedContent = processedContent.replaceAll(citation.placeholder, "<sup>".concat(citation.displayIndex, "</sup>"));
+    for (var _i2 = 0, _placeholders = placeholders; _i2 < _placeholders.length; _i2++) {
+      var entry = _placeholders[_i2];
+      processedContent = processedContent.replaceAll(entry.placeholder, citationMarkerHtml(entry.displayIndex, entry.label));
     }
-    processedContent = processedContent.replaceAll('</sup><sup>', '</sup><sup>,</sup><sup>');
+
+    // Merged citations can leave the same number twice over a sentence; that is collapsed before the
+    // commas go in, or the reader is given "1,1".
+    processedContent = collapseRepeatedCitations(processedContent);
+    processedContent = separateAdjacentCitations(processedContent);
 
     // Generated files (such as exported tabular data) are always offered as a download even when
     // the model does not cite them inline, so the user never loses access to the produced file.
@@ -225,6 +293,7 @@ window.chatInteractionManager = function () {
           _value = _step2$value[1];
         citations.push({
           referenceKey: _key,
+          referenceKeys: [_key],
           displayIndex: displayIndex,
           label: getCitationLabel(_value, _key),
           link: _value.link || null,
@@ -252,12 +321,27 @@ window.chatInteractionManager = function () {
     if (!copyContent || !Array.isArray(citations) || citations.length === 0) {
       return copyContent;
     }
+
+    // Every key the citation absorbed is replaced, not just the first: a merged key left behind would
+    // reach the clipboard as the raw reference token the reader never saw on the page.
     var _iterator3 = _createForOfIteratorHelper(citations),
       _step3;
     try {
       for (_iterator3.s(); !(_step3 = _iterator3.n()).done;) {
+        var _citation$referenceKe;
         var citation = _step3.value;
-        copyContent = copyContent.replaceAll(citation.referenceKey, "[".concat(citation.displayIndex, "]"));
+        var _iterator5 = _createForOfIteratorHelper((_citation$referenceKe = citation.referenceKeys) !== null && _citation$referenceKe !== void 0 && _citation$referenceKe.length ? citation.referenceKeys : [citation.referenceKey]),
+          _step5;
+        try {
+          for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
+            var key = _step5.value;
+            copyContent = copyContent.replaceAll(key, "[".concat(citation.displayIndex, "]"));
+          }
+        } catch (err) {
+          _iterator5.e(err);
+        } finally {
+          _iterator5.f();
+        }
       }
     } catch (err) {
       _iterator3.e(err);
@@ -286,13 +370,20 @@ window.chatInteractionManager = function () {
   function updateMessagePresentation(message, references) {
     var messageReferences = normalizeReferences(references !== null && references !== void 0 ? references : message.references);
     var rawContent = typeof message.rawContent === 'string' ? message.rawContent : typeof message.content === 'string' ? message.content : '';
-    var citationDisplay = buildCitationDisplay(rawContent, messageReferences);
+    // Figure markers become images before anything else reads the content: the citation pass looks for its
+    // own keys in what is left, and the markdown parser then sees an ordinary image.
+    var displayContent = expandImageMarkers(rawContent, messageReferences);
+    var citationDisplay = buildCitationDisplay(displayContent, messageReferences);
     message.rawContent = rawContent;
     message.content = rawContent;
     message.displayContent = citationDisplay.content;
     message.references = messageReferences;
     message.citationReferences = citationDisplay.citations;
-    message.copyContent = buildCopyContent(rawContent, citationDisplay.citations);
+    // Copied from the expanded content, so a copied answer carries the picture's link rather than a label
+    // that means nothing outside this page.
+    // Split here too: the copy is built from the expanded content rather than the display path's output,
+    // so a combined marker would otherwise survive into the clipboard as a raw key.
+    message.copyContent = buildCopyContent(splitCombinedCitations(displayContent), citationDisplay.citations);
     message.htmlContent = parseMarkdownContent(citationDisplay.content, message);
     return message;
   }
@@ -336,7 +427,16 @@ window.chatInteractionManager = function () {
     if (!src) return '';
     var alt = data.text || defaultConfig.generatedImageAltText;
     var maxWidth = defaultConfig.generatedImageMaxWidth;
-    return "<div class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <div class=\"mt-2\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                    <i class=\"fa-solid fa-download\"></i>\n                </a>\n            </div>\n        </div>");
+    // Spans, not divs. A figure marker is often written mid-sentence -- "Figures [fig:1], [fig:2] and
+    // [fig:3] show..." -- and a block element cannot sit inside a paragraph: the browser closes the <p>
+    // at the first one, so the sentence is torn into fragments and the commas between the markers are
+    // left stranded on their own lines. Inline-block keeps the figure looking exactly the same while
+    // remaining something a paragraph can legally contain.
+    // The download sits over the picture's lower corner rather than on a line of its own beneath it.
+    // A row of its own cost a band of vertical space under every figure, which a conversation full of
+    // them pays for once per figure. The link itself is unchanged -- same address, same download
+    // attribute, same behaviour -- only where it is drawn.
+    return "<span class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                <i class=\"fa-solid fa-download\"></i>\n            </a>\n        </span>");
   };
 
   // Chart counter for unique IDs
@@ -351,6 +451,11 @@ window.chatInteractionManager = function () {
     return "<div class=\"chart-container\" style=\"position: relative; width: 100%; max-width: 560px; min-height: 420px;\">" + "<canvas id=\"".concat(chartId, "\"></canvas>") + "</div>" + "<div class=\"mt-2\">" + "<button type=\"button\" class=\"btn btn-sm btn-outline-secondary download-chart-btn\" data-chart-id=\"".concat(chartId, "\" title=\"").concat(defaultConfig.downloadChartTitle, "\">") + "<i class=\"fa-solid fa-download\"></i> ".concat(defaultConfig.downloadChartButtonText) + "</button>" + "</div>";
   }
 
+  // The marker itself is read by chat-markers.js, shared with every other chat surface, so the three of them
+  // cannot disagree about what a marker is. Everything below -- the container, the id scheme, the Chart.js
+  // call -- is this surface's own and legitimately differs from the others.
+  var findChartMarker = window.CoreAIChatMarkers.findChartMarker;
+
   // Register [chart:{...json...}] as a native marked block extension so the
   // markdown parser handles chart markers inline with surrounding text.
   marked.use({
@@ -362,7 +467,7 @@ window.chatInteractionManager = function () {
         return idx >= 0 ? idx : undefined;
       },
       tokenizer: function tokenizer(src) {
-        var extracted = tryExtractChartMarker(src);
+        var extracted = findChartMarker(src);
         if (!extracted || extracted.startIndex !== 0) {
           return undefined;
         }
@@ -385,69 +490,96 @@ window.chatInteractionManager = function () {
     }]
   });
 
-  // Extract a [chart:{...json...}] marker. This avoids regex issues with nested brackets.
-  function tryExtractChartMarker(text) {
-    var token = '[chart:';
-    var start = text.indexOf(token);
-    if (start < 0) {
-      return null;
+  // An image the assistant named but the server will not serve. The address is written by a language
+  // model from what retrieval handed it, so a mistyped or invented one is possible, and the browser's
+  // default for that is a broken-image icon captioned with the alt text -- which reads as a real picture
+  // that failed to arrive. Saying plainly that it could not be loaded is both truer and quieter.
+  //
+  // Wired here rather than as an inline onerror attribute because message bodies go through DOMPurify,
+  // which strips event-handler attributes.
+  function markBrokenImagesInMessage() {
+    // Scanning the document rather than one message, because the value threaded through the render
+    // path is the message DATA object -- the thing carrying content, references and pending charts --
+    // and not the element it was rendered into. Wiring is idempotent via the data-broken-wired mark,
+    // so re-scanning after each render costs a query over the handful of images already handled.
+    if (typeof document === 'undefined' || typeof requestAnimationFrame !== 'function') {
+      return;
     }
 
-    // Find JSON object boundary by balancing braces
-    var jsonStart = start + token.length;
-    var i = jsonStart;
-    while (i < text.length && (text[i] === ' ' || text[i] === '\n' || text[i] === '\r' || text[i] === '\t')) {
-      i++;
-    }
-    if (i >= text.length || text[i] !== '{') {
-      return null;
-    }
-    var depth = 0;
-    var inString = false;
-    var escape = false;
-    for (; i < text.length; i++) {
-      var ch = text[i];
-      if (inString) {
-        if (escape) {
-          escape = false;
-          continue;
-        }
-        if (ch === '\\') {
-          escape = true;
-          continue;
-        }
-        if (ch === '"') {
-          inString = false;
-        }
-        continue;
-      }
-      if (ch === '"') {
-        inString = true;
-        continue;
-      }
-      if (ch === '{') {
-        depth++;
-      } else if (ch === '}') {
-        depth--;
-        if (depth === 0) {
-          var jsonEnd = i;
-          // Expect closing bracket after JSON
-          var closeBracketIndex = text.indexOf(']', jsonEnd + 1);
-          if (closeBracketIndex < 0) {
-            return null;
-          }
-          var json = text.substring(jsonStart, jsonEnd + 1).trim();
-          return {
-            startIndex: start,
-            endIndex: closeBracketIndex + 1,
-            json: json
-          };
-        }
-      }
-    }
-    return null;
+    // Deferred for the same reason the charts below are: the render that produced these elements has
+    // not necessarily been flushed to the DOM when this runs.
+    requestAnimationFrame(wireBrokenImageHandlers);
+    requestAnimationFrame(wireImageZoom);
   }
-  function renderChartsInMessage(message) {
+
+  // A picture arrives after the markdown is handed back -- the view writes it, and a streamed answer
+  // rewrites it on every chunk -- so zooming cannot be attached once at load. It is attached on the same
+  // pass as the broken-image handler above, and the attribute marks a picture already attached so a
+  // re-render does not bind it a second time.
+  function wireImageZoom() {
+    // The library is the host's to load. Without it the picture is still shown and still downloadable;
+    // only the enlarging is missing, so this is not worth failing a render over.
+    if (typeof mediumZoom !== 'function') {
+      return;
+    }
+    var images = document.querySelectorAll('.generated-image-container img:not([data-zoom-wired])');
+    if (images.length === 0) {
+      return;
+    }
+    var _iterator6 = _createForOfIteratorHelper(images),
+      _step6;
+    try {
+      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+        var image = _step6.value;
+        image.setAttribute('data-zoom-wired', 'true');
+      }
+    } catch (err) {
+      _iterator6.e(err);
+    } finally {
+      _iterator6.f();
+    }
+    mediumZoom(images, {
+      // The drawing is bounded by the window rather than by this margin, so the margin is kept
+      // small: an ingested figure is read detail by detail, and every pixel given away here comes
+      // off the size it is read at.
+      margin: 16,
+      background: 'rgba(15, 15, 15, 0.92)'
+    });
+  }
+  function wireBrokenImageHandlers() {
+    var images = document.querySelectorAll('.generated-image-container img:not([data-broken-wired])');
+    var _iterator7 = _createForOfIteratorHelper(images),
+      _step7;
+    try {
+      var _loop = function _loop() {
+        var image = _step7.value;
+        image.setAttribute('data-broken-wired', 'true');
+        image.addEventListener('error', function () {
+          var container = image.closest('.generated-image-container');
+          if (!container || container.dataset.brokenHandled) {
+            return;
+          }
+          container.dataset.brokenHandled = 'true';
+          container.hidden = true;
+          var note = document.createElement('p');
+          note.className = 'text-muted small fst-italic mb-2';
+          note.textContent = image.alt ? "(the picture \"".concat(image.alt, "\" could not be loaded)") : '(that picture could not be loaded)';
+          container.insertAdjacentElement('afterend', note);
+        }, {
+          once: true
+        });
+      };
+      for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
+        _loop();
+      }
+    } catch (err) {
+      _iterator7.e(err);
+    } finally {
+      _iterator7.f();
+    }
+  }
+  function renderMessageMedia(message) {
+    markBrokenImagesInMessage();
     if (!message || !message._pendingCharts || !message._pendingCharts.length) {
       return;
     }
@@ -459,11 +591,11 @@ window.chatInteractionManager = function () {
     // Defer to requestAnimationFrame so the browser has fully laid out the
     // canvas elements before Chart.js reads their dimensions.
     requestAnimationFrame(function () {
-      var _iterator5 = _createForOfIteratorHelper(charts),
-        _step5;
+      var _iterator8 = _createForOfIteratorHelper(charts),
+        _step8;
       try {
-        for (_iterator5.s(); !(_step5 = _iterator5.n()).done;) {
-          var c = _step5.value;
+        for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+          var c = _step8.value;
           var canvas = document.getElementById(c.chartId);
           if (!canvas) {
             continue;
@@ -496,9 +628,9 @@ window.chatInteractionManager = function () {
           }
         }
       } catch (err) {
-        _iterator5.e(err);
+        _iterator8.e(err);
       } finally {
-        _iterator5.f();
+        _iterator8.f();
       }
     });
   }
@@ -506,11 +638,20 @@ window.chatInteractionManager = function () {
   // Parse markdown content via marked (which natively handles [chart:...] markers
   // through the registered extension) and collect pending chart configs for later
   // Chart.js rendering.
+  // A markdown table becomes a bare <table>, which Bootstrap leaves completely unstyled: it renders
+  // as cramped, borderless text that reads as plain output rather than a table. Adding the framework's
+  // own classes styles it wherever Bootstrap is loaded, and the wrapper lets a wide table scroll on
+  // its own instead of stretching the conversation. Markdown tables cannot nest, so the plain
+  // replacement is safe. This page renders markdown through its own pipeline, so the same treatment
+  // is applied here as in the shared chat script.
+  function styleMarkdownTables(html) {
+    return html.replace(/<table>/g, '<div class="table-responsive"><table class="table table-sm table-bordered table-striped align-middle">').replace(/<\/table>/g, '</table></div>');
+  }
   function parseMarkdownContent(content, message) {
     _pendingCharts = [];
-    var html = marked.parse(content, {
+    var html = styleMarkdownTables(marked.parse(content, {
       renderer: renderer
-    });
+    }));
     message._pendingCharts = _pendingCharts.length > 0 ? _toConsumableArray(_pendingCharts) : [];
     return DOMPurify.sanitize(html, {
       ADD_TAGS: ['canvas'],
@@ -590,6 +731,11 @@ window.chatInteractionManager = function () {
           isConversationMode: false,
           // Realtime (speech-to-speech) controller from the shared CoreAIRealtime module.
           realtimeController: null,
+          realtimeButton: null,
+          // Whether a realtime deployment actually resolved. The controller is attached whenever the
+          // module is loaded, so its presence says nothing about which transport carries the
+          // conversation -- only this flag does.
+          realtimeEnabled: config.realtimeEnabled === true,
           notifications: [],
           notificationDismissTimers: {},
           copyTitle: config.copyTitle,
@@ -637,7 +783,7 @@ window.chatInteractionManager = function () {
                     ((_data$messages = data.messages) !== null && _data$messages !== void 0 ? _data$messages : []).forEach(function (msg) {
                       _this.addMessage(msg);
                       _this.$nextTick(function () {
-                        renderChartsInMessage(msg);
+                        renderMessageMedia(msg);
                       });
                     });
                   });
@@ -795,7 +941,7 @@ window.chatInteractionManager = function () {
                       msg.references = normalizeReferences(Object.assign({}, msg.references || {}, references || {}));
                       updateMessagePresentation(msg, msg.references);
                       _this.$nextTick(function () {
-                        renderChartsInMessage(msg);
+                        renderMessageMedia(msg);
                         _this.scrollToBottom();
                       });
                     }
@@ -914,7 +1060,7 @@ window.chatInteractionManager = function () {
           this.hidePlaceholder();
           this.$nextTick(function () {
             // Render any pending charts once the DOM is updated
-            renderChartsInMessage(message);
+            renderMessageMedia(message);
             _this3.scrollToBottom();
           });
         },
@@ -994,6 +1140,11 @@ window.chatInteractionManager = function () {
                   }
                   return _context2.a(2);
                 case 1:
+                  // A live voice session and a typed turn are two writers into one interaction, and they
+                  // would interleave. End the session first; the turns it already produced are persisted, so
+                  // the typed message simply continues the same thread.
+                  _this4.endActiveVoiceSession();
+
                   // Stop any active recording before sending.
                   if (_this4.isRecording) {
                     _this4.stopRecording();
@@ -1082,7 +1233,7 @@ window.chatInteractionManager = function () {
               updateMessagePresentation(message, references);
               _this5.messages[messageIndex] = message;
               _this5.$nextTick(function () {
-                renderChartsInMessage(message);
+                renderMessageMedia(message);
                 _this5.scrollToBottom();
               });
             },
@@ -1141,7 +1292,7 @@ window.chatInteractionManager = function () {
             updateMessagePresentation(message, references);
             this.messages[messageIndex] = message;
             this.$nextTick(function () {
-              renderChartsInMessage(message);
+              renderMessageMedia(message);
               _this6.scrollToBottom();
             });
           }
@@ -1294,18 +1445,18 @@ window.chatInteractionManager = function () {
           }, 0);
           var combined = new Uint8Array(totalLength);
           var offset = 0;
-          var _iterator6 = _createForOfIteratorHelper(this.audioChunks),
-            _step6;
+          var _iterator9 = _createForOfIteratorHelper(this.audioChunks),
+            _step9;
           try {
-            for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
-              var chunk = _step6.value;
+            for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+              var chunk = _step9.value;
               combined.set(chunk, offset);
               offset += chunk.length;
             }
           } catch (err) {
-            _iterator6.e(err);
+            _iterator9.e(err);
           } finally {
-            _iterator6.f();
+            _iterator9.f();
           }
           this.audioChunks = [];
           var blob = new Blob([combined], {
@@ -1388,11 +1539,55 @@ window.chatInteractionManager = function () {
             return _this12.updateTtsPlaybackButtons();
           });
         },
+        // A live voice session takes the message box away and puts the audio settings in its place; ending
+        // the session gives it back. Sending a typed message already ends the session first, so the box was
+        // never a way to say something *during* one -- hiding it only makes that honest, and frees the row
+        // for the gear. Both transports land here: realtime through the module's onActivate, the
+        // speech-to-text cascade through startConversationMode.
+        setVoiceSessionLive: function setVoiceSessionLive(live) {
+          if (this.inputElement) {
+            this.inputElement.hidden = live;
+          }
+          if (this.buttonElement) {
+            this.buttonElement.hidden = live;
+          }
+
+          // With the message box gone the live button would otherwise sit at its natural width in an
+          // empty row, so it takes the space the box left behind. Whichever transport is carrying the
+          // conversation owns a different button, and the hidden one is unaffected by the class.
+          [this.realtimeButton, this.conversationButton].forEach(function (button) {
+            if (button) {
+              button.classList.toggle('flex-grow-1', live);
+            }
+          });
+
+          // The gear is built by the realtime module directly after the button it was handed, and only
+          // in realtime mode, so it is absent on the cascade. It belongs to a live session rather than
+          // to the surface. The module hard-codes its element id and a page can host two chat clients
+          // at once -- this one and the admin widget -- so it is found next to this client's own button
+          // rather than by id.
+          var next = this.realtimeButton && this.realtimeButton.nextElementSibling;
+          var audioSettings = next && next.id === 'realtime-audio-settings' ? next : null;
+          if (audioSettings) {
+            audioSettings.hidden = !live;
+          }
+        },
         toggleConversationMode: function toggleConversationMode() {
           if (this.isConversationMode) {
             this.stopConversationMode();
           } else {
             this.startConversationMode();
+          }
+        },
+        // Two writers into one interaction would interleave, so the voice session ends before the typed
+        // turn starts rather than running alongside it.
+        endActiveVoiceSession: function endActiveVoiceSession() {
+          if (this.realtimeController && this.realtimeController.isActive()) {
+            this.realtimeController.stop();
+            return;
+          }
+          if (this.isConversationMode) {
+            this.stopConversationMode();
           }
         },
         startConversationMode: function startConversationMode() {
@@ -2029,6 +2224,8 @@ window.chatInteractionManager = function () {
           // module owns the mic capture, playback, echo guard, push-to-talk and audio settings; the
           // callbacks below plug it into this app's connection and conversation-transcript display.
           if (window.CoreAIRealtime && config.realtimeButtonElementSelector) {
+            // Kept so the voice settings popover can be found next to this client's own button.
+            this.realtimeButton = document.querySelector(config.realtimeButtonElementSelector);
             this.realtimeController = window.CoreAIRealtime.attach({
               connection: this.connection,
               ensureConnected: function ensureConnected() {
@@ -2051,13 +2248,23 @@ window.chatInteractionManager = function () {
               },
               capableDeployments: config.realtimeCapableDeployments || [],
               realtimeEnabled: config.realtimeEnabled === true,
+              // input and sendButton are deliberately not handed over. The module hides every
+              // control it is given when realtime takes over, and typing has to stay available
+              // during a voice conversation -- that is the whole feature.
+              //
+              // deploymentSelect is not handed over either: it would read the raw select value,
+              // and an empty conversation deployment means "use the site default", which still
+              // resolves. The host resolves it and calls applyMode itself (see below).
               selectors: {
                 realtimeButton: config.realtimeButtonElementSelector,
-                input: config.inputElementSelector,
-                sendButton: config.sendButtonElementSelector,
                 micButton: config.micButtonElementSelector,
-                conversationButton: config.conversationButtonElementSelector,
-                deploymentSelect: config.deploymentSelectElementSelector
+                conversationButton: config.conversationButtonElementSelector
+              },
+              // The module owns whether a session is live, so the message box follows its flag
+              // rather than this app's copy of it. Losing one of these events used to leave the
+              // box hidden under a button that had already gone back to "Start speaking".
+              onSessionStateChanged: function onSessionStateChanged(active) {
+                _this18.setVoiceSessionLive(active);
               },
               onActivate: function onActivate() {
                 _this18.isConversationMode = true;
@@ -2118,6 +2325,11 @@ window.chatInteractionManager = function () {
               }
             });
             this.setupRealtimeVoicePicker(config);
+
+            // The module reveals the gear as soon as the surface enters realtime mode, but it belongs
+            // to a live session. The watcher that would hide it only runs on a change, so the idle
+            // state has to be stated once here.
+            this.setVoiceSessionLive(false);
           }
         },
         // Populates the per-interaction realtime voice picker from the selected realtime deployment's
@@ -2131,27 +2343,45 @@ window.chatInteractionManager = function () {
             return;
           }
           var voiceGroup = config.realtimeVoiceGroupElementSelector ? document.querySelector(config.realtimeVoiceGroupElementSelector) : null;
-          var deploymentSelect = config.deploymentSelectElementSelector ? document.querySelector(config.deploymentSelectElementSelector) : null;
+          var conversationSelect = config.conversationDeploymentSelectElementSelector ? document.querySelector(config.conversationDeploymentSelectElementSelector) : null;
           var capable = (config.realtimeCapableDeployments || []).map(function (n) {
             return (n || '').toLowerCase();
           });
           var savedVoiceId = config.realtimeVoiceName || '';
+          var self = this;
           function isRealtimeDeployment(name) {
             return name && capable.indexOf(name.toLowerCase()) !== -1;
+          }
+
+          // Mirrors the realtime slot's chain on the server: the interaction's own choice, then the
+          // site default, then the first realtime-capable deployment. Only conversation mode reaches
+          // it -- an interaction that is not in conversation mode never speaks.
+          function resolveConversationDeployment() {
+            if (!self.conversationModeEnabled) {
+              return '';
+            }
+            var name = conversationSelect && conversationSelect.value || config.defaultRealtimeDeploymentName || (capable.length ? capable[0] : '');
+            return isRealtimeDeployment(name) ? name : '';
           }
           function loadVoices() {
             return _loadVoices.apply(this, arguments);
           }
           function _loadVoices() {
             _loadVoices = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
-              var deploymentName, realtime, response, result, grouped, _iterator7, _step7, voice, groupName, _t2;
+              var deploymentName, realtime, response, contentType, result, grouped, _iterator0, _step0, voice, groupName, _t2;
               return _regenerator().w(function (_context4) {
                 while (1) switch (_context4.p = _context4.n) {
                   case 0:
-                    deploymentName = deploymentSelect ? deploymentSelect.value : '';
-                    realtime = isRealtimeDeployment(deploymentName);
+                    deploymentName = resolveConversationDeployment();
+                    realtime = !!deploymentName;
                     if (voiceGroup) {
                       voiceGroup.classList.toggle('d-none', !realtime);
+                    }
+
+                    // Changing the conversation deployment switches the voice toggle on or off without a
+                    // reload.
+                    if (self.realtimeController) {
+                      self.realtimeController.applyMode(realtime);
                     }
                     if (realtime) {
                       _context4.n = 1;
@@ -2167,21 +2397,29 @@ window.chatInteractionManager = function () {
                     });
                   case 3:
                     response = _context4.v;
-                    _context4.n = 4;
-                    return response.json();
-                  case 4:
-                    result = _context4.v;
-                    if (!(!result || !Array.isArray(result.voices))) {
-                      _context4.n = 5;
+                    contentType = (response.headers.get('content-type') || '').toLowerCase(); // A sign-in redirect answers with HTML and response.ok, so this has to be checked
+                    // rather than parsed: the default voice is a fine outcome, a parser error is not.
+                    if (!(!response.ok || contentType.indexOf('json') < 0)) {
+                      _context4.n = 4;
                       break;
                     }
                     return _context4.a(2);
+                  case 4:
+                    _context4.n = 5;
+                    return response.json();
                   case 5:
+                    result = _context4.v;
+                    if (!(!result || !Array.isArray(result.voices))) {
+                      _context4.n = 6;
+                      break;
+                    }
+                    return _context4.a(2);
+                  case 6:
                     grouped = new Map();
-                    _iterator7 = _createForOfIteratorHelper(result.voices);
+                    _iterator0 = _createForOfIteratorHelper(result.voices);
                     try {
-                      for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-                        voice = _step7.value;
+                      for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
+                        voice = _step0.value;
                         groupName = voice.gender || 'Voices';
                         if (!grouped.has(groupName)) {
                           grouped.set(groupName, []);
@@ -2189,9 +2427,9 @@ window.chatInteractionManager = function () {
                         grouped.get(groupName).push(voice);
                       }
                     } catch (err) {
-                      _iterator7.e(err);
+                      _iterator0.e(err);
                     } finally {
-                      _iterator7.f();
+                      _iterator0.f();
                     }
                     Array.from(grouped.keys()).sort(function (a, b) {
                       return a.localeCompare(b);
@@ -2207,20 +2445,20 @@ window.chatInteractionManager = function () {
                       });
                       voiceSelect.appendChild(optgroup);
                     });
-                    _context4.n = 7;
+                    _context4.n = 8;
                     break;
-                  case 6:
-                    _context4.p = 6;
-                    _t2 = _context4.v;
                   case 7:
+                    _context4.p = 7;
+                    _t2 = _context4.v;
+                  case 8:
                     return _context4.a(2);
                 }
-              }, _callee4, null, [[2, 6]]);
+              }, _callee4, null, [[2, 7]]);
             }));
             return _loadVoices.apply(this, arguments);
           }
-          if (deploymentSelect) {
-            deploymentSelect.addEventListener('change', loadVoices);
+          if (conversationSelect) {
+            conversationSelect.addEventListener('change', loadVoices);
           }
           loadVoices();
         },
@@ -2512,17 +2750,20 @@ window.chatInteractionManager = function () {
           // no longer mutes tracks; browser echo cancellation handles echo.
         },
         isConversationMode: function isConversationMode(active) {
+          // The dictation microphone is hidden while a voice conversation runs: the conversation
+          // already owns the microphone, and a second one would mean something different.
           if (this.micButton) {
             this.micButton.style.display = active ? 'none' : this.speechToTextEnabled ? '' : 'none';
           }
-          if (this.buttonElement) {
-            this.buttonElement.style.display = active ? 'none' : '';
-          }
-          if (this.inputElement) {
-            this.inputElement.disabled = active;
-            if (active) {
-              this.inputElement.placeholder = '';
-            }
+
+          // The message box and the send button give way to the voice settings while the conversation
+          // runs, and come back when it ends. Both kinds of turn still land in the same thread; what
+          // they cannot do is overlap.
+          //
+          // Only the cascade is driven from here. Realtime follows the module's own session flag
+          // (onSessionStateChanged), so the two never disagree about whether a session is live.
+          if (!this.realtimeEnabled) {
+            this.setVoiceSessionLive(active);
           }
         },
         copiedMessageIndex: function copiedMessageIndex() {
@@ -2727,30 +2968,42 @@ window.chatInteractionDocumentManager = function () {
       }
       interactionDocuments.forEach(function (documentInfo) {
         var row = window.document.createElement('div');
-        row.className = 'd-flex justify-content-between align-items-start gap-2 border rounded px-2 py-2 bg-white chat-document-row';
+        row.className = 'd-flex align-items-center gap-2 border rounded px-2 py-2 bg-white chat-document-row';
         row.dataset.chatDocumentId = documentInfo.documentId;
         row.dataset.chatDocumentName = documentInfo.fileName;
         row.dataset.chatDocumentSize = documentInfo.fileSize;
+        var actions = window.document.createElement('div');
+        actions.className = 'd-flex gap-1';
+        var downloadBaseUrl = config.downloadDocumentBaseUrl || '/ai/documents/';
+        var downloadLink = createTextElement('a', 'btn btn-sm btn-outline-secondary', '');
+        downloadLink.title = 'Download';
+        downloadLink.href = downloadBaseUrl + encodeURIComponent(documentInfo.documentId) + '/download';
+        var downloadIcon = window.document.createElement('i');
+        downloadIcon.className = 'fa-solid fa-download';
+        downloadLink.appendChild(downloadIcon);
+        var removeButton = createTextElement('button', 'btn btn-sm btn-outline-danger remove-chat-document-btn', '');
+        removeButton.type = 'button';
+        removeButton.title = 'Remove';
+        removeButton.dataset.documentId = documentInfo.documentId;
+        var removeIcon = window.document.createElement('i');
+        removeIcon.className = 'fa-solid fa-trash';
+        removeButton.appendChild(removeIcon);
+        removeButton.addEventListener('click', function () {
+          return removeDocument(documentInfo.documentId);
+        });
+        actions.appendChild(downloadLink);
+        actions.appendChild(removeButton);
         var details = window.document.createElement('div');
-        details.className = 'me-2 min-w-0';
-        var name = createTextElement('div', 'fw-semibold small', documentInfo.fileName || 'Document');
+        details.className = 'min-w-0';
+        var name = createTextElement('div', 'fw-semibold small text-truncate', documentInfo.fileName || 'Document');
         var icon = window.document.createElement('i');
         icon.className = 'fa-solid fa-file-lines me-1';
         name.prepend(icon);
         var size = createTextElement('div', 'text-muted small', formatFileSize(documentInfo.fileSize));
         details.appendChild(name);
         details.appendChild(size);
-        var removeButton = createTextElement('button', 'btn btn-sm btn-outline-danger remove-chat-document-btn', ' Remove');
-        removeButton.type = 'button';
-        removeButton.dataset.documentId = documentInfo.documentId;
-        var removeIcon = window.document.createElement('i');
-        removeIcon.className = 'fa-solid fa-trash';
-        removeButton.prepend(removeIcon);
-        removeButton.addEventListener('click', function () {
-          return removeDocument(documentInfo.documentId);
-        });
+        row.appendChild(actions);
         row.appendChild(details);
-        row.appendChild(removeButton);
         documentsList.appendChild(row);
       });
     }
@@ -3129,9 +3382,20 @@ window.chatInteractionDocumentManager = function () {
               showUploadStatus('Failed to remove document.', 'text-danger');
               return _context8.a(2);
             case 4:
-              _context8.n = 5;
-              return response.json();
+              if (!((response.headers.get('content-type') || '').toLowerCase().indexOf('json') < 0)) {
+                _context8.n = 5;
+                break;
+              }
+              console.error('Remove document: response was not JSON.', {
+                status: response.status,
+                redirected: response.redirected
+              });
+              showUploadStatus(response.redirected ? 'You may not be signed in, or you do not have permission for this. Please reload and try again.' : 'Failed to remove document.', 'text-danger');
+              return _context8.a(2);
             case 5:
+              _context8.n = 6;
+              return response.json();
+            case 6:
               result = _context8.v;
               serverDocuments = (Array.isArray(result.documents) ? result.documents : []).map(normalizeDocumentInfo).filter(function (document) {
                 return document && document.documentId;
@@ -3141,17 +3405,17 @@ window.chatInteractionDocumentManager = function () {
               });
               renderDocuments();
               showUploadStatus('Document removed.', 'text-success');
-              _context8.n = 7;
+              _context8.n = 8;
               break;
-            case 6:
-              _context8.p = 6;
+            case 7:
+              _context8.p = 7;
               _t6 = _context8.v;
               console.error('Remove failed:', _t6);
               showUploadStatus('Failed to remove document.', 'text-danger');
-            case 7:
+            case 8:
               return _context8.a(2);
           }
-        }, _callee8, null, [[1, 6]]);
+        }, _callee8, null, [[1, 7]]);
       }));
       return _removeDocument.apply(this, arguments);
     }

@@ -31,29 +31,50 @@ Add the following section to `appsettings.json`:
   "OrchardCore": {
     "CrestApps": {
       "AI": {
-        "Providers": {
-          "Azure": {
-            "DefaultConnectionName": "azure-openai",
-            "Connections": {
-              "azure-openai": {
-                "Endpoint": "https://your-resource.openai.azure.com/",
-                "AuthenticationType": "ApiKey",
-                "ApiKey": "your-api-key",
-                "Deployments": [
-                  { "Name": "chat-deployment", "Purpose": "Chat" },
-                  { "Name": "utility-deployment", "Purpose": "Utility" },
-                  { "Name": "embedding-deployment", "Purpose": "Embedding" },
-                  { "Name": "image-deployment", "Purpose": "Image" }
-                ]
+        "Connections": [
+          {
+            "Name": "azure-openai",
+            "ClientName": "Azure",
+            "DisplayText": "Azure OpenAI",
+            "Endpoint": "https://your-resource.openai.azure.com/",
+            "AuthenticationType": "ApiKey",
+            "ApiKey": "your-api-key"
+          }
+        ],
+        "Deployments": [
+          {
+            "Name": "chat-deployment",
+            "ClientName": "Azure",
+            "ConnectionName": "azure-openai",
+            "ModelName": "gpt-4.1",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textGeneration", "toolCalling", "streaming", "structuredOutputs" ]
+              }
+            }
+          },
+          {
+            "Name": "embedding-deployment",
+            "ClientName": "Azure",
+            "ConnectionName": "azure-openai",
+            "ModelName": "text-embedding-3-small",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textEmbedding" ]
               }
             }
           }
-        }
+        ]
       }
     }
   }
 }
 ```
+
+`ClientName` ties a deployment to its provider and `ConnectionName` to the connection it authenticates
+with. `Features` declares what the model can do; which deployment serves chat, utility, embedding and the
+rest is decided by the deployment slots under **Configuration** -> **Artificial Intelligence** ->
+**Settings**. See [Model capabilities](../model-capabilities.md) for the full list of features and slots.
 
 Valid values for `AuthenticationType` are `Default`, `ManagedIdentity`, and `ApiKey`. If using `ApiKey`, the `ApiKey` field is required.
 
@@ -61,13 +82,15 @@ When using `ManagedIdentity`, you can optionally provide an `IdentityId` to use 
 
 ```json
 {
-  "Connections": {
-    "azure-openai": {
+  "Connections": [
+    {
+      "Name": "azure-openai",
+      "ClientName": "Azure",
       "Endpoint": "https://my-account.openai.azure.com/",
       "AuthenticationType": "ManagedIdentity",
       "IdentityId": "optional-user-assigned-managed-identity-client-id"
     }
-  }
+  ]
 }
 ```
 
@@ -111,13 +134,23 @@ Use `AIProviderConnections` to create the connection, `AIDeployment` to create t
           "Name": "chat-deployment",
           "ClientName": "Azure",
           "ConnectionName": "azure-openai",
-          "Purpose": "Chat"
+          "ModelName": "gpt-4.1",
+          "Properties": {
+            "AIDeploymentMetadata": {
+              "Features": [ "textGeneration", "toolCalling", "streaming" ]
+            }
+          }
         },
         {
-          "Name": "utility-deployment",
+          "Name": "embedding-deployment",
           "ClientName": "Azure",
           "ConnectionName": "azure-openai",
-          "Purpose": "Utility"
+          "ModelName": "text-embedding-3-small",
+          "Properties": {
+            "AIDeploymentMetadata": {
+              "Features": [ "textEmbedding" ]
+            }
+          }
         }
       ]
     },
@@ -192,10 +225,14 @@ Instead of creating Azure Speech deployments through the admin UI, you can defin
           {
             "ClientName": "AzureSpeech",
             "Name": "my-speech-to-text",
-            "Purpose": "SpeechToText",
             "Endpoint": "https://eastus.api.cognitive.microsoft.com/",
             "AuthenticationType": "ApiKey",
-            "ApiKey": "your-speech-service-api-key"
+            "ApiKey": "your-speech-service-api-key",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "speechToText" ]
+              }
+            }
           }
         ]
       }

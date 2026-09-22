@@ -53,15 +53,13 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
-            // The chat picker asks "what can this profile talk to", so it lists the text-capable deployments
-            // and the realtime (speech-to-speech) ones together. Which of the two the selection turns out to
-            // be is read back from the deployment's own capabilities. The utility slot serves background text
-            // work and so stays text-only.
-            model.ChatDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetConversationalDeploymentsAsync());
+            // The chat deployment is the text model the generated profile talks to, so the picker offers the
+            // chat slot only -- a speech-to-speech model cannot answer a typed turn. The model that carries a
+            // spoken conversation is named separately, on the chat mode editor. The utility slot serves
+            // background text work and so stays text-only too.
+            model.ChatDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat)).ToSelectList();
 
-            model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility));
+            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
         }
 
         return Combine(
@@ -91,30 +89,4 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
         return Edit(template, context);
     }
 
-    private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
-    {
-        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
-
-        return deployments
-            .OrderBy(d => d.GetConnectionDisplayName(), StringComparer.OrdinalIgnoreCase)
-            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(d =>
-            {
-                var groupKey = d.GetConnectionDisplayName();
-                SelectListGroup group = null;
-
-                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
-                {
-                    group = new SelectListGroup { Name = groupKey };
-
-                    groups[groupKey] = group;
-                }
-
-                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                ? d.Name
-                : $"{d.Name} ({d.ModelName})";
-
-                return new SelectListItem(label, d.Name) { Group = group };
-            });
-    }
 }

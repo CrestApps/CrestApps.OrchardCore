@@ -7,7 +7,11 @@ description: Run live, spoken AI conversations over a provider realtime session,
 
 # Realtime Voice (Speech-to-Speech)
 
-A realtime-capable model can hold a live, spoken conversation — audio in, audio out — while still honoring the profile's system message, tools, and data sources. Unlike the `Conversation` chat mode (which chains speech-to-text → chat → text-to-speech), realtime runs the whole turn through a provider **realtime session** driven by the realtime orchestrator, so replies begin while the user is still finishing their sentence and the user can interrupt (barge-in).
+A realtime-capable model can hold a live, spoken conversation — audio in, audio out — while still honoring the profile's system message, tools, and data sources. The whole turn runs through a provider **realtime session** driven by the realtime orchestrator, so replies begin while the user is still finishing their sentence and the user can interrupt (barge-in).
+
+One chat thread carries both kinds of turn. A surface in **Conversation** chat mode shows a voice toggle
+*beside* an ordinary message box: start a session and speak, end it and type, and both land in the same
+thread. Choosing a speech-to-speech model no longer turns the surface voice-only.
 
 ## Prerequisites
 
@@ -15,34 +19,59 @@ A realtime-capable model can hold a live, spoken conversation — audio in, audi
    - **A provider's own speech-to-speech model.** Create an **AI → Deployment** whose model supports speech-to-speech and, on its **Model capabilities** card, enable the **Realtime (speech-to-speech)** feature. See [Model Capabilities](model-capabilities.md).
    - **A cascaded realtime deployment**, when no provider you use ships a speech-to-speech model. See [Cascaded realtime](#cascaded-realtime-when-no-provider-speaks) below.
 
-   Optionally set the site's default realtime deployment.
-2. **A profile or interaction that selects it as its chat deployment.** There is no realtime chat mode: whether a
-   conversation is spoken follows from the model the profile talks to.
-   - **AI Chat session** — pick the realtime deployment as the profile's **Chat deployment**. The chat deployment
-     picker lists text-capable and realtime deployments together.
-   - **Chat interactions** — pick the realtime deployment on the interaction. A site can no longer force realtime
-     globally through the chat mode.
+   Optionally set the site's default realtime deployment under **Settings → Artificial Intelligence → Default
+   Deployments**.
+2. **A surface in conversation mode.**
+   - **AI Chat session** — set the profile's **Chat mode** to **Conversation**. A **Conversation deployment**
+     picker appears beside it; leave it empty to inherit the site default.
+   - **Chat interactions** — an interaction has no chat mode of its own, so set chat interactions to
+     **Conversation** site-wide and name the **Conversation deployment** on the interaction. Naming one is
+     itself how that interaction asks to speak.
 
-Because the deployment *is* the answer, a profile can no longer be set to realtime while no realtime model is
-available, and there is nothing to fall back from. Selecting a text model instead gives the ordinary text,
-`AudioInput`, or `Conversation` experience.
+## Conversation mode and the realtime slot
+
+A surface holds a spoken conversation when its chat mode is **Conversation**. How that conversation is carried
+is resolved, not stored:
+
+1. the **conversation deployment** named on the profile or the chat interaction, if any;
+2. otherwise the site's default realtime deployment;
+3. otherwise the first deployment whose model declares the `realtime` capability.
+
+If none of those answers, the conversation falls back to the client-driven **speech-to-text plus
+text-to-speech cascade**, which needs both a speech-to-text and a text-to-speech deployment configured for the
+site. Failing that it degrades to microphone dictation, and failing that to plain typing.
+
+Because step 3 accepts *any* realtime-capable deployment, an installation that has one will use it for
+conversation mode even when nothing is named and no site default is set. There is deliberately no per-profile
+switch back to the cascade: the transport is not a stored property of a profile or an interaction. To keep the
+cascade, have no deployment declare `realtime`; to speak without a speech-to-speech model, use a
+[cascaded realtime deployment](#cascaded-realtime-when-no-provider-speaks).
+
+A deployment named as the conversation deployment that cannot serve realtime is reported rather than quietly
+replaced, so a typo does not silently move the conversation to a different model.
+
+The **Chat deployment** means only "the text model this profile talks to". It answers typed messages,
+including those typed during a voice conversation, so its picker lists text-capable deployments only.
 
 :::note
-A profile written before this change named its speech-to-speech model in a separate **Realtime deployment**
-field and declared a `Realtime` chat mode. Both are gone. When such a profile is read, the realtime deployment
-becomes its chat deployment, and the chat deployment it used to name moves to the **Utility deployment** when
-none was set — so background work such as summarization keeps running on the model it always did. No migration
-is required.
+A profile written before the conversation deployment existed named its speech-to-speech model as its chat
+deployment. Nothing is rewritten on disk: when such a profile is read, that model is shown as its
+**Conversation deployment** and the chat mode as **Conversation**, and saving the profile persists that shape.
+No migration is required.
 :::
 
 ## What changes in the UI
 
-When realtime is active, the chat surface becomes audio-only:
+In conversation mode the chat surface keeps everything it had and adds a voice toggle:
 
-- The text input is hidden and a **Start speaking** button is shown. Press it and talk; press again to end the session.
-- The **Chat mode** selector and the **text-to-speech playback** switch disappear from the editor: they layer
-  speech-to-text and text-to-speech over a text model, and a realtime model already speaks.
-- A **Voice** picker appears, populated from the selected realtime model's own voices.
+- Between sessions the message box has the row, with **Send** beside it and the soundwave toggle on the right.
+- While a session runs, the message box and **Send** give way to the voice settings and the **End
+  Conversation** button takes the width they leave. Sending a typed message ends the session first, so the two
+  never overlap.
+- The dictation microphone is hidden while a realtime session carries the conversation: the session already
+  owns the microphone.
+- A **Voice** picker appears beside the conversation deployment, populated from the resolved realtime model's
+  own voices — or from the text-to-speech deployment's when the conversation runs as the cascade.
 - A short settings popover (from the shared realtime audio controller) exposes only per-device preferences — microphone, speaker, assistant volume, language, **Allow interruptions** (barge-in), and **Push-to-talk** — saved per browser. Everything acoustic (echo margins, the microphone gate, turn-detection timing) is measured automatically; there are no acoustic knobs to tune.
 
 The realtime experience is delivered by the `@crestapps/ai-chat-ui` package (the vendored `realtime-audio.js` controller plus the `ai-chat.js` / `chat-interaction.js` apps); no additional page script is required.
@@ -74,8 +103,8 @@ The deployment declares the **Realtime** feature for you — a cascade is realti
 appears wherever a realtime deployment is offered. It owns no connection of its own; the three deployments
 it names carry the credentials.
 
-Point a profile at it and set the chat mode to **Realtime** exactly as you would for a native realtime model.
-The **Voice** picker lists the voices of the text-to-speech deployment, since that is the one that speaks.
+Name it as a profile's **Conversation deployment** exactly as you would a native realtime model. The **Voice**
+picker lists the voices of the text-to-speech deployment, since that is the one that speaks.
 
 ### What to expect
 

@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.Infrastructure;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
@@ -43,6 +44,10 @@ public sealed class Startup : StartupBase
         services.AddScoped<IDocumentIndexHandler, DataSourceAzureAISearchDocumentIndexHandler>();
         services.AddDisplayDriver<AIDataSource, AzureAISearchAIDataSourceDisplayDriver>();
         services.AddKeyedScoped<IAIDataSourceSourceHandler, AzureAISearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.AzureAISearch);
+
+        // This source reads rows it did not shape, and its handler extracts each document by the configured
+        // TitleFieldName and ContentFieldName, so it has to ask which field is which.
+        services.Configure<AIDataSourceFieldMappingOptions>(options => options.Require(AIDataSourceSourceTypes.AzureAISearch));
         services.Configure<AIDataSourceSourceOptions>(options => options.AddOrUpdate(
             AIDataSourceSourceTypes.AzureAISearch,
             S["Azure AI Search"],

@@ -9,10 +9,11 @@
     "marked": "^18.0.5"
   },
   "dependencies": {
-    "@crestapps/ai-chat-ui": "2.0.0-preview.175",
+    "@crestapps/ai-chat-ui": "2.0.0-preview.199",
     "@crestapps/bootstrap-select": "1.2.1",
     "chart.js": "^4.5.1",
-    "intl-tel-input": "29.1.0"
+    "intl-tel-input": "29.1.0",
+    "medium-zoom": "1.1.0"
   },
   "overrides": {
     "postcss": "^8.5.15"

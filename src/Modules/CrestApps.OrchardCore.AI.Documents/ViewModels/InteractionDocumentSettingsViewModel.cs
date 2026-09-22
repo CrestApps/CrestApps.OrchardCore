@@ -36,6 +36,18 @@ public class InteractionDocumentSettingsViewModel
     public bool AllowImageUploads { get; set; }
 
     /// <summary>
+    /// Gets or sets how much extracted text a single uploaded document may hold and still be indexed.
+    /// Zero means no limit.
+    /// </summary>
+    public int MaxIndexableCharacters { get; set; } = 50000;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether figures inside uploaded documents are described by a
+    /// vision model.
+    /// </summary>
+    public bool DescribeFiguresInUploads { get; set; } = true;
+
+    /// <summary>
     /// Gets or sets the document retrieval mode options.
     /// </summary>
     [BindNever]

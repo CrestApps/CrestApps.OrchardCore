@@ -1,4 +1,4 @@
-﻿using CrestApps.Core;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Chat.Services;
@@ -65,6 +65,10 @@ public sealed class Startup : StartupBase
     {
         services.AddAICoreServices()
             .AddCoreAIServicesStoresYesSql()
+            // Has to follow the YesSql stores: they bind the connection and deployment catalogs to the
+            // database alone, which hides configuration-backed entries from everything that resolves a
+            // catalog instead of a store.
+            .AddMultiSourceAICatalogs()
             .AddDataMigration<AIDeploymentIndexMigrations>()
             .AddDataMigration<AIProfileIndexMigrations>()
             .AddDataMigration<AIProviderConnectionIndexMigrations>()
@@ -328,6 +332,7 @@ public sealed class ChatCoreStartup : StartupBase
         services.AddSiteDisplayDriver<DefaultOrchestratorSettingsDisplayDriver>();
         services.AddNavigationProvider<AISiteSettingsAdminMenu>();
 
+        services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
     }
 }
 

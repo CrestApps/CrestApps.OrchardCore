@@ -71,12 +71,12 @@ AI Chat supports three chat modes that control how users interact with the AI. T
 | --- | --- | --- |
 | **Text Only** (default) | Standard text-based chat. Users type prompts and receive text responses. | — |
 | **Audio Input** | Adds a microphone button (🎤) for speech-to-text dictation. Users speak their prompts, review the transcribed text, and click send manually. | Microphone button |
-| **Conversation** | Persistent two-way voice interaction like ChatGPT voice mode. A continuous audio stream stays open — the user speaks, the AI responds with both text and voice simultaneously. | Headset button |
+| **Conversation** | Two-way voice interaction the user switches on and off beside an ordinary message box. Starting a session hands the turn to speech; ending it gives the message box back, and both kinds of turn land in the same thread. | Soundwave button |
 
 #### Prerequisites
 
 - **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
-- **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
+- **Conversation** is carried by a realtime (speech-to-speech) deployment when one resolves — the profile's own **Conversation deployment**, then the site's default realtime deployment, then the first realtime-capable deployment. See [Realtime Voice](realtime-voice.md). When none resolves it falls back to the client-driven speech-to-text plus text-to-speech cascade, which requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment**.
 - Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. This voice is used when no profile-specific voice is selected.
 - If an AI Profile leaves its chat model set to **Default deployment**, chat sessions use **Default Chat Deployment** from **Settings → Artificial Intelligence → Default Deployments** after checking the connection-level default.
 
@@ -84,8 +84,10 @@ AI Chat supports three chat modes that control how users interact with the AI. T
 
 1. Navigate to the AI Profile editor (or AI Profile Template editor for Profile source templates).
 2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears for **Chat** profile types and when the required default deployments are configured.
-3. When **Conversation** is selected, a **Voice** dropdown appears. Available voices are fetched from the configured text-to-speech provider. If no voice is selected, the default voice from site settings (or the provider's default) is used.
+3. When **Conversation** is selected, a **Conversation deployment** picker and a **Voice** dropdown appear. Leave the deployment empty to inherit the site's default realtime deployment. The voices are fetched from the model that will speak — the resolved realtime deployment's own voices, or the text-to-speech provider's when the conversation runs as the cascade. If no voice is selected, the default voice from site settings (or the provider's default) is used.
 4. Save the profile.
+
+The **Chat deployment** is a separate question: it names the text model the profile talks to, and it answers typed messages including those typed during a voice conversation. Its picker lists text-capable deployments only.
 
 Once configured, the selected chat mode applies to all chat UIs associated with that profile:
 - Admin session chat
@@ -103,14 +105,16 @@ Once configured, the selected chat mode applies to all chat UIs associated with 
 
 #### How Conversation Mode Works
 
-1. Click the **headset** button to start conversation mode.
-2. The microphone button, send button, and text input are hidden — a persistent audio stream opens to the server.
+1. Click the **soundwave** button to start a voice session.
+2. The message box and send button give way to the voice settings for the duration of the session, and the **End Conversation** button takes the width they leave. The dictation microphone is hidden too — the session already owns the microphone.
 3. Speak naturally — your speech is continuously streamed to the server and transcribed in real time.
 4. When a complete utterance is recognized, it is automatically displayed as a user message in the chat and sent to the AI.
 5. The AI response streams to the chat as text **and** is simultaneously synthesized to speech — you see the text appear while hearing it read aloud.
 6. If you start speaking while the AI is still responding, the AI's current response (both text and audio) is interrupted, and your new prompt is processed instead.
 7. The stream stays open for continuous back-and-forth conversation — no need to click send between turns.
-8. Click the headset button again to end the conversation. The microphone, send button, and text input are restored.
+8. Click the button again to end the conversation. The message box, send button, and microphone come straight back, and typing continues the same thread.
+
+Typing is never taken away permanently. Sending a typed message ends any live voice session first and is sent as an ordinary text turn into the same thread, so the two kinds of turn take turns rather than overlapping.
 
 :::info
 If the speech-to-text service encounters an error (e.g., authentication failure), the error is reported immediately and the recording stops automatically — the microphone button resets so you can try again.
@@ -331,12 +335,22 @@ Each override is optional and independent: an unset field always falls back to t
 
 The **Visitor Identity** section controls how anonymous widget visitors are tracked for unique-visitor analytics, abuse controls, and optional remote-address storage. Anonymous visitors receive a stable first-party cookie during page load so repeat visits are recognized as the same visitor instead of a new one for each chat session.
 
+That identity is also what a visitor's chat history is listed by: an anonymous visitor sees the sessions their own cookie owns, exactly as a signed-in user sees theirs. A visitor whose cookie has not been issued yet, or whose browser refuses it, has no history to list.
+
 | Setting | Default | Description |
 | --- | --- | --- |
 | Visitor cookie name | `crestapps-ai-visitor` | Stable first-party cookie used to identify anonymous visitors across chat sessions. |
 | Cookie lifetime (days) | `180` | How long the anonymous visitor cookie remains valid before a new visitor identity is issued. Must be between `1` and `3650`. |
+| Allow cross-site embedding | Off | Writes the cookie `SameSite=None; Secure` so it survives inside a frame on another site. See below. |
+| Partition the cookie per embedding site | On | Adds the `Partitioned` attribute (CHIPS) while cross-site embedding is on. |
 | Remote address storage mode | `Hashed` | How the remote address is captured. See the modes below. |
 | Remote address hash salt | `CrestApps.Core.AI.VisitorIdentity` | Application-specific salt used when hashing remote addresses for abuse controls. Required for the `Hashed` and `Encrypted` modes. |
+
+Turn **Allow cross-site embedding** on only when the chat is embedded in a frame on another site, such as the external chat widget. The cookie is otherwise written `SameSite=Lax`, which a browser refuses in a third-party context and reports as "Cookie 'crestapps-ai-visitor' has been rejected because it is in a cross-site context". Every request from inside the frame then looks like a brand new visitor: the conversation does not survive a page load, and the visitor rate-limit partition never accumulates, so throttling falls back to the coarser network-address, session, and connection keys. The cookie stays `HttpOnly` either way, and it identifies a visitor rather than authenticating one, so it grants no privilege of its own.
+
+`SameSite=None` is only legal together with `Secure`, and a `Secure` cookie never reaches a plain HTTP page, so a request that did not arrive over HTTPS keeps the `SameSite=Lax` cookie rather than losing it altogether.
+
+Leave **Partition the cookie per embedding site** on unless a deployment needs one identifier across sites. `SameSite` is not part of a cookie's identity key, so without partitioning the cookie written inside a frame replaces the first-party cookie of the same name and downgrades that one to `SameSite=None` everywhere. Partitioning also keeps the cookie working in browsers that are phasing out unrestricted third-party cookies, and gives a visitor a separate identifier per embedding site, which is what per-site abuse control wants.
 
 The **Remote address storage mode** supports the following values:
 

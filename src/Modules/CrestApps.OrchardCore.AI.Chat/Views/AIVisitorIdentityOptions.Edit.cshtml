@@ -26,6 +26,26 @@
     </div>
 
     <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="AllowCrossSiteEmbedding" />
+                <label class="form-check-label" asp-for="AllowCrossSiteEmbedding">@T["Allow cross-site embedding"]</label>
+                <span class="hint">@T["Turn this on when the chat is embedded in a frame on another site. The cookie is otherwise written SameSite=Lax, which a browser refuses in a frame, so every request looks like a brand new visitor: the conversation does not survive a page load and the visitor rate-limit partition never accumulates. It stays HttpOnly either way, and identifies a visitor rather than authenticating one. A request that did not arrive over HTTPS keeps the SameSite=Lax cookie, because SameSite=None is only legal together with Secure."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UsePartitionedCookie" />
+                <label class="form-check-label" asp-for="UsePartitionedCookie">@T["Partition the cookie per embedding site"]</label>
+                <span class="hint">@T["Applies only while cross-site embedding is on, and there is rarely a reason to turn it off. SameSite is not part of a cookie's identity, so without partitioning the cookie written in a frame replaces the first-party cookie of the same name and downgrades it everywhere. It also keeps the cookie working in browsers that are phasing out unrestricted third-party cookies, and gives a visitor a separate identifier per embedding site, which is what per-site abuse control wants."]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
         <label asp-for="RemoteAddressMode" class="ocat-label">@T["Remote address storage mode"]</label>
         <div class="ocat-end">
             <select asp-for="RemoteAddressMode" class="form-select">

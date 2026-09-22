@@ -79,6 +79,62 @@ dotnet run
 
 Use this when you want the local orchestration environment for the sample clients and supporting services.
 
+The Aspire host starts Ollama, Redis, a PostgreSQL container running the [pgvector](https://github.com/pgvector/pgvector) image, and an Elasticsearch container. PostgreSQL provides a local vector store, and Elasticsearch backs the Orchard Core search indexes.
+
+Both stores keep their data under `src\Startup\CrestApps.OrchardCore.Cms.Web\App_Data`, mounted into the containers instead of Docker volumes, so they sit beside the rest of the tenant data:
+
+| Container | Data folder | Host port |
+| --- | --- | --- |
+| PostgreSQL (pgvector) | `App_Data\PostgreSQL` | 5432 |
+| Elasticsearch | `App_Data\Elasticsearch` | 9200 |
+
+The app host creates both folders on startup, and the first run initializes the data there. Delete a folder's contents to start that store over.
+
+The credentials are app host parameters, so they can be overridden through user secrets:
+
+```powershell
+cd .\src\Startup\CrestApps.Aspire.AppHost
+dotnet user-secrets set Parameters:PostgresPassword "<password>"
+dotnet user-secrets set Parameters:ElasticsearchPassword "<password>"
+```
+
+PostgreSQL defaults to `postgres`/`postgres` with a `vectordb` database, and Elasticsearch to the built-in `elastic` user with the password `elasticsearch`.
+
+The host passes both connections to the CMS as environment variables, so features pick them up without any per-feature setup:
+
+```text
+OrchardCore__CrestApps__PostgreSQL__ConnectionString
+OrchardCore__CrestApps__Elasticsearch__Url
+OrchardCore__CrestApps__Elasticsearch__Username
+OrchardCore__CrestApps__Elasticsearch__Password
+OrchardCore__OrchardCore_Elasticsearch__*
+```
+
+The `CrestApps` sections are the global connections described in [AI Data Sources - PostgreSQL](./ai/data-sources/postgresql.md) and [AI Data Sources - Elasticsearch](./ai/data-sources/elasticsearch.md). The `OrchardCore_Elasticsearch` section configures the Orchard Core Elasticsearch feature that owns the Orchard-managed indexes.
+
+#### Share the local stores
+
+Because the data lives in `App_Data`, sharing that folder shares the vector store and the indexes with it. Stop the Aspire host first so both containers shut down cleanly, then copy or zip `App_Data`; copying the files while the containers run produces torn data. The other developer drops the folder into their own `CrestApps.OrchardCore.Cms.Web` and starts the app host, which mounts it as is.
+
+Leave `App_Data\logs` out of the copy. It holds the site logs rather than any state, and it grows to gigabytes on a long-running development site.
+
+Each store is only readable by the major version that wrote it, so both sides must stay on the images pinned by the app host. Both must also use the same passwords, since PostgreSQL bakes its credentials into the cluster when it is first initialized.
+
+To move individual databases instead of the whole folder, run `pg_dump` and `pg_restore` inside the container:
+
+```powershell
+docker exec -e PGPASSWORD=postgres <container> pg_dump --username postgres --dbname vectordb --format=custom --file /tmp/vectordb.dump
+docker cp <container>:/tmp/vectordb.dump .\vectordb.dump
+```
+
+To work against shared servers instead of copies, host them somewhere both developers can reach and set the connections per developer rather than in source control:
+
+```powershell
+cd .\src\Startup\CrestApps.OrchardCore.Cms.Web
+dotnet user-secrets set OrchardCore:CrestApps:PostgreSQL:ConnectionString "<connection string>"
+dotnet user-secrets set OrchardCore:CrestApps:Elasticsearch:Url "<url>"
+```
+
 ### Sample clients
 
 ```powershell

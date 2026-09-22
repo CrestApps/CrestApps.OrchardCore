@@ -1,7 +1,7 @@
-﻿@using System.Text.Json
+﻿@using CrestApps.Core.AI.Ingestion
+@using System.Text.Json
 @using CrestApps.Core
 @using CrestApps.Core.AI
-@using CrestApps.Core.AI.Capabilities
 @using CrestApps.Core.AI.Chat.Realtime
 @using CrestApps.Core.AI.Deployments
 @using CrestApps.Core.AI.Documents.Models
@@ -25,7 +25,6 @@
 @inject IAIProfileStore ProfilesCatalog
 @inject IAIChatSessionPromptStore PromptStore
 @inject IAIDeploymentManager AIDeploymentManager
-@inject IAIDeploymentCapabilityService CapabilityService
 
 @{
     var baseId = Html.IdForModel();
@@ -76,29 +75,29 @@
 
     var speechToTextDeployment = await AIDeploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText);
     var textToSpeechDeployment = await AIDeploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.TextToSpeech);
-    var speechToTextEnabled = (chatMode == ChatMode.AudioInput || chatMode == ChatMode.Conversation)
+
+    // Conversation mode decides how the conversation is carried, and the conversation deployment names the
+    // model that carries it. One resolution shared with the hub, so the toggle the user sees and the session
+    // the hub will start cannot disagree.
+    var conversation = await AIDeploymentManager.ResolveConversationModeAsync(
+        chatMode,
+        chatModeSettings?.ConversationDeploymentName,
+        Model.Profile?.ChatDeploymentName,
+        speechToTextDeployment != null,
+        textToSpeechDeployment != null);
+
+    var realtimeEnabled = conversation.RealtimeEnabled;
+    var effectiveChatMode = conversation.ChatMode;
+
+    // A realtime session captures the microphone itself, so the dictation button would be a second microphone
+    // doing something different. Suppress it while realtime carries the conversation.
+    var speechToTextEnabled = !realtimeEnabled
+        && (effectiveChatMode == ChatMode.AudioInput || effectiveChatMode == ChatMode.Conversation)
         && speechToTextDeployment != null;
-    var textToSpeechEnabled = (chatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true)
+    var textToSpeechEnabled = (!realtimeEnabled && effectiveChatMode == ChatMode.Conversation || chatModeSettings?.EnableTextToSpeechPlayback == true)
         && textToSpeechDeployment != null;
 
     var ttsVoiceName = chatModeSettings?.VoiceName;
-
-    // Realtime (speech-to-speech): the profile's own chat deployment decides whether this is a voice
-    // conversation, which keeps the client's realtime UI in step with the hub's capability gate. Realtime is
-    // audio-only and reuses the conversation button as the "Start speaking" toggle (see ai-chat.js).
-    var realtimeEnabled = await CapabilityService.IsRealtimeDeploymentAsync(Model.Profile?.ChatDeploymentName);
-
-    // The chat mode layers speech-to-text and text-to-speech over a text model, so it does not apply to a
-    // realtime deployment, which speaks natively.
-    var effectiveChatMode = realtimeEnabled
-        ? ChatMode.TextInput
-        : chatMode switch
-        {
-            ChatMode.Conversation when speechToTextEnabled && textToSpeechEnabled => ChatMode.Conversation,
-            ChatMode.AudioInput when speechToTextEnabled => ChatMode.AudioInput,
-            ChatMode.Conversation when speechToTextEnabled => ChatMode.AudioInput,
-            _ => ChatMode.TextInput,
-        };
 
     // Whether the server can offer WebRTC is a capability of the host, not of this page's current mode. The
     // client turns realtime on by itself when a realtime-capable deployment is picked after the page loaded, and
@@ -106,13 +105,14 @@
     var realtimeWebRtcEnabled = RealtimeTransportSettings.IsWebRtcEnabled(Context.RequestServices);
     var realtimeVoiceName = chatModeSettings?.VoiceName;
 
-    // The conversation button doubles as the realtime "Start speaking" toggle, so render it for both modes.
+    // The conversation button doubles as the realtime "Start speaking" toggle. Conversation mode alone
+    // decides whether it is rendered now: a realtime deployment no longer turns the surface voice-only.
     var conversationModeEnabled = effectiveChatMode == ChatMode.Conversation;
-    var conversationButtonVisible = conversationModeEnabled || realtimeEnabled;
 
     var micBtnHtmlId = $"{baseId}_MicBtn";
 
     var conversationBtnHtmlId = $"{baseId}_ConversationBtn";
+    var realtimeHintHtmlId = $"{baseId}_RealtimeHint";
 
     var orchestratorAvailability = new OrchestratorAvailability();
 
@@ -163,29 +163,18 @@
                 <div id="@documentBarHtmlId" class="d-none"></div>
             }
 
-            @* Realtime is audio-only. The element stays in the DOM because the chat app reads the session
-               and profile ids from it, but it is hidden: there is nothing to type into during a spoken
-               conversation. Hidden here rather than by the realtime controller, which only owns the
-               elements this app hands it -- and this app hands it only the button. *@
-            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Profile?.ItemId ?? Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId" hidden="@realtimeEnabled"></textarea>
+            @* Typing stays available whatever the voice toggle is doing: a typed message ends the voice
+               session and is sent as an ordinary text turn into the same thread. The client hides it only
+               while a session is actually live, and gives it straight back when the session ends. *@
+            <textarea class="form-control bg-transparent border-0 chat-user-prompt-input px-4" id="@userPromptHtmlId" data-session-id="@(Model.IsNew ? string.Empty : Model.Session.SessionId)" data-profile-id="@(Model.Profile?.ItemId ?? Model.Session.ProfileId)" placeholder="@T["Message AI Chat"] ..." aria-label="@T["Message AI Chat"]" aria-describedby="@buttonHtmlId"></textarea>
 
-            @* Single flex row so the realtime "Start speaking" button (flex-grow-1) can span the full input
-               width when the client hides the text controls (audio-only). The shared realtime-audio
-               controller inserts its settings gear as a sibling (beside the button) and appends the status
-               line + push-to-talk bar to the prompt container below the row — mirroring CrestApps.Core. *@
+            @* Single flex row so the "End Conversation" button (flex-grow-1) can take the space the message
+               box leaves behind while a voice session runs. The shared realtime-audio controller inserts its
+               settings gear as a sibling (beside the button) and appends the status line + push-to-talk bar
+               to the prompt container below the row — mirroring CrestApps.Core. *@
             <div class="d-flex gap-2 align-items-center px-3 my-2">
 
-                @* The conversation button doubles as the realtime "Start speaking" toggle (ai-chat.js reuses
-                   conversationButtonElementSelector). When realtime, it is a direct child of this row so it
-                   can span; the settings gear and status attach relative to it. *@
-                @if (realtimeEnabled)
-                {
-                    <button class="btn btn-outline-dark flex-grow-1" type="button" id="@conversationBtnHtmlId" title="@T["Start speaking"]" data-start-title="@T["Start speaking"]" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square me-1'></i> @T["Start speaking"]" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
-                        <i class="fa-solid fa-wave-square me-1"></i>
-                        <span>@T["Start speaking"]</span>
-                    </button>
-                }
-                else if (promptGeneratedProfiles.Any())
+                @if (promptGeneratedProfiles.Any())
                 {
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary rounded-pill dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -208,18 +197,35 @@
                         <i class="fa-solid fa-microphone"></i>
                     </button>
 
-                    @if (!realtimeEnabled && conversationModeEnabled)
-                    {
-                        <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@T["Start Conversation"]" data-start-title="@T["Start Conversation"]" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
-                            <i class="fa-solid fa-wave-square"></i>
-                        </button>
-                    }
-
-                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled hidden="@realtimeEnabled" data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
+                    @* Send sits with the message box it belongs to. *@
+                    <button class="btn btn-dark rounded" type="button" id="@buttonHtmlId" disabled data-start-icon="<i class='fa-solid fa-arrow-up'></i>" data-stop-icon="<i class='fa-solid fa-stop'></i>">
                         <i class="fa-solid fa-arrow-up"></i>
                     </button>
                 </div>
+
+                @if (conversationModeEnabled)
+                {
+                    @* A direct child of the row rather than of the group above, so that when a live session
+                       takes the message box and send away the client can grow this button into the space they
+                       leave. The realtime module inserts its settings popover directly after it, which puts
+                       the gear at the far right of the row.
+
+                       Idle is the soundwave on its own; the title and aria-label carry the meaning. The end
+                       state keeps its words because stopping a live conversation should be unmistakable. *@
+                    <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])" aria-label="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])" data-start-title="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+                        <i class="fa-solid fa-wave-square"></i>
+                    </button>
+                }
             </div>
+
+            @if (realtimeEnabled)
+            {
+                @* Shown only while a voice session is live: the old copy announced a voice-only profile,
+                   which is exactly what this is not any more. *@
+                <div class="form-text text-center pb-2 d-none" id="@realtimeHintHtmlId">
+                    <i class="fa-solid fa-circle-info"></i> @T["Speaking. Use headphones to avoid echo — end the conversation to go back to typing."]
+                </div>
+            }
         </div>
     </div>
 </div>
@@ -266,6 +272,7 @@
         micButtonElementSelector = $"#{micBtnHtmlId}",
         ttsVoiceName = string.IsNullOrWhiteSpace(ttsVoiceName) ? null : ttsVoiceName,
         conversationButtonElementSelector = $"#{conversationBtnHtmlId}",
+        realtimeHintElementSelector = realtimeEnabled ? $"#{realtimeHintHtmlId}" : null,
         textToSpeechEnabled,
         visionEnabled,
         // Realtime (speech-to-speech). ai-chat.js reuses the conversation button as the realtime toggle and

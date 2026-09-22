@@ -62,6 +62,8 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
             viewModel.RetrievalMode = section.RetrievalMode;
             viewModel.AllowDocumentUploads = section.AllowDocumentUploads;
             viewModel.AllowImageUploads = section.AllowImageUploads;
+            viewModel.MaxIndexableCharacters = section.MaxIndexableCharacters;
+            viewModel.DescribeFiguresInUploads = section.DescribeFiguresInUploads;
             viewModel.RetrievalModes = DocumentRetrievalModeSelectListBuilder.Build(S, section.RetrievalMode);
 
             var items = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
@@ -86,16 +88,24 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
         var indexProfileName = string.IsNullOrWhiteSpace(model.IndexProfileName)
             ? null
             : model.IndexProfileName;
+        // A negative ceiling would refuse every upload, so treat it as the "no limit" zero rather than
+        // storing a number nothing can satisfy.
+        var maxIndexableCharacters = Math.Max(0, model.MaxIndexableCharacters);
+
         var settingsChanged =
             !string.Equals(settings.IndexProfileName, indexProfileName, StringComparison.Ordinal) ||
             settings.RetrievalMode != model.RetrievalMode ||
             settings.AllowDocumentUploads != model.AllowDocumentUploads ||
-            settings.AllowImageUploads != model.AllowImageUploads;
+            settings.AllowImageUploads != model.AllowImageUploads ||
+            settings.MaxIndexableCharacters != maxIndexableCharacters ||
+            settings.DescribeFiguresInUploads != model.DescribeFiguresInUploads;
 
         settings.IndexProfileName = indexProfileName;
         settings.RetrievalMode = model.RetrievalMode;
         settings.AllowDocumentUploads = model.AllowDocumentUploads;
         settings.AllowImageUploads = model.AllowImageUploads;
+        settings.MaxIndexableCharacters = maxIndexableCharacters;
+        settings.DescribeFiguresInUploads = model.DescribeFiguresInUploads;
 
         if (!string.IsNullOrWhiteSpace(settings.IndexProfileName))
         {

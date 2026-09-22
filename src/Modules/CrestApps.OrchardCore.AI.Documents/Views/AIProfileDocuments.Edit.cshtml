@@ -1,4 +1,4 @@
-@using CrestApps.Core.AI.Documents.Models
+@using CrestApps.Core.AI.Ingestion
 @using CrestApps.OrchardCore.AI.Documents.ViewModels
 @using Microsoft.Extensions.Options
 
@@ -74,12 +74,22 @@
                     foreach (var doc in Model.Documents)
                     {
                         <div class="document-item d-flex align-items-center border-bottom py-2" data-document-id="@doc.DocumentId">
-                            <button type="button"
-                                    class="btn btn-sm btn-outline-danger remove-profile-document me-2 flex-shrink-0"
-                                    data-document-id="@doc.DocumentId"
-                                    title="@T["Remove document"]">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
+                            <div class="d-flex gap-1 me-2 flex-shrink-0">
+                                @if (Model.AllowDownload)
+                                {
+                                    <a class="btn btn-sm btn-outline-secondary"
+                                       href="@Url.Content($"~/ai/documents/{doc.DocumentId}/download")"
+                                       title="@T["Download document"]">
+                                        <i class="fa-solid fa-download"></i>
+                                    </a>
+                                }
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-danger remove-profile-document"
+                                        data-document-id="@doc.DocumentId"
+                                        title="@T["Remove document"]">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
                             <div class="text-truncate">
                                 <div class="fw-medium small text-truncate">@doc.FileName</div>
                                 <small class="text-muted" style="font-size: 0.75rem;">

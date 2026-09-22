@@ -95,12 +95,12 @@ Chat Interactions supports configurable chat modes that control how users intera
 | --- | --- | --- |
 | **Text Only** (default) | Standard text-based chat. Users type prompts and receive text responses. | — |
 | **Audio Input** | Adds a microphone button (🎤) for speech-to-text dictation. Users speak their prompts, review the transcribed text, and click send manually. | Microphone button |
-| **Conversation** | Persistent two-way voice interaction like ChatGPT voice mode. A continuous audio stream stays open — the user speaks, the AI responds with both text and voice simultaneously. | Headset button |
+| **Conversation** | Two-way voice interaction the user switches on and off beside an ordinary message box. Starting a session hands the turn to speech; ending it gives the message box back, and both kinds of turn land in the same interaction. | Soundwave button |
 
 ### Prerequisites
 
 - **Audio Input** requires a **Default Speech-to-Text Deployment** configured in **Settings → Artificial Intelligence → Default Deployments** (any deployment supporting the `ISpeechToTextClient` interface, such as Azure Speech or OpenAI Whisper).
-- **Conversation** requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment** configured in default deployment settings.
+- **Conversation** is carried by a realtime (speech-to-speech) deployment when one resolves — the interaction's own **Conversation deployment**, then the site's default realtime deployment, then the first realtime-capable deployment. See [Realtime Voice](realtime-voice.md). When none resolves it falls back to the client-driven speech-to-text plus text-to-speech cascade, which requires both a **Default Speech-to-Text Deployment** and a **Default Text-to-Speech Deployment**.
 - Optionally, set a **Default Text-to-Speech Voice** in **Settings → Artificial Intelligence → Default Deployments**. The voice list always includes the current culture, even if no site cultures are configured.
 
 ### Configuring Chat Mode
@@ -109,12 +109,12 @@ Chat Interactions supports configurable chat modes that control how users intera
 2. Select the desired option from the **Chat Mode** dropdown. The dropdown only appears when the required default deployments are configured.
 3. Save the settings.
 
-The selected chat mode applies to all Chat Interaction UIs. Unlike AI Profiles, there is no per-session voice selection — Conversation mode uses the default voice configured in site settings (or the provider's default).
+The selected chat mode applies to all Chat Interaction UIs. An interaction has no chat mode of its own, so naming a **Conversation deployment** on the interaction is how that interaction asks to speak while the site is in Conversation mode. The **Voice** picker beside it is per-interaction and lists the voices of whichever model resolves; leaving it empty uses the default voice configured in site settings (or the provider's default).
 
 Once configured:
 
 - **Audio Input**: A microphone button (🎤) appears in the chat interaction interface. Click the microphone to start recording and speak your prompt. Audio is streamed to the server in real-time via SignalR, and transcript text is sent back as it becomes available — you see words appear while still speaking. Click the stop button when finished, then review or edit the transcribed text before sending.
-- **Conversation**: A headset button appears in the Chat Interaction editor. Click it to start a persistent two-way voice conversation — the mic, send button, and text input are hidden. Speak naturally and your transcribed prompt appears as a user message and is automatically sent. The AI responds with streamed text **and** spoken audio simultaneously. If you speak while the AI is responding, the current response is interrupted to process your new prompt. Click the headset button again to end the conversation and restore the text interface.
+- **Conversation**: A soundwave button appears beside the message box in the Chat Interaction editor. Click it to start a voice session — the message box and send button give way to the voice settings for the duration, and the dictation microphone is hidden because the session already owns the microphone. Speak naturally and your transcribed prompt appears as a user message and is automatically sent. The AI responds with streamed text **and** spoken audio simultaneously. If you speak while the AI is responding, the current response is interrupted to process your new prompt. Click the button again to end the session; the message box comes straight back and typing continues the same interaction. Sending a typed message ends any live session first, so the two kinds of turn take turns rather than overlapping.
 
 :::info
 If the speech-to-text service encounters an error during transcription, the error is reported immediately and the recording stops automatically.
@@ -181,30 +181,34 @@ To enable image generation, create an `AIDeployment` record with the `Image` pur
   "OrchardCore": {
     "CrestApps": {
       "AI": {
-        "Providers": {
-          "OpenAI": {
-            "Connections": {
-              "default": {
-                "Deployments": [
-                  {
-                    "Name": "gpt-4o",
-                    "Purpose": "Chat"
-                  },
-                  {
-                    "Name": "gpt-4o-mini",
-                    "Purpose": "Utility"
-                  },
-                  {
-                    "Name": "dall-e-3",
-                    "Purpose": "Image"
-                  }
-                ]
+        "Deployments": [
+          {
+            "Name": "gpt-4o",
+            "ClientName": "OpenAI",
+            "ConnectionName": "default",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textGeneration", "toolCalling", "streaming" ]
+              }
+            }
+          },
+          {
+            "Name": "dall-e-3",
+            "ClientName": "OpenAI",
+            "ConnectionName": "default",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "imageOutput" ]
               }
             }
           }
-        }
+        ]
       }
     }
   }
 }
 ```
+
+The image deployment is the one declaring `imageOutput`. Assign it to the `image` slot under
+**Configuration** -> **Artificial Intelligence** -> **Settings** so image generation picks it up. See
+[Model capabilities](model-capabilities.md) for the full list of features and slots.

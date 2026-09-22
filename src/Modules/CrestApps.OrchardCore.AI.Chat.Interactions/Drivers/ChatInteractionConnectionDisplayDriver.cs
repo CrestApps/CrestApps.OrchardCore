@@ -1,8 +1,10 @@
 ﻿using CrestApps.Core;
-using CrestApps.Core.AI;
 using CrestApps.Core.AI.Deployments;
 using CrestApps.Core.AI.Models;
+using CrestApps.Core.AI;
+using CrestApps.OrchardCore.AI.Chat.Interactions.Settings;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -50,15 +52,21 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         async ValueTask PopulateAsync(EditChatInteractionConnectionViewModel model)
         {
             var settings = await _siteService.GetSettingsAsync<DefaultAIDeploymentSettings>();
-            // The chat picker asks "what can this interaction talk to", so it lists the text-capable
-            // deployments and the realtime (speech-to-speech) ones together.
-            var chatDeployments = (await _deploymentManager.GetConversationalDeploymentsAsync()).ToList();
+            var site = await _siteService.GetSiteSettingsAsync();
+
+            // The chat deployment is the text model this interaction talks to, so the picker offers the chat
+            // slot only -- a speech-to-speech model cannot answer a typed turn. The model that carries a
+            // spoken conversation is named separately, below.
+            var chatDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat)).ToList();
 
             model.ChatDeploymentName = interaction.ChatDeploymentName;
             model.UtilityDeploymentName = interaction.UtilityDeploymentName;
+            model.ConversationDeploymentName = interaction.ConversationDeploymentName;
+            model.ConversationDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Realtime);
+            model.ConversationModeEnabled = site.GetOrCreate<ChatInteractionChatModeSettings>().ChatMode == ChatMode.Conversation;
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
-            model.ChatDeployments = BuildGroupedDeploymentItems(chatDeployments);
+            model.ChatDeployments = chatDeployments.ToSelectList();
             // Vision is the imageInput capability, which is opt-in: a genuinely vision-capable model declares
             // it rather than being inferred from a flag nobody remembered to tick.
             model.DeploymentVisionSupport = chatDeployments
@@ -67,15 +75,19 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
             model.DefaultChatDeploymentSupportsVision = await _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.Chat) is { } defaultChatDeployment
                 && SupportsVision(defaultChatDeployment);
 
-            model.UtilityDeployments = BuildGroupedDeploymentItems(
-                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Utility));
+            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
         }
 
         return Combine(
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionChatConnection_Edit", PopulateAsync)
                 .Location("Parameters:3#Settings;1"),
-            // The voice belongs to the chat deployment, so it sits with it rather than beside the chat's
-            // send controls. Hidden until the client sees that the selected deployment is realtime-capable.
+            // The model that speaks, separate from the text model above. Naming one is how an interaction
+            // opts into a spoken conversation, so it sits directly beneath the deployment it is not.
+            Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionConversationDeployment_Edit", PopulateAsync)
+                .Location("Parameters:3.4#Settings;1"),
+            // The voice belongs to whatever carries the conversation, so it sits with the conversation
+            // deployment rather than beside the chat's send controls. Hidden until the client sees that a
+            // realtime deployment actually resolves.
             View("ChatInteractionRealtimeVoice_Edit", interaction)
                 .Location("Parameters:3.5#Settings;1"),
             Initialize<EditChatInteractionConnectionViewModel>("ChatInteractionUtilityConnection_Edit", PopulateAsync)
@@ -91,6 +103,12 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         interaction.ChatDeploymentName = model.ChatDeploymentName;
         interaction.UtilityDeploymentName = model.UtilityDeploymentName;
 
+        // Never written with the resolved value. Empty means "use the site default", and storing what that
+        // resolved to today would pin the interaction to a model the operator has since replaced.
+        interaction.ConversationDeploymentName = string.IsNullOrWhiteSpace(model.ConversationDeploymentName)
+            ? null
+            : model.ConversationDeploymentName.Trim();
+
         return Edit(interaction, context);
     }
 
@@ -99,30 +117,4 @@ public sealed class ChatInteractionConnectionDisplayDriver : DisplayDriver<ChatI
         => deployment.TryGet<AIDeploymentMetadata>(out var metadata) &&
             metadata.SupportsFeature(AIDeploymentFeatureNames.ImageInput);
 
-    private static IEnumerable<SelectListItem> BuildGroupedDeploymentItems(IEnumerable<AIDeployment> deployments)
-    {
-        var groups = new Dictionary<string, SelectListGroup>(StringComparer.OrdinalIgnoreCase);
-
-        return deployments
-            .OrderBy(d => d.ConnectionName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(d =>
-            {
-                var groupKey = d.ConnectionName;
-                SelectListGroup group = null;
-
-                if (!string.IsNullOrEmpty(groupKey) && !groups.TryGetValue(groupKey, out group))
-                {
-                    group = new SelectListGroup { Name = groupKey };
-
-                    groups[groupKey] = group;
-                }
-
-                var label = string.Equals(d.Name, d.ModelName, StringComparison.OrdinalIgnoreCase)
-                ? d.Name
-                : $"{d.Name} ({d.ModelName})";
-
-                return new SelectListItem(label, d.Name) { Group = group };
-            });
-    }
 }
