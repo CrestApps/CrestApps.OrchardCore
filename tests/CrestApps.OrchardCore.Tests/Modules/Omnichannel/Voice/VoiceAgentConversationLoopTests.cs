@@ -1,4 +1,5 @@
-﻿using CrestApps.Core.AI;
+﻿using CrestApps.Core;
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Completions;
@@ -401,6 +402,96 @@ public sealed class VoiceAgentConversationLoopTests
         Assert.Equal(0, harness.Media.Hangups);
         await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(1, harness.Media.Hangups);
+    }
+
+    // ---- A line answered by voicemail ----
+    //
+    // A recording is heard exactly like somebody answering. Live, "when you have finished recording you may hang up"
+    // was replied to as the customer, and the call was concluded as the customer asking not to be called again.
+
+    [Fact]
+    public async Task AVoicemailGreeting_IsLeftAMessage_RatherThanRepliedTo()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        harness.Reply = "Hi Amani, this is Alex from Prestige Auto Group. Sorry we missed you, we will try again soon.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "When you have finished recording you may hang up.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Contains(harness.Transcript, message => message.Role == ChatRole.System && message.Text == VoiceAgentConversationLoop.LeavingAVoicemail);
+        Assert.Equal(harness.Reply, harness.Media.Spoken[^1]);
+        Assert.True(harness.Activity.TryGet<VoicemailReached>(out var voicemail));
+        Assert.True(voicemail.MessageLeft);
+
+        // The message is heard out, and then the call is over: nobody is going to reply to it.
+        Assert.Equal(0, harness.Media.Hangups);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(1, harness.Media.Hangups);
+    }
+
+    [Fact]
+    public async Task AGreetingStillGoing_IsLetFinish_AndTheMessageIsLeftWhenTheLineGoesQuiet()
+    {
+        // Arrange
+        // Speaking over the rest of the greeting records half a message, or none of it.
+        var harness = new LoopHarness();
+        harness.Reply = "Hi, this is Alex from Prestige Auto Group. We will try you again soon.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        var spokenBefore = harness.Media.Spoken.Count;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Hi, you've reached Amani.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(spokenBefore, harness.Media.Spoken.Count);
+        Assert.Empty(harness.Transcript);
+        var watch = harness.SilenceWatchdog.Armed[^1];
+        Assert.Equal(VoiceAgentConversationLoop.VoicemailToneWait, watch.Wait);
+
+        // The greeting ends and the tone sounds: the quiet that follows is the recording, not a caller gone silent.
+        await harness.Loop.OnListeningTimedOutAsync(watch, TestContext.Current.CancellationToken);
+
+        Assert.Equal(harness.Reply, harness.Media.Spoken[^1]);
+        Assert.DoesNotContain(VoiceAgentConversationLoop.StillThereLine, harness.Media.Spoken);
+    }
+
+    [Fact]
+    public async Task AVoicemailWithNothingFromTheModel_IsStillLeftAMessage()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        harness.Reply = null;
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Please leave a message after the tone.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(VoiceAgentConversationLoop.FallbackVoicemailMessage, harness.Media.Spoken[^1]);
+    }
+
+    [Fact]
+    public async Task ACustomerWhoMentionsVoicemail_IsRepliedTo()
+    {
+        // Arrange
+        // Once somebody has spoken, the line is a person, whatever they go on to talk about.
+        var harness = new LoopHarness();
+        harness.Reply = "Got it.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Yes, this is Amani.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I got your voicemail yesterday, leave a message next time too.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Got it.", harness.Media.Spoken[^1]);
+        Assert.False(harness.Activity.TryGet<VoicemailReached>(out _));
+        Assert.DoesNotContain(harness.Transcript, message => message.Text == VoiceAgentConversationLoop.LeavingAVoicemail);
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Capabilities;
 using CrestApps.Core.AI.Chat;
@@ -14,6 +15,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.OrchardCore.Telephony.Services;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
@@ -130,6 +132,51 @@ public sealed class VoiceCallConclusionWiringTests
         Assert.Equal("disposition-no-answer", harness.WrittenActivity.DispositionId);
         var run = Assert.Single(harness.Executor.Runs);
         Assert.Equal("disposition-no-answer", run.Disposition.ItemId);
+    }
+
+    [Fact]
+    public async Task ACallVoicemailAnswered_IsNeverReviewed_AndTriesAgainRatherThanOptingTheContactOut()
+    {
+        // Arrange
+        // Live: the greeting was stored as the customer's turn, the review read "when you have finished recording
+        // you may hang up" as the customer declining, and chose do-not-call -- opting out somebody who had never
+        // picked up. A recording is not a conversation, so it is concluded exactly like a call nobody answered.
+        var harness = new ConclusionHarness();
+        harness.Says(
+            (ChatRole.Assistant, "Hi Amani, this is Alex at Prestige Auto Group. Do you have a quick minute?"),
+            (ChatRole.User, "When you have finished recording you may hang up."),
+            (ChatRole.Assistant, "Thanks, Amani! Have a great day! [[HANGUP]]"));
+        harness.Offers("disposition-do-not-call", "Do Not Call");
+        harness.Offers("disposition-no-answer", "No answer", OmnichannelConstants.ActionTypes.TryAgain);
+        harness.ModelReturns(dispositionId: "disposition-do-not-call", summary: "The customer declined to engage.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal(0, harness.Model.Requests);
+        Assert.Equal("disposition-no-answer", harness.WrittenActivity.DispositionId);
+        Assert.Equal(VoiceCallConclusionPolicy.VoicemailNote, harness.WrittenActivity.Notes);
+    }
+
+    [Fact]
+    public async Task ACallTheLoopMarkedAsVoicemail_IsConcludedAsUnanswered()
+    {
+        // Arrange
+        // The model can recognise a voicemail the greeting check does not, and the loop records that on the
+        // activity; the conclusion has to honour it even though the transcript reads like a conversation.
+        var harness = new ConclusionHarness();
+        harness.Activity.Put(new VoicemailReached { MessageLeft = true });
+        harness.Offers("disposition-interested", "Interested");
+        harness.Offers("disposition-no-answer", "No answer", OmnichannelConstants.ActionTypes.TryAgain);
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer wants a call back.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal(0, harness.Model.Requests);
+        Assert.Equal("disposition-no-answer", harness.WrittenActivity.DispositionId);
     }
 
     [Fact]
@@ -532,6 +579,20 @@ public sealed class VoiceCallConclusionWiringTests
         /// </summary>
         public void NobodySpoke()
             => _prompts.Clear();
+
+        /// <summary>
+        /// Replaces the transcript with the given turns.
+        /// </summary>
+        public void Says(params (ChatRole Role, string Content)[] turns)
+        {
+            _prompts.Clear();
+            _prompts.AddRange(turns.Select(turn => new AIChatSessionPrompt
+            {
+                SessionId = "session-1",
+                Role = turn.Role,
+                Content = turn.Content,
+            }));
+        }
 
         /// <summary>
         /// What the review answers with when it is asked.

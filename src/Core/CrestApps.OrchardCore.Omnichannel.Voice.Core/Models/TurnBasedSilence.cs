@@ -28,4 +28,13 @@ public sealed class TurnBasedSilence
     /// when the watch fires means the line has been silent the whole time.
     /// </remarks>
     public int PromptCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how long the line may stay quiet before the watch fires, when not the default.
+    /// </summary>
+    /// <remarks>
+    /// A voicemail greeting that has finished is followed by the tone and then a recording of whatever comes next,
+    /// so the pause worth waiting for there is a few seconds rather than the time a person is given to answer.
+    /// </remarks>
+    public TimeSpan? Wait { get; set; }
 }

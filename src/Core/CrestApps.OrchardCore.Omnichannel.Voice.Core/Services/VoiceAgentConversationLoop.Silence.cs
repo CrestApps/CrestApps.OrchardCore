@@ -81,6 +81,20 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
+        // A voicemail has gone quiet because its greeting is over and it is recording: that is the moment to leave
+        // the message, not to ask a recording whether it is still there.
+        if (activity.TryGet<VoicemailReached>(out var voicemail))
+        {
+            await media.StopTranscriptionAsync(silence.ProviderCallId, cancellationToken);
+
+            if (!voicemail.MessageLeft)
+            {
+                await LeaveVoicemailAsync(media, silence.ProviderCallId, activity, voicemail, profile, session, cancellationToken);
+            }
+
+            return;
+        }
+
         var stillTherePrompts = Enumerable.Reverse(prompts)
             .TakeWhile(prompt => prompt.Role == ChatRole.Assistant)
             .Count(prompt => string.Equals(prompt.Content?.Trim(), StillThereLine, StringComparison.Ordinal));
@@ -117,12 +131,13 @@ public sealed partial class VoiceAgentConversationLoop
         await SpeakAsync(media, silence.ProviderCallId, activity, SilentLineGoodbye, cancellationToken);
     }
 
-    private Task WatchForSilenceAsync(VoiceAgentEvent voiceEvent, int promptCount)
+    private Task WatchForSilenceAsync(VoiceAgentEvent voiceEvent, int promptCount, TimeSpan? wait = null)
         => _silenceWatchdog.ArmAsync(new TurnBasedSilence
         {
             ActivityId = voiceEvent.ActivityId,
             ProviderName = voiceEvent.ProviderName,
             ProviderCallId = voiceEvent.ProviderCallId,
             PromptCount = promptCount,
+            Wait = wait,
         });
 }

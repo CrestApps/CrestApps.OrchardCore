@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CrestApps.Core;
 using CrestApps.Core.AI;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
@@ -12,6 +13,7 @@ using CrestApps.Core.Support;
 using CrestApps.Core.Templates.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -84,7 +86,14 @@ public sealed partial class VoiceAgentConversationLoop
 
         // Whether anybody actually said anything. A call that rang out, was declined, or was answered and hung up
         // on leaves no turns at all, and there is nothing for the review below to read.
-        var hasConversation = VoiceCallConclusionPolicy.HasConversation(sessionPrompts);
+        //
+        // A voicemail is not a conversation either, whatever its transcript holds: the "customer" in it is a
+        // recording. Reviewed, one greeting was read as the customer declining and concluded as do-not-call, opting
+        // out somebody who had never picked up. Recognised from the transcript as well as from the marker, so a call
+        // held by a live session, which leaves no marker, is judged the same way.
+        var reachedVoicemail = activity.TryGet<VoicemailReached>(out _) ||
+            VoicemailGreeting.OpensWithRecordedGreeting(sessionPrompts);
+        var hasConversation = VoiceCallConclusionPolicy.HasConversation(sessionPrompts) && !reachedVoicemail;
 
         // The AI field-update guards are a snapshot taken when the automated inventory was loaded (the subject
         // AI-settings UI is inbound-only, so an outbound automated inventory configures these on the batch). Only
@@ -190,7 +199,9 @@ public sealed partial class VoiceAgentConversationLoop
             : VoiceCallConclusionPolicy.ChooseUnansweredDisposition(dispositions, allActions, activity.SubjectContentType);
         var dispositionId = disposition?.ItemId;
 
-        var notes = VoiceCallConclusionPolicy.ResolveNotes(hasConversation, result?.Summary);
+        var notes = reachedVoicemail
+            ? VoiceCallConclusionPolicy.VoicemailNote
+            : VoiceCallConclusionPolicy.ResolveNotes(hasConversation, result?.Summary);
 
         // Terminal write. Reload the activity fresh (the analysis above ran a slow LLM call, during which the row
         // may have moved on) and apply the conclusion. The answered call was advanced to InProgress, which keeps

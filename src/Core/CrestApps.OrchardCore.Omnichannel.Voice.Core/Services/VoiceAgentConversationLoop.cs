@@ -470,9 +470,26 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             return;
         }
 
+        // Read before this turn is stored, so the turn being judged is not mistaken for somebody having already spoken.
+        var turnsBefore = prompts.Count;
+        var customerHadSpoken = prompts.Any(prompt => prompt.Role == ChatRole.User && !prompt.IsGeneratedPrompt && !string.IsNullOrWhiteSpace(prompt.Content));
+
         await StorePromptAsync(session, ChatRole.User, caller, cancellationToken);
 
-        var (reply, handoffRequested, handoffReason, endCallRequested) = await CompleteAsync(profile, session, activity, cancellationToken);
+        // A recording answering is not somebody to converse with, and must never be read as the customer's reply.
+        if (await HandleVoicemailTurnAsync(voiceEvent, media, activity, profile, session, turnsBefore, customerHadSpoken, caller, stopListening, cancellationToken))
+        {
+            return;
+        }
+
+        var (reply, handoffRequested, handoffReason, endCallRequested) = await CompleteAsync(profile, session, activity, turnGuidance: null, cancellationToken);
+
+        // The model recognised a voicemail the greeting check did not, and has left its message on it.
+        if (endCallRequested && _endCallTurn.ReachedVoicemail)
+        {
+            activity.Put(new VoicemailReached { MessageLeft = true });
+            await _activityStore.UpdateAsync(activity, cancellationToken);
+        }
 
         await stopListening;
 
@@ -640,7 +657,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         return rendered?.Trim();
     }
 
-    private async Task<(string Reply, bool HandoffRequested, string Reason, bool EndCallRequested)> CompleteAsync(AIProfile profile, AIChatSession session, OmnichannelActivity activity, CancellationToken cancellationToken)
+    private async Task<(string Reply, bool HandoffRequested, string Reason, bool EndCallRequested)> CompleteAsync(AIProfile profile, AIChatSession session, OmnichannelActivity activity, string turnGuidance, CancellationToken cancellationToken)
     {
         var prompts = await _promptStore.GetPromptsAsync(session.SessionId);
 
@@ -666,6 +683,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // The same thing the live session is told, because a turn-based call is the same call: somebody has to
         // hang up, and the model is the only one here who knows the conversation is over.
         transcript.Insert(0, new ChatMessage(ChatRole.System, VoiceCallGuidance.EndingTheCall));
+
+        // What this particular turn is for, when it is not a reply to the customer. Last, so it is what is acted on.
+        if (!string.IsNullOrEmpty(turnGuidance))
+        {
+            transcript.Add(new ChatMessage(ChatRole.System, turnGuidance));
+        }
 
         var context = await _contextBuilder.BuildAsync(profile, cancellationToken: cancellationToken);
         context.AdditionalProperties["Session"] = session;

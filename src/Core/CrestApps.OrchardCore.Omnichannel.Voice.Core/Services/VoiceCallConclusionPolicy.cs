@@ -27,6 +27,11 @@ public static class VoiceCallConclusionPolicy
     public const string CompletedWithoutSummaryNote = "Automated AI voice call completed.";
 
     /// <summary>
+    /// The note written for a call that was answered by voicemail rather than by the customer.
+    /// </summary>
+    public const string VoicemailNote = "The automated call reached voicemail and left a message; nobody spoke with the customer.";
+
+    /// <summary>
     /// Whether this call's outcome is the automation's to write.
     /// </summary>
     /// <remarks>

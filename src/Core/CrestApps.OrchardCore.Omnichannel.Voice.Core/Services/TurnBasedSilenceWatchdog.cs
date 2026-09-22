@@ -61,7 +61,7 @@ public sealed class TurnBasedSilenceWatchdog : ITurnBasedSilenceWatchdog
     {
         try
         {
-            await Task.Delay(SilenceBeforeSpeakingUp);
+            await Task.Delay(silence.Wait ?? SilenceBeforeSpeakingUp);
 
             var scope = await _shellHost.GetScopeAsync(_shellSettings);
 

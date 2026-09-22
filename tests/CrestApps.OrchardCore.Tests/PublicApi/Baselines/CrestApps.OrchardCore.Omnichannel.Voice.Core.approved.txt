@@ -24,6 +24,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public int PromptCount { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
+        public System.TimeSpan? Wait { get; set; }
     }
     public sealed class VoiceAgentEvent
     {
@@ -42,6 +43,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         SpeechEnded = 2,
         Transcription = 3,
         Hangup = 4,
+    }
+    public sealed class VoicemailReached
+    {
+        public VoicemailReached() { }
+        public bool MessageLeft { get; set; }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Voice
@@ -172,6 +178,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         public const string CompletedWithoutSummaryNote = "Automated AI voice call completed.";
         public const string NoConversationNote = "The automated call produced no conversation: nothing was said by either side.";
+        public const string VoicemailNote = "The automated call reached voicemail and left a message; nobody spoke with the cu" +
+            "stomer.";
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, string modelChoiceId) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseUnansweredDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
         public static bool HasConversation(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
@@ -189,6 +197,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public void RequestEndCall(string reason) { }
         public void RequestEndCall(string reason, bool reachedVoicemail) { }
         public void Reset() { }
+    }
+    public static class VoicemailGreeting
+    {
+        public static bool InvitesTheMessage(string text) { }
+        public static bool IsRecordedGreeting(string text) { }
+        public static bool OpensWithRecordedGreeting(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Tools
