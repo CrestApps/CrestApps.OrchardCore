@@ -97,7 +97,7 @@ public interface IOmnichannelHandoffService
 
 ### Configuration surface
 
-Extend [`SubjectFlowSettings`](../../../src/Core/CrestApps.OrchardCore.Omnichannel.Core/Models/SubjectFlowSettings.cs)
+Extend `SubjectFlowSettings` (in `CrestApps.OrchardCore.Omnichannel.Core`, under `Models`)
 (composed from the subject content-type AI settings part) with:
 
 | Field | Meaning |
