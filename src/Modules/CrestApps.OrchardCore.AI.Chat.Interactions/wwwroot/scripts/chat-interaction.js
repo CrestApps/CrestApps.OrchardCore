@@ -432,7 +432,11 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
     // at the first one, so the sentence is torn into fragments and the commas between the markers are
     // left stranded on their own lines. Inline-block keeps the figure looking exactly the same while
     // remaining something a paragraph can legally contain.
-    return "<span class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <span class=\"mt-2 d-block\">\n                <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                    <i class=\"fa-solid fa-download\"></i>\n                </a>\n            </span>\n        </span>");
+    // The download sits over the picture's lower corner rather than on a line of its own beneath it.
+    // A row of its own cost a band of vertical space under every figure, which a conversation full of
+    // them pays for once per figure. The link itself is unchanged -- same address, same download
+    // attribute, same behaviour -- only where it is drawn.
+    return "<span class=\"generated-image-container\">\n            <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n            <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                <i class=\"fa-solid fa-download\"></i>\n            </a>\n        </span>");
   };
 
   // Chart counter for unique IDs
@@ -505,14 +509,50 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
     // Deferred for the same reason the charts below are: the render that produced these elements has
     // not necessarily been flushed to the DOM when this runs.
     requestAnimationFrame(wireBrokenImageHandlers);
+    requestAnimationFrame(wireImageZoom);
   }
-  function wireBrokenImageHandlers() {
-    var images = document.querySelectorAll('.generated-image-container img:not([data-broken-wired])');
+
+  // A picture arrives after the markdown is handed back -- the view writes it, and a streamed answer
+  // rewrites it on every chunk -- so zooming cannot be attached once at load. It is attached on the same
+  // pass as the broken-image handler above, and the attribute marks a picture already attached so a
+  // re-render does not bind it a second time.
+  function wireImageZoom() {
+    // The library is the host's to load. Without it the picture is still shown and still downloadable;
+    // only the enlarging is missing, so this is not worth failing a render over.
+    if (typeof mediumZoom !== 'function') {
+      return;
+    }
+    var images = document.querySelectorAll('.generated-image-container img:not([data-zoom-wired])');
+    if (images.length === 0) {
+      return;
+    }
     var _iterator6 = _createForOfIteratorHelper(images),
       _step6;
     try {
-      var _loop = function _loop() {
+      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
         var image = _step6.value;
+        image.setAttribute('data-zoom-wired', 'true');
+      }
+    } catch (err) {
+      _iterator6.e(err);
+    } finally {
+      _iterator6.f();
+    }
+    mediumZoom(images, {
+      // The drawing is bounded by the window rather than by this margin, so the margin is kept
+      // small: an ingested figure is read detail by detail, and every pixel given away here comes
+      // off the size it is read at.
+      margin: 16,
+      background: 'rgba(15, 15, 15, 0.92)'
+    });
+  }
+  function wireBrokenImageHandlers() {
+    var images = document.querySelectorAll('.generated-image-container img:not([data-broken-wired])');
+    var _iterator7 = _createForOfIteratorHelper(images),
+      _step7;
+    try {
+      var _loop = function _loop() {
+        var image = _step7.value;
         image.setAttribute('data-broken-wired', 'true');
         image.addEventListener('error', function () {
           var container = image.closest('.generated-image-container');
@@ -529,13 +569,13 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
           once: true
         });
       };
-      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+      for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
         _loop();
       }
     } catch (err) {
-      _iterator6.e(err);
+      _iterator7.e(err);
     } finally {
-      _iterator6.f();
+      _iterator7.f();
     }
   }
   function renderMessageMedia(message) {
@@ -551,11 +591,11 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
     // Defer to requestAnimationFrame so the browser has fully laid out the
     // canvas elements before Chart.js reads their dimensions.
     requestAnimationFrame(function () {
-      var _iterator7 = _createForOfIteratorHelper(charts),
-        _step7;
+      var _iterator8 = _createForOfIteratorHelper(charts),
+        _step8;
       try {
-        for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-          var c = _step7.value;
+        for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+          var c = _step8.value;
           var canvas = document.getElementById(c.chartId);
           if (!canvas) {
             continue;
@@ -588,9 +628,9 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
           }
         }
       } catch (err) {
-        _iterator7.e(err);
+        _iterator8.e(err);
       } finally {
-        _iterator7.f();
+        _iterator8.f();
       }
     });
   }
@@ -691,6 +731,11 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
           isConversationMode: false,
           // Realtime (speech-to-speech) controller from the shared CoreAIRealtime module.
           realtimeController: null,
+          realtimeButton: null,
+          // Whether a realtime deployment actually resolved. The controller is attached whenever the
+          // module is loaded, so its presence says nothing about which transport carries the
+          // conversation -- only this flag does.
+          realtimeEnabled: config.realtimeEnabled === true,
           notifications: [],
           notificationDismissTimers: {},
           copyTitle: config.copyTitle,
@@ -1095,6 +1140,11 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
                   }
                   return _context2.a(2);
                 case 1:
+                  // A live voice session and a typed turn are two writers into one interaction, and they
+                  // would interleave. End the session first; the turns it already produced are persisted, so
+                  // the typed message simply continues the same thread.
+                  _this4.endActiveVoiceSession();
+
                   // Stop any active recording before sending.
                   if (_this4.isRecording) {
                     _this4.stopRecording();
@@ -1395,18 +1445,18 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
           }, 0);
           var combined = new Uint8Array(totalLength);
           var offset = 0;
-          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
-            _step8;
+          var _iterator9 = _createForOfIteratorHelper(this.audioChunks),
+            _step9;
           try {
-            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-              var chunk = _step8.value;
+            for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+              var chunk = _step9.value;
               combined.set(chunk, offset);
               offset += chunk.length;
             }
           } catch (err) {
-            _iterator8.e(err);
+            _iterator9.e(err);
           } finally {
-            _iterator8.f();
+            _iterator9.f();
           }
           this.audioChunks = [];
           var blob = new Blob([combined], {
@@ -1489,11 +1539,55 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
             return _this12.updateTtsPlaybackButtons();
           });
         },
+        // A live voice session takes the message box away and puts the audio settings in its place; ending
+        // the session gives it back. Sending a typed message already ends the session first, so the box was
+        // never a way to say something *during* one -- hiding it only makes that honest, and frees the row
+        // for the gear. Both transports land here: realtime through the module's onActivate, the
+        // speech-to-text cascade through startConversationMode.
+        setVoiceSessionLive: function setVoiceSessionLive(live) {
+          if (this.inputElement) {
+            this.inputElement.hidden = live;
+          }
+          if (this.buttonElement) {
+            this.buttonElement.hidden = live;
+          }
+
+          // With the message box gone the live button would otherwise sit at its natural width in an
+          // empty row, so it takes the space the box left behind. Whichever transport is carrying the
+          // conversation owns a different button, and the hidden one is unaffected by the class.
+          [this.realtimeButton, this.conversationButton].forEach(function (button) {
+            if (button) {
+              button.classList.toggle('flex-grow-1', live);
+            }
+          });
+
+          // The gear is built by the realtime module directly after the button it was handed, and only
+          // in realtime mode, so it is absent on the cascade. It belongs to a live session rather than
+          // to the surface. The module hard-codes its element id and a page can host two chat clients
+          // at once -- this one and the admin widget -- so it is found next to this client's own button
+          // rather than by id.
+          var next = this.realtimeButton && this.realtimeButton.nextElementSibling;
+          var audioSettings = next && next.id === 'realtime-audio-settings' ? next : null;
+          if (audioSettings) {
+            audioSettings.hidden = !live;
+          }
+        },
         toggleConversationMode: function toggleConversationMode() {
           if (this.isConversationMode) {
             this.stopConversationMode();
           } else {
             this.startConversationMode();
+          }
+        },
+        // Two writers into one interaction would interleave, so the voice session ends before the typed
+        // turn starts rather than running alongside it.
+        endActiveVoiceSession: function endActiveVoiceSession() {
+          if (this.realtimeController && this.realtimeController.isActive()) {
+            this.realtimeController.stop();
+            return;
+          }
+          if (this.isConversationMode) {
+            this.stopConversationMode();
           }
         },
         startConversationMode: function startConversationMode() {
@@ -2130,6 +2224,8 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
           // module owns the mic capture, playback, echo guard, push-to-talk and audio settings; the
           // callbacks below plug it into this app's connection and conversation-transcript display.
           if (window.CoreAIRealtime && config.realtimeButtonElementSelector) {
+            // Kept so the voice settings popover can be found next to this client's own button.
+            this.realtimeButton = document.querySelector(config.realtimeButtonElementSelector);
             this.realtimeController = window.CoreAIRealtime.attach({
               connection: this.connection,
               ensureConnected: function ensureConnected() {
@@ -2152,13 +2248,23 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
               },
               capableDeployments: config.realtimeCapableDeployments || [],
               realtimeEnabled: config.realtimeEnabled === true,
+              // input and sendButton are deliberately not handed over. The module hides every
+              // control it is given when realtime takes over, and typing has to stay available
+              // during a voice conversation -- that is the whole feature.
+              //
+              // deploymentSelect is not handed over either: it would read the raw select value,
+              // and an empty conversation deployment means "use the site default", which still
+              // resolves. The host resolves it and calls applyMode itself (see below).
               selectors: {
                 realtimeButton: config.realtimeButtonElementSelector,
-                input: config.inputElementSelector,
-                sendButton: config.sendButtonElementSelector,
                 micButton: config.micButtonElementSelector,
-                conversationButton: config.conversationButtonElementSelector,
-                deploymentSelect: config.deploymentSelectElementSelector
+                conversationButton: config.conversationButtonElementSelector
+              },
+              // The module owns whether a session is live, so the message box follows its flag
+              // rather than this app's copy of it. Losing one of these events used to leave the
+              // box hidden under a button that had already gone back to "Start speaking".
+              onSessionStateChanged: function onSessionStateChanged(active) {
+                _this18.setVoiceSessionLive(active);
               },
               onActivate: function onActivate() {
                 _this18.isConversationMode = true;
@@ -2219,6 +2325,11 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
               }
             });
             this.setupRealtimeVoicePicker(config);
+
+            // The module reveals the gear as soon as the surface enters realtime mode, but it belongs
+            // to a live session. The watcher that would hide it only runs on a change, so the idle
+            // state has to be stated once here.
+            this.setVoiceSessionLive(false);
           }
         },
         // Populates the per-interaction realtime voice picker from the selected realtime deployment's
@@ -2232,27 +2343,45 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
             return;
           }
           var voiceGroup = config.realtimeVoiceGroupElementSelector ? document.querySelector(config.realtimeVoiceGroupElementSelector) : null;
-          var deploymentSelect = config.deploymentSelectElementSelector ? document.querySelector(config.deploymentSelectElementSelector) : null;
+          var conversationSelect = config.conversationDeploymentSelectElementSelector ? document.querySelector(config.conversationDeploymentSelectElementSelector) : null;
           var capable = (config.realtimeCapableDeployments || []).map(function (n) {
             return (n || '').toLowerCase();
           });
           var savedVoiceId = config.realtimeVoiceName || '';
+          var self = this;
           function isRealtimeDeployment(name) {
             return name && capable.indexOf(name.toLowerCase()) !== -1;
+          }
+
+          // Mirrors the realtime slot's chain on the server: the interaction's own choice, then the
+          // site default, then the first realtime-capable deployment. Only conversation mode reaches
+          // it -- an interaction that is not in conversation mode never speaks.
+          function resolveConversationDeployment() {
+            if (!self.conversationModeEnabled) {
+              return '';
+            }
+            var name = conversationSelect && conversationSelect.value || config.defaultRealtimeDeploymentName || (capable.length ? capable[0] : '');
+            return isRealtimeDeployment(name) ? name : '';
           }
           function loadVoices() {
             return _loadVoices.apply(this, arguments);
           }
           function _loadVoices() {
             _loadVoices = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
-              var deploymentName, realtime, response, contentType, result, grouped, _iterator9, _step9, voice, groupName, _t2;
+              var deploymentName, realtime, response, contentType, result, grouped, _iterator0, _step0, voice, groupName, _t2;
               return _regenerator().w(function (_context4) {
                 while (1) switch (_context4.p = _context4.n) {
                   case 0:
-                    deploymentName = deploymentSelect ? deploymentSelect.value : '';
-                    realtime = isRealtimeDeployment(deploymentName);
+                    deploymentName = resolveConversationDeployment();
+                    realtime = !!deploymentName;
                     if (voiceGroup) {
                       voiceGroup.classList.toggle('d-none', !realtime);
+                    }
+
+                    // Changing the conversation deployment switches the voice toggle on or off without a
+                    // reload.
+                    if (self.realtimeController) {
+                      self.realtimeController.applyMode(realtime);
                     }
                     if (realtime) {
                       _context4.n = 1;
@@ -2287,10 +2416,10 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
                     return _context4.a(2);
                   case 6:
                     grouped = new Map();
-                    _iterator9 = _createForOfIteratorHelper(result.voices);
+                    _iterator0 = _createForOfIteratorHelper(result.voices);
                     try {
-                      for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
-                        voice = _step9.value;
+                      for (_iterator0.s(); !(_step0 = _iterator0.n()).done;) {
+                        voice = _step0.value;
                         groupName = voice.gender || 'Voices';
                         if (!grouped.has(groupName)) {
                           grouped.set(groupName, []);
@@ -2298,9 +2427,9 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
                         grouped.get(groupName).push(voice);
                       }
                     } catch (err) {
-                      _iterator9.e(err);
+                      _iterator0.e(err);
                     } finally {
-                      _iterator9.f();
+                      _iterator0.f();
                     }
                     Array.from(grouped.keys()).sort(function (a, b) {
                       return a.localeCompare(b);
@@ -2328,8 +2457,8 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
             }));
             return _loadVoices.apply(this, arguments);
           }
-          if (deploymentSelect) {
-            deploymentSelect.addEventListener('change', loadVoices);
+          if (conversationSelect) {
+            conversationSelect.addEventListener('change', loadVoices);
           }
           loadVoices();
         },
@@ -2621,17 +2750,20 @@ window.chatInteractionManager = function (_window$CoreAIChatMar, _window$CoreAIC
           // no longer mutes tracks; browser echo cancellation handles echo.
         },
         isConversationMode: function isConversationMode(active) {
+          // The dictation microphone is hidden while a voice conversation runs: the conversation
+          // already owns the microphone, and a second one would mean something different.
           if (this.micButton) {
             this.micButton.style.display = active ? 'none' : this.speechToTextEnabled ? '' : 'none';
           }
-          if (this.buttonElement) {
-            this.buttonElement.style.display = active ? 'none' : '';
-          }
-          if (this.inputElement) {
-            this.inputElement.disabled = active;
-            if (active) {
-              this.inputElement.placeholder = '';
-            }
+
+          // The message box and the send button give way to the voice settings while the conversation
+          // runs, and come back when it ends. Both kinds of turn still land in the same thread; what
+          // they cannot do is overlap.
+          //
+          // Only the cascade is driven from here. Realtime follows the module's own session flag
+          // (onSessionStateChanged), so the two never disagree about whether a session is live.
+          if (!this.realtimeEnabled) {
+            this.setVoiceSessionLive(active);
           }
         },
         copiedMessageIndex: function copiedMessageIndex() {

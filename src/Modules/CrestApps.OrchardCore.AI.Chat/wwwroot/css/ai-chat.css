@@ -448,6 +448,8 @@
     display: inline-block;
     vertical-align: top;
     margin-top: 0.5rem;
+    /* The positioning context for the download that sits inside it. */
+    position: relative;
 }
 
 .generated-image-container img {
@@ -455,6 +457,66 @@
     max-height: 60vh;
     height: auto;
     object-fit: contain;
+    /* The cap above is what makes a figure a thumbnail: an ingested diagram lands at roughly half size,
+       legible as a picture but not as a drawing. Pointing at it says it can be opened. */
+    cursor: zoom-in;
+}
+
+/* The opened picture is a copy the library appends outside the figure, so it is matched on its own class
+   rather than through the container -- a rule written as a descendant of the figure never reaches it. The
+   copy carries the thumbnail's classes, so the frame is taken off here: its padding and white ground are
+   scaled up with the drawing and would otherwise ring the picture with a broad white border. The cap is
+   lifted for the same reason, and only here, so the thumbnail sitting in the conversation is left exactly
+   as it was. */
+img.medium-zoom-image--opened {
+    max-width: none !important;
+    max-height: none !important;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+/* Over the picture's lower corner rather than below it, so a figure costs only the height of the picture.
+   It is drawn on a ground of its own because it sits on whatever the drawing happens to put in that
+   corner. */
+.generated-image-container .ai-download-image {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 2;
+    opacity: 0;
+    color: #1f2933;
+    background-color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(0, 0, 0, 0.15);
+    transition: opacity 0.15s ease-in-out;
+}
+
+/* The outline button this is built from inverts on hover: it fills itself with its own colour and turns
+   its label white. Against the pale ground kept here that leaves a white icon on white -- the button is
+   still there and still works, but there is nothing to see. Both colours are therefore stated for every
+   state the button can be in rather than only the resting one. */
+.generated-image-container .ai-download-image:hover,
+.generated-image-container .ai-download-image:focus,
+.generated-image-container .ai-download-image:focus-visible,
+.generated-image-container .ai-download-image:active {
+    color: #1f2933;
+    background-color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.35);
+}
+
+/* Revealed by pointing at the figure. focus-within is what keeps it reachable by keyboard: the button is
+   invisible until it takes focus, and an invisible control that cannot be brought into view cannot be
+   used at all. */
+.generated-image-container:hover .ai-download-image,
+.generated-image-container:focus-within .ai-download-image {
+    opacity: 1;
+}
+
+/* A touch screen has no hover to reveal it with, so there it is simply always shown. */
+@media (hover: none) {
+    .generated-image-container .ai-download-image {
+        opacity: 1;
+    }
 }
 
 /* ── Tables ── */
