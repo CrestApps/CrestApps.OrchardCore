@@ -5,7 +5,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.DncRegistry;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.Telephony;
@@ -45,6 +47,36 @@ public sealed class ManualCallScreenerTests
         Assert.Equal(DialerSuppressionReason.DoNotCall.ToString(), result.Reason);
         Assert.Single(harness.PublishedEvents);
         Assert.Equal(ContactCenterConstants.Events.ManualDialSuppressed, harness.PublishedEvents[0].EventType);
+    }
+
+    [Fact]
+    public async Task ScreenAsync_WhenTheDestinationsContactSharesANumberWithSomebodyWhoOptedOut_Denies()
+    {
+        // Arrange
+        // Live, the contact holding the destination had never asked to stop, but it shared a number with a
+        // contact who had, and it was dialled on its other number minutes after the request. Whoever asked to stop
+        // may not be reached at any number that leads to them, so the screen asks about everybody at the contact's
+        // numbers rather than only about the contact.
+        var harness = new Harness();
+        harness.ContactLookup
+            .Setup(lookup => lookup.FindContactItemIdsAsync("+14255551212", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(["contact1"]);
+        var contact = new ContentItem { ContentItemId = "contact1" };
+        contact.Apply(new OmnichannelContactPart { DoNotCall = false });
+        harness.ContentManager
+            .Setup(manager => manager.GetAsync("contact1", It.IsAny<VersionOptions>()))
+            .ReturnsAsync(contact);
+        harness.OptOutResolver
+            .Setup(resolver => resolver.HasOptedOutAsync(contact, OmnichannelConstants.Channels.Phone, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await harness.ScreenAsync("+14255551212");
+
+        // Assert
+        Assert.False(result.IsAllowed);
+        Assert.Equal(DialerSuppressionReason.DoNotCall.ToString(), result.Reason);
+        Assert.Single(harness.PublishedEvents);
     }
 
     [Fact]
@@ -236,6 +268,8 @@ public sealed class ManualCallScreenerTests
 
         public Mock<IContentManager> ContentManager { get; } = new();
 
+        public Mock<IContactOptOutResolver> OptOutResolver { get; } = new();
+
         public Mock<IBusinessHoursService> BusinessHoursService { get; } = new();
 
         public List<InteractionEvent> PublishedEvents { get; } = [];
@@ -277,6 +311,7 @@ public sealed class ManualCallScreenerTests
                 Registries,
                 ContactLookup.Object,
                 ContentManager.Object,
+                OptOutResolver.Object,
                 BusinessHoursService.Object,
                 publisher.Object,
                 clock.Object,

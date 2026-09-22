@@ -38,6 +38,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
     private readonly IDbConnectionAccessor _dbConnectionAccessor;
     private readonly IEnumerable<IActivityDialerContributor> _dialerContributors;
     private readonly ActivityBatchSourceOptions _sourceOptions;
+    private readonly IContactOptOutResolver _optOutResolver;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -65,6 +66,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         IDbConnectionAccessor dbConnectionAccessor,
         IEnumerable<IActivityDialerContributor> dialerContributors,
         IOptions<ActivityBatchSourceOptions> sourceOptions,
+        IContactOptOutResolver optOutResolver,
         ILogger<DefaultContactActivityBatchLoader> logger)
     {
         _catalog = catalog;
@@ -77,6 +79,7 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
         _dbConnectionAccessor = dbConnectionAccessor;
         _dialerContributors = dialerContributors;
         _sourceOptions = sourceOptions.Value;
+        _optOutResolver = optOutResolver;
         _logger = logger;
     }
 
@@ -464,7 +467,13 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
                 // the same whoever ends up dialling. The batch's own "include" flag is the operator's explicit
                 // override for the cases a preference is not meant to block, such as a recall notice; until now
                 // it was stored, editable and read by nothing at all.
-                if (OmnichannelHelper.HasOptedOut(contact, activity.Channel) && !IncludesOptedOutContacts(batch, activity.Channel))
+                //
+                // Asked of everybody reachable at the contact's numbers, not only of this record: live, a contact
+                // who had asked not to be called shared a number with a second record, and the second record was
+                // dialled on its other number. Whoever asked to stop may not be reached at any number that leads
+                // to them.
+                if (!IncludesOptedOutContacts(batch, activity.Channel) &&
+                    await _optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken))
                 {
                     continue;
                 }

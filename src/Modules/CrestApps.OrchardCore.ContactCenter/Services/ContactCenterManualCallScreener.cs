@@ -2,7 +2,9 @@ using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.DncRegistry;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
@@ -28,6 +30,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
     private readonly IEnumerable<INationalDoNotCallRegistry> _doNotCallRegistries;
     private readonly IInboundContactLookup _contactLookup;
     private readonly IContentManager _contentManager;
+    private readonly IContactOptOutResolver _optOutResolver;
     private readonly IBusinessHoursService _businessHoursService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IClock _clock;
@@ -43,6 +46,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
     /// <param name="doNotCallRegistries">The registered national do-not-call registries, if any.</param>
     /// <param name="contactLookup">The lookup used to resolve a contact from the destination number.</param>
     /// <param name="contentManager">The content manager used to load the resolved contact.</param>
+    /// <param name="optOutResolver">Decides whether anybody reachable at the destination has asked not to be called.</param>
     /// <param name="businessHoursService">The business-hours service used to evaluate the calling window.</param>
     /// <param name="publisher">The event publisher used to record an auditable suppression event.</param>
     /// <param name="clock">The clock used to evaluate the calling window.</param>
@@ -54,6 +58,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
         IEnumerable<INationalDoNotCallRegistry> doNotCallRegistries,
         IInboundContactLookup contactLookup,
         IContentManager contentManager,
+        IContactOptOutResolver optOutResolver,
         IBusinessHoursService businessHoursService,
         IContactCenterEventPublisher publisher,
         IClock clock,
@@ -65,6 +70,7 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
         _doNotCallRegistries = doNotCallRegistries;
         _contactLookup = contactLookup;
         _contentManager = contentManager;
+        _optOutResolver = optOutResolver;
         _businessHoursService = businessHoursService;
         _publisher = publisher;
         _clock = clock;
@@ -129,6 +135,18 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
                 return await SuppressAsync(
                     DialerSuppressionReason.DoNotCall,
                     S["The contact opted out of phone calls."].Value,
+                    destination.Value,
+                    cancellationToken);
+            }
+
+            // The contact at this number never asked to stop, but somebody sharing one of their numbers did. Live,
+            // exactly that contact was dialled on its other number minutes after the request: whoever asked to stop
+            // may not be reached at any number that leads to them.
+            if (await AnyoneAtTheDestinationOptedOutAsync(destination.Value, cancellationToken))
+            {
+                return await SuppressAsync(
+                    DialerSuppressionReason.DoNotCall,
+                    S["Somebody reachable at one of this contact's numbers opted out of phone calls."].Value,
                     destination.Value,
                     cancellationToken);
             }
@@ -212,6 +230,21 @@ public sealed class ContactCenterManualCallScreener : IOutboundCallScreener
         await _publisher.PublishAsync(suppressionEvent, cancellationToken);
 
         return OutboundCallScreeningResult.Deny(reason.ToString(), description);
+    }
+
+    private async Task<bool> AnyoneAtTheDestinationOptedOutAsync(string destination, CancellationToken cancellationToken)
+    {
+        foreach (var contactItemId in await _contactLookup.FindContactItemIdsAsync(destination, cancellationToken))
+        {
+            var contact = await _contentManager.GetAsync(contactItemId, VersionOptions.Published);
+
+            if (await _optOutResolver.HasOptedOutAsync(contact, OmnichannelConstants.Channels.Phone, cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task<OmnichannelContactPart> LoadContactPartAsync(string destination, CancellationToken cancellationToken)

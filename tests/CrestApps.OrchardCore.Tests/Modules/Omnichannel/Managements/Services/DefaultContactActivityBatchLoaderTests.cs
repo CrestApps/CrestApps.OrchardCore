@@ -93,6 +93,101 @@ public sealed class DefaultContactActivityBatchLoaderTests
     }
 
     [Fact]
+    public async Task LoadAsync_WhenAContactSharesANumberWithSomebodyWhoAskedNotToBeCalled_CreatesNoActivityForThem()
+    {
+        // Arrange
+        // Live, a contact asked not to be called. A second record held the same number as one of its two, and was
+        // dialled on its other number minutes later. Whoever asked to stop may not be reached at any number that
+        // leads to them, so a record sharing a number is left out of the inventory whichever number it would use.
+        var databasePath = DatabasePath("shared-number-do-not-call");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            string optedOutContactId;
+            string linkedContactId;
+            string unrelatedContactId;
+
+            await using (var seedSession = store.CreateSession())
+            {
+                optedOutContactId = await SaveContactAsync(seedSession, cellPhoneNumber: "+15555551101", cellNationalNumber: "5555551101", doNotCall: true);
+                linkedContactId = await SaveContactAsync(
+                    seedSession,
+                    cellPhoneNumber: "+15555551102",
+                    cellNationalNumber: "5555551102",
+                    homePhoneNumber: "+15555551101",
+                    homeNationalNumber: "5555551101");
+                unrelatedContactId = await SaveContactAsync(seedSession, cellPhoneNumber: "+15555551103", cellNationalNumber: "5555551103");
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var batch = NewBatch(ActivitySources.Automatic, OmnichannelConstants.Channels.Phone);
+
+            // Act
+            await LoadAsync(store, connectionString, batch);
+
+            // Assert
+            var activities = await ListLoadedActivitiesAsync(store);
+            var activity = Assert.Single(activities);
+
+            Assert.Equal(unrelatedContactId, activity.ContactContentItemId);
+            Assert.DoesNotContain(activities, entry => entry.ContactContentItemId == linkedContactId);
+            Assert.DoesNotContain(activities, entry => entry.ContactContentItemId == optedOutContactId);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Theory]
+    [InlineData("Sms", true, false)]
+    [InlineData("Phone", true, true)]
+    public async Task LoadAsync_WhenAContactSharesANumber_OnlyThatChannelsOptOutKeepsThemOut(string channel, bool sharedNumberOptedOutOfSms, bool expectLinkedLoaded)
+    {
+        // Arrange
+        // The shared-number rule follows the channel the request was about. A request to stop texting reaches every
+        // record at that number for text messages, and says nothing about calls, which are a separate preference.
+        var databasePath = DatabasePath($"shared-number-{channel}");
+        var connectionString = $"Data Source={databasePath};Pooling=False";
+        var store = await CreateStoreAsync(connectionString);
+
+        try
+        {
+            string linkedContactId;
+
+            await using (var seedSession = store.CreateSession())
+            {
+                await SaveContactAsync(seedSession, cellPhoneNumber: "+15555551201", cellNationalNumber: "5555551201", doNotSms: sharedNumberOptedOutOfSms);
+                linkedContactId = await SaveContactAsync(
+                    seedSession,
+                    cellPhoneNumber: "+15555551202",
+                    cellNationalNumber: "5555551202",
+                    homePhoneNumber: "+15555551201",
+                    homeNationalNumber: "5555551201");
+
+                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
+            }
+
+            var batch = NewBatch(ActivitySources.Automatic, channel == "Sms" ? OmnichannelConstants.Channels.Sms : OmnichannelConstants.Channels.Phone);
+
+            // Act
+            await LoadAsync(store, connectionString, batch);
+
+            // Assert
+            var activities = await ListLoadedActivitiesAsync(store);
+
+            Assert.Equal(expectLinkedLoaded, activities.Any(entry => entry.ContactContentItemId == linkedContactId));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
     public async Task LoadAsync_WhenAnAutomatedSmsContactHasAskedNotToBeTexted_CreatesNoActivityForThem()
     {
         // Arrange
@@ -728,6 +823,7 @@ public sealed class DefaultContactActivityBatchLoaderTests
             new SqliteDbConnectionAccessor(connectionString),
             [],
             Options.Create(sourceOptions),
+            new ContactOptOutResolver(session),
             NullLogger<DefaultContactActivityBatchLoader>.Instance);
     }
 
@@ -808,6 +904,8 @@ public sealed class DefaultContactActivityBatchLoaderTests
         string cellPhoneNumber = null,
         string cellNationalNumber = null,
         string emailAddress = null,
+        string homePhoneNumber = null,
+        string homeNationalNumber = null,
         string timeZoneId = null,
         bool doNotCall = false,
         bool doNotSms = false,
@@ -842,6 +940,11 @@ public sealed class DefaultContactActivityBatchLoaderTests
             contactMethods.ContentItems.Add(NewPhoneNumberContactMethod(cellPhoneNumber, cellNationalNumber));
         }
 
+        if (!string.IsNullOrEmpty(homePhoneNumber))
+        {
+            contactMethods.ContentItems.Add(NewPhoneNumberContactMethod(homePhoneNumber, homeNationalNumber, "Home"));
+        }
+
         if (!string.IsNullOrEmpty(emailAddress))
         {
             contactMethods.ContentItems.Add(NewEmailAddressContactMethod(emailAddress));
@@ -854,14 +957,14 @@ public sealed class DefaultContactActivityBatchLoaderTests
         return contact.ContentItemId;
     }
 
-    private static ContentItem NewPhoneNumberContactMethod(string phoneNumber, string nationalNumber)
+    private static ContentItem NewPhoneNumberContactMethod(string phoneNumber, string nationalNumber, string type = "Cell")
     {
         var contactMethod = new ContentItem
         {
             ContentItemId = IdGenerator.GenerateId(),
             ContentItemVersionId = IdGenerator.GenerateId(),
             ContentType = OmnichannelConstants.ContentTypes.PhoneNumber,
-            DisplayText = $"Cell: {phoneNumber}",
+            DisplayText = $"{type}: {phoneNumber}",
         };
 
         contactMethod.Alter<PhoneNumberInfoPart>(part =>
@@ -874,7 +977,7 @@ public sealed class DefaultContactActivityBatchLoaderTests
             };
             part.Type = new TextField
             {
-                Text = "Cell",
+                Text = type,
             };
         });
 

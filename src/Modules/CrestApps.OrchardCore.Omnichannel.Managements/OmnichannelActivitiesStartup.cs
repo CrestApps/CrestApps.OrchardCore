@@ -65,6 +65,10 @@ public sealed class OmnichannelActivitiesStartup : StartupBase
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AutomatedActivitiesProcessorBackgroundTask>());
 
+        // Shared with the Contact Center's outbound screening, so the loader and the dialler answer "may we reach
+        // them?" the same way. Whichever feature registers it first provides it.
+        services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
+
         services
             .AddYesSqlDocumentCatalog<OmnichannelActivityBatch, OmnichannelActivityBatchIndex>(collection: OmnichannelConstants.CollectionName)
             .AddScoped<IOmnichannelActivityStore, OmnichannelActivityStore>()

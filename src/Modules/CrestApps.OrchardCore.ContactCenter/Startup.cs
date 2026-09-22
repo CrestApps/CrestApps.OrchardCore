@@ -132,6 +132,7 @@ public sealed class Startup : StartupBase
         services.TryAddScoped<IQueuedVoiceWorkOfferService, NoQueuedVoiceWorkOfferService>();
         services.TryAddScoped<IDialerProfileReader, NullDialerProfileReader>();
         services.TryAddScoped<IBusinessHoursGate, AlwaysOpenBusinessHoursGate>();
+        services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
         // The entry-point chain asks every registered resolver in turn. It lives here rather than in the
         // inbound feature because the inbound processor is constructed on tenants that have no resolvers at
