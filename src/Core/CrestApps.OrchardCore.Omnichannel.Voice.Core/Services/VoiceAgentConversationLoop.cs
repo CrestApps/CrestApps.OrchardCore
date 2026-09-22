@@ -684,10 +684,12 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         // hang up, and the model is the only one here who knows the conversation is over.
         transcript.Insert(0, new ChatMessage(ChatRole.System, VoiceCallGuidance.EndingTheCall));
 
-        // What this particular turn is for, when it is not a reply to the customer. Last, so it is what is acted on.
+        // What this particular turn is for, when it is not a reply to the customer. Put to the model as the turn it
+        // answers: added as one more system note it was outweighed by the persona and the conversation, and the
+        // model carried on selling to the recording instead of leaving a message on it.
         if (!string.IsNullOrEmpty(turnGuidance))
         {
-            transcript.Add(new ChatMessage(ChatRole.System, turnGuidance));
+            transcript.Add(new ChatMessage(ChatRole.User, turnGuidance));
         }
 
         var context = await _contextBuilder.BuildAsync(profile, cancellationToken: cancellationToken);

@@ -422,7 +422,8 @@ public sealed class VoiceAgentConversationLoopTests
         await harness.HandleAsync(VoiceAgentEventKind.Transcription, "When you have finished recording you may hang up.", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Contains(harness.Transcript, message => message.Role == ChatRole.System && message.Text == VoiceAgentConversationLoop.LeavingAVoicemail);
+        Assert.Equal(VoiceAgentConversationLoop.LeavingAVoicemail, harness.Transcript[^1].Text);
+        Assert.Equal(ChatRole.User, harness.Transcript[^1].Role);
         Assert.Equal(harness.Reply, harness.Media.Spoken[^1]);
         Assert.True(harness.Activity.TryGet<VoicemailReached>(out var voicemail));
         Assert.True(voicemail.MessageLeft);
@@ -470,6 +471,22 @@ public sealed class VoiceAgentConversationLoopTests
 
         // Act
         await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Please leave a message after the tone.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(VoiceAgentConversationLoop.FallbackVoicemailMessage, harness.Media.Spoken[^1]);
+    }
+
+    [Fact]
+    public async Task AVoicemailMessageThatAsksAQuestion_IsReplacedWithThePlainMessage()
+    {
+        // Arrange
+        // Live, the model carried on selling to the recording: "are you looking for a new or used vehicle?"
+        var harness = new LoopHarness();
+        harness.Reply = "Hi Amani, just following up. Are you looking for a new or used vehicle?";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Please record your message. When you have finished recording you may hang up.", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(VoiceAgentConversationLoop.FallbackVoicemailMessage, harness.Media.Spoken[^1]);

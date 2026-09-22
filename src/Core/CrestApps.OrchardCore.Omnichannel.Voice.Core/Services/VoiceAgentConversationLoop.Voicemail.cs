@@ -32,9 +32,10 @@ public sealed partial class VoiceAgentConversationLoop
     /// What the model is told when the time has come to leave the message.
     /// </summary>
     internal const string LeavingAVoicemail =
-        "This call was answered by voicemail. The customer lines in this conversation are its recorded greeting, " +
-        "not the customer, and nobody is listening. Leave one short voicemail message now: who you are, why you " +
-        "called, and that you will try again. Say nothing else, do not ask questions and do not wait for a reply.";
+        "[Not the customer] This call went to voicemail: the lines before this are its recorded greeting, and it is " +
+        "now recording. Reply with only the voicemail message to leave, in one to three short sentences: greet the " +
+        "customer by name if you know it, say who you are and why you called, and say you will try them again. It is " +
+        "a recording, so do not ask any questions.";
 
     /// <summary>
     /// The message left when the model produces none.
@@ -113,7 +114,10 @@ public sealed partial class VoiceAgentConversationLoop
 
         var message = (reply ?? string.Empty).Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
 
-        if (string.IsNullOrWhiteSpace(message))
+        // A question left on a recording is never answered, and is the surest sign the model carried on the
+        // conversation instead of leaving a message: live, it asked the voicemail whether the customer wanted a new
+        // or used vehicle. The plain message is better than that.
+        if (string.IsNullOrWhiteSpace(message) || message.Contains('?', StringComparison.Ordinal))
         {
             message = FallbackVoicemailMessage;
         }
