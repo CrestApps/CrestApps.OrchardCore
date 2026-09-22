@@ -114,12 +114,31 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         }
 
         var now = _clock.UtcNow;
+
+        // The retry is the same work tried again, so it is carried out the same way. Leaving the kind, source and
+        // automation settings behind turned a call that rang out into a manual task with no AI profile, which the
+        // automated processor picked up with nothing to place the call and the contact was never tried again. The
+        // AI session and re-engagement count are not copied: the retry is a new conversation.
         var nextAttempt = new OmnichannelActivity
         {
             ItemId = IdGenerator.GenerateId(),
+            Kind = activity.Kind,
+            Source = activity.Source,
             Channel = activity.Channel,
             ChannelEndpointId = activity.ChannelEndpointId,
             InteractionType = activity.InteractionType,
+            AIProfileId = activity.AIProfileId,
+            SpeechToTextDeploymentName = activity.SpeechToTextDeploymentName,
+            TextToSpeechDeploymentName = activity.TextToSpeechDeploymentName,
+            TextToSpeechVoiceId = activity.TextToSpeechVoiceId,
+            UseCallAmbience = activity.UseCallAmbience,
+            AllowAIToUpdateContact = activity.AllowAIToUpdateContact,
+            AllowAIToUpdateSubject = activity.AllowAIToUpdateSubject,
+            ResponseDelayMode = activity.ResponseDelayMode,
+            ResponseDelaySeconds = activity.ResponseDelaySeconds,
+            ResponseDelayJitterSeconds = activity.ResponseDelayJitterSeconds,
+            BusinessHoursCalendarId = activity.BusinessHoursCalendarId,
+            CadenceId = activity.CadenceId,
             PreferredDestination = activity.PreferredDestination,
             ContactContentItemId = activity.ContactContentItemId,
             ContactContentType = activity.ContactContentType,
