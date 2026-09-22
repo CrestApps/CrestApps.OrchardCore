@@ -1,7 +1,5 @@
-using System.Data.Common;
 using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using Microsoft.Extensions.Logging;
-using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using YesSql;
 using YesSql.Sql;
@@ -11,22 +9,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Migrations;
 internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations : DataMigration
 {
     private readonly IStore _store;
-    private readonly IDbConnectionAccessor _dbConnectionAccessor;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelContactCommunicationPreferenceIndexMigrations"/> class.
     /// </summary>
     /// <param name="store">The YesSql store.</param>
-    /// <param name="dbConnectionAccessor">The database connection accessor.</param>
     /// <param name="logger">The logger.</param>
     public OmnichannelContactCommunicationPreferenceIndexMigrations(
         IStore store,
-        IDbConnectionAccessor dbConnectionAccessor,
         ILogger<OmnichannelContactCommunicationPreferenceIndexMigrations> logger)
     {
         _store = store;
-        _dbConnectionAccessor = dbConnectionAccessor;
         _logger = logger;
     }
 
@@ -58,57 +52,51 @@ internal sealed class OmnichannelContactCommunicationPreferenceIndexMigrations :
         // The chat preference was writable but never readable: the platform has no chat channel, no processor for
         // one, and no path that can create chat work, so a contact who asked not to be chatted with was told
         // something the product could not honour. The promise is withdrawn, so the columns behind it go too.
-        await using var connection = _dbConnectionAccessor.CreateConnection();
-        await connection.OpenAsync();
+        //
+        // The columns are looked for rather than dropped blindly. The host runs this step on the transaction every
+        // sibling step in the feature shares, and a drop that failed there would take all of them down with it, so a
+        // table that never had these columns has to be recognised before anything is attempted. The check and the
+        // drops run on that same transaction: a second connection would wait on SQLite for the write lock this
+        // transaction already holds, stall every startup for the full busy timeout, and fail.
+        var columns = await GetColumnNamesAsync();
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
-            builder => builder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table =>
-                table.DropColumn("DoNotChat")),
-            "drop the obsolete 'DoNotChat' column");
+        if (columns.Contains("DoNotChat"))
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table =>
+                table.DropColumn("DoNotChat"));
+        }
 
-        await ApplyIsolatedSchemaChangeAsync(connection,
-            builder => builder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table =>
-                table.DropColumn("DoNotChatUtc")),
-            "drop the obsolete 'DoNotChatUtc' column");
+        if (columns.Contains("DoNotChatUtc"))
+        {
+            await SchemaBuilder.AlterIndexTableAsync<OmnichannelContactCommunicationPreferenceIndex>(table =>
+                table.DropColumn("DoNotChatUtc"));
+        }
 
         return 3;
     }
 
-    // Each drop runs on its own transaction because a tenant created after the columns were removed never had them,
-    // and a failed drop on the shared migration transaction would roll back every sibling migration in the feature.
-    private async Task ApplyIsolatedSchemaChangeAsync(
-        DbConnection connection,
-        Func<ISchemaBuilder, Task> schemaChange,
-        string operation)
+    // Columns are read through the data reader rather than an engine-specific catalog view, so the same probe works
+    // on every supported engine, and the query matches no rows because only the declared columns are wanted.
+    private async Task<HashSet<string>> GetColumnNamesAsync()
     {
-        await using var transaction = await connection.BeginTransactionAsync();
+        var tableName = SchemaBuilder.TablePrefix +
+            SchemaBuilder.TableNameConvention.GetIndexTable(typeof(OmnichannelContactCommunicationPreferenceIndex), null);
+        var quotedTableName = SchemaBuilder.Dialect.QuoteForTableName(tableName, _store.Configuration.Schema);
 
-        try
-        {
-            await schemaChange(new SchemaBuilder(_store.Configuration, transaction));
-            await transaction.CommitAsync();
-        }
-        catch (Exception ex)
-        {
-            // A tenant whose table was created without these columns fails here, which is the expected outcome rather
-            // than a fault, so it stays at Debug where a trace is still available when production logs at that level.
-            if (_logger.IsEnabled(LogLevel.Debug))
-            {
-                _logger.LogDebug(ex, "Skipped the isolated schema change to {SchemaChangeOperation}; the object it targets is most likely already absent.", operation);
-            }
+        await using var command = SchemaBuilder.Connection.CreateCommand();
+        command.Transaction = SchemaBuilder.Transaction;
+        command.CommandText = $"SELECT * FROM {quotedTableName} WHERE 1 = 0";
 
-            try
-            {
-                await transaction.RollbackAsync();
-            }
-            catch (Exception rollbackException)
-            {
-                if (_logger.IsEnabled(LogLevel.Debug))
-                {
-                    _logger.LogDebug(rollbackException, "Failed to roll back the isolated schema change transaction for the operation to {SchemaChangeOperation}.", operation);
-                }
-            }
+        await using var reader = await command.ExecuteReaderAsync();
+
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
+        {
+            columns.Add(reader.GetName(ordinal));
         }
+
+        return columns;
     }
 
     private async Task EnsureDefaultContactCommunicationPreferenceIndexTableAsync()
