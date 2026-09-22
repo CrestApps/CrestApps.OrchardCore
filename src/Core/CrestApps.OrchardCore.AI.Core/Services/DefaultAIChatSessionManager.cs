@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.Core.AI;
@@ -23,16 +22,12 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// </summary>
 public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
 {
-    private static readonly PropertyInfo[] _copiedSessionProperties = typeof(AIChatSession)
-        .GetProperties(BindingFlags.Public | BindingFlags.Instance)
-        .Where(property => property.CanRead && property.CanWrite && property.GetIndexParameters().Length == 0)
-        .ToArray();
-
     private readonly IClock _clock;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAIVisitorIdentityResolver _visitorIdentityResolver;
     private readonly ISession _session;
     private readonly IAIChatSessionPromptStore _promptStore;
+    private readonly IAIChatSessionStore _sessionStore;
 
     private readonly IEnumerable<IAIChatSessionHandler> _handlers;
     private readonly YesSqlStoreOptions _yesSqlStoreOptions;
@@ -46,6 +41,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     /// <param name="visitorIdentityResolver">The resolver for stable visitor identity data.</param>
     /// <param name="session">The YesSql session used for persistence.</param>
     /// <param name="promptStore">The store for chat session prompts.</param>
+    /// <param name="sessionStore">The store that writes chat sessions to their documents.</param>
     /// <param name="handlers">The chat session lifecycle handlers.</param>
     /// <param name="logger">The logger instance.</param>
     public DefaultAIChatSessionManager(
@@ -54,6 +50,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         IAIVisitorIdentityResolver visitorIdentityResolver,
         ISession session,
         IAIChatSessionPromptStore promptStore,
+        IAIChatSessionStore sessionStore,
         IEnumerable<IAIChatSessionHandler> handlers,
         IOptions<YesSqlStoreOptions> yesSqlStoreOptions,
         ILogger<DefaultAIChatSessionManager> logger)
@@ -63,6 +60,7 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
         _visitorIdentityResolver = visitorIdentityResolver;
         _session = session;
         _promptStore = promptStore;
+        _sessionStore = sessionStore;
         _handlers = handlers;
         _yesSqlStoreOptions = yesSqlStoreOptions.Value;
         _logger = logger;
@@ -279,36 +277,19 @@ public sealed class DefaultAIChatSessionManager : IAIChatSessionManager
     }
 
     /// <summary>
-    /// Persists the specified chat session, updating the stored document with the same session id if one exists.
+    /// Persists the specified chat session to its existing document, or creates one for a new session.
     /// </summary>
     /// <param name="chatSession">The chat session to save.</param>
     /// <param name="cancellationToken">A token to cancel the operation.</param>
     /// <remarks>
-    /// Voice mode re-saves one instance after each commit; without this lookup YesSql inserts a duplicate.
+    /// Voice mode saves the same instance after every turn's commit, which YesSql no longer tracks. The session
+    /// store matches it to its stored document by session id, so each turn updates one document.
     /// </remarks>
-    public async Task SaveAsync(AIChatSession chatSession, CancellationToken cancellationToken = default)
+    public Task SaveAsync(AIChatSession chatSession, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(chatSession);
 
-        AIChatSession storedSession = null;
-
-        if (!string.IsNullOrEmpty(chatSession.SessionId))
-        {
-            storedSession = await _session.Query<AIChatSession, AIChatSessionIndex>(i => i.SessionId == chatSession.SessionId, collection: _yesSqlStoreOptions.AICollectionName).FirstOrDefaultAsync(cancellationToken);
-        }
-
-        if (storedSession is not null && !ReferenceEquals(storedSession, chatSession))
-        {
-            // Copy all properties so new AIChatSession fields are never dropped.
-            foreach (var property in _copiedSessionProperties)
-            {
-                property.SetValue(storedSession, property.GetValue(chatSession));
-            }
-
-            chatSession = storedSession;
-        }
-
-        await _session.SaveAsync(chatSession, collection: _yesSqlStoreOptions.AICollectionName, cancellationToken: cancellationToken);
+        return _sessionStore.SaveAsync(chatSession, cancellationToken);
     }
 
     /// <summary>

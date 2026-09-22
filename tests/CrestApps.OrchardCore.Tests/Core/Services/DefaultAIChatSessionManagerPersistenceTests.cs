@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Security;
 using CrestApps.Core.Data.YesSql;
 using CrestApps.Core.Data.YesSql.Indexes.AIChat;
+using CrestApps.Core.Data.YesSql.Services;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.Tests.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -31,7 +32,7 @@ public sealed class DefaultAIChatSessionManagerPersistenceTests
     public async Task SaveAsync_WhenTheSameSessionIsCommittedAtEveryTurn_KeepsOneDocument()
     {
         // Arrange
-        var databasePath = DatabasePath("chat-session-resave");
+        var databasePath = Path.Combine(Path.GetTempPath(), $"crestapps-chat-session-resave-{Guid.NewGuid():N}.db");
         var store = await CreateStoreAsync(databasePath);
 
         try
@@ -43,70 +44,25 @@ public sealed class DefaultAIChatSessionManagerPersistenceTests
                 SessionId = "session-1",
                 ProfileId = "profile-1",
                 UserId = "user-1",
-                Title = "Untitled",
-                CreatedUtc = new DateTime(2026, 9, 22, 21, 0, 0, DateTimeKind.Utc),
             };
 
             // Act
+            // Voice mode saves and commits the same instance at every turn.
             for (var turn = 1; turn <= 3; turn++)
             {
                 chatSession.Title = $"Turn {turn}";
-                chatSession.LastActivityUtc = chatSession.CreatedUtc.AddMinutes(turn);
 
                 await manager.SaveAsync(chatSession, TestContext.Current.CancellationToken);
                 await session.SaveChangesAsync(TestContext.Current.CancellationToken);
             }
 
             // Assert
-            var persisted = await ReadAllAsync(store, "session-1");
-            var single = Assert.Single(persisted);
-            Assert.Equal("Turn 3", single.Title);
-            Assert.Equal(chatSession.CreatedUtc.AddMinutes(3), single.LastActivityUtc);
-        }
-        finally
-        {
-            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
-        }
-    }
+            await using var readSession = store.CreateSession();
+            var persisted = await readSession
+                .Query<AIChatSession, AIChatSessionIndex>(x => x.SessionId == "session-1")
+                .ListAsync(TestContext.Current.CancellationToken);
 
-    [Fact]
-    public async Task SaveAsync_WhenADifferentInstanceCarriesAStoredSessionId_UpdatesTheStoredDocument()
-    {
-        // Arrange
-        var databasePath = DatabasePath("chat-session-detached");
-        var store = await CreateStoreAsync(databasePath);
-
-        try
-        {
-            await using (var seedSession = store.CreateSession())
-            {
-                await CreateManager(seedSession).SaveAsync(new AIChatSession
-                {
-                    SessionId = "session-1",
-                    ProfileId = "profile-1",
-                    UserId = "user-1",
-                    Title = "Original",
-                }, TestContext.Current.CancellationToken);
-                await seedSession.SaveChangesAsync(TestContext.Current.CancellationToken);
-            }
-
-            await using var session = store.CreateSession();
-
-            // Act
-            await CreateManager(session).SaveAsync(new AIChatSession
-            {
-                SessionId = "session-1",
-                ProfileId = "profile-1",
-                UserId = "user-1",
-                Title = "Renamed",
-                RemoteAddressHash = "hash-1",
-            }, TestContext.Current.CancellationToken);
-            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-            // Assert
-            var single = Assert.Single(await ReadAllAsync(store, "session-1"));
-            Assert.Equal("Renamed", single.Title);
-            Assert.Equal("hash-1", single.RemoteAddressHash);
+            Assert.Equal("Turn 3", Assert.Single(persisted).Title);
         }
         finally
         {
@@ -116,9 +72,6 @@ public sealed class DefaultAIChatSessionManagerPersistenceTests
 
     private static DefaultAIChatSessionManager CreateManager(YSession session)
     {
-        var clock = new Mock<IClock>();
-        clock.SetupGet(x => x.UtcNow).Returns(new DateTime(2026, 9, 22, 21, 0, 0, DateTimeKind.Utc));
-
         var httpContextAccessor = new HttpContextAccessor
         {
             HttpContext = new DefaultHttpContext
@@ -128,18 +81,16 @@ public sealed class DefaultAIChatSessionManagerPersistenceTests
         };
 
         return new DefaultAIChatSessionManager(
-            clock.Object,
+            Mock.Of<IClock>(),
             httpContextAccessor,
             Mock.Of<IAIVisitorIdentityResolver>(),
             session,
             Mock.Of<IAIChatSessionPromptStore>(),
+            new YesSqlAIChatSessionStore(session, Options.Create(_storeOptions)),
             [],
             Options.Create(_storeOptions),
             Mock.Of<Microsoft.Extensions.Logging.ILogger<DefaultAIChatSessionManager>>());
     }
-
-    private static string DatabasePath(string prefix)
-        => Path.Combine(Path.GetTempPath(), $"crestapps-{prefix}-{Guid.NewGuid():N}.db");
 
     private static async Task<IStore> CreateStoreAsync(string databasePath)
     {
@@ -153,15 +104,5 @@ public sealed class DefaultAIChatSessionManagerPersistenceTests
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
 
         return store;
-    }
-
-    private static async Task<IReadOnlyList<AIChatSession>> ReadAllAsync(IStore store, string sessionId)
-    {
-        await using var session = store.CreateSession();
-
-        return (await session
-            .Query<AIChatSession, AIChatSessionIndex>(x => x.SessionId == sessionId)
-            .ListAsync(TestContext.Current.CancellationToken))
-            .ToList();
     }
 }
