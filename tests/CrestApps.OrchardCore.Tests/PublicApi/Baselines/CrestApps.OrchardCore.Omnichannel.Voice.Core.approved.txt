@@ -76,8 +76,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         bool EndCallRequested { get; }
         System.Threading.CancellationToken EndCallRequestedToken { get; }
+        bool ReachedVoicemail { get; }
         string Reason { get; }
         void RequestEndCall(string reason);
+        void RequestEndCall(string reason, bool reachedVoicemail);
         void Reset();
     }
     public sealed class NoRealtimeVoiceConversationRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner
@@ -111,6 +113,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public CrestApps.Core.AI.Models.AIProfile Profile { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
+        public System.Func<bool> ReachedVoicemail { get; set; }
         public string RealtimeDeploymentName { get; set; }
         public CrestApps.Core.AI.Models.AIChatSession Session { get; set; }
         public bool UseCallAmbience { get; set; }
@@ -160,8 +163,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public VoiceCallEndTurn() { }
         public bool EndCallRequested { get; }
         public System.Threading.CancellationToken EndCallRequestedToken { get; }
+        public bool ReachedVoicemail { get; }
         public string Reason { get; }
         public void RequestEndCall(string reason) { }
+        public void RequestEndCall(string reason, bool reachedVoicemail) { }
         public void Reset() { }
     }
 }

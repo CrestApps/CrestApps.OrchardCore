@@ -60,6 +60,16 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private long _lastCallerSpeechTicks;
 
     /// <summary>
+    /// Set when the call was ended with nothing being said, which means the goodbye is already behind the
+    /// assistant and anything it says next is suppressed as a repeat.
+    /// </summary>
+    /// <remarks>
+    /// Shared with the closing watchdog so it does not wait for a goodbye to begin that the assistant pump has
+    /// already decided nobody will hear.
+    /// </remarks>
+    private bool _goodbyeAlreadySaid;
+
+    /// <summary>
     /// How long the session is given to finish its closing line after the model asks to transfer, before it is
     /// closed and the caller is handed to the queue. Long enough for "connecting you now", short enough that a
     /// caller is never left with the assistant after being promised a person.
@@ -90,6 +100,16 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// </para>
     /// </remarks>
     private static readonly TimeSpan ClosingListeningGrace = TimeSpan.FromSeconds(4);
+
+    /// <summary>
+    /// How long a voicemail message is allowed past the projected end of its playback before the call is hung up.
+    /// </summary>
+    /// <remarks>
+    /// A recording has nobody to leave a moment for, so the listening grace does not apply; this only covers the
+    /// delay between audio leaving here and reaching the far end, so the last word of the message is not clipped.
+    /// Live, the listening grace and the wait before it came out as silence at the end of the customer's voicemail.
+    /// </remarks>
+    private static readonly TimeSpan VoicemailTailGrace = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// How often the closing watchdog re-checks. Fine enough that the hangup lands when it was meant to.
@@ -226,6 +246,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         var startedTicks = DateTime.UtcNow.Ticks;
         Interlocked.Exchange(ref _lastAssistantAudioTicks, startedTicks);
         Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
+        Volatile.Write(ref _goodbyeAlreadySaid, false);
 
         using var callScope = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
@@ -245,7 +266,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // a watchdog rather than another CancelAfter: it waits for the goodbye to finish and then leaves the line
         // open a moment, and abandons the hangup entirely if the caller uses it.
         var closing = context.EndCallRequested.CanBeCanceled
-            ? CloseWhenConversationEndsAsync(callScope, context.EndCallRequested)
+            ? CloseWhenConversationEndsAsync(callScope, context.ReachedVoicemail, context.EndCallRequested)
             : Task.CompletedTask;
 
         // Nobody has said anything for a while, and on a phone call somebody has to. Usually it is the caller's
@@ -511,7 +532,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         while (Interlocked.CompareExchange(ref _lastAssistantAudioTicks, playsUntil, queuedUntil) != queuedUntil);
     }
 
-    private async Task CloseWhenConversationEndsAsync(CancellationTokenSource callScope, CancellationToken endCallRequested)
+    private async Task CloseWhenConversationEndsAsync(
+        CancellationTokenSource callScope,
+        Func<bool> reachedVoicemail,
+        CancellationToken endCallRequested)
     {
         // Watched together, because a call ends for all sorts of reasons that are nothing to do with this: the
         // caller hangs up, the model asks to transfer, the session fails. Waiting on the end-call signal alone
@@ -560,7 +584,9 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 return;
             }
 
-            closingLineStarted |= lastAssistantTicks > requestedAtTicks;
+            // A goodbye the assistant pump has already marked as said counts as started: anything the model says
+            // from here is suppressed, so waiting for it to begin only holds the line open on silence.
+            closingLineStarted |= lastAssistantTicks > requestedAtTicks || Volatile.Read(ref _goodbyeAlreadySaid);
 
             // The model usually calls the tool and says its goodbye immediately after, so the silence at this
             // moment is the gap before it starts — not the end of anything. Waiting for it to speak is what keeps
@@ -572,9 +598,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             }
 
             // Quiet since the goodbye ended — and long enough that the caller has had their moment to answer it.
-            // Measured from the assistant's last audio rather than from the tool call, so a long closing line
-            // does not eat the window the caller was supposed to get.
-            if (now - lastAssistantTicks < ClosingListeningGrace.Ticks)
+            // Measured from the end of the assistant's playback rather than from the tool call, so a long closing
+            // line does not eat the window the caller was supposed to get. A voicemail has no caller to give it
+            // to, so there the call ends as soon as the message has reached the far end.
+            var afterGoodbye = reachedVoicemail?.Invoke() == true ? VoicemailTailGrace : ClosingListeningGrace;
+
+            if (now - lastAssistantTicks < afterGoodbye.Ticks)
             {
                 continue;
             }

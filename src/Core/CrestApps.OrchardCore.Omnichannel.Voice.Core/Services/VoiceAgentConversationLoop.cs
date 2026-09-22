@@ -237,6 +237,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     // rather than leaving the customer to notice that nobody is going to.
                     EndCallRequested = _endCallTurn.EndCallRequestedToken,
 
+                    // Read when the call is being closed, since the model only says so as it ends the call.
+                    ReachedVoicemail = () => _endCallTurn.ReachedVoicemail,
+
                     // Only when this call actually has an agent to reach. Telling a model it may transfer, on a
                     // call where nothing can receive the caller, promises the caller a person who is not coming.
                     HandoffInstructions = realtimeHandoffService is null

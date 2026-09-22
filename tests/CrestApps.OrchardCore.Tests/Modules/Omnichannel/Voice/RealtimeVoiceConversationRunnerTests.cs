@@ -417,6 +417,85 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task AVoicemail_IsHungUpOnOnceTheMessageHasPlayed_RatherThanLeftRecordingSilence()
+    {
+        // Arrange
+        // A person is given a moment after the goodbye to add something. A recording has nobody to give it to, and
+        // on a live call that moment -- and the wait before it -- ended up as silence at the end of the voicemail
+        // the customer listened to.
+        const int MessageSeconds = 2;
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        // Act
+        var run = harness.RunAsync();
+        var spokenAt = DateTime.UtcNow;
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantAudioDelta,
+            Audio = new byte[RealtimeAudioConverter.RealtimeSampleRate * 2 * MessageSeconds],
+        });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(200), TestContext.Current.CancellationToken);
+        harness.ReachedVoicemail = true;
+        await endCall.CancelAsync();
+
+        // Assert
+        // The message itself is not cut short...
+        await Task.Delay(spokenAt.AddSeconds(MessageSeconds - 0.5) - DateTime.UtcNow, TestContext.Current.CancellationToken);
+        Assert.False(run.IsCompleted, "The voicemail message was cut off before it had played.");
+
+        // ...but the line is closed well before a person's moment to answer would have run out after it.
+        var completed = await Task.WhenAny(run, Task.Delay(spokenAt.AddSeconds(MessageSeconds + 2.5) - DateTime.UtcNow, TestContext.Current.CancellationToken));
+
+        Assert.Same(run, completed);
+        await run;
+    }
+
+    [Fact]
+    public async Task AGoodbyeAlreadySaid_IsNotWaitedForAgain_WhenTheCallIsEndedLater()
+    {
+        // Arrange
+        // When nothing is being said at the moment the model ends the call, the goodbye is behind it and anything
+        // the model says next is suppressed as a repeat. The closing watchdog still waited for a goodbye to begin
+        // -- one that could never be heard -- and held the line open on silence for the full wait. Live, that was
+        // four more seconds of nothing recorded at the end of a voicemail.
+        var harness = new RealtimeHarness();
+        using var endCall = new CancellationTokenSource();
+        harness.EndCallRequested = endCall.Token;
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        // Act
+        var run = harness.RunAsync();
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantAudioDelta,
+            Audio = new byte[320],
+        });
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantTranscriptDone,
+            Text = "Thanks, take care.",
+        });
+
+        // Long enough after the goodbye that the caller's moment to answer it has already passed.
+        await Task.Delay(TimeSpan.FromSeconds(4.5), TestContext.Current.CancellationToken);
+        var endedAt = DateTime.UtcNow;
+        await endCall.CancelAsync();
+
+        // Assert
+        var completed = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        Assert.Same(run, completed);
+        await run;
+        Assert.True(DateTime.UtcNow - endedAt < TimeSpan.FromSeconds(2), "The call was held open waiting for a goodbye that had already been said.");
+    }
+
+    [Fact]
     public async Task TheAssistantOpensTheCall_EvenOnASessionThatAnswersByItself()
     {
         // Arrange
@@ -941,6 +1020,11 @@ public sealed class RealtimeVoiceConversationRunnerTests
         public CancellationToken EndCallRequested { get; set; }
 
         /// <summary>
+        /// Whether the model said, as it ended the call, that it had reached voicemail.
+        /// </summary>
+        public bool ReachedVoicemail { get; set; }
+
+        /// <summary>
         /// The escalation guidance the loop passes when this call has an agent queue behind it.
         /// </summary>
         public string HandoffInstructions { get; set; }
@@ -962,6 +1046,7 @@ public sealed class RealtimeVoiceConversationRunnerTests
                 ProviderCallId = "call-1",
                 HandoffRequested = HandoffRequested,
                 EndCallRequested = EndCallRequested,
+                ReachedVoicemail = () => ReachedVoicemail,
                 HandoffInstructions = HandoffInstructions,
                 ContactName = ContactName,
 

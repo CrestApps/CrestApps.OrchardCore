@@ -85,6 +85,15 @@ public sealed class RealtimeVoiceConversationContext
     public CancellationToken EndCallRequested { get; set; }
 
     /// <summary>
+    /// Gets or sets a function reporting whether the model, when it ended the call, said it had reached voicemail.
+    /// </summary>
+    /// <remarks>
+    /// Read once <see cref="EndCallRequested"/> has fired. A recording has nobody to give a moment to, so the call
+    /// is hung up as soon as the message has played rather than leaving it recording silence.
+    /// </remarks>
+    public Func<bool> ReachedVoicemail { get; set; }
+
+    /// <summary>
     /// Gets or sets the guidance telling the model when to hand the caller to a live agent, or
     /// <see langword="null"/> when this call has nowhere to hand them.
     /// </summary>

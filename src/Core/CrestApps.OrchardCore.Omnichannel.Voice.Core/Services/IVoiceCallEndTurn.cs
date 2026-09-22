@@ -29,6 +29,16 @@ public interface IVoiceCallEndTurn
     string Reason { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the model said it had reached voicemail or an answering machine and left
+    /// its message there.
+    /// </summary>
+    /// <remarks>
+    /// Nobody is on the line to add anything, so the session hangs up as soon as the message has played instead of
+    /// giving a person their moment to answer -- a moment a recording spends recording silence.
+    /// </remarks>
+    bool ReachedVoicemail { get; }
+
+    /// <summary>
     /// Gets a token that is cancelled the moment the model says the conversation is finished.
     /// </summary>
     /// <remarks>
@@ -42,6 +52,13 @@ public interface IVoiceCallEndTurn
     /// </summary>
     /// <param name="reason">The reason the model gave.</param>
     void RequestEndCall(string reason);
+
+    /// <summary>
+    /// Records that the model considers the conversation complete, and whether it ended on voicemail.
+    /// </summary>
+    /// <param name="reason">The reason the model gave.</param>
+    /// <param name="reachedVoicemail">Whether the model reached voicemail or an answering machine and left its message.</param>
+    void RequestEndCall(string reason, bool reachedVoicemail);
 
     /// <summary>
     /// Clears the decision, so the call that follows starts from nothing recorded.

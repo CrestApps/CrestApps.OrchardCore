@@ -115,10 +115,12 @@ public sealed partial class RealtimeVoiceConversationRunner
             {
                 closingRequested = true;
 
-                // Nothing was being said when the call was closed, so the goodbye is already behind us.
+                // Nothing was being said when the call was closed, so the goodbye is already behind us. The closing
+                // watchdog is told too, so it does not wait for a goodbye that this pump will now suppress.
                 if (!Volatile.Read(ref utteranceInFlight))
                 {
                     goodbyeSaid = true;
+                    Volatile.Write(ref _goodbyeAlreadySaid, true);
                 }
             })
             : default;
@@ -194,6 +196,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // They are talking, so the call is not over after all and the assistant may answer.
                         goodbyeSaid = false;
                         closingRequested = false;
+                        Volatile.Write(ref _goodbyeAlreadySaid, false);
 
                         // The first syllable, not the finished sentence. A transcript only exists once the caller
                         // has stopped talking and the provider has transcribed them, which is seconds later --

@@ -32,6 +32,10 @@ public sealed class EndCallTool : AIFunction
         "reason": {
           "type": "string",
           "description": "A short reason the call is over (for example 'customer has what they needed' or 'customer asked not to be called again')."
+        },
+        "voicemail": {
+          "type": "boolean",
+          "description": "True when the call was answered by voicemail or an answering machine and you have just left your message on it."
         }
       },
       "additionalProperties": false,
@@ -48,7 +52,10 @@ public sealed class EndCallTool : AIFunction
         "the customer has what they needed, has declined, has asked not to be called again, or has said goodbye. " +
         "Say your closing line first and call this tool immediately after it; the call is hung up once you have " +
         "finished speaking and the customer has had a moment to add anything. Do not call it while the customer " +
-        "still has questions, is mid-sentence, or is being transferred to a person.";
+        "still has questions, is mid-sentence, or is being transferred to a person. If the call is answered by " +
+        "voicemail or an answering machine, wait until its greeting and tone have finished, leave one short " +
+        "message, and call this tool immediately after it with voicemail set to true: nobody is going to answer, " +
+        "so do not wait for a reply and do not repeat the message.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -65,13 +72,14 @@ public sealed class EndCallTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
 
         arguments.TryGetFirstString("reason", out var reason);
+        var reachedVoicemail = ReadVoicemail(arguments);
 
         // The turn is a scoped service the session resolved for this call, so recording the decision here is
         // visible to that session and to nothing else running concurrently.
         var turn = arguments.Services?.GetService<IVoiceCallEndTurn>();
         var recorded = turn is not null;
 
-        turn?.RequestEndCall(reason);
+        turn?.RequestEndCall(reason, reachedVoicemail);
 
         if (arguments.Services is not null)
         {
@@ -79,7 +87,7 @@ public sealed class EndCallTool : AIFunction
 
             if (logger is not null && logger.IsEnabled(LogLevel.Information))
             {
-                logger.LogInformation("The AI ended the call (recorded: {Recorded}).", recorded);
+                logger.LogInformation("The AI ended the call (recorded: {Recorded}, voicemail: {ReachedVoicemail}).", recorded, reachedVoicemail);
             }
         }
 
@@ -88,5 +96,23 @@ public sealed class EndCallTool : AIFunction
         return ValueTask.FromResult<object>(recorded
             ? "The call will be ended for you once you finish speaking. Say nothing further unless the customer speaks again."
             : "This conversation cannot be ended from here; continue assisting the customer.");
+    }
+
+    // The schema says boolean, but the tool is not strict, so the argument can arrive as a JSON value or as text.
+    private static bool ReadVoicemail(AIFunctionArguments arguments)
+    {
+        if (!arguments.TryGetValue("voicemail", out var value))
+        {
+            return false;
+        }
+
+        return value switch
+        {
+            bool flag => flag,
+            JsonElement { ValueKind: JsonValueKind.True } => true,
+            JsonElement { ValueKind: JsonValueKind.String } element => bool.TryParse(element.GetString(), out var parsed) && parsed,
+            string text => bool.TryParse(text, out var parsed) && parsed,
+            _ => false,
+        };
     }
 }
