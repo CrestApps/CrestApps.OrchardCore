@@ -98,10 +98,18 @@ var orchardCore = builder.AddProject<Projects.CrestApps_OrchardCore_Cms_Web>("Or
         options.EnvironmentVariables["OrchardCore__OrchardCore_Elasticsearch__Password"] = elasticsearchPassword.Resource;
 
         // Configure the AI connection using the flat connections format.
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Connections__0__Name", "Default");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Connections__0__ClientName", "Ollama");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Connections__0__Endpoint", "http://localhost:11434");
-        options.EnvironmentVariables.Add("OrchardCore__CrestApps__AI__Connections__0__ChatDeploymentName", ollamaModelName);
+        //
+        // The slot is deliberately not 0. Orchard Core appends the environment variable provider after
+        // the tenant's App_Data/appsettings.json, and these keys address array positions, so writing to
+        // slot 0 does not add a connection beside the developer's own: it overwrites whichever one they
+        // happen to have listed first. Its name and client silently become this Ollama pair while their
+        // endpoint and key stay behind, and every deployment pointing at the original name then fails to
+        // resolve. Appending past the end leaves their connections untouched.
+
+        options.EnvironmentVariables.Add($"OrchardCore__CrestApps__AI__Connections__90__Name", "Default");
+        options.EnvironmentVariables.Add($"OrchardCore__CrestApps__AI__Connections__90__ClientName", "Ollama");
+        options.EnvironmentVariables.Add($"OrchardCore__CrestApps__AI__Connections__90__Endpoint", "http://localhost:11434");
+        options.EnvironmentVariables.Add($"OrchardCore__CrestApps__AI__Connections__90__ChatDeploymentName", ollamaModelName);
 
         // Uncomment the following lines to configure the Copilot orchestrator with BYOK authentication.
         // This bypasses GitHub OAuth and uses your own API key from a model provider.

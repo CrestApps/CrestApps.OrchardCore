@@ -18,61 +18,79 @@ Use this provider for OpenAI and for OpenAI-compatible platforms such as DeepSee
 
 ## appsettings.json configuration
 
-Add an OpenAI connection under `OrchardCore:CrestApps:AI:Providers:OpenAI`:
+Add an OpenAI connection under `OrchardCore:CrestApps:AI:Connections`:
 
 ```json
 {
   "OrchardCore": {
     "CrestApps": {
       "AI": {
-        "Providers": {
-          "OpenAI": {
-            "DefaultConnectionName": "openai-cloud",
-            "Connections": {
-              "openai-cloud": {
-                "ApiKey": "your-api-key",
-                "Deployments": [
-                  {
-                    "Name": "chat-default",
-                    "ModelName": "gpt-4o",
-                    "Purpose": "Chat"
-                  },
-                  {
-                    "Name": "utility-default",
-                    "ModelName": "gpt-4o-mini",
-                    "Purpose": "Utility"
-                  },
-                  {
-                    "Name": "embedding-default",
-                    "ModelName": "text-embedding-3-large",
-                    "Purpose": "Embedding"
-                  },
-                  {
-                    "Name": "image-default",
-                    "ModelName": "dall-e-3",
-                    "Purpose": "Image"
-                  }
-                ]
+        "Connections": [
+          {
+            "Name": "openai-cloud",
+            "ClientName": "OpenAI",
+            "ApiKey": "your-api-key"
+          }
+        ],
+        "Deployments": [
+          {
+            "Name": "chat-default",
+            "ClientName": "OpenAI",
+            "ConnectionName": "openai-cloud",
+            "ModelName": "gpt-4o",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textGeneration", "toolCalling", "streaming", "structuredOutputs" ]
+              }
+            }
+          },
+          {
+            "Name": "embedding-default",
+            "ClientName": "OpenAI",
+            "ConnectionName": "openai-cloud",
+            "ModelName": "text-embedding-3-large",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textEmbedding" ]
+              }
+            }
+          },
+          {
+            "Name": "image-default",
+            "ClientName": "OpenAI",
+            "ConnectionName": "openai-cloud",
+            "ModelName": "dall-e-3",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "imageOutput" ]
               }
             }
           }
-        }
+        ]
       }
     }
   }
 }
 ```
 
+`ClientName` ties a deployment to its provider and `ConnectionName` to the connection it authenticates with.
+`Features` declares what the model can do; which deployment serves chat, utility, embedding and the rest is
+decided by the deployment slots under **Configuration** -> **Artificial Intelligence** -> **Settings**, so one
+deployment can back several slots. See [Model capabilities](../model-capabilities.md) for the full list of
+features and slots.
+
 Set `Endpoint` when the provider uses a custom OpenAI-compatible base URL:
 
 ```json
 {
-  "Connections": {
-    "deepseek": {
+  "Connections": [
+    {
+      "Name": "deepseek",
+      "ClientName": "OpenAI",
       "Endpoint": "https://api.deepseek.com/v1",
       "ApiKey": "your-deepseek-api-key"
     }
-  }
+  ]
 }
 ```
 
@@ -107,14 +125,22 @@ Use `AIProviderConnections` to create the connection and `AIDeployment` to creat
           "ModelName": "deepseek-chat",
           "ClientName": "OpenAI",
           "ConnectionName": "deepseek",
-          "Purpose": "Chat"
+          "Properties": {
+            "AIDeploymentMetadata": {
+              "Features": [ "textGeneration", "toolCalling", "streaming" ]
+            }
+          }
         },
         {
           "Name": "deepseek-reasoner",
           "ModelName": "deepseek-reasoner",
           "ClientName": "OpenAI",
           "ConnectionName": "deepseek",
-          "Purpose": "Utility"
+          "Properties": {
+            "AIDeploymentMetadata": {
+              "Features": [ "textGeneration", "reasoning", "streaming" ]
+            }
+          }
         }
       ]
     }

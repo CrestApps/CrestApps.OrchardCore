@@ -517,7 +517,11 @@ window.coreAIChatManager = function (_window$CoreAIChatMar, _window$CoreAIChatMa
     // at the first one, so the sentence is torn into fragments and the commas between the markers are
     // left stranded on their own lines. Inline-block keeps the figure looking exactly the same while
     // remaining something a paragraph can legally contain.
-    return "<span class=\"generated-image-container\">\n        <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n        <span class=\"mt-2 d-block\">\n            <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n                <i class=\"fa-solid fa-download\"></i>\n            </a>\n        </span>\n    </span>");
+    // The download sits over the picture's lower corner rather than on a line of its own beneath it.
+    // A row of its own cost a band of vertical space under every figure, which a conversation full of
+    // them pays for once per figure. The link itself is unchanged -- same address, same download
+    // attribute, same behaviour -- only where it is drawn.
+    return "<span class=\"generated-image-container\">\n        <img src=\"".concat(src, "\" alt=\"").concat(alt, "\" class=\"img-thumbnail\" style=\"max-width: ").concat(maxWidth, "px; height: auto;\" />\n        <a href=\"").concat(src, "\" target=\"_blank\" download=\"").concat(alt, "\" title=\"").concat(defaultConfig.downloadImageTitle, "\" class=\"btn btn-sm btn-outline-secondary ai-download-image\">\n            <i class=\"fa-solid fa-download\"></i>\n        </a>\n    </span>");
   };
 
   // Chart counter for unique IDs
@@ -592,14 +596,50 @@ window.coreAIChatManager = function (_window$CoreAIChatMar, _window$CoreAIChatMa
     // Deferred for the same reason the charts below are: the render that produced these elements has
     // not necessarily been flushed to the DOM when this runs.
     requestAnimationFrame(wireBrokenImageHandlers);
+    requestAnimationFrame(wireImageZoom);
   }
-  function wireBrokenImageHandlers() {
-    var images = document.querySelectorAll('.generated-image-container img:not([data-broken-wired])');
+
+  // A picture arrives after the markdown is handed back -- the view writes it, and a streamed answer
+  // rewrites it on every chunk -- so zooming cannot be attached once at load. It is attached on the same
+  // pass as the broken-image handler above, and the attribute marks a picture already attached so a
+  // re-render does not bind it a second time.
+  function wireImageZoom() {
+    // The library is the host's to load. Without it the picture is still shown and still downloadable;
+    // only the enlarging is missing, so this is not worth failing a render over.
+    if (typeof mediumZoom !== 'function') {
+      return;
+    }
+    var images = document.querySelectorAll('.generated-image-container img:not([data-zoom-wired])');
+    if (images.length === 0) {
+      return;
+    }
     var _iterator6 = _createForOfIteratorHelper(images),
       _step6;
     try {
-      var _loop = function _loop() {
+      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
         var image = _step6.value;
+        image.setAttribute('data-zoom-wired', 'true');
+      }
+    } catch (err) {
+      _iterator6.e(err);
+    } finally {
+      _iterator6.f();
+    }
+    mediumZoom(images, {
+      // The drawing is bounded by the window rather than by this margin, so the margin is kept
+      // small: an ingested figure is read detail by detail, and every pixel given away here comes
+      // off the size it is read at.
+      margin: 16,
+      background: 'rgba(15, 15, 15, 0.92)'
+    });
+  }
+  function wireBrokenImageHandlers() {
+    var images = document.querySelectorAll('.generated-image-container img:not([data-broken-wired])');
+    var _iterator7 = _createForOfIteratorHelper(images),
+      _step7;
+    try {
+      var _loop = function _loop() {
+        var image = _step7.value;
         image.setAttribute('data-broken-wired', 'true');
         image.addEventListener('error', function () {
           var container = image.closest('.generated-image-container');
@@ -616,13 +656,13 @@ window.coreAIChatManager = function (_window$CoreAIChatMar, _window$CoreAIChatMa
           once: true
         });
       };
-      for (_iterator6.s(); !(_step6 = _iterator6.n()).done;) {
+      for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
         _loop();
       }
     } catch (err) {
-      _iterator6.e(err);
+      _iterator7.e(err);
     } finally {
-      _iterator6.f();
+      _iterator7.f();
     }
   }
   function renderMessageMedia(message) {
@@ -638,17 +678,17 @@ window.coreAIChatManager = function (_window$CoreAIChatMar, _window$CoreAIChatMa
     // Defer to requestAnimationFrame so the browser has fully laid out the
     // canvas elements before Chart.js reads their dimensions.
     requestAnimationFrame(function () {
-      var _iterator7 = _createForOfIteratorHelper(charts),
-        _step7;
+      var _iterator8 = _createForOfIteratorHelper(charts),
+        _step8;
       try {
-        for (_iterator7.s(); !(_step7 = _iterator7.n()).done;) {
-          var c = _step7.value;
+        for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
+          var c = _step8.value;
           renderChartOnCanvas(c.chartId, c.config);
         }
       } catch (err) {
-        _iterator7.e(err);
+        _iterator8.e(err);
       } finally {
-        _iterator7.f();
+        _iterator8.f();
       }
     });
   }
@@ -2313,18 +2353,18 @@ window.coreAIChatManager = function (_window$CoreAIChatMar, _window$CoreAIChatMa
           }, 0);
           var combined = new Uint8Array(totalLength);
           var offset = 0;
-          var _iterator8 = _createForOfIteratorHelper(this.audioChunks),
-            _step8;
+          var _iterator9 = _createForOfIteratorHelper(this.audioChunks),
+            _step9;
           try {
-            for (_iterator8.s(); !(_step8 = _iterator8.n()).done;) {
-              var chunk = _step8.value;
+            for (_iterator9.s(); !(_step9 = _iterator9.n()).done;) {
+              var chunk = _step9.value;
               combined.set(chunk, offset);
               offset += chunk.length;
             }
           } catch (err) {
-            _iterator8.e(err);
+            _iterator9.e(err);
           } finally {
-            _iterator8.f();
+            _iterator9.f();
           }
           this.audioChunks = [];
           var blob = new Blob([combined], {

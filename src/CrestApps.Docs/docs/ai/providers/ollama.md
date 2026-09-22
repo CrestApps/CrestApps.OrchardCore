@@ -36,33 +36,33 @@ To configure the Ollama connection manually, add the following settings to `apps
   "OrchardCore": {
     "CrestApps": {
       "AI": {
-        "Providers": {
-          "Ollama": {
-            "DefaultConnectionName": "Default",
-            "Connections": {
-              "Default": {
-                "Endpoint": "http://localhost:11434",
-                "Deployments": [
-                  {
-                    "Name": "local-chat",
-                    "ModelName": "deepseek-v2:16b",
-                    "Purpose": "Chat"
-                  },
-                  {
-                    "Name": "local-utility",
-                    "ModelName": "deepseek-v2:16b",
-                    "Purpose": "Utility"
-                  }
-                ]
+        "Connections": [
+          {
+            "Name": "Default",
+            "ClientName": "Ollama",
+            "Endpoint": "http://localhost:11434"
+          }
+        ],
+        "Deployments": [
+          {
+            "Name": "local-chat",
+            "ClientName": "Ollama",
+            "ConnectionName": "Default",
+            "ModelName": "deepseek-v2:16b",
+            "Properties": {
+              "AIDeploymentMetadata": {
+                "Features": [ "textGeneration", "toolCalling", "streaming" ]
               }
             }
           }
-        }
+        ]
       }
     }
   }
 }
 ```
+
+`Features` describes what the model can do. Which deployment actually serves chat, utility, embedding and the rest is decided by the deployment slots under **Configuration** -> **Artificial Intelligence** -> **Settings**, so a single deployment can back several slots. See [Model capabilities](../model-capabilities.md) for the full list of features and slots.
 
 ## Aspire
 

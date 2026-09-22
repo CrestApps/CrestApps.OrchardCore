@@ -45,6 +45,20 @@
   {
     "copy": true,
     "inputs": [
+      "node_modules/medium-zoom/dist/medium-zoom.js"
+    ],
+    "output": "wwwroot/vendors/medium-zoom/medium-zoom.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
+      "node_modules/medium-zoom/dist/medium-zoom.min.js"
+    ],
+    "output": "wwwroot/vendors/medium-zoom/medium-zoom.min.js"
+  },
+  {
+    "copy": true,
+    "inputs": [
       "node_modules/chart.js/dist/chart.umd.js.map"
     ],
     "output": "wwwroot/vendors/chartjs/chart.umd.js.map"

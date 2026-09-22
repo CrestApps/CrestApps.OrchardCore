@@ -419,12 +419,73 @@
     display: inline-block;
     vertical-align: top;
     margin-top: 0.5rem;
+    /* The positioning context for the download that sits inside it. */
+    position: relative;
 }
 
 .ai-chat-widget-messages .generated-image-container img {
     max-width: 100% !important;
     max-height: 50vh;
     object-fit: contain;
+    /* The panel is 380px wide, so a figure in it is a thumbnail whatever it was drawn at. Pointing at it
+       says it can be opened to the size of the window. */
+    cursor: zoom-in;
+}
+
+/* Deliberately not scoped to the panel. The opened picture is a copy the library appends to the document
+   body, which is outside the widget entirely, so a rule under .ai-chat-widget-messages never reaches it.
+   It is repeated from ai-chat.css because a page that mounts only the widget loads only this file. The
+   copy carries the thumbnail's classes, so the frame and the cap are taken off here -- both are scaled up
+   with the drawing and would otherwise ring the picture with a broad white border. */
+img.medium-zoom-image--opened {
+    max-width: none !important;
+    max-height: none !important;
+    padding: 0;
+    border: 0;
+    background: none;
+}
+
+/* Over the picture's lower corner rather than below it. In a panel this narrow a row of its own cost a
+   band of vertical space per figure, which a conversation full of them pays for once each. */
+.ai-chat-widget-messages .generated-image-container .ai-download-image {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 2;
+    opacity: 0;
+    color: #1f2933;
+    background-color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(0, 0, 0, 0.15);
+    transition: opacity 0.15s ease-in-out;
+}
+
+/* The outline button this is built from inverts on hover: it fills itself with its own colour and turns
+   its label white. Against the pale ground kept here that leaves a white icon on white -- the button is
+   still there and still works, but there is nothing to see. Both colours are therefore stated for every
+   state the button can be in rather than only the resting one. */
+.ai-chat-widget-messages .generated-image-container .ai-download-image:hover,
+.ai-chat-widget-messages .generated-image-container .ai-download-image:focus,
+.ai-chat-widget-messages .generated-image-container .ai-download-image:focus-visible,
+.ai-chat-widget-messages .generated-image-container .ai-download-image:active {
+    color: #1f2933;
+    background-color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.35);
+}
+
+/* Revealed by pointing at the figure. focus-within is what keeps it reachable by keyboard: the button is
+   invisible until it takes focus, and an invisible control that cannot be brought into view cannot be
+   used at all. */
+.ai-chat-widget-messages .generated-image-container:hover .ai-download-image,
+.ai-chat-widget-messages .generated-image-container:focus-within .ai-download-image {
+    opacity: 1;
+}
+
+/* A touch screen has no hover to reveal it with, so there it is simply always shown. The widget is the
+   surface most likely to be read on one. */
+@media (hover: none) {
+    .ai-chat-widget-messages .generated-image-container .ai-download-image {
+        opacity: 1;
+    }
 }
 
 /* ── Tables inside widget ── */
