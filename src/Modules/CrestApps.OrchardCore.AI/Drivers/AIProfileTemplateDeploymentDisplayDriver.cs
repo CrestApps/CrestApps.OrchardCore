@@ -53,11 +53,11 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
             model.ShowMissingDefaultChatDeploymentWarning = string.IsNullOrEmpty(settings.DefaultChatDeploymentName);
             model.ShowMissingDefaultUtilityDeploymentWarning = string.IsNullOrEmpty(settings.DefaultUtilityDeploymentName);
 
-            // The chat picker asks "what can this profile talk to", so it lists the text-capable deployments
-            // and the realtime (speech-to-speech) ones together. Which of the two the selection turns out to
-            // be is read back from the deployment's own capabilities. The utility slot serves background text
-            // work and so stays text-only.
-            model.ChatDeployments = (await _deploymentManager.GetConversationalDeploymentsAsync()).ToSelectList();
+            // The chat deployment is the text model the generated profile talks to, so the picker offers the
+            // chat slot only -- a speech-to-speech model cannot answer a typed turn. The model that carries a
+            // spoken conversation is named separately, on the chat mode editor. The utility slot serves
+            // background text work and so stays text-only too.
+            model.ChatDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Chat)).ToSelectList();
 
             model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
         }

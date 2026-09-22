@@ -251,10 +251,11 @@ internal static class AIProfileRecipeSchemaBuilder
                     .Type(SchemaValueType.String)
                     .Enum("Chat", "Utility", "TemplatePrompt", "Agent")
                     .Description("Profile type created from this template.")),
-                ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment the generated profile converses with. Naming one whose model declares the 'realtime' feature makes it a speech-to-speech profile.")),
+                ("ChatDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Text deployment the generated profile talks to. It answers typed messages, including those typed during a voice conversation.")),
+                ("ConversationDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Deployment that carries a spoken conversation for the generated profile. Naming one puts the profile in Conversation chat mode unless the template carries a chat mode of its own. Leave it empty to inherit the site's default realtime deployment.")),
                 ("UtilityDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Utility deployment name used when the generated profile needs a utility or background model.")),
                 ("OrchestratorName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Orchestrator name applied to generated profiles.")),
-                ("RealtimeDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Legacy. Realtime is a model capability rather than a separate deployment, so set ChatDeploymentName to the realtime deployment instead. Still honored for existing templates: when set, it supplies the chat deployment.")),
+                ("RealtimeDeploymentName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Legacy. Set ConversationDeploymentName instead. Still honored for existing templates: when set and no conversation deployment is named, it supplies one.")),
                 ("InitialResponseHandlerName", new JsonSchemaBuilder().Type(SchemaValueType.String).Description("Optional response handler that runs before the main orchestrator.")),
                 ("TitleType", new JsonSchemaBuilder()
                     .Type(SchemaValueType.String)

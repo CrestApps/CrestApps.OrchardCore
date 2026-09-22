@@ -687,6 +687,12 @@
     var noop = function noop() {};
     var onActivate = opts.onActivate || noop;
     var onDeactivate = opts.onDeactivate || noop;
+    // Reports whether a session is live, every time the button is repainted, so a host that shows or hides
+    // controls around the session reads the same flag the button does. onActivate/onDeactivate are events
+    // and can be missed -- the transport fallback deactivates WebRTC and activates the WebSocket without
+    // pairing them -- which left a host tracking the session itself able to drift out of step with the
+    // button, showing "Start speaking" over a message box that was still hidden.
+    var onSessionStateChanged = opts.onSessionStateChanged || noop;
     var onEnterRealtimeMode = opts.onEnterRealtimeMode || noop;
     // The server tells us a user utterance was captured before it has been transcribed, so the host can show a
     // placeholder in the right position; onUserTurnDropped removes it when the utterance produced nothing.
@@ -792,7 +798,11 @@
       realtimeMicDeviceId = '',
       realtimeOutputDeviceId = '',
       realtimeLanguage = '',
-      realtimeAudioSettingsBuilt = false;
+      realtimeAudioSettingsBuilt = false,
+      // The settings popover this instance built. A page can host two chat clients at once -- its own chat
+      // and the admin widget -- and both popovers carry the same element id, so looking one up by id would
+      // hand the second instance the first one's popover.
+      realtimeAudioSettingsElement = null;
 
     // The half-duplex echo tail on the WebSocket transport: how long the microphone stays muted after the
     // scheduled end of the assistant's playback, covering the room's reverberation.
@@ -1023,6 +1033,7 @@
       wrap.appendChild(gear);
       wrap.appendChild(panel);
       realtimeBtn.insertAdjacentElement('afterend', wrap);
+      realtimeAudioSettingsElement = wrap;
       var bargeInput = panel.querySelector('.js-barge');
       var pttInput = panel.querySelector('.js-ptt');
       var volInput = panel.querySelector('.js-vol');
@@ -1192,6 +1203,9 @@
       button.replaceChildren(document.createTextNode(text));
     }
     function updateRealtimeButton() {
+      // Reported before the early return: a host still has to be told the session ended even on a surface
+      // that never rendered the button.
+      onSessionStateChanged(isRealtimeActive);
       var realtimeBtn = q('realtimeButton');
       if (!realtimeBtn) {
         return;
@@ -1219,7 +1233,7 @@
       var conversationBtn = q('conversationButton');
       var inputEl = q('input');
       var sendBtn = q('sendButton');
-      var audioSettings = document.getElementById('realtime-audio-settings');
+      var audioSettings = realtimeAudioSettingsElement;
       if (enable) {
         onEnterRealtimeMode();
         if (inputEl) {
