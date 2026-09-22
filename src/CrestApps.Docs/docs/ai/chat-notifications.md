@@ -582,35 +582,49 @@ When the external platform signals that an agent has joined, the notification ca
 
 **Approach 1: Using the External Chat Relay (recommended for persistent connections)**
 
-When using the **external chat relay** infrastructure, events are routed automatically through the keyed builder/handler pattern. The `DefaultExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder` keyed by event type, creates a `ChatNotification(type)` using the builder's `NotificationType`, calls `Build` to populate the remaining properties, and then delegates to `IExternalChatRelayNotificationHandler` for processing.
+The **external chat relay** infrastructure defines a keyed builder/handler pattern for turning relay events
+into chat notifications. `IExternalChatRelayEventHandler` resolves an `IExternalChatRelayNotificationBuilder`
+keyed by event type, creates a `ChatNotification(type)` using the builder's `NotificationType`, calls `Build`
+to populate the remaining properties, and delegates the result to `IExternalChatRelayNotificationHandler`.
 
-The handler supports three operations:
+A notification handler supports three operations:
 - **Remove**: removes notification types listed in `result.RemoveNotificationTypes`
 - **Send**: sends `result.Notification` as a new notification when `result.IsUpdate` is `false`
 - **Update**: updates an existing notification when `result.IsUpdate` is `true` (e.g., wait time changes)
 
+:::warning
+CrestApps ships the **contracts and the event-type constants only**. `IExternalChatRelayEventHandler`,
+`IExternalChatRelayNotificationBuilder`, and `IExternalChatRelayNotificationHandler` have no built-in
+implementations, and no notification builder is registered for any event type out of the box. An integration
+that wants the behavior below has to register its own handler and one builder per event type it handles.
+`ExternalChatRelayConnectionManager` (the connection side of the relay) is the only implementation the
+framework provides.
+:::
+
 ```csharp
 // The relay receives a JSON event like:
-// { "type": "agent_connected", "agent_name": "Sarah" }
+// { "type": "agent-connected", "agent_name": "Sarah" }
 //
-// The DefaultExternalChatRelayEventHandler automatically:
-// 1. Resolves the AgentConnectedNotificationBuilder (keyed by "agent-connected").
+// Your IExternalChatRelayEventHandler then:
+// 1. Resolves the builder you registered for "agent-connected".
 // 2. Creates a ChatNotification("info") using the builder's NotificationType.
 // 3. Calls builder.Build() which populates Content, Icon, Dismissible,
 //    and adds the transfer notification type to RemoveNotificationTypes.
 // 4. Passes the result to IExternalChatRelayNotificationHandler which
 //    removes the transfer notification, then sends the agent-connected notification.
 //
-// Built-in event types with registered builders:
-// - ExternalChatRelayEventTypes.AgentTyping        → typing indicator
-// - ExternalChatRelayEventTypes.AgentStoppedTyping  → removes typing indicator
-// - ExternalChatRelayEventTypes.AgentConnected      → agent-connected info notification
-// - ExternalChatRelayEventTypes.AgentDisconnected   → removes agent-connected notification
-// - ExternalChatRelayEventTypes.AgentReconnecting   → reconnecting warning notification
-// - ExternalChatRelayEventTypes.ConnectionLost      → connection-lost error notification
-// - ExternalChatRelayEventTypes.ConnectionRestored  → removes connection-lost notification
-// - ExternalChatRelayEventTypes.WaitTimeUpdated     → updates transfer notification (IsUpdate = true)
-// - ExternalChatRelayEventTypes.SessionEnded        → session-ended notification
+// The event-type constants the framework defines (ExternalChatRelayEventTypes).
+// None of them has a builder registered by default - register the ones you handle:
+// - AgentTyping          = "agent-typing"
+// - AgentStoppedTyping   = "agent-stopped-typing"
+// - AgentConnected       = "agent-connected"
+// - AgentDisconnected    = "agent-disconnected"
+// - AgentReconnecting    = "agent-reconnecting"
+// - ConnectionLost       = "connection-lost"
+// - ConnectionRestored   = "connection-restored"
+// - Message              = "message"
+// - WaitTimeUpdated      = "wait-time-updated"
+// - SessionEnded         = "session-ended"
 ```
 
 **Approach 2: Using `IChatNotificationSender` directly (for webhooks or one-off calls)**
@@ -660,7 +674,7 @@ public sealed class SupervisorJoinedBuilder : IExternalChatRelayNotificationBuil
 }
 ```
 
-The `DefaultExternalChatRelayEventHandler` automatically resolves your builder when an event with type `"supervisor-joined"` arrives. The `IExternalChatRelayNotificationHandler` then processes the result — removing any notification types in `RemoveNotificationTypes`, then sending (or updating, if `IsUpdate` is `true`) the notification.
+Your `IExternalChatRelayEventHandler` resolves this builder when an event with type `"supervisor-joined"` arrives, and your `IExternalChatRelayNotificationHandler` processes the result — removing any notification types in `RemoveNotificationTypes`, then sending (or updating, if `IsUpdate` is `true`) the notification.
 
 See the [Response Handlers documentation](./response-handlers.md) for the full handler implementation pattern, including both webhook and persistent relay integration examples.
 

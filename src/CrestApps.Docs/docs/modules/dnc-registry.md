@@ -27,6 +27,7 @@ The module currently ships with these provider features:
 | USA FTC Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.UsaFtc` | **Settings** -> **DNC Registries** -> **USA FTC Registry** |
 | Canada LNNTE-DNCL Registry | `CrestApps.OrchardCore.DncRegistry.CanadaDncl` | **Settings** -> **DNC Registries** -> **Canada LNNTE-DNCL Registry** |
 | Local Do Not Call Registry | `CrestApps.OrchardCore.DncRegistry.Local` | **Interaction Center** -> **Local DNC Registry** |
+| DNC Registry - Azure Blob Storage | `CrestApps.OrchardCore.DncRegistry.Azure` | Configuration only -- see [below](#store-local-registry-files-in-azure-blob-storage) |
 
 Enable the core **DNC Registry** feature first, then enable the provider features you want to use. The **USA FTC Registry**, **Canada LNNTE-DNCL Registry**, and **Local DNC Registry** admin pages are only added to the admin menu when their matching provider feature is enabled.
 
@@ -193,6 +194,59 @@ Current settings:
 | **API key** | The protected credential sent in the request header |
 
 To obtain access, follow the official API onboarding guidance at [www.lnnte-dncl.gc.ca/en/Organization/DNCL_API](https://www.lnnte-dncl.gc.ca/en/Organization/DNCL_API).
+
+## Store local registry files in Azure Blob Storage
+
+| | |
+| --- | --- |
+| **Feature Name** | DNC Registry - Azure Blob Storage |
+| **Feature ID** | `CrestApps.OrchardCore.DncRegistry.Azure` |
+
+By default the **Local Do Not Call Registry** keeps uploaded list files on the local file system. Enable
+**DNC Registry - Azure Blob Storage** to keep them in an Azure Blob container instead, which is what a
+multi-instance deployment needs so every instance reads the same uploads.
+
+The feature depends on **Local Do Not Call Registry** and has no admin screen of its own. It is configured
+entirely through the `CrestApps:DncRegistry:AzureBlobStorage` shell configuration section, which sits under
+the `OrchardCore` key in the application's root `appsettings.json`:
+
+```json
+{
+  "OrchardCore": {
+    "CrestApps": {
+      "DncRegistry": {
+        "AzureBlobStorage": {
+          "ConnectionString": "",
+          "ContainerName": "dnc-registry",
+          "BasePath": "some/base/path",
+          "CreateContainer": true
+        }
+      }
+    }
+  }
+}
+```
+
+| Setting | Description |
+| --- | --- |
+| `ConnectionString` | Azure Storage account connection string. **Required.** |
+| `ContainerName` | Azure Blob container name. Must follow Azure container naming rules and should be lowercase. **Required.** |
+| `BasePath` | Optional subdirectory inside the container where registry files are stored. |
+| `CreateContainer` | When `true`, the container is created automatically if it does not already exist. |
+| `RemoveContainer` | When `true`, the container is removed when the tenant is deleted. |
+| `RemoveFilesFromBasePath` | Removes only the configured `BasePath` contents when the tenant is deleted. Use this instead of `RemoveContainer` when the container is shared. |
+
+:::warning
+`ConnectionString` and `ContainerName` are both required. When either is missing, the feature stays enabled
+but **does not take over storage** — an error is written to the log and the local file system keeps serving
+the registry files.
+:::
+
+:::note
+A tenant that overrides these values in its own `App_Data/Sites/{tenant}/appsettings.json` writes the same
+keys **without** the `OrchardCore` wrapper, starting at `CrestApps`, because that file is already scoped to
+the tenant.
+:::
 
 ## Adding a new registry
 

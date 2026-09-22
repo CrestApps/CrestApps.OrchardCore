@@ -369,9 +369,9 @@ The remote-address value is read from the `X-Forwarded-For` header when present,
 
 | | |
 | --- | --- |
-| **Feature Name** | AI Chat Analytics |
+| **Feature Name** | AI Chat Session Analytics |
 | **Feature ID** | `CrestApps.OrchardCore.AI.Chat.Analytics` |
 
 Provides comprehensive analytics and reporting for AI chat sessions, including conversation metrics, performance tracking, user segmentation, and feedback analysis.
 
-For complete documentation, see the [AI Chat Analytics](./chat-analytics.md) guide.
+For complete documentation, see the [AI Chat Session Analytics](./chat-analytics.md) guide.

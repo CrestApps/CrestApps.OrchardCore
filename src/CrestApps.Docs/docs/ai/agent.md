@@ -9,8 +9,8 @@ description: Orchard Core module guidance for agent profiles and agent-enabled A
 
 | | |
 | --- | --- |
-| **Module** | `CrestApps.OrchardCore.AI.Agent` |
-| **Manifest ID** | `CrestApps.OrchardCore.AI.Agent` |
+| **Feature Name** | Orchard Core AI Agent |
+| **Feature ID** | `CrestApps.OrchardCore.AI.Agent` |
 
 The Orchard agent module surfaces agent profiles inside Orchard Core so they can participate in module-driven AI experiences such as profile-based chat, A2A hosting, and other Orchard-managed orchestration flows.
 
@@ -28,7 +28,8 @@ The screencast below enables the feature, creates an Agent-type AI profile on th
 
 ## How to use it in Orchard
 
-1. Enable **AI Agents** together with the base AI features.
+1. Enable **Orchard Core AI Agent** (listed under **Artificial Intelligence** in **Tools → Features**)
+   together with the base AI features.
 2. Go to **Artificial Intelligence -> Profiles**.
 3. Create or edit the AI profile that should participate in agent scenarios.
 4. Enable the related Orchard features if you want additional tool categories to appear.
