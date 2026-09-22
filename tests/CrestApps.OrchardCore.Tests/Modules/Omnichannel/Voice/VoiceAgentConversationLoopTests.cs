@@ -336,6 +336,112 @@ public sealed class VoiceAgentConversationLoopTests
         Assert.Equal(1, harness.Media.Hangups);
     }
 
+    // ---- A line nobody speaks on ----
+    //
+    // A turn-based call only moves when the provider reports something happened, and silence reports nothing. Live,
+    // a voicemail that had finished its greeting was held open for over a minute and a half, recording nothing,
+    // until the carrier cut it off: the platform never hung up because it was never told to do anything.
+
+    [Fact]
+    public async Task WhenTheAssistantStartsListening_TheLineIsWatchedForSilence()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var armed = Assert.Single(harness.SilenceWatchdog.Armed);
+        Assert.Equal(harness.Activity.ItemId, armed.ActivityId);
+        Assert.Equal("call-1", armed.ProviderCallId);
+        Assert.Equal("Fake", armed.ProviderName);
+        Assert.Equal(1, armed.PromptCount);
+    }
+
+    [Fact]
+    public async Task ASilentLine_IsAskedWhetherTheCallerIsStillThere()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.Loop.OnListeningTimedOutAsync(harness.SilenceWatchdog.Armed[^1], TestContext.Current.CancellationToken);
+
+        // Assert
+        // Listening stops before speaking, as it does before any reply, so the assistant does not hear itself.
+        Assert.Equal(1, harness.Media.TranscriptionStops);
+        Assert.Equal(VoiceAgentConversationLoop.StillThereLine, harness.Media.Spoken[^1]);
+        Assert.Equal(0, harness.Media.Hangups);
+    }
+
+    [Fact]
+    public async Task ALineThatStaysSilent_IsEnded_AfterTheAssistantHasAskedTwice()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        // Each prompt is spoken, finishes, and is met with silence again, exactly as on the live call.
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+            await harness.Loop.OnListeningTimedOutAsync(harness.SilenceWatchdog.Armed[^1], TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.Equal(2, harness.Media.Spoken.Count(text => text == VoiceAgentConversationLoop.StillThereLine));
+        Assert.Equal(VoiceAgentConversationLoop.SilentLineGoodbye, harness.Media.Spoken[^1]);
+
+        // The goodbye is heard out before the line is cut, the same way any closing line is.
+        Assert.Equal(0, harness.Media.Hangups);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(1, harness.Media.Hangups);
+    }
+
+    [Fact]
+    public async Task ASilenceTheCallerBroke_IsLeftAlone()
+    {
+        // Arrange
+        // The watch fires on a timer, so it can arrive after the caller has already answered. Prompting them
+        // then would talk over a conversation that is going perfectly well.
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        var watch = harness.SilenceWatchdog.Armed[^1];
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "I am looking for a small SUV.", cancellationToken: TestContext.Current.CancellationToken);
+        var spokenBefore = harness.Media.Spoken.Count;
+
+        // Act
+        await harness.Loop.OnListeningTimedOutAsync(watch, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(spokenBefore, harness.Media.Spoken.Count);
+        Assert.DoesNotContain(VoiceAgentConversationLoop.StillThereLine, harness.Media.Spoken);
+    }
+
+    [Fact]
+    public async Task ACallThatHasAlreadyEnded_IsNotPromptedOnASilence()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        harness.Activity.Status = ActivityStatus.Completed;
+        var spokenBefore = harness.Media.Spoken.Count;
+
+        // Act
+        await harness.Loop.OnListeningTimedOutAsync(harness.SilenceWatchdog.Armed[^1], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(spokenBefore, harness.Media.Spoken.Count);
+        Assert.Equal(0, harness.Media.TranscriptionStops);
+    }
+
     // ---- The journey a caller asking for a person actually takes ----
     //
     // Three separate defects broke this in production, and each one passed the tests of the day because every
@@ -708,6 +814,18 @@ public sealed class VoiceAgentConversationLoopTests
     /// <summary>
     /// A realtime runner that records the session it was asked for instead of opening one.
     /// </summary>
+    private sealed class RecordingSilenceWatchdog : ITurnBasedSilenceWatchdog
+    {
+        public List<TurnBasedSilence> Armed { get; } = [];
+
+        public Task ArmAsync(TurnBasedSilence silence)
+        {
+            Armed.Add(silence);
+
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class RecordingRealtimeRunner : IRealtimeVoiceConversationRunner
     {
         public List<RealtimeVoiceConversationContext> Sessions { get; } = [];
@@ -866,6 +984,7 @@ public sealed class VoiceAgentConversationLoopTests
                 // Two providers, so the loop has to resolve by name rather than fall back to the only one there is.
                 new VoiceAgentMediaProviderResolver([Media, new FakeVoiceAgentMediaProvider("OtherFake")]),
                 Realtime,
+                SilenceWatchdog,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
                 Mock.Of<IClock>(),
@@ -879,6 +998,11 @@ public sealed class VoiceAgentConversationLoopTests
         public FakeVoiceAgentMediaProvider Media { get; } = new();
 
         public RecordingRealtimeRunner Realtime { get; } = new();
+
+        /// <summary>
+        /// Every listening turn the loop asked to have watched for silence.
+        /// </summary>
+        public RecordingSilenceWatchdog SilenceWatchdog { get; } = new();
 
         public VoiceAgentConversationLoop Loop { get; }
 

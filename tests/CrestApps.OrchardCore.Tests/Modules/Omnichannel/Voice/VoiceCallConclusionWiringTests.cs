@@ -459,6 +459,7 @@ public sealed class VoiceCallConclusionWiringTests
                 [],
                 Mock.Of<IVoiceAgentMediaProviderResolver>(),
                 Mock.Of<IRealtimeVoiceConversationRunner>(),
+                Mock.Of<ITurnBasedSilenceWatchdog>(),
                 Mock.Of<ILiquidTemplateManager>(),
                 ContentManager.Object,
                 new StubClock(_now),

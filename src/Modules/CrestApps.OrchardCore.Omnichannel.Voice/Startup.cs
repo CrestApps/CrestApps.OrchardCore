@@ -30,6 +30,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<VoiceAgentConversationLoop>();
         services.AddScoped<IVoiceAgentConversationLoop>(serviceProvider => serviceProvider.GetRequiredService<VoiceAgentConversationLoop>());
         services.AddScoped<IRealtimeCallCompletionRunner, RealtimeCallCompletionRunner>();
+        services.AddScoped<ITurnBasedSilenceWatchdog, TurnBasedSilenceWatchdog>();
 
         // One per call, so the tool and the session holding the line share an instance and two calls running at
         // once cannot end each other.

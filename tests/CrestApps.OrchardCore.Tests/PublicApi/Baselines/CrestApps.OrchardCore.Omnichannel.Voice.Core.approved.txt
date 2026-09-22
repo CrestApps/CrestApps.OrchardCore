@@ -17,6 +17,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
     }
+    public sealed class TurnBasedSilence
+    {
+        public TurnBasedSilence() { }
+        public string ActivityId { get; set; }
+        public int PromptCount { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+    }
     public sealed class VoiceAgentEvent
     {
         public VoiceAgentEvent() { }
@@ -67,6 +75,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     public interface IRealtimeVoiceConversationRunner
     {
         System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ITurnBasedSilenceWatchdog
+    {
+        System.Threading.Tasks.Task ArmAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.TurnBasedSilence silence);
     }
     public interface IVoiceAgentConversationLoop
     {
@@ -123,6 +135,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public RealtimeVoiceConversationRunner(CrestApps.Core.AI.Realtime.IRealtimeOrchestrator orchestrator, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceMediaProviderResolver mediaResolver, CrestApps.Core.AI.IAIChatSessionPromptStore promptStore, CrestApps.Core.AI.Chat.IAIChatSessionManager chatSessionManager, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationRunner> logger) { }
         public System.Threading.Tasks.Task<bool> RunAsync(CrestApps.OrchardCore.Omnichannel.Voice.Services.RealtimeVoiceConversationContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class TurnBasedSilenceWatchdog : CrestApps.OrchardCore.Omnichannel.Voice.Services.ITurnBasedSilenceWatchdog
+    {
+        public static readonly System.TimeSpan SilenceBeforeSpeakingUp;
+        public TurnBasedSilenceWatchdog(OrchardCore.Environment.Shell.IShellHost shellHost, OrchardCore.Environment.Shell.ShellSettings shellSettings, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.TurnBasedSilenceWatchdog> logger) { }
+        public System.Threading.Tasks.Task ArmAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.TurnBasedSilence silence) { }
+    }
     public sealed class VoiceAgentConversationLoop : CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceAgentConversationLoop
     {
         public VoiceAgentConversationLoop(
@@ -142,11 +160,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelHandoffService> handoffServices,
                     CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver mediaResolver,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner realtimeRunner,
+                    CrestApps.OrchardCore.Omnichannel.Voice.Services.ITurnBasedSilenceWatchdog silenceWatchdog,
                     OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager,
                     OrchardCore.ContentManagement.IContentManager contentManager,
                     OrchardCore.Modules.IClock clock,
                     Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> logger) { }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task OnListeningTimedOutAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.TurnBasedSilence silence, System.Threading.CancellationToken cancellationToken) { }
     }
     public static class VoiceCallConclusionPolicy
     {

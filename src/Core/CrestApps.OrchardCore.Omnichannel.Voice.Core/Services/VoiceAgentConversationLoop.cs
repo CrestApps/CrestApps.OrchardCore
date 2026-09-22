@@ -63,6 +63,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IEnumerable<IOmnichannelHandoffService> _handoffServices;
     private readonly IVoiceAgentMediaProviderResolver _mediaResolver;
     private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
+    private readonly ITurnBasedSilenceWatchdog _silenceWatchdog;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
@@ -85,6 +86,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IEnumerable<IOmnichannelHandoffService> handoffServices,
         IVoiceAgentMediaProviderResolver mediaResolver,
         IRealtimeVoiceConversationRunner realtimeRunner,
+        ITurnBasedSilenceWatchdog silenceWatchdog,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IClock clock,
@@ -106,6 +108,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _handoffServices = handoffServices;
         _mediaResolver = mediaResolver;
         _realtimeRunner = realtimeRunner;
+        _silenceWatchdog = silenceWatchdog;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
         _clock = clock;
@@ -426,6 +429,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         // The agent finished speaking; listen for the caller's reply.
         await media.StartTranscriptionAsync(voiceEvent.ProviderCallId, language: "en", commandId: $"ai-tx-{prompts.Count}", cancellationToken);
+        await WatchForSilenceAsync(voiceEvent, prompts.Count);
     }
 
     private async Task OnTranscriptionAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, CancellationToken cancellationToken)
@@ -476,6 +480,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         {
             // Nothing to say; keep listening so the call is not stranded silent.
             await media.StartTranscriptionAsync(voiceEvent.ProviderCallId, language: "en", commandId: $"ai-tx-retry-{prompts.Count}", cancellationToken);
+
+            // The caller's turn has been stored since the prompts above were read, so it counts as said.
+            await WatchForSilenceAsync(voiceEvent, prompts.Count + 1);
             return;
         }
 
