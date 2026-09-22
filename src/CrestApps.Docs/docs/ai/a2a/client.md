@@ -9,7 +9,7 @@ description: Connect to remote A2A hosts to discover and use external AI agents.
 
 | | |
 | --- | --- |
-| **Feature Name** | Agent to Agent Protocol (A2A) |
+| **Feature Name** | Agent-to-Agent (A2A) Client |
 | **Feature ID** | `CrestApps.OrchardCore.AI.A2A` |
 
 The A2A Client feature allows your Orchard Core application to connect to external A2A hosts, enabling AI models to discover and communicate with remote AI agents.

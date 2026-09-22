@@ -33,7 +33,7 @@ Use the Core site when you need:
 | --- | --- |
 | Foundational AI features | [AI Services](overview) |
 | Profile-driven chat UI | [AI Chat](chat) |
-| Session analytics | [AI Chat Analytics](chat-analytics) |
+| Session analytics | [AI Chat Session Analytics](chat-analytics) |
 | Ad-hoc chat experiences | [AI Chat Interactions](chat-interactions) |
 | Chat notifications | [AI Chat Notifications](chat-notifications) |
 | Copilot orchestration | [Copilot Integration](copilot) |
@@ -42,6 +42,10 @@ Use the Core site when you need:
 | Prompt templates | [AI Prompt Templates](prompt-templates) |
 | Profile templates | [AI Profile Templates](profile-templates) |
 | User memory | [AI Memory](memory) |
+| Tool instances | [AI Tool Instances](tool-instances) |
+| Deployment capabilities and slots | [Model Capabilities](model-capabilities) |
+| Spoken conversations | [Realtime Voice](realtime-voice) |
+| Scheduled folder ingestion | [AI File Sources](file-sources) |
 | Workflow activities and events | [AI Workflows](workflows) |
 | A2A modules | [A2A](a2a/) |
 | Provider modules | [AI Providers](providers/) |

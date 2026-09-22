@@ -167,12 +167,12 @@ Image and chart generation are handled by AI tools that the orchestrator can inv
 
 ### Configuration
 
-To enable image generation, create an `AIDeployment` record with the `Image` purpose for your image model (for example `dall-e-3`). You can set it as the default Image deployment globally, or select it explicitly on each chat interaction.
+To enable image generation, create an `AIDeployment` record for your image model (for example `dall-e-3`) and declare the `imageOutput` capability on it. You can set it as the site's default image deployment, or select it explicitly on each chat interaction.
 
 **Option 1: Admin UI**
 
-1. Navigate to **Artificial Intelligence > Deployments** and create a new deployment with purpose **Image** (for example, name `dall-e-3`, connection `openai-main`).
-2. Optionally, set it as the default Image deployment in **Settings > Artificial Intelligence > Default Deployments**.
+1. Navigate to **Artificial Intelligence > Deployments** and create a new deployment (for example, name `dall-e-3`, connection `openai-main`). On its **Model capabilities** card, enable **Image output**.
+2. Optionally, set it as the **Default image deployment** in **Settings > Artificial Intelligence**.
 
 **Option 2: Configuration (appsettings.json)**
 
@@ -209,6 +209,6 @@ To enable image generation, create an `AIDeployment` record with the `Image` pur
 }
 ```
 
-The image deployment is the one declaring `imageOutput`. Assign it to the `image` slot under
-**Configuration** -> **Artificial Intelligence** -> **Settings** so image generation picks it up. See
-[Model capabilities](model-capabilities.md) for the full list of features and slots.
+The image deployment is the one declaring `imageOutput`. Assign it to the `image` slot by selecting it as the
+**Default image deployment** under **Settings** -> **Artificial Intelligence** so image generation picks it
+up. See [Model capabilities](model-capabilities.md) for the full list of features and slots.

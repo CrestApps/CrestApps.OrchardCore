@@ -37,20 +37,35 @@ Claude configuration can come from both shell configuration and tenant site sett
 
 ### appsettings.json
 
-The module binds shared Claude options from:
+The module binds shared Claude options from the `CrestApps:AI:Claude` section:
 
 ```json
 {
   "OrchardCore": {
     "CrestApps": {
-      "Claude": {
-        "BaseUrl": "https://api.anthropic.com",
-        "DefaultModel": "claude-sonnet-4-5"
+      "AI": {
+        "Claude": {
+          "ApiKey": "<anthropic-api-key>",
+          "BaseUrl": "https://api.anthropic.com",
+          "DefaultModel": "claude-sonnet-4-5"
+        }
       }
     }
   }
 }
 ```
+
+| Setting | Type | Default | Description |
+| --- | --- | --- | --- |
+| `ApiKey` | `string` | `null` | Anthropic API key. A key stored in the site settings replaces this value when API-key authentication is selected there. |
+| `BaseUrl` | `string` | `https://api.anthropic.com` | Anthropic API base address. |
+| `DefaultModel` | `string` | `null` | Model used when a profile, template, or interaction does not select one. |
+
+:::note
+The `OrchardCore` wrapper is how the host `appsettings.json` is shaped. A tenant that overrides these
+values in its own `App_Data/Sites/{tenant}/appsettings.json` writes the same keys **without** the wrapper,
+starting at `CrestApps`, because that file is already scoped to the tenant.
+:::
 
 ### Site settings
 

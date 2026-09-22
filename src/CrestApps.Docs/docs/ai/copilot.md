@@ -171,7 +171,7 @@ The module uses `IChatInteractionSettingsHandler` to decouple Copilot-specific s
 
 ### Orchestration Context Flow
 
-1. `CopilotOrchestrationContextHandler` (implements `IOrchestrationContextHandler`) reads `CopilotSessionMetadata` from the resource entity and sets it on `OrchestrationContext.Properties`
+1. `CopilotOrchestrationContextHandler` (implements `IOrchestrationContextBuilderHandler`) reads `CopilotSessionMetadata` from the resource entity and sets it on `OrchestrationContext.Properties`
 2. `CopilotOrchestrator` reads the metadata from `Properties` to configure the session model and the `--allow-all` flag
 3. Authentication uses the SDK's `GithubToken` property (not environment variables) and `CliArgs` for the allow-all flag
 

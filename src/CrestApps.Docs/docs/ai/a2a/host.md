@@ -9,7 +9,7 @@ description: Expose Orchard Core Agent AI Profiles to external clients via the A
 
 | | |
 | --- | --- |
-| **Feature Name** | Agent to Agent Protocol (A2A) Host |
+| **Feature Name** | Agent-to-Agent (A2A) Host |
 | **Feature ID** | `CrestApps.OrchardCore.AI.A2A.Host` |
 
 The A2A Host feature exposes all AI Profiles of type **Agent** as discoverable agents via the Agent-to-Agent protocol. External A2A clients can discover available agents and send messages to them.
