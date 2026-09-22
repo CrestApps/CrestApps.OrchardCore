@@ -30,8 +30,8 @@ The management experience layers a lightweight Customer Relationship Management 
 ## What the base module does
 
 - provides the shared Orchard communication layer
-- exposes the generic omnichannel webhook endpoint
-- supplies shared concepts used by the management and channel modules
+- supplies the shared message, endpoint, preference, and processing contracts used by the management
+  and channel modules
 - acts as the dependency root for optional channel integrations such as Azure Communication Services
 
 ## Enable the feature
@@ -40,13 +40,17 @@ The management experience layers a lightweight Customer Relationship Management 
 2. Enable **Omnichannel**.
 3. Add the related management or channel modules you need.
 
-## Webhook endpoint
+## Inbound webhooks
 
-The base module exposes:
+The base feature defines no HTTP endpoint of its own. Inbound events arrive through the channel
+feature that owns the provider:
 
-- `~/Omnichannel/CommunicationService`
+| Feature | Endpoint |
+| --- | --- |
+| [Omnichannel - Azure Event Grid](event-grid) | `~/Omnichannel/webhook/AzureEventGrid` |
 
-Provider-specific integrations can forward inbound events into this endpoint.
+Enable the channel feature that matches how your provider delivers events, and configure its
+authentication before pointing a subscription at it.
 
 ## Reports
 

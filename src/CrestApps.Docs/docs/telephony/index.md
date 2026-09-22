@@ -40,26 +40,29 @@ If you are building another provider, see [Custom Telephony and Contact Center P
 
 ## The provider contract
 
-A telephony provider implements `ITelephonyProvider`, which declares only the provider's display name and
-the operations it advertises through the `Capabilities` property (a `TelephonyCapabilities` flags value).
-Every call operation lives on its own capability contract, so a provider implements exactly the operations
-its backend really supports:
+`ITelephonyProvider` identifies a provider and nothing more. It declares only:
 
-| Operation | Capability | Contract and method |
+| Member | Purpose |
+| --- | --- |
+| `Name` | The localized, human-readable provider name. |
+| `Capabilities` | A `TelephonyCapabilities` flags value listing the operations the provider supports. |
+
+The executable operations live on separate **capability contracts**, so a provider is never obliged to
+answer for an operation it cannot perform. Each advertised capability names the contract that must back it
+(`TelephonyCapabilityContracts` holds the authoritative map):
+
+| Capability | Contract | Method |
 | --- | --- | --- |
-| Dial | `Dial` | `ITelephonyCallControlProvider.DialAsync` |
-| Hang up | `Hangup` | `ITelephonyCallControlProvider.HangupAsync` |
-| Hold (pause) | `Hold` | `ITelephonyHoldProvider.HoldAsync` |
-| Resume | `Resume` | `ITelephonyHoldProvider.ResumeAsync` |
-| Mute / Unmute | `Mute` | `ITelephonyMuteProvider.MuteAsync` / `UnmuteAsync` |
-| Blind transfer | `Transfer` | `ITelephonyTransferProvider.TransferAsync` |
-| Attended (warm) transfer | `AttendedTransfer` | `ITelephonyAttendedTransferProvider.StartAttendedTransferAsync` |
-| Merge calls | `Merge` | `ITelephonyConferenceProvider.MergeAsync` |
-| Send DTMF digits | `SendDigits` | `ITelephonyDtmfProvider.SendDigitsAsync` |
-| Answer / Reject inbound | `ReceiveCalls` | `ITelephonyInboundCallProvider.AnswerAsync` / `RejectAsync` |
-| Send to voicemail | `Voicemail` | `ITelephonyVoicemailProvider.SendToVoicemailAsync` |
-| Directory lookup | `Directory` | `ITelephonyDirectoryProvider.GetDirectoryAsync` |
-| Client bootstrap | — | `ITelephonySoftPhoneCredentialsProvider.GetClientCredentialsAsync` |
+| `Dial`, `Hangup` | `ITelephonyCallControlProvider` | `DialAsync` / `HangupAsync` |
+| `Hold`, `Resume` | `ITelephonyHoldProvider` | `HoldAsync` / `ResumeAsync` |
+| `Mute` | `ITelephonyMuteProvider` | `MuteAsync` / `UnmuteAsync` |
+| `Transfer` | `ITelephonyTransferProvider` | `TransferAsync` |
+| `AttendedTransfer` | `ITelephonyAttendedTransferProvider` | `StartAttendedTransferAsync` |
+| `Merge` | `ITelephonyConferenceProvider` | `MergeAsync` |
+| `SendDigits` | `ITelephonyDtmfProvider` | `SendDigitsAsync` |
+| `ReceiveCalls` | `ITelephonyInboundCallProvider` | `AnswerAsync` / `RejectAsync` |
+| `Voicemail` | `ITelephonyVoicemailProvider` | `SendToVoicemailAsync` |
+| `Directory` | `ITelephonyDirectoryProvider` | `GetDirectoryAsync` |
 
 The soft phone UI uses the advertised flags to show or hide controls, and `DefaultTelephonyService` repeats
 the check server-side before calling the provider so a hidden or forged client command fails closed. It also
@@ -67,7 +70,15 @@ requires the provider to implement the capability's declared contract, recorded 
 `TelephonyCapabilityContracts`, so advertising a capability without implementing it and implementing a
 contract without advertising it both fail closed instead of dispatching.
 
-Live agent audio is advertised separately through the optional `ITelephonyAudioProvider` contract. `TelephonyAudioCapabilities` distinguishes browser audio from an external device or provider-owned application, and `TelephonyAudioModeResolver` applies these rules:
+A few contracts are optional rather than capability-gated. Implement them when they apply to your provider:
+
+| Contract | Purpose |
+| --- | --- |
+| `ITelephonySoftPhoneCredentialsProvider` | Issues the bootstrap configuration a browser soft phone needs (`GetClientCredentialsAsync`). A provider driven only from the server does not implement it. |
+| `ITelephonyCallStateProvider` | Reports provider-authoritative call state (`GetCallStateAsync`) so stale interactions can be reconciled. |
+| `ITelephonyAudioProvider` | Declares how live call audio reaches the agent, and names the browser media adapter when browser audio is supported. |
+
+On `ITelephonyAudioProvider`, `TelephonyAudioCapabilities` distinguishes browser audio from an external device or provider-owned application, and `TelephonyAudioModeResolver` applies these rules:
 
 - A browser-only provider automatically uses browser audio.
 - An external-device-only provider automatically leaves microphone and speaker handling outside Orchard.
@@ -109,13 +120,19 @@ public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder ro
 
 The soft phone view uses `Html.SignalRHubUrl<TelephonyHub>()` so the generated hub URL includes the current tenant path base.
 
-Every hub method runs in its own Orchard Core shell scope and is authorized against the `Use the telephony soft phone` permission. Authorized connections join a user destination qualified by the immutable Orchard shell name, and every server-side incoming-call or call-state projection uses that tenant-qualified destination. This remains required when a multi-node deployment uses a shared SignalR backplane because Orchard user identifiers are not globally unique across tenants. Call-control methods return a `TelephonyResult` that acknowledges the command but do not optimistically push its returned call as authoritative state. The hub exposes `GetActiveCall` for compatibility and `GetActiveCalls` for provider-authoritative multi-call restoration and recovery, while provider event projections push `CallStateChanged`, `IncomingCall` (with its contextual cards), and `ReceiveError` events through the strongly typed `ITelephonyClient` interface. It also exposes `Answer`, `Reject`, and `Voicemail` operations for a ringing inbound call.
+Every hub method runs in its own Orchard Core shell scope and is authorized against the `Use the telephony soft phone` permission. Authorized connections join a user destination qualified by the immutable Orchard shell name, and every server-side incoming-call or call-state projection uses that tenant-qualified destination. This remains required when a multi-node deployment uses a shared SignalR backplane because Orchard user identifiers are not globally unique across tenants. Call-control methods return a `TelephonyResult` that acknowledges the command but do not optimistically push its returned call as authoritative state. The hub exposes `GetActiveCall` for compatibility and `GetActiveCalls` for provider-authoritative multi-call restoration and recovery, while provider event projections push `CallStateChanged` and `IncomingCall` (with its contextual cards). Through the same strongly typed `ITelephonyClient` interface the server also pushes `CredentialsIssued` when the provider issues new connection credentials, `DialRequested` when a call is started outside the soft phone (such as the call button beside a phone-number field), and `ReceiveError`. It also exposes `Answer`, `Reject`, and `Voicemail` operations for a ringing inbound call.
 
 ## Site settings
 
 Telephony settings live under **Settings → Communication → Telephony** and require the
-`Manage telephony settings` permission. The screen follows the same multi-provider tab layout as the
-Orchard Core SMS settings:
+`Manage telephony settings` permission.
+
+:::note
+The settings screen and its admin menu entry are part of the **Telephony** feature itself; there is no separate
+administration feature to enable.
+:::
+
+The screen follows the same multi-provider tab layout as the Orchard Core SMS settings:
 
 - The **Soft Phone** tab selects the **default provider** from the list of enabled providers (as its
   first option) and configures where the soft phone widget appears.
@@ -407,7 +424,8 @@ Call recordings are ingested into a provider-neutral, encrypted media store. By 
 To add a new provider:
 
 1. Reference `CrestApps.OrchardCore.Telephony.Abstractions`.
-2. Implement `ITelephonyProvider` plus a capability contract for each operation the backend supports.
+2. Implement `ITelephonyProvider` to give the provider a name and advertise its `Capabilities`, then
+   implement the [capability contracts](#the-provider-contract) for each operation you advertised.
 3. Register the provider and an `IConfigureOptions<TelephonyProviderOptions>` that reflects whether
    it is enabled based on the tenant settings:
 

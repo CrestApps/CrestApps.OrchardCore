@@ -164,7 +164,8 @@ Realtime transport options bind to the `OrchardCore:CrestApps:AI:RealtimeTranspo
           "EnableWebRtc": true,
           "TurnDetectionType": "semantic_vad",
           "TurnDetectionEagerness": "auto",
-          "IdleTimeoutMinutes": 10,
+          "IdleTimeoutSeconds": 30,
+          "MaxSessionDurationSeconds": 300,
           "StunUrls": [ "stun:stun.l.google.com:19302" ]
         }
       }
@@ -178,11 +179,16 @@ Realtime transport options bind to the `OrchardCore:CrestApps:AI:RealtimeTranspo
 | `EnableWebRtc` | Whether WebRTC is offered to browsers (default `true`). Turn it off on hosts with no inbound UDP and no reachable TURN relay, otherwise every session waits out the connect timeout before falling back. |
 | `TurnDetectionType` | `semantic_vad` (default) lets the model decide when the user has finished; `server_vad` ends the turn after a fixed silence. A deployment that rejects semantic detection is switched to server VAD automatically. |
 | `TurnDetectionEagerness` | For `semantic_vad`: `low`, `medium`, `high`, or `auto` (default). Lower waits longer for the user to continue. |
-| `IdleTimeoutMinutes` | How long a session may go without user speech before it ends (default `10`; `0` disables). A realtime session holds an open, billed provider connection whether or not anyone is talking. |
+| `IdleTimeoutSeconds` | How long a session may go without user speech before it ends (default `30`). A realtime session holds an open, billed provider connection whether or not anyone is talking. |
+| `MaxSessionDurationSeconds` | Hard ceiling on a single session's length, regardless of activity (default `300`). |
+| `EnableKnowledgeGrounding` | Whether the server retrieves knowledge for a turn before asking the model to reply, instead of letting the model answer immediately (default `true`). |
+| `GroundingAcknowledgementDelayMs` | How long retrieval may run before the caller hears one short spoken filler sentence ("let me look that up") so the wait is not silent (default `700`). |
+| `GroundingResponseWatchdogSeconds` | How long to wait for the grounded reply before answering anyway rather than leaving the turn unanswered (default `15`). |
 | `StunUrls` | STUN server URLs. Defaults to a public server when empty. |
 | `TurnUrls` | TURN server URLs (`turn:`/`turns:`). Required for users behind strict/symmetric NATs or blocked UDP. |
-| `TurnSecret` / `TurnCredentialTtlSeconds` | coturn `use-auth-secret` shared secret and TTL; enables short-lived ephemeral TURN credentials (recommended for production). |
+| `TurnSecret` / `TurnCredentialTtlSeconds` | coturn `use-auth-secret` shared secret and TTL (default `3600`); enables short-lived ephemeral TURN credentials (recommended for production). |
 | `TurnUsername` / `TurnCredential` | Static TURN credentials, used only when `TurnSecret` is unset. |
+| `IceTransportPolicy` | `All` (default) lets the browser try direct connectivity first; `Relay` forces every candidate through TURN. |
 
 STUN enables direct connectivity through most home/office NATs. A **TURN** server is required where traffic must be relayed; without it, those users fall back to WebSocket. ICE servers are fetched per session (over the hub), so ephemeral TURN credentials are always fresh.
 

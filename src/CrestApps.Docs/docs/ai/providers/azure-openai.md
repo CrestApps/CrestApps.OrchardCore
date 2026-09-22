@@ -196,10 +196,10 @@ This is useful when:
 
 ### How to create an Azure Speech deployment
 
-1. Navigate to **AI Services** -> **Deployments** in the admin dashboard.
+1. Navigate to **Artificial Intelligence** -> **Deployments** in the admin dashboard.
 2. Click **Add Deployment** and select **Azure Speech** as the provider.
 3. Enter a deployment name.
-4. Set the deployment purpose to **SpeechToText**.
+4. On the **Model capabilities** card, enable the **Speech to text** feature.
 5. Provide the endpoint URL of your Azure Speech Service resource.
 6. Select the authentication type: `Default`, `ManagedIdentity`, or `ApiKey`.
 7. Save the deployment.

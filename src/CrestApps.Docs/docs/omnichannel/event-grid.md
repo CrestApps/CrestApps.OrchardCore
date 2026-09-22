@@ -42,22 +42,31 @@ If neither check succeeds, the endpoint returns `401 Unauthorized`.
 
 ## Configuration
 
-Configure the module through tenant configuration:
+The module binds the `CrestApps:Omnichannel:EventGrid` section from the tenant's shell configuration.
+In the application's root `appsettings.json` that section sits under the `OrchardCore` key:
 
 ```json
 {
-  "CrestApps": {
-    "Omnichannel": {
-      "EventGrid": {
-        "EventGridSasKey": "your-event-grid-sas-key",
-        "AADIssuer": "https://sts.windows.net/<tenant-id>/",
-        "AADAudience": "api://your-app-id",
-        "AADMetadataAddress": "https://login.microsoftonline.com/<tenant-id>/.well-known/openid-configuration"
+  "OrchardCore": {
+    "CrestApps": {
+      "Omnichannel": {
+        "EventGrid": {
+          "EventGridSasKey": "your-event-grid-sas-key",
+          "AADIssuer": "https://sts.windows.net/<tenant-id>/",
+          "AADAudience": "api://your-app-id",
+          "AADMetadataAddress": "https://login.microsoftonline.com/<tenant-id>/.well-known/openid-configuration"
+        }
       }
     }
   }
 }
 ```
+
+:::note
+A tenant that overrides these values in its own `App_Data/Sites/{tenant}/appsettings.json` writes the same
+keys **without** the `OrchardCore` wrapper, starting at `CrestApps`, because that file is already scoped to
+the tenant.
+:::
 
 ### Configuration fields
 

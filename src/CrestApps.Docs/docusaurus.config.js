@@ -54,6 +54,10 @@ const config = {
               label: 'Latest',
               path: '',
             },
+            '2.1': {
+              label: '2.1',
+              path: '2.1',
+            },
             '2.0': {
               label: '2.0',
               path: '2.0',

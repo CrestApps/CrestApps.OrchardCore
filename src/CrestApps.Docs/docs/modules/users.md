@@ -7,7 +7,7 @@ description: Enhanced user management with display name customization and avatar
 
 | | |
 | --- | --- |
-| **Feature Name** | CrestApps Users Core |
+| **Feature Name** | Users Core Components |
 | **Feature ID** | `CrestApps.OrchardCore.Users` |
 
 Extends the Orchard Core Users module by adding functionality to cache users.

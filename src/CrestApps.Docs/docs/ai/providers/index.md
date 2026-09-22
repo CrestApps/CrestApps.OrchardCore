@@ -16,7 +16,7 @@ A provider is a module that implements the connection layer between CrestApps AI
 - **Authentication** — Managing API keys, tokens, or managed identity credentials
 - **Client creation** — Creating `IChatClient`, `IEmbeddingGenerator`, and `IImageGenerator` instances
 - **Connection configuration** — Defining endpoints, deployment names, and provider-specific settings
-- **Deployment management** — Supporting multiple named deployments under a single connection, each with one or more `Purpose` values such as `Chat`, `Utility`, `Embedding`, `Image`, `SpeechToText`, `TextToSpeech`, or `Vision`
+- **Deployment management** — Supporting multiple named deployments under a single connection, each declaring the **model capabilities** its model supports, such as `textGeneration`, `textEmbedding`, `imageOutput`, `imageInput`, `speechToText`, `textToSpeech`, or `realtime`
 
 ## Built-in Providers
 
@@ -195,7 +195,7 @@ public sealed class CustomAIClientProvider : IAIClientProvider
 
 ### 2. Implement `IAICompletionClient`
 
-Use the `NamedAICompletionClient` base class for standard providers, or `DeploymentAwareAICompletionClient` if your provider supports multiple deployments. Provider connections come from the active provider connection catalog:
+Derive from the abstract `NamedAICompletionClient` base class, or from `ProviderAICompletionClient<TOptions>` (which derives from it) when your provider is driven by its own options type. Provider connections come from the active provider connection catalog:
 
 ```csharp
 public sealed class CustomCompletionClient : NamedAICompletionClient

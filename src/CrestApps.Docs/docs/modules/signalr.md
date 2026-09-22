@@ -17,8 +17,15 @@ The SignalR module has been migrated into the Orchard Core framework. Use `Orcha
 and the framework `signalr` script resource for new work. The deprecated CrestApps feature only
 exists as a compatibility feature for sites that still need migration.
 
-Views that need a hub URL can use `Html.SignalRHubUrl<T>()`. The helper adds the current request
-path base, so hub links work for tenants that use a URL prefix.
+## CrestApps hub helpers
+
+`SignalRHubRoutes` and `Html.SignalRHubUrl<T>()` are **not** part of the Orchard Core SignalR module. They
+ship in `CrestApps.OrchardCore.Core` and are the routing convention the CrestApps hubs follow, so a module
+that references that package gets them whichever SignalR feature is enabled.
+
+`SignalRHubRoutes.GetHubPath<T>()` returns `/Communication/Hub/{HubTypeName}`. Views that need the client
+URL use `Html.SignalRHubUrl<T>()`, which adds the current request path base so hub links work for tenants
+served under a URL prefix.
 
 ```csharp
 public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder routes, IServiceProvider serviceProvider)
@@ -34,5 +41,17 @@ public override void Configure(IApplicationBuilder app, IEndpointRouteBuilder ro
 
 <script asp-name="my-script" depends-on="signalr" at="Foot"></script>
 ```
+
+## Multi-tenant destinations
+
+A SignalR backplane is shared infrastructure, while Orchard user identifiers and application group names are
+tenant-local. Do not send tenant data through an unqualified `Clients.User(userId)` or a globally named
+group.
+
+`TenantSignalRGroupName` (in `CrestApps.OrchardCore.SignalR.Core`) qualifies both:
+`TenantSignalRGroupName.ForUser(shellName, userId)` for user destinations and
+`TenantSignalRGroupName.ForGroup(shellName, logicalGroupName)` for application groups. The hub adds only
+authorized connections to the qualified group, and publishers target the same generated name, so equal user
+or group identifiers in different shells stay isolated on single-node and backplane deployments alike.
 
 Learn more in the [Orchard Core SignalR documentation](https://docs.orchardcore.net/en/latest/reference/modules/SignalR/).

@@ -31,13 +31,21 @@ The AI modules add Orchard admin experiences and feature wiring on top of CrestA
 - **[AI Providers](ai/providers/)** - provider modules such as OpenAI, Azure OpenAI, Azure AI Inference, and Ollama
 - **[AI Documents](ai/documents/)** - document upload, parsing, storage, and indexing modules
 - **[AI Data Sources](ai/data-sources/)** - external knowledge source integrations
+- **[AI File Sources](ai/file-sources)** - scheduled ingestion of a local, FTP, or SFTP folder
+- **[Model Capabilities](ai/model-capabilities)** - what each deployment's model can do, and the slot it fills
+- **[Realtime Voice](ai/realtime-voice)** - live spoken conversations over a provider realtime session
 - **[MCP](ai/mcp/)** - Orchard Core MCP client, server, and resource modules
 - **[A2A](ai/a2a/)** - Orchard Core client and host support for the Agent-to-Agent protocol
 
 ### Standard modules
 
 - **[Content Access Control](modules/content-access-control)**
+- **[Content Fields](modules/content-fields)**
+- **[Content Transfer](modules/content-transfer)**
+- **[DNC Registry](modules/dnc-registry)**
+- **[Phone Number Verifications](modules/phone-number-verifications)**
 - **[Recipes](modules/recipes)**
+- **[Reports](modules/reports)**
 - **[Resources](modules/resources)**
 - **[Roles](modules/roles)**
 - **[SignalR](modules/signalr)**
@@ -47,9 +55,15 @@ The AI modules add Orchard admin experiences and feature wiring on top of CrestA
 ### Omnichannel Communications
 
 - **[Omnichannel overview](omnichannel/)**
+- **[Azure Communication Services](omnichannel/azure-communication-services)**
 - **[Event Grid integration](omnichannel/event-grid)**
 - **[Management UI](omnichannel/management)**
 - **[SMS automation](omnichannel/sms)**
+
+### Telephony
+
+- **[Telephony soft phone](telephony/)**
+- **[Dialpad provider](telephony/dialpad)**
 
 ### Samples
 
