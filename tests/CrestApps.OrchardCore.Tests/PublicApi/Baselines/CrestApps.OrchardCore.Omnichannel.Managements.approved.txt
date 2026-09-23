@@ -535,8 +535,9 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Migrations
         protected OrchardCore.Data.IDbConnectionAccessor DbConnectionAccessor { get; }
         protected Microsoft.Extensions.Logging.ILogger Logger { get; }
         protected YesSql.IStore Store { get; }
-        protected System.Threading.Tasks.Task ApplyIsolatedSchemaChangeAsync(System.Data.Common.DbConnection connection, System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> schemaChange, string operation) { }
+        protected System.Threading.Tasks.Task ApplyIsolatedSchemaChangeAsync(System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> schemaChange, string operation) { }
         protected System.Threading.Tasks.Task EnsureColumnExistsAsync<TIndex>(string collection, string columnName, System.Action<YesSql.Sql.Schema.IAlterTableCommand> addColumn, string operation) { }
+        protected System.Threading.Tasks.Task<System.Exception> TryApplyIsolatedAsync(System.Func<YesSql.Sql.ISchemaBuilder, System.Threading.Tasks.Task> work) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Managements.Models
