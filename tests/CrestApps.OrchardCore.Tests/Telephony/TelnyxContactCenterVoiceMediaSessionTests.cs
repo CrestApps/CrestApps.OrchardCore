@@ -116,6 +116,47 @@ public sealed class TelnyxContactCenterVoiceMediaSessionTests
     }
 
     [Fact]
+    public async Task ReadIncomingAsync_Cancelled_StopsStreamingBeforeTheSocketIsDropped()
+    {
+        // Arrange
+        using var socket = new FakeWebSocket();
+        var abortedWhenStopped = new List<bool>();
+        var workManager = new TestContactCenterFeatureWorkManager();
+        var session = new TelnyxContactCenterVoiceMediaSession(
+            "session-1",
+            "call-1",
+            socket,
+            workManager.TryEnter("media"),
+            new WebSocketRendezvous(),
+            _ =>
+            {
+                abortedWhenStopped.Add(socket.Aborted);
+
+                return Task.CompletedTask;
+            });
+
+        using var reading = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var frames = new List<ContactCenterVoiceMediaFrame>();
+
+        // Act: the conversation ends while a receive is pending.
+        var readLoop = Task.Run(async () =>
+        {
+            await foreach (var frame in session.ReadIncomingAsync(reading.Token))
+            {
+                frames.Add(frame);
+            }
+        }, TestContext.Current.CancellationToken);
+
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        await reading.CancelAsync();
+        await readLoop.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(Assert.Single(abortedWhenStopped));
+        Assert.True(socket.Aborted);
+    }
+
+    [Fact]
     public async Task WriteOutgoingAsync_AfterStop_Throws()
     {
         // Arrange

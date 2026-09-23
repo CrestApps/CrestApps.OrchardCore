@@ -66,6 +66,12 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
         var buffer = ArrayPool<byte>.Shared.Rent(ReceiveChunkBytes);
         var messageStream = new MemoryStream();
 
+        // A caller that stops reading stops the stream the orderly way. Handing the token to ReceiveAsync instead
+        // would abort the socket the moment it was cancelled, because cancelling a pending WebSocket receive
+        // aborts the connection: Telnyx then saw the stream vanish, reported streaming.failed with reason
+        // "disconnected" and dialled back in, on every session that ended with the conversation.
+        using var stopOnCancel = cancellationToken.Register(static state => ((TelnyxContactCenterVoiceMediaSession)state).StopInBackground(), this);
+
         try
         {
             while (!cancellationToken.IsCancellationRequested && Volatile.Read(ref _stopped) == 0)
@@ -74,7 +80,7 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
 
                 try
                 {
-                    result = await _webSocket.ReceiveAsync(buffer.AsMemory(0, ReceiveChunkBytes), cancellationToken);
+                    result = await _webSocket.ReceiveAsync(buffer.AsMemory(0, ReceiveChunkBytes), CancellationToken.None);
                 }
                 catch (OperationCanceledException)
                 {
@@ -222,6 +228,22 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
                     _workLease.Dispose();
                 }
             }
+        }
+    }
+
+    private void StopInBackground()
+        => _ = StopQuietlyAsync();
+
+    private async Task StopQuietlyAsync()
+    {
+        try
+        {
+            await StopAsync();
+        }
+        catch
+        {
+            // Stopping is best effort here; the owner stops the session again when it disposes it, and that call
+            // is the one whose failure is observed.
         }
     }
 
