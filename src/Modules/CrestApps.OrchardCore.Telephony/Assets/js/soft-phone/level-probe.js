@@ -190,6 +190,26 @@
         return !!track && track.readyState === 'live' && !track.muted;
     }
 
+    // Whether the capture probe has to be rebuilt to measure the track that is being sent now.
+    //
+    // A probe binds to the track it was built on and never follows a swap: createMediaStreamSource takes the
+    // stream's track once, and a track later removed from that stream, stopped, or replaced on the sender leaves
+    // the probe reading the old one. A stopped track feeds the graph zero-filled frames, so the probe does not
+    // go quiet -- it reports a confident 0.000 for the rest of the call. That is what every mid-call microphone
+    // change did (device picked, boost or processing changed, dead microphone recovered): OutLevel read 0.000
+    // while the far end measured the agent at around 0.3.
+    //
+    // Rebuild when there is a live track to measure and it is not the one the probe was built on. An ended
+    // current track is not worth rebuilding onto -- it would measure the same silence -- and no track at all
+    // leaves nothing to bind to.
+    function captureProbeNeedsRebuild(probeTrackId, currentTrackId, currentTrackState) {
+        if (!currentTrackId || currentTrackState === 'ended') {
+            return false;
+        }
+
+        return probeTrackId !== currentTrackId;
+    }
+
     // The level to report for a probe window: the peak, or unknown when the window produced no frames at all.
     // A window that was measured and found silent reports 0, which is a finding; a window that could not be
     // measured reports -1, which is not.
@@ -210,4 +230,5 @@
     softPhone.createLevelProbe = createLevelProbe;
     softPhone.probeLevel = probeLevel;
     softPhone.isTrackDeliverable = isTrackDeliverable;
+    softPhone.captureProbeNeedsRebuild = captureProbeNeedsRebuild;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

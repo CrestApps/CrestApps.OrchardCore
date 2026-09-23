@@ -159,6 +159,44 @@
     return (level || 0) <= QUALITY_SILENT_MIC_LEVEL && (energyDelta || 0) <= 0;
   }
 
+  // The capture level over the window since the previous sample, on the same 0..1 scale as
+  // RTCAudioSourceStats.audioLevel. Returns -1 when the browser reports no capture statistics (Firefox has no
+  // media-source stats at all), so an unmeasured capture never reads as a silent one.
+  //
+  // audioLevel itself is a single instantaneous reading, and one reading every eight seconds says almost
+  // nothing: it lands in a pause between words as often as not and then reads 0, so an agent in the middle of
+  // a conversation the far end was hearing clearly could log Mic=0.000 beside it. totalAudioEnergy accumulates
+  // audioLevel squared times duration, and totalSamplesDuration accumulates the duration, so the two deltas
+  // give the RMS level across the whole window -- every word in it counts, not just whichever instant the
+  // timer happened to fall on.
+  //
+  // A window in which no samples were captured at all is a measured silence (0): the track delivered
+  // nothing. Counters that went backwards were reset -- a replaced track can surface as a fresh media-source
+  // stat -- so the current totals are the window. A browser that reports audioLevel without the cumulative
+  // counters falls back to the instantaneous reading, which is still better than nothing.
+  function windowedMicrophoneLevel(mediaSource, previous) {
+    if (!mediaSource) {
+      return -1;
+    }
+    var hasTotals = typeof mediaSource.totalAudioEnergy === 'number' && typeof mediaSource.totalSamplesDuration === 'number';
+    if (!hasTotals) {
+      return typeof mediaSource.audioLevel === 'number' ? mediaSource.audioLevel : -1;
+    }
+    var energy = mediaSource.totalAudioEnergy;
+    var duration = mediaSource.totalSamplesDuration;
+    var previousEnergy = previous && typeof previous.totalAudioEnergy === 'number' ? previous.totalAudioEnergy : 0;
+    var previousDuration = previous && typeof previous.totalSamplesDuration === 'number' ? previous.totalSamplesDuration : 0;
+    if (energy < previousEnergy || duration < previousDuration) {
+      previousEnergy = 0;
+      previousDuration = 0;
+    }
+    var durationDelta = duration - previousDuration;
+    if (durationDelta <= 0) {
+      return 0;
+    }
+    return Math.min(1, Math.sqrt(Math.max(0, energy - previousEnergy) / durationDelta));
+  }
+
   // Extracts the audio inbound-rtp, the capture (media-source) and outbound-rtp, the selected candidate pair,
   // negotiated codec, and candidate types from an RTCStatsReport. Written defensively because the exact shape
   // and which candidate pair is flagged "selected" varies across browsers (Chrome nominates a succeeded pair;
@@ -254,6 +292,7 @@
   softPhone.estimateMos = estimateMos;
   softPhone.readJitterBufferMs = readJitterBufferMs;
   softPhone.isCaptureSilent = isCaptureSilent;
+  softPhone.windowedMicrophoneLevel = windowedMicrophoneLevel;
   softPhone.parseWebRtcStats = parseWebRtcStats;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
@@ -436,6 +475,25 @@
     return !!track && track.readyState === 'live' && !track.muted;
   }
 
+  // Whether the capture probe has to be rebuilt to measure the track that is being sent now.
+  //
+  // A probe binds to the track it was built on and never follows a swap: createMediaStreamSource takes the
+  // stream's track once, and a track later removed from that stream, stopped, or replaced on the sender leaves
+  // the probe reading the old one. A stopped track feeds the graph zero-filled frames, so the probe does not
+  // go quiet -- it reports a confident 0.000 for the rest of the call. That is what every mid-call microphone
+  // change did (device picked, boost or processing changed, dead microphone recovered): OutLevel read 0.000
+  // while the far end measured the agent at around 0.3.
+  //
+  // Rebuild when there is a live track to measure and it is not the one the probe was built on. An ended
+  // current track is not worth rebuilding onto -- it would measure the same silence -- and no track at all
+  // leaves nothing to bind to.
+  function captureProbeNeedsRebuild(probeTrackId, currentTrackId, currentTrackState) {
+    if (!currentTrackId || currentTrackState === 'ended') {
+      return false;
+    }
+    return probeTrackId !== currentTrackId;
+  }
+
   // The level to report for a probe window: the peak, or unknown when the window produced no frames at all.
   // A window that was measured and found silent reports 0, which is a finding; a window that could not be
   // measured reports -1, which is not.
@@ -453,6 +511,7 @@
   softPhone.createLevelProbe = createLevelProbe;
   softPhone.probeLevel = probeLevel;
   softPhone.isTrackDeliverable = isTrackDeliverable;
+  softPhone.captureProbeNeedsRebuild = captureProbeNeedsRebuild;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * Call status text with elapsed time, and call duration for history rows.
@@ -1396,6 +1455,8 @@
   var createLevelProbe = softPhoneModules.createLevelProbe;
   var probeLevel = softPhoneModules.probeLevel;
   var isTrackDeliverable = softPhoneModules.isTrackDeliverable;
+  var captureProbeNeedsRebuild = softPhoneModules.captureProbeNeedsRebuild;
+  var windowedMicrophoneLevel = softPhoneModules.windowedMicrophoneLevel;
   var findAudioSender = softPhoneModules.findAudioSender;
   var formatCallStatus = softPhoneModules.formatCallStatus;
   var connectedAtFor = softPhoneModules.connectedAtFor;
@@ -1957,21 +2018,70 @@
     // They cover what getStats cannot: how loud the far end actually is (no browser reports it), and the
     // capture level in browsers that do not implement RTCAudioSourceStats.
     var captureProbe = null;
+    // The id of the track the capture probe was built on, kept even when the build failed so a browser
+    // that refuses the graph is not asked again every sample -- only when the track changes.
+    var captureProbeTrackId = null;
     var inboundProbe = null;
+
+    // The audio track the far end is hearing: whatever the live sender carries, else the soft phone's own
+    // send stream. The sender is the authority because the provider SDK may be sending a track other than
+    // the one it was handed, and a probe on the wrong track measures a microphone nobody hears.
+    function currentSendTrack(peer) {
+      if (peer && typeof peer.getSenders === 'function') {
+        var sender = findAudioSender(peer.getSenders());
+        if (sender && sender.track) {
+          return sender.track;
+        }
+      }
+      return context.localStream && typeof context.localStream.getAudioTracks === 'function' ? context.localStream.getAudioTracks()[0] || null : null;
+    }
+
+    // (Re)builds the capture probe on one specific track. The probe is given a stream holding that track
+    // alone rather than the shared send stream, so what it binds to is exactly the track named here: a
+    // MediaStreamAudioSourceNode takes its stream's track once, at construction, and a stream that briefly
+    // holds both the old and the new track mid-swap would leave it to the browser which one it picked.
+    function startCaptureProbe(track) {
+      if (captureProbe) {
+        captureProbe.dispose();
+        captureProbe = null;
+      }
+      captureProbeTrackId = track ? track.id : null;
+      if (!track) {
+        return;
+      }
+      var stream = typeof MediaStream === 'function' ? new MediaStream([track]) : context.localStream;
+      captureProbe = createLevelProbe(stream);
+    }
     function startLevelProbes() {
       stopLevelProbes();
-      captureProbe = createLevelProbe(context.localStream);
+      var call = qualityState && qualityState.call;
+      startCaptureProbe(currentSendTrack(call && call.peer && call.peer.instance));
 
       // The far end's audio is attached to the remote element by the provider SDK, so that element is
       // where the received stream can be found.
       var remoteStream = remoteElement && remoteElement.srcObject;
       inboundProbe = createLevelProbe(remoteStream);
     }
+
+    // Points the capture probe at the track now being sent, after the soft phone swapped its microphone
+    // mid-call. Called once the swap is committed -- the new track on the sender AND the old one stopped --
+    // never from inside the sender swap itself: rebuilding there bound the probe to the send stream while it
+    // still held the old track, which the commit then stopped, and the probe read 0.000 for the rest of the
+    // call while the far end measured the agent at around 0.3. Leaves the inbound probe alone; the far end
+    // did not change.
+    function refreshCaptureProbe() {
+      if (!qualityState) {
+        return;
+      }
+      var call = qualityState.call;
+      startCaptureProbe(currentSendTrack(call && call.peer && call.peer.instance));
+    }
     function stopLevelProbes() {
       if (captureProbe) {
         captureProbe.dispose();
         captureProbe = null;
       }
+      captureProbeTrackId = null;
       if (inboundProbe) {
         inboundProbe.dispose();
         inboundProbe = null;
@@ -2050,6 +2160,9 @@
         // reported on the summary: it answers "was this agent audible for the whole call?" from the
         // server log alone, which nothing could before.
         lastAudioEnergy: 0,
+        // The previous media-source counters, so the reported microphone level covers the window
+        // since the last sample rather than one instant of it.
+        lastMediaSource: null,
         silentSamples: 0,
         minMicLevel: Infinity,
         captureAlerted: false,
@@ -2126,6 +2239,18 @@
         var sentTrackLabel = sentTrack ? sentTrack.label || '' : '';
         var sentTrackIsLocalStream = !!(sentTrack && localTrack && sentTrack.id === localTrack.id);
 
+        // Keep the capture probe on the track being sent. The swap paths rebuild it themselves once a
+        // new microphone is committed, but anything that changes the send track without passing through
+        // them -- the provider SDK swapping its own track, or a swap whose rebuild was lost -- would
+        // otherwise leave the probe reading a stopped track as 0.000 for the rest of the call. The
+        // window right after a rebuild has no frames yet and reports unknown (-1), not silence. While a
+        // call is on hold the sender carries the comfort tone, so the probe follows it there and back:
+        // the level reported is always that of what the far end is being sent.
+        var probeTarget = sentTrack || localTrack;
+        if (captureProbeNeedsRebuild(captureProbeTrackId, probeTarget ? probeTarget.id : null, probeTarget ? probeTarget.readyState : null)) {
+          startCaptureProbe(probeTarget);
+        }
+
         // The provider's own identifiers for this leg, so a browser-side observation can be joined to the
         // server's webhook and command log for the same leg instead of being lined up by timestamp.
         var callOptions = call && call.options || {};
@@ -2145,8 +2270,12 @@
         // microphone is delivering silence" -- the same conflation that made a dropped round-trip time
         // read as a perfect connection. So an unmeasured capture is -1, and nothing is concluded from
         // it.
-        var captureReported = !!mediaSource && typeof mediaSource.audioLevel === 'number';
-        var micLevel = captureReported ? mediaSource.audioLevel : -1;
+        //
+        // The level is the RMS across the window since the previous sample, from the cumulative energy
+        // counters, not the instantaneous audioLevel: a single reading every eight seconds landed in a
+        // pause between words often enough to log Mic=0.000 for an agent the far end could hear.
+        var micLevel = windowedMicrophoneLevel(mediaSource, qualityState.lastMediaSource);
+        var captureReported = micLevel >= 0;
         var audioEnergy = mediaSource && typeof mediaSource.totalAudioEnergy === 'number' ? mediaSource.totalAudioEnergy : 0;
         var energyDelta = audioEnergy - qualityState.lastAudioEnergy;
         var bytesSent = parsed.outbound && parsed.outbound.bytesSent ? parsed.outbound.bytesSent : 0;
@@ -2189,6 +2318,10 @@
         qualityState.lastPacketsReceived = packetsReceived;
         qualityState.lastPacketsLost = packetsLost;
         qualityState.lastAudioEnergy = audioEnergy;
+        qualityState.lastMediaSource = mediaSource ? {
+          totalAudioEnergy: mediaSource.totalAudioEnergy,
+          totalSamplesDuration: mediaSource.totalSamplesDuration
+        } : null;
         qualityState.samples++;
         qualityState.mosSum += mos;
         qualityState.minMos = Math.min(qualityState.minMos, mos);
@@ -2727,16 +2860,19 @@
           if (!sender || typeof sender.replaceTrack !== 'function') {
             return Promise.resolve(false);
           }
+
+          // The capture probe is NOT rebuilt here. At this point the soft phone has not yet committed the
+          // swap: its send stream still holds the old track, which it stops only afterwards, so a probe
+          // built now bound to a track that was about to die and read 0.000 for the rest of the call
+          // (observed live: OutLevel=0.000 while the far end measured InLevel around 0.3). The caller
+          // rebuilds it through refreshCaptureProbe once the commit is done.
           return Promise.resolve(sender.replaceTrack(track)).then(function () {
-            // A MediaStreamAudioSourceNode binds to the track it was built from and does not follow
-            // a track swapped into the same stream, so the level probes would go on measuring the
-            // old -- now stopped -- track and report silence for the rest of the call. Rebuild them
-            // against what is being sent now. (Observed live: media-source read full scale while the
-            // probe alongside it read 0.000 after a mid-call microphone change.)
-            startLevelProbes();
             return true;
           });
         },
+        // Re-points the capture level probe at the track now being sent, once a mid-call microphone swap
+        // has been committed. A no-op when no call is being sampled.
+        refreshCaptureProbe: refreshCaptureProbe,
         // Places an outbound call through the Telnyx SDK and returns a controller. onState receives
         // soft-phone state names: 'Ringing', 'Connected', 'Disconnected'.
         originate: function (destination, callerId, onState) {
@@ -3547,8 +3683,11 @@
     //
     // A fresh getUserMedia on the selection, swapped onto the live sender with replaceTrack, changes what the
     // far end hears within a packet or two and needs no renegotiation. The new track goes into the SAME
-    // MediaStream object, so the adapter (which reads that stream when the next call starts), the probes and
-    // the meter all follow without being told. Known edge: a switch made while a call is on hold replaces
+    // MediaStream object, so the adapter (which reads that stream when the next call starts) follows without
+    // being told. The call-quality level probe does NOT: a MediaStreamAudioSourceNode binds to the track it
+    // was built on, so after a swap it went on reading the stopped old track as 0.000 for the rest of the call
+    // while the far end heard the agent fine. It is rebuilt explicitly once the swap is committed, and the
+    // meter is restarted below for the same reason. Known edge: a switch made while a call is on hold replaces
     // the hold audio too; unhold then restores the original, now stopped, track. Rare enough to note rather
     // than guard.
     function switchLocalAudioTrack(reason) {
@@ -3587,6 +3726,13 @@
         }
         return replace.then(function () {
           commitCapture(stream, pipeline);
+
+          // Only now -- the new track on the sender and in the send stream, the old one stopped -- can
+          // the capture probe be rebuilt onto what the far end hears. A probe does not follow a track
+          // swap on its own; see refreshCaptureProbe.
+          if (browserAudioSession && typeof browserAudioSession.refreshCaptureProbe === 'function') {
+            browserAudioSession.refreshCaptureProbe();
+          }
           watchLocalAudioTrack();
           reportDiagnostic('info', 'microphone-switched', 'The captured microphone was switched (' + reason + ').', localAudioTrackLabel() + (describeBoost(micBoostDb) ? ' ' + describeBoost(micBoostDb) : ''));
           if (micPermissionState === null) {

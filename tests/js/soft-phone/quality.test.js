@@ -193,3 +193,48 @@ describe('parseWebRtcStats capture and outbound', () => {
         expect(parsed.mediaSource).toBeNull();
     });
 });
+
+// A single instantaneous audioLevel every eight seconds lands in a pause between words as often as not and reads
+// 0 for an agent the far end can hear. The reported level is the RMS across the window instead, from the
+// cumulative energy counters.
+describe('windowedMicrophoneLevel', () => {
+    it('is unknown when the browser reports no capture statistics', () => {
+        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel(null, null)).toBe(-1);
+        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel({ kind: 'audio' }, null)).toBe(-1);
+    });
+
+    it('reports the RMS across the window, not the instantaneous level', () => {
+        // Eight seconds at an RMS of 0.2 (energy = level^2 * duration), sampled in a pause where audioLevel is 0.
+        const previous = { totalAudioEnergy: 1, totalSamplesDuration: 10 };
+        const current = { audioLevel: 0, totalAudioEnergy: 1 + 0.04 * 8, totalSamplesDuration: 18 };
+
+        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel(current, previous)).toBeCloseTo(0.2, 6);
+    });
+
+    it('measures the first window from the call-lifetime totals', () => {
+        const current = { audioLevel: 0, totalAudioEnergy: 0.09 * 4, totalSamplesDuration: 4 };
+
+        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel(current, null)).toBeCloseTo(0.3, 6);
+    });
+
+    it('reports a measured silence when the window captured nothing', () => {
+        const previous = { totalAudioEnergy: 2, totalSamplesDuration: 30 };
+
+        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel({ audioLevel: 0.4, totalAudioEnergy: 2, totalSamplesDuration: 30 }, previous)).toBe(0);
+    });
+
+    it('treats counters that went backwards as reset and uses the current totals as the window', () => {
+        const previous = { totalAudioEnergy: 5, totalSamplesDuration: 60 };
+        const current = { audioLevel: 0, totalAudioEnergy: 0.01 * 2, totalSamplesDuration: 2 };
+
+        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel(current, previous)).toBeCloseTo(0.1, 6);
+    });
+
+    it('falls back to the instantaneous level when the cumulative counters are absent', () => {
+        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel({ audioLevel: 0.25 }, null)).toBe(0.25);
+    });
+
+    it('never reports above full scale', () => {
+        expect(globalThis.CrestAppsSoftPhone.windowedMicrophoneLevel({ totalAudioEnergy: 10, totalSamplesDuration: 1 }, null)).toBe(1);
+    });
+});

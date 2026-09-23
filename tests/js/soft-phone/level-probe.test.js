@@ -277,3 +277,29 @@ describe('isTrackDeliverable', () => {
         expect(softPhone.isTrackDeliverable(undefined)).toBe(false);
     });
 });
+
+// A probe binds to the track it was built on and never follows a swap. After every mid-call microphone change the
+// probe was rebuilt while the send stream still held the old track, which was then stopped: OutLevel read 0.000
+// for the rest of the call while the far end measured the agent at around 0.3.
+describe('captureProbeNeedsRebuild', () => {
+    it('rebuilds when the track being sent is not the one the probe was built on', () => {
+        expect(softPhone.captureProbeNeedsRebuild('old-track', 'new-track', 'live')).toBe(true);
+    });
+
+    it('builds a probe for a live track when none was built yet', () => {
+        expect(softPhone.captureProbeNeedsRebuild(null, 'new-track', 'live')).toBe(true);
+    });
+
+    it('keeps a probe that is already on the track being sent', () => {
+        expect(softPhone.captureProbeNeedsRebuild('track', 'track', 'live')).toBe(false);
+    });
+
+    it('does not rebuild onto an ended track, which would measure the same silence', () => {
+        expect(softPhone.captureProbeNeedsRebuild('old-track', 'new-track', 'ended')).toBe(false);
+    });
+
+    it('does nothing when there is no track to bind to', () => {
+        expect(softPhone.captureProbeNeedsRebuild('old-track', null, null)).toBe(false);
+        expect(softPhone.captureProbeNeedsRebuild(null, '', undefined)).toBe(false);
+    });
+});

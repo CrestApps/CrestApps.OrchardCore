@@ -92,6 +92,52 @@
         return (level || 0) <= QUALITY_SILENT_MIC_LEVEL && (energyDelta || 0) <= 0;
     }
 
+    // The capture level over the window since the previous sample, on the same 0..1 scale as
+    // RTCAudioSourceStats.audioLevel. Returns -1 when the browser reports no capture statistics (Firefox has no
+    // media-source stats at all), so an unmeasured capture never reads as a silent one.
+    //
+    // audioLevel itself is a single instantaneous reading, and one reading every eight seconds says almost
+    // nothing: it lands in a pause between words as often as not and then reads 0, so an agent in the middle of
+    // a conversation the far end was hearing clearly could log Mic=0.000 beside it. totalAudioEnergy accumulates
+    // audioLevel squared times duration, and totalSamplesDuration accumulates the duration, so the two deltas
+    // give the RMS level across the whole window -- every word in it counts, not just whichever instant the
+    // timer happened to fall on.
+    //
+    // A window in which no samples were captured at all is a measured silence (0): the track delivered
+    // nothing. Counters that went backwards were reset -- a replaced track can surface as a fresh media-source
+    // stat -- so the current totals are the window. A browser that reports audioLevel without the cumulative
+    // counters falls back to the instantaneous reading, which is still better than nothing.
+    function windowedMicrophoneLevel(mediaSource, previous) {
+        if (!mediaSource) {
+            return -1;
+        }
+
+        var hasTotals = typeof mediaSource.totalAudioEnergy === 'number' &&
+            typeof mediaSource.totalSamplesDuration === 'number';
+
+        if (!hasTotals) {
+            return typeof mediaSource.audioLevel === 'number' ? mediaSource.audioLevel : -1;
+        }
+
+        var energy = mediaSource.totalAudioEnergy;
+        var duration = mediaSource.totalSamplesDuration;
+        var previousEnergy = previous && typeof previous.totalAudioEnergy === 'number' ? previous.totalAudioEnergy : 0;
+        var previousDuration = previous && typeof previous.totalSamplesDuration === 'number' ? previous.totalSamplesDuration : 0;
+
+        if (energy < previousEnergy || duration < previousDuration) {
+            previousEnergy = 0;
+            previousDuration = 0;
+        }
+
+        var durationDelta = duration - previousDuration;
+
+        if (durationDelta <= 0) {
+            return 0;
+        }
+
+        return Math.min(1, Math.sqrt(Math.max(0, energy - previousEnergy) / durationDelta));
+    }
+
     // Extracts the audio inbound-rtp, the capture (media-source) and outbound-rtp, the selected candidate pair,
     // negotiated codec, and candidate types from an RTCStatsReport. Written defensively because the exact shape
     // and which candidate pair is flagged "selected" varies across browsers (Chrome nominates a succeeded pair;
@@ -206,5 +252,6 @@
     softPhone.estimateMos = estimateMos;
     softPhone.readJitterBufferMs = readJitterBufferMs;
     softPhone.isCaptureSilent = isCaptureSilent;
+    softPhone.windowedMicrophoneLevel = windowedMicrophoneLevel;
     softPhone.parseWebRtcStats = parseWebRtcStats;
 }(typeof globalThis !== 'undefined' ? globalThis : window));
