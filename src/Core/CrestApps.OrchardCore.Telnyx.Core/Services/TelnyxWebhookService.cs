@@ -68,7 +68,7 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Telnyx webhook {EventType}: CallControlId={CallControlId}, Leg={CallLegId}, Session={CallSessionId}, Direction={Direction}, State={State}, HangupCause={HangupCause}, SipHangupCause={SipHangupCause}, ClientState={ClientState}.",
+                "Telnyx webhook {EventType}: CallControlId={CallControlId}, Leg={CallLegId}, Session={CallSessionId}, Direction={Direction}, State={State}, HangupCause={HangupCause}, SipHangupCause={SipHangupCause}, ClientState={ClientState}, FailureReason={FailureReason}.",
                 callEvent.EventType.SanitizeLogValue(),
                 callEvent.CallControlId.SanitizeLogValue(),
                 callEvent.CallLegId.SanitizeLogValue(),
@@ -77,7 +77,8 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
                 callEvent.State.SanitizeLogValue(),
                 callEvent.HangupCause.SanitizeLogValue(),
                 callEvent.SipHangupCause.SanitizeLogValue(),
-                callEvent.ClientState.SanitizeLogValue());
+                callEvent.ClientState.SanitizeLogValue(),
+                callEvent.FailureReason.SanitizeLogValue());
         }
 
         // Advance an outbound soft-phone bridge before anything else. The destination leg is an internal leg

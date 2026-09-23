@@ -120,4 +120,10 @@ public sealed class TelnyxCallEvent
     /// uses it to correlate the agent and destination legs it created.
     /// </summary>
     public string ClientState { get; set; }
+
+    /// <summary>
+    /// Gets or sets why Telnyx says an operation failed, when the event reports a failure, such as a media stream
+    /// that could not be kept open.
+    /// </summary>
+    public string FailureReason { get; set; }
 }

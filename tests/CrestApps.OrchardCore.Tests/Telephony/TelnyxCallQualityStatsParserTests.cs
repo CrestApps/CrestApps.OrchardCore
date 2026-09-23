@@ -72,6 +72,22 @@ public sealed class TelnyxCallQualityStatsParserTests
     }
 
     [Fact]
+    public void Parse_StreamingFailed_ReadsTheFailureReason()
+    {
+        // Arrange
+        const string Payload = """
+        { "data": { "event_type": "streaming.failed", "payload": { "call_control_id": "ctrl-1", "failure_reason": "connection_failed" } } }
+        """;
+
+        // Act
+        var parsed = TelnyxCallEventParser.TryParse(Payload, out var callEvent);
+
+        // Assert
+        Assert.True(parsed);
+        Assert.Equal("connection_failed", callEvent.FailureReason);
+    }
+
+    [Fact]
     public void Evaluate_ProviderFigures_RateOnWhicheverIsKnown()
     {
         // Act & Assert

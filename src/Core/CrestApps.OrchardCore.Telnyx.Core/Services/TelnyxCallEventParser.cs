@@ -76,6 +76,7 @@ public static class TelnyxCallEventParser
                     ? ReadString(payload, "result")
                     : null,
                 ClientState = ReadClientState(payload),
+                FailureReason = ReadString(payload, "failure_reason"),
             };
 
             return !string.IsNullOrWhiteSpace(callEvent.CallControlId);
