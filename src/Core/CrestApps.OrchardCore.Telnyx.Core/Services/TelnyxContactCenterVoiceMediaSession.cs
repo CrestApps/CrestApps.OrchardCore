@@ -181,9 +181,6 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
     {
         Interlocked.Exchange(ref _stopped, 1);
 
-        // Abort unblocks any in-flight ReceiveAsync immediately so the read loop ends without waiting on the peer.
-        _webSocket.Abort();
-
         await _stopLock.WaitAsync(CancellationToken.None);
 
         try
@@ -195,12 +192,17 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
 
             using var cleanupCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
+            // Telnyx is told to stop streaming before the socket is dropped. Dropping it first made every session end
+            // in streaming.failed with reason "disconnected", on calls that had worked, so a real stream failure
+            // could not be told apart from a normal ending. The abort afterwards still unblocks an in-flight
+            // ReceiveAsync, so the read loop ends without waiting on the peer to close its side.
             try
             {
                 await _stop(cleanupCancellation.Token);
             }
             finally
             {
+                _webSocket.Abort();
                 _webSocket.Dispose();
             }
 

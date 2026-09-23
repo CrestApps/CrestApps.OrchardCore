@@ -88,6 +88,34 @@ public sealed class TelnyxContactCenterVoiceMediaSessionTests
     }
 
     [Fact]
+    public async Task StopAsync_StopsStreaming_BeforeTheSocketIsDropped()
+    {
+        // Arrange
+        using var socket = new FakeWebSocket();
+        var abortedWhenStopped = new List<bool>();
+        var workManager = new TestContactCenterFeatureWorkManager();
+        var session = new TelnyxContactCenterVoiceMediaSession(
+            "session-1",
+            "call-1",
+            socket,
+            workManager.TryEnter("media"),
+            new WebSocketRendezvous(),
+            _ =>
+            {
+                abortedWhenStopped.Add(socket.Aborted);
+
+                return Task.CompletedTask;
+            });
+
+        // Act
+        await session.StopAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(Assert.Single(abortedWhenStopped));
+        Assert.True(socket.Aborted);
+    }
+
+    [Fact]
     public async Task WriteOutgoingAsync_AfterStop_Throws()
     {
         // Arrange
