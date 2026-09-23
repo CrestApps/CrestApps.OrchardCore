@@ -86,6 +86,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         var endpointCatalog = serviceProvider.GetRequiredService<ICatalog<OmnichannelChannelEndpoint>>();
         var cadenceCatalog = serviceProvider.GetRequiredService<ICatalog<Cadence>>();
         var contentManager = serviceProvider.GetRequiredService<IContentManager>();
+        var optOutResolver = serviceProvider.GetRequiredService<IContactOptOutResolver>();
         var smsService = serviceProvider.GetRequiredService<ISmsService>();
         var omnichannelActivityStore = serviceProvider.GetRequiredService<IOmnichannelActivityStore>();
         var subjectFlowSettingsService = serviceProvider.GetRequiredService<ISubjectFlowSettingsService>();
@@ -142,6 +143,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
                         endpointCatalog,
                         cadenceCatalog,
                         contentManager,
+                        optOutResolver,
                         smsService,
                         omnichannelActivityStore,
                         subjectFlowSettingsService,
@@ -171,6 +173,7 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
         ICatalog<OmnichannelChannelEndpoint> endpointCatalog,
         ICatalog<Cadence> cadenceCatalog,
         IContentManager contentManager,
+        IContactOptOutResolver optOutResolver,
         ISmsService smsService,
         IOmnichannelActivityStore omnichannelActivityStore,
         ISubjectFlowSettingsService subjectFlowSettingsService,
@@ -257,9 +260,15 @@ public sealed class SmsReEngagementBackgroundTask : IBackgroundTask
 
         // A follow-up is a message like any other, and this task never asked whether it was still welcome. The
         // conversation it is reviving began when the contact was willing to hear from us; somebody who has since
-        // said stop is exactly the person a cadence would otherwise keep messaging, on a schedule, for days.
-        if (OmnichannelContactPreferences.HasOptedOut(contact, activity.Channel))
+        // said stop is exactly the person a cadence would otherwise keep messaging, on a schedule, for days. Asked
+        // of everybody reachable at the number, because a stop said on another record that holds it is theirs too.
+        if (await optOutResolver.HasOptedOutAsync(contact, activity.Channel, cancellationToken))
         {
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("Skipping SMS re-engagement for Activity {ActivityId}: the contact has opted out of text messages.", activity.ItemId.SanitizeLogValue());
+            }
+
             return;
         }
 

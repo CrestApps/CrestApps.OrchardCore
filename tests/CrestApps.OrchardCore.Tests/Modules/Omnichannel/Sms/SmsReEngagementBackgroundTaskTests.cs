@@ -598,6 +598,38 @@ public sealed class SmsReEngagementBackgroundTaskTests
     }
 
     [Fact]
+    public async Task DoWorkAsync_WhenSomebodyElseAtTheNumberHasOptedOut_SendsNoNudge()
+    {
+        // Arrange
+        // A stop is honoured at every number the person can be reached on. Another record holding the same number
+        // opted out, so this one is the same person, and a nudge to it is the text they asked not to receive.
+        var databasePath = DatabasePath("shared-number-opted-out");
+        var store = await CreateStoreAsync(databasePath);
+
+        try
+        {
+            var scenario = new ReEngagementScenario
+            {
+                Cadence = DefinedMessageCadence(("Still interested?", 30)),
+            };
+            scenario.OptOutResolver.SomebodyAtTheNumberOptedOut = true;
+
+            var activity = await SeedAwaitingConversationAsync(store, scenario, _contactDestination, _now.AddMinutes(-45));
+
+            // Act
+            await RunAsync(store, scenario);
+
+            // Assert
+            Assert.Empty(scenario.Sms.Sent);
+            Assert.Equal(0, activity.ReEngagementAttempts);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
     public async Task DoWorkAsync_WhenTheStepIsAiComposed_SendsTheModelsMessageAndPassesTheStepGuidance()
     {
         // Arrange
@@ -672,6 +704,7 @@ public sealed class SmsReEngagementBackgroundTaskTests
         services.AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
 
         services.AddSingleton<ISmsService>(scenario.Sms);
+        services.AddSingleton<IContactOptOutResolver>(scenario.OptOutResolver);
         services.AddSingleton<IBusinessHoursGate>(scenario.BusinessHours);
         services.AddSingleton<IAutomatedConversationGate>(scenario.ConversationGate);
         services.AddSingleton<ILocalLock>(new InProcessLocalLock());
@@ -997,6 +1030,8 @@ public sealed class SmsReEngagementBackgroundTaskTests
     private sealed class ReEngagementScenario
     {
         public Cadence Cadence { get; set; }
+
+        public SharedNumberOptOutResolver OptOutResolver { get; } = new();
 
         public OmnichannelChannelEndpoint Endpoint { get; } = new()
         {

@@ -480,6 +480,24 @@ public sealed class SmsOmnichannelProcessorTests
         Assert.NotEqual(ActivityStatus.AwaitingCustomerAnswer, activity.Status);
     }
 
+    [Fact]
+    public async Task StartAsync_WhenSomebodyElseAtTheNumberHasOptedOut_SendsNothing()
+    {
+        // Arrange
+        // A stop is honoured at every number the person can be reached on: another record holding this number
+        // opted out, so texting this one is texting the person who asked us to stop.
+        var activity = CreateActivity();
+        var harness = CreateHarness(activity);
+        harness.OptOutResolver.SomebodyAtTheNumberOptedOut = true;
+
+        // Act
+        _ = await Record.ExceptionAsync(
+            () => harness.CreateProcessor().StartAsync(activity, TestContext.Current.CancellationToken));
+
+        // Assert
+        Assert.Empty(harness.Sms.Sent);
+    }
+
     private static OmnichannelActivity CreateActivity()
     {
         return new OmnichannelActivity
@@ -571,6 +589,8 @@ public sealed class SmsOmnichannelProcessorTests
     /// </summary>
     private sealed class Harness
     {
+        public SharedNumberOptOutResolver OptOutResolver { get; } = new();
+
         public FakeChatSessionManager Sessions { get; } = new();
 
         public FakePromptStore Prompts { get; } = new();
@@ -615,6 +635,7 @@ public sealed class SmsOmnichannelProcessorTests
                 Sms,
                 Liquid,
                 contentManager.Object,
+                OptOutResolver,
                 new StubClock(_now),
                 new PassThroughStringLocalizer<SmsOmnichannelProcessor>());
         }

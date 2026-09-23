@@ -1,5 +1,6 @@
 ﻿using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Sms.BackgroundTasks;
 using CrestApps.OrchardCore.Omnichannel.Sms.Endpoints;
 using CrestApps.OrchardCore.Omnichannel.Sms.Handlers;
@@ -28,6 +29,9 @@ public sealed class Startup : StartupBase
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IOmnichannelProcessor, SmsOmnichannelProcessor>());
 
         services.AddScoped<IOmnichannelEventHandler, SmsOmnichannelEventHandler>();
+
+        // Asked before any text goes out, so a stop said on any record that holds the number is honoured here too.
+        services.TryAddScoped<IContactOptOutResolver, ContactOptOutResolver>();
 
         // Re-drives automated SMS conversations whose in-memory reply generation was lost (for example on a restart),
         // so an owed reply is not left stranded and the no-response timeout does not wrongly fail the conversation.
