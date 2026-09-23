@@ -1,0 +1,111 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model ProfileWizardSetupViewModel
+
+<zone Name="Title"><h1>@RenderTitleSegments(T["New AI Profile"])</h1></zone>
+
+<nav aria-label="@T["Wizard steps"]" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a asp-action="Index">@T["Choose a starting point"]</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@T["Set up"]</li>
+    </ol>
+</nav>
+
+<div class="card mb-4">
+    <div class="card-body d-flex gap-3 align-items-start">
+        <div class="rounded-3 d-flex align-items-center justify-content-center bg-primary-subtle text-primary-emphasis flex-shrink-0" style="width: 3rem; height: 3rem;">
+            <i class="@(string.IsNullOrEmpty(Model.Scenario.Icon) ? "fa-solid fa-robot" : Model.Scenario.Icon) fa-lg" aria-hidden="true"></i>
+        </div>
+        <div class="flex-grow-1">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                <h2 class="h5 mb-0">@Model.Scenario.Title</h2>
+                @await Html.PartialAsync("_ScenarioTypeBadge", Model.Scenario)
+            </div>
+            @if (!string.IsNullOrEmpty(Model.Scenario.Description))
+            {
+                <p class="text-body-secondary mb-0">@Model.Scenario.Description</p>
+            }
+        </div>
+    </div>
+</div>
+
+<form asp-action="Setup" asp-route-templateId="@Model.Scenario.TemplateId" method="post" class="no-multisubmit">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="DisplayText" class="ocat-label">@T["Title"]</label>
+        <div class="ocat-end">
+            <input asp-for="DisplayText" class="form-control" autofocus />
+            <span asp-validation-for="DisplayText" class="text-danger"></span>
+            <span class="hint">@T["The name people see for this profile."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+        <div class="ocat-end">
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+            <span class="hint">@T["A unique name that refers to this profile, for example in recipes. It cannot be changed later."]</span>
+        </div>
+    </div>
+
+    @if (Model.ShowMissingDefaultChatDeploymentWarning)
+    {
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="alert alert-warning mb-0" role="alert">
+                    @T["Default chat deployment is not configured in Settings > Artificial Intelligence > Default Deployments. Configure it there, or pick a deployment below, so the profile has a model to talk to."]
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <label asp-for="ChatDeploymentName" class="ocat-label">@T["Chat deployment"]</label>
+        <div class="ocat-end">
+            <select asp-for="ChatDeploymentName" asp-items="Model.ChatDeployments" class="form-select">
+                <option value="">@T["Default"]</option>
+            </select>
+            <span asp-validation-for="ChatDeploymentName" class="text-danger"></span>
+            <span class="hint">@T["Optional. Leave it on Default to use the site's default chat deployment."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button class="btn btn-primary" type="submit">
+                <i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>@T["Create profile"]
+            </button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Back"]</a>
+            <div class="hint mt-2">@T["The profile is created right away and opens in the full editor, where every other setting is optional."]</div>
+        </div>
+    </div>
+</form>
+
+<script asp-name="technical-name-generator"></script>
+<script at="Foot" depends-on="technical-name-generator">
+    (function () {
+        var displayId = '@Html.IdFor(m => m.DisplayText)';
+        var nameId = '@Html.IdFor(m => m.Name)';
+
+        window.initAutoGenerateTechnicalName(displayId, nameId);
+
+        // The title arrives prefilled with the scenario's name, so derive a technical name from it once the
+        // generator is listening. A name the user already typed is left alone.
+        function suggestName() {
+            var displayElement = document.getElementById(displayId);
+            var nameElement = document.getElementById(nameId);
+
+            if (displayElement && nameElement && !nameElement.value.trim()) {
+                displayElement.dispatchEvent(new Event('input'));
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', suggestName);
+        } else {
+            suggestName();
+        }
+    })();
+</script>

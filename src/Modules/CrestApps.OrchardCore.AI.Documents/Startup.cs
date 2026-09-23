@@ -120,6 +120,11 @@ public sealed class ProfileDocumentsStartup : StartupBase
     {
         services.AddDisplayDriver<AIProfile, AIProfileDocumentsDisplayDriver>();
         services.AddDisplayDriver<AIProfileTemplate, AIProfileTemplateDocumentsDisplayDriver>();
+
+        // A profile built from a template, whether through its editor or the "New AI profile" wizard, gets its
+        // own copy of the template's documents rather than a reference to them.
+        services.AddScoped<ProfileTemplateDocumentCloner>();
+        services.AddScoped<IAIProfileTemplateApplicationHandler, ProfileDocumentsTemplateApplicationHandler>();
     }
 }
 

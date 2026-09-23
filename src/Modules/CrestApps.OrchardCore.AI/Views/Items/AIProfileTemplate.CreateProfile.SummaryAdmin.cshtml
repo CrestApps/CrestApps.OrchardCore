@@ -1,0 +1,9 @@
+@using CrestApps.Core.AI.Models
+@using OrchardCore.DisplayManagement.Views
+
+@model ShapeViewModel<AIProfileTemplate>
+
+<a asp-controller="ProfileWizard"
+   asp-action="Setup"
+   asp-route-templateId="@Model.Value.ItemId"
+   class="btn btn-success btn-sm">@T["Create profile"]</a>
