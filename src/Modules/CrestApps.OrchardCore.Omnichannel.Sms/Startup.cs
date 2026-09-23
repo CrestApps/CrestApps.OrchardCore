@@ -16,6 +16,7 @@ using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.Modules;
+using OrchardCore.Sms.Services;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms;
 
@@ -42,6 +43,12 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, SmsReEngagementBackgroundTask>();
 
         services.AddRedaction(builder => builder.SetRedactor<ErasingRedactor>(LogDataClassifications.AddressSet));
+
+        // Twilio says why it refused a message, and its provider throws that away. Recorded, so a text that fails
+        // for credentials, region or a trial restriction says which in the log.
+        services.AddTransient<TwilioErrorLoggingHandler>();
+        services.AddHttpClient(TwilioSmsProvider.TechnicalName)
+            .AddHttpMessageHandler<TwilioErrorLoggingHandler>();
 
         services
             .AddDataMigration<OminchannelActivityAIChatSessionIndexMigrations>()
