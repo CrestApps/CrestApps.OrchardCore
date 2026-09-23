@@ -147,6 +147,7 @@ const sidebars = {
                 'contact-center/configuration-deployment',
                 'contact-center/runbooks',
                 'contact-center/testing-plan',
+                'contact-center/activity-audit-plan',
                 'contact-center/production-support',
                 'contact-center/public-api-surface',
                 'contact-center/production-readiness-plan',
