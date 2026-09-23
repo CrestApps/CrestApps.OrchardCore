@@ -79,6 +79,7 @@ defect crossed a seam, the test has to cross it too.
 | Opting out on a live call | Verified | the caller asked to be taken off the list; the call was concluded as do-not-call and the contact flagged together, the next load for the number took nobody -- eight records shared it -- and a retry already due for the contact was cancelled rather than dialled |
 | Voicemail on a live session, with detection | Verified | the provider reported the machine and the greeting's end; the model stayed silent through the greeting, left one message, and the call was concluded as No Answer |
 | AI-to-agent handoff with detection on | Verified | re-run after the dial began asking for answering machine detection: the provider classified the caller as a person, the caller asked for an agent, the call was queued, offered, accepted on the soft phone and bridged with audio both ways |
+| Call quality, recorded and reported | Verified | two handed-off calls each stored three records against the interaction and agent: the soft phone's summary and Telnyx's statistics for the agent and customer legs. The report named the agent and showed both calls. The outgoing level read 0.156 with the probe running on a live track, where every earlier call read 0.000. On a call with no pauses, Telnyx's loss on the agent leg fell from 2.5% to 0.9%, so most of the earlier figure was silence. |
 
 ## Still to be proven on a live call
 
