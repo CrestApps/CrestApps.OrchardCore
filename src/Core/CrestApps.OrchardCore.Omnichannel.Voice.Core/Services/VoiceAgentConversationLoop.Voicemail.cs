@@ -32,8 +32,8 @@ public sealed partial class VoiceAgentConversationLoop
     /// What the model is told when the time has come to leave the message.
     /// </summary>
     internal const string LeavingAVoicemail =
-        "[Not the customer] This call went to voicemail: the lines before this are its recorded greeting, and it is " +
-        "now recording. Reply with only the voicemail message to leave, in one to three short sentences: greet the " +
+        "[Not the customer] This call went to voicemail and it is now recording; any customer lines before this are " +
+        "its recorded greeting. Reply with only the voicemail message to leave, in one to three short sentences: greet the " +
         "customer by name if you know it, say who you are and why you called, and say you will try them again. It is " +
         "a recording, so do not ask any questions.";
 

@@ -40,8 +40,9 @@ public sealed partial class VoiceAgentConversationLoop
     /// </summary>
     /// <remarks>
     /// Asks whether the caller is still there, twice, and then says goodbye and ends the call through the same
-    /// speak-then-hang-up path a goodbye from the model takes. A turn the watch no longer describes -- the caller
-    /// spoke, the assistant replied, the call ended or was handed to an agent -- is left alone.
+    /// speak-then-hang-up path a goodbye from the model takes. A line nobody has spoken on at all is taken to be a
+    /// voicemail that is recording, and is left a message instead. A turn the watch no longer describes -- the
+    /// caller spoke, the assistant replied, the call ended or was handed to an agent -- is left alone.
     /// </remarks>
     /// <param name="silence">The listening turn, as it stood when listening began.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
@@ -81,9 +82,32 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
+        // Nobody has said a word since the call was answered. A person who picks up speaks; a line that stays silent
+        // through the whole opening line is a voicemail whose greeting played underneath it -- the assistant only
+        // listens once it has finished speaking, so a short greeting is never heard. Live, such a call was asked
+        // "are you still there?" twice and told "now isn't a good time", all of it recorded as the message.
+        var nobodyHasSpoken = !prompts.Any(prompt =>
+            prompt.Role == ChatRole.User &&
+            !prompt.IsGeneratedPrompt &&
+            !string.IsNullOrWhiteSpace(prompt.Content));
+
+        if (!activity.TryGet<VoicemailReached>(out var voicemail) && nobodyHasSpoken)
+        {
+            voicemail = new VoicemailReached();
+            activity.Put(voicemail);
+            await _activityStore.UpdateAsync(activity, cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Nobody has spoken on automated call activity '{ActivityId}' since it was answered, so it is taken to be a voicemail and a message is being left.",
+                    activity.ItemId.SanitizeLogValue());
+            }
+        }
+
         // A voicemail has gone quiet because its greeting is over and it is recording: that is the moment to leave
         // the message, not to ask a recording whether it is still there.
-        if (activity.TryGet<VoicemailReached>(out var voicemail))
+        if (voicemail is not null)
         {
             await media.StopTranscriptionAsync(silence.ProviderCallId, cancellationToken);
 

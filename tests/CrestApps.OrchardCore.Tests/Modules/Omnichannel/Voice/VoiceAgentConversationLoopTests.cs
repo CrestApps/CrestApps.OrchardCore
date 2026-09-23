@@ -365,8 +365,10 @@ public sealed class VoiceAgentConversationLoopTests
     public async Task ASilentLine_IsAskedWhetherTheCallerIsStillThere()
     {
         // Arrange
+        // Somebody answered and spoke, and then went quiet: they are asked whether they are still there.
         var harness = new LoopHarness();
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Hi, who is this?", cancellationToken: TestContext.Current.CancellationToken);
         await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
@@ -374,7 +376,7 @@ public sealed class VoiceAgentConversationLoopTests
 
         // Assert
         // Listening stops before speaking, as it does before any reply, so the assistant does not hear itself.
-        Assert.Equal(1, harness.Media.TranscriptionStops);
+        Assert.Equal(2, harness.Media.TranscriptionStops);
         Assert.Equal(VoiceAgentConversationLoop.StillThereLine, harness.Media.Spoken[^1]);
         Assert.Equal(0, harness.Media.Hangups);
     }
@@ -385,6 +387,7 @@ public sealed class VoiceAgentConversationLoopTests
         // Arrange
         var harness = new LoopHarness();
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Hi, who is this?", cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         // Each prompt is spoken, finishes, and is met with silence again, exactly as on the live call.
@@ -490,6 +493,30 @@ public sealed class VoiceAgentConversationLoopTests
 
         // Assert
         Assert.Equal(VoiceAgentConversationLoop.FallbackVoicemailMessage, harness.Media.Spoken[^1]);
+    }
+
+    [Fact]
+    public async Task ALineNobodyHasSpokenOn_IsLeftAVoicemailMessage_RatherThanAskedIfAnybodyIsThere()
+    {
+        // Arrange
+        // Live, a short greeting played underneath the opening line and was never heard. The silence after it was
+        // asked "are you still there?" twice and told "now isn't a good time", all of it recorded as the message.
+        var harness = new LoopHarness();
+        harness.Reply = "Hi Amani, this is Alex from Prestige Auto Group. Sorry we missed you, we will try again soon.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.Loop.OnListeningTimedOutAsync(harness.SilenceWatchdog.Armed[^1], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(harness.Reply, harness.Media.Spoken[^1]);
+        Assert.DoesNotContain(VoiceAgentConversationLoop.StillThereLine, harness.Media.Spoken);
+        Assert.True(harness.Activity.TryGet<VoicemailReached>(out var voicemail));
+        Assert.True(voicemail.MessageLeft);
+
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(1, harness.Media.Hangups);
     }
 
     [Fact]
