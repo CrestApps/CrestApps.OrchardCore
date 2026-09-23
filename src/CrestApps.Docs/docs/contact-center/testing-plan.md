@@ -80,15 +80,15 @@ defect crossed a seam, the test has to cross it too.
 | Voicemail on a live session, with detection | Verified | the provider reported the machine and the greeting's end; the model stayed silent through the greeting, left one message, and the call was concluded as No Answer |
 | AI-to-agent handoff with detection on | Verified | re-run after the dial began asking for answering machine detection: the provider classified the caller as a person, the caller asked for an agent, the call was queued, offered, accepted on the soft phone and bridged with audio both ways |
 | Call quality, recorded and reported | Verified | two handed-off calls each stored three records against the interaction and agent: the soft phone's summary and Telnyx's statistics for the agent and customer legs. The report named the agent and showed both calls. The outgoing level read 0.156 with the probe running on a live track, where every earlier call read 0.000. On a call with no pauses, Telnyx's loss on the agent leg fell from 2.5% to 0.9%, so most of the earlier figure was silence. |
+| Repeated poor calls raise an alert | Verified | three poor summaries sent through the soft phone's reporting path were each stored against the agent; the third published one `CallQualityAlertRaised`, and a supervisor connection received it live, naming packet loss as the likely cause |
+| A live session's stream ends cleanly | Verified | after both fixes the stream ended with `streaming.stopped` and no `streaming.failed`, on a handoff and on a voicemail. Before them, every session ended in `streaming.failed` with reason `disconnected`, because cancelling a pending WebSocket receive aborted the socket before `streaming_stop` was sent |
+| Voicemail on a live session, waiting for the greeting | Verified | the provider reported the greeting's end and the session's stream opened 0.07 seconds later; one short message was left after the greeting, the call hung up, and it was concluded as No Answer |
 
 ## Still to be proven on a live call
 
 - **Opting out by text.** The call path is proven end to end. A text opt-out, and a cadence step already due for
   somebody who opted out, still wait on a working SMS account: the Twilio account the tenant uses was reported by
   Twilio as not active during this round, which refused every message before any of it was tested.
-- **Answering-machine detection on a live session.** Telnyx detection is proven on a turn-based call. A realtime
-  call records the provider's verdict for its outcome but does not yet use the greeting's end as its cue to leave
-  the message; the model still leaves it on what it hears.
 - **What the model believes it heard.** Transcription on a phone line is noisier than the conversation feels, and
   nothing questions an implausible reading before it is acted on or written down. Observed live: an email address
   read back with a company domain the caller never said, confirmed with a "sure"; and a budget recorded as a
@@ -97,13 +97,13 @@ defect crossed a seam, the test has to cross it too.
   spoken address came back as two different wrong domains, each read back to the caller and confirmed.
   On 2026-09-23 the same address was heard right the first time on both paths: by the realtime model, and by a
   turn-based call once it listened on the phone-audio model. Two calls are not a proof, so this stays open.
+  Later that day, on two live sessions, the model read a spoken domain back correctly both times, but the stored
+  transcript of the first call had a different domain. The end-of-call review reads that transcript, so an address
+  saved from it would have been wrong even though the caller heard it right.
 - **An ambiguous phrase read as an opt-out.** On the default transcription engine a reply came back as "no I don't
   want anyone", and the review concluded the call as do-not-call. Leaning towards stopping is the rule on purpose,
   and the engine that produced the fragment has been replaced, so the open question is only whether a clear
   transcript ever still does this.
-- **A stream reported as failed after it ends.** Telnyx sends `streaming.failed` just after every live session's
-  stream stops, including on calls that worked end to end. It looks like the order the socket is closed and the
-  stream is stopped in, and it changes nothing about the call; the reason in the event has not been read yet.
 - **Signaling region.** Whether moving the signaling edge moves the media edge with it. Only the round-trip figure
   on a call can answer that; the provider does not document it.
 
