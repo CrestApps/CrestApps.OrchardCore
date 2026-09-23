@@ -66,6 +66,46 @@ public sealed class VoiceAgentMediaProviderTests
     }
 
     [Fact]
+    public async Task StartingTranscription_UsesAModelMadeForPhoneAudio()
+    {
+        // Arrange
+        // The untuned default engine heard a caller's answers as fragments and read an email address back wrong
+        // four times running, and every turn of the conversation is built on what it hears.
+        var handler = new RecordingHttpMessageHandler().AlwaysRespondWith(HttpStatusCode.OK);
+        var provider = CreateProvider(handler);
+
+        // Act
+        await provider.StartTranscriptionAsync("ctrl-1", "en", "cmd-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var request = Assert.Single(handler.Requests);
+        Assert.Contains("\"transcription_engine\":\"Deepgram\"", request.Body, StringComparison.Ordinal);
+        Assert.Contains("\"transcription_model\":\"deepgram/nova-3\"", request.Body, StringComparison.Ordinal);
+        Assert.Contains("\"smart_format\":true", request.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task StartingTranscription_FallsBackToThePhoneCallModel_WhenTheEngineIsRefused()
+    {
+        // Arrange
+        // A call that is not listening is a caller talking to nobody, so a refusal has to lead somewhere.
+        var handler = new RecordingHttpMessageHandler()
+            .RespondWith(HttpStatusCode.UnprocessableEntity)
+            .RespondWith(HttpStatusCode.OK);
+        var provider = CreateProvider(handler);
+
+        // Act
+        var started = await provider.StartTranscriptionAsync("ctrl-1", "en", "cmd-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(started);
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Contains("\"model\":\"phone_call\"", handler.Requests[1].Body, StringComparison.Ordinal);
+        Assert.Contains("\"command_id\":\"cmd-1-fallback\"", handler.Requests[1].Body, StringComparison.Ordinal);
+        Assert.Contains("\"transcription_tracks\":\"inbound\"", handler.Requests[1].Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TheProvider_CarriesItsOwnDefaultVoice()
     {
         // Arrange

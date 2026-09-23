@@ -51,19 +51,56 @@ public sealed class TelnyxVoiceAgentMediaProvider : IVoiceAgentMediaProvider
         string commandId = null,
         CancellationToken cancellationToken = default)
     {
+        var spokenLanguage = string.IsNullOrWhiteSpace(language) ? "en" : language;
+
+        // A model made for phone audio, with numbers and addresses written the way they are meant. The provider's
+        // default engine, untuned, heard a caller's answers as "who's", "GNC" and "on", read an email address back
+        // wrong four times running, and turned a reply into "no I don't want anyone" -- which the review then took
+        // as an opt-out. Everything the conversation does, it does with what this hears.
+        var result = await StartWithAsync(providerCallId, commandId, new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["transcription_engine"] = "Deepgram",
+            ["transcription_model"] = "deepgram/nova-3",
+            ["language"] = spokenLanguage,
+            ["smart_format"] = true,
+        }, cancellationToken);
+
+        if (result)
+        {
+            return true;
+        }
+
+        // An account that does not offer that engine refuses the command, and a call that is not listening is a
+        // caller talking to nobody. The default engine, on its phone-call model, is the next best thing. A command
+        // id is single-use, so the second attempt carries its own.
+        return await StartWithAsync(
+            providerCallId,
+            string.IsNullOrWhiteSpace(commandId) ? null : commandId + "-fallback",
+            new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["transcription_engine"] = "Google",
+                ["model"] = "phone_call",
+                ["use_enhanced"] = true,
+                ["language"] = spokenLanguage,
+            },
+            cancellationToken);
+    }
+
+    private async Task<bool> StartWithAsync(
+        string providerCallId,
+        string commandId,
+        Dictionary<string, object> engineConfig,
+        CancellationToken cancellationToken)
+    {
         var body = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            // Engine "A" is the Google-backed transcription. The inbound track is the far end, so the assistant's
-            // own text-to-speech is never transcribed back as if the person had said it.
-            ["transcription_engine"] = "A",
-            ["transcription_tracks"] = "inbound",
-            ["language"] = "en",
-        };
+            ["transcription_engine"] = engineConfig["transcription_engine"],
+            ["transcription_engine_config"] = engineConfig,
 
-        if (!string.IsNullOrWhiteSpace(language))
-        {
-            body["language"] = language;
-        }
+            // The inbound track is the far end, so the assistant's own text-to-speech is never transcribed back as
+            // if the person had said it.
+            ["transcription_tracks"] = "inbound",
+        };
 
         if (!string.IsNullOrWhiteSpace(commandId))
         {
