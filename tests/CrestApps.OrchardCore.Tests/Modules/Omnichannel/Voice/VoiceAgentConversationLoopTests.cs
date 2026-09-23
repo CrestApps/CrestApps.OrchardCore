@@ -598,6 +598,40 @@ public sealed class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task AVoicemailTriggeredAgainWhileItsMessageIsBeingComposed_IsLeftOneMessage()
+    {
+        // Arrange
+        // Composing the message takes seconds, and live, a late transcript of the rest of the greeting arrived in
+        // that window and decided the message was still owed: one voicemail was left two.
+        var harness = new LoopHarness();
+        harness.Reply = "Hi, this is Alex from Prestige Auto Group. We will try you again soon.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Machine, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        var interrupted = false;
+        harness.DuringCompletion = () =>
+        {
+            if (interrupted)
+            {
+                return;
+            }
+
+            interrupted = true;
+            harness.HandleAsync(VoiceAgentEventKind.Transcription, "When you have finished recording you may hang up.", cancellationToken: TestContext.Current.CancellationToken)
+                .GetAwaiter()
+                .GetResult();
+        };
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Please leave a message after the tone.", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(interrupted);
+        Assert.Equal(1, harness.Media.Spoken.Count(text => text == harness.Reply));
+    }
+
+    [Fact]
     public async Task AGreetingEnd_WithNoMachineDetected_ChangesNothing()
     {
         // Arrange

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using CrestApps.Core;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Support;
@@ -43,6 +44,13 @@ public sealed partial class VoiceAgentConversationLoop
     internal const string FallbackVoicemailMessage =
         "Hi, sorry we missed you. We were calling about your recent inquiry and will try you again soon. Have a great day.";
 
+    // The calls whose message is being composed right now. Composing takes seconds, and during them a late
+    // transcript of the rest of the greeting, the silence watch and the provider's greeting-ended event can each
+    // arrive and each decide the message is owed: live, one voicemail was left two. The flag on the activity is
+    // only seen once this request commits, so the claim is also held here, where every other path on the node
+    // sees it at once.
+    private static readonly ConcurrentDictionary<string, byte> _messagesBeingLeft = new(StringComparer.Ordinal);
+
     // Returns whether the caller's turn was the voicemail's rather than a person's, in which case it has been dealt
     // with here and must not be replied to. Listening has been asked to stop; that is awaited before anything else.
     private async Task<bool> HandleVoicemailTurnAsync(
@@ -80,8 +88,9 @@ public sealed partial class VoiceAgentConversationLoop
 
         await stopListening;
 
-        // The message has been left and the call is being hung up; whatever the recording hears now is not a turn.
-        if (voicemail.MessageLeft)
+        // The message has been left, or is being, and the call is being hung up; whatever the recording hears now
+        // is not a turn.
+        if (voicemail.MessageLeft || _messagesBeingLeft.ContainsKey(activity.ItemId))
         {
             return true;
         }
@@ -175,6 +184,15 @@ public sealed partial class VoiceAgentConversationLoop
         return true;
     }
 
+    // Forgets the claim once the call is over, so the set holds only calls that are still up.
+    private static void ReleaseVoicemailClaim(string activityId)
+    {
+        if (!string.IsNullOrEmpty(activityId))
+        {
+            _messagesBeingLeft.TryRemove(activityId, out _);
+        }
+    }
+
     // How long a quiet line is given before the silence is acted on. A voicemail that has not been left its
     // message is listened to for its tone, not given the time a person gets to answer.
     private static TimeSpan? ListeningWait(OmnichannelActivity activity)
@@ -191,24 +209,49 @@ public sealed partial class VoiceAgentConversationLoop
         AIChatSession session,
         CancellationToken cancellationToken)
     {
-        var (reply, _, _, _) = await CompleteAsync(profile, session, activity, LeavingAVoicemail, cancellationToken);
-
-        var message = (reply ?? string.Empty).Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
-
-        // A question left on a recording is never answered, and is the surest sign the model carried on the
-        // conversation instead of leaving a message: live, it asked the voicemail whether the customer wanted a new
-        // or used vehicle. The plain message is better than that.
-        if (string.IsNullOrWhiteSpace(message) || message.Contains('?', StringComparison.Ordinal))
+        // Claimed before the message is composed, not after: whoever claims it second leaves nothing.
+        if (voicemail.MessageLeft || !_messagesBeingLeft.TryAdd(activity.ItemId, 0))
         {
-            message = FallbackVoicemailMessage;
+            return;
         }
 
-        voicemail.MessageLeft = true;
-        activity.Put(voicemail);
-        await _activityStore.UpdateAsync(activity, cancellationToken);
+        try
+        {
+            voicemail.MessageLeft = true;
+            activity.Put(voicemail);
+            await _activityStore.UpdateAsync(activity, cancellationToken);
 
-        // Nobody is going to answer it, so the message is the last thing said: the marker hangs up once it has played.
-        await StorePromptAsync(session, ChatRole.Assistant, message + " " + HangupMarker, cancellationToken);
-        await SpeakAsync(media, providerCallId, activity, message, cancellationToken);
+            string reply = null;
+
+            try
+            {
+                (reply, _, _, _) = await CompleteAsync(profile, session, activity, LeavingAVoicemail, cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // The message is owed whether or not the model can compose it; the plain one is left instead.
+                _logger.LogWarning(ex, "Composing the voicemail message for automated call activity '{ActivityId}' failed, so the plain message is left.", activity.ItemId.SanitizeLogValue());
+            }
+
+            var message = (reply ?? string.Empty).Replace(HangupMarker, string.Empty, StringComparison.Ordinal).Trim();
+
+            // A question left on a recording is never answered, and is the surest sign the model carried on the
+            // conversation instead of leaving a message: live, it asked the voicemail whether the customer wanted a
+            // new or used vehicle. The plain message is better than that.
+            if (string.IsNullOrWhiteSpace(message) || message.Contains('?', StringComparison.Ordinal))
+            {
+                message = FallbackVoicemailMessage;
+            }
+
+            // Nobody is going to answer it, so the message is the last thing said: the marker hangs up once it has
+            // played.
+            await StorePromptAsync(session, ChatRole.Assistant, message + " " + HangupMarker, cancellationToken);
+            await SpeakAsync(media, providerCallId, activity, message, cancellationToken);
+        }
+        finally
+        {
+            // Held until the message is with the provider; the flag this request commits covers every path after.
+            ReleaseVoicemailClaim(activity.ItemId);
+        }
     }
 }

@@ -554,6 +554,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
     private async Task OnHangupAsync(VoiceAgentEvent voiceEvent, CancellationToken cancellationToken)
     {
+        ReleaseVoicemailClaim(voiceEvent.ActivityId);
+
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
         // This fires when the model's own leg ends, which is also what a handoff looks like from here: the model
