@@ -266,7 +266,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // a watchdog rather than another CancelAfter: it waits for the goodbye to finish and then leaves the line
         // open a moment, and abandons the hangup entirely if the caller uses it.
         var closing = context.EndCallRequested.CanBeCanceled
-            ? CloseWhenConversationEndsAsync(callScope, context.ReachedVoicemail, context.EndCallRequested)
+            ? CloseWhenConversationEndsAsync(callScope, context.ReachedVoicemail, context.EndCallRequests, context.EndCallRequested)
             : Task.CompletedTask;
 
         // Nobody has said anything for a while, and on a phone call somebody has to. Usually it is the caller's
@@ -535,6 +535,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private async Task CloseWhenConversationEndsAsync(
         CancellationTokenSource callScope,
         Func<bool> reachedVoicemail,
+        Func<int> endCallRequests,
         CancellationToken endCallRequested)
     {
         // Watched together, because a call ends for all sorts of reasons that are nothing to do with this: the
@@ -560,6 +561,41 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             return;
         }
 
+        while (true)
+        {
+            if (await CloseAfterTheGoodbyeAsync(callScope, reachedVoicemail))
+            {
+                return;
+            }
+
+            // The customer answered the goodbye and has the call back. The model will end it again once they are
+            // done, and that request has to be heard: live, the watch stopped here for good, the second goodbye
+            // was said, and the line stayed open until the customer hung up on it. Requests made before the
+            // customer spoke are spent, so only a newer one closes the call.
+            if (endCallRequests is null)
+            {
+                return;
+            }
+
+            var spent = endCallRequests();
+
+            while (endCallRequests() <= spent)
+            {
+                try
+                {
+                    await Task.Delay(ClosingPollInterval, callScope.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    // Returns whether the call was closed, or ended on its own; false when the customer spoke and took it back.
+    private async Task<bool> CloseAfterTheGoodbyeAsync(CancellationTokenSource callScope, Func<bool> reachedVoicemail)
+    {
         var requestedAtTicks = DateTime.UtcNow.Ticks;
         var closingLineStarted = false;
 
@@ -571,7 +607,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             }
             catch (OperationCanceledException)
             {
-                return;
+                return true;
             }
 
             var now = DateTime.UtcNow.Ticks;
@@ -581,7 +617,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             // already answering them, and hanging up mid-answer would be worse than never having closed at all.
             if (Interlocked.Read(ref _lastCallerSpeechTicks) > requestedAtTicks)
             {
-                return;
+                return false;
             }
 
             // A goodbye the assistant pump has already marked as said counts as started: anything the model says
@@ -610,8 +646,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
 
             await callScope.CancelAsync();
 
-            return;
+            return true;
         }
+
+        return true;
     }
 
     private async Task<IRealtimeConversation> StartConversationAsync(

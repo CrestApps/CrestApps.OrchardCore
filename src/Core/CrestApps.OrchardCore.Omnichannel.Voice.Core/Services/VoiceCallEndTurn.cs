@@ -8,6 +8,8 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
 {
     private CancellationTokenSource _requested = new();
 
+    private int _requestCount;
+
     /// <inheritdoc/>
     public bool EndCallRequested { get; private set; }
 
@@ -20,6 +22,8 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
     /// <inheritdoc/>
     public CancellationToken EndCallRequestedToken => _requested.Token;
 
+    public int RequestCount => Volatile.Read(ref _requestCount);
+
     /// <inheritdoc/>
     public void RequestEndCall(string reason)
         => RequestEndCall(reason, reachedVoicemail: false);
@@ -30,6 +34,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
         EndCallRequested = true;
         Reason = reason;
         ReachedVoicemail = reachedVoicemail;
+        Interlocked.Increment(ref _requestCount);
 
         // Signalled last, so the session woken by it already sees the decision it is reacting to.
         _requested.Cancel();
@@ -41,6 +46,7 @@ public sealed class VoiceCallEndTurn : IVoiceCallEndTurn
         EndCallRequested = false;
         Reason = null;
         ReachedVoicemail = false;
+        Volatile.Write(ref _requestCount, 0);
 
         // A cancelled source cannot be reused, so the next call gets a fresh one. Without this a scope that ended
         // one call would read every later call as finished the instant anything observed the token.

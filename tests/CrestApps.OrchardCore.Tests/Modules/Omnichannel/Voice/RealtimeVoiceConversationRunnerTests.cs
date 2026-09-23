@@ -674,6 +674,103 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task ACustomerWhoAnsweredTheGoodbye_IsStillHungUpOn_OnceTheModelEndsTheCallAgain()
+    {
+        // Arrange
+        // Live: the model said goodbye and ended the call, the customer said "bye", the model ended it again and
+        // said "bye, take care" -- and the line stayed open until the customer hung up, because the watch had
+        // stopped for good when the customer spoke and the end-call signal only ever fires once.
+        var turn = new VoiceCallEndTurn();
+        var harness = new RealtimeHarness
+        {
+            EndCallRequested = turn.EndCallRequestedToken,
+            EndCallRequests = () => turn.RequestCount,
+        };
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "I'll send those options over. Talk soon." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+        turn.RequestEndCall("customer has what they needed");
+
+        // The customer answers the goodbye.
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserSpeechStarted },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTranscript, Text = "Bye." });
+
+        await Task.Delay(TimeSpan.FromSeconds(1), TestContext.Current.CancellationToken);
+        var writtenBeforeTheLastGoodbye = harness.Media.WrittenAudio.Count;
+
+        // Act
+        // The model ends the call first and says its last line after, as it did live.
+        turn.RequestEndCall("customer said goodbye");
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." });
+
+        var ended = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken)) == run;
+
+        // Assert
+        // The last goodbye is heard rather than muted as a repeat, and then the call is ended for the customer.
+        Assert.True(ended);
+        Assert.True(harness.Media.WrittenAudio.Count > writtenBeforeTheLastGoodbye);
+        Assert.Contains(harness.StoredPrompts, prompt => prompt.Role == ChatRole.Assistant && prompt.Content == "Bye, take care.");
+
+        harness.Conversation.KeepAlive = false;
+        harness.Media.KeepAlive = false;
+    }
+
+    [Fact]
+    public async Task AGoodbyeSaidAfterTheModelEndsTheCall_IsHeard_WhenItHasNotAnsweredTheCustomerYet()
+    {
+        // Arrange
+        // The model does not always speak before it calls the tool. With nothing in flight, the line it says next
+        // was taken for a repeat of a goodbye it had never said, and the customer's "bye" was met with silence.
+        var turn = new VoiceCallEndTurn();
+        var harness = new RealtimeHarness
+        {
+            EndCallRequested = turn.EndCallRequestedToken,
+            EndCallRequests = () => turn.RequestCount,
+        };
+        harness.Conversation.KeepAlive = true;
+        harness.Media.KeepAlive = true;
+
+        var run = harness.RunAsync();
+
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserSpeechStarted },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.UserTranscript, Text = "That's all, bye." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), TestContext.Current.CancellationToken);
+        var writtenBefore = harness.Media.WrittenAudio.Count;
+
+        // Act
+        turn.RequestEndCall("customer said goodbye");
+
+        harness.Conversation.Queue(
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." });
+
+        await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(harness.Media.WrittenAudio.Count > writtenBefore);
+        Assert.Contains(harness.StoredPrompts, prompt => prompt.Role == ChatRole.Assistant && prompt.Content == "Bye, take care.");
+
+        harness.Conversation.KeepAlive = false;
+        harness.Media.KeepAlive = false;
+
+        await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public async Task TheSessionIsGivenTheToolsACallNeeds()
     {
         // Arrange
@@ -1025,6 +1122,11 @@ public sealed class RealtimeVoiceConversationRunnerTests
         public bool ReachedVoicemail { get; set; }
 
         /// <summary>
+        /// How many times the model has asked to end the call, as the loop reports it from the end-call turn.
+        /// </summary>
+        public Func<int> EndCallRequests { get; set; }
+
+        /// <summary>
         /// The escalation guidance the loop passes when this call has an agent queue behind it.
         /// </summary>
         public string HandoffInstructions { get; set; }
@@ -1047,6 +1149,7 @@ public sealed class RealtimeVoiceConversationRunnerTests
                 HandoffRequested = HandoffRequested,
                 EndCallRequested = EndCallRequested,
                 ReachedVoicemail = () => ReachedVoicemail,
+                EndCallRequests = EndCallRequests,
                 HandoffInstructions = HandoffInstructions,
                 ContactName = ContactName,
 

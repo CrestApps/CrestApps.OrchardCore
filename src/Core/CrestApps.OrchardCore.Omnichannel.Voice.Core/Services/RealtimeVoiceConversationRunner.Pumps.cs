@@ -110,18 +110,34 @@ public sealed partial class RealtimeVoiceConversationRunner
         var closingRequested = false;
         var utteranceInFlight = false;
 
+        // Whether the assistant has finished a line since the customer last spoke. A request to end the call that
+        // arrives with nothing in flight means the goodbye is already said only when the assistant has answered
+        // the customer's last words. The model does not always speak first: live, after the customer said "bye",
+        // it called the tool and only then said "bye, take care" -- a goodbye this would otherwise have muted.
+        var spokeSinceCaller = false;
+
+        // The requests already acted on, so a later one -- the model ending the call again after the customer
+        // answered its first goodbye -- is recognised as new.
+        var requestsSeen = 0;
+
+        void OnClosingRequested()
+        {
+            closingRequested = true;
+
+            // Nothing is being said, and the assistant has already answered the customer, so the goodbye is behind
+            // us. The closing watchdog is told too, so it does not wait for a goodbye this pump will now suppress.
+            if (!Volatile.Read(ref utteranceInFlight) && Volatile.Read(ref spokeSinceCaller))
+            {
+                goodbyeSaid = true;
+                Volatile.Write(ref _goodbyeAlreadySaid, true);
+            }
+        }
+
         using var closingRegistration = context.EndCallRequested.CanBeCanceled
             ? context.EndCallRequested.Register(() =>
             {
-                closingRequested = true;
-
-                // Nothing was being said when the call was closed, so the goodbye is already behind us. The closing
-                // watchdog is told too, so it does not wait for a goodbye that this pump will now suppress.
-                if (!Volatile.Read(ref utteranceInFlight))
-                {
-                    goodbyeSaid = true;
-                    Volatile.Write(ref _goodbyeAlreadySaid, true);
-                }
+                Volatile.Write(ref requestsSeen, Math.Max(Volatile.Read(ref requestsSeen), 1));
+                OnClosingRequested();
             })
             : default;
 
@@ -135,6 +151,16 @@ public sealed partial class RealtimeVoiceConversationRunner
         {
             await foreach (var conversationEvent in conversation.GetEventsAsync(cancellationToken))
             {
+                // The token only ever fires for the first request, so later ones are noticed here, on the next event
+                // after the tool call -- which is before anything the model says in reply to it.
+                var requests = context.EndCallRequests?.Invoke() ?? 0;
+
+                if (requests > Volatile.Read(ref requestsSeen))
+                {
+                    Volatile.Write(ref requestsSeen, requests);
+                    OnClosingRequested();
+                }
+
                 if (conversationEvent.Type is not RealtimeConversationEventType.AssistantAudioDelta
                                             and not RealtimeConversationEventType.AssistantTranscriptDelta &&
                     _logger.IsEnabled(LogLevel.Debug))
@@ -196,6 +222,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // They are talking, so the call is not over after all and the assistant may answer.
                         goodbyeSaid = false;
                         closingRequested = false;
+                        Volatile.Write(ref spokeSinceCaller, false);
                         Volatile.Write(ref _goodbyeAlreadySaid, false);
 
                         // The first syllable, not the finished sentence. A transcript only exists once the caller
@@ -263,6 +290,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         await StorePromptAsync(context, ChatRole.Assistant, spoken, cancellationToken);
 
                         utteranceInFlight = false;
+                        Volatile.Write(ref spokeSinceCaller, true);
 
                         // The line that was in flight when the call was closed is the goodbye. It has now been
                         // said, so the assistant is done talking.

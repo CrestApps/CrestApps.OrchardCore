@@ -94,6 +94,16 @@ public sealed class RealtimeVoiceConversationContext
     public Func<bool> ReachedVoicemail { get; set; }
 
     /// <summary>
+    /// Gets or sets a function reporting how many times the model has asked to end the call.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="EndCallRequested"/> fires once, for the first request. A customer who answers the goodbye hands
+    /// the call back, and the model then ends it again; this is how the session hears that second request. Left
+    /// unset, only the first request closes the call.
+    /// </remarks>
+    public Func<int> EndCallRequests { get; set; }
+
+    /// <summary>
     /// Gets or sets the guidance telling the model when to hand the caller to a live agent, or
     /// <see langword="null"/> when this call has nowhere to hand them.
     /// </summary>

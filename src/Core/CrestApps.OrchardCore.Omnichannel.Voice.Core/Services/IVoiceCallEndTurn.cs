@@ -48,6 +48,16 @@ public interface IVoiceCallEndTurn
     CancellationToken EndCallRequestedToken { get; }
 
     /// <summary>
+    /// Gets how many times the model has asked to end the call since the turn was last reset.
+    /// </summary>
+    /// <remarks>
+    /// The token fires once, but a call can be ended more than once: the model says goodbye, the customer answers
+    /// it, and the model ends the call again after the last word. Counted so the session can tell a new request
+    /// from the one it already acted on, and does not leave the line open after the second goodbye.
+    /// </remarks>
+    int RequestCount { get; }
+
+    /// <summary>
     /// Records that the model considers the conversation complete.
     /// </summary>
     /// <param name="reason">The reason the model gave.</param>

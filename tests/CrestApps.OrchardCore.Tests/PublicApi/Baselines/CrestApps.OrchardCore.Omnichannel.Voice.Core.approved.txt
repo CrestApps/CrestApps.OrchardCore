@@ -96,6 +96,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         System.Threading.CancellationToken EndCallRequestedToken { get; }
         bool ReachedVoicemail { get; }
         string Reason { get; }
+        int RequestCount { get; }
         void RequestEndCall(string reason);
         void RequestEndCall(string reason, bool reachedVoicemail);
         void Reset();
@@ -125,6 +126,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity Activity { get; set; }
         public string ContactName { get; set; }
         public System.Threading.CancellationToken EndCallRequested { get; set; }
+        public System.Func<int> EndCallRequests { get; set; }
         public string HandoffInstructions { get; set; }
         public System.Threading.CancellationToken HandoffRequested { get; set; }
         public string InteractionId { get; set; }
@@ -194,6 +196,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public System.Threading.CancellationToken EndCallRequestedToken { get; }
         public bool ReachedVoicemail { get; }
         public string Reason { get; }
+        public int RequestCount { get; }
         public void RequestEndCall(string reason) { }
         public void RequestEndCall(string reason, bool reachedVoicemail) { }
         public void Reset() { }
