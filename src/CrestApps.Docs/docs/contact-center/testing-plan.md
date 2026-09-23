@@ -37,6 +37,8 @@ defect crossed a seam, the test has to cross it too.
 | Disposition guidance | `Modules/Omnichannel/SubjectDispositionGuidanceTests` | The model is given the subject's own wording for a disposition when there is one, the disposition's general description when there is not, and never another subject's wording |
 | Contact preferences | `Modules/Omnichannel/Managements/DefaultSubjectActionExecutorTests` | A disposition that sets do-not-call actually writes the contact, and publishes it, because the lists that decide who gets dialled query published contacts |
 | Trying again | `DefaultSubjectActionExecutorTests` | A retry is placed the same way as the attempt it follows: an automated call's retry keeps its kind, source, AI profile, voice and pacing, and starts a new conversation |
+| Editing an activity | `OmnichannelActivityEditRulesTests` | Saving an existing activity leaves its channel, endpoint, interaction type and campaign alone; only a new activity, or one moved to another subject, takes them from the subject's flow |
+| What a turn-based call hears | `Telephony/VoiceAgentMediaProviderTests` | Listening starts on a model made for phone audio, on the far end's track only, and falls back to the default engine's phone-call model when the account refuses it |
 | Call outcome | `VoiceCallConclusionPolicyTests` | Dispositions come from the subject's own actions; a disposition the model invented is refused; a silent call is never given an invented summary; an escalated call is left for the agent |
 | Voicemail access | `VoicemailMediaEndpointTests` | An agent can play and delete a voicemail addressed by the soft phone's own row id, and cannot reach one belonging to somebody else |
 | Permission to make contact | `Modules/Telephony/OutboundCallScreeningTests`, `Modules/ContactCenter/ManualCallScreenerTests` | The question is asked immediately before the call goes out, not when the batch was loaded: a denial never reaches the provider, the first refusal wins, and a screener that cannot answer — an unreachable registry, a number it cannot canonicalize — refuses rather than allows |
@@ -69,6 +71,10 @@ defect crossed a seam, the test has to cross it too.
 | A voicemail heard under the greeting | Verified | a short greeting played entirely under the opening line and was never transcribed; the silence after it now leaves the message instead of asking a recording whether it is still there |
 | Ringing long enough for voicemail | Verified | a call abandoned at the provider's 30-second default just before voicemail answered; at 45 seconds the voicemail answers |
 | A second goodbye | Verified | the customer answered the goodbye, the model ended the call again, and the platform hung up about four seconds after the last line finished. Before the fix the line stayed open until the customer hung up |
+| A retry, placed | Verified | a call rang out, its retry was created with its AI profile, rescheduled from the activity editor, dialled, answered, and held a full conversation |
+| Hearing a turn-based caller | Verified | on the default engine a caller's answers came back as fragments and an email address was read back wrong four times; on the phone-audio model every answer and the address were heard right the first time |
+| The turn-based call ending a conversation | Verified | the model ended the call through the end-call tool once the customer had what they needed, and the platform hung up after the goodbye |
+| Outcomes the guidance separates | Verified | a buyer ready to sign was concluded as the won-lead disposition, and a buyer only wanting options as the ordinary one |
 
 ## Still to be proven on a live call
 
@@ -90,23 +96,18 @@ defect crossed a seam, the test has to cross it too.
   nobody speaks on, and a live session relies on the model saying so as it ends the call. Neither is the provider
   telling the platform that a machine answered and when its tone sounded, which is the reliable answer and a paid
   provider feature. The opening line is still spoken over the greeting either way.
-- **A retry, placed.** The retry of an unanswered call is now created with everything it needs to be dialled, and
-  that is held by a test and seen on the stored record. Nobody has yet watched one ring, because each was
-  scheduled a day out.
 - **What the model believes it heard.** Transcription on a phone line is noisier than the conversation feels, and
   nothing questions an implausible reading before it is acted on or written down. Observed live: an email address
   read back with a company domain the caller never said, confirmed with a "sure"; and a budget recorded as a
   figure that did not match the car being discussed. Both were written to the record as fact. This is the one
   open behaviour that produces wrong data rather than an awkward call. Seen twice more on 2026-09-22: the same
   spoken address came back as two different wrong domains, each read back to the caller and confirmed.
-- **The disposition descriptions.** Every disposition now describes when to choose it, and a subject workflow can
-  override that wording for its own work. The rule that decides which description the model sees is unit-tested,
-  and the descriptions themselves have not yet been judged by a model on a live call. The useful test is not
-  another refusal — it is a call that should land on a *different* disposition, to show the guidance separates
-  outcomes rather than pulling everything towards the one it describes most forcefully.
-- **The turn-based fallback ending a conversation.** A turn-based call has now been heard hanging up on silence
-  and on voicemail. It has not yet been heard ending a real conversation through the end-call tool, because every
-  conversation on it since was with a recording.
+  On 2026-09-23 the same address was heard right the first time on both paths: by the realtime model, and by a
+  turn-based call once it listened on the phone-audio model. Two calls are not a proof, so this stays open.
+- **An ambiguous phrase read as an opt-out.** On the default transcription engine a reply came back as "no I don't
+  want anyone", and the review concluded the call as do-not-call. Leaning towards stopping is the rule on purpose,
+  and the engine that produced the fragment has been replaced, so the open question is only whether a clear
+  transcript ever still does this.
 - **Signaling region.** Whether moving the signaling edge moves the media edge with it. Only the round-trip figure
   on a call can answer that; the provider does not document it.
 
