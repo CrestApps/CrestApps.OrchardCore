@@ -2028,6 +2028,35 @@
     var captureProbeTrackId = null;
     var captureProbeTrack = null;
     var inboundProbe = null;
+    var inboundProbeTrackId = null;
+
+    // The audio track the soft phone is receiving: whatever the live receiver carries, else the remote
+    // element's stream. Like the sender, the receiver is the authority: the provider SDK can replace the
+    // stream on the remote element during a call, and a probe left on the first one read 0.000 for the rest of
+    // the call while the agent could hear the caller.
+    function currentReceiveTrack(peer) {
+      if (peer && typeof peer.getReceivers === 'function') {
+        var receiver = peer.getReceivers().filter(function (candidate) {
+          return candidate && candidate.track && candidate.track.kind === 'audio';
+        })[0];
+        if (receiver) {
+          return receiver.track;
+        }
+      }
+      var remoteStream = remoteElement && remoteElement.srcObject;
+      return remoteStream && typeof remoteStream.getAudioTracks === 'function' ? remoteStream.getAudioTracks()[0] || null : null;
+    }
+    function startInboundProbe(track) {
+      if (inboundProbe) {
+        inboundProbe.dispose();
+        inboundProbe = null;
+      }
+      inboundProbeTrackId = track ? track.id : null;
+      if (!track) {
+        return;
+      }
+      inboundProbe = createLevelProbe(typeof MediaStream === 'function' ? new MediaStream([track]) : remoteElement && remoteElement.srcObject);
+    }
 
     // The audio track the far end is hearing: whatever the live sender carries, else the soft phone's own
     // send stream. The sender is the authority because the provider SDK may be sending a track other than
@@ -2063,11 +2092,7 @@
       stopLevelProbes();
       var call = qualityState && qualityState.call;
       startCaptureProbe(currentSendTrack(call && call.peer && call.peer.instance));
-
-      // The far end's audio is attached to the remote element by the provider SDK, so that element is
-      // where the received stream can be found.
-      var remoteStream = remoteElement && remoteElement.srcObject;
-      inboundProbe = createLevelProbe(remoteStream);
+      startInboundProbe(currentReceiveTrack(call && call.peer && call.peer.instance));
     }
 
     // Points the capture probe at the track now being sent, after the soft phone swapped its microphone
@@ -2094,6 +2119,7 @@
         inboundProbe.dispose();
         inboundProbe = null;
       }
+      inboundProbeTrackId = null;
     }
 
     // Records what was negotiated the moment media is up: the audio m= line and codec maps of both the offer
@@ -2299,9 +2325,11 @@
         // buffer setting is only worth keeping while this stays near zero.
         var concealment = concealmentPercent(inbound, qualityState.lastInbound);
 
-        // The far end may not have been attached when the call started; take the probe as soon as it is.
-        if (!inboundProbe && remoteElement && remoteElement.srcObject) {
-          inboundProbe = createLevelProbe(remoteElement.srcObject);
+        // The far end may not have been attached when the call started, and the provider SDK may replace
+        // it during the call; keep the inbound probe on the track actually being received.
+        var receiveTrack = currentReceiveTrack(call && call.peer && call.peer.instance);
+        if (captureProbeNeedsRebuild(inboundProbeTrackId, receiveTrack ? receiveTrack.id : null, receiveTrack ? receiveTrack.readyState : null)) {
+          startInboundProbe(receiveTrack);
         }
 
         // Measured loudness in both directions, on the same scale, whatever the browser reports.
