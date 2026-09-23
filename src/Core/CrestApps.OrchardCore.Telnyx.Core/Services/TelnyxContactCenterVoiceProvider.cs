@@ -159,23 +159,21 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         {
             var callerCallControlId = request.ProviderCallId.Trim();
 
-            // Answer the inbound caller leg first. Telnyx rejects a bridge whose legs are not yet answered
-            // ("call not answered yet", code 90034), so the caller must be connected before the agent leg is
-            // bridged in. A caller leg that is already answered simply fails here, which is ignored.
-            var answerResult = await _apiClient.AnswerAsync(callerCallControlId, cancellationToken: cancellationToken);
-
-            if (!answerResult.Succeeded)
-            {
-                _logger.LogWarning(
-                    "Telnyx returned {StatusCode} answering the caller leg before an agent bridge (it may already be answered).",
-                    answerResult.StatusCode);
-            }
+            // Answer the inbound caller leg. Telnyx rejects a bridge whose legs are not yet answered ("call not
+            // answered yet", code 90034), so the caller must be connected before the agent leg is bridged in. A
+            // caller leg that is already answered simply fails here, which is ignored.
+            //
+            // It runs alongside the agent-leg origination rather than before it. The bridge waits for the agent's
+            // browser to answer, a second or more after the invite, and the caller's answer returns long before
+            // that, so nothing depends on the order; doing them one after the other only added the answer's round
+            // trip to the time the agent waited after clicking Answer.
+            var answerTask = _apiClient.AnswerAsync(callerCallControlId, cancellationToken: cancellationToken);
 
             // Originate the agent leg to the agent's registered browser SIP endpoint. The browser auto-answers
             // the invite; when its call.answered webhook arrives, the outbound-bridge orchestration bridges it
             // to the caller leg carried in client_state. Bridging is deferred to then because Telnyx requires
             // both legs to be answered first.
-            var originateResult = await _apiClient.OriginateAsync(
+            var originateTask = _apiClient.OriginateAsync(
                 new TelnyxOriginateRequest
                 {
                     ConnectionId = _options.ConnectionId,
@@ -188,6 +186,17 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
                     }.ToClientStateJson(),
                 },
                 cancellationToken);
+
+            var answerResult = await answerTask;
+
+            if (!answerResult.Succeeded)
+            {
+                _logger.LogWarning(
+                    "Telnyx returned {StatusCode} answering the caller leg before an agent bridge (it may already be answered).",
+                    answerResult.StatusCode);
+            }
+
+            var originateResult = await originateTask;
 
             if (!originateResult.Succeeded)
             {
