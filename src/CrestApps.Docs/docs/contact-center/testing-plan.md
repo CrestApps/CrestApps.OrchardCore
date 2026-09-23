@@ -75,6 +75,7 @@ defect crossed a seam, the test has to cross it too.
 | Hearing a turn-based caller | Verified | on the default engine a caller's answers came back as fragments and an email address was read back wrong four times; on the phone-audio model every answer and the address were heard right the first time |
 | The turn-based call ending a conversation | Verified | the model ended the call through the end-call tool once the customer had what they needed, and the platform hung up after the goodbye |
 | Outcomes the guidance separates | Verified | a buyer ready to sign was concluded as the won-lead disposition, and a buyer only wanting options as the ordinary one |
+| Telnyx answering machine detection | Verified | premium detection reported a machine about five seconds after answer and the greeting's end after it; one message was left, the call hung up and was concluded as No Answer. The first run left two messages, because a late greeting transcript arrived while the first was being composed; the message is now claimed before it is composed |
 
 ## Still to be proven on a live call
 
@@ -92,10 +93,9 @@ defect crossed a seam, the test has to cross it too.
   inventory load no longer contains them, and a cadence step that was already due for them passes in silence.
   Note that there are three channels to prove, not four — the chat opt-out was withdrawn, because there is no
   chat channel on this platform and the preference was read by nothing.
-- **Answering-machine detection.** A turn-based call now recognises a voicemail from its greeting, or from a line
-  nobody speaks on, and a live session relies on the model saying so as it ends the call. Neither is the provider
-  telling the platform that a machine answered and when its tone sounded, which is the reliable answer and a paid
-  provider feature. The opening line is still spoken over the greeting either way.
+- **Answering-machine detection on a live session.** Telnyx detection is proven on a turn-based call. A realtime
+  call records the provider's verdict for its outcome but does not yet use the greeting's end as its cue to leave
+  the message; the model still leaves it on what it hears.
 - **What the model believes it heard.** Transcription on a phone line is noisier than the conversation feels, and
   nothing questions an implausible reading before it is acted on or written down. Observed live: an email address
   read back with a company domain the caller never said, confirmed with a "sure"; and a budget recorded as a
