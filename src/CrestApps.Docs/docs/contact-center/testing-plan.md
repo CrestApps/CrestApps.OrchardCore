@@ -29,20 +29,22 @@ defect crossed a seam, the test has to cross it too.
 | Dialer under volume | `DialerVolumeWorkflowTests` | 100 calls across 10 agents: fair spread, no double-booking, queue drains, everyone ends Available |
 | Automated voice conversation | `Modules/Omnichannel/Voice/VoiceAgentConversationLoopTests` | Greeting once, listening, replying, escalating, ending; realtime and turn-based both write the same transcript |
 | The handoff journey | `VoiceAgentConversationLoopTests` (journey cases) | A caller asking for a person reaches the queue **with the request token already cancelled** — which is how an abandoned provider webhook actually arrives — and is not hung up on instead |
-| Live session teardown | `RealtimeVoiceConversationRunnerTests` | A transferred call and a caller who hangs up both let the session return, so the work after it runs; the closing line is never clipped, and a customer who speaks after goodbye is not hung up on |
+| Live session teardown | `RealtimeVoiceConversationRunnerTests` | A transferred call and a caller who hangs up both let the session return, so the work after it runs; the closing line is never clipped, a customer who speaks after goodbye is not hung up on, and the model ending the call again after that still hangs up |
+| Voicemail on a turn-based call | `VoiceAgentConversationLoopTests`, `VoicemailGreetingTests` | A recorded greeting is recognised and never replied to as the customer; a greeting still playing is let finish; one message is left, never a question, and the call hangs up; a line nobody has said a word on is treated as voicemail rather than asked whether anybody is there |
 | Session tooling | `RealtimeVoiceConversationRunnerTests` | The live session is given the end-call tool, and the transfer tool only when the call has a queue behind it, and is started inside the invocation scope those tools need |
 | Who speaks, and when | `RealtimeVoiceConversationRunnerTests` | The assistant opens the call even on a session the provider answers for itself; it speaks up when nobody has spoken for too long, and stops after two attempts; the closing line is played, counted and recorded once however many times the model produces it |
 | Which way a call runs | `VoiceAgentConversationLoopTests` | A profile whose model declares the realtime capability holds the call as a live session. The harness resolves it the way the framework does — the chat slot refuses realtime deployments — so a call cannot pass here and fall back to turn-based live |
 | Disposition guidance | `Modules/Omnichannel/SubjectDispositionGuidanceTests` | The model is given the subject's own wording for a disposition when there is one, the disposition's general description when there is not, and never another subject's wording |
 | Contact preferences | `Modules/Omnichannel/Managements/DefaultSubjectActionExecutorTests` | A disposition that sets do-not-call actually writes the contact, and publishes it, because the lists that decide who gets dialled query published contacts |
+| Trying again | `DefaultSubjectActionExecutorTests` | A retry is placed the same way as the attempt it follows: an automated call's retry keeps its kind, source, AI profile, voice and pacing, and starts a new conversation |
 | Call outcome | `VoiceCallConclusionPolicyTests` | Dispositions come from the subject's own actions; a disposition the model invented is refused; a silent call is never given an invented summary; an escalated call is left for the agent |
 | Voicemail access | `VoicemailMediaEndpointTests` | An agent can play and delete a voicemail addressed by the soft phone's own row id, and cannot reach one belonging to somebody else |
 | Permission to make contact | `Modules/Telephony/OutboundCallScreeningTests`, `Modules/ContactCenter/ManualCallScreenerTests` | The question is asked immediately before the call goes out, not when the batch was loaded: a denial never reaches the provider, the first refusal wins, and a screener that cannot answer — an unreachable registry, a number it cannot canonicalize — refuses rather than allows |
 | The same question on every path | `AutomatedActivitiesProcessorBackgroundTaskTests`, `Modules/Omnichannel/Sms/SmsOmnichannelProcessorTests`, `SmsReEngagementBackgroundTaskTests` | Somebody who opted out after their activity was created is neither called nor messaged — held separately at each of the three paths that used to skip the question: the automated voice call, the SMS processor that is the last code before the carrier, and the cadence that would otherwise nudge them on a schedule for days |
-| Who a batch admits | `Managements/Services/DefaultContactActivityBatchLoaderTests` | The per-channel "include do-not-calls" flags decide what they claim to: unticked excludes the people who asked to be left alone, on manual sheets as well as automated ones, and ticking one is an operator overriding that on purpose |
+| Who a batch admits | `Managements/Services/DefaultContactActivityBatchLoaderTests` | The per-channel "include do-not-calls" flags decide what they claim to: unticked excludes the people who asked to be left alone, on manual sheets as well as automated ones, and ticking one is an operator overriding that on purpose. A request to stop is honoured at every number: a contact who shares a phone number with somebody who opted out is not called or texted on it |
 | Business hours on a nudge | `SmsReEngagementBackgroundTaskTests` | The cadence is judged in the contact's time zone rather than against the server clock, and a calendar it cannot evaluate closes the window rather than opening it |
 | The SMS outcome | `Modules/Omnichannel/Sms/SmsConclusionDispositionTests` | A conversation with no disposition chosen is never handed to the executor that rejects it, so it cannot be left open with no outcome, no notes and no follow-up |
-| The voice outcome, wired up | `Modules/Omnichannel/Voice/VoiceCallConclusionWiringTests` | End to end rather than by policy alone: the chosen outcome reaches the subject's actions, an invented one does not, a silent call gets the policy's note, and a customer's email is written back only where the activity allows it |
+| The voice outcome, wired up | `Modules/Omnichannel/Voice/VoiceCallConclusionWiringTests` | End to end rather than by policy alone: the chosen outcome reaches the subject's actions, an invented one does not, a silent call gets the policy's note, and a customer's email is written back only where the activity allows it. A call nobody answered, and a call voicemail answered, take the outcome that tries again and are never reviewed |
 | What a bulk action says it will touch | `Managements/Handlers/BulkManageActivityFilterHandlerSqlTests` | The count shown before a bulk complete or purge is the real one — every filter value is bound rather than inlined, the do-not-call flag is compared as a boolean so PostgreSQL does not refuse the query outright, and a contact behind several index rows is counted once |
 
 ## Proven on a live call
@@ -61,6 +63,12 @@ defect crossed a seam, the test has to cross it too.
 | The assistant opening the call | Verified | the greeting is the first thing on the line, with no caller turn before it — twice running |
 | Breaking a silence | Verified | after twelve quiet seconds the assistant asks whether the caller is still there, twice, and then stops asking |
 | One goodbye, not two | Verified | the model produced the closing line twice on two calls; the caller heard it once, and the transcript records it once |
+| Stopping at every number | Verified | a batch aimed at a contact who shares a number with somebody who opted out loaded nobody, where the same batch had loaded seven before the fix |
+| A call nobody answers | Verified | a call that rang out was concluded as No Answer and a retry was scheduled a day later with the AI profile it needs to be placed; before the fix the retry was a manual task with no profile, which nothing could dial |
+| Voicemail on a turn-based call | Verified | the greeting was recognised, one message was left, the call hung up and was concluded as No Answer. Before the fix the greeting was answered as the customer and the review concluded the call as do-not-call, opting out somebody who never picked up |
+| A voicemail heard under the greeting | Verified | a short greeting played entirely under the opening line and was never transcribed; the silence after it now leaves the message instead of asking a recording whether it is still there |
+| Ringing long enough for voicemail | Verified | a call abandoned at the provider's 30-second default just before voicemail answered; at 45 seconds the voicemail answers |
+| A second goodbye | Verified | the customer answered the goodbye, the model ended the call again, and the platform hung up about four seconds after the last line finished. Before the fix the line stayed open until the customer hung up |
 
 ## Still to be proven on a live call
 
@@ -78,23 +86,27 @@ defect crossed a seam, the test has to cross it too.
   inventory load no longer contains them, and a cadence step that was already due for them passes in silence.
   Note that there are three channels to prove, not four — the chat opt-out was withdrawn, because there is no
   chat channel on this platform and the preference was read by nothing.
-- **Answering-machine detection.** Nothing tells a call whether a person or a machine picked up. A call that
-  reaches voicemail is answered by the assistant introducing itself to the recording, and it will keep talking to
-  it. Seen live; the assistant behaved sensibly on what it could hear, which is the point — it is the platform
-  that has no notion of who answered.
+- **Answering-machine detection.** A turn-based call now recognises a voicemail from its greeting, or from a line
+  nobody speaks on, and a live session relies on the model saying so as it ends the call. Neither is the provider
+  telling the platform that a machine answered and when its tone sounded, which is the reliable answer and a paid
+  provider feature. The opening line is still spoken over the greeting either way.
+- **A retry, placed.** The retry of an unanswered call is now created with everything it needs to be dialled, and
+  that is held by a test and seen on the stored record. Nobody has yet watched one ring, because each was
+  scheduled a day out.
 - **What the model believes it heard.** Transcription on a phone line is noisier than the conversation feels, and
   nothing questions an implausible reading before it is acted on or written down. Observed live: an email address
   read back with a company domain the caller never said, confirmed with a "sure"; and a budget recorded as a
   figure that did not match the car being discussed. Both were written to the record as fact. This is the one
-  open behaviour that produces wrong data rather than an awkward call.
+  open behaviour that produces wrong data rather than an awkward call. Seen twice more on 2026-09-22: the same
+  spoken address came back as two different wrong domains, each read back to the caller and confirmed.
 - **The disposition descriptions.** Every disposition now describes when to choose it, and a subject workflow can
   override that wording for its own work. The rule that decides which description the model sees is unit-tested,
   and the descriptions themselves have not yet been judged by a model on a live call. The useful test is not
   another refusal — it is a call that should land on a *different* disposition, to show the guidance separates
   outcomes rather than pulling everything towards the one it describes most forcefully.
-- **The turn-based fallback's hangup.** A call that cannot run as a live session is now told that hanging up is
-  its job, and is given the tool to do it. Both are unit-tested. No live call has taken that path since, because
-  the realtime path stopped falling back — so it is proven by test and unproven by phone.
+- **The turn-based fallback ending a conversation.** A turn-based call has now been heard hanging up on silence
+  and on voicemail. It has not yet been heard ending a real conversation through the end-call tool, because every
+  conversation on it since was with a recording.
 - **Signaling region.** Whether moving the signaling edge moves the media edge with it. Only the round-trip figure
   on a call can answer that; the provider does not document it.
 
