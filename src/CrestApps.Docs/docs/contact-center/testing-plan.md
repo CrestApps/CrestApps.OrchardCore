@@ -78,6 +78,7 @@ defect crossed a seam, the test has to cross it too.
 | Telnyx answering machine detection | Verified | premium detection reported a machine about five seconds after answer and the greeting's end after it; one message was left, the call hung up and was concluded as No Answer. The first run left two messages, because a late greeting transcript arrived while the first was being composed; the message is now claimed before it is composed |
 | Opting out on a live call | Verified | the caller asked to be taken off the list; the call was concluded as do-not-call and the contact flagged together, the next load for the number took nobody -- eight records shared it -- and a retry already due for the contact was cancelled rather than dialled |
 | Voicemail on a live session, with detection | Verified | the provider reported the machine and the greeting's end; the model stayed silent through the greeting, left one message, and the call was concluded as No Answer |
+| AI-to-agent handoff with detection on | Verified | re-run after the dial began asking for answering machine detection: the provider classified the caller as a person, the caller asked for an agent, the call was queued, offered, accepted on the soft phone and bridged with audio both ways |
 
 ## Still to be proven on a live call
 
@@ -99,6 +100,9 @@ defect crossed a seam, the test has to cross it too.
   want anyone", and the review concluded the call as do-not-call. Leaning towards stopping is the rule on purpose,
   and the engine that produced the fragment has been replaced, so the open question is only whether a clear
   transcript ever still does this.
+- **A stream reported as failed after it ends.** Telnyx sends `streaming.failed` just after every live session's
+  stream stops, including on calls that worked end to end. It looks like the order the socket is closed and the
+  stream is stopped in, and it changes nothing about the call; the reason in the event has not been read yet.
 - **Signaling region.** Whether moving the signaling edge moves the media edge with it. Only the round-trip figure
   on a call can answer that; the provider does not document it.
 
