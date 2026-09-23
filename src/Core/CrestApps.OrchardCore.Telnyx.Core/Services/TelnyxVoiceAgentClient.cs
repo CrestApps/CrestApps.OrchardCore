@@ -7,6 +7,16 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 public sealed class TelnyxVoiceAgentClient : ITelnyxVoiceAgentClient
 {
+    /// <summary>
+    /// How long an automated call rings before it is given up on.
+    /// </summary>
+    /// <remarks>
+    /// Longer than the provider's 30-second default, because a customer's voicemail is often set to pick up at about
+    /// that point: live, a call was abandoned just before the voicemail answered, so no message was left and the
+    /// attempt counted as nobody there. A voicemail that answers is a message left; a call cut off first is nothing.
+    /// </remarks>
+    public const int RingTimeoutSeconds = 45;
+
     private readonly TelnyxApiClient _apiClient;
     private readonly TelnyxOptions _options;
 
@@ -32,6 +42,7 @@ public sealed class TelnyxVoiceAgentClient : ITelnyxVoiceAgentClient
             // The client owns the transport encoding, so the state is handed over as JSON. Encoding it here as
             // well produces a value that decodes to base64 rather than to JSON, and every correlation then fails.
             ClientState = clientState.ToClientStateJson(),
+            TimeoutSeconds = RingTimeoutSeconds,
         };
 
         // A redelivered dial command must not place a second call to the same person.
