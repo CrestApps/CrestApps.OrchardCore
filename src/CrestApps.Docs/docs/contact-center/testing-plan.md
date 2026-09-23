@@ -76,23 +76,14 @@ defect crossed a seam, the test has to cross it too.
 | The turn-based call ending a conversation | Verified | the model ended the call through the end-call tool once the customer had what they needed, and the platform hung up after the goodbye |
 | Outcomes the guidance separates | Verified | a buyer ready to sign was concluded as the won-lead disposition, and a buyer only wanting options as the ordinary one |
 | Telnyx answering machine detection | Verified | premium detection reported a machine about five seconds after answer and the greeting's end after it; one message was left, the call hung up and was concluded as No Answer. The first run left two messages, because a late greeting transcript arrived while the first was being composed; the message is now claimed before it is composed |
+| Opting out on a live call | Verified | the caller asked to be taken off the list; the call was concluded as do-not-call and the contact flagged together, the next load for the number took nobody -- eight records shared it -- and a retry already due for the contact was cancelled rather than dialled |
+| Voicemail on a live session, with detection | Verified | the provider reported the machine and the greeting's end; the model stayed silent through the greeting, left one message, and the call was concluded as No Answer |
 
 ## Still to be proven on a live call
 
-- **Compliance request, end to end.** Half of this is proven: on three live refusals the model chose the
-  do-not-call disposition every time, including one where the refusal was brief. The other half never worked —
-  the contact's Do Not Call preference was applied in memory and never saved, so the customer stayed dialable.
-  That is fixed and unit-tested; what is still owed is one live call showing the disposition and the account flag
-  land together, and the contact then missing from the next inventory load.
-
-  The scope of that call has since grown. The preference is now asked for again immediately before each contact
-  rather than only when the batch was loaded, and three paths that never asked at all — the SMS processor, the
-  re-engagement cadence and the automated voice call — now go through the same screening an agent's call does.
-  Each of those is held by tests, and none has been watched refuse a real person. The single most useful live
-  call is therefore the one that opts out and then waits: the disposition and the flag land together, the next
-  inventory load no longer contains them, and a cadence step that was already due for them passes in silence.
-  Note that there are three channels to prove, not four — the chat opt-out was withdrawn, because there is no
-  chat channel on this platform and the preference was read by nothing.
+- **Opting out by text.** The call path is proven end to end. A text opt-out, and a cadence step already due for
+  somebody who opted out, still wait on a working SMS account: the Twilio account the tenant uses was reported by
+  Twilio as not active during this round, which refused every message before any of it was tested.
 - **Answering-machine detection on a live session.** Telnyx detection is proven on a turn-based call. A realtime
   call records the provider's verdict for its outcome but does not yet use the greeting's end as its cue to leave
   the message; the model still leaves it on what it hears.
