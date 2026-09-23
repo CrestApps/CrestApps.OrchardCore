@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -12,13 +13,14 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// events into provider-neutral voice events, projects them through the shared Telephony ingress, and lets
 /// optional higher-level features route unmatched inbound calls.
 /// </summary>
-public sealed class TelnyxWebhookService : ITelnyxWebhookService
+public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
 {
     private readonly INormalizedVoiceEventIngestor _normalizedVoiceEventIngestor;
     private readonly ITelnyxInboundCallRouter _inboundCallRouter;
     private readonly IInboundVoiceDigitsSink _digitsSink;
     private readonly ITelnyxOutboundBridgeOrchestrator _outboundBridgeOrchestrator;
     private readonly IEnumerable<ITelnyxRecordingSavedHandler> _recordingSavedHandlers;
+    private readonly IEnumerable<ICallQualityObserver> _callQualityObservers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -40,6 +42,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
         IInboundVoiceDigitsSink digitsSink,
         ITelnyxOutboundBridgeOrchestrator outboundBridgeOrchestrator,
         IEnumerable<ITelnyxRecordingSavedHandler> recordingSavedHandlers,
+        IEnumerable<ICallQualityObserver> callQualityObservers,
         IClock clock,
         ILogger<TelnyxWebhookService> logger)
     {
@@ -48,6 +51,7 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
         _digitsSink = digitsSink;
         _outboundBridgeOrchestrator = outboundBridgeOrchestrator;
         _recordingSavedHandlers = recordingSavedHandlers;
+        _callQualityObservers = callQualityObservers;
         _clock = clock;
         _logger = logger;
     }
@@ -79,6 +83,10 @@ public sealed class TelnyxWebhookService : ITelnyxWebhookService
         // Advance an outbound soft-phone bridge before anything else. The destination leg is an internal leg
         // the platform created only to reach the dialed party, so it is bridged here and never surfaced to the
         // soft phone; the agent leg is the call the soft phone tracks, so it continues to normalization below.
+        // Every leg's quality is kept, before the hidden bridge leg returns below: that leg is the customer's side of
+        // an outbound call, which is the side the agent's soft phone cannot measure.
+        await ObserveCallQualityAsync(callEvent, cancellationToken);
+
         var bridgeLeg = await _outboundBridgeOrchestrator.AdvanceAsync(callEvent, cancellationToken);
 
         if (bridgeLeg == TelnyxOutboundBridgeLeg.DestinationLeg)

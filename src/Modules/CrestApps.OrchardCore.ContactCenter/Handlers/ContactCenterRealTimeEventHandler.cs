@@ -118,6 +118,14 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
                     context.QueueItemStore,
                     cancellationToken);
                 break;
+
+            case ContactCenterConstants.Events.CallQualityAlertRaised:
+                if (interactionEvent.GetData<CallQualityAlertNotification>() is { } alert)
+                {
+                    await _notifier.NotifyCallQualityAlertAsync(alert, cancellationToken);
+                }
+
+                break;
         }
     }
 

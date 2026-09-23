@@ -43,4 +43,10 @@ public interface IContactCenterHubClient
     /// </summary>
     /// <param name="notification">The recording state change.</param>
     Task RecordingStateChanged(RecordingStateNotification notification);
+
+    /// <summary>
+    /// Tells a supervisor that an agent's calls keep rating poor.
+    /// </summary>
+    /// <param name="notification">The alert.</param>
+    Task CallQualityAlert(CallQualityAlertNotification notification);
 }

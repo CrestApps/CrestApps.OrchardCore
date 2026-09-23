@@ -68,6 +68,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string CallEnded = "CallEnded";
             public const string CallHeld = "CallHeld";
             public const string CallMuted = "CallMuted";
+            public const string CallQualityAlertRaised = "CallQualityAlertRaised";
             public const string CallResumed = "CallResumed";
             public const string CallSentToVoicemail = "CallSentToVoicemail";
             public const string CallSessionCreated = "CallSessionCreated";
@@ -258,6 +259,7 @@ namespace CrestApps.OrchardCore.ContactCenter
     public interface IContactCenterRealTimeNotifier
     {
         System.Threading.Tasks.Task NotifyAgentMembershipChangedAsync(string userId, System.Collections.Generic.IEnumerable<string> removedQueueIds, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task NotifyCallQualityAlertAsync(CrestApps.OrchardCore.ContactCenter.Models.CallQualityAlertNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyOfferReceivedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyOfferRevokedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentOfferRevokedNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyPresenceChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceNotification notification, System.Threading.CancellationToken cancellationToken = default);
@@ -448,6 +450,26 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Meeting = 9,
         Training = 10,
         AfterHoursUnavailable = 11,
+    }
+    public sealed class CallQualityAlertNotification
+    {
+        public CallQualityAlertNotification() { }
+        public string AgentId { get; set; }
+        public string InteractionId { get; set; }
+        public string LikelyCause { get; set; }
+        public System.DateTime ObservedUtc { get; set; }
+        public int PoorCallCount { get; set; }
+        public int RecentCallCount { get; set; }
+        public string UserId { get; set; }
+    }
+    public enum CallQualityCause
+    {
+        Unknown = 0,
+        NoAudioReceived = 1,
+        PacketLoss = 2,
+        Jitter = 3,
+        Latency = 4,
+        CustomerSide = 5,
     }
     public enum CallbackRequestStatus
     {

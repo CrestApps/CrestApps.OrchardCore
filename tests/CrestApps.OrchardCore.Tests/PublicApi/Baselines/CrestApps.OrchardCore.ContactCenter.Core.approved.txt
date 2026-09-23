@@ -200,6 +200,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public bool Enabled { get; set; }
         public string Name { get; set; }
     }
+    public sealed class CallQualityRecordIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public CallQualityRecordIndex() { }
+        public string AgentId { get; set; }
+        public long DocumentId { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime ObservedUtc { get; set; }
+        public string QueueId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallQualityRating Rating { get; set; }
+        public string RecordKey { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallQualitySource Source { get; set; }
+    }
     public sealed class CallSessionIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
         public CallSessionIndex() { }
@@ -214,6 +226,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Indexes
         public string ProviderName { get; set; }
         public string QueueId { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.VoiceCallState State { get; set; }
+    }
+    public sealed class CallSessionLegIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
+    {
+        public CallSessionLegIndex() { }
+        public string AgentId { get; set; }
+        public long DocumentId { get; set; }
+        public string InteractionId { get; set; }
+        public string ProviderLegId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.CallPartyRole Role { get; set; }
+        public System.DateTime StartedUtc { get; set; }
     }
     public sealed class CallbackRequestIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
@@ -804,6 +826,33 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         Consult = 3,
         Supervisor = 4,
         External = 5,
+    }
+    public sealed class CallQualityRecord : CrestApps.Core.Models.CatalogItem
+    {
+        public CallQualityRecord() { }
+        public string AgentId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallQualityReport Browser { get; set; }
+        public string CallSessionId { get; set; }
+        public System.DateTime CreatedUtc { get; set; }
+        public double? DurationSeconds { get; set; }
+        public string InteractionId { get; set; }
+        public double? JitterMs { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.CallPartyRole LegRole { get; set; }
+        public double? LossPercent { get; set; }
+        public double? Mos { get; set; }
+        public System.DateTime ObservedUtc { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.ProviderCallQualityStats Provider { get; set; }
+        public string ProviderCallControlId { get; set; }
+        public string ProviderLegId { get; set; }
+        public string ProviderName { get; set; }
+        public string ProviderSessionId { get; set; }
+        public string QueueId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallQualityRating Rating { get; set; }
+        public string RecordKey { get; set; }
+        public double? RoundTripMs { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallQualitySource Source { get; set; }
+        public string UserId { get; set; }
+        public static string BuildRecordKey(CrestApps.OrchardCore.Telephony.Models.CallQualitySource source, string providerCallControlId) { }
     }
     public sealed class CallRelationship
     {
@@ -2411,6 +2460,21 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public CallControlAuthorizationService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ISupervisorQueueAuthorizationService supervisorQueueAuthorizationService) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallControlAuthorizationResult> AuthorizeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.CallControlAuthorizationContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public static class CallQualityCauseClassifier
+    {
+        public const double JitterMsThreshold = 30D;
+        public const double LossPercentThreshold = 5D;
+        public const double RoundTripMsThreshold = 300D;
+        public static CrestApps.OrchardCore.ContactCenter.Models.CallQualityCause Classify(CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord record) { }
+        public static CrestApps.OrchardCore.ContactCenter.Models.CallQualityCause ClassifyMostLikely(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord> records) { }
+    }
+    public sealed class CallQualityRecordStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord, CrestApps.OrchardCore.ContactCenter.Core.Indexes.CallQualityRecordIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallQualityRecordStore
+    {
+        public CallQualityRecordStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord> FindByRecordKeyAsync(string recordKey, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>> GetObservedBetweenAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>> GetRecentForAgentAsync(string agentId, System.DateTime sinceUtc, int count, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class CallSessionManager : CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager
     {
         public CallSessionManager(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionStore store, System.Collections.Generic.IEnumerable<CrestApps.Core.Services.ICatalogEntryHandler<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>> handlers, Microsoft.Extensions.Logging.ILogger<CrestApps.Core.Services.CatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>> logger) { }
@@ -2426,6 +2490,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderLegIdAsync(string providerLegId, System.Threading.CancellationToken cancellationToken = default) { }
         protected override System.Threading.Tasks.ValueTask SavingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession record) { }
     }
     public static class CallTopologyProjector
@@ -3079,6 +3144,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallControlAuthorizationResult> AuthorizeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.CallControlAuthorizationContext context, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ICallQualityRecordStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord> FindByRecordKeyAsync(string recordKey, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>> GetObservedBetweenAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord>> GetRecentForAgentAsync(string agentId, System.DateTime sinceUtc, int count, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ICallSessionManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession>
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
@@ -3091,6 +3162,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByInteractionIdAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderCallIdAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession> FindByProviderLegIdAsync(string providerLegId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ICallbackRequestManager : CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>, CrestApps.Core.Services.IReadCatalogManager<CrestApps.OrchardCore.ContactCenter.Core.Models.CallbackRequest>
     {

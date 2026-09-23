@@ -77,6 +77,17 @@ public sealed class CallSessionStore : DocumentCatalog<CallSession, CallSessionI
     }
 
     /// <inheritdoc/>
+    public async Task<CallSession> FindByProviderLegIdAsync(string providerLegId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(providerLegId);
+
+        return await Session.Query<CallSession, CallSessionLegIndex>(
+            index => index.ProviderLegId == providerLegId,
+            collection: ContactCenterStorage.CollectionName)
+            .OrderByDescending(index => index.StartedUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<int> CountActiveAsync(CancellationToken cancellationToken = default)
     {
         return await Session.Query<CallSession, CallSessionIndex>(

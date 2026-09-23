@@ -84,4 +84,51 @@ public static class TelephonyCallQualityEvaluator
 
         return CallQualityRating.Good;
     }
+
+    /// <summary>
+    /// Rates a whole call from its end-of-call summary.
+    /// </summary>
+    /// <remarks>
+    /// The summary carries the call's last sample alongside its averages, and a call is not judged by its last few
+    /// seconds: one that was poor throughout and recovered as it ended would otherwise be recorded as good. The
+    /// average opinion score and the worst loss are what it is rated on, falling back to the last sample only when
+    /// the averages were never measured.
+    /// </remarks>
+    /// <param name="report">The end-of-call summary.</param>
+    /// <returns>The rating.</returns>
+    public static CallQualityRating EvaluateSummary(CallQualityReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        if (report.BytesReceived == 0 && report.PacketsReceived > 0)
+        {
+            return CallQualityRating.Poor;
+        }
+
+        var mos = report.AvgMos > 0 ? report.AvgMos : report.Mos;
+        var loss = Math.Max(report.MaxLossPercent, report.LossPercent);
+
+        return Evaluate(mos > 0 ? mos : null, loss);
+    }
+
+    /// <summary>
+    /// Rates a leg from an opinion score and a loss percentage, either of which may be unknown.
+    /// </summary>
+    /// <param name="mos">The mean opinion score, or <see langword="null"/> when not measured.</param>
+    /// <param name="lossPercent">The packet loss percentage, or <see langword="null"/> when not measured.</param>
+    /// <returns>The rating.</returns>
+    public static CallQualityRating Evaluate(double? mos, double? lossPercent)
+    {
+        if ((mos is > 0 and <= PoorMosThreshold) || lossPercent >= PoorLossPercentThreshold)
+        {
+            return CallQualityRating.Poor;
+        }
+
+        if ((mos is > 0 and <= DegradedMosThreshold) || lossPercent >= DegradedLossPercentThreshold)
+        {
+            return CallQualityRating.Degraded;
+        }
+
+        return CallQualityRating.Good;
+    }
 }

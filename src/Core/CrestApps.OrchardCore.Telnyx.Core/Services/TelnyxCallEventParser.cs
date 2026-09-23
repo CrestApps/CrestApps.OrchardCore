@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
@@ -63,6 +64,7 @@ public static class TelnyxCallEventParser
                 HangupCause = ReadString(payload, "hangup_cause"),
                 HangupSource = ReadString(payload, "hangup_source"),
                 SipHangupCause = ReadString(payload, "sip_hangup_cause"),
+                CallQualityStats = ReadCallQualityStats(payload),
                 RecordingId = ReadString(payload, "recording_id"),
                 TranscriptionText = ReadNestedString(payload, "transcription_data", "transcript"),
                 TranscriptionIsFinal = ReadNestedBool(payload, "transcription_data", "is_final"),
@@ -82,6 +84,60 @@ public static class TelnyxCallEventParser
         {
             return false;
         }
+    }
+
+    private static ProviderCallQualityStats ReadCallQualityStats(JsonElement payload)
+    {
+        // A hangup carries the provider's measurement of the leg, one side for the audio it received and one for the
+        // audio it sent. Telnyx sends every figure as a string.
+        if (payload.ValueKind != JsonValueKind.Object ||
+            !payload.TryGetProperty("call_quality_stats", out var stats) ||
+            stats.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var inbound = stats.TryGetProperty("inbound", out var inboundElement) ? inboundElement : default;
+        var outbound = stats.TryGetProperty("outbound", out var outboundElement) ? outboundElement : default;
+
+        var result = new ProviderCallQualityStats
+        {
+            InboundMos = ReadNumber(inbound, "mos"),
+            InboundJitterMaxVarianceMs = ReadNumber(inbound, "jitter_max_variance"),
+            InboundJitterPacketCount = ReadCount(inbound, "jitter_packet_count"),
+            InboundPacketCount = ReadCount(inbound, "packet_count"),
+            InboundSkipPacketCount = ReadCount(inbound, "skip_packet_count"),
+            OutboundPacketCount = ReadCount(outbound, "packet_count"),
+            OutboundSkipPacketCount = ReadCount(outbound, "skip_packet_count"),
+        };
+
+        return result.HasMeasurements ? result : null;
+    }
+
+    private static double? ReadNumber(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDouble(out var number))
+        {
+            return number;
+        }
+
+        return value.ValueKind == JsonValueKind.String &&
+            double.TryParse(value.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed) &&
+            double.IsFinite(parsed)
+            ? parsed
+            : null;
+    }
+
+    private static long? ReadCount(JsonElement element, string propertyName)
+    {
+        var number = ReadNumber(element, propertyName);
+
+        return number is >= 0 ? (long)number.Value : null;
     }
 
     private static string ReadClientState(JsonElement payload)

@@ -124,6 +124,11 @@ public static partial class ContactCenterConstants
         public const string AgentReleased = "AgentReleased";
 
         /// <summary>
+        /// Raised when too many of an agent's recent calls rated poor, naming the most likely cause.
+        /// </summary>
+        public const string CallQualityAlertRaised = "CallQualityAlertRaised";
+
+        /// <summary>
         /// Raised when a dialer run starts.
         /// </summary>
         public const string DialerRunStarted = "DialerRunStarted";

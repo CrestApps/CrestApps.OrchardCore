@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Telephony.Models;
+
 namespace CrestApps.OrchardCore.Telnyx.Services;
 
 /// <summary>
@@ -67,6 +69,11 @@ public sealed class TelnyxCallEvent
     /// Gets or sets the SIP response code Telnyx reported for the hangup, when present.
     /// </summary>
     public string SipHangupCause { get; set; }
+
+    /// <summary>
+    /// Gets or sets Telnyx's own measurement of the leg's audio, when the event is a hangup that carries one.
+    /// </summary>
+    public ProviderCallQualityStats CallQualityStats { get; set; }
 
     /// <summary>
     /// Gets or sets the recording identifier, when the event carries one.

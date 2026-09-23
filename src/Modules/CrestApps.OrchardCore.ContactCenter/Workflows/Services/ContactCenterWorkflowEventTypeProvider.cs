@@ -92,6 +92,7 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["Call conference changed"].Value, ContactCenterConstants.Events.CallConferenceChanged) { Group = calls },
             new SelectListItem(S["Call ended"].Value, ContactCenterConstants.Events.CallEnded) { Group = calls },
             new SelectListItem(S["Call sent to voicemail"].Value, ContactCenterConstants.Events.CallSentToVoicemail) { Group = calls },
+            new SelectListItem(S["Repeated poor call quality"].Value, ContactCenterConstants.Events.CallQualityAlertRaised) { Group = calls },
 
             new SelectListItem(S["Recording started"].Value, ContactCenterConstants.Events.RecordingStarted) { Group = recording },
             new SelectListItem(S["Recording paused"].Value, ContactCenterConstants.Events.RecordingPaused) { Group = recording },

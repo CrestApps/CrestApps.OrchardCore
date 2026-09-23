@@ -32,6 +32,14 @@
             ["connected"] = T["Connected"].Value,
             ["reconnecting"] = T["Connection lost. Reconnecting..."].Value,
             ["disconnected"] = T["Disconnected. Live updates are paused."].Value,
+            ["qualityAlert"] = T["{0}: {1} of their last {2} calls rated poor. Likely cause: {3}."].Value,
+            ["dismiss"] = T["Dismiss"].Value,
+            ["cause.NoAudioReceived"] = T["no audio received"].Value,
+            ["cause.PacketLoss"] = T["packet loss on their network"].Value,
+            ["cause.Jitter"] = T["jitter on their network"].Value,
+            ["cause.Latency"] = T["latency on their network path"].Value,
+            ["cause.CustomerSide"] = T["the customers' lines"].Value,
+            ["cause.Unknown"] = T["not determined"].Value,
         },
     };
 }
@@ -47,6 +55,8 @@
     </div>
 
     <div class="cc-error" data-cc-error role="alert" aria-live="assertive" hidden></div>
+
+    <div class="cc-quality-alerts" data-cc-quality-alerts role="status" aria-live="polite"></div>
 
     <div class="cc-dashboard__summary" data-cc-summary role="status" aria-live="polite" aria-label="@T["Contact center summary"]"></div>
 

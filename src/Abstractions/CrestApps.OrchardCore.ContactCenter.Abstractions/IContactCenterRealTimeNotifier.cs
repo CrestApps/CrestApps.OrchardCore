@@ -54,4 +54,11 @@ public interface IContactCenterRealTimeNotifier
     /// <param name="notification">The recording state change.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     Task NotifyRecordingStateChangedAsync(RecordingStateNotification notification, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Tells supervisors that an agent's calls keep rating poor.
+    /// </summary>
+    /// <param name="notification">The alert.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task NotifyCallQualityAlertAsync(CallQualityAlertNotification notification, CancellationToken cancellationToken = default);
 }

@@ -10,6 +10,10 @@ namespace CrestApps.OrchardCore.Telephony.Extensions
 }
 namespace CrestApps.OrchardCore.Telephony
 {
+    public interface ICallQualityObserver
+    {
+        System.Threading.Tasks.Task ObserveAsync(CrestApps.OrchardCore.Telephony.Models.CallQualityObservation observation, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IIncomingCallContextProvider
     {
         System.Threading.Tasks.Task ContributeAsync(CrestApps.OrchardCore.Telephony.Models.IncomingCallContributionContext context, System.Threading.CancellationToken cancellationToken = default);
@@ -332,6 +336,20 @@ namespace CrestApps.OrchardCore.Telephony.Models
         Failed = 4,
         Canceled = 5,
     }
+    public sealed class CallQualityObservation
+    {
+        public CallQualityObservation() { }
+        public CrestApps.OrchardCore.Telephony.Models.CallQualityReport Browser { get; set; }
+        public System.DateTime ObservedUtc { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.ProviderCallQualityStats Provider { get; set; }
+        public string ProviderCallControlId { get; set; }
+        public string ProviderLegId { get; set; }
+        public string ProviderName { get; set; }
+        public string ProviderSessionId { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallQualityRating Rating { get; set; }
+        public CrestApps.OrchardCore.Telephony.Models.CallQualitySource Source { get; set; }
+        public string UserId { get; set; }
+    }
     public enum CallQualityRating
     {
         Good = 0,
@@ -386,6 +404,11 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public bool SentTrackIsLocalStream { get; set; }
         public string SentTrackLabel { get; set; }
         public bool SentTrackReported { get; set; }
+    }
+    public enum CallQualitySource
+    {
+        Browser = 0,
+        Provider = 1,
     }
     public sealed class CallReference
     {
@@ -510,6 +533,19 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public string Reason { get; init; }
         public static CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult Allow() { }
         public static CrestApps.OrchardCore.Telephony.Models.OutboundCallScreeningResult Deny(string reason, string description) { }
+    }
+    public sealed class ProviderCallQualityStats
+    {
+        public ProviderCallQualityStats() { }
+        public bool HasMeasurements { get; }
+        public double? InboundJitterMaxVarianceMs { get; set; }
+        public long? InboundJitterPacketCount { get; set; }
+        public double? InboundLossPercent { get; }
+        public double? InboundMos { get; set; }
+        public long? InboundPacketCount { get; set; }
+        public long? InboundSkipPacketCount { get; set; }
+        public long? OutboundPacketCount { get; set; }
+        public long? OutboundSkipPacketCount { get; set; }
     }
     public sealed class ProviderIdentity
     {
@@ -697,6 +733,8 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public const double PoorLossPercentThreshold = 5D;
         public const double PoorMosThreshold = 3.5D;
         public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating Evaluate(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
+        public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating Evaluate(double? mos, double? lossPercent) { }
+        public static CrestApps.OrchardCore.Telephony.Models.CallQualityRating EvaluateSummary(CrestApps.OrchardCore.Telephony.Models.CallQualityReport report) { }
     }
     [System.Flags]
     public enum TelephonyCapabilities

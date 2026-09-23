@@ -44,6 +44,7 @@
         connection.on('OfferRevoked', options.onOfferRevoked || noop);
         connection.on('QueueStatsChanged', options.onQueueStatsChanged || noop);
         connection.on('RecordingStateChanged', options.onRecordingStateChanged || noop);
+        connection.on('CallQualityAlert', options.onCallQualityAlert || noop);
         connection.on('MembershipChanged', function () {
             loadSnapshot().catch(function () { });
         });

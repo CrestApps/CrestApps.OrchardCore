@@ -252,7 +252,15 @@ public sealed class Startup : StartupBase
 
         services
             .AddIndexProvider<CallSessionIndexProvider>()
-            .AddDataMigration<CallSessionIndexMigrations>();
+            .AddDataMigration<CallSessionIndexMigrations>()
+            .AddIndexProvider<CallSessionLegIndexProvider>()
+            .AddDataMigration<CallSessionLegIndexMigrations>();
+
+        // Call quality records are written only by Voice, and read by the reports, which do not depend on it.
+        services
+            .AddScoped<ICallQualityRecordStore, CallQualityRecordStore>()
+            .AddIndexProvider<CallQualityRecordIndexProvider>()
+            .AddDataMigration<CallQualityRecordIndexMigrations>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, OutboxDispatchBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ContactCenterRetentionBackgroundTask>());

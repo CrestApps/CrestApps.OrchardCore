@@ -38,6 +38,13 @@ public sealed partial class TelephonyHub
 
             var rating = TelephonyCallQualityEvaluator.Evaluate(report);
 
+            // The end-of-call summary is the call's record: handed on first, whatever its rating, because a poor
+            // call is exactly the one a record is kept for, and the logging below returns early on it.
+            if (report.Final)
+            {
+                await ObserveCallQualityAsync(scope.ServiceProvider, report);
+            }
+
             if (rating == CallQualityRating.Poor)
             {
                 if (_logger.IsEnabled(LogLevel.Warning))

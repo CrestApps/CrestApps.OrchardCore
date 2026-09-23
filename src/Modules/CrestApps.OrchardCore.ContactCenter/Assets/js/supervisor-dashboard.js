@@ -73,8 +73,13 @@
             tiles: root.querySelector('[data-cc-tiles]'),
             board: root.querySelector('[data-cc-board]'),
             connection: root.querySelector('[data-cc-connection]'),
-            error: root.querySelector('[data-cc-error]')
+            error: root.querySelector('[data-cc-error]'),
+            qualityAlerts: root.querySelector('[data-cc-quality-alerts]')
         };
+
+        // The latest call-quality alert for each agent, until a supervisor dismisses it.
+        var qualityAlerts = {};
+        var lastAgents = [];
 
         var realtime = null;
 
@@ -254,12 +259,70 @@
             watchQueues(state);
         }
 
+        function format(template) {
+            var args = Array.prototype.slice.call(arguments, 1);
+
+            return template.replace(/\{(\d+)\}/g, function (match, index) {
+                return args[index] !== undefined ? args[index] : match;
+            });
+        }
+
+        function agentName(alert) {
+            var agent = lastAgents.find(function (candidate) {
+                return candidate.agentId === alert.agentId || (alert.userId && candidate.userId === alert.userId);
+            });
+
+            return agent ? (agent.displayName || agent.userId) : (alert.userId || alert.agentId);
+        }
+
+        function renderQualityAlerts() {
+            if (!refs.qualityAlerts) {
+                return;
+            }
+
+            var html = Object.keys(qualityAlerts).map(function (agentId) {
+                var alert = qualityAlerts[agentId];
+                var cause = label('cause.' + alert.likelyCause, label('cause.Unknown', 'not determined'));
+                var text = format(
+                    label('qualityAlert', '{0}: {1} of their last {2} calls rated poor. Likely cause: {3}.'),
+                    agentName(alert),
+                    alert.poorCallCount,
+                    alert.recentCallCount,
+                    cause);
+
+                return '<div class="alert alert-warning d-flex align-items-center justify-content-between mb-2">' +
+                    '<span>' + escapeHtml(text) + '</span>' +
+                    '<button type="button" class="btn-close" data-cc-dismiss-quality="' + escapeHtml(agentId) + '" aria-label="' + escapeHtml(label('dismiss', 'Dismiss')) + '"></button>' +
+                    '</div>';
+            }).join('');
+
+            if (setRegionHtml(refs.qualityAlerts, 'qualityAlerts', html)) {
+                refs.qualityAlerts.querySelectorAll('[data-cc-dismiss-quality]').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        delete qualityAlerts[button.getAttribute('data-cc-dismiss-quality')];
+                        renderQualityAlerts();
+                    });
+                });
+            }
+        }
+
+        function onCallQualityAlert(alert) {
+            if (!alert || !alert.agentId) {
+                return;
+            }
+
+            qualityAlerts[alert.agentId] = alert;
+            renderQualityAlerts();
+        }
+
         function refresh() {
             return fetch(config.stateUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
                 .then(function (response) { return response.ok ? response.json() : null; })
                 .then(function (state) {
                     if (state) {
+                        lastAgents = state.agents || [];
                         render(state);
+                        renderQualityAlerts();
                     }
                 })
                 .catch(function () { });
@@ -309,7 +372,8 @@
                 onOfferReceived: refresh,
                 onOfferRevoked: refresh,
                 onQueueStatsChanged: refresh,
-                onRecordingStateChanged: refresh
+                onRecordingStateChanged: refresh,
+                onCallQualityAlert: onCallQualityAlert
             });
         }
 

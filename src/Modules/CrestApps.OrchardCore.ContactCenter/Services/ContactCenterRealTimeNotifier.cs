@@ -137,6 +137,15 @@ public sealed class ContactCenterRealTimeNotifier : IContactCenterRealTimeNotifi
         await _hubContext.Clients.Group(SupervisorsGroup).RecordingStateChanged(notification);
     }
 
+    /// <inheritdoc/>
+    public async Task NotifyCallQualityAlertAsync(CallQualityAlertNotification notification, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(notification);
+
+        // Supervisors only: the agent is not the one to act on it mid-shift, and is often not the cause.
+        await _hubContext.Clients.Group(SupervisorsGroup).CallQualityAlert(notification);
+    }
+
     private string SupervisorsGroup
     {
         get

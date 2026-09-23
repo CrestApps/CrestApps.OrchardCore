@@ -141,6 +141,12 @@ public sealed class VoiceStartup : StartupBase
             .AddIndexProvider<ProviderCommandIndexProvider>()
             .AddDataMigration<ProviderCommandIndexMigrations>();
 
+        // Each call leg's quality, from the agent's soft phone and from the provider, stored against the call and
+        // agent it belongs to. The store itself is registered by the base feature, for the reports.
+        services
+            .AddScoped<ICallQualityObserver, ContactCenterCallQualityObserver>()
+            .AddScoped<ICallQualityAlertService, CallQualityAlertService>();
+
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderCommandRecoveryBackgroundTask>());
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ProviderCallStateReconciliationBackgroundTask>());
