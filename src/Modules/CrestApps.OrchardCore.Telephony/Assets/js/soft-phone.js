@@ -37,6 +37,8 @@
     var findAudioSender = softPhoneModules.findAudioSender;
     var formatCallStatus = softPhoneModules.formatCallStatus;
     var connectedAtFor = softPhoneModules.connectedAtFor;
+    var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
+    var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
     var durationMeta = softPhoneModules.durationMeta;
     var clampBoostDb = softPhoneModules.clampBoostDb;
     var describeBoost = softPhoneModules.describeBoost;
@@ -2593,6 +2595,7 @@
                     stopMicMeter();
                     startMicMeter();
                     populateDevicePickers();
+                    checkForVirtualAudioDevices();
                 }, abandon);
             });
         }
@@ -2977,6 +2980,7 @@
             Promise.resolve(dom.remoteAudio.setSinkId(selectedOutputDeviceId || '')).then(function () {
                 reportDiagnostic('info', 'output-device-applied',
                     'Remote audio routed to the selected output device.', selectedOutputDeviceId || 'default');
+                checkForVirtualAudioDevices();
             }, function (error) {
                 reportDiagnostic('warning', 'output-device-failed',
                     'The selected output device could not be applied: ' + String((error && error.message) || error),
@@ -2984,6 +2988,43 @@
                 showError(strings.outputDeviceFailed ||
                     'The selected speaker could not be applied. The call keeps its current output.');
             });
+        }
+
+        // Warns when the microphone or the speaker is a virtual cable, mixer or loopback rather than real hardware.
+        // Such a device looks like any other in the lists and breaks a call in a way that looks like the platform's
+        // fault: as the microphone it captures the computer's own playback, so the far end hears itself and nobody's
+        // voice is sent; as the speaker it plays the call into the cable, so the agent hears nothing. Observed live
+        // on an extension call that was silent both ways. The system default is checked too, because that is how a
+        // cable is usually reached: set as the Windows default, never picked in the phone.
+        function checkForVirtualAudioDevices() {
+            if (typeof isVirtualAudioDevice !== 'function' || !navigator.mediaDevices ||
+                typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+                return;
+            }
+
+            var microphone = localAudioTrackLabel();
+
+            navigator.mediaDevices.enumerateDevices().then(function (devices) {
+                var speaker = outputDeviceSelectionSupported()
+                    ? resolveDeviceLabel(devices, 'audiooutput', selectedOutputDeviceId)
+                    : '';
+
+                if (isVirtualAudioDevice(microphone)) {
+                    reportDiagnostic('warning', 'virtual-microphone',
+                        'The captured microphone is a virtual audio device, not a microphone.', microphone);
+                    showError(strings.virtualMicrophone ||
+                        'Your microphone is set to a virtual audio device, not a real microphone, so the caller will not hear you and may hear themselves. Choose your headset or microphone in the phone settings.');
+
+                    return;
+                }
+
+                if (isVirtualAudioDevice(speaker)) {
+                    reportDiagnostic('warning', 'virtual-speaker',
+                        'The selected speaker is a virtual audio device, not a speaker.', speaker);
+                    showError(strings.virtualSpeaker ||
+                        'Your speaker is set to a virtual audio device, so you will not hear the caller. Choose your headset or speakers in the phone settings.');
+                }
+            }).catch(function () { /* best effort */ });
         }
 
         // Enumerates audio devices and fills the pickers. Device labels are only exposed once microphone
@@ -3230,6 +3271,7 @@
                     clearMicPermissionIssue();
                     populateDevicePickers();
                     applyOutputDevice();
+                    checkForVirtualAudioDevices();
 
                     return Promise.resolve(adapter({
                         credentials: credentials,

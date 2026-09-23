@@ -16,6 +16,7 @@
       "Assets/js/soft-phone/mic-boost.js",
       "Assets/js/soft-phone/playout-delay.js",
       "Assets/js/soft-phone/signaling-region.js",
+      "Assets/js/soft-phone/audio-devices.js",
       "Assets/js/soft-phone/diagnostics.js",
       "Assets/js/soft-phone/telnyx-state.js",
       "Assets/js/soft-phone/reconnect.js",
