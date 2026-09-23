@@ -3267,6 +3267,34 @@
     var incomingAcceptPending = false;
     // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
     var ringtone = createRingtonePlayer();
+
+    // Every open agent page runs its own soft phone, and each rings for the same offer. Answering or declining
+    // in one page tells the others through the browser, so they fall silent at once: before this, the pages the
+    // agent did not click kept ringing in the headset until the server's own "offer taken" update reached them,
+    // a second or so after the call had been answered.
+    var offerChannel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('crestapps-soft-phone-offers') : null;
+    function announceOfferHandled() {
+      var id = currentCallId();
+      if (!offerChannel || !id) {
+        return;
+      }
+      try {
+        offerChannel.postMessage({
+          type: 'offer-handled',
+          callId: id
+        });
+      } catch (error) {/* another page not hearing it only costs a second of ringing */}
+    }
+    if (offerChannel) {
+      offerChannel.onmessage = function (event) {
+        var message = event && event.data;
+        if (!message || message.type !== 'offer-handled' || !currentCall || currentCall.callId !== message.callId) {
+          return;
+        }
+        incomingHandled = true;
+        render();
+      };
+    }
     var incomingExpiryTimer = null;
     var requiresAuthentication = false;
     var isConnected = false;
@@ -6525,6 +6553,7 @@
       // connect the media) before the device answers, so the same live call is never answered here
       // while it is being re-offered to another agent.
       incomingAcceptPending = true;
+      announceOfferHandled();
 
       // Reflect the pending accept immediately so the offer controls disable while the accept round-trips,
       // instead of appearing clickable until the next server status update arrives.
@@ -6564,6 +6593,7 @@
         return;
       }
       var call = currentCallReference();
+      announceOfferHandled();
       postLifecycle('declineUrl');
       if (call) {
         invoke('Voicemail', call);
@@ -6580,6 +6610,7 @@
       var call = currentCallReference();
       var hasOffer = incomingContext && incomingContext.properties && incomingContext.properties.declineUrl;
       if (hasOffer) {
+        announceOfferHandled();
         postLifecycle('declineUrl').then(function (result) {
           if (!result || result.succeeded === false) {
             showError(strings.offerUnavailable || 'This call is no longer available.');
