@@ -41,9 +41,8 @@ internal sealed class CallQualityRecordIndexMigrations : DataMigration
 
         await SchemaBuilder.AlterIndexTableAsync<CallQualityRecordIndex>(table => table
             .CreateIndex(
-                "IDX_CallQualityRecordIndex_Observed",
+                "IDX_CallQualityRecordIndex_Retention",
                 "ObservedUtc",
-                "Rating",
                 "DocumentId"),
             collection: ContactCenterStorage.CollectionName
         );

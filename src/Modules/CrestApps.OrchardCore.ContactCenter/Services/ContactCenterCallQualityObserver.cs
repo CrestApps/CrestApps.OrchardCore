@@ -91,8 +91,8 @@ public sealed class ContactCenterCallQualityObserver : ICallQualityObserver
                 record.Source,
                 record.Rating,
                 callControlId.SanitizeLogValue(),
-                record.InteractionId,
-                record.AgentId);
+                record.InteractionId.SanitizeLogValue(),
+                record.AgentId.SanitizeLogValue());
         }
 
         await _alertService.EvaluateAsync(record, cancellationToken);

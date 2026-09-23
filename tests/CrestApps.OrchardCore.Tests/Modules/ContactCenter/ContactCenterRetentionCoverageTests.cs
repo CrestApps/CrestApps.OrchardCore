@@ -34,6 +34,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["DialerProfileIndex"] = "Configuration. One row per configured dialer profile.",
         ["VoiceMediaItemIndex"] = "Tenant-local reference data. One row per voice media library entry an operator uploaded, bounded by tenant setup rather than traffic.",
         ["ContactCenterProjectionCheckpointIndex"] = "Bookkeeping. One row per projection handler; deleting one would replay that projection from the beginning.",
+        ["CallSessionLegIndex"] = "A second index over call sessions, one row per leg. Its rows leave with the session when the call session policy purges it.",
     };
 
     /// <summary>
@@ -58,6 +59,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ["CallbackRequest"] = "ModifiedUtc",
         ["ContactCenterWorkState"] = "ModifiedUtc",
         ["SecureCaptureSession"] = "ModifiedUtc",
+        ["CallQualityRecord"] = "ObservedUtc",
     };
 
     /// <summary>
@@ -75,6 +77,8 @@ public sealed class ContactCenterRetentionCoverageTests
         ["ContactCenterEventMetricDelta"] = [],
         ["ContactCenterProcessedEvent"] = [],
         ["AgentSession"] = [],
+        // A measurement of a leg that is already over; it is written once and never changes.
+        ["CallQualityRecord"] = [],
         // No terminal status exists: closure is owned by the CRM activity. Safe only because a purged work
         // state is recreated and re-seeded from the activity projection on next access.
         ["ContactCenterWorkState"] = [],
@@ -104,6 +108,7 @@ public sealed class ContactCenterRetentionCoverageTests
         "ContactCenterEventMetric",
         "ContactCenterEventMetricDelta",
         "ContactCenterProcessedEvent",
+        "CallQualityRecord",
     };
 
     /// <summary>
@@ -124,6 +129,10 @@ public sealed class ContactCenterRetentionCoverageTests
         ["InteractionEvent"] =
         [
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/DefaultContactCenterEventPublisher.cs", "PublishAsync", "interactionEvent.OccurredUtc = "),
+        ],
+        ["CallQualityRecord"] =
+        [
+            ("src/Modules/CrestApps.OrchardCore.ContactCenter/Services/ContactCenterCallQualityObserver.cs", "ObserveAsync", "ObservedUtc = observation.ObservedUtc"),
         ],
         ["CallSession"] =
         [
@@ -214,6 +223,7 @@ public sealed class ContactCenterRetentionCoverageTests
         // A settled capture holds no raw sensitive value, only a masked representation, and its audit trail is
         // held under the same legal hold as the interaction it belongs to.
         ["SecureCaptureSession"] = (true, false, 0),
+        ["CallQualityRecord"] = (false, false, 0),
     };
 
     [Fact]
@@ -659,6 +669,7 @@ public sealed class ContactCenterRetentionCoverageTests
             AgentSessionRetentionDays = 1,
             CallbackRequestRetentionDays = 1,
             EventMetricRetentionDays = 1,
+            CallQualityRecordRetentionDays = 1,
             ProcessedEventRetentionDays = 1,
             WorkStateRetentionDays = 1,
             SecureCaptureRetentionDays = 1,

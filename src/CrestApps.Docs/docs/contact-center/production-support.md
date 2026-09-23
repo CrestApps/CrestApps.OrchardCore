@@ -452,6 +452,7 @@ Retention is configured under `CrestApps:ContactCenter:Retention`. Every window 
 | `AgentSessionRetentionDays` | Agent sessions |
 | `CallbackRequestRetentionDays` | Callback requests |
 | `EventMetricRetentionDays` | Daily event metrics |
+| `CallQualityRecordRetentionDays` | Call quality records |
 | `ProcessedEventRetentionDays` | Processed-event markers |
 | `WorkStateRetentionDays` | Routing work state |
 
@@ -547,6 +548,7 @@ Every persisted Contact Center data category is classified in code by `ContactCe
 | Activity reservation | Non-personal | No | `ActivityReservationRetentionDays`, once rejected, expired or canceled | Retention expiry |
 | Routing work state | Non-personal | No | `WorkStateRetentionDays`, from last mutation; recreated and re-seeded on next access | Retention expiry |
 | Event metric | Non-personal | No | `EventMetricRetentionDays` | Not applicable |
+| Call quality record | Non-personal | No | `CallQualityRecordRetentionDays`, from the end of the measured leg | Retention expiry |
 | Projection checkpoint | Non-personal | No | Operational; updated in place | Not applicable |
 | Processed-event ledger | Non-personal | No | `ProcessedEventRetentionDays`, floored by the redelivery envelope | Retention expiry |
 | Routing and dialing configuration | Non-personal | No | Administrator-managed | Not applicable |

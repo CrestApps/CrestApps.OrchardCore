@@ -1177,6 +1177,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public ContactCenterRetentionOptions() { }
         public int ActivityReservationRetentionDays { get; set; }
         public int AgentSessionRetentionDays { get; set; }
+        public int CallQualityRecordRetentionDays { get; set; }
         public int CallSessionRetentionDays { get; set; }
         public int CallbackRequestRetentionDays { get; set; }
         public int EventMetricRetentionDays { get; set; }
@@ -4267,6 +4268,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services.Retention
         public AgentSessionRetentionPolicy(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionStore agentSessionStore) { }
         public override string EntityName { get; }
         protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.AgentSessionIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
+        protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
+    }
+    public sealed class CallQualityRecordRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.CallQualityRecord, CrestApps.OrchardCore.ContactCenter.Core.Indexes.CallQualityRecordIndex>
+    {
+        public CallQualityRecordRetentionPolicy(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallQualityRecordStore recordStore) { }
+        public override string EntityName { get; }
+        protected override System.Linq.Expressions.Expression<System.Func<CrestApps.OrchardCore.ContactCenter.Core.Indexes.CallQualityRecordIndex, bool>> BuildExpiredPredicate(System.DateTime cutoffUtc) { }
         protected override double GetRetentionDays(CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterRetentionOptions options) { }
     }
     public sealed class CallSessionRetentionPolicy : CrestApps.OrchardCore.ContactCenter.Core.Services.Retention.ContactCenterRetentionPolicyBase<CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession, CrestApps.OrchardCore.ContactCenter.Core.Indexes.CallSessionIndex>

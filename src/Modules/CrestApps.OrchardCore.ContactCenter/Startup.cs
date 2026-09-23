@@ -81,6 +81,7 @@ public sealed class Startup : StartupBase
                     && options.AgentSessionRetentionDays >= 0
                     && options.CallbackRequestRetentionDays >= 0
                     && options.EventMetricRetentionDays >= 0
+                    && options.CallQualityRecordRetentionDays >= 0
                     && options.SecureCaptureRetentionDays >= 0
                     && options.ProcessedEventRetentionDays >= 0
                     && options.WorkStateRetentionDays >= 0,
@@ -259,6 +260,7 @@ public sealed class Startup : StartupBase
         // Call quality records are written only by Voice, and read by the reports, which do not depend on it.
         services
             .AddScoped<ICallQualityRecordStore, CallQualityRecordStore>()
+            .AddScoped<IContactCenterRetentionPolicy, CallQualityRecordRetentionPolicy>()
             .AddIndexProvider<CallQualityRecordIndexProvider>()
             .AddDataMigration<CallQualityRecordIndexMigrations>();
 

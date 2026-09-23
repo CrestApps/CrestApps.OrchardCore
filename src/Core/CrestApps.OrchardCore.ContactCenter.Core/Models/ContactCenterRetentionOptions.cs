@@ -108,6 +108,12 @@ public sealed class ContactCenterRetentionOptions
     public int EventMetricRetentionDays { get; set; }
 
     /// <summary>
+    /// Gets or sets the number of days to retain call quality records, measured from the end of the leg each one
+    /// measured.
+    /// </summary>
+    public int CallQualityRecordRetentionDays { get; set; }
+
+    /// <summary>
     /// Gets or sets the number of days to retain secure capture sessions that have reached a terminal state
     /// (completed, cancelled, or expired), measured from the time they settled. A collecting capture is never
     /// purged; only settled captures, which hold no raw sensitive value, are eligible.
