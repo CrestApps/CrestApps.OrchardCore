@@ -5786,8 +5786,10 @@
             // Ring while an inbound offer is pending answer (covers both Contact Center offers and direct
             // extension rings, since both surface as a ringing inbound call). start()/stop() are idempotent, so
             // calling them on every render is safe; the ring stops the moment the call is answered, declined,
-            // ignored, times out, or the caller hangs up.
-            if (visible) {
+            // ignored, times out, or the caller hangs up. Answering a Contact Center offer waits on the server
+            // to accept it before the call connects, and the agent heard the ringtone carry on through that
+            // round trip after clicking Answer, so a pending accept silences it too.
+            if (visible && !incomingAcceptPending) {
                 ringtone.start();
             } else {
                 ringtone.stop();
