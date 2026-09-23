@@ -109,6 +109,11 @@ public sealed class TelnyxOptions
     public TelnyxOrphanedCallHandling OrphanedCallHandling { get; set; }
 
     /// <summary>
+    /// Gets or sets how an automated call asks the provider whether a person or a machine answered it.
+    /// </summary>
+    public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether the provider has the minimum configuration required to place and
     /// control calls: an API key and a Call Control connection identifier.
     /// </summary>

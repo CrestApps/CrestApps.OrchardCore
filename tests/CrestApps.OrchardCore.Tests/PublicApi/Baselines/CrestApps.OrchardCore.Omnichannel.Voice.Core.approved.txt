@@ -26,10 +26,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public string ProviderName { get; set; }
         public System.TimeSpan? Wait { get; set; }
     }
+    public enum VoiceAgentAnswerer
+    {
+        Unknown = 0,
+        Person = 1,
+        Machine = 2,
+    }
     public sealed class VoiceAgentEvent
     {
         public VoiceAgentEvent() { }
         public string ActivityId { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentAnswerer Answerer { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEventKind Kind { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
@@ -43,10 +50,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         SpeechEnded = 2,
         Transcription = 3,
         Hangup = 4,
+        AnswererDetected = 5,
+        MachineGreetingEnded = 6,
     }
     public sealed class VoicemailReached
     {
         public VoicemailReached() { }
+        public bool DetectedByProvider { get; set; }
+        public bool GreetingEnded { get; set; }
         public bool MessageLeft { get; set; }
     }
 }
@@ -206,6 +217,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public static bool InvitesTheMessage(string text) { }
         public static bool IsRecordedGreeting(string text) { }
         public static bool OpensWithRecordedGreeting(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
+        public static bool ReachedVoicemail(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoicemailReached voicemail, System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Tools

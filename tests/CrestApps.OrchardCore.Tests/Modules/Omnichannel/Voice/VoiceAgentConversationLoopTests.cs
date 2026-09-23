@@ -519,6 +519,100 @@ public sealed class VoiceAgentConversationLoopTests
         Assert.Equal(1, harness.Media.Hangups);
     }
 
+    // ---- The provider says who answered ----
+
+    [Fact]
+    public async Task AMachineTheProviderDetected_IsMarkedAsVoicemail()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Machine, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(harness.Activity.TryGet<VoicemailReached>(out var voicemail));
+        Assert.True(voicemail.DetectedByProvider);
+        Assert.False(voicemail.MessageLeft);
+    }
+
+    [Fact]
+    public async Task APersonTheProviderDetected_IsConversedWith()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Person, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(harness.Activity.TryGet<VoicemailReached>(out _));
+        Assert.Null(harness.SilenceWatchdog.Armed[^1].Wait);
+    }
+
+    [Fact]
+    public async Task OnceAMachineIsDetected_TheLineIsListenedToForItsTone()
+    {
+        // Arrange
+        // A person is given twelve seconds to answer. A recording that is waiting for its tone is not, or the
+        // message it records is mostly silence.
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Machine, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(VoiceAgentConversationLoop.VoicemailToneWait, harness.SilenceWatchdog.Armed[^1].Wait);
+    }
+
+    [Fact]
+    public async Task AGreetingThatEndsWhileTheAssistantIsSpeaking_IsLeftTheMessageTheMomentItStops()
+    {
+        // Arrange
+        // Spoken the moment the provider said so, the message would queue behind the opening line and the hangup
+        // that follows the line would cut it off. It is left when the line finishes instead.
+        var harness = new LoopHarness();
+        harness.Reply = "Hi, this is Alex from Prestige Auto Group. We will try you again soon.";
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Machine, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.MachineGreetingEnded, cancellationToken: TestContext.Current.CancellationToken);
+        var spokenBefore = harness.Media.Spoken.Count;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(spokenBefore + 1, harness.Media.Spoken.Count);
+        Assert.Equal(harness.Reply, harness.Media.Spoken[^1]);
+        Assert.Equal(VoiceAgentConversationLoop.LeavingAVoicemail, harness.Transcript[^1].Text);
+        Assert.Equal(0, harness.Media.TranscriptionStarts);
+
+        // The message plays, and then the call is over.
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(1, harness.Media.Hangups);
+    }
+
+    [Fact]
+    public async Task AGreetingEnd_WithNoMachineDetected_ChangesNothing()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.MachineGreetingEnded, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(harness.Activity.TryGet<VoicemailReached>(out _));
+        Assert.Equal(1, harness.Media.TranscriptionStarts);
+    }
+
     [Fact]
     public async Task ACustomerWhoMentionsVoicemail_IsRepliedTo()
     {
@@ -1237,6 +1331,7 @@ public sealed class VoiceAgentConversationLoopTests
             string transcript = null,
             bool isFinal = true,
             string providerName = "Fake",
+            VoiceAgentAnswerer answerer = VoiceAgentAnswerer.Unknown,
             CancellationToken cancellationToken = default)
             => Loop.HandleAsync(
                 new VoiceAgentEvent
@@ -1247,6 +1342,7 @@ public sealed class VoiceAgentConversationLoopTests
                     ActivityId = Activity.ItemId,
                     TranscriptionText = transcript,
                     TranscriptionIsFinal = isFinal,
+                    Answerer = answerer,
                 },
                 cancellationToken);
 

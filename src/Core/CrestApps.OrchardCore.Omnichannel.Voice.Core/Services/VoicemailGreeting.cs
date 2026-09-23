@@ -1,5 +1,6 @@
 using System.Text;
 using CrestApps.Core.AI.Models;
+using CrestApps.OrchardCore.Omnichannel.Voice.Models;
 using Microsoft.Extensions.AI;
 
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
@@ -104,6 +105,45 @@ public static class VoicemailGreeting
                 !string.IsNullOrWhiteSpace(prompt.Content));
 
         return firstCallerTurn is not null && IsRecordedGreeting(firstCallerTurn.Content);
+    }
+
+    /// <summary>
+    /// Whether a concluded call was answered by voicemail rather than by the customer.
+    /// </summary>
+    /// <remarks>
+    /// A mark the provider made on its own word is not the final say: detection can mistake a person for a
+    /// machine, and a call that went on to hold a conversation -- the customer answering more than once in
+    /// words no greeting uses -- is the conversation it was. Every other mark, and a transcript that opens with a
+    /// recorded greeting, is taken as it stands.
+    /// </remarks>
+    /// <param name="voicemail">The mark on the activity, if any.</param>
+    /// <param name="prompts">The stored transcript for the call's session.</param>
+    public static bool ReachedVoicemail(VoicemailReached voicemail, IEnumerable<AIChatSessionPrompt> prompts)
+    {
+        var turns = prompts?.Where(prompt => prompt is not null).ToList() ?? [];
+
+        if (OpensWithRecordedGreeting(turns))
+        {
+            return true;
+        }
+
+        if (voicemail is null)
+        {
+            return false;
+        }
+
+        if (!voicemail.DetectedByProvider || voicemail.MessageLeft)
+        {
+            return true;
+        }
+
+        var conversationalTurns = turns.Count(prompt =>
+            prompt.Role == ChatRole.User &&
+            !prompt.IsGeneratedPrompt &&
+            !string.IsNullOrWhiteSpace(prompt.Content) &&
+            !IsRecordedGreeting(prompt.Content));
+
+        return conversationalTurns < 2;
     }
 
     private static bool ContainsAny(string text, string[] phrases)

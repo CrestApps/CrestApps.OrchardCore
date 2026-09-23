@@ -67,6 +67,12 @@ public static class TelnyxCallEventParser
                 TranscriptionText = ReadNestedString(payload, "transcription_data", "transcript"),
                 TranscriptionIsFinal = ReadNestedBool(payload, "transcription_data", "is_final"),
                 Digits = ReadString(payload, "digits"),
+
+                // Read only for the detection events: "result" is a common enough field name that another event
+                // carrying one must not be mistaken for a verdict on who answered.
+                MachineDetectionResult = eventType.StartsWith("call.machine.", StringComparison.OrdinalIgnoreCase)
+                    ? ReadString(payload, "result")
+                    : null,
                 ClientState = ReadClientState(payload),
             };
 

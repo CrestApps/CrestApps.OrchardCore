@@ -116,6 +116,12 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="AnsweringMachineDetection">@T["Answering machine detection"]</label>
+                <select class="form-select" asp-for="AnsweringMachineDetection" asp-items="@Html.GetEnumSelectList<TelnyxAnsweringMachineDetection>()"></select>
+                <span class="hint">@T["How an automated call learns whether a person or a voicemail answered, so a voicemail is left one message after its tone instead of being talked to. Premium and Standard are billed by Telnyx per call. With detection off, a voicemail is still recognised from its greeting or from a line nobody speaks on."]</span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="SipWebSocketUrl">@T["SIP WebSocket URL"]</label>
                 <input type="text" class="form-control" asp-for="SipWebSocketUrl" placeholder="wss://sip.telnyx.com" />
             </div>

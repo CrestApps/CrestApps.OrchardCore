@@ -79,6 +79,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             model.IceTransportPolicy = settings.IceTransportPolicy;
             model.EchoTestDestination = settings.EchoTestDestination;
             model.OrphanedCallHandling = settings.OrphanedCallHandling;
+            model.AnsweringMachineDetection = settings.AnsweringMachineDetection;
             model.ApiBaseUrl = settings.ApiBaseUrl;
             model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
             model.HasWebhookPublicKey = !string.IsNullOrEmpty(settings.WebhookPublicKey);
@@ -135,6 +136,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             hasChanges |= settings.IceTransportPolicy != Trim(model.IceTransportPolicy);
             hasChanges |= settings.EchoTestDestination != Trim(model.EchoTestDestination);
             hasChanges |= settings.OrphanedCallHandling != model.OrphanedCallHandling;
+            hasChanges |= settings.AnsweringMachineDetection != model.AnsweringMachineDetection;
             hasChanges |= settings.ApiBaseUrl != Trim(model.ApiBaseUrl);
             hasChanges |= settings.CredentialLifetimeMinutes != NormalizeLifetime(model.CredentialLifetimeMinutes);
 
@@ -148,6 +150,7 @@ public sealed class TelnyxSettingsDisplayDriver : SiteDisplayDriver<TelnyxSettin
             settings.IceTransportPolicy = Trim(model.IceTransportPolicy);
             settings.EchoTestDestination = Trim(model.EchoTestDestination);
             settings.OrphanedCallHandling = model.OrphanedCallHandling;
+            settings.AnsweringMachineDetection = model.AnsweringMachineDetection;
             settings.ApiBaseUrl = Trim(model.ApiBaseUrl);
             settings.CredentialLifetimeMinutes = NormalizeLifetime(model.CredentialLifetimeMinutes);
 

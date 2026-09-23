@@ -91,8 +91,9 @@ public sealed partial class VoiceAgentConversationLoop
         // recording. Reviewed, one greeting was read as the customer declining and concluded as do-not-call, opting
         // out somebody who had never picked up. Recognised from the transcript as well as from the marker, so a call
         // held by a live session, which leaves no marker, is judged the same way.
-        var reachedVoicemail = activity.TryGet<VoicemailReached>(out _) ||
-            VoicemailGreeting.OpensWithRecordedGreeting(sessionPrompts);
+        var reachedVoicemail = VoicemailGreeting.ReachedVoicemail(
+            activity.TryGet<VoicemailReached>(out var voicemail) ? voicemail : null,
+            sessionPrompts);
         var hasConversation = VoiceCallConclusionPolicy.HasConversation(sessionPrompts) && !reachedVoicemail;
 
         // The AI field-update guards are a snapshot taken when the automated inventory was loaded (the subject

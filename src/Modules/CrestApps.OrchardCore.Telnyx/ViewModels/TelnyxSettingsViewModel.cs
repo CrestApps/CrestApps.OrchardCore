@@ -120,6 +120,11 @@ public class TelnyxSettingsViewModel
     public TelnyxOrphanedCallHandling OrphanedCallHandling { get; set; }
 
     /// <summary>
+    /// Gets or sets how an automated call asks the provider whether a person or a machine answered it.
+    /// </summary>
+    public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
+
+    /// <summary>
     /// Gets or sets the optional REST API base address override.
     /// </summary>
     public string ApiBaseUrl { get; set; }

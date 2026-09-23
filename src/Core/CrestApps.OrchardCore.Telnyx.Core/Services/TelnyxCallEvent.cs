@@ -91,6 +91,13 @@ public sealed class TelnyxCallEvent
     public string Digits { get; set; }
 
     /// <summary>
+    /// Gets or sets the answering machine detection result, on a <c>call.machine.*</c> event: who answered
+    /// (<c>human</c>, <c>machine</c>, <c>not_sure</c>, and the premium variants) or how the greeting ended
+    /// (<c>beep_detected</c>, <c>no_beep_detected</c>, <c>ended</c>).
+    /// </summary>
+    public string MachineDetectionResult { get; set; }
+
+    /// <summary>
     /// Gets or sets the Telnyx event identifier used for delivery de-duplication.
     /// </summary>
     public string EventId { get; set; }

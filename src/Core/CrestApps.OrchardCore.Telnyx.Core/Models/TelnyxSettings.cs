@@ -124,4 +124,10 @@ public sealed class TelnyxSettings
     /// working, and ending it is the more destructive of the two mistakes.
     /// </summary>
     public TelnyxOrphanedCallHandling OrphanedCallHandling { get; set; }
+
+    /// <summary>
+    /// Gets or sets how an automated call asks the provider whether a person or a machine answered it. Defaults
+    /// to the provider's premium detection.
+    /// </summary>
+    public TelnyxAnsweringMachineDetection AnsweringMachineDetection { get; set; }
 }

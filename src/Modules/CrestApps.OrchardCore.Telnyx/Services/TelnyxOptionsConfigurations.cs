@@ -60,6 +60,7 @@ internal sealed class TelnyxOptionsConfigurations : IConfigureOptions<TelnyxOpti
             : settings.SipDomain.Trim();
         options.EchoTestDestination = settings.EchoTestDestination?.Trim();
         options.OrphanedCallHandling = settings.OrphanedCallHandling;
+        options.AnsweringMachineDetection = settings.AnsweringMachineDetection;
 
         options.ApiBaseUrl = ResolveApiBaseUrl(settings.ApiBaseUrl);
     }

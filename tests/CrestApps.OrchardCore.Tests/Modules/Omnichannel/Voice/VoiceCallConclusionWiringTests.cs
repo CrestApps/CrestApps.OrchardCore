@@ -180,6 +180,49 @@ public sealed class VoiceCallConclusionWiringTests
     }
 
     [Fact]
+    public async Task ACallTheProviderTookForAMachine_ThatHeldAConversation_IsReviewedAsOne()
+    {
+        // Arrange
+        // Detection can mistake a person for a machine. A customer who went on to answer the assistant, more
+        // than once and in words no greeting uses, had a conversation, and it is concluded as one.
+        var harness = new ConclusionHarness();
+        harness.Activity.Put(new VoicemailReached { DetectedByProvider = true });
+        harness.Says(
+            (ChatRole.Assistant, "Hi, this is Ada calling about your enquiry. Is now a good time?"),
+            (ChatRole.User, "Sure, what do you have?"),
+            (ChatRole.Assistant, "We have a few options in your range."),
+            (ChatRole.User, "Great, send me the details."));
+        harness.Offers("disposition-interested", "Interested");
+        harness.Offers("disposition-no-answer", "No answer", OmnichannelConstants.ActionTypes.TryAgain);
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer asked for details.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal(1, harness.Model.Requests);
+        Assert.Equal("disposition-interested", harness.WrittenActivity.DispositionId);
+    }
+
+    [Fact]
+    public async Task ACallTheProviderTookForAMachine_WithNoConversation_TriesAgain()
+    {
+        // Arrange
+        var harness = new ConclusionHarness();
+        harness.Activity.Put(new VoicemailReached { DetectedByProvider = true });
+        harness.Says((ChatRole.Assistant, "Hi, this is Ada calling about your enquiry."));
+        harness.Offers("disposition-interested", "Interested");
+        harness.Offers("disposition-no-answer", "No answer", OmnichannelConstants.ActionTypes.TryAgain);
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.Equal(0, harness.Model.Requests);
+        Assert.Equal("disposition-no-answer", harness.WrittenActivity.DispositionId);
+    }
+
+    [Fact]
     public async Task AnOutcomeTheModelInvented_NeverReachesTheSubjectsActions()
     {
         // Arrange

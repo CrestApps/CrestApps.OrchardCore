@@ -101,6 +101,87 @@ public sealed partial class VoiceAgentConversationLoop
         return true;
     }
 
+    // The provider has said who answered. A machine is marked straight away, so the greeting is listened to as a
+    // greeting and the call is concluded as unanswered; a person needs nothing, because a conversation is already
+    // what the call assumes.
+    private async Task OnAnswererDetectedAsync(VoiceAgentEvent voiceEvent, CancellationToken cancellationToken)
+    {
+        if (voiceEvent.Answerer != VoiceAgentAnswerer.Machine)
+        {
+            return;
+        }
+
+        var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
+
+        if (activity is null || activity.Status.IsTerminal() || activity.TryGet<VoicemailReached>(out _))
+        {
+            return;
+        }
+
+        activity.Put(new VoicemailReached { DetectedByProvider = true });
+        await _activityStore.UpdateAsync(activity, cancellationToken);
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "The provider detected a machine answering automated call activity '{ActivityId}', so it will be left a message rather than conversed with.",
+                activity.ItemId.SanitizeLogValue());
+        }
+    }
+
+    // The provider heard the greeting end. Recorded rather than acted on here, because the assistant may still be
+    // saying its opening line: a message spoken now would queue behind it, and the hangup that follows that line
+    // would cut the message off. The speech-ended handler leaves it the moment the line finishes, and a line
+    // already listening is on the short voicemail watch, whose silence leaves it.
+    private async Task OnMachineGreetingEndedAsync(VoiceAgentEvent voiceEvent, CancellationToken cancellationToken)
+    {
+        var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
+
+        if (activity is null ||
+            activity.Status.IsTerminal() ||
+            !activity.TryGet<VoicemailReached>(out var voicemail) ||
+            voicemail.MessageLeft ||
+            voicemail.GreetingEnded)
+        {
+            return;
+        }
+
+        voicemail.GreetingEnded = true;
+        activity.Put(voicemail);
+        await _activityStore.UpdateAsync(activity, cancellationToken);
+    }
+
+    // Leaves the message when the assistant has just finished speaking on a voicemail whose greeting is over.
+    private async Task<bool> LeaveVoicemailOnceTheGreetingHasEndedAsync(
+        VoiceAgentEvent voiceEvent,
+        IVoiceAgentMediaProvider media,
+        OmnichannelActivity activity,
+        CancellationToken cancellationToken)
+    {
+        if (!activity.TryGet<VoicemailReached>(out var voicemail) || voicemail.MessageLeft || !voicemail.GreetingEnded)
+        {
+            return false;
+        }
+
+        var (profile, session) = await ResolveConversationAsync(activity, cancellationToken);
+
+        if (profile is null || session is null)
+        {
+            return false;
+        }
+
+        await LeaveVoicemailAsync(media, voiceEvent.ProviderCallId, activity, voicemail, profile, session, cancellationToken);
+
+        return true;
+    }
+
+    // How long a quiet line is given before the silence is acted on. A voicemail that has not been left its
+    // message is listened to for its tone, not given the time a person gets to answer.
+    private static TimeSpan? ListeningWait(OmnichannelActivity activity)
+        => activity.TryGet<VoicemailReached>(out var voicemail) && !voicemail.MessageLeft
+            ? VoicemailToneWait
+            : null;
+
     private async Task LeaveVoicemailAsync(
         IVoiceAgentMediaProvider media,
         string providerCallId,

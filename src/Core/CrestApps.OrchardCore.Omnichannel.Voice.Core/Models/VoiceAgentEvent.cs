@@ -37,4 +37,9 @@ public sealed class VoiceAgentEvent
     /// transcripts are ignored: answering half a sentence talks over the person saying the rest of it.
     /// </summary>
     public bool TranscriptionIsFinal { get; set; }
+
+    /// <summary>
+    /// Gets or sets who the provider says answered, on an <see cref="VoiceAgentEventKind.AnswererDetected"/> event.
+    /// </summary>
+    public VoiceAgentAnswerer Answerer { get; set; }
 }

@@ -30,4 +30,14 @@ public enum VoiceAgentEventKind
     /// The call ended.
     /// </summary>
     Hangup,
+
+    /// <summary>
+    /// The provider has said who answered: a person or a machine.
+    /// </summary>
+    AnswererDetected,
+
+    /// <summary>
+    /// The provider has heard a machine's greeting end, on its tone or on the silence after it.
+    /// </summary>
+    MachineGreetingEnded,
 }
