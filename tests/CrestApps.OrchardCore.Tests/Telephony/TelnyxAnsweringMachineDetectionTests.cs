@@ -64,9 +64,10 @@ public sealed class TelnyxAnsweringMachineDetectionTests
         """;
 
         // Act
-        TelnyxCallEventParser.TryParse(Payload, out var callEvent);
+        var parsed = TelnyxCallEventParser.TryParse(Payload, out var callEvent);
 
         // Assert
+        Assert.True(parsed);
         Assert.Equal("machine", callEvent.MachineDetectionResult);
     }
 
@@ -86,9 +87,10 @@ public sealed class TelnyxAnsweringMachineDetectionTests
         """;
 
         // Act
-        TelnyxCallEventParser.TryParse(Payload, out var callEvent);
+        var parsed = TelnyxCallEventParser.TryParse(Payload, out var callEvent);
 
         // Assert
+        Assert.True(parsed);
         Assert.Null(callEvent.MachineDetectionResult);
     }
 
