@@ -50,7 +50,7 @@ public sealed partial class TelephonyHub
                 if (_logger.IsEnabled(LogLevel.Warning))
                 {
                     _logger.LogWarning(
-                        "Telephony call quality {Rating} for user {UserId}. CallId={CallId}, Mos={Mos:F2}, Loss={Loss:F1}%, Jitter={Jitter:F0}ms, Rtt={Rtt:F0}ms, Buffer={Buffer:F0}ms, Conceal={Conceal:F1}%, InLevel={InLevel:F3}, OutLevel={OutLevel:F3}, BytesReceived={Bytes}, Mic={Mic:F3}, MicReported={MicReported}, BytesSent={BytesSent}, Capture={CaptureRate}Hz {CaptureProcessing} on {CaptureDevice}, Sent={SentIsLocal}/{SentLabel}, SendCodec={SendCodec}, RttSource={RttSource}, RemoteLoss={RemoteLoss:F1}%, RemoteJitter={RemoteJitter:F0}ms, Echo={EchoReported}:{Erl:F1}/{Erle:F1}dB, Leg={ProviderLegId}, Ccid={ProviderCallControlId}, Codec={Codec}, Ice={LocalIce}/{RemoteIce}, Final={Final}.",
+                        "Telephony call quality {Rating} for user {UserId}. CallId={CallId}, Mos={Mos:F2}, Loss={Loss:F1}%, Jitter={Jitter:F0}ms, Rtt={Rtt:F0}ms, Buffer={Buffer:F0}ms, Conceal={Conceal:F1}%, InLevel={InLevel:F3}, OutLevel={OutLevel:F3} ({OutProbe}), BytesReceived={Bytes}, Mic={Mic:F3}, MicReported={MicReported}, BytesSent={BytesSent}, Capture={CaptureRate}Hz {CaptureProcessing} on {CaptureDevice}, Sent={SentIsLocal}/{SentLabel}, SendCodec={SendCodec}, RttSource={RttSource}, RemoteLoss={RemoteLoss:F1}%, RemoteJitter={RemoteJitter:F0}ms, Echo={EchoReported}:{Erl:F1}/{Erle:F1}dB, Leg={ProviderLegId}, Ccid={ProviderCallControlId}, Codec={Codec}, Ice={LocalIce}/{RemoteIce}, Final={Final}.",
                         rating,
                         RedactedUserId(),
                         report.CallId.SanitizeLogValue(),
@@ -62,6 +62,7 @@ public sealed partial class TelephonyHub
                         report.ConcealmentPercent,
                         report.InboundLevel,
                         report.CaptureProbeLevel,
+                        report.CaptureProbeState.SanitizeLogValue(),
                         report.BytesReceived,
                         report.MicrophoneLevel,
                         report.CaptureReported,
@@ -94,7 +95,7 @@ public sealed partial class TelephonyHub
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
                     _logger.LogInformation(
-                        "Telephony call quality summary ({Rating}) for user {UserId}. CallId={CallId}, AvgMos={AvgMos:F2}, MinMos={MinMos:F2}, MaxLoss={MaxLoss:F1}%, Samples={Samples}, DurationMs={Duration}, Buffer={Buffer:F0}ms, Conceal={Conceal:F1}%, MaxBuffer={MaxBuffer:F0}ms, InLevel={InLevel:F3}, OutLevel={OutLevel:F3}, Mic={Mic:F3}, MinMic={MinMic:F3}, MicReported={MicReported}, BytesSent={BytesSent}, Capture={CaptureRate}Hz {CaptureProcessing} on {CaptureDevice}, Sent={SentIsLocal}/{SentLabel}, SendCodec={SendCodec}, RttSource={RttSource}, RemoteLoss={RemoteLoss:F1}%, RemoteJitter={RemoteJitter:F0}ms, Echo={EchoReported}:{Erl:F1}/{Erle:F1}dB, Leg={ProviderLegId}, Ccid={ProviderCallControlId}, Codec={Codec}, Ice={LocalIce}/{RemoteIce}.",
+                        "Telephony call quality summary ({Rating}) for user {UserId}. CallId={CallId}, AvgMos={AvgMos:F2}, MinMos={MinMos:F2}, MaxLoss={MaxLoss:F1}%, Samples={Samples}, DurationMs={Duration}, Buffer={Buffer:F0}ms, Conceal={Conceal:F1}%, MaxBuffer={MaxBuffer:F0}ms, InLevel={InLevel:F3}, OutLevel={OutLevel:F3} ({OutProbe}), Mic={Mic:F3}, MinMic={MinMic:F3}, MicReported={MicReported}, BytesSent={BytesSent}, Capture={CaptureRate}Hz {CaptureProcessing} on {CaptureDevice}, Sent={SentIsLocal}/{SentLabel}, SendCodec={SendCodec}, RttSource={RttSource}, RemoteLoss={RemoteLoss:F1}%, RemoteJitter={RemoteJitter:F0}ms, Echo={EchoReported}:{Erl:F1}/{Erle:F1}dB, Leg={ProviderLegId}, Ccid={ProviderCallControlId}, Codec={Codec}, Ice={LocalIce}/{RemoteIce}.",
                         rating,
                         RedactedUserId(),
                         report.CallId.SanitizeLogValue(),
@@ -108,6 +109,7 @@ public sealed partial class TelephonyHub
                         report.MaxJitterBufferMs,
                         report.InboundLevel,
                         report.CaptureProbeLevel,
+                        report.CaptureProbeState.SanitizeLogValue(),
                         report.MicrophoneLevel,
                         report.MinMicrophoneLevel,
                         report.CaptureReported,
@@ -137,7 +139,7 @@ public sealed partial class TelephonyHub
             if (_logger.IsEnabled(LogLevel.Debug))
             {
                 _logger.LogDebug(
-                    "Telephony call quality sample ({Rating}) for user {UserId}. CallId={CallId}, Mos={Mos:F2}, Loss={Loss:F1}%, Jitter={Jitter:F0}ms, Rtt={Rtt:F0}ms, Buffer={Buffer:F0}ms, Conceal={Conceal:F1}%, InLevel={InLevel:F3}, OutLevel={OutLevel:F3}, BytesReceived={Bytes}, Mic={Mic:F3}, MicReported={MicReported}, BytesSent={BytesSent}, Capture={CaptureRate}Hz {CaptureProcessing} on {CaptureDevice}, Sent={SentIsLocal}/{SentLabel}, SendCodec={SendCodec}, RttSource={RttSource}, RemoteLoss={RemoteLoss:F1}%, RemoteJitter={RemoteJitter:F0}ms, Echo={EchoReported}:{Erl:F1}/{Erle:F1}dB, Leg={ProviderLegId}, Ccid={ProviderCallControlId}, Codec={Codec}.",
+                    "Telephony call quality sample ({Rating}) for user {UserId}. CallId={CallId}, Mos={Mos:F2}, Loss={Loss:F1}%, Jitter={Jitter:F0}ms, Rtt={Rtt:F0}ms, Buffer={Buffer:F0}ms, Conceal={Conceal:F1}%, InLevel={InLevel:F3}, OutLevel={OutLevel:F3} ({OutProbe}), BytesReceived={Bytes}, Mic={Mic:F3}, MicReported={MicReported}, BytesSent={BytesSent}, Capture={CaptureRate}Hz {CaptureProcessing} on {CaptureDevice}, Sent={SentIsLocal}/{SentLabel}, SendCodec={SendCodec}, RttSource={RttSource}, RemoteLoss={RemoteLoss:F1}%, RemoteJitter={RemoteJitter:F0}ms, Echo={EchoReported}:{Erl:F1}/{Erle:F1}dB, Leg={ProviderLegId}, Ccid={ProviderCallControlId}, Codec={Codec}.",
                     rating,
                     RedactedUserId(),
                     report.CallId.SanitizeLogValue(),
@@ -149,6 +151,7 @@ public sealed partial class TelephonyHub
                     report.ConcealmentPercent,
                     report.InboundLevel,
                     report.CaptureProbeLevel,
+                    report.CaptureProbeState.SanitizeLogValue(),
                     report.BytesReceived,
                     report.MicrophoneLevel,
                     report.CaptureReported,

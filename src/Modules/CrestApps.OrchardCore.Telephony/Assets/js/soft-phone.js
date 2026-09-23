@@ -679,6 +679,7 @@
         // The id of the track the capture probe was built on, kept even when the build failed so a browser
         // that refuses the graph is not asked again every sample -- only when the track changes.
         var captureProbeTrackId = null;
+        var captureProbeTrack = null;
         var inboundProbe = null;
 
         // The audio track the far end is hearing: whatever the live sender carries, else the soft phone's own
@@ -709,6 +710,7 @@
             }
 
             captureProbeTrackId = track ? track.id : null;
+            captureProbeTrack = track || null;
 
             if (!track) {
                 return;
@@ -756,6 +758,7 @@
             }
 
             captureProbeTrackId = null;
+            captureProbeTrack = null;
 
             if (inboundProbe) {
                 inboundProbe.dispose();
@@ -1032,6 +1035,14 @@
                 var inboundLevel = probeLevel(inboundProbe);
                 var captureProbeLevel = probeLevel(captureProbe);
 
+                // Why the outgoing level reads what it does: the probe's audio engine state, then the probed
+                // track's state and whether it is muted or disabled. An outgoing level of 0.000 on a call the far
+                // end could hear is otherwise impossible to explain from the log.
+                var captureProbeState = (captureProbe && typeof captureProbe.state === 'function' ? captureProbe.state() : 'none') +
+                    '/' + (captureProbeTrack ? captureProbeTrack.readyState : 'no-track') +
+                    (captureProbeTrack && captureProbeTrack.muted ? '/muted' : '') +
+                    (captureProbeTrack && captureProbeTrack.enabled === false ? '/disabled' : '');
+
                 // The format the microphone is delivering in. Read every sample rather than once, because a
                 // Bluetooth headset switches profile when a call claims its microphone -- the value at
                 // registration is not the value on the call.
@@ -1111,6 +1122,7 @@
                     concealmentPercent: concealment,
                     inboundLevel: inboundLevel,
                     captureProbeLevel: captureProbeLevel,
+                    captureProbeState: captureProbeState,
                     sendCodec: parsed.sendCodec,
                     rttSource: rttSource,
                     remoteFractionLostPercent: remoteFractionLostPercent,
@@ -1192,6 +1204,7 @@
                 concealmentPercent: sample.concealmentPercent,
                 inboundLevel: sample.inboundLevel,
                 captureProbeLevel: sample.captureProbeLevel,
+                captureProbeState: sample.captureProbeState,
                 // The capture format, so a call that measured perfectly and sounded wrong can be explained
                 // from the server log instead of from a live diagnostics panel nobody had open at the time.
                 captureSampleRate: sample.captureSampleRate,

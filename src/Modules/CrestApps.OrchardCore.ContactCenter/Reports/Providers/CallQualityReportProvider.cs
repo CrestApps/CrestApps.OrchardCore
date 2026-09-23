@@ -6,7 +6,9 @@ using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
@@ -29,6 +31,7 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
 
     private readonly ICallQualityRecordStore _recordStore;
     private readonly IAgentProfileStore _agentProfileStore;
+    private readonly UserManager<IUser> _userManager;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CallQualityReportProvider"/> class.
@@ -37,17 +40,20 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
     /// <param name="capabilityGuard">The guard that decides whether the producing capabilities are enabled.</param>
     /// <param name="recordStore">The call quality records.</param>
     /// <param name="agentProfileStore">The agent directory, for agent names.</param>
+    /// <param name="userManager">The user manager, for the name of an agent whose profile does not carry one.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CallQualityReportProvider(
         IContactCenterReportingService reportingService,
         IContactCenterReportCapabilityGuard capabilityGuard,
         ICallQualityRecordStore recordStore,
         IAgentProfileStore agentProfileStore,
+        UserManager<IUser> userManager,
         IStringLocalizer<CallQualityReportProvider> stringLocalizer)
         : base(reportingService, capabilityGuard, stringLocalizer)
     {
         _recordStore = recordStore;
         _agentProfileStore = agentProfileStore;
+        _userManager = userManager;
     }
 
     /// <inheritdoc/>
@@ -97,13 +103,11 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
-        var agents = agentIds.Length > 0
-            ? (await _agentProfileStore.GetAsync(agentIds, cancellationToken)).ToDictionary(agent => agent.ItemId, StringComparer.Ordinal)
-            : new Dictionary<string, AgentProfile>(StringComparer.Ordinal);
+        var userNames = await ResolveUserNamesAsync(agentIds, cancellationToken);
 
         string AgentName(string agentId)
             => ReportValue.UserDisplayName(
-                agentId is not null && agents.TryGetValue(agentId, out var agent) ? agent.UserName : null,
+                agentId is not null && userNames.TryGetValue(agentId, out var userName) ? userName : null,
                 S["(Unknown agent)"].Value);
 
         var document = new ReportDocument();
@@ -246,6 +250,32 @@ public sealed class CallQualityReportProvider : ContactCenterReportBase
         }
 
         return document;
+    }
+
+    // An agent profile created before it carried the user name knows only the user's id, so the name is read from
+    // the account instead of reporting a real agent as unknown.
+    private async Task<Dictionary<string, string>> ResolveUserNamesAsync(string[] agentIds, CancellationToken cancellationToken)
+    {
+        var userNames = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        if (agentIds.Length == 0)
+        {
+            return userNames;
+        }
+
+        foreach (var agent in await _agentProfileStore.GetAsync(agentIds, cancellationToken))
+        {
+            var userName = agent.UserName;
+
+            if (string.IsNullOrEmpty(userName) && !string.IsNullOrEmpty(agent.UserId))
+            {
+                userName = (await _userManager.FindByIdAsync(agent.UserId))?.UserName;
+            }
+
+            userNames[agent.ItemId] = userName;
+        }
+
+        return userNames;
     }
 
     /// <summary>

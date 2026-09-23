@@ -365,6 +365,7 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public string CallId { get; set; }
         public string CaptureDevice { get; set; }
         public double CaptureProbeLevel { get; set; }
+        public string CaptureProbeState { get; set; }
         public string CaptureProcessing { get; set; }
         public bool CaptureReported { get; set; }
         public int CaptureSampleRate { get; set; }

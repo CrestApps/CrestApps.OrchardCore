@@ -125,6 +125,13 @@ public sealed class CallQualityReport
     public double CaptureProbeLevel { get; set; }
 
     /// <summary>
+    /// Gets or sets the state behind <see cref="CaptureProbeLevel"/>: the probe's audio engine state, then the
+    /// probed track's state, marked muted or disabled when it is (for example <c>running/live</c> or
+    /// <c>suspended/live/muted</c>). It explains an outgoing level of zero on a call the far end could hear.
+    /// </summary>
+    public string CaptureProbeState { get; set; }
+
+    /// <summary>
     /// Gets or sets the highest jitter-buffer delay observed over the call (populated on the final summary),
     /// so a call that drifted into walkie-talkie territory late is visible without reading every sample.
     /// </summary>

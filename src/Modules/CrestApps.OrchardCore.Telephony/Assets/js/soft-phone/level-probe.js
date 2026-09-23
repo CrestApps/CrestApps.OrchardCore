@@ -158,6 +158,11 @@
 
                 return window;
             },
+            // The audio engine's state: a probe whose context never left "suspended" reads silence however loud
+            // the track is, which is indistinguishable from a dead microphone without it.
+            state: function () {
+                return disposed ? 'disposed' : context.state;
+            },
             dispose: function () {
                 if (disposed) {
                     return;
