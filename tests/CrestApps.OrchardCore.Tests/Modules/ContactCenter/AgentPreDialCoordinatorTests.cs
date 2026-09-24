@@ -383,7 +383,7 @@ public sealed class AgentPreDialCoordinatorTests
     {
         // Arrange
         var coordinator = new Mock<IAgentPreDialCoordinator>();
-        var handler = new AgentPreDialEventHandler(coordinator.Object);
+        var handler = new AgentPreDialEventHandler(new Lazy<IAgentPreDialCoordinator>(() => coordinator.Object));
 
         // Act
         await handler.HandleAsync(new InteractionEvent { EventType = eventType, AggregateId = "r1" }, TestContext.Current.CancellationToken);
@@ -397,7 +397,7 @@ public sealed class AgentPreDialCoordinatorTests
     {
         // Arrange
         var coordinator = new Mock<IAgentPreDialCoordinator>();
-        var handler = new AgentPreDialEventHandler(coordinator.Object);
+        var handler = new AgentPreDialEventHandler(new Lazy<IAgentPreDialCoordinator>(() => coordinator.Object));
 
         // Act
         await handler.HandleAsync(
@@ -413,7 +413,7 @@ public sealed class AgentPreDialCoordinatorTests
     {
         // Arrange
         var coordinator = new Mock<IAgentPreDialCoordinator>();
-        var handler = new AgentPreDialEventHandler(coordinator.Object);
+        var handler = new AgentPreDialEventHandler(new Lazy<IAgentPreDialCoordinator>(() => coordinator.Object));
 
         // Act
         await handler.HandleAsync(

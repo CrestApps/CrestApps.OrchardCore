@@ -156,7 +156,7 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
             new ReportColumn(S["Detail"].Value),
             new ReportColumn(S["Interaction"].Value),
             new ReportColumn(S["Changed by"].Value),
-            new ReportColumn(S["Recorded (UTC)"].Value),
+            new ReportColumn(S["Logged (UTC)"].Value),
         };
 
         var rows = entries

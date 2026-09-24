@@ -13,13 +13,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </remarks>
 public sealed class AgentPreDialEventHandler : IContactCenterEventHandler
 {
-    private readonly IAgentPreDialCoordinator _coordinator;
+    private readonly Lazy<IAgentPreDialCoordinator> _coordinator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentPreDialEventHandler"/> class.
     /// </summary>
-    /// <param name="coordinator">The pre-dial coordinator.</param>
-    public AgentPreDialEventHandler(IAgentPreDialCoordinator coordinator)
+    /// <param name="coordinator">The pre-dial coordinator, deferred: the outbox constructs every handler to dispatch an
+    /// event, and the coordinator's own dependencies reach back to the event publisher that needs the outbox, so
+    /// taking it directly made the publisher impossible to construct.</param>
+    public AgentPreDialEventHandler(Lazy<IAgentPreDialCoordinator> coordinator)
     {
         _coordinator = coordinator;
     }
@@ -38,25 +40,25 @@ public sealed class AgentPreDialEventHandler : IContactCenterEventHandler
         return interactionEvent.EventType switch
         {
             ContactCenterConstants.Events.AgentReserved
-                => _coordinator.PreDialAsync(interactionEvent.AggregateId, cancellationToken),
+                => _coordinator.Value.PreDialAsync(interactionEvent.AggregateId, cancellationToken),
 
             ContactCenterConstants.Events.AgentReleased or
             ContactCenterConstants.Events.OfferDeclined
-                => _coordinator.ReleaseAsync(interactionEvent.AggregateId, cancellationToken),
+                => _coordinator.Value.ReleaseAsync(interactionEvent.AggregateId, cancellationToken),
 
             // A failed connect re-offers the call; the leg rung for the failed offer is not the new offer's.
             ContactCenterConstants.Events.OfferRequeued
                 when string.Equals(interactionEvent.AggregateType, nameof(ActivityReservation), StringComparison.Ordinal)
-                => _coordinator.ReleaseAsync(interactionEvent.AggregateId, cancellationToken),
+                => _coordinator.Value.ReleaseAsync(interactionEvent.AggregateId, cancellationToken),
 
             // The caller hung up while the offer rang.
             ContactCenterConstants.Events.CallEnded
-                => _coordinator.ReleaseForInteractionAsync(
+                => _coordinator.Value.ReleaseForInteractionAsync(
                     string.IsNullOrEmpty(interactionEvent.InteractionId) ? interactionEvent.AggregateId : interactionEvent.InteractionId,
                     cancellationToken),
 
             ContactCenterConstants.Events.AgentSignedOut
-                => _coordinator.ReleaseForAgentAsync(interactionEvent.AggregateId, cancellationToken),
+                => _coordinator.Value.ReleaseForAgentAsync(interactionEvent.AggregateId, cancellationToken),
 
             _ => Task.CompletedTask,
         };

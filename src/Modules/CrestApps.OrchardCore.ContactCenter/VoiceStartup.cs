@@ -82,6 +82,7 @@ public sealed class VoiceStartup : StartupBase
             // Rings the agent's device while a voice offer is still ringing, and joins or hangs up that leg.
             .AddScoped<IAgentPreDialLegStore, DistributedCacheAgentPreDialLegStore>()
             .AddScoped<IAgentPreDialCoordinator, AgentPreDialCoordinator>()
+            .AddScoped(sp => new Lazy<IAgentPreDialCoordinator>(sp.GetRequiredService<IAgentPreDialCoordinator>))
             .AddScoped<IContactCenterEventHandler, AgentPreDialEventHandler>()
             .AddScoped<IProviderCommandStore, ProviderCommandStore>()
             .AddScoped<IProviderCommandManager, ProviderCommandManager>()
