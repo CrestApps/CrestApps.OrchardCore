@@ -520,11 +520,18 @@ public class DefaultContactActivityBatchLoader : IActivityBatchLoader
 
                 if (dialerProfile is not null)
                 {
+                    // Queueing for the dialer commits the unit of work, and a committed session no longer tracks what
+                    // it loaded before: the batch saved after it would be stored as a second document. The batch goes
+                    // into this commit, and is read again as the commit left it.
+                    await _catalog.UpdateAsync(batch, cancellationToken);
+
                     await dialerContributor.EnqueueAsync(
                         activity.ItemId,
                         campaignId,
                         dialerProfile,
                         cancellationToken);
+
+                    batch = await _catalog.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
                 }
             }
 

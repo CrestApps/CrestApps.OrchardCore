@@ -37,7 +37,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements.Services;
 /// operator asked for, or a filtered batch that quietly loads the whole database. These tests hold the loader to
 /// the promises the batch form makes to the person filling it in.
 /// </summary>
-public sealed class DefaultContactActivityBatchLoaderTests
+public sealed partial class DefaultContactActivityBatchLoaderTests
 {
     private static readonly DateTime _now = new(2026, 7, 16, 20, 0, 0, DateTimeKind.Utc);
 

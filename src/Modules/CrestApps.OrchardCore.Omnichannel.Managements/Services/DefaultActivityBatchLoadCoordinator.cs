@@ -79,9 +79,13 @@ public sealed class DefaultActivityBatchLoadCoordinator : IActivityBatchLoadCoor
         {
             _logger.LogError(ex, "An error occurred while loading activities for the batch with ID '{BatchId}'.", batch.ItemId);
 
-            batch.Status = OmnichannelActivityBatchStatus.New;
+            // The loader can have committed part-way through, and a committed session no longer tracks the batch read
+            // above; saving it would store a second document. The batch is read again as the commit left it.
+            var current = await _catalog.FindByIdAsync(batch.ItemId, cancellationToken) ?? batch;
 
-            await _catalog.UpdateAsync(batch, cancellationToken);
+            current.Status = OmnichannelActivityBatchStatus.New;
+
+            await _catalog.UpdateAsync(current, cancellationToken);
         }
     }
 
