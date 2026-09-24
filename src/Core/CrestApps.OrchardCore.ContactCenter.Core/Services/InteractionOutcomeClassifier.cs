@@ -239,6 +239,42 @@ public sealed class InteractionOutcomeClassifier
         return WholeCallSeconds(interaction);
     }
 
+    /// <summary>
+    /// Gets how long the caller waited, measured to what became of the call: to an agent answering for an answered
+    /// call, to leaving the queue for voicemail for a voicemail, and to hanging up for an abandon.
+    /// </summary>
+    /// <param name="interaction">The interaction.</param>
+    /// <returns>The wait in seconds, or zero for a call that is still in progress, failed or did not connect.</returns>
+    public double GetWaitSeconds(Interaction interaction)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        return Classify(interaction) switch
+        {
+            InteractionOutcome.Answered => SecondsBetween(interaction.CreatedUtc, interaction.AnsweredUtc.Value),
+            InteractionOutcome.Voicemail => GetWaitBeforeVoicemailSeconds(interaction),
+            InteractionOutcome.Abandoned => GetWaitBeforeAbandonSeconds(interaction),
+            _ => 0d,
+        };
+    }
+
+    /// <summary>
+    /// Gets how long an agent was connected to the caller: from the answer to the call's end, for an answered call.
+    /// </summary>
+    /// <param name="interaction">The interaction.</param>
+    /// <returns>The connected seconds; zero for any call no agent answered. The platform answers a caller itself to
+    /// record a voicemail or to play the queue, and that time is not talk time.</returns>
+    public double GetTalkSeconds(Interaction interaction)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        return Classify(interaction) == InteractionOutcome.Answered &&
+            interaction.EndedUtc.HasValue &&
+            interaction.EndedUtc.Value >= interaction.AnsweredUtc.Value
+                ? (interaction.EndedUtc.Value - interaction.AnsweredUtc.Value).TotalSeconds
+                : 0d;
+    }
+
     private CallEvidence Find(Interaction interaction)
         => !string.IsNullOrEmpty(interaction.ItemId) && _evidence.TryGetValue(interaction.ItemId, out var call) ? call : null;
 

@@ -343,7 +343,6 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
 
     [Theory]
     [InlineData(ProviderCommandType.Reject)]
-    [InlineData(ProviderCommandType.SendToVoicemail)]
     public async Task ProjectSuccessAsync_WhenTelephonyActionSucceeds_MarksInteractionEndedAndPublishesCallEnded(
         ProviderCommandType commandType)
     {
@@ -458,9 +457,43 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Assert.Equal(endedUtc, interaction.EndedUtc);
     }
 
+    // The provider taking a call to voicemail answers the caller to record their message; the call goes on until they
+    // hang up, and that hangup is what records the call's end.
+    [Theory]
+    [InlineData(InteractionStatus.Ringing)]
+    [InlineData(InteractionStatus.Connected)]
+    public async Task ProjectSuccessAsync_SendToVoicemail_LeavesTheCallToEndAtTheCallersHangup(InteractionStatus liveStatus)
+    {
+        // Arrange
+        var interaction = new Interaction { ItemId = "interaction-1", ProviderInteractionId = "call-1" }
+            .RestorePersistedStatus(liveStatus);
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var publisher = new Mock<IContactCenterEventPublisher>(MockBehavior.Strict);
+        var executor = CreateExecutor(ProviderCommandType.SendToVoicemail, new Mock<ITelephonyService>(MockBehavior.Strict), interactionManager, publisher, CreateClock());
+        var command = CreateCommand(ProviderCommandType.SendToVoicemail);
+
+        // Act
+        await executor.ProjectSuccessAsync(
+            command,
+            new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "call-1", ProviderName = "ProviderA" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(liveStatus, interaction.Status);
+        Assert.Null(interaction.EndedUtc);
+        Assert.Equal("Succeeded", interaction.TechnicalMetadata["providerCallActionOutcome"]);
+        Assert.Equal(command.CommandId, interaction.TechnicalMetadata["providerCallActionCommandId"]);
+        interactionManager.Verify(
+            manager => manager.UpdateAsync(interaction, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        publisher.VerifyNoOtherCalls();
+    }
+
     [Theory]
     [InlineData(ProviderCommandType.Reject)]
-    [InlineData(ProviderCommandType.SendToVoicemail)]
     public async Task ProjectSuccessAsync_TheCallEndedItPublishes_NamesTheProviderAsItsActor(ProviderCommandType commandType)
     {
         // Arrange

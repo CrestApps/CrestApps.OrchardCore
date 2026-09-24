@@ -113,7 +113,15 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             filteredAgents,
             cancellationToken);
 
-        return BuildAgentProductivity(fromUtc, toUtc, FilterInteractions(interactions, criteria), completedByUser, filteredAgents);
+        var filtered = FilterInteractions(interactions, criteria);
+
+        return BuildAgentProductivity(
+            fromUtc,
+            toUtc,
+            filtered,
+            completedByUser,
+            filteredAgents,
+            await InteractionOutcomeClassifier.LoadAsync(_eventStore, filtered, cancellationToken));
     }
 
     /// <inheritdoc/>
@@ -347,86 +355,9 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         DateTime toUtc,
         IReadOnlyList<Interaction> interactions,
         IReadOnlyDictionary<string, long> completedByUser,
-        IReadOnlyList<AgentProfile> agents)
-    {
-        var stats = new Dictionary<string, AgentProductivityRow>(StringComparer.Ordinal);
-
-        foreach (var interaction in interactions)
-        {
-            if (!interaction.AnsweredUtc.HasValue || string.IsNullOrEmpty(interaction.AgentId))
-            {
-                continue;
-            }
-
-            if (!stats.TryGetValue(interaction.AgentId, out var row))
-            {
-                row = new AgentProductivityRow { AgentId = interaction.AgentId };
-                stats[interaction.AgentId] = row;
-            }
-
-            row.InteractionsHandled++;
-
-            if (interaction.Direction == InteractionDirection.Inbound)
-            {
-                row.InboundHandled++;
-            }
-            else
-            {
-                row.OutboundHandled++;
-            }
-
-            if (interaction.EndedUtc.HasValue && interaction.EndedUtc.Value >= interaction.AnsweredUtc.Value)
-            {
-                row.TotalTalkTimeSeconds += (interaction.EndedUtc.Value - interaction.AnsweredUtc.Value).TotalSeconds;
-            }
-
-            row.TotalWrapUpTimeSeconds += CallInsightsBuilder.GetWrapUpSeconds(interaction);
-        }
-
-        foreach (var agent in agents)
-        {
-            var completed = !string.IsNullOrEmpty(agent.UserId) && completedByUser.TryGetValue(agent.UserId, out var count)
-                ? count
-                : 0L;
-
-            stats.TryGetValue(agent.ItemId, out var row);
-
-            if (row is null && completed == 0)
-            {
-                continue;
-            }
-
-            row ??= new AgentProductivityRow { AgentId = agent.ItemId };
-            row.UserName = agent.UserName;
-            row.DisplayName = ResolveAgentName(agent);
-            row.ActivitiesCompleted = completed;
-
-            stats[agent.ItemId] = row;
-        }
-
-        foreach (var row in stats.Values)
-        {
-            if (string.IsNullOrEmpty(row.DisplayName))
-            {
-                row.DisplayName = row.AgentId;
-            }
-
-            row.AverageWrapUpTimeSeconds = row.InteractionsHandled > 0 ? row.TotalWrapUpTimeSeconds / row.InteractionsHandled : 0d;
-            row.AverageHandleTimeSeconds = row.InteractionsHandled > 0
-                ? (row.TotalTalkTimeSeconds + row.TotalWrapUpTimeSeconds) / row.InteractionsHandled
-                : 0d;
-        }
-
-        return new AgentProductivityReport
-        {
-            FromUtc = fromUtc,
-            ToUtc = toUtc,
-            Rows = stats.Values
-                .OrderByDescending(row => row.InteractionsHandled)
-                .ThenByDescending(row => row.ActivitiesCompleted)
-                .ToList(),
-        };
-    }
+        IReadOnlyList<AgentProfile> agents,
+        InteractionOutcomeClassifier outcomes = null)
+        => AgentProductivityBuilder.Build(fromUtc, toUtc, interactions, completedByUser, agents, outcomes ?? InteractionOutcomeClassifier.WithoutEvents);
 
     internal static QueueUsageReport BuildQueueUsage(
         DateTime fromUtc,
@@ -887,21 +818,6 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         totals.Failed += counts.Failed;
         totals.Cancelled += counts.Cancelled;
         totals.TotalAttempts += counts.TotalAttempts;
-    }
-
-    private static string ResolveAgentName(AgentProfile agent)
-    {
-        if (!string.IsNullOrWhiteSpace(agent.DisplayName))
-        {
-            return agent.DisplayName;
-        }
-
-        if (!string.IsNullOrWhiteSpace(agent.UserName))
-        {
-            return agent.UserName;
-        }
-
-        return agent.ItemId;
     }
 
     private sealed class QueueUsageAccumulator

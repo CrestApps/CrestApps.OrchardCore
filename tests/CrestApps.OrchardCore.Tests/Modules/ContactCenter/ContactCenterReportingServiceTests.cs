@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Models.Reports;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
@@ -329,6 +330,25 @@ public sealed class ContactCenterReportingServiceTests
 
         // The second agent never answered an interaction and completed no activity, so is excluded.
         Assert.Single(report.Rows);
+    }
+
+    [Fact]
+    public void BuildAgentProductivity_ACallSentToTheAgentsVoicemail_IsNotOneTheyHandled()
+    {
+        // Arrange: the platform answered the caller to record a message for the agent, and the caller spoke for 40s.
+        var voicemail = AgentInteraction("agent-1", InteractionDirection.Inbound, answeredAfter: 30, endedAfter: 70);
+        voicemail.TechnicalMetadata[ContactCenterConstants.Voicemail.ProjectionMetadataKey] = true;
+        var answered = AgentInteraction("agent-1", InteractionDirection.Inbound, answeredAfter: 5, endedAfter: 65);
+        var agents = new[] { new AgentProfile { ItemId = "agent-1", UserId = "user-1", DisplayName = "Agent One" } };
+
+        // Act
+        var report = ContactCenterReportingService.BuildAgentProductivity(_from, _to, [voicemail, answered], new Dictionary<string, long>(), agents);
+
+        // Assert
+        var row = Assert.Single(report.Rows);
+        Assert.Equal(1, row.InteractionsHandled);
+        Assert.Equal(60d, row.TotalTalkTimeSeconds);
+        Assert.Equal(60d, row.AverageHandleTimeSeconds);
     }
 
     [Fact]

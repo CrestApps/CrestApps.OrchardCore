@@ -301,6 +301,19 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
         var now = _clock.UtcNow;
 
+        // Sending a call to voicemail hands it to the provider's recording; it does not end it. Routing has already
+        // let go of the call (the caller left the queue and the agent was released) and the caller is still on the
+        // line, leaving a message. The caller's hangup ends the call: the provider reports it, and the call session
+        // records the one CallEnded and the interaction's end at that moment. Ending it here as well put a first
+        // CallEnded on record while the caller was still speaking.
+        if (CommandType == ProviderCommandType.SendToVoicemail)
+        {
+            ApplyProjectionMetadata(interaction, command, request, "Succeeded", null, null, now);
+            await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+            return;
+        }
+
         // A hangup that succeeds at the provider can land after the call had already been recorded as failed,
         // and a settled interaction keeps whichever ending it recorded first. Its end is already on record, too:
         // recovery trusts a teardown the provider cannot confirm and projects it again minutes later, and a second

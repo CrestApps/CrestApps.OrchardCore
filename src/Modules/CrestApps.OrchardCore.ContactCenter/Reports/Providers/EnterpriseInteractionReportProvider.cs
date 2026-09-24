@@ -172,10 +172,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             EnterpriseInteractionReportKind.ProviderUsageBilling => BuildUsageReport(filteredInteractions, S["Provider"].Value, interaction => DisplayOrUnknown(interaction.ProviderName)),
             EnterpriseInteractionReportKind.ChannelUsageBilling => BuildUsageReport(filteredInteractions, S["Channel"].Value, interaction => interaction.Channel.ToString()),
             EnterpriseInteractionReportKind.DailyUsageBilling => BuildUsageReport(filteredInteractions, S["Date (UTC)"].Value, interaction => interaction.CreatedUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
-            EnterpriseInteractionReportKind.LongInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => GetTalkSeconds(interaction) >= 900d), S["Long interactions (15+ minutes)"].Value),
+            EnterpriseInteractionReportKind.LongInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => _outcomes.GetTalkSeconds(interaction) >= 900d), S["Long interactions (15+ minutes)"].Value),
             EnterpriseInteractionReportKind.FailedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(_outcomes.IsFailed), S["Failed interactions"].Value),
             EnterpriseInteractionReportKind.AbandonedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(_outcomes.IsAbandoned), S["Abandoned interactions"].Value),
-            EnterpriseInteractionReportKind.HighWaitDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => GetWaitSeconds(interaction) >= 60d), S["High-wait interactions (60+ seconds)"].Value),
+            EnterpriseInteractionReportKind.HighWaitDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => _outcomes.GetWaitSeconds(interaction) >= 60d), S["High-wait interactions (60+ seconds)"].Value),
             EnterpriseInteractionReportKind.LifecycleDuration => BuildLifecycleDuration(filteredInteractions),
             EnterpriseInteractionReportKind.CallLegPerformance => await BuildCallLegPerformanceAsync(filteredInteractions, context, cancellationToken),
             _ => new ReportDocument(),
@@ -343,7 +343,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     private ReportSection BuildAgentWorkloadChart(IReadOnlyList<Interaction> interactions)
     {
         var agentWorkload = interactions
-            .Where(interaction => interaction.AnsweredUtc.HasValue && !string.IsNullOrEmpty(interaction.AgentId))
+            .Where(interaction => _outcomes.IsAnswered(interaction) && !string.IsNullOrEmpty(interaction.AgentId))
             .GroupBy(interaction => interaction.AgentId, StringComparer.Ordinal)
             .Select(group => new
             {
@@ -542,8 +542,8 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                 ResolveQueueName(interaction.QueueId, _queues),
                 ResolveAgentName(interaction.AgentId),
                 DisplayOrUnknown(interaction.ProviderName),
-                ReportFormat.Duration(GetWaitSeconds(interaction)),
-                ReportFormat.Duration(GetTalkSeconds(interaction)),
+                ReportFormat.Duration(_outcomes.GetWaitSeconds(interaction)),
+                ReportFormat.Duration(_outcomes.GetTalkSeconds(interaction)),
                 ReportFormat.Duration(GetWrapUpSeconds(interaction)),
                 ReportFormat.Number(interaction.TransferHistory.Count),
             ], _interactionDetailRequirements));
@@ -616,7 +616,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     private ReportDocument BuildRecordingCoverage(IReadOnlyList<Interaction> interactions)
     {
         var voice = interactions
-            .Where(interaction => interaction.Channel == InteractionChannel.Voice && interaction.AnsweredUtc.HasValue)
+            .Where(interaction => interaction.Channel == InteractionChannel.Voice && _outcomes.IsAnswered(interaction))
             .ToArray();
 
         var columns = new[]
@@ -727,7 +727,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     private ReportDocument BuildAgentHandleTime(IReadOnlyList<Interaction> interactions)
     {
         var answered = interactions.Where(interaction =>
-            interaction.AnsweredUtc.HasValue &&
+            _outcomes.IsAnswered(interaction) &&
             interaction.EndedUtc.HasValue &&
             interaction.EndedUtc.Value >= interaction.AnsweredUtc.Value &&
             !string.IsNullOrEmpty(interaction.AgentId));
@@ -773,7 +773,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             {
                 var count = group.LongCount();
                 var completed = group.LongCount(interaction => interaction.WrapUpCompletedUtc.HasValue);
-                var talk = group.Sum(GetTalkSeconds);
+                var talk = group.Sum(_outcomes.GetTalkSeconds);
                 var wrapUp = group.Sum(GetWrapUpSeconds);
 
                 var average = includeWrapUpOnly
@@ -810,7 +810,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
         var count = population.LongLength;
         var completed = population.LongCount(interaction => interaction.WrapUpCompletedUtc.HasValue);
-        var talk = population.Sum(GetTalkSeconds);
+        var talk = population.Sum(_outcomes.GetTalkSeconds);
         var wrapUp = population.Sum(GetWrapUpSeconds);
         var average = includeWrapUpOnly
             ? completed > 0 ? wrapUp / completed : 0d
@@ -876,13 +876,14 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             new ReportColumn(queueWait ? S["Average wait"].Value : S["Average handle time"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Maximum"].Value, ReportColumnAlign.End),
         };
+        // Handle time is an agent's, so only the calls an agent answered count toward it; every call that waited has a wait.
+        double Duration(Interaction interaction) => queueWait ? _outcomes.GetWaitSeconds(interaction) : _outcomes.GetTalkSeconds(interaction) + GetWrapUpSeconds(interaction);
+        interactions = queueWait ? interactions : [.. interactions.Where(_outcomes.IsAnswered)];
         var rows = interactions
             .GroupBy(interaction => ResolveQueueName(interaction.QueueId, queues), StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
-                var durations = group
-                    .Select(interaction => queueWait ? GetWaitSeconds(interaction) : GetTalkSeconds(interaction) + GetWrapUpSeconds(interaction))
-                    .ToArray();
+                var durations = group.Select(Duration).ToArray();
                 var total = durations.Sum();
 
                 return new
@@ -902,9 +903,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .Select(entry => entry.Row)
             .ToList();
 
-        var durations = interactions
-            .Select(interaction => queueWait ? GetWaitSeconds(interaction) : GetTalkSeconds(interaction) + GetWrapUpSeconds(interaction))
-            .ToArray();
+        var durations = interactions.Select(Duration).ToArray();
         var total = durations.Sum();
 
         rows.Add(new ReportRow(
@@ -932,7 +931,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             new ReportColumn(S["Transfers"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Transfer rate"].Value, ReportColumnAlign.End),
         };
-        var handledInteractions = interactions.Where(interaction => interaction.AnsweredUtc.HasValue).ToArray();
+        var handledInteractions = interactions.Where(_outcomes.IsAnswered).ToArray();
         var rows = handledInteractions
             .GroupBy(interaction => ResolveQueueName(interaction.QueueId, queues), StringComparer.OrdinalIgnoreCase)
             .Select(group =>
@@ -997,10 +996,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             {
                 var metrics = Aggregate(group, _outcomes);
                 var transfers = group.Sum(interaction => interaction.TransferHistory.Count);
-                var answeredVoice = group.LongCount(interaction => interaction.Channel == InteractionChannel.Voice && interaction.AnsweredUtc.HasValue);
+                var answeredVoice = group.LongCount(interaction => interaction.Channel == InteractionChannel.Voice && _outcomes.IsAnswered(interaction));
                 var recorded = group.LongCount(interaction =>
                     interaction.Channel == InteractionChannel.Voice &&
-                    interaction.AnsweredUtc.HasValue &&
+                    _outcomes.IsAnswered(interaction) &&
                     !string.IsNullOrEmpty(interaction.RecordingReference));
                 var order = mode switch
                 {
@@ -1034,10 +1033,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         var totalTransfers = population.Sum(interaction => interaction.TransferHistory.Count);
         var totalAnsweredVoice = population.LongCount(interaction =>
             interaction.Channel == InteractionChannel.Voice &&
-            interaction.AnsweredUtc.HasValue);
+            _outcomes.IsAnswered(interaction));
         var totalRecorded = population.LongCount(interaction =>
             interaction.Channel == InteractionChannel.Voice &&
-            interaction.AnsweredUtc.HasValue &&
+            _outcomes.IsAnswered(interaction) &&
             !string.IsNullOrEmpty(interaction.RecordingReference));
 
         rows.Add(SelectAvailableRow(
@@ -1076,7 +1075,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .GroupBy(selector, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
-                var connectedSeconds = group.Sum(GetTalkSeconds);
+                var connectedSeconds = group.Sum(_outcomes.GetTalkSeconds);
 
                 return new
                 {
@@ -1085,10 +1084,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                     [
                         group.Key,
                         ReportFormat.Number(group.LongCount()),
-                        ReportFormat.Number(group.LongCount(interaction => interaction.AnsweredUtc.HasValue)),
+                        ReportFormat.Number(group.LongCount(_outcomes.IsAnswered)),
                         ReportFormat.Duration(connectedSeconds),
                         ReportFormat.Duration(group.Sum(GetWrapUpSeconds)),
-                        ReportFormat.Duration(group.Sum(GetWaitSeconds)),
+                        ReportFormat.Duration(group.Sum(_outcomes.GetWaitSeconds)),
                         ReportFormat.Number(group.Sum(interaction => interaction.TransferHistory.Count)),
                         ReportFormat.Number(group.LongCount(interaction => !string.IsNullOrEmpty(interaction.RecordingReference))),
                     ], _usageRequirements),
@@ -1102,10 +1101,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         [
             S["Grand total"].Value,
             ReportFormat.Number(interactions.Count),
-            ReportFormat.Number(interactions.LongCount(interaction => interaction.AnsweredUtc.HasValue)),
-            ReportFormat.Duration(interactions.Sum(GetTalkSeconds)),
+            ReportFormat.Number(interactions.LongCount(_outcomes.IsAnswered)),
+            ReportFormat.Duration(interactions.Sum(_outcomes.GetTalkSeconds)),
             ReportFormat.Duration(interactions.Sum(GetWrapUpSeconds)),
-            ReportFormat.Duration(interactions.Sum(GetWaitSeconds)),
+            ReportFormat.Duration(interactions.Sum(_outcomes.GetWaitSeconds)),
             ReportFormat.Number(interactions.Sum(interaction => interaction.TransferHistory.Count)),
             ReportFormat.Number(interactions.LongCount(interaction => !string.IsNullOrEmpty(interaction.RecordingReference))),
         ], _usageRequirements, ReportRowKind.GrandTotal));
@@ -1141,8 +1140,8 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                 [
                     group.Key.ToString(),
                     ReportFormat.Number(count),
-                    ReportFormat.Duration(count > 0 ? group.Sum(GetWaitSeconds) / count : 0d),
-                    ReportFormat.Duration(count > 0 ? group.Sum(GetTalkSeconds) / count : 0d),
+                    ReportFormat.Duration(count > 0 ? group.Sum(_outcomes.GetWaitSeconds) / count : 0d),
+                    ReportFormat.Duration(count > 0 ? group.Sum(_outcomes.GetTalkSeconds) / count : 0d),
                     ReportFormat.Duration(count > 0 ? group.Sum(GetWrapUpSeconds) / count : 0d),
                     ReportFormat.Duration(ended.Length > 0 ? ended.Average(interaction => Math.Max(0d, (interaction.EndedUtc.Value - interaction.CreatedUtc).TotalSeconds)) : 0d),
                 ]);
@@ -1154,8 +1153,8 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         [
             S["Grand total"].Value,
             ReportFormat.Number(interactions.Count),
-            ReportFormat.Duration(interactions.Count > 0 ? interactions.Sum(GetWaitSeconds) / interactions.Count : 0d),
-            ReportFormat.Duration(interactions.Count > 0 ? interactions.Sum(GetTalkSeconds) / interactions.Count : 0d),
+            ReportFormat.Duration(interactions.Count > 0 ? interactions.Sum(_outcomes.GetWaitSeconds) / interactions.Count : 0d),
+            ReportFormat.Duration(interactions.Count > 0 ? interactions.Sum(_outcomes.GetTalkSeconds) / interactions.Count : 0d),
             ReportFormat.Duration(interactions.Count > 0 ? interactions.Sum(GetWrapUpSeconds) / interactions.Count : 0d),
             ReportFormat.Duration(ended.Length > 0
                 ? ended.Average(interaction => Math.Max(0d, (interaction.EndedUtc.Value - interaction.CreatedUtc).TotalSeconds))

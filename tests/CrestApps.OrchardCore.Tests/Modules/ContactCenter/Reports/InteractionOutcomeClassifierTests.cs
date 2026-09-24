@@ -120,6 +120,54 @@ public sealed class InteractionOutcomeClassifierTests
         Assert.Equal(40.96, outcomes.GetWaitBeforeAbandonSeconds(interaction), 6);
     }
 
+    [Fact]
+    public void GetTalkAndWaitSeconds_ACallSentToVoicemail_WaitedUntilItLeftTheQueue_AndTalkedToNobody()
+    {
+        // Arrange: queued at once, sent to voicemail after 30s, the platform answered to record and the caller hung up.
+        var interaction = Inbound("call-1", InteractionStatus.Ended, answeredAfter: 27.7, endedAfter: 33.2);
+        var outcomes = InteractionOutcomeClassifier.FromEvents(
+        [
+            Call(ContactCenterConstants.Events.CallQueued, "call-1", _start),
+            Call(ContactCenterConstants.Events.CallDequeued, "call-1", _start.AddSeconds(30)),
+            Call(ContactCenterConstants.Events.CallSentToVoicemail, "call-1", _start.AddSeconds(30.2)),
+        ]);
+
+        // Act
+        var talk = outcomes.GetTalkSeconds(interaction);
+        var wait = outcomes.GetWaitSeconds(interaction);
+
+        // Assert
+        Assert.Equal(0d, talk);
+        Assert.Equal(30, wait, 6);
+    }
+
+    [Fact]
+    public void GetTalkAndWaitSeconds_ACallerWhoAbandonedWhileTheQueuePlayed_WaitedUntilHangingUp_AndTalkedToNobody()
+    {
+        // Arrange
+        var interaction = Inbound("call-1", InteractionStatus.Ended, answeredAfter: 1, endedAfter: 45);
+        var outcomes = InteractionOutcomeClassifier.FromEvents(
+        [
+            Call(ContactCenterConstants.Events.CallQueued, "call-1", _start),
+            Call(ContactCenterConstants.Events.CallAbandoned, "call-1", _start.AddSeconds(45), durationSeconds: 45),
+        ]);
+
+        // Act & Assert
+        Assert.Equal(0d, outcomes.GetTalkSeconds(interaction));
+        Assert.Equal(45, outcomes.GetWaitSeconds(interaction), 6);
+    }
+
+    [Fact]
+    public void GetTalkAndWaitSeconds_AnAnsweredCall_WaitedForTheAnswer_AndTalkedUntilItEnded()
+    {
+        // Arrange
+        var interaction = Inbound("call-1", InteractionStatus.Ended, answeredAfter: 12, endedAfter: 300);
+
+        // Act & Assert
+        Assert.Equal(288, InteractionOutcomeClassifier.WithoutEvents.GetTalkSeconds(interaction), 6);
+        Assert.Equal(12, InteractionOutcomeClassifier.WithoutEvents.GetWaitSeconds(interaction), 6);
+    }
+
     private static Interaction Inbound(string id, InteractionStatus status, double? answeredAfter, double? endedAfter)
         => new Interaction
         {

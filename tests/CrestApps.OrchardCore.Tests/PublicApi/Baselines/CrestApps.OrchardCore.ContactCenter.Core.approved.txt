@@ -4178,8 +4178,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static System.Collections.Generic.IReadOnlyList<string> EvidenceEventTypes { get; }
         public static CrestApps.OrchardCore.ContactCenter.Core.Services.InteractionOutcomeClassifier WithoutEvents { get; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionOutcome Classify(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public double GetTalkSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public double GetWaitBeforeAbandonSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public double GetWaitBeforeVoicemailSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public double GetWaitSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public bool IsAbandoned(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public bool IsAnswered(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
         public bool IsFailed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }

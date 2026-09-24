@@ -137,6 +137,74 @@ public sealed class UnansweredCallOutcomeReportTests
         }
     }
 
+    // The platform answers a caller it sends to voicemail, to record the message, and the provider reports that as an
+    // answer. The detail listed those seconds as connected time, and the wait ran only to the platform's answer.
+    [Theory]
+    [InlineData("max-wait-voicemail", 60d)]
+    [InlineData("unanswered-offer-voicemail", 73d)]
+    [InlineData("hung-up-queued", 30d)]
+    [InlineData("answered", 10d)]
+    public async Task InteractionDetail_ShowsTheWaitUntilWhatBecameOfTheCall_AndConnectedTimeOnlyForAnAgent(string interactionId, double wait)
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var (store, databasePath) = await CreateSeededStoreAsync(cancellationToken);
+
+        try
+        {
+            await using var session = store.CreateSession();
+
+            // Act
+            var document = await RunEnterpriseAsync(session, EnterpriseInteractionReportKind.InteractionDetail, cancellationToken);
+
+            // Assert
+            var section = Assert.Single(document.Sections);
+            var row = Assert.Single(section.Rows, value => value.Cells[1] == interactionId);
+            string Cell(string column) => row.Cells[section.Columns.ToList().FindIndex(value => value.Label == column)];
+
+            Assert.Equal(ReportFormat.Duration(wait), Cell("Wait"));
+            Assert.Equal(ReportFormat.Duration(interactionId == "answered" ? 60d : 0d), Cell("Connected"));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
+    public async Task UsageAndHandleTime_CountOnlyTheCallAnAgentAnswered()
+    {
+        // Arrange
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var (store, databasePath) = await CreateSeededStoreAsync(cancellationToken);
+
+        try
+        {
+            await using var session = store.CreateSession();
+
+            // Act
+            var usage = await RunEnterpriseAsync(session, EnterpriseInteractionReportKind.QueueUsageBilling, cancellationToken);
+            var handleTime = await RunEnterpriseAsync(session, EnterpriseInteractionReportKind.QueueHandleTime, cancellationToken);
+
+            // Assert: the one answered call talked for 60s; the voicemail's recording is nobody's handle time.
+            var usageSection = Assert.Single(usage.Sections);
+            var usageRow = Assert.Single(usageSection.Rows, value => value.Cells[0] == QueueName);
+            string UsageCell(string column) => usageRow.Cells[usageSection.Columns.ToList().FindIndex(value => value.Label == column)];
+            Assert.Equal("1", UsageCell("Answered"));
+            Assert.Equal(ReportFormat.Duration(60d), UsageCell("Connected time"));
+
+            var handleSection = Assert.Single(handleTime.Sections);
+            var handleRow = Assert.Single(handleSection.Rows, value => value.Cells[0] == QueueName);
+            string HandleCell(string column) => handleRow.Cells[handleSection.Columns.ToList().FindIndex(value => value.Label == column)];
+            Assert.Equal("1", HandleCell("Interactions"));
+            Assert.Equal(ReportFormat.Duration(60d), HandleCell("Average handle time"));
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
     private static string[] InteractionIds(ReportDocument document)
         => [.. Assert.Single(document.Sections).Rows.Select(row => row.Cells[1]).Order(StringComparer.Ordinal)];
 
