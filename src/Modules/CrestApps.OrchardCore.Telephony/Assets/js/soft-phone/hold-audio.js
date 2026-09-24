@@ -91,12 +91,34 @@
         var savedSender = null;
         var savedTrack = null;
         var engaged = false;
+        // The engage still in flight. The soft phone re-applies a held call's state on every server report, so a
+        // second engage can arrive before the first has swapped the track; it must join the first rather than start
+        // a second engine whose tone nobody would ever stop.
+        var engaging = null;
 
         function engage(peerConnection, micTrack) {
             if (engaged) {
                 return Promise.resolve(true);
             }
 
+            if (engaging) {
+                return engaging;
+            }
+
+            engaging = startEngage(peerConnection, micTrack).then(function (result) {
+                engaging = null;
+
+                return result;
+            }, function (error) {
+                engaging = null;
+
+                throw error;
+            });
+
+            return engaging;
+        }
+
+        function startEngage(peerConnection, micTrack) {
             var senders = peerConnection && typeof peerConnection.getSenders === 'function'
                 ? peerConnection.getSenders()
                 : [];
@@ -132,6 +154,16 @@
         }
 
         function release(peerConnection) {
+            // A resume that lands while the hold is still being put in place releases it once it is in place, so the
+            // caller is never left on the tone after the agent took them off hold.
+            if (engaging) {
+                return engaging.then(function () {
+                    return release(peerConnection);
+                }, function () {
+                    return false;
+                });
+            }
+
             if (!engaged) {
                 return Promise.resolve(false);
             }
@@ -165,7 +197,8 @@
         return {
             engage: engage,
             release: release,
-            isEngaged: function () { return engaged; },
+            // True while a hold is being put in place too, so a call ending mid-engage still tears it down.
+            isEngaged: function () { return engaged || !!engaging; },
             source: source
         };
     }

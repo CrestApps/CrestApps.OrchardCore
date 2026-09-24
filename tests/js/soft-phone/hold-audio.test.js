@@ -149,6 +149,39 @@ describe('createHoldAudioController', () => {
         expect(sender.replaced).toEqual([holdTrack]);
     });
 
+    it('joins an engage still in flight instead of starting a second engine', async () => {
+        // The soft phone re-applies a held call on every server report, so a second engage can arrive before the
+        // first has swapped the track. A second engine would play a tone nobody ever stops.
+        const sender = fakeSender({ kind: 'audio', id: 'mic' });
+        const pc = fakePeerConnection([sender]);
+
+        const first = controller.engage(pc, sender.track);
+        const second = controller.engage(pc, sender.track);
+
+        expect(controller.isEngaged()).toBe(true);
+
+        await Promise.all([first, second]);
+
+        expect(engine.started).toBe(1);
+        expect(sender.replaced).toEqual([holdTrack]);
+    });
+
+    it('a release that lands mid-engage takes the call off hold once the hold is in place', async () => {
+        const micTrack = { kind: 'audio', id: 'mic' };
+        const sender = fakeSender(micTrack);
+        const pc = fakePeerConnection([sender]);
+
+        const engaging = controller.engage(pc, micTrack);
+        const releasing = controller.release(pc);
+
+        await engaging;
+        await expect(releasing).resolves.toBe(true);
+
+        expect(controller.isEngaged()).toBe(false);
+        expect(engine.stopped).toBe(1);
+        expect(sender.track).toBe(micTrack);
+    });
+
     it('releasing before engaging is a harmless no-op', async () => {
         await expect(controller.release(fakePeerConnection([]))).resolves.toBe(false);
         expect(engine.stopped).toBe(0);
