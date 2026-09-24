@@ -161,6 +161,7 @@ public sealed class TelnyxExtensionVoicemailTests
             }),
             new Mock<IContactCenterAgentLegFailureService>().Object,
             [],
+            [],
             []);
 
     private static string DecodeClientState(string clientState)

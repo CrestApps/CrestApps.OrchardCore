@@ -295,5 +295,6 @@ public sealed class TelnyxAgentPreDialTests
             CreateMonitor(),
             failureService,
             [],
-            coordinator is null ? [] : [coordinator]);
+            coordinator is null ? [] : [coordinator],
+            []);
 }

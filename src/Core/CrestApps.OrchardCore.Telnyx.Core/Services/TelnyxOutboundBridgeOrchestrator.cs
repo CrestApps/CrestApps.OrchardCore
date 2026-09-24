@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     private readonly IContactCenterAgentLegFailureService _agentLegFailureService;
     private readonly IEnumerable<ITelnyxAiVoiceEventHandler> _aiVoiceEventHandlers;
     private readonly IAgentPreDialCoordinator _preDialCoordinator;
+    private readonly IInboundVoiceInteractionProbe _interactionProbe;
     private readonly TelnyxOptions _options;
 
     public TelnyxOutboundBridgeOrchestrator(
@@ -29,7 +31,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
         IContactCenterAgentLegFailureService agentLegFailureService,
         IEnumerable<ITelnyxAiVoiceEventHandler> aiVoiceEventHandlers,
-        IEnumerable<IAgentPreDialCoordinator> preDialCoordinators)
+        IEnumerable<IAgentPreDialCoordinator> preDialCoordinators,
+        IEnumerable<IInboundVoiceInteractionProbe> interactionProbes)
     {
         _apiClient = apiClient;
         _logger = logger;
@@ -37,6 +40,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         _agentLegFailureService = agentLegFailureService;
         _aiVoiceEventHandlers = aiVoiceEventHandlers;
         _preDialCoordinator = preDialCoordinators?.FirstOrDefault();
+        _interactionProbe = interactionProbes?.FirstOrDefault();
     }
 
     /// <inheritdoc/>
@@ -53,16 +57,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
 
         if (state.Intent == TelnyxOutboundBridgeState.AiVoiceLegIntent)
         {
-            // A leg an automated AI voice agent handles. Its lifecycle (answered, transcription, speak-ended,
-            // hangup) drives the conversation loop in the optional AI voice handler. The leg is never a human
-            // agent's call, so it is reported as a hidden internal leg (DestinationLeg) to keep its events out of
-            // Contact Center normalization -- otherwise the webhook pipeline would try to reserve an agent for it.
-            foreach (var handler in _aiVoiceEventHandlers)
-            {
-                await handler.HandleAsync(callEvent, state, cancellationToken);
-            }
-
-            return TelnyxOutboundBridgeLeg.DestinationLeg;
+            return await AdvanceAiVoiceLegAsync(callEvent, state, cancellationToken);
         }
 
         if (state.Intent == TelnyxOutboundBridgeState.AgentLegIntent)

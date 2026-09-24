@@ -171,6 +171,7 @@ public sealed class ContactCenterAgentLegFailureTests
             CreateMonitor(),
             failureService.Object,
             [],
+            [],
             []);
 
         // The webhook parser base64-decodes client_state before the orchestrator sees it, so the event carries
@@ -213,6 +214,7 @@ public sealed class ContactCenterAgentLegFailureTests
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
             failureService.Object,
+            [],
             [],
             []);
 
@@ -351,6 +353,7 @@ public sealed class ContactCenterAgentLegFailureTests
             CreateMonitor(),
             failureService.Object,
             [],
+            [],
             []);
 
         var clientState = DecodeClientState(new TelnyxOutboundBridgeState
@@ -400,6 +403,7 @@ public sealed class ContactCenterAgentLegFailureTests
             CreateMonitor(),
             failureService.Object,
             [],
+            [],
             []);
 
         var clientState = DecodeClientState(new TelnyxOutboundBridgeState
@@ -441,6 +445,7 @@ public sealed class ContactCenterAgentLegFailureTests
             NullLogger<TelnyxOutboundBridgeOrchestrator>.Instance,
             CreateMonitor(),
             failureService.Object,
+            [],
             [],
             []);
 

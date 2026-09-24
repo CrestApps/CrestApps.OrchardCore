@@ -53,6 +53,14 @@ public sealed class QueuedCallerAbandonmentHandler : IQueuedCallerAbandonmentHan
             return;
         }
 
+        // A caller who was joined to an agent did not abandon anything. The call's own hangup ends it, with the
+        // provider's cause, its talk time and the agent's wrap-up; ending it here first would settle an answered
+        // call from a conversation's point of view and leave the provider's ending nothing to record.
+        if (interaction.AnsweredUtc.HasValue)
+        {
+            return;
+        }
+
         // Moved along its own lifecycle rather than assigned: the interaction refuses a transition it does not
         // admit, and one that has already settled needs no ending. Reconciliation below still runs either way --
         // it is idempotent, and the queue item is the part most likely to have been left behind.
