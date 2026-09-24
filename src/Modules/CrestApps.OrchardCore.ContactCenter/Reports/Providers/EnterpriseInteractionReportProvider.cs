@@ -25,6 +25,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     private readonly IStringLocalizer _stringLocalizer;
     private readonly TimeSpan _maximumReportRange;
     private Dictionary<string, string> _agentUserNames = [];
+    private Dictionary<string, ActivityQueue> _queues = [];
     private HashSet<string> _absentFeatureIds = [];
 
     private static readonly string[] _executiveMetricRequirements =
@@ -117,7 +118,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .ListAsync(cancellationToken))
             .ToArray();
         var criteria = ContactCenterReportFilter.GetCriteria(context.Filter);
-        var queues = (await _queueManager.GetAllAsync(cancellationToken))
+        var queues = _queues = (await _queueManager.GetAllAsync(cancellationToken))
             .ToDictionary(queue => queue.ItemId, StringComparer.Ordinal);
 
         ContactCenterReportingService.ApplyCurrentQueueGroupCriteria(criteria, queues.Values.ToArray());
@@ -307,7 +308,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
                 return new
                 {
-                    Label = queue?.Name ?? DisplayOrUnknown(group.Key),
+                    Label = ResolveQueueName(group.Key, queues),
                     Offered = metrics.EligibleOffered,
                     ServiceLevel = metrics.ServiceLevel * 100d,
                     metrics.HasServiceLevel,
@@ -532,7 +533,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                 interaction.Channel.ToString(),
                 interaction.Direction.ToString(),
                 interaction.Status.ToString(),
-                DisplayOrUnknown(interaction.QueueId),
+                ResolveQueueName(interaction.QueueId, _queues),
                 ResolveAgentName(interaction.AgentId),
                 DisplayOrUnknown(interaction.ProviderName),
                 ReportFormat.Duration(GetWaitSeconds(interaction)),
@@ -688,7 +689,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                     metrics.ServiceLevel,
                     Row = new ReportRow(
                     [
-                        queue?.Name ?? DisplayOrUnknown(group.Key),
+                        ResolveQueueName(group.Key, queues),
                         threshold > 0 ? ReportFormat.Duration(threshold) : "—",
                         ReportFormat.Number(metrics.EligibleOffered),
                         ReportFormat.Number(metrics.AnsweredWithinThreshold),
@@ -748,7 +749,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
                     AbandonmentRate = abandonmentRate,
                     Row = new ReportRow(
                     [
-                        queue?.Name ?? DisplayOrUnknown(group.Key),
+                        ResolveQueueName(group.Key, queues),
                         ReportFormat.Number(offered),
                         ReportFormat.Number(answered),
                         ReportFormat.Number(abandoned.LongLength),
@@ -1285,11 +1286,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     }
 
     private string ResolveQueueName(string queueId, Dictionary<string, ActivityQueue> queues)
-    {
-        return !string.IsNullOrEmpty(queueId) && queues.TryGetValue(queueId, out var queue)
-            ? queue.Name
-            : DisplayOrUnknown(queueId);
-    }
+        => ContactCenterReportNames.Queue(queueId, queues, S);
 
     private enum AgentPerformanceMode
     {
@@ -1305,13 +1302,5 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     }
 
     private string ResolveAgentName(string agentId)
-    {
-        if (string.IsNullOrEmpty(agentId) ||
-            !_agentUserNames.TryGetValue(agentId, out var userName))
-        {
-            return S["(Unknown agent)"].Value;
-        }
-
-        return ReportValue.UserDisplayName(userName, S["(Unknown agent)"].Value);
-    }
+        => ContactCenterReportNames.Agent(agentId, _agentUserNames, S);
 }
