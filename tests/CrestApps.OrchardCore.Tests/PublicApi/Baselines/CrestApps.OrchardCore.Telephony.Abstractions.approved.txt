@@ -496,12 +496,14 @@ namespace CrestApps.OrchardCore.Telephony.Models
     public sealed class IncomingCallCard
     {
         public IncomingCallCard() { }
+        public string AnswerAndOpenText { get; set; }
         public System.Collections.Generic.IList<string> Badges { get; set; }
         public string Description { get; set; }
         public string Icon { get; set; }
         public string Id { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.Telephony.Models.IncomingCallCardLink> Links { get; set; }
         public bool OpenInNewTab { get; set; }
+        public string OpenText { get; set; }
         public int Priority { get; set; }
         public string Source { get; set; }
         public string Subtitle { get; set; }

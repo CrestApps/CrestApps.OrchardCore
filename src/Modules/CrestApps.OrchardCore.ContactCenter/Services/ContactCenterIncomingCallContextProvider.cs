@@ -1,4 +1,7 @@
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Http;
@@ -22,6 +25,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     private readonly IActivityQueueManager _queueManager;
     private readonly IInboundContactLookup _contactLookup;
     private readonly IContentManager _contentManager;
+    private readonly IOmnichannelActivityManager _activityManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
     private readonly ShellSettings _shellSettings;
@@ -37,6 +41,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     /// <param name="queueManager">The queue manager used to resolve the offered queue name.</param>
     /// <param name="contactLookup">The contact lookup used to match customers by phone number.</param>
     /// <param name="contentManager">The content manager used to load matched contact content items.</param>
+    /// <param name="activityManager">The activity manager used to resolve the customer the offered activity belongs to.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor used to read the path base of a live request.</param>
     /// <param name="linkGenerator">The link generator used to build the contact and offer-lifecycle URLs.</param>
     /// <param name="shellSettings">The tenant settings whose URL prefix is the path base when no request is live.</param>
@@ -48,6 +53,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         IActivityQueueManager queueManager,
         IInboundContactLookup contactLookup,
         IContentManager contentManager,
+        IOmnichannelActivityManager activityManager,
         IHttpContextAccessor httpContextAccessor,
         LinkGenerator linkGenerator,
         ShellSettings shellSettings,
@@ -59,6 +65,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         _queueManager = queueManager;
         _contactLookup = contactLookup;
         _contentManager = contentManager;
+        _activityManager = activityManager;
         _httpContextAccessor = httpContextAccessor;
         _linkGenerator = linkGenerator;
         _shellSettings = shellSettings;
@@ -80,7 +87,11 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         // and the accessor can still hand back that request after it has been disposed: link generation reads its
         // features and throws, and the offer went out without its accept and decline actions.
         var pathBase = ResolvePathBase();
-        var queueName = await ContributeOfferLifecycleAsync(context, pathBase, cancellationToken);
+        var agent = await _agentManager.FindByUserIdAsync(context.UserId, cancellationToken);
+        var reservation = agent is null
+            ? null
+            : await _reservationManager.FindPendingByAgentAsync(agent.ItemId, cancellationToken);
+        var queueName = await ContributeOfferLifecycleAsync(context, agent, reservation, pathBase, cancellationToken);
 
         if (string.IsNullOrEmpty(call.From))
         {
@@ -95,6 +106,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         }
 
         var contacts = await _contentManager.GetAsync(contactIds, VersionOptions.Latest);
+        var offeredActivityContactId = await FindOfferedActivityContactIdAsync(reservation, cancellationToken);
         context.Heading = S["Matched customers"];
 
         var priority = 0;
@@ -116,28 +128,63 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
                 card.Badges.Add(queueName);
             }
 
-            card.Url = _linkGenerator.GetPathByAction(
+            var contactUrl = _linkGenerator.GetPathByAction(
                 action: "Edit",
                 controller: "Admin",
                 values: new { area = "OrchardCore.Contents", contentItemId = contact.ContentItemId },
                 pathBase: pathBase);
 
+            card.Url = contactUrl;
+
+            // The customer the offered activity belongs to opens that activity's completion screen -- the notes and
+            // the disposition for this call -- rather than the customer's edit screen, where the agent had to find
+            // the activity first. The record stays one click away, and completing returns to it.
+            if (string.Equals(contact.ContentItemId, offeredActivityContactId, StringComparison.Ordinal))
+            {
+                var activityUrl = _linkGenerator.GetPathByAction(
+                    action: "Complete",
+                    controller: "Activities",
+                    values: new { area = OmnichannelConstants.Features.Managements, id = reservation.ActivityItemId, returnUrl = contactUrl },
+                    pathBase: pathBase);
+
+                if (!string.IsNullOrEmpty(activityUrl))
+                {
+                    card.Url = activityUrl;
+                    card.OpenText = S["Open activity"];
+                    card.AnswerAndOpenText = S["Answer & open activity"];
+                    card.Links.Add(new IncomingCallCardLink
+                    {
+                        Text = S["Customer record"],
+                        Url = contactUrl,
+                        Icon = "fa-solid fa-address-card",
+                    });
+                }
+            }
+
             context.Cards.Add(card);
         }
     }
 
-    private async Task<string> ContributeOfferLifecycleAsync(IncomingCallContributionContext context, PathString pathBase, CancellationToken cancellationToken)
+    private async Task<string> FindOfferedActivityContactIdAsync(ActivityReservation reservation, CancellationToken cancellationToken)
     {
-        var agent = await _agentManager.FindByUserIdAsync(context.UserId, cancellationToken);
-
-        if (agent is null)
+        if (string.IsNullOrEmpty(reservation?.ActivityItemId))
         {
             return null;
         }
 
-        var reservation = await _reservationManager.FindPendingByAgentAsync(agent.ItemId, cancellationToken);
+        var activity = await _activityManager.FindByIdAsync(reservation.ActivityItemId, cancellationToken);
 
-        if (reservation is null)
+        return activity?.ContactContentItemId;
+    }
+
+    private async Task<string> ContributeOfferLifecycleAsync(
+        IncomingCallContributionContext context,
+        AgentProfile agent,
+        ActivityReservation reservation,
+        PathString pathBase,
+        CancellationToken cancellationToken)
+    {
+        if (agent is null || reservation is null)
         {
             return null;
         }

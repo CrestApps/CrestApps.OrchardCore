@@ -45,6 +45,18 @@ public sealed class IncomingCallCard
     public bool OpenInNewTab { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the optional label of the action that opens <see cref="Url"/>, naming what it opens (for example
+    /// "Open activity"). When omitted, the modal shows its generic "Open" label.
+    /// </summary>
+    public string OpenText { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional label of the action that answers the call and opens <see cref="Url"/> (for example
+    /// "Answer &amp; open activity"). When omitted, the modal shows its generic "Answer &amp; open" label.
+    /// </summary>
+    public string AnswerAndOpenText { get; set; }
+
+    /// <summary>
     /// Gets or sets the contributing source name, used for grouping and diagnostics.
     /// </summary>
     public string Source { get; set; }

@@ -1,6 +1,8 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -74,6 +76,54 @@ public sealed class ContactCenterIncomingCallContextProviderTests
         Assert.Equal("/hosted/tenant-a/contents/contact-1", Assert.Single(context.Cards).Url);
     }
 
+    // Bug: an agent answering a handed-off call with "Answer & open" landed on the customer's edit screen and had to
+    // hunt for the activity to write notes and pick a disposition. The offer names its activity, so the matched
+    // customer it belongs to opens that activity's completion screen, and says so; the customer record stays a link.
+    [Fact]
+    public async Task ContributeAsync_ForTheOfferedActivitysCustomer_OpensTheActivityToComplete_AndKeepsTheRecordAsALink()
+    {
+        // Arrange
+        var provider = CreateProvider(httpContext: null, requestUrlPrefix: null, activity: new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            ContactContentItemId = "contact-1",
+        });
+        var context = CreateContext();
+
+        // Act
+        await provider.ContributeAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        var card = Assert.Single(context.Cards);
+        Assert.Equal("/activities/activity-1/complete?returnUrl=/contents/contact-1", card.Url);
+        Assert.Equal("Open activity", card.OpenText);
+        Assert.Equal("Answer & open activity", card.AnswerAndOpenText);
+        var link = Assert.Single(card.Links);
+        Assert.Equal("/contents/contact-1", link.Url);
+        Assert.Equal("Customer record", link.Text);
+    }
+
+    [Fact]
+    public async Task ContributeAsync_ForAnotherMatchedCustomer_StillOpensTheirRecord()
+    {
+        // Arrange
+        var provider = CreateProvider(httpContext: null, requestUrlPrefix: null, activity: new OmnichannelActivity
+        {
+            ItemId = "activity-1",
+            ContactContentItemId = "contact-2",
+        });
+        var context = CreateContext();
+
+        // Act
+        await provider.ContributeAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        var card = Assert.Single(context.Cards);
+        Assert.Equal("/contents/contact-1", card.Url);
+        Assert.Null(card.OpenText);
+        Assert.Empty(card.Links);
+    }
+
     private static IncomingCallContributionContext CreateContext()
         => new(new TelephonyCall
         {
@@ -82,7 +132,10 @@ public sealed class ContactCenterIncomingCallContextProviderTests
             Direction = CallDirection.Inbound,
         }, "user-1");
 
-    private static ContactCenterIncomingCallContextProvider CreateProvider(HttpContext httpContext, string requestUrlPrefix)
+    private static ContactCenterIncomingCallContextProvider CreateProvider(
+        HttpContext httpContext,
+        string requestUrlPrefix,
+        OmnichannelActivity activity = null)
     {
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
@@ -96,6 +149,7 @@ public sealed class ContactCenterIncomingCallContextProviderTests
             {
                 ItemId = "reservation-1",
                 AgentId = "agent-1",
+                ActivityItemId = activity?.ItemId,
                 ExpiresUtc = new DateTime(2026, 9, 24, 4, 10, 0, DateTimeKind.Utc),
             });
 
@@ -108,6 +162,15 @@ public sealed class ContactCenterIncomingCallContextProviderTests
         contentManager
             .Setup(manager => manager.GetAsync(It.IsAny<IEnumerable<string>>(), It.IsAny<VersionOptions>()))
             .ReturnsAsync([new ContentItem { ContentItemId = "contact-1", DisplayText = "A customer" }]);
+
+        var activityManager = new Mock<IOmnichannelActivityManager>();
+
+        if (activity is not null)
+        {
+            activityManager
+                .Setup(manager => manager.FindByIdAsync(activity.ItemId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(activity);
+        }
 
         var httpContextAccessor = new Mock<IHttpContextAccessor>();
         httpContextAccessor.SetupGet(accessor => accessor.HttpContext).Returns(httpContext);
@@ -130,6 +193,7 @@ public sealed class ContactCenterIncomingCallContextProviderTests
             new Mock<IActivityQueueManager>().Object,
             contactLookup.Object,
             contentManager.Object,
+            activityManager.Object,
             httpContextAccessor.Object,
             new PathLinkGenerator(),
             shellSettings,
@@ -187,6 +251,8 @@ public sealed class ContactCenterIncomingCallContextProviderTests
             {
                 string name when name == "ContactCenterVoiceAcceptOffer" => $"/offers/{values["reservationId"]}/accept",
                 string name when name == "ContactCenterVoiceDeclineOffer" => $"/offers/{values["reservationId"]}/decline",
+                RouteValuesAddress routeValues when Equals(routeValues.ExplicitValues["action"], "Complete") =>
+                    $"/activities/{routeValues.ExplicitValues["id"]}/complete?returnUrl={routeValues.ExplicitValues["returnUrl"]}",
                 RouteValuesAddress routeValues => $"/contents/{routeValues.ExplicitValues["contentItemId"]}",
                 _ => throw new NotSupportedException($"No test route for '{address}'."),
             };
