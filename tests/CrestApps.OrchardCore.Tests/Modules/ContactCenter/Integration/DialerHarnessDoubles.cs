@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
 
@@ -392,5 +393,36 @@ internal sealed class RecordingContactCenterEventPublisher : IContactCenterEvent
         Events.Add(interactionEvent);
 
         return Task.CompletedTask;
+    }
+}
+
+/// <summary>
+/// An independent unit of work over the harness database, as one webhook delivery's shell scope: its own session
+/// and its own copy of every real service.
+/// </summary>
+internal sealed class HarnessFlow : IAsyncDisposable
+{
+    private readonly ServiceProvider _provider;
+
+    public HarnessFlow(ISession session, ServiceProvider provider)
+    {
+        Session = session;
+        _provider = provider;
+    }
+
+    public ISession Session { get; }
+
+    public IServiceProvider Services => _provider;
+
+    /// <summary>
+    /// Gets every event this flow published, in order, including the agent state audit.
+    /// </summary>
+    public IReadOnlyList<InteractionEvent> PublishedEvents
+        => ((RecordingContactCenterEventPublisher)_provider.GetRequiredService<IContactCenterEventPublisher>()).Events;
+
+    public async ValueTask DisposeAsync()
+    {
+        await _provider.DisposeAsync();
+        await Session.DisposeAsync();
     }
 }

@@ -97,10 +97,21 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
 
     public IReadOnlyList<string> AgentIds => _agentIds;
 
-    public static async Task<DialerModeIntegrationHarness> CreateAsync()
+    /// <summary>
+    /// Creates the harness over a fresh temp SQLite database.
+    /// </summary>
+    /// <param name="busyTimeoutSeconds">
+    /// How long a flow waits for SQLite's write lock before failing with "database is locked", or
+    /// <see langword="null"/> for the provider default. A short timeout makes a flow that cannot get the lock fail
+    /// fast instead of stalling the test.
+    /// </param>
+    public static async Task<DialerModeIntegrationHarness> CreateAsync(int? busyTimeoutSeconds = null)
     {
         var databasePath = Path.Combine(Path.GetTempPath(), $"cc-dialer-integration-{Guid.NewGuid():N}.db");
-        var store = StoreFactory.Create(configuration => configuration.UseSqLite($"Data Source={databasePath};Pooling=False"));
+        var connectionString = busyTimeoutSeconds.HasValue
+            ? $"Data Source={databasePath};Pooling=False;Default Timeout={busyTimeoutSeconds.Value}"
+            : $"Data Source={databasePath};Pooling=False";
+        var store = StoreFactory.Create(configuration => configuration.UseSqLite(connectionString));
         store.RegisterIndexes(
         [
             new QueueItemIndexProvider(),
@@ -116,7 +127,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
 
         var session = store.CreateSession();
         var clock = new TestClock();
-        var provider = BuildServiceProvider(session, clock);
+        var provider = BuildServiceProvider(session, clock, CreateAlwaysGrantingLock());
 
         // Late-bind the harness scope executor and command processor to the built container so their deferred
         // work can resolve the real services.
@@ -303,6 +314,20 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     }
 
     /// <summary>
+    /// Opens an independent unit of work over the harness database: its own session and its own copy of every real
+    /// service, as a webhook delivery processed side by side with another gets its own shell scope. Flows that must
+    /// serialize on a call share <paramref name="distributedLock"/>.
+    /// </summary>
+    public HarnessFlow OpenFlow(IDistributedLock distributedLock)
+    {
+        var session = _store.CreateSession();
+        var provider = BuildServiceProvider(session, _clock, distributedLock);
+        ((HarnessScopeExecutor)provider.GetRequiredService<IContactCenterScopeExecutor>()).Bind(provider);
+
+        return new HarnessFlow(session, provider);
+    }
+
+    /// <summary>
     /// Commits the shared session and runs the work deferred until after commit, as a shell scope would.
     /// </summary>
     public Task CommitAsync() => DrainAsync();
@@ -326,7 +351,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         TemporarySqliteDatabase.DisposeAndDelete(_store, _databasePath);
     }
 
-    private static ServiceProvider BuildServiceProvider(ISession session, TestClock clock)
+    private static ServiceProvider BuildServiceProvider(ISession session, TestClock clock, IDistributedLock distributedLock)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -334,7 +359,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton(session);
         services.AddSingleton(clock);
         services.AddSingleton<IClock>(clock);
-        services.AddSingleton(CreateAlwaysGrantingLock());
+        services.AddSingleton(distributedLock);
 
         // Stores + catalog managers over the shared session.
         services.AddSingleton<IInteractionStore>(new InteractionStore(session));
@@ -386,7 +411,8 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton(Mock.Of<ITelephonyProviderResolver>());
         services.AddSingleton(CreateEmptyInteractionEventStore());
         services.AddSingleton<IProviderIdentityResolver>(new ProviderIdentityResolver([]));
-        services.AddSingleton<IVoiceIngressGate>(sp => new VoiceIngressGate(sp.GetRequiredService<IDistributedLock>()));
+        // As registered in the host, the gate releases the scope's own open work before it waits on a held call.
+        services.AddSingleton<IVoiceIngressGate>(sp => new VoiceIngressGate(sp.GetRequiredService<IDistributedLock>(), session));
 
         // Real agent-state pipeline. Entitlements are not enforced in the harness, so agents may sign in to any
         // queue or campaign (the permissive default policy).
@@ -399,6 +425,8 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<IAgentPresenceManager, AgentPresenceManagerService>();
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
         services.AddSingleton<IProviderVoiceEventService, ProviderVoiceEventService>();
+        services.AddSingleton(Mock.Of<ITelephonyService>());
+        services.AddSingleton<IContactCenterAgentLegFailureService, ContactCenterAgentLegFailureService>();
         services.AddSingleton<DialProviderCommandTypeExecutor>();
         services.AddSingleton<HarnessProviderCommandProcessor>();
         services.AddSingleton<IProviderCommandProcessor>(sp => sp.GetRequiredService<HarnessProviderCommandProcessor>());
