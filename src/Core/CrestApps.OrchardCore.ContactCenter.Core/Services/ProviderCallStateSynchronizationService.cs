@@ -146,6 +146,16 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             return interaction;
         }
 
+        if (lookup.Found && IsLive(lookup.Call) && !IsAnswered(interaction, currentSession))
+        {
+            // A live call nobody has answered yet stays as it is. The lookup is of the caller's own leg, and that leg
+            // is live -- often answered by the platform itself, for hold music or an automated assistant -- long before
+            // an agent takes the call. Some providers can only say whether the call exists, which reads as "connected".
+            // Taken as the call's state, it connected the call to the agent its offer was ringing, with nobody on it.
+            // An answer is reported by the provider's own events; the sweep only catches calls that ended.
+            return interaction;
+        }
+
         var providerEvent = BuildProviderEvent(interaction, providerName, lookup);
         await _providerVoiceEventService.IngestAsync(providerEvent, cancellationToken);
 
@@ -250,6 +260,32 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
                     entry => entry.Value?.ToString() ?? string.Empty,
                     StringComparer.OrdinalIgnoreCase) ?? [],
         };
+    }
+
+    private static bool IsLive(TelephonyCall call)
+    {
+        return call is not null &&
+            VoiceCallStateProjection.ToVoiceCallState(call.State, call.IsOnHold) is
+                VoiceCallState.Dialing or
+                VoiceCallState.Ringing or
+                VoiceCallState.Connected or
+                VoiceCallState.OnHold;
+    }
+
+    // Whether an agent is known to have taken the call: the interaction records the answer, or its session does.
+    private static bool IsAnswered(Interaction interaction, CallSession session)
+    {
+        if (interaction.AnsweredUtc.HasValue ||
+            interaction.Status is InteractionStatus.Connected or
+                InteractionStatus.Held or
+                InteractionStatus.Transferring or
+                InteractionStatus.Conferenced)
+        {
+            return true;
+        }
+
+        return session is not null &&
+            (session.AnsweredUtc.HasValue || session.State is VoiceCallState.Connected or VoiceCallState.OnHold);
     }
 
     private static bool IsEquivalent(CallSession session, TelephonyCall call)

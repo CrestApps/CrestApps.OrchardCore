@@ -352,7 +352,11 @@ public sealed class TelephonyInteractionSynchronizationService : ITelephonyInter
             },
             cancellationToken);
 
-        if (notifyProviderState)
+        // Only the end of a call is announced. The lookup says whether a call still exists; how a live one stands --
+        // ringing an agent, on hold, talking -- is not something every provider can tell (some report any live call as
+        // connected), and the real-time events have already told the phone. Announcing it told a phone ringing for an
+        // offer that the caller's live leg was a connected call: the prompt vanished for a call nobody had accepted.
+        if (notifyProviderState && call.State is CallState.Disconnected or CallState.Failed)
         {
             await NotifyUserAsync(interaction.UserId, call);
         }

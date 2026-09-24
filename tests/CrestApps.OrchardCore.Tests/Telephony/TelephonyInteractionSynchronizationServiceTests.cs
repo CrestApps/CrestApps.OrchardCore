@@ -418,6 +418,91 @@ public sealed class TelephonyInteractionSynchronizationServiceTests
         client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
     }
 
+    // Bug: a Contact Center offer rings the agent's phone while the caller's own leg is live (answered by the platform
+    // to play hold music). The provider can only say that leg is alive, and the sweep told the ringing phone the call
+    // was "Connected": the incoming-call prompt vanished and the phone showed a call in progress that nobody had
+    // accepted. A sweep only knows whether a call still exists; how a live call stands is the real-time events' to say.
+    [Theory]
+    [InlineData(CallState.Connected)]
+    [InlineData(CallState.OnHold)]
+    [InlineData(CallState.Ringing)]
+    public async Task ReconcileActiveInteractionsAsync_WhenTheCallIsStillLive_DoesNotAnnounceAState(CallState state)
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store.SetupRetryingUpdates(interaction);
+        var (hubContext, client) = CreateHubContext();
+        client
+            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(
+            store,
+            hubContext,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    ProviderName = "provider-1",
+                    State = state,
+                },
+            },
+            lockAcquired: true);
+
+        // Act
+        await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        client.Verify(value => value.CallStateChanged(It.IsAny<TelephonyCall>()), Times.Never);
+    }
+
+    // The end of a call is what the sweep is for: a provider that still knows the call but reports it over is announced.
+    [Fact]
+    public async Task ReconcileActiveInteractionsAsync_WhenTheProviderReportsTheCallOver_AnnouncesIt()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        var store = new Mock<ITelephonyInteractionStore>();
+        store
+            .Setup(value => value.GetActiveAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([interaction]);
+        store.SetupRetryingUpdates(interaction);
+        var (hubContext, client) = CreateHubContext();
+        client
+            .Setup(value => value.CallStateChanged(It.IsAny<TelephonyCall>()))
+            .Returns(Task.CompletedTask);
+        var service = CreateService(
+            store,
+            hubContext,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    ProviderName = "provider-1",
+                    State = CallState.Disconnected,
+                },
+            },
+            lockAcquired: true);
+
+        // Act
+        await service.ReconcileActiveInteractionsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        client.Verify(
+            value => value.CallStateChanged(It.Is<TelephonyCall>(call =>
+                call.CallId == "call-1" && call.State == CallState.Disconnected)),
+            Times.Once);
+    }
+
     private static TelephonyInteractionSynchronizationService CreateService(
         Mock<ITelephonyInteractionStore> store,
         Mock<IHubContext<TelephonyHub, ITelephonyClient>> hubContext,

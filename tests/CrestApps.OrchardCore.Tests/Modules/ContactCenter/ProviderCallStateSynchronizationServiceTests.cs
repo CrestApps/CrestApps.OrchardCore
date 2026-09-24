@@ -194,6 +194,157 @@ public sealed class ProviderCallStateSynchronizationServiceTests
             Times.Never);
     }
 
+    // Bug: a caller handed from the AI to a queue is on a live, answered leg the whole time they wait -- hearing hold
+    // music, while an agent's phone rings for them. The provider can only say that leg is alive, which the sweep read
+    // as "connected": it created the call's session straight into Connected, stamped the interaction answered, and the
+    // ringing agent's phone showed a call in progress that nobody had accepted, until the offer expired under it.
+    [Theory]
+    [InlineData(InteractionStatus.Created)]
+    [InlineData(InteractionStatus.Ringing)]
+    public async Task RefreshInteractionAsync_WhenNobodyAnsweredYet_DoesNotReadALiveCallAsConnected(InteractionStatus status)
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        interaction.RestorePersistedStatus(status);
+        var eventService = new Mock<IProviderVoiceEventService>();
+        var service = CreateService(
+            new Mock<IInteractionManager>(),
+            new Mock<ICallSessionManager>(),
+            eventService,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    State = CallState.Connected,
+                },
+            });
+
+        // Act
+        var refreshed = await service.RefreshInteractionAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Same(interaction, refreshed);
+        Assert.Equal(status, refreshed.Status);
+        eventService.Verify(
+            value => value.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // The same leg, with the call's session already opened by the offer (ringing): still nobody on it.
+    [Fact]
+    public async Task RefreshInteractionAsync_WhenTheSessionIsStillRinging_DoesNotReadALiveCallAsConnected()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        interaction.RestorePersistedStatus(InteractionStatus.Ringing);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CallSession
+            {
+                InteractionId = "interaction-1",
+                ProviderCallId = "call-1",
+            }.RestorePersistedState(VoiceCallState.Ringing));
+        var eventService = new Mock<IProviderVoiceEventService>();
+        var service = CreateService(
+            new Mock<IInteractionManager>(),
+            callSessionManager,
+            eventService,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    State = CallState.OnHold,
+                    IsOnHold = true,
+                },
+            });
+
+        // Act
+        await service.RefreshInteractionAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        eventService.Verify(
+            value => value.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // A call that has not been answered can still end: the sweep is how a missed hang-up is caught.
+    [Fact]
+    public async Task RefreshInteractionAsync_WhenNobodyAnsweredAndTheProviderSaysTheCallEnded_StillEndsIt()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        interaction.RestorePersistedStatus(InteractionStatus.Ringing);
+        ProviderVoiceEvent providerEvent = null;
+        var eventService = new Mock<IProviderVoiceEventService>();
+        eventService
+            .Setup(service => service.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvent = value)
+            .ReturnsAsync(new CallSession());
+        var service = CreateService(
+            new Mock<IInteractionManager>(),
+            new Mock<ICallSessionManager>(),
+            eventService,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    State = CallState.Disconnected,
+                },
+            });
+
+        // Act
+        await service.RefreshInteractionAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(providerEvent);
+        Assert.Equal(VoiceCallState.Ended, providerEvent.State);
+    }
+
+    // An answered call whose session never recorded it (a restart lost the event) is still repaired from the provider.
+    [Fact]
+    public async Task RefreshInteractionAsync_WhenTheInteractionWasAnsweredButHasNoSession_ReconcilesTheLiveCall()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        ProviderVoiceEvent providerEvent = null;
+        var eventService = new Mock<IProviderVoiceEventService>();
+        eventService
+            .Setup(service => service.IngestAsync(It.IsAny<ProviderVoiceEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<ProviderVoiceEvent, CancellationToken>((value, _) => providerEvent = value)
+            .ReturnsAsync(new CallSession());
+        var service = CreateService(
+            new Mock<IInteractionManager>(),
+            new Mock<ICallSessionManager>(),
+            eventService,
+            new TelephonyCallLookupResult
+            {
+                Succeeded = true,
+                Found = true,
+                Call = new TelephonyCall
+                {
+                    CallId = "call-1",
+                    State = CallState.Connected,
+                },
+            });
+
+        // Act
+        await service.RefreshInteractionAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(providerEvent);
+        Assert.Equal(VoiceCallState.Connected, providerEvent.State);
+    }
+
     [Fact]
     public async Task RefreshInteractionAsync_WhenTerminalSessionHasNonTerminalInteraction_RepairsInteractionAndOfferState()
     {
