@@ -14,6 +14,7 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly ITelephonyService _telephonyService;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -24,6 +25,7 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
         IInteractionManager interactionManager,
         ICallSessionManager callSessionManager,
         ITelephonyService telephonyService,
+        IContactCenterAuditRecorder auditRecorder,
         IClock clock,
         ILogger<ContactCenterAgentLegFailureService> logger)
     {
@@ -32,6 +34,7 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
         _clock = clock;
         _logger = logger;
         _telephonyService = telephonyService;
+        _auditRecorder = auditRecorder;
     }
 
     /// <inheritdoc />
@@ -61,6 +64,9 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
         var now = _clock.UtcNow;
         var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
 
+        // Read before the legs are ended below: the agent leg still being connected is the one that failed.
+        var agentLeg = session?.Legs.LastOrDefault(leg => leg.Role == CallPartyRole.Agent && !leg.EndedUtc.HasValue);
+
         if (session is not null && !CallSessionLifecycle.IsTerminal(session.State))
         {
             // Every leg ends with the call. The agent leg is already gone and the customer leg is about to be
@@ -79,6 +85,24 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
         interaction.EndedUtc = now;
 
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+        var data = session is not null
+            ? ContactCenterCallAudit.ForSession(session, interaction)
+            : ContactCenterCallAudit.ForInteraction(interaction);
+        data.ProviderLegId = agentLeg?.ProviderLegId;
+        data.LegRole = nameof(CallPartyRole.Agent);
+        data.AgentId = agentLeg?.AgentId ?? data.AgentId;
+        data.State = nameof(CallLegStatus.Failed);
+        data.HangupCause = hangupCause?.ToString();
+        data.Reason = CallLifecycleReasons.AgentLegFailed;
+
+        await _auditRecorder.RecordCallAsync(
+            ContactCenterConstants.Events.AgentLegFailed,
+            data,
+            now,
+            ContactCenterActor.Provider(providerName),
+            $"agent-leg:{ContactCenterConstants.Events.AgentLegFailed}:{agentLeg?.ProviderLegId ?? peerProviderCallId}",
+            cancellationToken);
 
         // Release the customer. They answered and are connected to an agent who was never reached, so leaving
         // the leg up holds them on dead air and keeps billing the call.
@@ -159,6 +183,20 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
         CallTopologyProjector.Join(session, agentLegProviderCallId, CallPartyRole.Agent, now, agentId: session.AgentId);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+
+        var data = ContactCenterCallAudit.ForSession(session, interaction);
+        data.ProviderLegId = agentLegProviderCallId;
+        data.LegRole = nameof(CallPartyRole.Agent);
+        data.State = nameof(CallLegStatus.Answered);
+
+        // Keyed on the leg alone, like the answer the connect command records, so the two are one record.
+        await _auditRecorder.RecordCallAsync(
+            ContactCenterConstants.Events.AgentLegAnswered,
+            data,
+            now,
+            ContactCenterActor.Provider(providerName),
+            $"agent-leg:{ContactCenterConstants.Events.AgentLegAnswered}:{agentLegProviderCallId}",
+            cancellationToken);
 
         return true;
     }

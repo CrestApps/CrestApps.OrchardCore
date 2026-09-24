@@ -26,6 +26,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     private readonly IAgentProfileManager _agentManager;
     private readonly IVoiceContactCenterCallRouter _voiceCallRouter;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly ILogger _logger;
@@ -43,6 +44,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
     /// <param name="agentManager">The agent profile manager used to resolve the reserved agent.</param>
     /// <param name="voiceCallRouter">The voice call router.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="auditRecorder">The recorder that writes each interaction a dial creates to the audit log.</param>
     /// <param name="scopeExecutor">The executor used for compensation and post-commit command wake-up.</param>
     /// <param name="providerCommandStateService">The service used to persist provider command intent.</param>
     /// <param name="logger">The logger instance.</param>
@@ -57,6 +59,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         IAgentProfileManager agentManager,
         IVoiceContactCenterCallRouter voiceCallRouter,
         IContactCenterEventPublisher publisher,
+        IContactCenterAuditRecorder auditRecorder,
         IContactCenterScopeExecutor scopeExecutor,
         IProviderCommandStateService providerCommandStateService,
         ILogger<DialerAttemptService> logger)
@@ -71,6 +74,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
         _agentManager = agentManager;
         _voiceCallRouter = voiceCallRouter;
         _publisher = publisher;
+        _auditRecorder = auditRecorder;
         _scopeExecutor = scopeExecutor;
         _providerCommandStateService = providerCommandStateService;
         _logger = logger;
@@ -158,6 +162,7 @@ public sealed class DialerAttemptService : IDialerAttemptService
                 workState => workState.Attempts++,
                 cancellationToken);
             await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
+            await _auditRecorder.RecordInteractionCreatedAsync(interaction, activity.Source, ContactCenterActor.System, cancellationToken);
             await _publisher.PublishAsync(new InteractionEvent
             {
                 EventType = ContactCenterConstants.Events.DialerAttemptStarted,

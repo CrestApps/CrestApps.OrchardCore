@@ -148,6 +148,7 @@ public sealed class ActivityQueueServiceConcurrencyTests
             countingExecutor,
             Mock.Of<IQueueTreatmentProvider>(),
             Mock.Of<IInteractionManager>(),
+            Mock.Of<IContactCenterAuditRecorder>(),
             CreateClock());
     }
 
@@ -176,6 +177,7 @@ public sealed class ActivityQueueServiceConcurrencyTests
             new NoRetryScopeExecutor(),
             Mock.Of<IQueueTreatmentProvider>(),
             Mock.Of<IInteractionManager>(),
+            Mock.Of<IContactCenterAuditRecorder>(),
             CreateClock());
     }
 

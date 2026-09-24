@@ -17,7 +17,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// Deserializes the dial request, stamps idempotency metadata, routes the outbound call, and projects
 /// outcomes onto the linked interaction and CRM activity.
 /// </summary>
-public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecutor
+public sealed partial class DialProviderCommandTypeExecutor : IProviderCommandTypeExecutor
 {
     private static readonly JsonSerializerOptions _serializerOptions = new()
     {
@@ -31,6 +31,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     private readonly IAgentProfileManager _agentManager;
     private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IDialDestinationPolicy _destinationPolicy;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -45,6 +46,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
     /// <param name="callSessionManager">The call session manager used to persist first-command ownership.</param>
     /// <param name="agentManager">The agent profile manager used to resolve the dialing user.</param>
     /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
+    /// <param name="auditRecorder">The recorder that writes each dial started or failed to the audit log.</param>
     /// <param name="logger">The logger used to surface why an outbound dial was rejected by the provider.</param>
     public DialProviderCommandTypeExecutor(
         IEnumerable<IProviderCommandDispatchValidator> dispatchValidators,
@@ -55,6 +57,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         ICallSessionManager callSessionManager,
         IAgentProfileManager agentManager,
         IDialDestinationPolicy destinationPolicy,
+        IContactCenterAuditRecorder auditRecorder,
         ILogger<DialProviderCommandTypeExecutor> logger)
     {
         _dispatchValidators = dispatchValidators;
@@ -64,6 +67,7 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
         _agentManager = agentManager;
         _activityWriter = activityWriter;
         _destinationPolicy = destinationPolicy;
+        _auditRecorder = auditRecorder;
         _clock = clock;
         _logger = logger;
     }
@@ -185,9 +189,12 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
             }
         }
 
+        Interaction dialedInteraction = null;
+
         if (!sessionConflict && !string.IsNullOrWhiteSpace(command.InteractionId))
         {
             var interaction = await _interactionManager.FindByIdAsync(command.InteractionId, cancellationToken);
+            dialedInteraction = interaction;
 
             if (interaction is not null)
             {
@@ -219,6 +226,11 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
 
             await _callSessionManager.UpdateAsync(ownedSession, cancellationToken: cancellationToken);
         }
+
+        if (!sessionConflict)
+        {
+            await RecordDialStartedAsync(command, result, dialedInteraction, ownedSession, cancellationToken);
+        }
     }
 
     /// <inheritdoc/>
@@ -241,6 +253,8 @@ public sealed class DialProviderCommandTypeExecutor : IProviderCommandTypeExecut
                 interaction.EndedUtc = _clock.UtcNow;
                 await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
             }
+
+            await RecordDialFailedAsync(command, interaction, cancellationToken);
         }
 
         if (!string.IsNullOrWhiteSpace(command.ActivityItemId))

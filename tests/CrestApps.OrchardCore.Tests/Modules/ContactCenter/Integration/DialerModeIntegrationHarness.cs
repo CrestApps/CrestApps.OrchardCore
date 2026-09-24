@@ -351,6 +351,7 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<HarnessScopeExecutor>();
         services.AddSingleton<IContactCenterScopeExecutor>(sp => sp.GetRequiredService<HarnessScopeExecutor>());
         services.AddSingleton<IContactCenterEventPublisher>(new RecordingContactCenterEventPublisher());
+        services.AddSingleton<IContactCenterAuditRecorder, ContactCenterAuditRecorder>();
         services.AddSingleton<IAgentAvailabilityService, HarnessAvailabilityService>();
         services.AddSingleton(CreateEligibilityService());
         services.AddSingleton(CreateFeatureWorkManager());

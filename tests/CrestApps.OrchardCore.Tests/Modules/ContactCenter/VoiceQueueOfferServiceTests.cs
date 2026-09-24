@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
@@ -34,6 +35,43 @@ public sealed class VoiceQueueOfferServiceTests
         Assert.Equal("user-1", userId);
         Assert.Equal("agent-1", harness.Interaction.AgentId);
         Assert.Equal("queue-1", harness.Interaction.QueueId);
+    }
+
+    [Fact]
+    public async Task OfferingACall_RecordsThatTheOfferStartedRinging_ForItsInteraction()
+    {
+        // Arrange
+        var harness = new OfferHarness();
+        harness.Reserve("agent-1", "activity-1");
+        harness.WithAgent("agent-1", "user-1");
+        harness.WithInteraction("activity-1", InteractionStatus.Ringing);
+
+        // Act
+        await harness.Service.OfferNextAsync("queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var offer = Assert.Single(harness.AuditRecorder.Offers);
+        Assert.Equal(ContactCenterConstants.Events.OfferPresented, offer.EventType);
+        Assert.Equal(harness.Interaction.ItemId, offer.Data.InteractionId);
+        Assert.Equal("agent-1", offer.Data.AgentId);
+        Assert.Equal("user-1", offer.Data.UserId);
+        Assert.Null(offer.Data.SettledUtc);
+        Assert.Null(offer.Data.RingSeconds);
+    }
+
+    [Fact]
+    public async Task AnOfferNobodyCouldBeRungFor_IsNotRecordedAsRinging()
+    {
+        // Arrange
+        var harness = new OfferHarness();
+        harness.Reserve("agent-1", "activity-1");
+        harness.WithAgent("agent-1", userId: null);
+
+        // Act
+        await harness.Service.OfferNextAsync("queue-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(harness.AuditRecorder.Offers);
     }
 
     [Fact]
@@ -286,10 +324,13 @@ public sealed class VoiceQueueOfferServiceTests
                 activityManager.Object,
                 _offerSynchronization.Object,
                 workManager.Object,
+                AuditRecorder,
                 NullLogger<VoiceQueueOfferService>.Instance);
         }
 
         public VoiceQueueOfferService Service { get; }
+
+        public RecordingContactCenterAuditRecorder AuditRecorder { get; } = new();
 
         public Interaction Interaction { get; private set; }
 

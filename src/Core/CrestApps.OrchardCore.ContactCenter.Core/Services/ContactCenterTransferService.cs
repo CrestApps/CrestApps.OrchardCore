@@ -18,6 +18,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly ITransferDestinationResolver _transferDestinationResolver;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly ITelephonyCommandExecutor _commandExecutor;
     private readonly IClock _clock;
 
@@ -29,6 +30,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
     /// <param name="queueService">The queue service used to re-enqueue queue transfers.</param>
     /// <param name="voiceProviderResolver">The voice provider resolver.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="auditRecorder">The recorder that writes the consult a warm transfer opens to the audit log.</param>
     /// <param name="commandExecutor">The executor that provides a bounded server-owned provider-operation token.</param>
     /// <param name="clock">The clock used to stamp transfer times.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
@@ -39,6 +41,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         IActivityQueueService queueService,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         IContactCenterEventPublisher publisher,
+        IContactCenterAuditRecorder auditRecorder,
         ITelephonyCommandExecutor commandExecutor,
         IClock clock,
         ICallControlAuthorizationService callControlAuthorizationService,
@@ -51,6 +54,7 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         _callControlAuthorizationService = callControlAuthorizationService;
         _transferDestinationResolver = transferDestinationResolver;
         _publisher = publisher;
+        _auditRecorder = auditRecorder;
         _commandExecutor = commandExecutor;
         _clock = clock;
     }
@@ -176,8 +180,25 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
                 AggregateType = nameof(Interaction),
                 AggregateId = interaction.ItemId,
                 ActorId = request.InitiatedByAgentId ?? interaction.AgentId,
+                ActorType = ContactCenterActorType.Agent,
                 SourceComponent = ContactCenterConstants.Components.Interactions,
+                OccurredUtc = now,
             };
+
+            // Where the call went is what a transfer report needs and what the event alone did not say.
+            var transfer = ContactCenterCallAudit.ForInteraction(interaction);
+            transfer.AgentId = request.InitiatedByAgentId ?? transfer.AgentId;
+            transfer.Target = destination.ResolvedTarget;
+            transfer.Reason = reason;
+            transfer.Details["transferType"] = request.Type.ToString();
+            transfer.Details["targetType"] = destination.TargetType.ToString();
+
+            if (!string.IsNullOrEmpty(request.TargetId))
+            {
+                transfer.Details["targetId"] = request.TargetId;
+            }
+
+            interactionEvent.SetData(transfer);
 
             await _publisher.PublishAsync(interactionEvent, CancellationToken.None);
 
@@ -213,11 +234,13 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
         // A consultative transfer opens a private consult leg that the customer cannot hear. Recording it on
         // the topology is what lets a supervisor see the customer is held while the agent talks to someone
         // else, and lets reporting tell a completed warm transfer apart from an abandoned consult.
+        ConsultCall consult = null;
+
         if (request.Type == InteractionTransferType.Consultative)
         {
             var consultId = IdGenerator.GenerateId();
 
-            CallTopologyProjector.StartConsult(
+            consult = CallTopologyProjector.StartConsult(
                 callSession,
                 consultId,
                 request.InitiatedByAgentId ?? interaction.AgentId,
@@ -240,6 +263,11 @@ public sealed class ContactCenterTransferService : IContactCenterTransferService
             relatedProviderCallId: providerResult?.ProviderCallId);
 
         await _callSessionManager.UpdateAsync(callSession, cancellationToken: cancellationToken);
+
+        if (consult is not null)
+        {
+            await _auditRecorder.RecordConsultAsync(ContactCenterConstants.Events.ConsultStarted, callSession, consult, now, cancellationToken);
+        }
     }
 
     private async Task<string> ApplyTargetAsync(

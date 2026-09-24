@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -58,6 +59,19 @@ public sealed class ContactCenterTransferServiceTests
         Assert.Single(interaction.TransferHistory);
         Assert.Equal(InteractionStatus.Transferring, interaction.Status);
         publisher.Verify(p => p.PublishAsync(It.Is<InteractionEvent>(e => e.EventType == ContactCenterConstants.Events.InteractionTransferred), It.IsAny<CancellationToken>()), Times.Once);
+
+        // The transfer now says where the call went, which the event alone never did.
+        var transferred = publisher.Invocations
+            .Select(invocation => invocation.Arguments[0])
+            .OfType<InteractionEvent>()
+            .Single(e => e.EventType == ContactCenterConstants.Events.InteractionTransferred);
+        var data = transferred.GetData<CallLifecycleEventData>();
+        Assert.Equal("q2", data.Target);
+        Assert.Equal("int-1", data.InteractionId);
+        Assert.Equal("a1", data.AgentId);
+        Assert.Equal(nameof(InteractionTransferType.Blind), data.Details["transferType"]);
+        Assert.Equal(nameof(InteractionTransferTargetType.Queue), data.Details["targetType"]);
+        Assert.Equal(ContactCenterActorType.Agent, transferred.ActorType);
     }
 
     [Fact]
@@ -326,7 +340,8 @@ public sealed class ContactCenterTransferServiceTests
         ITelephonyCommandExecutor commandExecutor = null,
         ICallControlAuthorizationService callControlAuthorizationService = null,
         ITransferDestinationResolver transferDestinationResolver = null,
-        CallSession callSession = null)
+        CallSession callSession = null,
+        RecordingContactCenterAuditRecorder auditRecorder = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -342,6 +357,7 @@ public sealed class ContactCenterTransferServiceTests
             queueService.Object,
             voiceProviderResolver.Object,
             publisher.Object,
+            auditRecorder ?? new RecordingContactCenterAuditRecorder(),
             commandExecutor ?? new DefaultTelephonyCommandExecutor(
                 Options.Create(new TelephonyCommandOptions()),
                 Mock.Of<IHostApplicationLifetime>()),

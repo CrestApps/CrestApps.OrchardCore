@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// default telephony facade when no voice provider is resolved, and projects the resulting call state
 /// onto the interaction and call session models.
 /// </summary>
-public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExecutor
+public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExecutor
 {
     private const string OwnerMetadataKey = "providerCommandOwner";
 
@@ -30,6 +30,8 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IAgentPreDialCoordinator _preDialCoordinator;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
+    private readonly IActivityReservationManager _reservationManager;
     private readonly IClock _clock;
 
     /// <summary>
@@ -43,6 +45,8 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     /// <param name="clock">The clock used to stamp UTC projections.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
     /// <param name="preDialCoordinators">The optional coordinator that joins an agent leg rung while the offer was ringing.</param>
+    /// <param name="auditRecorder">The recorder that writes the agent leg's outcome and a missed offer to the audit log.</param>
+    /// <param name="reservationManager">The reservation manager used to date a missed offer from when it started ringing.</param>
     public AnswerProviderCommandTypeExecutor(
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ITelephonyService telephonyService,
@@ -51,7 +55,9 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         IContactCenterEventPublisher publisher,
         IClock clock,
         ICallControlAuthorizationService callControlAuthorizationService,
-        IEnumerable<IAgentPreDialCoordinator> preDialCoordinators)
+        IEnumerable<IAgentPreDialCoordinator> preDialCoordinators,
+        IContactCenterAuditRecorder auditRecorder,
+        IActivityReservationManager reservationManager)
     {
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyService = telephonyService;
@@ -60,6 +66,8 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         _callControlAuthorizationService = callControlAuthorizationService;
         _publisher = publisher;
         _preDialCoordinator = preDialCoordinators?.FirstOrDefault();
+        _auditRecorder = auditRecorder;
+        _reservationManager = reservationManager;
         _clock = clock;
     }
 
@@ -302,6 +310,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
                 {
                     CallTopologyProjector.EnsureBridge(session, session.Bridge?.ProviderBridgeId, now);
                     CallTopologyProjector.Join(session, result.ProviderLegId, CallPartyRole.Agent, now, request.AgentId);
+                    await RecordAgentLegAnsweredAsync(session, interaction, result.ProviderLegId, request.AgentId, now, cancellationToken);
                 }
             }
 
@@ -358,6 +367,8 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
 
             await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         }
+
+        await RecordAnswerFailedAsync(command, request, interaction, session, now, cancellationToken);
 
         if (request.ReofferOnFailure)
         {

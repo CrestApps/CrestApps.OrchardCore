@@ -219,7 +219,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             now,
             cancellationToken);
 
-        await PublishAsync(ContactCenterConstants.Events.OfferAccepted, interaction.ItemId, reservation.AgentId, cancellationToken);
+        await PublishOfferAcceptedAsync(reservation, interaction, agent, now, cancellationToken);
 
         if (interaction.Status == InteractionStatus.Connected)
         {
@@ -318,19 +318,25 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             _logger.LogWarning(ex, "Could not release the pre-dialed agent leg of a declined offer.");
         }
 
+        var interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+        var declinedUtc = _clock.UtcNow;
         var interactionEvent = new InteractionEvent
         {
             EventType = ContactCenterConstants.Events.OfferDeclined,
+            InteractionId = interaction?.ItemId,
             AggregateType = nameof(ActivityReservation),
             AggregateId = reservation.ItemId,
             ActorId = reservation.AgentId,
+            ActorType = ContactCenterActorType.Agent,
             SourceComponent = ContactCenterConstants.Components.Voice,
+            OccurredUtc = declinedUtc,
         };
 
-        interactionEvent.SetData(new OfferDeclinedEventData
-        {
-            QueueId = reservation.QueueId,
-        });
+        // The offer payload carries the queue under the same name the re-offer handler reads it by, so the one
+        // payload both routes the next offer and records how long this one rang.
+        var offer = ContactCenterCallAudit.ForOffer(reservation, interaction, agent: null, declinedUtc);
+        offer.UserId = agentUserId;
+        interactionEvent.SetData(offer);
 
         await _publisher.PublishAsync(interactionEvent, cancellationToken);
 
@@ -471,6 +477,30 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 
         return session;
+    }
+
+    private Task PublishOfferAcceptedAsync(
+        ActivityReservation reservation,
+        Interaction interaction,
+        AgentProfile agent,
+        DateTime acceptedUtc,
+        CancellationToken cancellationToken)
+    {
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.OfferAccepted,
+            InteractionId = interaction.ItemId,
+            AggregateType = nameof(Interaction),
+            AggregateId = interaction.ItemId,
+            ActorId = reservation.AgentId,
+            ActorType = ContactCenterActorType.Agent,
+            SourceComponent = ContactCenterConstants.Components.Voice,
+            OccurredUtc = acceptedUtc,
+        };
+
+        interactionEvent.SetData(ContactCenterCallAudit.ForOffer(reservation, interaction, agent, acceptedUtc));
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 
     private Task PublishAsync(string eventType, string interactionId, string actorId, CancellationToken cancellationToken)

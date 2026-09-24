@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Moq;
 using OrchardCore.Modules;
 using YesSql;
@@ -17,6 +18,8 @@ public sealed class ActivityQueueServiceTests
     private static Mock<IQueueTreatmentProvider> TreatmentProvider { get; set; }
 
     private static Mock<IInteractionManager> InteractionManagerForDequeue { get; set; }
+
+    private static RecordingContactCenterAuditRecorder AuditRecorder { get; set; }
 
     private static readonly DateTime _now = new(2026, 1, 5, 12, 0, 0, DateTimeKind.Utc);
 
@@ -412,6 +415,95 @@ public sealed class ActivityQueueServiceTests
         Assert.Equal("q2", item2.QueueId);
     }
 
+    [Fact]
+    public async Task EnqueueAsync_RecordsTheCallEnteringTheQueue_AgainstItsInteraction()
+    {
+        // Arrange
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.NewAsync(It.IsAny<JsonNode>(), It.IsAny<CancellationToken>())).ReturnsAsync(new QueueItem { ItemId = "qi-1" });
+        var service = CreateService(queueItemManager, new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+
+        // Act
+        await service.EnqueueAsync("act-1", "q1", null, TestContext.Current.CancellationToken);
+
+        // Assert
+        var queued = Assert.Single(AuditRecorder.CallsOf(ContactCenterConstants.Events.CallQueued));
+        Assert.Equal("interaction-1", queued.Data.InteractionId);
+        Assert.Equal("q1", queued.Data.QueueId);
+        Assert.Equal(CallLifecycleReasons.Enqueued, queued.Data.Reason);
+        Assert.Equal(_now, queued.OccurredUtc);
+    }
+
+    [Fact]
+    public async Task DequeueAsync_RecordsHowLongTheCallerWaited_AndWhyTheyLeft()
+    {
+        // Arrange
+        var service = CreateService(new Mock<IQueueItemManager>(), new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+        var item = new QueueItem
+        {
+            ItemId = "qi-1",
+            QueueId = "q1",
+            ActivityItemId = "act-1",
+            EnqueuedUtc = _now.AddSeconds(-95),
+            QueueEnteredUtc = _now.AddSeconds(-45),
+        }.RestorePersistedStatus(QueueItemStatus.Waiting);
+
+        // Act
+        await service.DequeueAsync(item, QueueItemStatus.Removed, TestContext.Current.CancellationToken);
+
+        // Assert
+        var dequeued = Assert.Single(AuditRecorder.CallsOf(ContactCenterConstants.Events.CallDequeued));
+        Assert.Equal("interaction-1", dequeued.Data.InteractionId);
+        Assert.Equal(45, dequeued.Data.DurationSeconds);
+        Assert.Equal(nameof(QueueItemStatus.Removed), dequeued.Data.Reason);
+    }
+
+    [Fact]
+    public async Task OverflowItemAsync_RecordsLeavingOneQueueAndEnteringTheNext_EachWithItsOwnWait()
+    {
+        // Arrange
+        var service = CreateService(new Mock<IQueueItemManager>(), new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+        var item = new QueueItem
+        {
+            ItemId = "qi-1",
+            QueueId = "q1",
+            ActivityItemId = "act-1",
+            EnqueuedUtc = _now.AddSeconds(-60),
+            QueueEnteredUtc = _now.AddSeconds(-60),
+        }.RestorePersistedStatus(QueueItemStatus.Waiting);
+
+        // Act
+        await service.OverflowItemAsync(item, new ActivityQueue { ItemId = "q1" }, "q2", TestContext.Current.CancellationToken);
+
+        // Assert
+        var left = Assert.Single(AuditRecorder.CallsOf(ContactCenterConstants.Events.CallDequeued));
+        Assert.Equal("q1", left.Data.QueueId);
+        Assert.Equal("q2", left.Data.Target);
+        Assert.Equal(60, left.Data.DurationSeconds);
+        Assert.Equal(CallLifecycleReasons.Overflowed, left.Data.Reason);
+
+        var entered = Assert.Single(AuditRecorder.CallsOf(ContactCenterConstants.Events.CallQueued));
+        Assert.Equal("q2", entered.Data.QueueId);
+        Assert.NotEqual(left.IdempotencyKey, entered.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task QueueWorkThatIsNotACall_IsLeftToTheQueueEvents()
+    {
+        // Arrange
+        var service = CreateService(new Mock<IQueueItemManager>(), new Mock<IActivityQueueManager>(), new Mock<IOmnichannelActivityManager>(), new Mock<IBusinessHoursService>());
+        InteractionManagerForDequeue
+            .Setup(x => x.FindByActivityIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "interaction-1", Channel = InteractionChannel.Sms });
+        var item = new QueueItem { ItemId = "qi-1", QueueId = "q1", ActivityItemId = "act-1" }.RestorePersistedStatus(QueueItemStatus.Waiting);
+
+        // Act
+        await service.DequeueAsync(item, QueueItemStatus.Removed, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(AuditRecorder.Calls);
+    }
+
     private static ActivityQueueService CreateService(
         Mock<IQueueItemManager> queueItemManager,
         Mock<IActivityQueueManager> queueManager,
@@ -427,6 +519,7 @@ public sealed class ActivityQueueServiceTests
         var scopeExecutor = new Mock<IContactCenterScopeExecutor>();
 
         TreatmentProvider = new Mock<IQueueTreatmentProvider>();
+        AuditRecorder = new RecordingContactCenterAuditRecorder();
         InteractionManagerForDequeue = new Mock<IInteractionManager>();
         InteractionManagerForDequeue
             .Setup(x => x.FindByActivityIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -443,6 +536,7 @@ public sealed class ActivityQueueServiceTests
             scopeExecutor.Object,
             TreatmentProvider.Object,
             InteractionManagerForDequeue.Object,
+            AuditRecorder,
             clock.Object);
     }
 }

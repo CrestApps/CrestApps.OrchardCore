@@ -47,6 +47,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     private readonly IDistributedLock _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterFeatureWorkManager _workManager;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IClock _clock;
     private readonly TimeSpan _inboundLockTimeout;
     private readonly TimeSpan _inboundLockExpiration;
@@ -72,6 +73,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
     /// <param name="distributedLock">The distributed lock used to serialize inbound call creation by provider call id.</param>
     /// <param name="scopeExecutor">The executor used to release inbound routing locks after commit.</param>
     /// <param name="workManager">The feature work manager used to reject routing while Voice is quiescing.</param>
+    /// <param name="auditRecorder">The recorder that writes each inbound call's interaction to the audit log.</param>
     /// <param name="clock">The clock used to stamp times.</param>
     /// <param name="coordinationOptions">The distributed-lock timings this deployment coordinates inbound routing with.</param>
     public InboundVoiceCallProcessor(
@@ -93,6 +95,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterFeatureWorkManager workManager,
+        IContactCenterAuditRecorder auditRecorder,
         IClock clock,
         IOptions<ContactCenterCoordinationOptions> coordinationOptions)
     {
@@ -114,6 +117,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         _distributedLock = distributedLock;
         _scopeExecutor = scopeExecutor;
         _workManager = workManager;
+        _auditRecorder = auditRecorder;
         _clock = clock;
         _inboundLockTimeout = coordinationOptions.Value.InboundLockTimeout;
         _inboundLockExpiration = coordinationOptions.Value.InboundLockExpiration;
@@ -708,6 +712,7 @@ public sealed class InboundVoiceCallProcessor : IInboundVoiceCallProcessor
         }
 
         await _interactionManager.CreateAsync(interaction);
+        await _auditRecorder.RecordInteractionCreatedAsync(interaction, ActivitySources.Inbound, ContactCenterActor.Provider(inboundEvent.ProviderName));
 
         return interaction;
     }

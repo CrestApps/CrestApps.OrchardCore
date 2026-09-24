@@ -22,6 +22,7 @@ public sealed class ConsultTransferService : IConsultTransferService
 {
     private readonly ICallSessionManager _callSessionManager;
     private readonly IContactCenterVoiceProviderResolver _voiceProviderResolver;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -31,11 +32,13 @@ public sealed class ConsultTransferService : IConsultTransferService
     public ConsultTransferService(
         ICallSessionManager callSessionManager,
         IContactCenterVoiceProviderResolver voiceProviderResolver,
+        IContactCenterAuditRecorder auditRecorder,
         IClock clock,
         ILogger<ConsultTransferService> logger)
     {
         _callSessionManager = callSessionManager;
         _voiceProviderResolver = voiceProviderResolver;
+        _auditRecorder = auditRecorder;
         _clock = clock;
         _logger = logger;
     }
@@ -104,6 +107,7 @@ public sealed class ConsultTransferService : IConsultTransferService
             result.ProviderLegId);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+        await _auditRecorder.RecordConsultAsync(ContactCenterConstants.Events.ConsultStarted, session, consult, now, cancellationToken);
 
         return consult;
     }
@@ -118,9 +122,11 @@ public sealed class ConsultTransferService : IConsultTransferService
             return false;
         }
 
-        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Connected, _clock.UtcNow);
+        var connectedUtc = _clock.UtcNow;
+        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Connected, connectedUtc);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+        await _auditRecorder.RecordConsultAsync(ContactCenterConstants.Events.ConsultConnected, session, consult, connectedUtc, cancellationToken);
 
         return true;
     }
@@ -154,9 +160,11 @@ public sealed class ConsultTransferService : IConsultTransferService
             return false;
         }
 
-        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Completed, _clock.UtcNow);
+        var completedUtc = _clock.UtcNow;
+        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Completed, completedUtc);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+        await _auditRecorder.RecordConsultAsync(ContactCenterConstants.Events.ConsultCompleted, session, consult, completedUtc, cancellationToken);
 
         return true;
     }
@@ -189,9 +197,11 @@ public sealed class ConsultTransferService : IConsultTransferService
 
         // Cancelling must leave the customer with the agent they already had rather than in limbo; that is the
         // whole reason for consulting before committing.
-        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Cancelled, _clock.UtcNow);
+        var cancelledUtc = _clock.UtcNow;
+        CallTopologyProjector.AdvanceConsult(session, consultId, ConsultCallStatus.Cancelled, cancelledUtc);
 
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
+        await _auditRecorder.RecordConsultAsync(ContactCenterConstants.Events.ConsultCancelled, session, consult, cancelledUtc, cancellationToken);
 
         return true;
     }

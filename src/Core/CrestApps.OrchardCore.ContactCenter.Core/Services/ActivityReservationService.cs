@@ -28,6 +28,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     private readonly IContactCenterActivityWriter _activityWriter;
     private readonly IAgentStateTransitionService _stateTransitions;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IDistributedLock _distributedLock;
@@ -50,6 +51,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     /// <param name="activityWriter">The writer used to apply CRM activity lifecycle changes outside the routing transaction.</param>
     /// <param name="stateTransitions">The one place agent state is changed and recorded.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="auditRecorder">The recorder that writes how each offer was settled to the audit log.</param>
     /// <param name="providerCommandStateServices">The optional durable provider-command service used for voice-specific timeout actions.</param>
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
     /// <param name="distributedLock">The distributed lock used to serialize agent and reservation transitions.</param>
@@ -68,6 +70,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         IContactCenterActivityWriter activityWriter,
         IAgentStateTransitionService stateTransitions,
         IContactCenterEventPublisher publisher,
+        IContactCenterAuditRecorder auditRecorder,
         IEnumerable<IProviderCommandStateService> providerCommandStateServices,
         IContactCenterScopeExecutor scopeExecutor,
         IDistributedLock distributedLock,
@@ -87,6 +90,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         _activityWriter = activityWriter;
         _stateTransitions = stateTransitions;
         _publisher = publisher;
+        _auditRecorder = auditRecorder;
         _providerCommandStateService = providerCommandStateServices.FirstOrDefault();
         _scopeExecutor = scopeExecutor;
         _distributedLock = distributedLock;
@@ -280,6 +284,15 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             // waiting -- the agent is still being connected -- and stopping it now gave the caller dead air for
             // the second or more the connect takes. The accept path stops it once the agent is joined, or right
             // away for a provider that cannot tell when that happens (IContactCenterCallCommandService).
+
+            // Their queue wait ends here, when an agent takes the call, even though the connect is still to come.
+            await _auditRecorder.RecordQueueChangeAsync(
+                ContactCenterConstants.Events.CallDequeued,
+                queueItem,
+                await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken),
+                _clock.UtcNow,
+                CallLifecycleReasons.Assigned,
+                cancellationToken: cancellationToken);
         }
 
         var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
@@ -508,6 +521,12 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         if (agentReleased)
         {
             await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+        }
+
+        // An accepted offer was already settled when the agent took it; only one still ringing is withdrawn here.
+        if (!wasAccepted)
+        {
+            await RecordOfferSettledAsync(reservation, interaction: null, agent, now, CallLifecycleReasons.Compensated, cancellationToken);
         }
 
         await CommitTransitionAsync(

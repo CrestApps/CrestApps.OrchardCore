@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Moq;
 using OrchardCore.Modules;
 
@@ -311,6 +312,42 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         Assert.Equal(ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(command.CommandId, ContactCenterConstants.Events.OfferRequeued), harness.PublishedEvents[0].IdempotencyKey);
     }
 
+    [Fact]
+    public async Task ProjectFailureAsync_RecordsTheAgentLegFailed_AndTheAcceptedOfferMissed()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupActiveState();
+        harness.SetupPublisher();
+        harness.ReservationManager
+            .Setup(manager => manager.FindByIdAsync("reservation-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation
+            {
+                ItemId = "reservation-1",
+                AgentId = "agent-1",
+                QueueId = "queue-1",
+                CreatedUtc = _now.AddSeconds(-9),
+            });
+        var executor = harness.CreateExecutor();
+        var command = CreateCommand(reofferOnFailure: true);
+        command.LastError = "agent_unreachable";
+
+        // Act
+        await executor.ProjectFailureAsync(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        var legFailed = Assert.Single(harness.AuditRecorder.CallsOf(ContactCenterConstants.Events.AgentLegFailed));
+        Assert.Equal(command.InteractionId, legFailed.Data.InteractionId);
+        Assert.Equal("agent_unreachable", legFailed.Data.Reason);
+
+        var missed = Assert.Single(harness.AuditRecorder.Offers);
+        Assert.Equal(ContactCenterConstants.Events.OfferMissed, missed.EventType);
+        Assert.Equal("reservation-1", missed.Data.ReservationId);
+        Assert.Equal(command.InteractionId, missed.Data.InteractionId);
+        Assert.Equal(CallLifecycleReasons.AnswerFailed, missed.Data.Reason);
+        Assert.Equal(9, missed.Data.RingSeconds);
+    }
+
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -548,6 +585,10 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
         public FakeCallControlAuthorizationService CallControlAuthorization { get; } = new();
 
+        public RecordingContactCenterAuditRecorder AuditRecorder { get; } = new();
+
+        public Mock<IActivityReservationManager> ReservationManager { get; } = new();
+
         public AnswerProviderCommandTypeExecutor CreateExecutor()
         {
             var clock = new Mock<IClock>(MockBehavior.Strict);
@@ -561,7 +602,9 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 Publisher.Object,
                 clock.Object,
                 CallControlAuthorization,
-                PreDialCoordinators);
+                PreDialCoordinators,
+                AuditRecorder,
+                ReservationManager.Object);
         }
 
         public void SetupActiveState()

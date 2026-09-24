@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
@@ -244,6 +245,7 @@ public sealed class InboundVoiceVoicemailDispatchTests
                 new Mock<IDistributedLock>().Object,
                 scopeExecutor.Object,
                 new Mock<IContactCenterFeatureWorkManager>().Object,
+                new RecordingContactCenterAuditRecorder(),
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()));
         }

@@ -164,6 +164,8 @@ public sealed partial class ActivityReservationService
                 await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
             }
 
+            await RecordOfferSettledAsync(reservation, interaction: null, obsoleteAgent, now, CallLifecycleReasons.Superseded, cancellationToken);
+
             return;
         }
 
@@ -313,6 +315,16 @@ public sealed partial class ActivityReservationService
         }
 
         await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+
+        // A decline is recorded by whoever took it, with the agent as the actor; an expiry names what became of the
+        // caller, and a withdrawal says the platform took the offer back.
+        await RecordOfferSettledAsync(
+            reservation,
+            interaction,
+            agent,
+            now,
+            status == ReservationStatus.Expired ? configuredUnansweredAction.ToString() : CallLifecycleReasons.Withdrawn,
+            cancellationToken);
 
         if (providerCommand is not null)
         {

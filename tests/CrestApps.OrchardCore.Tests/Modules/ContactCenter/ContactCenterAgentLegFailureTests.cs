@@ -1,5 +1,6 @@
 #nullable enable annotations
 
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -7,6 +8,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telnyx;
 using CrestApps.OrchardCore.Telnyx.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -16,6 +18,8 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ContactCenterAgentLegFailureTests
 {
+    private readonly RecordingContactCenterAuditRecorder _auditRecorder = new();
+
     private static readonly DateTime _now = new(2026, 8, 28, 20, 9, 8, DateTimeKind.Utc);
 
     [Fact]
@@ -73,6 +77,7 @@ public sealed class ContactCenterAgentLegFailureTests
             interactionManager.Object,
             callSessionManager.Object,
             telephonyService.Object,
+            _auditRecorder,
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
@@ -91,6 +96,12 @@ public sealed class ContactCenterAgentLegFailureTests
         telephonyService.Verify(
             telephony => telephony.HangupAsync(It.Is<CallReference>(call => call.CallId == "call-1"), It.IsAny<CancellationToken>()),
             Times.Once);
+
+        var legFailed = Assert.Single(_auditRecorder.CallsOf(ContactCenterConstants.Events.AgentLegFailed));
+        Assert.Equal("interaction-1", legFailed.Data.InteractionId);
+        Assert.Equal(nameof(HangupCause.Rejected), legFailed.Data.HangupCause);
+        Assert.Equal(nameof(CallPartyRole.Agent), legFailed.Data.LegRole);
+        Assert.Equal(_now, legFailed.OccurredUtc);
     }
 
     [Fact]
@@ -120,6 +131,7 @@ public sealed class ContactCenterAgentLegFailureTests
             interactionManager.Object,
             new Mock<ICallSessionManager>(MockBehavior.Strict).Object,
             telephonyService.Object,
+            _auditRecorder,
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
@@ -286,6 +298,7 @@ public sealed class ContactCenterAgentLegFailureTests
             interactionManager.Object,
             callSessionManager.Object,
             new Mock<ITelephonyService>(MockBehavior.Strict).Object,
+            _auditRecorder,
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
@@ -303,6 +316,12 @@ public sealed class ContactCenterAgentLegFailureTests
 
         // The agent is a party on the bridge, so the call correctly reports who was on it.
         Assert.Contains(session.Bridge.ActiveParticipants, participant => participant.ProviderLegId == "agent-leg-1");
+
+        var legAnswered = Assert.Single(_auditRecorder.CallsOf(ContactCenterConstants.Events.AgentLegAnswered));
+        Assert.Equal("interaction-1", legAnswered.Data.InteractionId);
+        Assert.Equal("agent-leg-1", legAnswered.Data.ProviderLegId);
+        Assert.Equal("agent-1", legAnswered.Data.AgentId);
+        Assert.Equal($"agent-leg:{ContactCenterConstants.Events.AgentLegAnswered}:agent-leg-1", legAnswered.IdempotencyKey);
 
         callSessionManager.Verify(
             manager => manager.UpdateAsync(session, It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),

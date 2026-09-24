@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using CrestApps.OrchardCore.Telephony.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -284,6 +285,47 @@ public sealed class DialProviderCommandTypeExecutorTests
     }
 
     // ProjectFailureAsync
+
+    [Fact]
+    public async Task ProjectSuccessAsync_RecordsTheDialStarted_OncePerCommand()
+    {
+        // Arrange
+        var auditRecorder = new RecordingContactCenterAuditRecorder();
+        var harness = CreateHarness(auditRecorder: auditRecorder);
+        var result = new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-1",
+            ProviderName = "provider",
+        };
+
+        // Act
+        await harness.Executor.ProjectSuccessAsync(harness.Command, result, TestContext.Current.CancellationToken);
+
+        // Assert
+        var started = Assert.Single(auditRecorder.CallsOf(ContactCenterConstants.Events.DialStarted));
+        Assert.Equal(harness.Command.InteractionId, started.Data.InteractionId);
+        Assert.Equal("call-1", started.Data.ProviderCallId);
+        Assert.Equal($"dial:{ContactCenterConstants.Events.DialStarted}:command-1", started.IdempotencyKey);
+    }
+
+    [Fact]
+    public async Task ProjectFailureAsync_RecordsTheDialFailed_WithWhy()
+    {
+        // Arrange
+        var auditRecorder = new RecordingContactCenterAuditRecorder();
+        var harness = CreateHarness(auditRecorder: auditRecorder);
+        harness.Command.LastError = "caller_id_rejected";
+
+        // Act
+        await harness.Executor.ProjectFailureAsync(harness.Command, TestContext.Current.CancellationToken);
+
+        // Assert
+        var failed = Assert.Single(auditRecorder.CallsOf(ContactCenterConstants.Events.DialFailed));
+        Assert.Equal(harness.Command.InteractionId, failed.Data.InteractionId);
+        Assert.Equal("caller_id_rejected", failed.Data.Reason);
+        Assert.Equal(_now, failed.OccurredUtc);
+    }
 
     [Fact]
     public async Task ProjectFailureAsync_SetsInteractionStatusToFailed()
@@ -589,7 +631,8 @@ public sealed class DialProviderCommandTypeExecutorTests
     private static TestHarness CreateHarness(
         bool canDispatch = true,
         IList<IProviderCommandDispatchValidator> validators = null,
-        CallSession callSession = null)
+        CallSession callSession = null,
+        RecordingContactCenterAuditRecorder auditRecorder = null)
     {
         var command = new ProviderCommand
         {
@@ -655,6 +698,7 @@ public sealed class DialProviderCommandTypeExecutorTests
             callSessionManager.Object,
             dialAgentManager.Object,
             CreateDialDestinationPolicy(),
+            auditRecorder ?? new RecordingContactCenterAuditRecorder(),
             NullLogger<DialProviderCommandTypeExecutor>.Instance);
 
         return new TestHarness(command, claim, interaction, activity, validator, router, executor, callSessionManager, callSession);

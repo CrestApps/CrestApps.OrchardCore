@@ -174,6 +174,10 @@ public sealed class Startup : StartupBase
             .AddScoped<ContactCenterEventDispatchContext>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
             .AddScoped<IContactCenterAuditRecorder, ContactCenterAuditRecorder>()
+
+            // For the services an event handler depends on: the recorder needs the publisher, the publisher's
+            // outbox needs every handler, so injecting the recorder itself there would close a construction cycle.
+            .AddScoped(serviceProvider => new Lazy<IContactCenterAuditRecorder>(serviceProvider.GetRequiredService<IContactCenterAuditRecorder>))
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
             .AddScoped<IContactCenterMetricDeltaStore, ContactCenterMetricDeltaStore>()
             .AddScoped<IContactCenterMetricRollupService, ContactCenterMetricRollupService>()

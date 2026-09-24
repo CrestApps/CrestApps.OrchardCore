@@ -37,6 +37,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
     private readonly ContactCenterCoordinationOptions _coordinationOptions;
     private readonly IQueueTreatmentService _treatmentService;
     private readonly ISession _session;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -56,6 +57,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         IOptions<ContactCenterCoordinationOptions> coordinationOptions,
         IQueueTreatmentService treatmentService,
         ISession session,
+        IContactCenterAuditRecorder auditRecorder,
         ILogger<VoiceAgentHandoffService> logger)
     {
         _interactionManager = interactionManager;
@@ -71,6 +73,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         _coordinationOptions = coordinationOptions.Value;
         _treatmentService = treatmentService;
         _session = session;
+        _auditRecorder = auditRecorder;
         _logger = logger;
     }
 
@@ -184,6 +187,7 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
             ApplyHandoffContext(interaction, request);
 
             await _interactionManager.CreateAsync(interaction, cancellationToken: cancellationToken);
+            await _auditRecorder.RecordInteractionCreatedAsync(interaction, activity.Source, new ContactCenterActor(ContactCenterActorType.AiAgent), cancellationToken);
         }
         else
         {
@@ -198,6 +202,8 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
 
             await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
         }
+
+        await RecordHandoffRequestedAsync(interaction, request, queueId, cancellationToken);
 
         // Move the activity from the automated lane into the manual/queued lane so it routes like an inbound call.
         // Mark it escalated (durable) so containment reporting counts it even though it leaves the automated lane.
@@ -254,6 +260,35 @@ public sealed class VoiceAgentHandoffService : IOmnichannelHandoffService
         return string.IsNullOrEmpty(offeredUserId)
             ? OmnichannelHandoffResult.WaitingInQueue("The caller is waiting in the queue for the next agent.")
             : OmnichannelHandoffResult.Success("The caller was offered to an available agent.", offeredToUserId: offeredUserId);
+    }
+
+    private Task RecordHandoffRequestedAsync(
+        Interaction interaction,
+        OmnichannelHandoffRequest request,
+        string queueId,
+        CancellationToken cancellationToken)
+    {
+        var data = ContactCenterCallAudit.ForInteraction(interaction);
+        data.ProviderName ??= request.ProviderName;
+        data.ProviderCallId ??= request.ProviderCallId;
+        data.QueueId = queueId;
+        data.Target = queueId;
+        data.Reason = request.Reason;
+
+        if (!string.IsNullOrWhiteSpace(request.AiSessionId))
+        {
+            data.Details["aiSessionId"] = request.AiSessionId;
+        }
+
+        // One handoff per call: the escalation is redelivered with the provider's events, and the lock above
+        // already makes a second one a no-op for routing.
+        return _auditRecorder.RecordCallAsync(
+            ContactCenterConstants.Events.AiHandoffRequested,
+            data,
+            _clock.UtcNow,
+            new ContactCenterActor(ContactCenterActorType.AiAgent),
+            $"ai-handoff:{interaction.ItemId}",
+            cancellationToken);
     }
 
     // Only the sources that placed the call are outbound. Anything else, including an activity with no source

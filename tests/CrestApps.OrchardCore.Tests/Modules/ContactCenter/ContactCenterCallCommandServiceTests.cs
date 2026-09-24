@@ -672,6 +672,68 @@ public sealed class ContactCenterCallCommandServiceTests
         harness.PreDialCoordinator.Verify(coordinator => coordinator.ReleaseAsync("r1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+        public async Task AcceptInboundOfferAsync_OfferAcceptedCarriesTheOffer_AndHowLongItRang()
+    {
+        // Arrange
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, []);
+        harness.SetupProvider(VoiceProviderDeliveryModel.AgentDeviceNative);
+        var published = new List<InteractionEvent>();
+        harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => published.Add(interactionEvent))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await harness.CreateService().AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var accepted = Assert.Single(published, e => e.EventType == ContactCenterConstants.Events.OfferAccepted);
+        Assert.Equal("int1", accepted.InteractionId);
+        Assert.Equal(ContactCenterActorType.Agent, accepted.ActorType);
+        Assert.Equal(_now, accepted.OccurredUtc);
+
+        var offer = accepted.GetData<OfferLifecycleEventData>();
+        Assert.Equal("r1", offer.ReservationId);
+        Assert.Equal("int1", offer.InteractionId);
+        Assert.Equal(_now, offer.SettledUtc);
+        Assert.Equal(7, offer.RingSeconds);
+    }
+
+    [Fact]
+    public async Task DeclineInboundOfferAsync_NamesTheInteraction_AndStillRoutesTheNextOffer()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupInteraction();
+        harness.ReservationService
+            .Setup(service => service.RejectAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateReservation());
+        InteractionEvent? declined = null;
+        harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => declined = interactionEvent)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await harness.CreateService().DeclineInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(declined);
+        Assert.Equal("int1", declined!.InteractionId);
+        Assert.Equal(ContactCenterActorType.Agent, declined.ActorType);
+
+        var offer = declined.GetData<OfferLifecycleEventData>();
+        Assert.Equal("int1", offer.InteractionId);
+        Assert.Equal("u1", offer.UserId);
+        Assert.Equal(7, offer.RingSeconds);
+
+        // The re-offer handler reads the queue from the same payload under its own contract.
+        Assert.Equal("q1", declined.GetData<OfferDeclinedEventData>().QueueId);
+    }
+
     private static void ConfigureAcceptedInboundOffer(Harness harness, List<string> order)
     {
         harness.SetupAcceptedReservation(order);
@@ -689,6 +751,7 @@ public sealed class ContactCenterCallCommandServiceTests
             ActivityItemId = "act1",
             QueueId = "q1",
             DialerProfileId = "profile-1",
+            CreatedUtc = _now.AddSeconds(-7),
         }.RestorePersistedStatus(ReservationStatus.Pending);
     }
 

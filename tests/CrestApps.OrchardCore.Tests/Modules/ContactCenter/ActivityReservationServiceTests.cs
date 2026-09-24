@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -448,6 +449,47 @@ public sealed partial class ActivityReservationServiceTests
     }
 
     [Fact]
+    public async Task ExpireDueAsync_RecordsTheOfferRangOut_WithItsCallAndHowLongItRang()
+    {
+        // Arrange
+        var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", QueueId = "q1", AgentId = "a1", ActivityItemId = "act-1", CreatedUtc = _now.AddSeconds(-20) }.RestorePersistedStatus(ReservationStatus.Pending);
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.GetExpiredAsync(_now, It.IsAny<DateTime?>(), It.IsAny<long>(), It.IsAny<int>(), It.IsAny<CancellationToken>())).ReturnsAsync(new ExpiredReservationPage([reservation], null, 0));
+        reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByIdAsync("qi-1", It.IsAny<CancellationToken>())).ReturnsAsync(new QueueItem { ItemId = "qi-1" }.RestorePersistedStatus(QueueItemStatus.Reserved));
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>())).ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "user-1" });
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>())).ReturnsAsync(new Interaction { ItemId = "i1", ActivityItemId = "act-1" }.RestorePersistedStatus(InteractionStatus.Ringing));
+        var auditRecorder = new RecordingContactCenterAuditRecorder();
+        var service = CreateService(
+            reservationManager,
+            queueItemManager,
+            agentManager,
+            new Mock<IActivityQueueManager>(),
+            new Mock<IActivityQueueService>(),
+            interactionManager,
+            new Mock<IOmnichannelActivityManager>(),
+            new Mock<IContactCenterEventPublisher>(),
+            providerCommandStateService: null,
+            scopeExecutor: null,
+            auditRecorder: auditRecorder);
+
+        // Act
+        await service.ExpireDueAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var offer = Assert.Single(auditRecorder.Offers);
+        Assert.Equal(ContactCenterConstants.Events.OfferExpired, offer.EventType);
+        Assert.Equal("i1", offer.Data.InteractionId);
+        Assert.Equal("r1", offer.Data.ReservationId);
+        Assert.Equal("user-1", offer.Data.UserId);
+        Assert.Equal(20, offer.Data.RingSeconds);
+        Assert.Equal(nameof(UnansweredOfferAction.Requeue), offer.Data.Reason);
+    }
+
+    [Fact]
     public async Task ExpireDueAsync_WhenCancelledDuringAFailedAcquisition_StopsAndDoesNotProcessRemainingCandidates()
     {
         // Arrange
@@ -802,6 +844,9 @@ public sealed partial class ActivityReservationServiceTests
                 It.IsAny<System.Text.Json.Nodes.JsonNode>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
+
+        // The superseded offer is still written to the audit log against its call, which reads the interaction;
+        // what must not happen is the newer offer's call being changed.
         interactionManager.Verify(
             manager => manager.UpdateAsync(It.IsAny<Interaction>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -1853,7 +1898,7 @@ public sealed partial class ActivityReservationServiceTests
         Mock<IDistributedLock> distributedLock = null,
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null,
-        IContactCenterAuditRecorder? auditRecorder = null)
+        RecordingContactCenterAuditRecorder auditRecorder = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -1924,6 +1969,7 @@ public sealed partial class ActivityReservationServiceTests
             new FakeContactCenterActivityWriter(activityManager.Object),
             AgentStateAuditTestDoubles.CreateTransitions(auditRecorder, clock.Object),
             publisher.Object,
+            auditRecorder ?? new RecordingContactCenterAuditRecorder(),
             providerCommandStateService is null ? [] : [providerCommandStateService.Object],
             (scopeExecutor ?? new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict)).Object,
             distributedLock.Object,

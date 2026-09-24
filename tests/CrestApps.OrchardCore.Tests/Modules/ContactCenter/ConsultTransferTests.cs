@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -41,6 +42,59 @@ public sealed class ConsultTransferTests
         Assert.Equal(ConsultCallStatus.Initiated, consult.Status);
         Assert.Equal(_now, consult.StartedUtc);
         Assert.Single(harness.Session.Consults);
+    }
+
+    [Fact]
+    public async Task EveryPhaseOfAConsult_IsRecordedOnce_AgainstTheCall()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.Session.InteractionId = "interaction-1";
+
+        // Act
+        var consult = await harness.Service.StartAsync(Request(), TestContext.Current.CancellationToken);
+        await harness.Service.MarkConnectedAsync("call-1", consult.ConsultId, TestContext.Current.CancellationToken);
+        await harness.Service.CompleteAsync("call-1", consult.ConsultId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(
+            [
+                ContactCenterConstants.Events.ConsultStarted,
+                ContactCenterConstants.Events.ConsultConnected,
+                ContactCenterConstants.Events.ConsultCompleted,
+            ],
+            harness.AuditRecorder.Calls.Select(call => call.EventType));
+        Assert.All(harness.AuditRecorder.Calls, call => Assert.Equal("interaction-1", call.Data.InteractionId));
+        Assert.All(harness.AuditRecorder.Calls, call => Assert.Equal(consult.ConsultId, call.Data.Details["consultId"]));
+        Assert.Equal("consult-leg-1", harness.AuditRecorder.Calls[0].Data.ProviderLegId);
+        Assert.Equal(3, harness.AuditRecorder.Calls.Select(call => call.IdempotencyKey).Distinct().Count());
+    }
+
+    [Fact]
+    public async Task CancellingAConsult_IsRecordedAsCancelled()
+    {
+        // Arrange
+        var harness = new Harness();
+        var consult = await harness.Service.StartAsync(Request(), TestContext.Current.CancellationToken);
+
+        // Act
+        await harness.Service.CancelAsync("call-1", consult.ConsultId, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(harness.AuditRecorder.CallsOf(ContactCenterConstants.Events.ConsultCancelled));
+    }
+
+    [Fact]
+    public async Task AConsultTheProviderRefused_IsNotRecorded()
+    {
+        // Arrange
+        var harness = new Harness(transferAllowed: false);
+
+        // Act
+        await harness.Service.StartAsync(Request(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(harness.AuditRecorder.Calls);
     }
 
     [Fact]
@@ -180,6 +234,8 @@ public sealed class ConsultTransferTests
 
         public ConsultTransferService Service { get; }
 
+        public RecordingContactCenterAuditRecorder AuditRecorder { get; } = new();
+
         public Harness(bool transferAllowed = true)
         {
             var callSessionManager = new Mock<ICallSessionManager>();
@@ -210,6 +266,7 @@ public sealed class ConsultTransferTests
             Service = new ConsultTransferService(
                 callSessionManager.Object,
                 voiceProviderResolver.Object,
+                AuditRecorder,
                 new StubClock(_now),
                 NullLogger<ConsultTransferService>.Instance);
         }

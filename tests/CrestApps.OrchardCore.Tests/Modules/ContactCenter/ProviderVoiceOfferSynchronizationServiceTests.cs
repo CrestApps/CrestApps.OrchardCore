@@ -1,9 +1,11 @@
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Moq;
 using OrchardCore.Modules;
 
@@ -11,6 +13,122 @@ namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
 public sealed class ProviderVoiceOfferSynchronizationServiceTests
 {
+    private readonly RecordingContactCenterAuditRecorder _auditRecorder = new();
+
+    [Fact]
+    public async Task ReconcileEndedOfferAsync_WhenTheCallerHangsUpWhileRinging_RecordsTheWithdrawnOfferTheDepartureAndTheAbandon()
+    {
+        // Arrange
+        var endedUtc = new DateTime(2026, 7, 10, 11, 59, 30, 250, DateTimeKind.Utc);
+        var interaction = new Interaction
+        {
+            ItemId = "int1",
+            ActivityItemId = "act1",
+            Channel = InteractionChannel.Voice,
+            Direction = InteractionDirection.Inbound,
+            EndedUtc = endedUtc,
+        }.RestorePersistedStatus(InteractionStatus.Ended);
+        var queueItem = new QueueItem
+        {
+            ItemId = "qi-1",
+            QueueId = "queue-1",
+            ActivityItemId = "act1",
+            ReservationId = "res-1",
+            EnqueuedUtc = endedUtc.AddSeconds(-42),
+            QueueEnteredUtc = endedUtc.AddSeconds(-42),
+        }.RestorePersistedStatus(QueueItemStatus.Reserved);
+        var reservation = new ActivityReservation
+        {
+            ItemId = "res-1",
+            AgentId = "agent-1",
+            ActivityItemId = "act1",
+            CreatedUtc = endedUtc.AddSeconds(-12),
+        }.RestorePersistedStatus(ReservationStatus.Pending);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.GetActiveByActivityAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(endedUtc.AddMinutes(1));
+
+        var service = new ProviderVoiceOfferSynchronizationService(
+            interactionManager.Object,
+            new Mock<ICallSessionManager>().Object,
+            queueItemManager.Object,
+            reservationManager.Object,
+            new Mock<IAgentProfileManager>().Object,
+            new Mock<IOmnichannelActivityManager>().Object,
+            new FakeContactCenterWorkStateService(),
+            CreateServiceProvider(),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
+            clock.Object,
+            new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
+
+        // Act
+        await service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var offer = Assert.Single(_auditRecorder.Offers);
+        Assert.Equal(ContactCenterConstants.Events.OfferCancelled, offer.EventType);
+        Assert.Equal("int1", offer.Data.InteractionId);
+        Assert.Equal(CallLifecycleReasons.CallEnded, offer.Data.Reason);
+        Assert.Equal(12, offer.Data.RingSeconds!.Value, precision: 3);
+
+        var dequeued = Assert.Single(_auditRecorder.CallsOf(ContactCenterConstants.Events.CallDequeued));
+        Assert.Equal(endedUtc, dequeued.OccurredUtc);
+        Assert.Equal(42, dequeued.Data.DurationSeconds!.Value, precision: 3);
+
+        var abandoned = Assert.Single(_auditRecorder.CallsOf(ContactCenterConstants.Events.CallAbandoned));
+        Assert.Equal("int1", abandoned.Data.InteractionId);
+        Assert.Equal(endedUtc, abandoned.OccurredUtc);
+        Assert.Equal(42, abandoned.Data.DurationSeconds!.Value, precision: 3);
+        Assert.Equal(ContactCenterActorType.Customer, abandoned.Actor.Type);
+    }
+
+    [Fact]
+    public async Task ReconcileEndedOfferAsync_AnOutboundCallNobodyAnswered_IsNotAnAbandon()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "int1",
+            ActivityItemId = "act1",
+            Channel = InteractionChannel.Voice,
+            Direction = InteractionDirection.Outbound,
+            EndedUtc = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc),
+        }.RestorePersistedStatus(InteractionStatus.Failed);
+        var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "queue-1", ActivityItemId = "act1" }.RestorePersistedStatus(QueueItemStatus.Waiting);
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.GetActiveByActivityAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        var service = new ProviderVoiceOfferSynchronizationService(
+            interactionManager.Object,
+            new Mock<ICallSessionManager>().Object,
+            queueItemManager.Object,
+            reservationManager.Object,
+            new Mock<IAgentProfileManager>().Object,
+            new Mock<IOmnichannelActivityManager>().Object,
+            new FakeContactCenterWorkStateService(),
+            CreateServiceProvider(),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
+            new Mock<IClock>().Object,
+            new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
+
+        // Act
+        await service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Single(_auditRecorder.CallsOf(ContactCenterConstants.Events.CallDequeued));
+        Assert.Empty(_auditRecorder.CallsOf(ContactCenterConstants.Events.CallAbandoned));
+    }
+
     [Fact]
     public async Task ReconcileEndedOfferAsync_WhenPreConnectOfferEnded_RemovesQueueAndReleasesAgent()
     {
@@ -89,6 +207,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(stateTransitions: AgentStateAuditTestDoubles.CreateTransitions(recorder, clock.Object)),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
             clock.Object,
             logger.Object);
 
@@ -179,6 +298,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
@@ -252,6 +372,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(presenceManager.Object),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
@@ -339,6 +460,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(presenceManager.Object),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
@@ -405,6 +527,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             new Mock<IOmnichannelActivityManager>().Object,
             new FakeContactCenterWorkStateService(),
             CreateServiceProvider(),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
@@ -487,6 +610,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             CreateServiceProvider(),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 
@@ -567,6 +691,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             new Mock<IOmnichannelActivityManager>().Object,
             new FakeContactCenterWorkStateService(),
             CreateServiceProvider(presenceManager.Object),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
             clock.Object,
             new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>().Object);
 

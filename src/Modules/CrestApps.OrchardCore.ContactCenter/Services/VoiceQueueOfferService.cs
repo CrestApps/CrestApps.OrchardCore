@@ -29,6 +29,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IProviderVoiceOfferSynchronizationService _offerSynchronizationService;
     private readonly IContactCenterFeatureWorkManager _workManager;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly ILogger _logger;
 
     /// <summary>
@@ -42,6 +43,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
     /// <param name="activityManager">The CRM activity manager.</param>
     /// <param name="offerSynchronizationService">The offer synchronization service used to remove calls already known to have ended.</param>
     /// <param name="workManager">The feature work manager used to reject offering while Voice is quiescing.</param>
+    /// <param name="auditRecorder">The recorder that writes each offer that starts ringing to the audit log.</param>
     /// <param name="logger">The logger instance.</param>
     public VoiceQueueOfferService(
         IActivityAssignmentService assignmentService,
@@ -52,6 +54,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         IOmnichannelActivityManager activityManager,
         IProviderVoiceOfferSynchronizationService offerSynchronizationService,
         IContactCenterFeatureWorkManager workManager,
+        IContactCenterAuditRecorder auditRecorder,
         ILogger<VoiceQueueOfferService> logger)
     {
         _assignmentService = assignmentService;
@@ -62,6 +65,7 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         _activityManager = activityManager;
         _offerSynchronizationService = offerSynchronizationService;
         _workManager = workManager;
+        _auditRecorder = auditRecorder;
         _logger = logger;
     }
 
@@ -240,6 +244,14 @@ public sealed class VoiceQueueOfferService : IVoiceQueueOfferService
         interaction.AgentId = agent.ItemId;
         interaction.QueueId = reservation.QueueId;
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
+
+        // The call is now ringing on the agent's screen. Its settlement -- accepted, declined, expired, missed or
+        // withdrawn -- is recorded against the same reservation, which is how its ring time is measured.
+        await _auditRecorder.RecordOfferAsync(
+            ContactCenterConstants.Events.OfferPresented,
+            ContactCenterCallAudit.ForOffer(reservation, interaction, agent, settledUtc: null),
+            ContactCenterActor.System,
+            cancellationToken);
 
         return (OfferOutcome.Offered, agent.UserId);
     }

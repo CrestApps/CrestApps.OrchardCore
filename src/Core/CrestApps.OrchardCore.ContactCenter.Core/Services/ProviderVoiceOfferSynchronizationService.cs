@@ -13,7 +13,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Reconciles routing state when provider truth reports that a queued, offered, or assigned call ended.
 /// </summary>
-public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOfferSynchronizationService
+public sealed partial class ProviderVoiceOfferSynchronizationService : IProviderVoiceOfferSynchronizationService
 {
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
@@ -23,6 +23,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IServiceProvider _serviceProvider;
+    private readonly Lazy<IContactCenterAuditRecorder> _auditRecorder;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -38,6 +39,9 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="serviceProvider">The service provider used to lazily resolve presence management and the agent state
     /// transition point without an event-publisher cycle.</param>
+    /// <param name="auditRecorder">The recorder that writes a withdrawn offer, a call leaving its queue and an abandon to
+    /// the audit log. Lazy because an event handler depends on this service and the recorder depends on the publisher
+    /// that dispatches to every handler.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public ProviderVoiceOfferSynchronizationService(
@@ -49,6 +53,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         IOmnichannelActivityManager activityManager,
         IContactCenterWorkStateService workStateService,
         IServiceProvider serviceProvider,
+        Lazy<IContactCenterAuditRecorder> auditRecorder,
         IClock clock,
         ILogger<ProviderVoiceOfferSynchronizationService> logger)
     {
@@ -60,6 +65,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         _activityManager = activityManager;
         _workStateService = workStateService;
         _serviceProvider = serviceProvider;
+        _auditRecorder = auditRecorder;
         _clock = clock;
         _logger = logger;
     }
@@ -101,6 +107,7 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         foreach (var reservation in reservations)
         {
             reservationAgentId ??= reservation.AgentId;
+            var wasRinging = reservation.Status == ReservationStatus.Pending;
             reservation.TransitionTo(ReservationStatus.Canceled);
 
             // This is the age settled reservations are purged by.
@@ -108,6 +115,11 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
 
             await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
             canceledReservationIds.Add(reservation.ItemId);
+
+            if (wasRinging)
+            {
+                await RecordOfferWithdrawnAsync(reservation, interaction, cancellationToken);
+            }
         }
 
         if (wasAnsweredByAgent)
@@ -160,9 +172,12 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
         if (queueItem is not null &&
             queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned)
         {
+            var wasWaiting = queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved;
             queueItem.TransitionTo(QueueItemStatus.Removed);
             queueItem.DequeuedUtc = _clock.UtcNow;
             await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+
+            await RecordLeftQueueAsync(queueItem, interaction, session, wasWaiting, cancellationToken);
         }
 
         var agentId = reservationAgentId ?? session?.AgentId ?? interaction.AgentId;

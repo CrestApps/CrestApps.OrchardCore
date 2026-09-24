@@ -26,6 +26,7 @@ public sealed class ActivityQueueService : IActivityQueueService
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IQueueTreatmentProvider _treatmentProvider;
     private readonly IInteractionManager _interactionManager;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IClock _clock;
 
     /// <summary>
@@ -39,6 +40,9 @@ public sealed class ActivityQueueService : IActivityQueueService
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="session">The YesSql session used to make newly queued work visible to immediate routing queries.</param>
     /// <param name="scopeExecutor">The executor used to retry idempotent enqueue conflicts in a fresh scope.</param>
+    /// <param name="treatmentProvider">The provider that plays and stops what a waiting caller hears.</param>
+    /// <param name="interactionManager">The interaction manager used to find the call a queue item carries.</param>
+    /// <param name="auditRecorder">The recorder that writes each call entering and leaving a queue to the audit log.</param>
     /// <param name="clock">The clock used to stamp queue times.</param>
     public ActivityQueueService(
         IQueueItemManager queueItemManager,
@@ -51,6 +55,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         IContactCenterScopeExecutor scopeExecutor,
         IQueueTreatmentProvider treatmentProvider,
         IInteractionManager interactionManager,
+        IContactCenterAuditRecorder auditRecorder,
         IClock clock)
     {
         _queueItemManager = queueItemManager;
@@ -63,6 +68,7 @@ public sealed class ActivityQueueService : IActivityQueueService
         _scopeExecutor = scopeExecutor;
         _treatmentProvider = treatmentProvider;
         _interactionManager = interactionManager;
+        _auditRecorder = auditRecorder;
         _clock = clock;
     }
 
@@ -135,6 +141,14 @@ public sealed class ActivityQueueService : IActivityQueueService
             SourceComponent = ContactCenterConstants.Components.Queues,
         }, cancellationToken);
 
+        await _auditRecorder.RecordQueueChangeAsync(
+            ContactCenterConstants.Events.CallQueued,
+            item,
+            await _interactionManager.FindByActivityIdAsync(activityItemId, cancellationToken),
+            item.QueueEnteredUtc,
+            CallLifecycleReasons.Enqueued,
+            cancellationToken: cancellationToken);
+
         return item;
     }
 
@@ -204,6 +218,14 @@ public sealed class ActivityQueueService : IActivityQueueService
             AggregateId = queueItem.ItemId,
             SourceComponent = ContactCenterConstants.Components.Queues,
         }, cancellationToken);
+
+        await _auditRecorder.RecordQueueChangeAsync(
+            ContactCenterConstants.Events.CallDequeued,
+            queueItem,
+            await _interactionManager.FindByActivityIdAsync(queueItem.ActivityItemId, cancellationToken),
+            queueItem.DequeuedUtc.Value,
+            status.ToString(),
+            cancellationToken: cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -311,10 +333,33 @@ public sealed class ActivityQueueService : IActivityQueueService
             queueItem.OverflowHistory.Add(fromQueue.ItemId);
         }
 
+        var now = _clock.UtcNow;
+        var interaction = await _interactionManager.FindByActivityIdAsync(queueItem.ActivityItemId, cancellationToken);
+
+        // The caller leaves one queue and enters the next, and each visit is its own wait: recorded before the
+        // item moves, the departure still carries how long the caller waited where they were.
+        await _auditRecorder.RecordQueueChangeAsync(
+            ContactCenterConstants.Events.CallDequeued,
+            queueItem,
+            interaction,
+            now,
+            CallLifecycleReasons.Overflowed,
+            fromQueue.ItemId,
+            targetQueueId,
+            cancellationToken);
+
         queueItem.OverflowedFromQueueId = fromQueue.ItemId;
         queueItem.QueueId = targetQueueId;
-        queueItem.QueueEnteredUtc = _clock.UtcNow;
+        queueItem.QueueEnteredUtc = now;
         await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
+
+        await _auditRecorder.RecordQueueChangeAsync(
+            ContactCenterConstants.Events.CallQueued,
+            queueItem,
+            interaction,
+            now,
+            CallLifecycleReasons.Overflowed,
+            cancellationToken: cancellationToken);
 
         await _publisher.PublishAsync(new InteractionEvent
         {

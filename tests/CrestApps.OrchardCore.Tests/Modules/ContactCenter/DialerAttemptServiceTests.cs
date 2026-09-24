@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -553,6 +554,7 @@ public sealed class DialerAttemptServiceTests
             agentManager.Object,
             voiceCallRouter.Object,
             publisher.Object,
+            new RecordingContactCenterAuditRecorder(),
             scopeExecutor.Object,
             providerCommandStateService.Object,
             new Mock<ILogger<DialerAttemptService>>().Object);

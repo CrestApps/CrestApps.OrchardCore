@@ -1,10 +1,12 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -142,6 +144,46 @@ public class VoiceAgentHandoffServiceTests
 
         harness.QueueService.Verify(q => q.EnqueueAsync("act1", "queue-1", It.IsAny<InteractionPriority?>(), It.IsAny<CancellationToken>()), Times.Once);
         harness.OfferService.Verify(o => o.OfferNextAsync("queue-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RequestHandoff_RecordsTheInteractionItCreated_AndTheHandoff_ByTheAiAgent()
+    {
+        // Arrange
+        var activity = new OmnichannelActivity
+        {
+            ItemId = "act1",
+            Channel = "Phone",
+            PreferredDestination = "+15551112222",
+            InteractionType = ActivityInteractionType.Automated,
+            Status = ActivityStatus.InProgress,
+        };
+        var harness = new Harness(activity, offeredUserId: "u1");
+
+        // Act
+        await harness.Service.RequestHandoffAsync(new OmnichannelHandoffRequest
+        {
+            Activity = activity,
+            TargetQueueId = "queue-1",
+            ProviderName = "Telnyx",
+            ProviderCallId = "call-abc",
+            Reason = "caller asked for a person",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(
+            [ContactCenterConstants.Events.InteractionCreated, ContactCenterConstants.Events.AiHandoffRequested],
+            harness.AuditRecorder.Calls.Select(call => call.EventType));
+
+        var created = harness.AuditRecorder.Calls[0];
+        Assert.Equal(harness.CreatedInteraction.ItemId, created.Data.InteractionId);
+        Assert.Equal($"interaction-created:{harness.CreatedInteraction.ItemId}", created.IdempotencyKey);
+
+        var handoff = harness.AuditRecorder.Calls[1];
+        Assert.Equal("queue-1", handoff.Data.Target);
+        Assert.Equal("caller asked for a person", handoff.Data.Reason);
+        Assert.Equal("call-abc", handoff.Data.ProviderCallId);
+        Assert.Equal(ContactCenterActorType.AiAgent, handoff.Actor.Type);
     }
 
     [Fact]
@@ -554,6 +596,8 @@ public class VoiceAgentHandoffServiceTests
 
         public VoiceAgentHandoffService Service { get; }
 
+        public RecordingContactCenterAuditRecorder AuditRecorder { get; } = new();
+
         public Harness(OmnichannelActivity activity = null, string offeredUserId = null, bool afterHours = false)
         {
             var activityManager = new Mock<IOmnichannelActivityManager>();
@@ -607,6 +651,7 @@ public class VoiceAgentHandoffServiceTests
                 new OptionsWrapper<ContactCenterCoordinationOptions>(new ContactCenterCoordinationOptions()),
                 TreatmentService.Object,
                 new Mock<ISession>().Object,
+                AuditRecorder,
                 NullLogger<VoiceAgentHandoffService>.Instance);
         }
     }

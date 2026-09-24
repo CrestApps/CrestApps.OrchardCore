@@ -687,6 +687,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         services.AddSingleton(activityManager.Object);
         services.AddSingleton(availabilityService.Object);
         services.AddSingleton(Mock.Of<IContactCenterEventPublisher>());
+        services.AddSingleton(Mock.Of<IContactCenterAuditRecorder>());
         // Production has a shell scope, so the CRM reconciliation is deferred until after the routing
         // transaction commits. Without that, the fallback would join the routing session and the test would be
         // measuring the fallback rather than the shipped behaviour.

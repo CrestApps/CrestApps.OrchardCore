@@ -1325,6 +1325,8 @@ public sealed class InboundVoiceServiceTests
 
         public Mock<IProviderCommandStateService> ProviderCommandStateService { get; } = new();
 
+        public RecordingContactCenterAuditRecorder AuditRecorder { get; } = new();
+
         public Mock<IProviderCommandProcessor> ProviderCommandProcessor { get; } = new();
 
         public Mock<IDistributedLock> DistributedLock { get; } = new();
@@ -1401,6 +1403,7 @@ public sealed class InboundVoiceServiceTests
                 ActivityManager.Object,
                 OfferSynchronizationService.Object,
                 workManager,
+                AuditRecorder,
                 NullLogger<VoiceQueueOfferService>.Instance);
 
             var inboundProcessor = new InboundVoiceCallProcessor(
@@ -1424,6 +1427,7 @@ public sealed class InboundVoiceServiceTests
                 DistributedLock.Object,
                 ScopeExecutor,
                 workManager,
+                AuditRecorder,
                 clock.Object,
                 Options.Create(new ContactCenterCoordinationOptions()));
 
