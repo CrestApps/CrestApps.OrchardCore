@@ -1898,7 +1898,7 @@ public sealed partial class ActivityReservationServiceTests
         Mock<IDistributedLock> distributedLock = null,
         Mock<ISession> session = null,
         Mock<IAgentAvailabilityService> availabilityService = null,
-        RecordingContactCenterAuditRecorder auditRecorder = null)
+        IContactCenterAuditRecorder auditRecorder = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
