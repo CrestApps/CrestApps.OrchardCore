@@ -56,6 +56,48 @@ public sealed class ContactCenterRealTimeEventHandlerTests
             Times.Once);
     }
 
+    // Bug: an agent on a live call saw "Available" in the soft phone header. Routing moves an agent into Reserved when
+    // an offer rings and into Busy when it is accepted, and records both only as AgentStateChanged -- never as
+    // AgentPresenceChanged -- so neither change was ever pushed to the agent's screens.
+    [Theory]
+    [InlineData(AgentPresenceStatus.Reserved, "Reserved")]
+    [InlineData(AgentPresenceStatus.Busy, "Busy")]
+    [InlineData(AgentPresenceStatus.WrapUp, "WrapUp")]
+    public async Task HandleAsync_AgentStateChanged_BroadcastsPresence(AgentPresenceStatus status, string expected)
+    {
+        // Arrange
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("a1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile
+            {
+                ItemId = "a1",
+                UserId = "u1",
+                DisplayName = "Agent One",
+                PresenceStatus = status,
+                QueueIds = ["q1"],
+            });
+
+        var notifier = new Mock<IContactCenterRealTimeNotifier>();
+        var handler = CreateHandler(notifier, agentManager: agentManager);
+
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.AgentStateChanged,
+            AggregateId = "a1",
+            OccurredUtc = _now,
+        };
+
+        // Act
+        await handler.HandleAsync(interactionEvent, TestContext.Current.CancellationToken);
+
+        // Assert
+        notifier.Verify(
+            n => n.NotifyPresenceChangedAsync(
+                It.Is<AgentPresenceNotification>(p => p.UserId == "u1" && p.Status == expected),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     [Fact]
     public async Task HandleAsync_AgentEntitlementsChanged_RevokesQueueMembership()
     {

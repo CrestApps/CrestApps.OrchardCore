@@ -64,6 +64,11 @@ public sealed class ContactCenterRealTimeEventHandler : IContactCenterEventHandl
             case ContactCenterConstants.Events.AgentSignedIn:
             case ContactCenterConstants.Events.AgentSignedOut:
             case ContactCenterConstants.Events.AgentPresenceChanged:
+
+            // Routing moves an agent into Reserved when an offer rings and into Busy when it is accepted, and records
+            // those only as a state change, never as a presence change; without this the agent's own screens kept
+            // showing the state before the call for as long as it lasted.
+            case ContactCenterConstants.Events.AgentStateChanged:
                 await BroadcastPresenceAsync(
                     interactionEvent,
                     context.AgentManager,
