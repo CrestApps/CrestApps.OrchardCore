@@ -66,5 +66,10 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
                 ResolveAgentLegFailureCause(callEvent),
                 cancellationToken);
         }
+
+        // A leg that was joined to the caller carried the call, and its end is the call's end. The coordinator's record
+        // of the leg outlives only its ring window, so a conversation longer than that is recognized from the call
+        // itself; a leg that was never joined is left to the coordinator above.
+        await RecordAgentLegEndedAsync(callEvent, state, cancellationToken);
     }
 }

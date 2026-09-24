@@ -298,6 +298,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         System.Threading.Tasks.Task NotifyQueueStatsChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.QueueStatsNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyRecordingStateChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.RecordingStateNotification notification, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactCenterVoiceAgentLegReleaseProvider
+    {
+        System.Threading.Tasks.Task ReleaseAgentLegAsync(string agentLegId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactCenterVoiceAgentPreDialProvider
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> BridgePreDialedAgentAsync(string providerCallId, string agentLegId, System.Threading.CancellationToken cancellationToken = default);

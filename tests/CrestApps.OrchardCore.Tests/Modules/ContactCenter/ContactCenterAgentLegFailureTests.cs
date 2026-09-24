@@ -78,6 +78,7 @@ public sealed class ContactCenterAgentLegFailureTests
             callSessionManager.Object,
             telephonyService.Object,
             _auditRecorder,
+            new Mock<IProviderVoiceEventService>(MockBehavior.Strict).Object,
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
@@ -132,6 +133,7 @@ public sealed class ContactCenterAgentLegFailureTests
             new Mock<ICallSessionManager>(MockBehavior.Strict).Object,
             telephonyService.Object,
             _auditRecorder,
+            new Mock<IProviderVoiceEventService>(MockBehavior.Strict).Object,
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
@@ -204,8 +206,9 @@ public sealed class ContactCenterAgentLegFailureTests
     {
         // Arrange
         // A normal clearing is the agent leg of a real conversation ending, not a leg that never reached the
-        // agent. Reporting it would settle a finished call as failed and hang up a call that already ended.
-        var failureService = new Mock<IContactCenterAgentLegFailureService>(MockBehavior.Strict);
+        // agent. Reporting it would settle a finished call as failed and hang up a call that already ended. It is
+        // reported as the agent's leg ending instead, which ends the call only when the leg still carried it.
+        var failureService = new Mock<IContactCenterAgentLegFailureService>();
 
         var orchestrator = new TelnyxOutboundBridgeOrchestrator(
             // These tests are about the failure classification, not the wire, so the client is given a
@@ -301,6 +304,7 @@ public sealed class ContactCenterAgentLegFailureTests
             callSessionManager.Object,
             new Mock<ITelephonyService>(MockBehavior.Strict).Object,
             _auditRecorder,
+            new Mock<IProviderVoiceEventService>(MockBehavior.Strict).Object,
             clock.Object,
             NullLogger<ContactCenterAgentLegFailureService>.Instance);
 
@@ -435,8 +439,8 @@ public sealed class ContactCenterAgentLegFailureTests
     {
         // Arrange
         // A leg that carried a real conversation clears with SIP 200. It must not be read as a connect failure
-        // just because a SIP response accompanies the hangup.
-        var failureService = new Mock<IContactCenterAgentLegFailureService>(MockBehavior.Strict);
+        // just because a SIP response accompanies the hangup; it is reported as the agent's leg ending instead.
+        var failureService = new Mock<IContactCenterAgentLegFailureService>();
 
         var orchestrator = new TelnyxOutboundBridgeOrchestrator(
             // These tests are about the failure classification, not the wire, so the client is given a

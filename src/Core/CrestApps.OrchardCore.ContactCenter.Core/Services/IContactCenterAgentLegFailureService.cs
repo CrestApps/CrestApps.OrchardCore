@@ -44,4 +44,28 @@ public interface IContactCenterAgentLegFailureService
         string peerProviderCallId,
         Telephony.Models.HangupCause? hangupCause,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ends the call whose joined agent leg hung up first, at the moment the leg ended, and releases the caller.
+    /// </summary>
+    /// <remarks>
+    /// A bridged caller is not always released by the provider when the agent's leg goes: the caller's leg stays up
+    /// on its own, and the call (its talk and hold time, and the agent's wrap-up) waits for it. A leg that no longer
+    /// carries the call is left alone: one that was never joined (a connect failure, which <see cref="FailAsync"/>
+    /// settles), one whose call has moved to another agent, and one whose call already ended.
+    /// </remarks>
+    /// <param name="providerName">The technical name of the provider that reported the hangup.</param>
+    /// <param name="peerProviderCallId">The provider identifier of the customer call the agent leg was joined to.</param>
+    /// <param name="agentLegProviderCallId">The provider identifier of the agent leg that hung up.</param>
+    /// <param name="endedUtc">When the provider says the agent leg ended, or <see langword="null"/> for now.</param>
+    /// <param name="hangupCause">The cause the provider reported for the agent leg, when it reported one.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when the call was ended; otherwise <see langword="false"/>.</returns>
+    Task<bool> RecordEndedAsync(
+        string providerName,
+        string peerProviderCallId,
+        string agentLegProviderCallId,
+        DateTime? endedUtc,
+        Telephony.Models.HangupCause? hangupCause,
+        CancellationToken cancellationToken = default);
 }

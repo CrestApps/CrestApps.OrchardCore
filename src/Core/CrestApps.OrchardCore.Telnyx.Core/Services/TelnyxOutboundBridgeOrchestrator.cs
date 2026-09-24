@@ -129,6 +129,10 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                     ResolveAgentLegFailureCause(callEvent),
                     cancellationToken);
             }
+            else if (IsHangup(callEvent))
+            {
+                await RecordAgentLegEndedAsync(callEvent, state, cancellationToken);
+            }
 
             return TelnyxOutboundBridgeLeg.None;
         }

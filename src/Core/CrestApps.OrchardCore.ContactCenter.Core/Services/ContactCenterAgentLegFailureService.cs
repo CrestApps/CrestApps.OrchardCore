@@ -9,12 +9,13 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
 /// <inheritdoc />
-public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLegFailureService
+public sealed partial class ContactCenterAgentLegFailureService : IContactCenterAgentLegFailureService
 {
     private readonly IInteractionManager _interactionManager;
     private readonly ICallSessionManager _callSessionManager;
     private readonly ITelephonyService _telephonyService;
     private readonly IContactCenterAuditRecorder _auditRecorder;
+    private readonly IProviderVoiceEventService _providerVoiceEventService;
     private readonly IClock _clock;
     private readonly ILogger _logger;
 
@@ -26,6 +27,7 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
         ICallSessionManager callSessionManager,
         ITelephonyService telephonyService,
         IContactCenterAuditRecorder auditRecorder,
+        IProviderVoiceEventService providerVoiceEventService,
         IClock clock,
         ILogger<ContactCenterAgentLegFailureService> logger)
     {
@@ -35,6 +37,7 @@ public sealed class ContactCenterAgentLegFailureService : IContactCenterAgentLeg
         _logger = logger;
         _telephonyService = telephonyService;
         _auditRecorder = auditRecorder;
+        _providerVoiceEventService = providerVoiceEventService;
     }
 
     /// <inheritdoc />

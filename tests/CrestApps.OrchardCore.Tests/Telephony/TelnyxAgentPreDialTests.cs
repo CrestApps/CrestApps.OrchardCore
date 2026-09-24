@@ -186,7 +186,7 @@ public sealed class TelnyxAgentPreDialTests
         // A declined or expired offer's leg is hung up on purpose; only the coordinator knows whether that matters.
         var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"data\":{}}");
         var coordinator = new Mock<IAgentPreDialCoordinator>();
-        var failureService = new Mock<IContactCenterAgentLegFailureService>(MockBehavior.Strict);
+        var failureService = new Mock<IContactCenterAgentLegFailureService>();
         var orchestrator = CreateOrchestrator(handler, failureService.Object, coordinator.Object);
 
         // Act
@@ -196,6 +196,9 @@ public sealed class TelnyxAgentPreDialTests
         coordinator.Verify(
             value => value.OnAgentLegEndedAsync("Telnyx", "r1", "leg-1", HangupCause.Rejected, It.IsAny<CancellationToken>()),
             Times.Once);
+        failureService.Verify(
+            service => service.FailAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<HangupCause?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

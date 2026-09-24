@@ -127,6 +127,9 @@ public sealed class VoiceStartup : StartupBase
             // default the base feature registers.
             .Replace(ServiceDescriptor.Scoped<IProviderCallStateSynchronizationService, ProviderCallStateSynchronizationService>())
             .AddScoped<IContactCenterEventHandler, ContactCenterVoiceOfferReconciliationHandler>()
+            // A provider that joins the agent through a leg of its own does not always hang that leg up when the
+            // caller's goes, so the call ending releases it.
+            .AddScoped<IContactCenterEventHandler, ContactCenterAgentLegReleaseHandler>()
             .AddScoped<IContactCenterEventHandler, ReofferVoiceWorkHandler>()
             .AddScoped<IVoiceQueueOfferService, VoiceQueueOfferService>()
             .AddScoped<IDirectHoldTimeoutService, DirectHoldTimeoutService>()

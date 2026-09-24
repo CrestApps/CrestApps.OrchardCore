@@ -2822,9 +2822,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterAgentLegFailureService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAgentLegFailureService
     {
-        public ContactCenterAgentLegFailureService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.Telephony.ITelephonyService telephonyService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterAgentLegFailureService> logger) { }
+        public ContactCenterAgentLegFailureService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.Telephony.ITelephonyService telephonyService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderVoiceEventService providerVoiceEventService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterAgentLegFailureService> logger) { }
         public System.Threading.Tasks.Task<bool> FailAsync(string providerName, string peerProviderCallId, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> RecordAnsweredAsync(string providerName, string peerProviderCallId, string agentLegProviderCallId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> RecordEndedAsync(string providerName, string peerProviderCallId, string agentLegProviderCallId, System.DateTime? endedUtc, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class ContactCenterAgentLegReleaseHandler : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler
+    {
+        public ContactCenterAgentLegReleaseHandler(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.ContactCenterAgentLegReleaseHandler> logger) { }
+        public string HandlerId { get; }
+        public CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
+        public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class ContactCenterAssistService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAssistService
     {
@@ -3525,6 +3533,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<bool> FailAsync(string providerName, string peerProviderCallId, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> RecordAnsweredAsync(string providerName, string peerProviderCallId, string agentLegProviderCallId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RecordEndedAsync(string providerName, string peerProviderCallId, string agentLegProviderCallId, System.DateTime? endedUtc, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterAssistProvider
     {
