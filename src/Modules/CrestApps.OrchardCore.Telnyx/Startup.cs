@@ -93,6 +93,7 @@ public sealed class Startup : StartupBase
             .AddScoped<ISoftPhoneRegistrationConfigContributor, TelnyxSoftPhoneRegistrationConfigContributor>()
             .AddScoped<ISoftPhoneCredentialRevoker, TelnyxSoftPhoneCredentialRevoker>()
             .AddScoped<ISoftPhoneCredentialRegistrar, TelnyxSoftPhoneCredentialRegistrar>()
+            .AddScoped<ISoftPhoneClientCapabilityRegistrar, TelnyxSoftPhoneCredentialRegistrar>()
             // The automated-voice media seam. Registered here rather than with the Contact Center voice
             // provider because an automated conversation does not need a contact center to run.
             .AddScoped<IVoiceAgentMediaProvider, TelnyxVoiceAgentMediaProvider>();

@@ -31,6 +31,12 @@ public interface ITelnyxAgentCredentialStore
     Task<bool> MarkRegisteredAsync(string userId, string credentialId, DateTime registeredUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records what the client registered on a user's credential reported it can do, replacing what it reported
+    /// before.
+    /// </summary>
+    Task<bool> SetClientCapabilitiesAsync(string userId, string credentialId, IReadOnlyCollection<string> capabilities, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Marks a credential as revoked.
     /// </summary>
     Task MarkRevokedAsync(TelnyxAgentCredential credential, DateTime revokedUtc, CancellationToken cancellationToken = default);

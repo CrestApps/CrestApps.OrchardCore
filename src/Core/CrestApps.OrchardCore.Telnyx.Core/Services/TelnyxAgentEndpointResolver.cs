@@ -39,7 +39,11 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
     }
 
     /// <inheritdoc/>
-    public async Task<string> ResolveAsync(string userId, CancellationToken cancellationToken = default)
+    public Task<string> ResolveAsync(string userId, CancellationToken cancellationToken = default)
+        => ResolveAsync(userId, requiredClientCapability: null, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<string> ResolveAsync(string userId, string requiredClientCapability, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -73,6 +77,23 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
                 credential.CredentialId.SanitizeLogValue(),
                 credential.RegisteredUtc,
                 credential.IssuedUtc);
+        }
+
+        // The choice of credential is the same either way; a capability only decides whether that one will do. A
+        // client that predates a capability never reported it, and is dialed the way it always was.
+        if (!string.IsNullOrEmpty(requiredClientCapability) &&
+            credential.ClientCapabilities?.Contains(requiredClientCapability, StringComparer.Ordinal) != true)
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "The client registered on credential '{CredentialId}' for user '{UserId}' did not report '{Capability}'.",
+                    credential.CredentialId.SanitizeLogValue(),
+                    userId.SanitizeLogValue(),
+                    requiredClientCapability.SanitizeLogValue());
+            }
+
+            return null;
         }
 
         var sipDomain = string.IsNullOrWhiteSpace(_options.SipDomain)

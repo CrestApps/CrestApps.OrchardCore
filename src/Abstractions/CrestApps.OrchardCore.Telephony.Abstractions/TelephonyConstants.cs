@@ -30,6 +30,25 @@ public static class TelephonyConstants
     public const string RecordingMediaFolderName = "RecordingMedia";
 
     /// <summary>
+    /// What a soft-phone client tells the server it can do, once it has registered. A client that reports nothing is
+    /// treated as able to do none of these, so a client that predates a capability keeps working as it did.
+    /// </summary>
+    public static class SoftPhoneClientCapabilities
+    {
+        /// <summary>
+        /// The client recognizes an incoming provider leg rung for a Contact Center offer that is still ringing
+        /// on screen, holds it without ringing it as a separate call, and answers it when the agent accepts the
+        /// offer (anywhere) or hangs it up when they decline.
+        /// </summary>
+        public const string HeldOfferLeg = "held-offer-leg";
+
+        /// <summary>
+        /// Every capability a client may report. Anything else a client sends is ignored.
+        /// </summary>
+        public static readonly IReadOnlyCollection<string> All = [HeldOfferLeg];
+    }
+
+    /// <summary>
     /// Contains metadata keys that have provider-neutral command semantics.
     /// </summary>
     public static class RequestMetadata

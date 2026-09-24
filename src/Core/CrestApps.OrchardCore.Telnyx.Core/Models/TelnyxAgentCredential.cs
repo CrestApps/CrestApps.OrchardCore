@@ -56,6 +56,13 @@ public sealed class TelnyxAgentCredential
     public DateTime? RegisteredUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets what the client registered on this credential reported it can do (see
+    /// <c>TelephonyConstants.SoftPhoneClientCapabilities</c>). Empty for a client that reported nothing, which is
+    /// treated as able to do none of them.
+    /// </summary>
+    public IList<string> ClientCapabilities { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the UTC time the credential was revoked, when it has been revoked.
     /// </summary>
     public DateTime? RevokedUtc { get; set; }

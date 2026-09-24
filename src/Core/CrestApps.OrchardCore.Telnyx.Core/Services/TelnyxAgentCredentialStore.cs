@@ -95,6 +95,42 @@ public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
     }
 
     /// <inheritdoc/>
+    public async Task<bool> SetClientCapabilitiesAsync(
+        string userId,
+        string credentialId,
+        IReadOnlyCollection<string> capabilities,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(credentialId))
+        {
+            return false;
+        }
+
+        var tenantName = GetTenantName();
+        var normalizedUserId = userId.Trim();
+        var normalizedCredentialId = credentialId.Trim();
+
+        // Scoped to the caller's own credentials, like the registration report.
+        var credential = await _session
+            .Query<TelnyxAgentCredential, TelnyxAgentCredentialIndex>(index =>
+                index.TenantName == tenantName &&
+                index.UserId == normalizedUserId &&
+                index.CredentialId == normalizedCredentialId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (credential is null)
+        {
+            return false;
+        }
+
+        credential.ClientCapabilities = capabilities is null ? [] : [.. capabilities];
+
+        await _session.SaveAsync(credential, cancellationToken: cancellationToken);
+
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<TelnyxAgentCredential>> ListByUserAsync(string userId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(userId))
