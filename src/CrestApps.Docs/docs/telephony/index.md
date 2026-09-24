@@ -287,6 +287,33 @@ three actions:
 
 The modal appears for a ringing **inbound** call even when the panel is closed. When Contact Center is using the soft phone for queue offers, the modal restores the current ringing offer after a page refresh or reconnect, reopens immediately when the Contact Center hub reports a new queued offer, and keeps the ringing state visible until the offer is accepted, declined, or the authoritative reservation timeout expires. Those Contact Center offer actions go through the authoritative reservation endpoints without sending an extra duplicate reject/answer device action. If the real-time revoke event arrives while the authoritative accept is still completing, the soft phone preserves the accepted call instead of clearing it back to idle. The successful accept response does not mark the browser connected; the widget waits for the normalized provider state event or provider-authoritative lookup before changing the call state. For provider-only server-side queue flows that do not register a Contact Center voice provider, Contact Center also answers the underlying telephony call during accept so the provider can emit the resulting live state. The keypad **Hangup** control stays hidden while a call is still only ringing and appears only once the provider reports that the call is connected or held.
 
+### Notifications from a desktop app
+
+A desktop app can embed the standalone `/softphone` page with WebView2 and show its own incoming-call notification. The CrestApps Soft Phone for Windows does this. So that the agent does not see the same call twice, the page gives the incoming prompt to the app, but only while the app confirms that its notification is on screen. The agent must always get a notification, so every other result keeps the modal.
+
+The page and the app exchange JSON messages through `window.chrome.webview`. This object exists only inside WebView2. In a normal browser tab or the browser extension, the page does not send any message and the modal shows as before, without delay.
+
+| Direction | Message | Meaning |
+|---|---|---|
+| Page → app | `softphone-ready` `{ protocol }` | The page loaded. Sent once. |
+| App → page | `host-ready` `{ protocol }` | The app takes part in the handoff. Without this reply, the page keeps its modal. |
+| Page → app | `incoming-call` `{ callId, from, queue, heading, canVoicemail, cards }` | A call rings. The cards are the matched records of the modal, with absolute `http`/`https` URLs and the resolved **Answer & open** / **Open** labels. The page sends the message again when the details change. |
+| App → page | `incoming-call-shown` `{ callId, ringing }` | The app's notification for this call is on screen. `ringing` tells whether the app plays a ringtone. |
+| App → page | `incoming-call-dismissed` `{ callId }` | The app's notification closed without an answer. |
+| App → page | `incoming-call-action` `{ callId, action }` | The agent chose `answer`, `decline`, or `voicemail` in the app's notification. |
+| Page → app | `incoming-call-action-result` `{ callId, action, handled }` | The page ran the action (`handled: true`), or did not have that call. |
+| Page → app | `incoming-call-ended` `{ callId }` | The call does not ring on the page any more (answered, declined, expired, or ended). |
+
+The page uses these rules:
+
+- When a call rings, the page sends `incoming-call`, hides the modal, and stays silent while it waits. If the modal was already on screen, it stays on screen until the app confirms.
+- After `incoming-call-shown` for that call id, the modal stays hidden. The page rings only if the app does not ring.
+- If no confirmation arrives within 2 seconds, or the app sends `incoming-call-dismissed`, the page shows the modal and rings. A late confirmation hides the modal again.
+- The page runs an `incoming-call-action` through the same paths as the modal buttons, because the page holds the call audio and the offer. If the call still rings 5 seconds after the action, the page shows the modal.
+- If the action is `answer` for a call that the page does not show yet, the page answers that call when it arrives, the same as `/softphone?answerCallId=`. The page does not reload.
+
+Only the visibility of the modal and the page ringtone change. The offer state, the reservation expiry timer, and the held offer leg work the same as without a desktop app.
+
 ### Offering a call to a user
 
 Inbound calls are pushed to a specific user through `IIncomingCallDispatcher`. It runs every

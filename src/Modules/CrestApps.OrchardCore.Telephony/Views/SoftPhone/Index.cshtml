@@ -48,7 +48,9 @@
 </head>
 <body>
     @* data-softphone-answer-call-id and data-softphone-embedded are read by the soft phone client to render
-       expanded and, when present, auto-answer the matching pending offer on load (client wiring pending). *@
+       expanded and, when present, auto-answer the matching pending offer on load. Embedded mode also lets a
+       desktop app that hosts this page in WebView2 show the incoming-call notification instead of the modal
+       (see soft-phone/host-bridge.js). *@
     <div class="softphone-standalone"
          data-softphone-embedded="true"
          data-softphone-answer-call-id="@Model.AnswerCallId">
