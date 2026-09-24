@@ -64,6 +64,11 @@
 
     var createHoldAudioController = softPhoneModules.createHoldAudioController;
 
+    var rememberAgentHold = softPhoneModules.rememberAgentHold;
+    var pruneAgentHolds = softPhoneModules.pruneAgentHolds;
+    var isAgentHeld = softPhoneModules.isAgentHeld;
+    var reconcileAgentHold = softPhoneModules.reconcileAgentHold;
+
     var readOfferLegTag = softPhoneModules.readOfferLegTag;
     var classifyOfferLeg = softPhoneModules.classifyOfferLeg;
     var rememberAcceptedOffer = softPhoneModules.rememberAcceptedOffer;
@@ -2207,6 +2212,9 @@
         // Offers this agent is known to have accepted -- here, in another page, or on another device -- remembered
         // briefly so their leg is answered the moment it arrives rather than held.
         var acceptedOfferIds = {};
+        // Calls the agent put on hold and has not resumed, by call id. With browser audio the hold happens here and
+        // the server keeps reporting the call connected, so this, not the server, says whether the call is held.
+        var agentHolds = {};
         // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
         var ringtone = createRingtonePlayer();
 
@@ -4892,16 +4900,46 @@
             delete activeCalls[callId];
             delete conferenceSelections[callId];
             delete callConnectedAt[callId];
+            rememberAgentHold(agentHolds, callId, false);
 
             if (currentCall && currentCall.callId === callId) {
                 currentCall = getActiveCalls()[0] || null;
             }
         }
 
+        // Whether a hold on a platform call is performed by this browser, which the provider then cannot see.
+        function holdIsPerformedHere() {
+            return isBrowserAudioEnabled() && !!browserAudioSession;
+        }
+
+        // Applies the agent's own hold to a report of a platform call, so a report that the call is connected does
+        // not take the caller off a hold this browser is performing (see soft-phone/agent-hold.js). Browser-placed
+        // calls keep their hold on the call object itself and never pass through the server's reports.
+        function applyAgentHold(call) {
+            if (call.browserOriginated) {
+                return;
+            }
+
+            var stateName = normalizeState(call.state);
+            var outcome = reconcileAgentHold(stateName, call.isOnHold, isAgentHeld(agentHolds, call.callId), holdIsPerformedHere());
+
+            rememberAgentHold(agentHolds, call.callId, outcome.agentHeld);
+
+            if (outcome.stateName !== stateName) {
+                reportDiagnostic('info', 'agent-hold-kept',
+                    'A report that the call is ' + stateName + ' did not end the hold the agent placed.', call.callId);
+                call.state = outcome.stateName;
+            }
+
+            call.isOnHold = outcome.isOnHold;
+        }
+
         function upsertActiveCall(call, select) {
             if (!call || !call.callId) {
                 return;
             }
+
+            applyAgentHold(call);
 
             var stateName = normalizeState(call.state);
 
@@ -5651,6 +5689,9 @@
                 upsertActiveCall(call, false);
             });
 
+            // A held call the server no longer reports is over; its hold goes with it.
+            pruneAgentHolds(agentHolds, Object.keys(activeCalls));
+
             currentCall = previousCallId && activeCalls[previousCallId]
                 ? activeCalls[previousCallId]
                 : getActiveCalls()[0] || null;
@@ -5887,8 +5928,22 @@
             var call = currentCallReference();
 
             if (call) {
-                invoke('Hold', call);
+                // Remembered before the round trip, so a report that crosses it cannot take the caller off hold; a
+                // hold the server refused is forgotten again.
+                rememberAgentHold(agentHolds, call.callId, true);
+                settleHoldCommand(invoke('Hold', call), call.callId, false);
             }
+        }
+
+        // Undoes the remembered hold change when the command did not go through.
+        function settleHoldCommand(pending, callId, heldIfRefused) {
+            Promise.resolve(pending).then(function (result) {
+                if (!result || result.succeeded === false) {
+                    rememberAgentHold(agentHolds, callId, heldIfRefused);
+                }
+            }, function () {
+                rememberAgentHold(agentHolds, callId, heldIfRefused);
+            });
         }
 
         function resume() {
@@ -5907,7 +5962,11 @@
             var call = currentCallReference();
 
             if (call) {
-                invoke('Resume', call);
+                // Only the agent ends their own hold. A resume the server refused leaves the call held.
+                var wasHeld = isAgentHeld(agentHolds, call.callId);
+
+                rememberAgentHold(agentHolds, call.callId, false);
+                settleHoldCommand(invoke('Resume', call), call.callId, wasHeld);
             }
         }
 
@@ -6040,6 +6099,8 @@
 
                         call.state = 'Connected';
                         call.isOnHold = false;
+                        // Joining the conference is the agent taking these calls off hold.
+                        rememberAgentHold(agentHolds, callId, false);
                         call.metadata = call.metadata || {};
                         call.metadata.isConference = true;
                         call.metadata.participantCount = callIds.length;
@@ -7278,6 +7339,8 @@
                         keptBrowserCalls.forEach(function (existing) {
                             activeCalls[existing.callId] = existing;
                         });
+
+                        pruneAgentHolds(agentHolds, Object.keys(activeCalls));
 
                         currentCall = getActiveCalls()[0] || null;
                         incomingHandled = false;
