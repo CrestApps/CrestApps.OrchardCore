@@ -78,7 +78,7 @@ public sealed class QueueUsageReportProvider : ContactCenterReportBase
         var rows = report.Rows
             .Select(row => new ReportRow(
             [
-                string.IsNullOrEmpty(row.QueueName) ? noQueue : row.QueueName,
+                ContactCenterReportNames.Queue(row.QueueId, row.QueueName, noQueue, S),
                 ReportFormat.Number(row.InteractionsHandled),
                 ReportFormat.Number(row.Answered),
                 ReportFormat.Number(row.Abandoned),

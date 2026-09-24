@@ -98,9 +98,11 @@ public sealed class CallHandlingReportProvider : ContactCenterReportBase
         return Build(
             metrics,
             agentId => ReportValue.UserDisplayName(agentId is not null && agents.TryGetValue(agentId, out var userName) ? userName : null, S["(Unknown agent)"].Value),
-            queueId => string.IsNullOrEmpty(queueId)
-                ? S["(No queue)"].Value
-                : queues.TryGetValue(queueId, out var name) && !string.IsNullOrEmpty(name) ? name : queueId);
+            queueId => ContactCenterReportNames.Queue(
+                queueId,
+                !string.IsNullOrEmpty(queueId) && queues.TryGetValue(queueId, out var name) ? name : null,
+                S["(No queue)"].Value,
+                S));
     }
 
     /// <summary>
