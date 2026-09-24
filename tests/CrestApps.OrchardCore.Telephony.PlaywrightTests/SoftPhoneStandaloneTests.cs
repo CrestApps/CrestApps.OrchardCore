@@ -9,49 +9,14 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests;
 /// (<c>data-softphone-embedded</c> plus an optional <c>data-softphone-answer-call-id</c>), and verify the
 /// embedded rendering and the one-shot "answer from the OS notification" handoff.
 /// </summary>
-public sealed class SoftPhoneStandaloneTests : IAsyncLifetime
+public sealed class SoftPhoneStandaloneTests : SoftPhoneBrowserTest
 {
-    private SoftPhoneTestServer _server = null!;
-    private IPlaywright _playwright = null!;
-    private IBrowser _browser = null!;
-
-    public async ValueTask InitializeAsync()
-    {
-        var exitCode = Microsoft.Playwright.Program.Main(["install", "chromium"]);
-
-        if (exitCode != 0)
-        {
-            throw new InvalidOperationException($"Playwright browser installation failed with exit code {exitCode}.");
-        }
-
-        _server = new SoftPhoneTestServer();
-        await _server.StartAsync();
-
-        _playwright = await Playwright.CreateAsync();
-        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions { Headless = true });
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_browser is not null)
-        {
-            await _browser.DisposeAsync();
-        }
-
-        _playwright?.Dispose();
-
-        if (_server is not null)
-        {
-            await _server.DisposeAsync();
-        }
-    }
-
     [Fact]
     public async Task Embedded_OpensThePanelOnLoad_WithoutAToggleClick()
     {
         // Arrange & Act - load the phone the way the standalone page renders it, with no interaction.
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl + "?embedded=true");
+        var page = await Browser.NewPageAsync();
+        await page.GotoAsync(Server.BaseUrl + "?embedded=true");
         await WaitForConnectedAsync(page);
 
         // Assert - the floating panel is expanded on load, because the standalone page renders the phone full
@@ -64,8 +29,8 @@ public sealed class SoftPhoneStandaloneTests : IAsyncLifetime
     {
         // Arrange - the agent answered this exact call from the OS notification while the window was closed, so
         // the extension opened /softphone?answerCallId=call-answer-1.
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl + "?embedded=true&answerCallId=call-answer-1");
+        var page = await Browser.NewPageAsync();
+        await page.GotoAsync(Server.BaseUrl + "?embedded=true&answerCallId=call-answer-1");
         await WaitForConnectedAsync(page);
         await RecordAcceptFetchAsync(page);
 
@@ -84,8 +49,8 @@ public sealed class SoftPhoneStandaloneTests : IAsyncLifetime
     public async Task Embedded_WithMatchingAnswerCallId_DoesNotAnswerADifferentOffer()
     {
         // Arrange - the handoff named call-answer-1, but a different call is what rings.
-        var page = await _browser.NewPageAsync();
-        await page.GotoAsync(_server.BaseUrl + "?embedded=true&answerCallId=call-answer-1");
+        var page = await Browser.NewPageAsync();
+        await page.GotoAsync(Server.BaseUrl + "?embedded=true&answerCallId=call-answer-1");
         await WaitForConnectedAsync(page);
         await RecordAcceptFetchAsync(page);
 
@@ -136,18 +101,5 @@ public sealed class SoftPhoneStandaloneTests : IAsyncLifetime
                 })
             """,
             new[] { callId });
-    }
-
-    private static async Task WaitForConnectedAsync(IPage page)
-    {
-        await page.WaitForFunctionAsync(
-            """
-            () => {
-                const el = document.querySelector('#telephony-soft-phone');
-                const api = el && el.__telephonySoftPhone;
-                const connection = api && api.getConnection && api.getConnection();
-                return connection && connection.state === 'Connected';
-            }
-            """);
     }
 }

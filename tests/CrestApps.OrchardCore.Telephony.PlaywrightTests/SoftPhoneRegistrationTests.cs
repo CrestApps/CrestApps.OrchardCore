@@ -8,7 +8,7 @@ namespace CrestApps.OrchardCore.Telephony.PlaywrightTests;
 /// Drives the real soft phone bundle to prove the browser stays registered with the provider between calls and that
 /// answering an offer responds at once, even when the phone has to register first.
 /// </summary>
-public sealed class SoftPhoneRegistrationTests : IAsyncLifetime
+public sealed class SoftPhoneRegistrationTests : SoftPhoneBrowserTest
 {
     // Stands in for the provider media client (the browser supplies a fake microphone): counts registrations (each adapter call is one) and
     // tear-downs, and lets a test hold a registration open to see what the phone shows meanwhile.
@@ -44,45 +44,6 @@ public sealed class SoftPhoneRegistrationTests : IAsyncLifetime
             return new Promise(function (resolve) { state.release = function () { resolve(session); }; });
         })
         """;
-
-    private SoftPhoneTestServer _server = null!;
-    private IPlaywright _playwright = null!;
-    private IBrowser _browser = null!;
-
-    public async ValueTask InitializeAsync()
-    {
-        var exitCode = Microsoft.Playwright.Program.Main(["install", "chromium"]);
-
-        if (exitCode != 0)
-        {
-            throw new InvalidOperationException($"Playwright browser installation failed with exit code {exitCode}.");
-        }
-
-        _server = new SoftPhoneTestServer();
-        await _server.StartAsync();
-
-        _playwright = await Playwright.CreateAsync();
-        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-        {
-            Headless = true,
-            Args = ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"],
-        });
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_browser is not null)
-        {
-            await _browser.DisposeAsync();
-        }
-
-        _playwright?.Dispose();
-
-        if (_server is not null)
-        {
-            await _server.DisposeAsync();
-        }
-    }
 
     // Bug: when the last server-tracked call ended, the phone tore its provider registration down and never set it up
     // again. The next offer's leg was rung at a credential nothing was registered on (SIP 480) and the agent could
@@ -211,9 +172,9 @@ public sealed class SoftPhoneRegistrationTests : IAsyncLifetime
 
     private async Task<IPage> OpenPhoneAsync(bool holdRegistration = false)
     {
-        var page = await _browser.NewPageAsync();
+        var page = await Browser.NewPageAsync();
         await page.AddInitScriptAsync(BrowserAudioInitScript);
-        await page.GotoAsync(_server.BaseUrl + "?browserAudio=true");
+        await page.GotoAsync(Server.BaseUrl + "?browserAudio=true");
         await page.WaitForFunctionAsync(
             """
             () => {

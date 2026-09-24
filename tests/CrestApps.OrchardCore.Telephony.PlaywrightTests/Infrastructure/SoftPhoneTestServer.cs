@@ -44,9 +44,9 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 context.Request.Query.ContainsKey("embedded"),
                 context.Request.Query["answerCallId"]),
             "text/html; charset=utf-8"));
-        app.MapGet("/soft-phone.js", () => ServeAsset("soft-phone.js"));
-        app.MapGet("/telephony-client.js", () => ServeAsset("telephony-client.js"));
-        app.MapGet("/signalr.js", ServeSignalRAsset);
+        // The module's own scripts, from its built wwwroot, at the URLs its resource manifest gives them.
+        app.MapGet(SoftPhoneAssets.ModuleUrlPrefix + "{**path}", (string path) => ServeModuleAsset(path));
+        app.MapGet(SoftPhoneAssets.SignalRUrl, ServeSignalRAsset);
 
         await app.StartAsync();
 
@@ -63,11 +63,24 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         }
     }
 
-    private static IResult ServeAsset(string name)
-    {
-        var path = Path.Combine(AppContext.BaseDirectory, "assets", name);
+    /// <summary>
+    /// Gets the script URLs the harness page loads, in order: the widget's resource dependencies, resolved from the
+    /// module's resource manifest (see <see cref="SoftPhoneAssets"/>).
+    /// </summary>
+    public static IReadOnlyList<string> ScriptUrls { get; } = SoftPhoneAssets.ResolveHarnessScriptUrls();
 
-        return Results.File(path, "application/javascript");
+    private static IResult ServeModuleAsset(string path)
+    {
+        var file = SoftPhoneAssets.ResolveModuleFile(path);
+
+        if (!File.Exists(file))
+        {
+            return Results.NotFound();
+        }
+
+        var contentType = file.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ? "text/css" : "application/javascript";
+
+        return Results.File(file, contentType);
     }
 
     private static IResult ServeSignalRAsset()
@@ -125,6 +138,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
             ? $"<div class=\"softphone-standalone\" data-softphone-embedded=\"true\" data-softphone-answer-call-id=\"{encodedAnswerCallId}\">"
             : string.Empty;
         var embeddedClose = embedded ? "</div>" : string.Empty;
+        var scripts = string.Join(Environment.NewLine + "    ", ScriptUrls.Select(url => $"<script src=\"{url}\"></script>"));
 
         return $$"""
         <!DOCTYPE html>
@@ -197,9 +211,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                 </div>
             </div>
             {{embeddedClose}}
-            <script src="/signalr.js"></script>
-            <script src="/telephony-client.js"></script>
-            <script src="/soft-phone.js"></script>
+            {{scripts}}
         </body>
         </html>
         """;

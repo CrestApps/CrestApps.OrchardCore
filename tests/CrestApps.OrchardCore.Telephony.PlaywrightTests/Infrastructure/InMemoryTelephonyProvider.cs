@@ -77,7 +77,10 @@ public sealed class InMemoryTelephonyProvider :
             CallId = $"call-{Interlocked.Increment(ref _counter)}",
             To = request?.To,
             From = request?.From,
-            State = CallState.Connected,
+
+            // Like every real provider, a dial is acknowledged as connecting; the call is connected by the provider's
+            // own report (PublishLatestCallState), not by the command's answer.
+            State = CallState.Connecting,
             Direction = CallDirection.Outbound,
             ProviderName = "InMemory",
             StartedUtc = DateTimeOffset.UtcNow,
@@ -268,6 +271,12 @@ public sealed class InMemoryTelephonyProvider :
         if (_latestCall?.CallId is not null)
         {
             _publishedCallIds[_latestCall.CallId] = 0;
+        }
+
+        // The far end answers the call that was dialed.
+        if (_latestCall?.State == CallState.Connecting)
+        {
+            _latestCall.State = CallState.Connected;
         }
 
         return _latestCall;
