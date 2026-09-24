@@ -231,7 +231,8 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
             _entries.Remove(state.Key);
         }
 
-        state.Entry.Timer.Dispose();
+        // Null only for a timer source that fires from inside CreateTimer, before the timer was handed back.
+        state.Entry.Timer?.Dispose();
 
         if (_disposed.IsCancellationRequested)
         {
