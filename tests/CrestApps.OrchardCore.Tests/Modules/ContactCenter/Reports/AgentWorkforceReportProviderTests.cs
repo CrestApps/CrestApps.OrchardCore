@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
-using CrestApps.OrchardCore.ContactCenter.Reports.Providers;
+using CrestApps.OrchardCore.ContactCenter.Reports.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter.Reports;
 
@@ -22,7 +22,7 @@ public sealed class AgentWorkforceReportProviderTests
         };
 
         // Act
-        var intervals = AgentWorkforceReportProvider.BuildIntervals(events, fromUtc, toUtc);
+        var intervals = AgentStateTimeline.BuildIntervals(events, fromUtc, toUtc);
 
         // Assert
         Assert.Collection(
@@ -57,7 +57,7 @@ public sealed class AgentWorkforceReportProviderTests
         second.SetData(secondData);
 
         // Act
-        var intervals = AgentWorkforceReportProvider.BuildIntervals([first, second], fromUtc, toUtc);
+        var intervals = AgentStateTimeline.BuildIntervals([first, second], fromUtc, toUtc);
 
         // Assert
         Assert.Equal(2, intervals.Count);

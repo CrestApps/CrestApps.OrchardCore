@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OrchardCore.Modules;
 using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Services;
@@ -28,6 +29,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
     private readonly IStringLocalizer<AgentWorkforceReportProvider> _workforceLocalizer;
     private readonly ContactCenterReportCatalogOptions _catalogOptions;
     private readonly TimeSpan _maximumReportRange;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterReportProvider"/> class.
@@ -42,6 +44,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
     /// <param name="workforceLocalizer">The localizer for agent workforce reports.</param>
     /// <param name="catalogOptions">The configured report catalog.</param>
     /// <param name="reportingOptions">The reporting options that bound the report range.</param>
+    /// <param name="clock">The clock, so time that has not happened yet is never reported.</param>
     public ContactCenterReportProvider(
         ISession session,
         IActivityQueueManager queueManager,
@@ -52,7 +55,8 @@ internal sealed class ContactCenterReportProvider : IReportProvider
         IStringLocalizer<EnterpriseInteractionReportProvider> enterpriseLocalizer,
         IStringLocalizer<AgentWorkforceReportProvider> workforceLocalizer,
         IOptions<ContactCenterReportCatalogOptions> catalogOptions,
-        IOptions<ContactCenterReportingOptions> reportingOptions)
+        IOptions<ContactCenterReportingOptions> reportingOptions,
+        IClock clock)
     {
         _session = session;
         _queueManager = queueManager;
@@ -64,6 +68,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
         _workforceLocalizer = workforceLocalizer;
         _catalogOptions = catalogOptions.Value;
         _maximumReportRange = reportingOptions.Value.MaximumReportRange;
+        _clock = clock;
     }
 
     /// <inheritdoc/>
@@ -89,7 +94,8 @@ internal sealed class ContactCenterReportProvider : IReportProvider
                 _campaignManager,
                 definition,
                 _capabilityGuard,
-                _workforceLocalizer);
+                _workforceLocalizer,
+                _clock);
         }
     }
 }

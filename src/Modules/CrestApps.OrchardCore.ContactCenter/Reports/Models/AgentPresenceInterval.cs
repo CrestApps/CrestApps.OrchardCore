@@ -18,5 +18,11 @@ internal sealed class AgentPresenceInterval
 
     public DateTime EndUtc { get; set; }
 
+    /// <summary>
+    /// Gets or sets whether the interval was built from the state audit rather than the older presence events,
+    /// which do not record reservations, calls or wrap-up.
+    /// </summary>
+    public bool FromAudit { get; set; }
+
     public double DurationSeconds => Math.Max(0d, (EndUtc - StartUtc).TotalSeconds);
 }

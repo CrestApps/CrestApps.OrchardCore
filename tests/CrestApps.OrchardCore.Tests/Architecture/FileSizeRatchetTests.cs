@@ -44,7 +44,6 @@ public sealed class FileSizeRatchetTests
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ContactCenterReportingService.cs"] = 1019,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ProviderVoiceEventService.cs"] = 974,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms.Portal/Controllers/AdminController.cs"] = 955,
-        ["src/Modules/CrestApps.OrchardCore.ContactCenter/Reports/Providers/AgentWorkforceReportProvider.cs"] = 833,
     };
 
     [Fact]

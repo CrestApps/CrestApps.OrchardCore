@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
 using Microsoft.Extensions.Localization;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
@@ -22,6 +23,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
     private readonly AgentWorkforceReportDefinition _definition;
     private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
     private readonly IStringLocalizer _stringLocalizer;
+    private readonly IClock _clock;
 
     public AgentWorkforceReportProvider(
         IInteractionEventStore eventStore,
@@ -29,7 +31,8 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         ICatalogManager<OmnichannelCampaign> campaignManager,
         AgentWorkforceReportDefinition definition,
         IContactCenterReportCapabilityGuard capabilityGuard,
-        IStringLocalizer stringLocalizer)
+        IStringLocalizer stringLocalizer,
+        IClock clock)
     {
         _eventStore = eventStore;
         _agentManager = agentManager;
@@ -37,6 +40,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         _definition = definition;
         _capabilityGuard = capabilityGuard;
         _stringLocalizer = stringLocalizer;
+        _clock = clock;
     }
 
     public string Name => _definition.Name;
@@ -64,33 +68,24 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
 
         var range = context.Filter.GetDateRange();
         var fromUtc = range.FromUtc.GetValueOrDefault();
-        var toUtc = range.ToUtc.GetValueOrDefault();
 
-        // The event log is read through the store rather than queried directly, because a payload written by an
-        // earlier release deserializes into today's type without complaint and the store is where the stored
-        // schema version is brought to the one this release understands.
-        var events = (await _eventStore.GetByAggregateTypeAsync(
-            nameof(AgentProfile),
-            [
-                ContactCenterConstants.Events.AgentSignedIn,
-                ContactCenterConstants.Events.AgentSignedOut,
-                ContactCenterConstants.Events.AgentPresenceChanged,
-            ],
-            toUtc,
-            cancellationToken))
-            .ToArray();
+        // Time that has not happened yet is never counted: a period ending tonight ends, for an agent still signed
+        // in, now.
+        var toUtc = ContactCenterReportPeriod.ObservedEnd(range.ToUtc, _clock.UtcNow);
         var criteria = ContactCenterReportFilter.GetCriteria(context.Filter);
-
-        if (!string.IsNullOrEmpty(criteria.AgentId))
-        {
-            events = events
-                .Where(interactionEvent => string.Equals(interactionEvent.AggregateId, criteria.AgentId, StringComparison.Ordinal))
-                .ToArray();
-        }
-
         var agents = (await _agentManager.GetAllAsync(cancellationToken))
             .ToDictionary(agent => agent.ItemId, StringComparer.Ordinal);
-        var intervals = BuildIntervals(events, fromUtc, toUtc);
+        var filtered = !string.IsNullOrEmpty(criteria.AgentId);
+        var events = await AgentStateEventReader.ReadAsync(
+            _eventStore,
+            filtered ? [criteria.AgentId] : agents.Keys,
+            onlyTheseAgents: filtered,
+            fromUtc,
+            toUtc,
+            additionalEventTypes: null,
+            cancellationToken);
+        var timelines = AgentStateTimeline.Build(events);
+        var intervals = AgentStateTimeline.BuildIntervals(timelines, fromUtc, toUtc);
         var campaignNames = (await _campaignManager.GetAllAsync(cancellationToken))
             .Where(campaign => !string.IsNullOrEmpty(campaign.ItemId))
             .ToDictionary(
@@ -108,7 +103,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             AgentWorkforceReportKind.Utilization => BuildUtilization(intervals, agents, occupancy: false),
             AgentWorkforceReportKind.Occupancy => BuildUtilization(intervals, agents, occupancy: true),
             AgentWorkforceReportKind.ReasonBreakdown => BuildReasonBreakdown(intervals),
-            AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(events, agents, fromUtc, toUtc),
+            AgentWorkforceReportKind.PresenceAudit => BuildPresenceAudit(timelines, agents, fromUtc, toUtc),
             AgentWorkforceReportKind.QueueMembershipHours => BuildMembershipHours(intervals, queueMembership: true),
             AgentWorkforceReportKind.CampaignMembershipHours => BuildMembershipHours(intervals, queueMembership: false, campaignNames),
             AgentWorkforceReportKind.PayrollTimecard => BuildPayrollTimecard(intervals, agents),
@@ -117,63 +112,6 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
     }
 
     private IStringLocalizer S => _stringLocalizer;
-
-    internal static IReadOnlyList<AgentPresenceInterval> BuildIntervals(
-        IEnumerable<InteractionEvent> events,
-        DateTime fromUtc,
-        DateTime toUtc)
-    {
-        var intervals = new List<AgentPresenceInterval>();
-
-        foreach (var agentEvents in events
-            .Where(interactionEvent => interactionEvent.OccurredUtc <= toUtc)
-            .GroupBy(interactionEvent => interactionEvent.AggregateId, StringComparer.Ordinal))
-        {
-            var transitions = agentEvents
-                .OrderBy(interactionEvent => interactionEvent.OccurredUtc)
-                .Select(interactionEvent => new
-                {
-                    Event = interactionEvent,
-                    Data = interactionEvent.GetData<AgentPresenceChangedEventData>(),
-                })
-                .Where(entry => entry.Data is not null)
-                .ToArray();
-
-            for (var index = 0; index < transitions.Length; index++)
-            {
-                var transition = transitions[index];
-                var startUtc = GetChangedUtc(transition.Event, transition.Data);
-                var endUtc = index + 1 < transitions.Length
-                    ? GetChangedUtc(transitions[index + 1].Event, transitions[index + 1].Data)
-                    : toUtc;
-                var clippedStart = startUtc < fromUtc ? fromUtc : startUtc;
-                var clippedEnd = endUtc > toUtc ? toUtc : endUtc;
-
-                if (clippedEnd <= clippedStart || endUtc <= fromUtc || startUtc > toUtc)
-                {
-                    continue;
-                }
-
-                intervals.Add(new AgentPresenceInterval
-                {
-                    AgentId = agentEvents.Key,
-                    Status = transition.Data.CurrentStatus,
-                    Reason = transition.Data.Reason,
-                    QueueIds = [.. transition.Data.QueueIds],
-                    CampaignIds = [.. transition.Data.CampaignIds],
-                    StartUtc = clippedStart,
-                    EndUtc = clippedEnd,
-                });
-            }
-        }
-
-        return intervals;
-    }
-
-    private static DateTime GetChangedUtc(InteractionEvent interactionEvent, AgentPresenceChangedEventData data)
-    {
-        return data.ChangedUtc == default ? interactionEvent.OccurredUtc : data.ChangedUtc;
-    }
 
     private ReportDocument BuildTimeSummary(
         IReadOnlyList<AgentPresenceInterval> intervals,
@@ -237,7 +175,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         IReadOnlyList<AgentPresenceInterval> intervals,
         Dictionary<string, AgentProfile> agents)
     {
-        var daily = SplitByUtcDay(intervals);
+        var daily = ContactCenterReportPeriod.SplitByUtcDay(intervals);
         var columns = new[]
         {
             new ReportColumn(S["Date (UTC)"].Value),
@@ -560,7 +498,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
     }
 
     private ReportDocument BuildPresenceAudit(
-        IReadOnlyList<InteractionEvent> events,
+        IReadOnlyList<AgentStateTimeline> timelines,
         Dictionary<string, AgentProfile> agents,
         DateTime fromUtc,
         DateTime toUtc)
@@ -573,30 +511,29 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             new ReportColumn(S["Current"].Value),
             new ReportColumn(S["Requested"].Value),
             new ReportColumn(S["Reason"].Value),
+            new ReportColumn(S["Source"].Value),
+            new ReportColumn(S["Changed by"].Value),
             new ReportColumn(S["Queues"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Campaigns"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Event"].Value),
         };
-        var rows = events
-            .Where(interactionEvent => interactionEvent.OccurredUtc >= fromUtc && interactionEvent.OccurredUtc <= toUtc)
-            .OrderByDescending(interactionEvent => interactionEvent.OccurredUtc)
-            .Select(interactionEvent => new
-            {
-                Event = interactionEvent,
-                Data = interactionEvent.GetData<AgentPresenceChangedEventData>(),
-            })
-            .Where(entry => entry.Data is not null)
-            .Select(entry => new ReportRow(
+        var rows = timelines
+            .SelectMany(timeline => timeline.Transitions)
+            .Where(transition => transition.ChangedUtc >= fromUtc && transition.ChangedUtc <= toUtc)
+            .OrderByDescending(transition => transition.ChangedUtc)
+            .Select(transition => new ReportRow(
             [
-                entry.Event.OccurredUtc.ToString("u", CultureInfo.InvariantCulture),
-                ResolveAgentName(entry.Event.AggregateId, agents),
-                entry.Data.PreviousStatus.ToString(),
-                entry.Data.CurrentStatus.ToString(),
-                entry.Data.RequestedStatus?.ToString() ?? "—",
-                entry.Data.Reason ?? "—",
-                ReportFormat.Number(entry.Data.QueueIds.Count),
-                ReportFormat.Number(entry.Data.CampaignIds.Count),
-                entry.Event.EventType,
+                AuditReportFormat.Timestamp(transition.ChangedUtc),
+                ResolveAgentName(transition.AgentId, agents),
+                transition.PreviousState.ToString(),
+                transition.CurrentState.ToString(),
+                transition.RequestedState?.ToString() ?? "—",
+                transition.Reason ?? "—",
+                transition.Superseded ? S["Superseded by a sign-off dated earlier"].Value : transition.Source ?? "—",
+                transition.ActorType.ToString(),
+                ReportFormat.Number(transition.QueueIds.Count),
+                ReportFormat.Number(transition.CampaignIds.Count),
+                transition.EventType,
             ]));
 
         return new ReportDocument()
@@ -707,37 +644,6 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             .Add(ReportSection.ForTable(S["Payroll timecard inputs"].Value, columns, rows));
     }
 
-    private static List<AgentPresenceInterval> SplitByUtcDay(IEnumerable<AgentPresenceInterval> intervals)
-    {
-        var result = new List<AgentPresenceInterval>();
-
-        foreach (var interval in intervals)
-        {
-            var start = interval.StartUtc;
-
-            while (start < interval.EndUtc)
-            {
-                var nextDay = start.Date.AddDays(1);
-                var end = interval.EndUtc < nextDay ? interval.EndUtc : nextDay;
-
-                result.Add(new AgentPresenceInterval
-                {
-                    AgentId = interval.AgentId,
-                    Status = interval.Status,
-                    Reason = interval.Reason,
-                    QueueIds = [.. interval.QueueIds],
-                    CampaignIds = [.. interval.CampaignIds],
-                    StartUtc = start,
-                    EndUtc = end,
-                });
-
-                start = end;
-            }
-        }
-
-        return result;
-    }
-
     private static string ResolveAgentName(string agentId, Dictionary<string, AgentProfile> agents)
     {
         if (!string.IsNullOrEmpty(agentId) && agents.TryGetValue(agentId, out var agent))
@@ -746,88 +652,5 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         }
 
         return "(Unknown agent)";
-    }
-
-    private sealed class AgentTimeSummary
-    {
-        public double SignedInSeconds { get; private set; }
-
-        public double AvailableSeconds { get; private set; }
-
-        public double ReservedSeconds { get; private set; }
-
-        public double BusySeconds { get; private set; }
-
-        public double WrapUpSeconds { get; private set; }
-
-        public double BreakSeconds { get; private set; }
-
-        public double AwaySeconds { get; private set; }
-
-        public double MeetingSeconds { get; private set; }
-
-        public double TrainingSeconds { get; private set; }
-
-        public double OtherNotReadySeconds { get; private set; }
-
-        public double WorkSeconds => BusySeconds + WrapUpSeconds;
-
-        public double ProductivePresenceSeconds => AvailableSeconds + ReservedSeconds + WorkSeconds;
-
-        public double BreakAndAwaySeconds => BreakSeconds + AwaySeconds;
-
-        public double MeetingAndTrainingSeconds => MeetingSeconds + TrainingSeconds;
-
-        public double Utilization => SignedInSeconds > 0d ? WorkSeconds / SignedInSeconds : 0d;
-
-        public static AgentTimeSummary Create(IEnumerable<AgentPresenceInterval> intervals)
-        {
-            var result = new AgentTimeSummary();
-
-            foreach (var interval in intervals)
-            {
-                var duration = interval.DurationSeconds;
-
-                if (interval.Status != AgentPresenceStatus.Offline)
-                {
-                    result.SignedInSeconds += duration;
-                }
-
-                switch (interval.Status)
-                {
-                    case AgentPresenceStatus.Available:
-                        result.AvailableSeconds += duration;
-                        break;
-                    case AgentPresenceStatus.Reserved:
-                        result.ReservedSeconds += duration;
-                        break;
-                    case AgentPresenceStatus.Busy:
-                        result.BusySeconds += duration;
-                        break;
-                    case AgentPresenceStatus.WrapUp:
-                        result.WrapUpSeconds += duration;
-                        break;
-                    case AgentPresenceStatus.Break:
-                        result.BreakSeconds += duration;
-                        break;
-                    case AgentPresenceStatus.Away:
-                        result.AwaySeconds += duration;
-                        break;
-                    case AgentPresenceStatus.Meeting:
-                        result.MeetingSeconds += duration;
-                        break;
-                    case AgentPresenceStatus.Training:
-                        result.TrainingSeconds += duration;
-                        break;
-                    case AgentPresenceStatus.Offline:
-                        break;
-                    default:
-                        result.OtherNotReadySeconds += duration;
-                        break;
-                }
-            }
-
-            return result;
-        }
     }
 }
