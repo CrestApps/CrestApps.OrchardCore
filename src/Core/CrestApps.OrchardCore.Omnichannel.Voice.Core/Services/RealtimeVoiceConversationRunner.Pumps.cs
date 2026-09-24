@@ -140,6 +140,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         }
         finally
         {
+            _meter?.EchoHeld(guard.WithheldMilliseconds);
             LogEchoGuard(guard, context);
         }
     }
@@ -282,6 +283,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                             // Where it plays is kept too, so a caller who talks over it can have it taken back.
                             var startsTicks = ExtendAssistantPlayback(speech.Length);
                             bargeIn.Queued(conversationEvent.ResponseId, conversationEvent.ItemId, startsTicks, speech.Length, DateTime.UtcNow.Ticks);
+                            _meter?.AssistantAudioScheduled(startsTicks, AssistantBargeIn.DurationTicks(speech.Length));
                         }
 
                         if (ambience is not null && !speech.IsEmpty)
@@ -303,6 +305,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.UserSpeechStarted:
+                        _meter?.CallerSpeechStarted(DateTime.UtcNow.Ticks);
+
                         // First, while it is still known whether the line being talked over is the closing one:
                         // a caller talking over the assistant has to stop hearing it, and the provider stopping
                         // the model does not do that on its own.
@@ -330,6 +334,13 @@ public sealed partial class RealtimeVoiceConversationRunner
 
                     case RealtimeConversationEventType.ResponseStarted:
                     case RealtimeConversationEventType.UserTurnCommitted:
+                        // The detector commits the caller's turn once it hears them stop, which is the only end of
+                        // their speech the session reports.
+                        if (conversationEvent.Type == RealtimeConversationEventType.UserTurnCommitted)
+                        {
+                            _meter?.CallerSpeechStopped(DateTime.UtcNow.Ticks);
+                        }
+
                         // A new turn, so speech from here is not the rest of a line the caller talked over.
                         bargeIn.NextTurn();
 
@@ -401,6 +412,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.Error:
+                        _meter?.Failed();
                         _logger.LogError(
                             "A realtime voice session reported an error on activity '{ActivityId}': {Error}",
                             context.Activity?.ItemId.SanitizeLogValue(),

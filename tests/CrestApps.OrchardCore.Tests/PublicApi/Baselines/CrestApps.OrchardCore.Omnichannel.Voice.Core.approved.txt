@@ -2,6 +2,33 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
 namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
 {
+    public sealed class AIVoiceSessionDraft
+    {
+        public AIVoiceSessionDraft() { }
+        public string ActivityId { get; set; }
+        public string DeploymentName { get; set; }
+        public System.DateTime? EndedUtc { get; set; }
+        public CrestApps.OrchardCore.AI.Core.Models.AIVoiceSessionEngine Engine { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Voice.Models.AIVoiceSessionMeasurements Measurements { get; set; }
+        public CrestApps.OrchardCore.AI.Core.Models.AIVoiceSessionOutcome? Outcome { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+        public bool WasAnswered { get; set; }
+    }
+    public sealed class AIVoiceSessionMeasurements
+    {
+        public AIVoiceSessionMeasurements() { }
+        public long? AssistantSpeakingMs { get; set; }
+        public int BargeIns { get; set; }
+        public long? CallerSpeakingMs { get; set; }
+        public long? EchoHeldMs { get; set; }
+        public System.DateTime EndedUtc { get; set; }
+        public int IdlePrompts { get; set; }
+        public long? MutualSilenceMs { get; set; }
+        public long SessionDurationMs { get; set; }
+        public System.DateTime StartedUtc { get; set; }
+        public long? TimeToFirstAssistantAudioMs { get; set; }
+    }
     public sealed class PendingVoiceHandoff
     {
         public PendingVoiceHandoff() { }
@@ -39,6 +66,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public string ActivityId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentAnswerer Answerer { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEventKind Kind { get; set; }
+        public System.DateTime? OccurredUtc { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
         public bool TranscriptionIsFinal { get; set; }
@@ -53,6 +81,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         Hangup = 4,
         AnswererDetected = 5,
         MachineGreetingEnded = 6,
+        SpeechStarted = 7,
     }
     public sealed class VoicemailReached
     {
@@ -85,6 +114,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public void Next(System.Span<short> destination) { }
         public System.ReadOnlyMemory<byte> NextPcmBytes(int sampleCount) { }
         public static void MixInto(System.Span<short> destination, System.ReadOnlySpan<short> ambience) { }
+    }
+    public interface IAIVoiceSessionTracker
+    {
+        void BeginTurnBased(string activityId, System.DateTime answeredUtc);
+        CrestApps.OrchardCore.Omnichannel.Voice.Models.AIVoiceSessionMeasurements EndTurnBased(string activityId, System.DateTime endedUtc);
+        System.Threading.Tasks.Task RecordAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.AIVoiceSessionDraft draft);
+        void TurnBasedSpeech(string activityId, bool started, System.DateTime occurredUtc);
     }
     public interface IRealtimeCallCompletionRunner
     {
@@ -182,6 +218,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.OrchardCore.Telephony.Services.IVoiceAgentMediaProviderResolver mediaResolver,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner realtimeRunner,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.ITurnBasedSilenceWatchdog silenceWatchdog,
+                    CrestApps.OrchardCore.Omnichannel.Voice.Services.IAIVoiceSessionTracker sessionTracker,
                     OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager,
                     OrchardCore.ContentManagement.IContentManager contentManager,
                     OrchardCore.Modules.IClock clock,

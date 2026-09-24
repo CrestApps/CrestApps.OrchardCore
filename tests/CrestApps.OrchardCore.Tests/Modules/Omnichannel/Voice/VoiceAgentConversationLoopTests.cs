@@ -1195,9 +1195,19 @@ public sealed partial class VoiceAgentConversationLoopTests
 
         public Action OnRun { get; set; }
 
+        /// <summary>
+        /// Runs with the context the session was given, standing in for what a live session measures.
+        /// </summary>
+        public Action<RealtimeVoiceConversationContext> DuringSession { get; set; }
+
         public Task<bool> RunAsync(RealtimeVoiceConversationContext context, CancellationToken cancellationToken = default)
         {
             OnRun?.Invoke();
+
+            if (CanRun)
+            {
+                DuringSession?.Invoke(context);
+            }
 
             if (!CanRun)
             {
@@ -1361,6 +1371,7 @@ public sealed partial class VoiceAgentConversationLoopTests
                 new VoiceAgentMediaProviderResolver([Media, new FakeVoiceAgentMediaProvider("OtherFake")]),
                 Realtime,
                 SilenceWatchdog,
+                SessionTracker,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
                 Clock,
@@ -1379,6 +1390,11 @@ public sealed partial class VoiceAgentConversationLoopTests
         public FakeVoiceAgentMediaProvider Media { get; } = new();
 
         public RecordingRealtimeRunner Realtime { get; } = new();
+
+        /// <summary>
+        /// What the loop measured and handed over to be written as the call's usage summary.
+        /// </summary>
+        public RecordingSessionTracker SessionTracker { get; } = new();
 
         /// <summary>
         /// Every listening turn the loop asked to have watched for silence.
@@ -1496,6 +1512,7 @@ public sealed partial class VoiceAgentConversationLoopTests
             bool isFinal = true,
             string providerName = "Fake",
             VoiceAgentAnswerer answerer = VoiceAgentAnswerer.Unknown,
+            DateTime? occurredUtc = null,
             CancellationToken cancellationToken = default)
             => Loop.HandleAsync(
                 new VoiceAgentEvent
@@ -1507,6 +1524,7 @@ public sealed partial class VoiceAgentConversationLoopTests
                     TranscriptionText = transcript,
                     TranscriptionIsFinal = isFinal,
                     Answerer = answerer,
+                    OccurredUtc = occurredUtc,
                 },
                 cancellationToken);
 

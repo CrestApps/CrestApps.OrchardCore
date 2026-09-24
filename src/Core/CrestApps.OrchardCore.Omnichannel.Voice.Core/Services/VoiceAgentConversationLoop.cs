@@ -43,7 +43,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 {
     // Marker the model appends to its final line when it wants to end the call. It is spoken-stripped, but kept
     // in the stored transcript so the speak.ended handler can hang up gracefully after the goodbye finishes.
-    private const string HangupMarker = "[[HANGUP]]";
+    internal const string HangupMarker = "[[HANGUP]]";
 
 
     private readonly IOmnichannelActivityStore _activityStore;
@@ -66,6 +66,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     private readonly IVoiceAgentMediaProviderResolver _mediaResolver;
     private readonly IRealtimeVoiceConversationRunner _realtimeRunner;
     private readonly ITurnBasedSilenceWatchdog _silenceWatchdog;
+    private readonly IAIVoiceSessionTracker _sessionTracker;
     private readonly ILiquidTemplateManager _liquidTemplateManager;
     private readonly IContentManager _contentManager;
     private readonly IClock _clock;
@@ -90,6 +91,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IVoiceAgentMediaProviderResolver mediaResolver,
         IRealtimeVoiceConversationRunner realtimeRunner,
         ITurnBasedSilenceWatchdog silenceWatchdog,
+        IAIVoiceSessionTracker sessionTracker,
         ILiquidTemplateManager liquidTemplateManager,
         IContentManager contentManager,
         IClock clock,
@@ -113,6 +115,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _mediaResolver = mediaResolver;
         _realtimeRunner = realtimeRunner;
         _silenceWatchdog = silenceWatchdog;
+        _sessionTracker = sessionTracker;
         _liquidTemplateManager = liquidTemplateManager;
         _contentManager = contentManager;
         _clock = clock;
@@ -151,7 +154,11 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     await ObserveAsync(voiceEvent, AutomatedVoiceCallObservationKind.Answered, cancellationToken: cancellationToken);
                     await OnAnsweredAsync(voiceEvent, media, cancellationToken);
                     break;
+                case VoiceAgentEventKind.SpeechStarted:
+                    MeterTurnBasedSpeech(voiceEvent, started: true);
+                    break;
                 case VoiceAgentEventKind.SpeechEnded:
+                    MeterTurnBasedSpeech(voiceEvent, started: false);
                     await OnSpeakEndedAsync(voiceEvent, media, cancellationToken);
                     break;
                 case VoiceAgentEventKind.Transcription:
@@ -230,6 +237,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             var (realtimeHandoffService, realtimeFlowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
 
             var sessionHeldTheCall = false;
+            var meter = new AIVoiceSessionMeter(measuresCallerSpeech: true);
 
             try
             {
@@ -271,6 +279,9 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
                     // So the assistant addresses the person it actually called, rather than a name it invented.
                     ContactName = await ResolveContactNameAsync(activity, cancellationToken),
+
+                    // Talk time, silence and interruptions, measured from the session's own audio.
+                    Meter = meter,
                 }, cancellationToken);
 
                 // The session is over. Said plainly on the record, because the failure this instrumentation was
@@ -291,6 +302,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 // the tool has recorded it. Leaving that to the success path put the caller on an open, silent
                 // line with nothing queued and nobody coming.
                 await FinishTheCallElsewhereAsync(activity, voiceEvent);
+                await RecordRealtimeSessionAsync(voiceEvent, meter, realtimeDeploymentName, sessionHeldTheCall);
             }
 
             if (sessionHeldTheCall)
@@ -298,6 +310,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 return;
             }
         }
+
+        _sessionTracker.BeginTurnBased(activity.ItemId, voiceEvent.OccurredUtc ?? _clock.UtcNow);
 
         var greeting = await RenderInitialPromptAsync(activity, profile, session, cancellationToken);
 
@@ -311,55 +325,10 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
     }
 
     /// <summary>
-    /// Moves an answered call into the live in-progress state.
-    /// </summary>
-    /// <remarks>
-    /// This both records the correct status and takes the activity out of the automated no-response expiry pass
-    /// window — that pass only transitions rows still awaiting an answer — so it cannot race the conclusion and
-    /// flip a live, answered call to Failed while somebody is still on it.
-    /// </remarks>
-    /// <summary>
-    /// The deployment a live session would be held on, or <see langword="null"/> when this profile cannot hold one.
-    /// </summary>
-    /// <remarks>
-    /// Realtime used to be its own deployment on the profile; it is a model capability now, so the profile's chat
-    /// deployment is asked whether it declares it. A profile that names no chat deployment falls back to whatever
-    /// deployment the tenant has with the capability, which is how the rest of the platform resolves it.
-    /// </remarks>
-    /// <param name="profile">The profile driving the conversation.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <summary>
     /// The name of the person being called, or <see langword="null"/> when the contact has none.
     /// </summary>
     /// <param name="activity">The call's activity.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    /// <summary>
-    /// Tells the Contact Center that a caller waiting for an agent has gone.
-    /// </summary>
-    /// <remarks>
-    /// Nothing thrown here is allowed out. This runs while a call is ending, and a queue that cannot be reached
-    /// must not stop the rest of the hangup from being handled.
-    /// </remarks>
-    /// <param name="activityItemId">The activity the caller was handed over on.</param>
-    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    private async Task ReleaseQueuedCallerAsync(string activityItemId, CancellationToken cancellationToken)
-    {
-        foreach (var handler in _abandonmentHandlers)
-        {
-            try
-            {
-                await handler.CallerAbandonedAsync(activityItemId, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(
-                    ex,
-                    "Could not release the queue work for the caller who left activity '{ActivityId}'.",
-                    activityItemId.SanitizeLogValue());
-            }
-        }
-    }
-
     private async Task<string> ResolveContactNameAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(activity?.ContactContentItemId))
@@ -372,6 +341,16 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         return string.IsNullOrWhiteSpace(contact?.DisplayText) ? null : contact.DisplayText.Trim();
     }
 
+    /// <summary>
+    /// The deployment a live session would be held on, or <see langword="null"/> when this profile cannot hold one.
+    /// </summary>
+    /// <remarks>
+    /// Realtime used to be its own deployment on the profile; it is a model capability now, so the profile's chat
+    /// deployment is asked whether it declares it. A profile that names no chat deployment falls back to whatever
+    /// deployment the tenant has with the capability, which is how the rest of the platform resolves it.
+    /// </remarks>
+    /// <param name="profile">The profile driving the conversation.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     private async Task<string> ResolveRealtimeDeploymentNameAsync(AIProfile profile, CancellationToken cancellationToken)
     {
         // Asked of the deployment catalog by capability, not through the chat slot. A speech-to-speech model
@@ -406,6 +385,14 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         return null;
     }
 
+    /// <summary>
+    /// Moves an answered call into the live in-progress state.
+    /// </summary>
+    /// <remarks>
+    /// This both records the correct status and takes the activity out of the automated no-response expiry pass
+    /// window — that pass only transitions rows still awaiting an answer — so it cannot race the conclusion and
+    /// flip a live, answered call to Failed while somebody is still on it.
+    /// </remarks>
     private async Task MarkInProgressAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         if (activity.Status == ActivityStatus.InProgress)
@@ -571,6 +558,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         ReleaseVoicemailClaim(voiceEvent.ActivityId);
 
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
+
+        await RecordTurnBasedSessionAsync(voiceEvent, activity, outcome: null, _clock.UtcNow);
 
         // This fires when the model's own leg ends, which is also what a handoff looks like from here: the model
         // disconnects the moment the caller is passed to a live agent.

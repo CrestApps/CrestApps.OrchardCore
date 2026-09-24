@@ -1,6 +1,7 @@
 ﻿using CrestApps.Core;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -83,6 +84,33 @@ public sealed partial class VoiceAgentConversationLoop
         await media.StopTranscriptionAsync(voiceEvent.ProviderCallId, cancellationToken);
 
         return true;
+    }
+
+    /// <summary>
+    /// Tells the Contact Center that a caller waiting for an agent has gone.
+    /// </summary>
+    /// <remarks>
+    /// Nothing thrown here is allowed out. This runs while a call is ending, and a queue that cannot be reached
+    /// must not stop the rest of the hangup from being handled.
+    /// </remarks>
+    /// <param name="activityItemId">The activity the caller was handed over on.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task ReleaseQueuedCallerAsync(string activityItemId, CancellationToken cancellationToken)
+    {
+        foreach (var handler in _abandonmentHandlers)
+        {
+            try
+            {
+                await handler.CallerAbandonedAsync(activityItemId, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Could not release the queue work for the caller who left activity '{ActivityId}'.",
+                    activityItemId.SanitizeLogValue());
+            }
+        }
     }
 
     /// <summary>
@@ -363,6 +391,10 @@ public sealed partial class VoiceAgentConversationLoop
             HandedToAgentOutcome,
             occurredUtc: conversationEndedUtc,
             cancellationToken: cancellationToken);
+
+        // The same moment ends the assistant's part for the usage report. Only a turn-based call measured here is
+        // written now; a live session was summarized when it ended, and an unmeasured call is left to the hangup.
+        await RecordTurnBasedSessionAsync(voiceEvent, activity, AIVoiceSessionOutcome.HandedToAgent, conversationEndedUtc, onlyWhenMeasured: true);
 
         // "Connecting you now" and "you are in a queue" are different promises. Saying the first to a caller
         // nobody is free to take leaves them listening to silence, waiting for a person who was never offered

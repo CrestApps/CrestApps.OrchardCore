@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core;
 using CrestApps.Core.AI;
+using CrestApps.Core.AI.Chat;
 using CrestApps.Core.AI.Clients;
 using CrestApps.Core.AI.Completions;
 using CrestApps.Core.AI.Deployments;
@@ -189,7 +190,10 @@ public sealed partial class VoiceAgentConversationLoop
 
         if (hasConversation)
         {
-            var response = await client.GetResponseAsync<VoiceConclusionResult>(messages, jsonOptions.SerializerOptions);
+            var response = await client.GetResponseAsync<VoiceConclusionResult>(
+                messages,
+                jsonOptions.SerializerOptions,
+                await CreateReviewOptionsAsync(services, activity.AISessionId));
             result = response.Result;
         }
 
@@ -279,6 +283,34 @@ public sealed partial class VoiceAgentConversationLoop
         {
             _logger.LogInformation("Concluded AI voice activity '{ActivityId}' with disposition '{Disposition}'.", activityId.SanitizeLogValue(), disposition?.Name.SanitizeLogValue());
         }
+    }
+
+    /// <summary>
+    /// The options the call review is asked with: the call's own chat session, so usage tracking records the
+    /// review's tokens against the call rather than against nothing.
+    /// </summary>
+    /// <remarks>
+    /// The review runs in a deferred scope with no invocation scope around it, so nothing else tells the tracking
+    /// client which session it belongs to, and the usage report leaves out every record that belongs to none.
+    /// </remarks>
+    /// <param name="services">The deferred scope's services.</param>
+    /// <param name="sessionId">The call's chat session.</param>
+    private static async Task<ChatOptions> CreateReviewOptionsAsync(IServiceProvider services, string sessionId)
+    {
+        var sessionManager = services.GetService<IAIChatSessionManager>();
+        var session = sessionManager is null || string.IsNullOrEmpty(sessionId)
+            ? null
+            : await sessionManager.FindByIdAsync(sessionId);
+
+        return session is null
+            ? null
+            : new ChatOptions
+            {
+                AdditionalProperties = new AdditionalPropertiesDictionary
+                {
+                    [AICompletionContextKeys.Session] = session,
+                },
+            };
     }
 
     private sealed class VoiceConclusionResult

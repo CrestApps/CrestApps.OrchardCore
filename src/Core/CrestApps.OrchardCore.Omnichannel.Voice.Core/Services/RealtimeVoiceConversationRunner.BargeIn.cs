@@ -94,6 +94,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         }
 
         var truncations = bargeIn.Interrupt(now);
+        _meter?.AssistantInterrupted(now);
 
         // The line is quiet from now, not from when the queued speech would have ended: the bed comes back, the
         // idle watchdog counts from here, and the assistant's answer plays straight away instead of after audio

@@ -40,4 +40,10 @@ public enum VoiceAgentEventKind
     /// The provider has heard a machine's greeting end, on its tone or on the silence after it.
     /// </summary>
     MachineGreetingEnded,
+
+    /// <summary>
+    /// The assistant's speech started playing. Only measured, never acted on: it is how a turn-based call's talk
+    /// time is known from the audio rather than guessed from the text.
+    /// </summary>
+    SpeechStarted,
 }

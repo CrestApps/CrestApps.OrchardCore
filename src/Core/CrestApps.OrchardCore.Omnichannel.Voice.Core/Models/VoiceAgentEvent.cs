@@ -42,4 +42,10 @@ public sealed class VoiceAgentEvent
     /// Gets or sets who the provider says answered, on an <see cref="VoiceAgentEventKind.AnswererDetected"/> event.
     /// </summary>
     public VoiceAgentAnswerer Answerer { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the provider says the event happened, or <see langword="null"/> when it does not say.
+    /// Webhooks arrive late and out of step, so a duration measured between two events is measured on these.
+    /// </summary>
+    public DateTime? OccurredUtc { get; set; }
 }

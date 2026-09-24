@@ -42,6 +42,9 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
             TranscriptionText = callEvent.TranscriptionText,
             TranscriptionIsFinal = callEvent.TranscriptionIsFinal,
             Answerer = ResolveAnswerer(callEvent.MachineDetectionResult),
+
+            // When Telnyx says it happened, so the time between two events is not the time between two webhooks.
+            OccurredUtc = callEvent.OccurredUtc,
         }, cancellationToken);
     }
 
@@ -60,6 +63,7 @@ public sealed class TelnyxAiVoiceConversationHandler : ITelnyxAiVoiceEventHandle
         => eventType?.Trim().ToLowerInvariant() switch
         {
             "call.answered" => VoiceAgentEventKind.Answered,
+            "call.speak.started" => VoiceAgentEventKind.SpeechStarted,
             "call.speak.ended" => VoiceAgentEventKind.SpeechEnded,
             "call.transcription" => VoiceAgentEventKind.Transcription,
             "call.hangup" => VoiceAgentEventKind.Hangup,

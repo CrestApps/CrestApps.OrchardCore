@@ -536,6 +536,9 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         Assert.Equal(2, harness.Conversation.Unprompted.Count);
         Assert.Contains("still there", harness.Conversation.Unprompted[^1], StringComparison.OrdinalIgnoreCase);
 
+        // And it is counted, because an assistant that keeps having to ask is a call worth looking at.
+        Assert.Equal(1, harness.Meter.Measure().IdlePrompts);
+
         harness.Conversation.KeepAlive = false;
         harness.Media.KeepAlive = false;
 
@@ -1252,6 +1255,11 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         public List<AIChatSessionPrompt> StoredPrompts => _prompts;
 
+        /// <summary>
+        /// What the session measured for the usage report.
+        /// </summary>
+        public AIVoiceSessionMeter Meter { get; } = new(measuresCallerSpeech: true);
+
         public Task<bool> RunAsync()
             => Runner.RunAsync(new RealtimeVoiceConversationContext
             {
@@ -1269,6 +1277,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
                 // The loop decides this now, by asking whether the profile's chat deployment can hold a live call.
                 RealtimeDeploymentName = "realtime-deployment",
+                Meter = Meter,
             }, TestContext.Current.CancellationToken);
     }
 

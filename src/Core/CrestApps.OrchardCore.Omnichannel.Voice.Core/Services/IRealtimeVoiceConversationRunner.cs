@@ -136,4 +136,10 @@ public sealed class RealtimeVoiceConversationContext
     /// for, which the assistant then read as a request for a human and transferred the call.
     /// </remarks>
     public string ContactName { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the session measures from its audio for the usage report: started once the live session
+    /// is holding the call, and stopped when it ends.
+    /// </summary>
+    internal AIVoiceSessionMeter Meter { get; set; }
 }

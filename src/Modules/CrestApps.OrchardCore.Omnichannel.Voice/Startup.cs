@@ -1,4 +1,5 @@
 ﻿using CrestApps.Core.AI;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Omnichannel.Voice.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Tools;
@@ -35,6 +36,12 @@ public sealed class Startup : StartupBase
         // One per call, so the tool and the session holding the line share an instance and two calls running at
         // once cannot end each other.
         services.TryAddScoped<IVoiceCallEndTurn, VoiceCallEndTurn>();
+
+        // The AI usage report's per-call summaries. The tracker outlives requests, because a turn-based call's
+        // measurements span many of them; the store is the analytics feature's, and records nothing without it.
+        services.AddSingleton<IAIVoiceSessionTracker, AIVoiceSessionTracker>();
+        services.AddScoped<AIVoiceSessionSummaryWriter>();
+        services.TryAddScoped<IAIVoiceSessionSummaryStore, NullAIVoiceSessionSummaryStore>();
 
         // The end-call tool is turned on by the call itself rather than by an administrator - every automated
         // call has to be endable - so it is registered without being selectable, like the transfer tool.

@@ -205,6 +205,29 @@ public sealed class VoiceCallConclusionWiringTests
     }
 
     [Fact]
+    public async Task TheCallReview_IsAskedOnTheCallsOwnChatSession_SoItsTokensAreCountedWithTheCall()
+    {
+        // Arrange
+        // The review is a completion like any other, and usage tracking attributes a completion to the session it
+        // is told about. Asked with no session, its tokens were recorded against nothing, and the usage report
+        // drops records that belong to no session -- so the most expensive completion of a call was invisible.
+        var harness = new ConclusionHarness();
+        harness.Says(
+            (ChatRole.Assistant, "Hi, this is Ada calling about your enquiry."),
+            (ChatRole.User, "Yes, I'd like a quote."));
+        harness.Offers("disposition-interested", "Interested");
+        harness.ModelReturns(dispositionId: "disposition-interested", summary: "The customer asked for a quote.");
+
+        // Act
+        await harness.ConcludeAsync();
+
+        // Assert
+        Assert.NotNull(harness.Model.LastOptions?.AdditionalProperties);
+        Assert.True(harness.Model.LastOptions.AdditionalProperties.TryGetValue(AICompletionContextKeys.Session, out var session));
+        Assert.Equal("session-1", Assert.IsType<AIChatSession>(session).SessionId);
+    }
+
+    [Fact]
     public async Task ACallTheProviderTookForAMachine_WithNoConversation_TriesAgain()
     {
         // Arrange
@@ -346,12 +369,18 @@ public sealed class VoiceCallConclusionWiringTests
 
         public int Requests { get; private set; }
 
+        /// <summary>
+        /// The options the review was last asked with.
+        /// </summary>
+        public ChatOptions LastOptions { get; private set; }
+
         public Task<ChatResponse> GetResponseAsync(
             IEnumerable<ChatMessage> messages,
             ChatOptions options = null,
             CancellationToken cancellationToken = default)
         {
             Requests++;
+            LastOptions = options;
 
             return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, ResponseText)));
         }
@@ -531,8 +560,14 @@ public sealed class VoiceCallConclusionWiringTests
             // The conclusion runs in a deferred shell scope and resolves everything it needs from that scope's
             // service provider rather than from the loop's own constructor, so this provider -- not the
             // constructor below -- is where the doubles that matter are wired.
+            var chatSessionManager = new Mock<IAIChatSessionManager>();
+            chatSessionManager
+                .Setup(manager => manager.FindByIdAsync("session-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new AIChatSession { SessionId = "session-1", ProfileId = "profile-1" });
+
             _services = new ServiceCollection()
                 .AddSingleton(activityStore.Object)
+                .AddSingleton(chatSessionManager.Object)
                 .AddSingleton(profileManager.Object)
                 .AddSingleton(flowSettingsService.Object)
                 .AddSingleton(promptStore.Object)
@@ -573,6 +608,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IVoiceAgentMediaProviderResolver>(),
                 Mock.Of<IRealtimeVoiceConversationRunner>(),
                 Mock.Of<ITurnBasedSilenceWatchdog>(),
+                Mock.Of<IAIVoiceSessionTracker>(),
                 Mock.Of<ILiquidTemplateManager>(),
                 ContentManager.Object,
                 new StubClock(_now),

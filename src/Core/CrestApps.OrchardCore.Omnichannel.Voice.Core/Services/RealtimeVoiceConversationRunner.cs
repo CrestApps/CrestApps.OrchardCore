@@ -80,6 +80,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private bool _goodbyeAlreadySaid;
 
     /// <summary>
+    /// What this call's audio is measured into for the usage report, or <see langword="null"/> when nobody asked.
+    /// </summary>
+    private AIVoiceSessionMeter _meter;
+
+    /// <summary>
     /// How long the session is given to finish its closing line after the model asks to transfer, before it is
     /// closed and the caller is handed to the queue. Long enough for "connecting you now", short enough that a
     /// caller is never left with the assistant after being promised a person.
@@ -219,6 +224,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // symptom was not an error on the line but an assistant that could not hear the caller while it spoke.
         using var invocationScope = AIInvocationScope.Begin();
 
+        // The call was answered moments ago; the caller's wait for the assistant's first word starts here.
+        var answeredTicks = DateTime.UtcNow.Ticks;
+        _meter = context.Meter;
+
         var mediaProvider = _mediaResolver.Get(context.ProviderName);
 
         // No live media means no realtime: the model needs the caller's audio, not a transcript of it. Reporting
@@ -248,6 +257,9 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         {
             return false;
         }
+
+        // Only now: a session that never opened held nothing, and the turn-based loop takes the call instead.
+        _meter?.Start(answeredTicks);
 
         await ApplyTelephonyTurnDetectionAsync(conversation, cancellationToken);
 
@@ -319,6 +331,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         }
         finally
         {
+            _meter?.Stop(DateTime.UtcNow.Ticks);
             await callScope.CancelAsync();
 
             // All of them are awaited so none is left writing to a disposed session.
@@ -492,6 +505,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                 }
 
                 attempts++;
+                _meter?.IdlePrompt();
 
                 if (_logger.IsEnabled(LogLevel.Information))
                 {
