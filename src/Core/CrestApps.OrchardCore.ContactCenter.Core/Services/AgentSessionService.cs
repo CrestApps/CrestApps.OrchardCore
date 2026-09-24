@@ -89,18 +89,72 @@ public sealed class AgentSessionService : IAgentSessionService
 
         await using var acquiredLock = locker;
 
-        var now = _clock.UtcNow;
-        var session = await _sessionManager.FindByUserIdAsync(userId, cancellationToken);
-        var isNew = session is null;
+        var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
 
-        if (isNew)
+        // The lock orders connects against each other, but it cannot make them safe on its own: the store's
+        // version check runs when the shell scope commits, after the lock is released, so two connections opened
+        // at once -- the workspace and the docked agent bar on one page -- both read the same version and one lost
+        // the check at commit. The hub then aborted that connection and the page showed itself disconnected. The
+        // write is therefore applied in its own unit of work, which commits before the lock is released, and
+        // retried against the newest version on a conflict, as a disconnect is.
+        AgentSession session = null;
+        var connectionAdded = false;
+        var now = _clock.UtcNow;
+
+        for (var attempt = 1; attempt <= MaxSessionWriteAttempts; attempt++)
         {
-            session = await _sessionManager.NewAsync(cancellationToken: cancellationToken);
-            session.UserId = userId;
-            session.CreatedUtc = now;
-            session.ConnectedUtc = now;
+            try
+            {
+                now = _clock.UtcNow;
+
+                await _scopeExecutor.ExecuteAsync<IAgentSessionManager>(async manager =>
+                {
+                    var current = await manager.FindByUserIdAsync(userId, cancellationToken);
+                    var isNew = current is null;
+
+                    if (isNew)
+                    {
+                        current = await manager.NewAsync(cancellationToken: cancellationToken);
+                        current.UserId = userId;
+                        current.CreatedUtc = now;
+                        current.ConnectedUtc = now;
+                    }
+
+                    connectionAdded = ApplyConnection(current, connectionId, userName, displayName, profile, now);
+
+                    if (isNew)
+                    {
+                        await manager.CreateAsync(current, cancellationToken: cancellationToken);
+                    }
+                    else
+                    {
+                        await manager.UpdateAsync(current, cancellationToken: cancellationToken);
+                    }
+
+                    session = current;
+                });
+
+                break;
+            }
+            catch (ConcurrencyException) when (attempt < MaxSessionWriteAttempts)
+            {
+                session = null;
+            }
         }
 
+        // A reconnect on a connection already in the list is the same connection, not a new one.
+        if (connectionAdded && profile is not null)
+        {
+            await RecordSessionAsync(ContactCenterConstants.Events.AgentConnected, profile, session, connectionId, reason: null, now, closesSession: false, cancellationToken);
+        }
+
+        return session;
+    }
+
+    // Adds the connection to the session and refreshes what the session mirrors from the agent. Returns whether the
+    // connection is new to the session.
+    private static bool ApplyConnection(AgentSession session, string connectionId, string userName, string displayName, AgentProfile profile, DateTime nowUtc)
+    {
         var connectionAdded = !session.ConnectionIds.Contains(connectionId);
 
         if (connectionAdded)
@@ -108,12 +162,12 @@ public sealed class AgentSessionService : IAgentSessionService
             session.ConnectionIds.Add(connectionId);
         }
 
-        session.ConnectionLastSeenUtc[connectionId] = now;
-
-        session.ConnectedUtc ??= now;
+        session.ConnectionLastSeenUtc ??= new Dictionary<string, DateTime>();
+        session.ConnectionLastSeenUtc[connectionId] = nowUtc;
+        session.ConnectedUtc ??= nowUtc;
         session.IsOnline = session.ConnectionIds.Count > 0;
-        session.LastHeartbeatUtc = now;
-        session.ModifiedUtc = now;
+        session.LastHeartbeatUtc = nowUtc;
+        session.ModifiedUtc = nowUtc;
 
         if (!string.IsNullOrEmpty(userName))
         {
@@ -124,8 +178,6 @@ public sealed class AgentSessionService : IAgentSessionService
         {
             session.DisplayName = displayName;
         }
-
-        var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
 
         if (profile is not null)
         {
@@ -138,22 +190,7 @@ public sealed class AgentSessionService : IAgentSessionService
             }
         }
 
-        if (isNew)
-        {
-            await _sessionManager.CreateAsync(session, cancellationToken: cancellationToken);
-        }
-        else
-        {
-            await _sessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
-        }
-
-        // A reconnect on a connection already in the list is the same connection, not a new one.
-        if (connectionAdded && profile is not null)
-        {
-            await RecordSessionAsync(ContactCenterConstants.Events.AgentConnected, profile, session, connectionId, reason: null, now, closesSession: false, cancellationToken);
-        }
-
-        return session;
+        return connectionAdded;
     }
 
     /// <inheritdoc/>

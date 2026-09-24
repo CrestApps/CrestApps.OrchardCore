@@ -154,6 +154,28 @@ public sealed class AgentSessionServiceTests
     }
 
     [Fact]
+    public async Task ConnectAsync_WhenAnotherConnectionCommitsFirst_RetriesInsteadOfFailingTheConnection()
+    {
+        // Arrange
+        // The workspace and the docked agent bar open their connections at the same moment. One commit loses the
+        // version check; before the retry the hub aborted that connection and the page showed itself disconnected.
+        var existing = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1"], IsOnline = true };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var scopeExecutor = new FlakyScopeExecutor(sessionManager.Object, new ConcurrencyException(new Document()), failuresBeforeSuccess: 1);
+        var service = CreateService(sessionManager, new Mock<IAgentProfileManager>(), scopeExecutor: scopeExecutor);
+
+        // Act
+        var session = await service.ConnectAsync("u1", "c2", "user1", "User One", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(session);
+        Assert.Contains("c2", session.ConnectionIds);
+        Assert.True(session.IsOnline);
+        Assert.Equal(2, scopeExecutor.InvocationCount);
+    }
+
+    [Fact]
     public async Task DisconnectAsync_WhenSessionWriteKeepsLosingVersionCheck_DoesNotThrow()
     {
         // Arrange

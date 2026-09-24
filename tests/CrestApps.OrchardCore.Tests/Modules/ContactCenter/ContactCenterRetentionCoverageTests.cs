@@ -170,7 +170,7 @@ public sealed class ContactCenterRetentionCoverageTests
         ],
         ["AgentSession"] =
         [
-            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/AgentSessionService.cs", "ConnectAsync", "session.LastHeartbeatUtc = "),
+            ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/AgentSessionService.cs", "ApplyConnection", "session.LastHeartbeatUtc = "),
             ("src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/AgentSessionService.cs", "HeartbeatAsync", "current.LastHeartbeatUtc = "),
         ],
         ["ContactCenterEventMetric"] =
