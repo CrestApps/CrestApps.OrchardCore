@@ -1427,6 +1427,167 @@
   softPhone.createHoldAudioController = createHoldAudioController;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * Recognizing the provider leg the platform rang for a Contact Center offer that is still ringing on screen.
+ *
+ * Accepting an offer used to make the platform ring this browser only after the click, so the agent waited the whole
+ * invite-and-answer round trip of their own phone before hearing the caller. The platform now rings the browser
+ * while the offer is still ringing. That leg must not ring as a second call on top of the offer, and must not be
+ * answered on arrival (the agent has not accepted anything yet): the phone holds it, answers it the moment the agent
+ * accepts -- here, in another page, or on another device -- and hangs it up if they decline.
+ *
+ * The leg names its offer in the provider's client state (intent "cc-predial", offer "r") and in a SIP header; the
+ * offer's context may also name the provider's own id for the leg. These are the pure decisions: what an incoming
+ * leg says about its offer, and what to do with it given the offer on screen and the offers known to be accepted.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  var PRE_DIALED_LEG_INTENT = 'cc-predial';
+  var OFFER_ID_HEADER = 'x-offer-id';
+
+  // How long an accept is remembered for a leg that has not arrived yet. The platform rings the leg within a second
+  // or two of the offer; anything later is not the leg for that accept.
+  var ACCEPTED_OFFER_MEMORY_MS = 60000;
+  function decodeBase64(value) {
+    try {
+      if (typeof root.atob === 'function') {
+        return root.atob(value);
+      }
+    } catch (error) {
+      return null;
+    }
+    return null;
+  }
+  function parseObject(text) {
+    try {
+      var parsed = JSON.parse(text);
+      return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  // The provider hands client state over base64-encoded; tolerate it already decoded too.
+  function readClientState(value) {
+    if (!value || typeof value !== 'string') {
+      return null;
+    }
+    var decoded = decodeBase64(value);
+    return decoded && parseObject(decoded) || parseObject(value);
+  }
+
+  // Custom SIP headers arrive as a list of { name, value } pairs, or occasionally as a plain map.
+  function readHeader(headers, name) {
+    if (!headers) {
+      return '';
+    }
+    if (Array.isArray(headers)) {
+      for (var i = 0; i < headers.length; i++) {
+        var header = headers[i];
+        if (header && typeof header.name === 'string' && header.name.toLowerCase() === name) {
+          return header.value == null ? '' : String(header.value);
+        }
+      }
+      return '';
+    }
+    if (typeof headers === 'object') {
+      var keys = Object.keys(headers);
+      for (var j = 0; j < keys.length; j++) {
+        if (keys[j].toLowerCase() === name) {
+          return headers[keys[j]] == null ? '' : String(headers[keys[j]]);
+        }
+      }
+    }
+    return '';
+  }
+
+  // What an incoming provider leg says about the offer it was rung for: { reservationId, legId }. Either may be
+  // empty. A leg that names no offer is an ordinary incoming call as far as this is concerned.
+  function readOfferLegTag(options) {
+    options = options || {};
+    var reservationId = '';
+    var state = readClientState(options.clientState || options.client_state);
+    if (state && state.i === PRE_DIALED_LEG_INTENT && state.r) {
+      reservationId = String(state.r);
+    }
+    if (!reservationId) {
+      reservationId = readHeader(options.customHeaders || options.custom_headers, OFFER_ID_HEADER);
+    }
+    var legId = options.telnyxCallControlId || options.callControlId || '';
+    return {
+      reservationId: reservationId,
+      legId: legId ? String(legId) : ''
+    };
+  }
+  function rememberAcceptedOffer(accepted, reservationId, now) {
+    if (!accepted || !reservationId) {
+      return;
+    }
+    accepted[reservationId] = now;
+
+    // Forget the old ones so the memory cannot grow for as long as the page stays open.
+    Object.keys(accepted).forEach(function (id) {
+      if (now - accepted[id] > ACCEPTED_OFFER_MEMORY_MS) {
+        delete accepted[id];
+      }
+    });
+  }
+  function forgetAcceptedOffer(accepted, reservationId) {
+    if (accepted && reservationId) {
+      delete accepted[reservationId];
+    }
+  }
+  function isOfferAccepted(accepted, reservationId, now) {
+    if (!accepted || !reservationId || typeof accepted[reservationId] !== 'number') {
+      return false;
+    }
+    return now - accepted[reservationId] <= ACCEPTED_OFFER_MEMORY_MS;
+  }
+
+  // What to do with an incoming provider leg.
+  //   tag      - readOfferLegTag() of the leg.
+  //   offer    - the offer on screen, { reservationId, agentLegId, accepting }, or null. accepting is true while
+  //              this page's own accept is in flight or has completed.
+  //   accepted - the offers known to have been accepted (rememberAcceptedOffer), from anywhere.
+  // Returns null for a leg that is not an offer's (the phone's usual rules apply), otherwise
+  // { action: 'hold' | 'answer', reservationId }.
+  function classifyOfferLeg(tag, offer, accepted, now) {
+    if (!tag) {
+      return null;
+    }
+    var matchesOffer = !!(offer && offer.reservationId && (tag.reservationId && tag.reservationId === offer.reservationId || tag.legId && offer.agentLegId && tag.legId === offer.agentLegId));
+    var reservationId = tag.reservationId || (matchesOffer ? offer.reservationId : '');
+    if (!reservationId) {
+      return null;
+    }
+
+    // The agent already said yes -- here, in another page, or on another device -- before the leg arrived.
+    if (isOfferAccepted(accepted, reservationId, now) || matchesOffer && offer.accepting) {
+      return {
+        action: 'answer',
+        reservationId: reservationId
+      };
+    }
+
+    // An offer's leg, and nobody has accepted it: hold it, without ringing it and without answering it. That is
+    // also what happens to a leg whose offer this page has not shown yet; the offer usually follows it.
+    return {
+      action: 'hold',
+      reservationId: reservationId
+    };
+  }
+  softPhone.readOfferLegTag = readOfferLegTag;
+  softPhone.classifyOfferLeg = classifyOfferLeg;
+  softPhone.rememberAcceptedOffer = rememberAcceptedOffer;
+  softPhone.forgetAcceptedOffer = forgetAcceptedOffer;
+  softPhone.isOfferAccepted = isOfferAccepted;
+  softPhone.OFFER_LEG_CAPABILITY = 'held-offer-leg';
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * Provider-agnostic soft phone client.
  *
  * Connects to the Telephony SignalR hub and drives the floating soft phone UI. The widget can be
@@ -1486,6 +1647,11 @@
   var iceServersIncludeTurn = softPhoneModules.iceServersIncludeTurn;
   var reconnectDelayMs = softPhoneModules.reconnectDelayMs;
   var createHoldAudioController = softPhoneModules.createHoldAudioController;
+  var readOfferLegTag = softPhoneModules.readOfferLegTag;
+  var classifyOfferLeg = softPhoneModules.classifyOfferLeg;
+  var rememberAcceptedOffer = softPhoneModules.rememberAcceptedOffer;
+  var forgetAcceptedOffer = softPhoneModules.forgetAcceptedOffer;
+  var OFFER_LEG_CAPABILITY = softPhoneModules.OFFER_LEG_CAPABILITY;
 
   // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
   var CAPABILITIES = {
@@ -2006,6 +2172,9 @@
     // An inbound leg that is ringing but has not been answered yet (a direct extension call). It is surfaced
     // to the soft-phone core as an Answer/Decline prompt; until the agent chooses it is not the currentCall.
     var inboundRingingCall = null;
+    // Legs the platform rang for a Contact Center offer that is still ringing on screen, handed to the core to
+    // hold (unanswered, and not rung as a call of their own) until the agent accepts or declines the offer.
+    var heldOfferCalls = [];
     var disposed = false;
 
     // Media-quality sampler state for the active call. A getStats sample is taken every few seconds while a
@@ -2639,6 +2808,35 @@
       }
     }
 
+    // The core's handle on a held offer leg. Answering it makes it the current call, exactly as the auto-answered
+    // agent leg of an accepted offer always was; the platform joins it to the caller.
+    function createOfferLegController(call) {
+      return {
+        legId: call.options && call.options.telnyxCallControlId || '',
+        answer: function () {
+          var index = heldOfferCalls.indexOf(call);
+          if (index >= 0) {
+            heldOfferCalls.splice(index, 1);
+          }
+          if (disposed || isTelnyxTerminalState(call.state)) {
+            return;
+          }
+          currentCall = call;
+          outboundNotify = null;
+          answerInboundCall(call);
+        },
+        hangup: function () {
+          var index = heldOfferCalls.indexOf(call);
+          if (index >= 0) {
+            heldOfferCalls.splice(index, 1);
+          }
+          try {
+            Promise.resolve(call.hangup()).catch(function () {});
+          } catch (error) {/* best effort: the platform also hangs it up */}
+        }
+      };
+    }
+
     // Best-effort extraction of the calling party from an inbound Telnyx call, used to label the ring
     // prompt. The SDK surfaces it under a few names depending on version; a display name is preferred over
     // a raw number, and both fall back to empty so the core can show a generic "Incoming call".
@@ -2656,7 +2854,29 @@
         return;
       }
       var call = notification.call;
+
+      // A held offer leg that ends (the platform hung it up because the offer was declined or expired, or it
+      // rang out) is reported so the core stops holding it.
+      var heldOfferIndex = heldOfferCalls.indexOf(call);
+      if (heldOfferIndex >= 0) {
+        if (isTelnyxTerminalState(call.state)) {
+          heldOfferCalls.splice(heldOfferIndex, 1);
+          if (typeof context.onOfferLegEnded === 'function') {
+            context.onOfferLegEnded(call.options && call.options.telnyxCallControlId || '');
+          }
+        }
+        return;
+      }
       if (call.direction === 'inbound' && call.state === 'ringing' && call !== currentCall && call !== inboundRingingCall && !disposed) {
+        // The leg the platform rang for an offer that is still ringing on screen. It is the core's to hold
+        // or answer, depending on whether the offer has been accepted; it never rings as a call of its own.
+        var takeOfferLeg = typeof context.claimOfferLeg === 'function' ? context.claimOfferLeg(call.options || {}) : null;
+        if (typeof takeOfferLeg === 'function') {
+          heldOfferCalls.push(call);
+          takeOfferLeg(createOfferLegController(call));
+          return;
+        }
+
         // The caller's own bridged leg (an extension call this browser just placed) and a Contact Center
         // leg it just accepted are inbound calls the agent is expecting, so they are answered
         // automatically. An unsolicited inbound leg -- a colleague dialing this agent's extension -- must
@@ -2881,6 +3101,9 @@
         signalingRegion: signalingRegion,
         // The browser places its own outbound calls through the Telnyx SDK.
         canOriginate: true,
+        // Reported to the server once registered: this client recognizes and holds the leg the platform
+        // rings for an offer that is still ringing, so the platform may ring it early.
+        clientCapabilities: OFFER_LEG_CAPABILITY ? [OFFER_LEG_CAPABILITY] : [],
         outboundCallerId: registrationConfig.outboundCallerId || '',
         // Optional echo/loopback destination for the diagnostics audio test (companion tooling).
         echoTestDestination: registrationConfig.echoTestDestination || '',
@@ -3265,6 +3488,14 @@
     var incomingContext = null;
     var incomingHandled = false;
     var incomingAcceptPending = false;
+    // The leg the platform rang for the offer on screen, held unanswered until the agent accepts or declines:
+    // { reservationId, legId, controller }. And the one answered for an accept that is still being confirmed, so
+    // it can be hung up if the accept fails.
+    var heldOfferLeg = null;
+    var answeredOfferLeg = null;
+    // Offers this agent is known to have accepted -- here, in another page, or on another device -- remembered
+    // briefly so their leg is answered the moment it arrives rather than held.
+    var acceptedOfferIds = {};
     // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
     var ringtone = createRingtonePlayer();
 
@@ -3273,7 +3504,7 @@
     // agent did not click kept ringing in the headset until the server's own "offer taken" update reached them,
     // a second or so after the call had been answered.
     var offerChannel = typeof BroadcastChannel === 'function' ? new BroadcastChannel('crestapps-soft-phone-offers') : null;
-    function announceOfferHandled() {
+    function announceOfferHandled(answered, reservationId) {
       var id = currentCallId();
       if (!offerChannel || !id) {
         return;
@@ -3281,14 +3512,25 @@
       try {
         offerChannel.postMessage({
           type: 'offer-handled',
-          callId: id
+          callId: id,
+          reservationId: reservationId || '',
+          answered: !!answered
         });
       } catch (error) {/* another page not hearing it only costs a second of ringing */}
     }
     if (offerChannel) {
       offerChannel.onmessage = function (event) {
         var message = event && event.data;
-        if (!message || message.type !== 'offer-handled' || !currentCall || currentCall.callId !== message.callId) {
+        if (!message || message.type !== 'offer-handled') {
+          return;
+        }
+
+        // The page the agent clicked in may not be the one the platform rang: whichever page holds the
+        // offer's leg answers it (or hangs it up) the moment it hears.
+        if (message.reservationId) {
+          settleOfferLeg(message.reservationId, !!message.answered);
+        }
+        if (!currentCall || currentCall.callId !== message.callId) {
           return;
         }
         incomingHandled = true;
@@ -4329,6 +4571,15 @@
       }
       connection.invoke('ReportCredentialRegistered', credentialId).catch(function () {});
     }
+
+    // Tell the server what this client can do on the credential it registered on, so it only rings this browser
+    // in ways it understands. A client that reports nothing is rung the way it always was.
+    function reportClientCapabilities(credentialId, capabilities) {
+      if (!connection || !credentialId || !Array.isArray(capabilities) || !capabilities.length) {
+        return;
+      }
+      connection.invoke('ReportCredentialCapabilities', credentialId, capabilities).catch(function () {});
+    }
     function ensureBrowserAudio() {
       if (!isBrowserAudioEnabled()) {
         return Promise.resolve(null);
@@ -4396,6 +4647,10 @@
             // automatically (the agent's own bridged leg) or ring an Answer/Decline prompt (a direct
             // extension call from a colleague).
             shouldAutoAnswerInbound: consumeInboundAutoAnswer,
+            // The leg rung for an offer still ringing on screen: held until the agent accepts or
+            // declines, never rung as a call of its own.
+            claimOfferLeg: claimOfferLeg,
+            onOfferLegEnded: handleOfferLegEnded,
             onInboundRing: handleBrowserInboundRing,
             onInboundRingCanceled: clearBrowserInboundRing,
             // Media-quality telemetry (item 2): the adapter samples the live peer connection and
@@ -4453,6 +4708,7 @@
 
         // Registration completed on this credential, so it is the one the platform must deliver to.
         reportCredentialRegistered(browserAudioCredentialId(browserAudioSession));
+        reportClientCapabilities(browserAudioCredentialId(browserAudioSession), browserAudioSession.clientCapabilities);
 
         // A renewal replaced a still-live credential; revoke that predecessor now that the fresh
         // session is registered (unless, defensively, the server handed back the same credential id).
@@ -5098,6 +5354,143 @@
         return true;
       }
       return false;
+    }
+
+    // The offer on screen, as the offer-leg rules need it.
+    function currentOfferDescriptor() {
+      var properties = incomingContext && incomingContext.properties;
+      if (!properties || !properties.reservationId) {
+        return null;
+      }
+      return {
+        reservationId: properties.reservationId,
+        agentLegId: properties.agentLegId || '',
+        accepting: incomingAcceptPending || incomingHandled
+      };
+    }
+
+    // Called by the media adapter for each inbound provider leg. Returns null for a leg that is not an offer's
+    // (the usual auto-answer/ring rules apply), otherwise a function the adapter hands the leg's controller to.
+    function claimOfferLeg(options) {
+      if (typeof readOfferLegTag !== 'function' || typeof classifyOfferLeg !== 'function') {
+        return null;
+      }
+      var decision = classifyOfferLeg(readOfferLegTag(options), currentOfferDescriptor(), acceptedOfferIds, Date.now());
+      if (!decision) {
+        return null;
+      }
+      return function (controller) {
+        if (decision.action === 'answer') {
+          answerOfferLeg(decision.reservationId, controller);
+          return;
+        }
+
+        // One offer rings at a time. A leg still held for an earlier one belongs to an offer that is over.
+        if (heldOfferLeg && heldOfferLeg.reservationId !== decision.reservationId) {
+          hangupHeldOfferLeg(heldOfferLeg.reservationId);
+        }
+        heldOfferLeg = {
+          reservationId: decision.reservationId,
+          legId: controller.legId || '',
+          controller: controller
+        };
+        reportDiagnostic('info', 'offer-leg-held', 'Holding the leg rung for the ringing offer until it is accepted or declined.', decision.reservationId);
+      };
+    }
+    function answerOfferLeg(reservationId, controller) {
+      answeredOfferLeg = {
+        reservationId: reservationId,
+        legId: controller.legId || '',
+        controller: controller
+      };
+      // The leg an accept is waiting for has arrived; nothing else should be auto-answered on its behalf.
+      expectInboundAutoAnswerUntil = 0;
+      try {
+        controller.answer();
+      } catch (error) {
+        showError(error && error.message ? error.message : String(error));
+      }
+    }
+
+    // Answers the held leg of an offer the agent accepted. Returns whether this page was holding it.
+    function answerHeldOfferLeg(reservationId) {
+      if (!heldOfferLeg || reservationId && heldOfferLeg.reservationId !== reservationId) {
+        return false;
+      }
+      var held = heldOfferLeg;
+      heldOfferLeg = null;
+      answerOfferLeg(held.reservationId, held.controller);
+      return true;
+    }
+    function hangupHeldOfferLeg(reservationId) {
+      if (!heldOfferLeg || reservationId && heldOfferLeg.reservationId !== reservationId) {
+        return;
+      }
+      var held = heldOfferLeg;
+      heldOfferLeg = null;
+      try {
+        held.controller.hangup();
+      } catch (error) {/* best effort: the platform also hangs it up */}
+    }
+
+    // An accept that failed: the leg answered for it is on a call nobody will join.
+    function hangupAnsweredOfferLeg(reservationId) {
+      hangupHeldOfferLeg(reservationId);
+      if (!answeredOfferLeg || reservationId && answeredOfferLeg.reservationId !== reservationId) {
+        return;
+      }
+      var answered = answeredOfferLeg;
+      answeredOfferLeg = null;
+      try {
+        answered.controller.hangup();
+      } catch (error) {/* best effort */}
+    }
+    function handleOfferLegEnded(legId) {
+      if (heldOfferLeg && (!legId || heldOfferLeg.legId === legId)) {
+        heldOfferLeg = null;
+      }
+      if (answeredOfferLeg && (!legId || answeredOfferLeg.legId === legId)) {
+        answeredOfferLeg = null;
+      }
+    }
+
+    // Something outside this page settled an offer: another page, another device, or the server. Accepted, its
+    // leg is answered here if this page holds it; otherwise it is hung up. Returns whether a held leg was
+    // answered.
+    function settleOfferLeg(reservationId, accepted) {
+      if (!reservationId) {
+        return false;
+      }
+      if (accepted) {
+        if (typeof rememberAcceptedOffer === 'function') {
+          rememberAcceptedOffer(acceptedOfferIds, reservationId, Date.now());
+        }
+        return answerHeldOfferLeg(reservationId);
+      }
+      if (typeof forgetAcceptedOffer === 'function') {
+        forgetAcceptedOffer(acceptedOfferIds, reservationId);
+      }
+      hangupHeldOfferLeg(reservationId);
+      return false;
+    }
+
+    // The server says an offer this agent was ringing for was answered -- by this page or any other. The pages
+    // that did not answer stop ringing now, rather than when the durable offer update reaches them.
+    function handleOfferAnswered(callId, reservationId) {
+      var answeredHeldLeg = settleOfferLeg(reservationId, true);
+      var ringing = !!(currentCall && isRingingInbound() && (!callId || currentCall.callId === callId));
+
+      // The page that made the accept finishes it itself, and a page another page already told has stopped.
+      if (!ringing || incomingAcceptPending || incomingHandled) {
+        return;
+      }
+
+      // The accept was made elsewhere. When this page is holding no leg for it, the platform may still ring this
+      // browser at accept time, and that leg is expected.
+      if (!answeredHeldLeg) {
+        armInboundAutoAnswer();
+      }
+      clearIncomingOffer();
     }
 
     // Surface a ringing direct extension call as an Answer/Decline prompt, reusing the incoming-call modal
@@ -6552,14 +6945,27 @@
       // A Contact Center offer: the server-side accept must succeed (accept the reservation and
       // connect the media) before the device answers, so the same live call is never answered here
       // while it is being re-offered to another agent.
+      //
+      // The one exception is the leg the platform already rang for this offer, held since the offer appeared.
+      // It is answered now, alongside the accept rather than after it: answering it proves only that this
+      // browser picked up, and the platform joins it to the caller only once the accept has succeeded.
+      var offerReservationId = incomingContext.properties.reservationId || '';
+      if (offerReservationId && typeof rememberAcceptedOffer === 'function') {
+        rememberAcceptedOffer(acceptedOfferIds, offerReservationId, Date.now());
+      }
+      answerHeldOfferLeg(offerReservationId);
       incomingAcceptPending = true;
-      announceOfferHandled();
+      announceOfferHandled(true, offerReservationId);
 
       // Reflect the pending accept immediately so the offer controls disable while the accept round-trips,
       // instead of appearing clickable until the next server status update arrives.
       render();
       postLifecycle('acceptUrl').then(function (result) {
         if (!result || result.succeeded === false) {
+          if (typeof forgetAcceptedOffer === 'function') {
+            forgetAcceptedOffer(acceptedOfferIds, offerReservationId);
+          }
+          hangupAnsweredOfferLeg(offerReservationId);
           showError(strings.offerUnavailable || 'This call is no longer available.');
           incomingContext = null;
           removeActiveCall(id);
@@ -6593,7 +6999,9 @@
         return;
       }
       var call = currentCallReference();
-      announceOfferHandled();
+      var declinedReservationId = incomingContext && incomingContext.properties ? incomingContext.properties.reservationId || '' : '';
+      settleOfferLeg(declinedReservationId, false);
+      announceOfferHandled(false, declinedReservationId);
       postLifecycle('declineUrl');
       if (call) {
         invoke('Voicemail', call);
@@ -6610,7 +7018,9 @@
       var call = currentCallReference();
       var hasOffer = incomingContext && incomingContext.properties && incomingContext.properties.declineUrl;
       if (hasOffer) {
-        announceOfferHandled();
+        var ignoredReservationId = incomingContext.properties.reservationId || '';
+        settleOfferLeg(ignoredReservationId, false);
+        announceOfferHandled(false, ignoredReservationId);
         postLifecycle('declineUrl').then(function (result) {
           if (!result || result.succeeded === false) {
             showError(strings.offerUnavailable || 'This call is no longer available.');
@@ -7286,6 +7696,11 @@
       connection.on('IncomingCall', function (call, context) {
         setIncomingOffer(call, context || null);
       });
+      connection.on('IncomingCallAnswered', function (notification) {
+        if (notification) {
+          handleOfferAnswered(notification.callId || '', notification.offerId || '');
+        }
+      });
       connection.on('ReceiveError', function (message) {
         showError(message);
       });
@@ -7656,6 +8071,8 @@
       // Lets the Contact Center layer declare that a routed leg is on its way to this browser, so the
       // media adapter answers it instead of ringing it as an unsolicited incoming call.
       armInboundAutoAnswer: armInboundAutoAnswer,
+      // Answers (accepted) or hangs up (not) the leg held for an offer; returns whether a held leg was answered.
+      settleOfferLeg: settleOfferLeg,
       setIncomingOffer: setIncomingOffer,
       clearIncomingOffer: clearIncomingOffer,
       showError: showError,

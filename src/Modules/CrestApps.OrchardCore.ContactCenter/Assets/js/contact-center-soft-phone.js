@@ -629,6 +629,12 @@
                     var accepted = reason === 2 || reason === 'Accepted';
                     var acceptPending = typeof api.isIncomingAcceptPending === 'function' && api.isIncomingAcceptPending();
 
+                    // The platform may have rung this browser with the offer's leg while the offer was ringing. Accepted
+                    // (wherever the accept was made), this page answers that leg if it is the one holding it; otherwise
+                    // the leg is hung up.
+                    var answeredHeldLeg = typeof api.settleOfferLeg === 'function' &&
+                        api.settleOfferLeg(notification && notification.reservationId, accepted);
+
                     // An accepted offer means the platform is about to deliver the routed leg to this browser.
                     // The accept can be made from the docked agent bar in the CRM chrome rather than from the
                     // phone, and in that case nothing here is pending, so the phone would treat the arriving leg
@@ -636,7 +642,7 @@
                     // refusal and the agent is never connected. Arming covers the accept wherever it was made;
                     // the window is one-shot, so an accept made in the phone (already covered by its own pending
                     // state) is unaffected.
-                    if (accepted && typeof api.armInboundAutoAnswer === 'function') {
+                    if (accepted && !answeredHeldLeg && typeof api.armInboundAutoAnswer === 'function') {
                         api.armInboundAutoAnswer();
                     }
 
