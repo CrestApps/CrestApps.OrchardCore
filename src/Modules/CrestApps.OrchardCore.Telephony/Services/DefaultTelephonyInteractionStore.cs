@@ -12,6 +12,8 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
 {
     private const int DefaultReconciliationBatchSize = 200;
     private const int ConcurrencyRetryLimit = 5;
+    private const int DatabaseBusyRetryLimit = 3;
+    private const int DatabaseBusyBaseDelayMilliseconds = 200;
 
     private readonly ISession _session;
     private readonly IStore _store;
@@ -126,48 +128,90 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
         Func<TelephonyInteraction, bool> mutate,
         CancellationToken cancellationToken)
     {
-        for (var attempt = 0; attempt < ConcurrencyRetryLimit; attempt++)
+        // The isolated session below is a second writer. When the caller's own session has already written (a
+        // provider webhook records the hangup's call quality before this projection runs), that open transaction
+        // holds the database's only write lock on SQLite, and the isolated write would wait on its own caller until
+        // the busy timeout ran out. Committing what the caller has done first leaves nothing of its own to wait on.
+        if (_session.CurrentTransaction is not null)
         {
-            // A dedicated session keeps the read-decide-write window as short as the database allows and,
-            // more importantly, gives the retry a session that has not been canceled by a failed commit.
-            await using var session = _store.CreateSession();
+            await _session.SaveChangesAsync(cancellationToken);
+        }
 
-            var interaction = await readAsync(session);
+        var concurrencyAttempts = 0;
+        var busyAttempts = 0;
 
-            if (interaction is null)
-            {
-                return null;
-            }
-
-            var wasInProgress = interaction.Outcome == CallOutcome.InProgress || !interaction.EndedUtc.HasValue;
-
-            if (!mutate(interaction))
-            {
-                return interaction;
-            }
-
+        while (true)
+        {
             try
             {
-                await session.SaveAsync(interaction, checkConcurrency: true, cancellationToken: cancellationToken);
-                await session.SaveChangesAsync(cancellationToken);
+                var (completed, interaction) = await TryMutateAsync(readAsync, mutate, cancellationToken);
+
+                if (completed)
+                {
+                    return interaction;
+                }
             }
-            catch (ConcurrencyException)
+            catch (Exception exception) when (TransientDatabaseErrors.IsTransient(exception) && busyAttempts < DatabaseBusyRetryLimit)
             {
-                // Another writer committed between the read and the save. The mutation was computed from a version
-                // that no longer exists, so it must be recomputed against the winner rather than overwriting it.
+                // Another writer held the database for longer than one attempt's busy timeout. The attempt's session
+                // is discarded with its failed commit, so the next attempt reads and decides afresh. A database that
+                // stays busy past the last retry is left to fail, so the caller (the durable webhook inbox) schedules
+                // the delivery again instead of the error being swallowed here.
+                busyAttempts++;
+                await Task.Delay(TimeSpan.FromMilliseconds(DatabaseBusyBaseDelayMilliseconds << (busyAttempts - 1)), cancellationToken);
+
                 continue;
             }
 
-            if (wasInProgress)
+            // Another writer committed between the read and the save. The mutation was computed from a version that
+            // no longer exists, so it must be recomputed against the winner rather than overwriting it.
+            if (++concurrencyAttempts >= ConcurrencyRetryLimit)
             {
-                await NotifyIfEndedAsync(interaction, cancellationToken);
+                throw new InvalidOperationException(
+                    $"Unable to update the telephony interaction after {ConcurrencyRetryLimit} attempts because concurrent writers kept winning the race.");
             }
+        }
+    }
 
-            return interaction;
+    private async Task<(bool Completed, TelephonyInteraction Interaction)> TryMutateAsync(
+        Func<ISession, Task<TelephonyInteraction>> readAsync,
+        Func<TelephonyInteraction, bool> mutate,
+        CancellationToken cancellationToken)
+    {
+        // A dedicated session keeps the read-decide-write window as short as the database allows and, more
+        // importantly, gives the retry a session that has not been canceled by a failed commit.
+        await using var session = _store.CreateSession();
+
+        var interaction = await readAsync(session);
+
+        if (interaction is null)
+        {
+            return (true, null);
         }
 
-        throw new InvalidOperationException(
-            $"Unable to update the telephony interaction after {ConcurrencyRetryLimit} attempts because concurrent writers kept winning the race.");
+        var wasInProgress = interaction.Outcome == CallOutcome.InProgress || !interaction.EndedUtc.HasValue;
+
+        if (!mutate(interaction))
+        {
+            return (true, interaction);
+        }
+
+        try
+        {
+            await session.SaveAsync(interaction, checkConcurrency: true, cancellationToken: cancellationToken);
+            await session.SaveChangesAsync(cancellationToken);
+        }
+        catch (ConcurrencyException)
+        {
+            return (false, null);
+        }
+
+        if (wasInProgress)
+        {
+            await NotifyIfEndedAsync(interaction, cancellationToken);
+        }
+
+        return (true, interaction);
     }
 
     /// <inheritdoc/>
