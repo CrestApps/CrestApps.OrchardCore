@@ -130,12 +130,7 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             RecordingReference = callEvent.RecordingId,
             RecordingState = string.IsNullOrWhiteSpace(callEvent.RecordingId) ? null : Telephony.Models.RecordingState.Stopped,
             HangupCause = ResolveHangupCause(state, callEvent.HangupCause),
-            Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["telnyxEventType"] = callEvent.EventType ?? string.Empty,
-                ["telnyxState"] = callEvent.State ?? string.Empty,
-                ["telnyxCallSessionId"] = callEvent.CallSessionId ?? string.Empty,
-            },
+            Metadata = BuildVoiceEventMetadata(callEvent),
         };
 
         var handled = await _normalizedVoiceEventIngestor.IngestAsync(providerEvent, cancellationToken);
@@ -210,6 +205,32 @@ public sealed partial class TelnyxWebhookService : ITelnyxWebhookService
             "originator_cancel" or "cancel" => VoiceCallState.Canceled,
             _ => VoiceCallState.Ended,
         };
+
+    private static Dictionary<string, string> BuildVoiceEventMetadata(TelnyxCallEvent callEvent)
+    {
+        var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["telnyxEventType"] = callEvent.EventType ?? string.Empty,
+            ["telnyxState"] = callEvent.State ?? string.Empty,
+            ["telnyxCallSessionId"] = callEvent.CallSessionId ?? string.Empty,
+        };
+
+        // The normalized cause collapses several provider outcomes onto one value; what Telnyx actually said is
+        // kept alongside it so an ending can be audited in the provider's own terms.
+        AddIfPresent(metadata, ContactCenter.ContactCenterConstants.TelephonyMetadata.ProviderHangupCause, callEvent.HangupCause);
+        AddIfPresent(metadata, ContactCenter.ContactCenterConstants.TelephonyMetadata.SipHangupCause, callEvent.SipHangupCause);
+        AddIfPresent(metadata, ContactCenter.ContactCenterConstants.TelephonyMetadata.HangupSource, callEvent.HangupSource);
+
+        return metadata;
+    }
+
+    private static void AddIfPresent(Dictionary<string, string> metadata, string key, string value)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            metadata[key] = value.Trim();
+        }
+    }
 
     private static HangupCause? ResolveHangupCause(VoiceCallState state, string hangupCause)
     {

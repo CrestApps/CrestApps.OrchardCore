@@ -74,5 +74,21 @@ public static partial class ContactCenterConstants
         /// The key under which the AMD (Answering Machine Detection) answer classification is stored.
         /// </summary>
         public const string AnswerClassification = "amd_answer_classification";
+
+        /// <summary>
+        /// The key under which a provider reports its own hangup cause, unchanged, on a voice event.
+        /// </summary>
+        public const string ProviderHangupCause = "provider_hangup_cause";
+
+        /// <summary>
+        /// The key under which a provider reports the SIP response code that ended a call, on a voice event.
+        /// </summary>
+        public const string SipHangupCause = "sip_hangup_cause";
+
+        /// <summary>
+        /// The key under which a provider reports who ended a call, such as the caller or the callee, on a voice
+        /// event.
+        /// </summary>
+        public const string HangupSource = "hangup_source";
     }
 }

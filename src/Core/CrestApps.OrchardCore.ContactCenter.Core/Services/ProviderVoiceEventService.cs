@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides the default implementation of <see cref="IProviderVoiceEventService"/>.
 /// </summary>
-public sealed class ProviderVoiceEventService : IProviderVoiceEventService
+public sealed partial class ProviderVoiceEventService : IProviderVoiceEventService
 {
     private const int MaxIngestionAttempts = 3;
 
@@ -346,7 +346,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
         {
             var idempotencyKey = ResolveEventIdempotencyKey(providerEvent.IdempotencyKey, eventType);
 
-            await PublishAsync(eventType, interaction.ItemId, session.AgentId, idempotencyKey, cancellationToken);
+            await PublishStateEventAsync(eventType, session, interaction, providerEvent, previousState, now, idempotencyKey, cancellationToken);
         }
 
         if (providerEvent.State == VoiceCallState.Connected)
@@ -509,10 +509,10 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             case VoiceCallState.Connected:
                 session.StartedUtc ??= now;
                 session.AnsweredUtc ??= now;
-                session.IsOnHold = false;
+                EndHold(session, now);
                 break;
             case VoiceCallState.OnHold:
-                session.IsOnHold = true;
+                StartHold(session, now);
                 break;
             case VoiceCallState.Ending:
                 break;
@@ -523,7 +523,7 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
             case VoiceCallState.Canceled:
             case VoiceCallState.Transferred:
                 session.EndedUtc ??= now;
-                session.IsOnHold = false;
+                EndHold(session, now);
 
                 if (session.AnsweredUtc.HasValue)
                 {

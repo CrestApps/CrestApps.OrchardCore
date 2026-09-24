@@ -217,6 +217,9 @@ namespace CrestApps.OrchardCore.ContactCenter
         public static class TelephonyMetadata
         {
             public const string AnswerClassification = "amd_answer_classification";
+            public const string HangupSource = "hangup_source";
+            public const string ProviderHangupCause = "provider_hangup_cause";
+            public const string SipHangupCause = "sip_hangup_cause";
         }
         public static class TransferMetadata
         {

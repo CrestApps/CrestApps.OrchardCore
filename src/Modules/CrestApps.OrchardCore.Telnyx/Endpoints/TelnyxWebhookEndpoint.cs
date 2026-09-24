@@ -120,16 +120,16 @@ internal static class TelnyxWebhookEndpoint
                 return TypedResults.BadRequest();
             }
 
-            var occurredUtc = ResolveOccurredUtc(timestamp, callEvent, clock.UtcNow);
+            var signedUtc = ResolveSignedUtc(timestamp, callEvent, clock.UtcNow);
 
-            if (!IsFresh(ingressLimiter, occurredUtc, clock.UtcNow))
+            if (!IsFresh(ingressLimiter, signedUtc, clock.UtcNow))
             {
                 logger.LogWarning("Rejected a Telnyx webhook because its signed timestamp was stale or too far in the future.");
 
                 return TypedResults.BadRequest();
             }
 
-            callEvent.OccurredUtc = occurredUtc;
+            callEvent.OccurredUtc = ResolveOccurredUtc(callEvent, signedUtc);
 
             // Fast-path the voicemail greeting-ended signal: issue record_start immediately, before the durable
             // webhook inbox write (which can stall for seconds under SQLite write contention). The beep-and-record
@@ -256,7 +256,20 @@ internal static class TelnyxWebhookEndpoint
         }
     }
 
-    private static DateTime ResolveOccurredUtc(string timestamp, TelnyxCallEvent callEvent, DateTime nowUtc)
+    /// <summary>
+    /// When the change the delivery reports happened: the event's own <c>occurred_at</c>, which Telnyx reports to the
+    /// millisecond, and only without one the whole-second time the delivery was signed at. The signed time is when
+    /// the delivery was sent, which for a retried delivery is not when the call changed.
+    /// </summary>
+    internal static DateTime ResolveOccurredUtc(TelnyxCallEvent callEvent, DateTime signedUtc)
+        => callEvent.OccurredUtc.HasValue
+            ? DateTime.SpecifyKind(callEvent.OccurredUtc.Value, DateTimeKind.Utc)
+            : signedUtc;
+
+    /// <summary>
+    /// The time the delivery was signed at, which the replay window is judged by.
+    /// </summary>
+    private static DateTime ResolveSignedUtc(string timestamp, TelnyxCallEvent callEvent, DateTime nowUtc)
     {
         if (long.TryParse(timestamp, NumberStyles.Integer, CultureInfo.InvariantCulture, out var unixSeconds))
         {

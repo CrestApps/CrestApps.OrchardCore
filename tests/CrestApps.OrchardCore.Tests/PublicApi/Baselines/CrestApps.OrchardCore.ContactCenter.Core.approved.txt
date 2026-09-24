@@ -936,6 +936,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string State { get; set; }
         public string Target { get; set; }
     }
+    public static class CallLifecycleReasons
+    {
+        public const string AgentLegFailed = "AgentLegFailed";
+        public const string AnswerFailed = "AnswerFailed";
+        public const string Assigned = "Assigned";
+        public const string CallEnded = "CallEnded";
+        public const string CallerHungUp = "CallerHungUp";
+        public const string Compensated = "Compensated";
+        public const string Enqueued = "Enqueued";
+        public const string NotAnswered = "NotAnswered";
+        public const string Overflowed = "Overflowed";
+        public const string Superseded = "Superseded";
+        public const string Withdrawn = "Withdrawn";
+    }
     public enum CallPartyRole
     {
         Unknown = 0,
@@ -1009,6 +1023,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public CrestApps.OrchardCore.Telephony.Models.HangupCause? HangupCause { get; set; }
         public long? HighWaterSequence { get; set; }
         public double HoldSeconds { get; set; }
+        public System.DateTime? HoldStartedUtc { get; set; }
         public string InteractionId { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsConference { get; }

@@ -194,6 +194,12 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     public bool IsOnHold { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time the current hold began, or the most recent one once the call has resumed. Each
+    /// hold's length is added to <see cref="HoldSeconds"/> when it ends.
+    /// </summary>
+    public DateTime? HoldStartedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the provider reports the call as muted.
     /// </summary>
     public bool IsMuted { get; set; }
