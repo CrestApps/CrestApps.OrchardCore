@@ -1214,11 +1214,17 @@ public sealed partial class VoiceAgentConversationLoopTests
     /// Wires the loop up to fakes: an in-memory activity, chat session and transcript, a model that returns
     /// whatever <see cref="Reply"/> is set to, and a provider that records rather than dials.
     /// </summary>
-    private sealed class LoopHarness
+    private sealed partial class LoopHarness
     {
         private readonly List<AIChatSessionPrompt> _prompts = [];
 
-        public LoopHarness(bool useRealTurns = false)
+        /// <param name="useRealTurns">Whether the loop records on the real turns rather than mocks of them.</param>
+        /// <param name="storesCopies">
+        /// Whether the activity store behaves like a real one: every read hands back a fresh copy of what was last
+        /// written, so only what the loop actually saved is seen by the next webhook. Otherwise every read returns
+        /// <see cref="Activity"/> itself, which makes any change to any copy visible everywhere.
+        /// </param>
+        public LoopHarness(bool useRealTurns = false, bool storesCopies = false)
         {
             Activity = new OmnichannelActivity
             {
@@ -1243,8 +1249,15 @@ public sealed partial class VoiceAgentConversationLoopTests
 
             var activityStore = new Mock<IOmnichannelActivityStore>();
             activityStore.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(() => Activity);
-            activityStore.Setup(x => x.UpdateAsync(It.IsAny<OmnichannelActivity>(), It.IsAny<CancellationToken>()));
+                .ReturnsAsync(() => storesCopies ? ReadStoredCopy() : Activity);
+            activityStore.Setup(x => x.UpdateAsync(It.IsAny<OmnichannelActivity>(), It.IsAny<CancellationToken>()))
+                .Callback<OmnichannelActivity, CancellationToken>((written, _) =>
+                {
+                    if (storesCopies)
+                    {
+                        Store(written);
+                    }
+                });
 
             var sessionManager = new Mock<IAIChatSessionManager>();
             sessionManager.Setup(x => x.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
