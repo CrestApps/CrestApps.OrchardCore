@@ -98,9 +98,17 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
         // ActiveReservationId pointing at dead work, which blocks all future offers.
         var reservations = await _reservationManager.GetActiveByActivityAsync(interaction.ActivityItemId, cancellationToken);
         var providerReportedAnswered = interaction.AnsweredUtc.HasValue || session?.AnsweredUtc.HasValue == true;
+
+        // A caller the platform answered itself (to play the queue) reports answered too, so an answer alone does not
+        // say an agent took the call. Any of these does: routing still holds the assignment, the accepted offer is
+        // still open, the call's own ending already started the agent's wrap-up, or the topology has an agent leg
+        // that was joined to the caller. The last two matter once the queue item and reservation have settled, which
+        // otherwise read as a pre-connect offer and moved an agent in wrap-up straight back to Available.
         var wasAnsweredByAgent = providerReportedAnswered &&
             (queueItem?.Status == QueueItemStatus.Assigned ||
-                reservations.Any(reservation => reservation.Status == ReservationStatus.Accepted));
+                reservations.Any(reservation => reservation.Status == ReservationStatus.Accepted) ||
+                interaction.WrapUpStartedUtc.HasValue ||
+                HadJoinedAgentLeg(session));
         var canceledReservationIds = new HashSet<string>(StringComparer.Ordinal);
         string reservationAgentId = null;
 
@@ -241,6 +249,9 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
             workState.ReservationExpiresUtc = null;
         }, cancellationToken);
     }
+
+    private static bool HadJoinedAgentLeg(CallSession session)
+        => session?.Legs.Any(leg => leg is not null && leg.Role == CallPartyRole.Agent && leg.AnsweredUtc.HasValue) == true;
 
     private static bool IsTerminalState(VoiceCallState? state)
     {
