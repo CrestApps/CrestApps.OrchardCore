@@ -35,6 +35,42 @@ public sealed class InteractionStore : DocumentCatalog<Interaction, InteractionI
         CollectionName = ContactCenterStorage.CollectionName;
     }
 
+    /// <summary>
+    /// Refuses to save an interaction instance the session no longer tracks while the interaction is already stored.
+    /// </summary>
+    /// <remarks>
+    /// YesSql stores any instance its session does not track as a new document, and a session stops tracking what
+    /// it loaded once it commits. An interaction read before a commit and saved after it would otherwise become a
+    /// second document with the same id, and the reads that find an interaction pick either copy. The refusal is a
+    /// <see cref="ConcurrencyException"/> because that is what it is: the instance is a snapshot the session can no
+    /// longer vouch for, and the callers that retry a lost race re-read and apply their change again.
+    /// </remarks>
+    /// <param name="record">The interaction about to be saved.</param>
+    protected override async ValueTask SavingAsync(Interaction record)
+    {
+        var stored = await Session.Query<Interaction, InteractionIndex>(
+            index => index.ItemId == record.ItemId,
+            collection: ContactCenterStorage.CollectionName)
+            .ListAsync();
+
+        // A session hands back the very instance it tracks, so a stored copy that is not this instance means the
+        // session does not track this one. Copies an earlier defect left behind are each still tracked in their own
+        // right, which is why every stored copy is checked rather than the first.
+        if (stored.Any() && !stored.Any(copy => ReferenceEquals(copy, record)))
+        {
+            var index = await Session.QueryIndex<InteractionIndex>(
+                index => index.ItemId == record.ItemId,
+                collection: ContactCenterStorage.CollectionName)
+                .FirstOrDefaultAsync();
+
+            throw new ConcurrencyException(new Document
+            {
+                Id = index?.DocumentId ?? 0,
+                Type = typeof(Interaction).FullName,
+            });
+        }
+    }
+
     /// <inheritdoc/>
     public async Task<Interaction> FindByActivityIdAsync(string activityItemId, CancellationToken cancellationToken = default)
     {

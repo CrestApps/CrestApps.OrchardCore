@@ -188,8 +188,18 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
             : await _interactionManager.GetActiveWithProviderCallIdAsync(providerName, MaxReconciliationBatchSize, cancellationToken);
         var refreshed = 0;
 
-        foreach (var interaction in interactions)
+        foreach (var candidate in interactions)
         {
+            // Reconciling a call can commit the unit of work (ingesting its provider state does), and a committed
+            // session no longer tracks what it loaded before. Each interaction is read again so a repair updates it
+            // rather than storing a second copy of it.
+            var interaction = await _interactionManager.FindByIdAsync(candidate.ItemId, cancellationToken);
+
+            if (interaction is null)
+            {
+                continue;
+            }
+
             var currentStatus = interaction.Status;
             var updated = await RefreshInteractionAsync(interaction, cancellationToken);
 

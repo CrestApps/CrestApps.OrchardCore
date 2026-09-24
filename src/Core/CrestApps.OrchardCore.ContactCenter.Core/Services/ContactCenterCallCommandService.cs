@@ -164,6 +164,15 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return CallCommandResult.Failure("The offer is no longer available.");
         }
 
+        // The accept commits the unit of work, and a committed session no longer tracks what it loaded before, so
+        // saving the interaction read above would store a second copy of it. It is read again, as the commit left it.
+        interaction = await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken);
+
+        if (interaction is null)
+        {
+            return CallCommandResult.Failure("The offer is no longer available.");
+        }
+
         // Every other page and device the agent has open is still ringing for this call. Tell them now, from the
         // accept itself, rather than a second later when the outbox gets to it.
         await NotifyOfferAnsweredAsync(reservation, agentUserId, interaction.ProviderInteractionId, cancellationToken);

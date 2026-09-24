@@ -4134,6 +4134,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default) { }
+        protected override System.Threading.Tasks.ValueTask SavingAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction record) { }
     }
     public sealed class IvrExecutionService : CrestApps.OrchardCore.ContactCenter.Core.Services.IIvrExecutionService
     {
