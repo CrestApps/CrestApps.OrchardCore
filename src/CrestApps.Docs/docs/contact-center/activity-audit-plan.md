@@ -111,33 +111,25 @@ Phases 2 to 4 are built against one contract, so the writers and the reports agr
 
 ## Status
 
-Phase 1 is built. Each item is unit-tested; the live call checks are still to do.
+All four phases are built, merged and covered by the unit and feature-activation suites. The agent-state and report
+paths have also been exercised on the running site, and the call paths wait on a live call.
 
-- The meters: the capture probe is rebuilt on the track actually being sent, and the microphone level is averaged over
-  each sampling window.
-- Stored records: every leg's end-of-call quality becomes a `CallQualityRecord`, one per source (soft phone or
-  provider). A new leg index on call sessions ties it to its interaction, queue and agent, and a leg the contact
-  center did not route, such as an extension call, is recorded against the agent alone.
-- Telnyx statistics: `call_quality_stats` is read from the hangup, logged, and recorded, including the hidden
-  customer leg of an outbound call.
-- The report: **Call quality** in the Contact Center reports. It shows ratings, the likely cause of poor calls,
-  results by agent and by network path, and each poor call with its measurements.
-- The alert: when three of an agent's last five calls in an hour rate poor, a `CallQualityAlertRaised` event is
-  published, at most once per agent per hour. Workflows can trigger on it, and the live dashboard shows it to
-  supervisors with the likely cause.
-
-Phase 2 is built and unit-tested; indexing the log by aggregate (item 5) is still to do.
-
-- One door: every writer of an agent's state goes through `IAgentStateTransitionService`, which sets the state,
-  stamps when it changed, and records `AgentStateChanged`. It never dates a change before the one it follows. The
-  presence events writers already published are unchanged.
-- Writers: sign-in, sign-out (with its reason, such as signing out of the site), a state set by the agent or a
-  workflow (recorded as a workflow actor), reserved, accepted, every release with its reason (expired, rejected,
-  canceled, compensated), wrap-up started, work completed, wrap-up timed out, a deferred request taking effect,
-  provider reconciliation, and the stale-session sign-off, which is dated by the last heartbeat.
-- Reason codes: a reason is matched to a configured code by identifier or by name, and recorded by identifier
-  with the name it had at the time. The agent screens still post the name.
-- Sessions: `AgentConnected`, `AgentDisconnected` (with the connections left open) and `AgentHeartbeatLost` (with
-  the last heartbeat) are recorded. Heartbeats themselves are not.
-
-Phases 3 and 4 are next.
+- **Phase 1, call quality.** Verified live: stored records, Telnyx statistics, the report, and the alert, including
+  the supervisor dashboard banner.
+- **Phase 2, agent state.** Every transition goes through `IAgentStateTransitionService` and is recorded as
+  `AgentStateChanged`. On the running site, a break with a reason code and the return to Available were recorded
+  with the reason code's id and name, the agent as actor, the change's own time and a separate recorded time.
+  Connections are recorded, and ones a restart left behind are pruned.
+- **Phase 3, call state.** Offers, queue visits, dials, agent legs, hold with its duration, transfers, consults,
+  abandons, hangup causes, AI calls and extension calls are recorded against their interaction and dated by the
+  provider's time. This waits on a live call.
+- **Phase 4, reports.** The workforce reports read the new transitions one period at a time through a new
+  aggregate index. New reports: the reconciled payroll timecard, call handling (talk time without hold, ring,
+  queue wait, abandons) and the agent activity timeline. All 83 reports render on the running site.
+- **Found and fixed on the running site.**
+  - Orchard's document serializer stored timestamps at whole seconds. The audit timestamps now keep every tick.
+  - Agent profiles made on first sign-in had no user name, so reports named agents as unknown.
+  - Two connections opening together lost the session version check, so one was aborted.
+  - Connection ids outlived server restarts.
+- **Answering faster.** The agent's leg is dialled while the offer rings and joined on accept. Hold music stops
+  at the bridge, and every client is told at once. This waits on a live call.
