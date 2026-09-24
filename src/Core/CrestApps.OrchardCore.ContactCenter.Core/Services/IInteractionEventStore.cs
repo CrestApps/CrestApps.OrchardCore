@@ -51,6 +51,45 @@ public interface IInteractionEventStore : ICatalog<InteractionEvent>
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Lists the events of the supplied types recorded against the supplied aggregate type that occurred within a
+    /// period, oldest first. A report over a period reads only that period through this method, instead of the
+    /// aggregate's whole history.
+    /// </summary>
+    /// <param name="aggregateType">The aggregate type the events were recorded against.</param>
+    /// <param name="eventTypes">The event types to include. When empty, every event type is included.</param>
+    /// <param name="aggregateIds">The aggregates to include, such as the agents a report covers. When
+    /// <see langword="null"/>, every aggregate of the type is included.</param>
+    /// <param name="fromUtc">The inclusive UTC lower bound on occurrence time.</param>
+    /// <param name="throughUtc">The inclusive UTC upper bound on occurrence time.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The matching events, oldest first.</returns>
+    Task<IReadOnlyList<InteractionEvent>> GetByAggregateWindowAsync(
+        string aggregateType,
+        IEnumerable<string> eventTypes,
+        IEnumerable<string> aggregateIds,
+        DateTime fromUtc,
+        DateTime throughUtc,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists, for each supplied aggregate, the most recent event of the supplied types that occurred strictly
+    /// before an instant. A period's account of an agent's time starts from the state they were already in when
+    /// the period opened, which is the last state change before it, however long ago that was.
+    /// </summary>
+    /// <param name="aggregateType">The aggregate type the events were recorded against.</param>
+    /// <param name="eventTypes">The event types to consider. When empty, every event type is considered.</param>
+    /// <param name="aggregateIds">The aggregates to look up. An aggregate with no earlier event is left out.</param>
+    /// <param name="beforeUtc">The exclusive UTC upper bound on occurrence time.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>At most one event per aggregate, oldest first.</returns>
+    Task<IReadOnlyList<InteractionEvent>> GetLatestBeforeAsync(
+        string aggregateType,
+        IEnumerable<string> eventTypes,
+        IEnumerable<string> aggregateIds,
+        DateTime beforeUtc,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Lists a page of events ordered deterministically by occurrence time then identifier. It is the
     /// forward-only enumeration used to replay the entire event log during a projection rebuild or drift
     /// check; callers page until fewer than <paramref name="take"/> events are returned.

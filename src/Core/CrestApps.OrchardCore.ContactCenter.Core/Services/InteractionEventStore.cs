@@ -11,6 +11,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, InteractionEventIndex>, IInteractionEventStore
 {
+    private const int AggregateIdBatchSize = 500;
+
     private readonly IInteractionEventUpcastService _upcastService;
 
     /// <summary>
@@ -115,6 +117,85 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<InteractionEvent>> GetByAggregateWindowAsync(
+        string aggregateType,
+        IEnumerable<string> eventTypes,
+        IEnumerable<string> aggregateIds,
+        DateTime fromUtc,
+        DateTime throughUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(aggregateType);
+
+        var types = Distinct(eventTypes);
+
+        if (aggregateIds is null)
+        {
+            return await LoadedAsync(await QueryWindow(aggregateType, types, ids: null, fromUtc, throughUtc).ListAsync(cancellationToken));
+        }
+
+        var events = new List<InteractionEvent>();
+
+        // The identifiers are sent in bounded batches, so a tenant with thousands of agents stays well inside every
+        // database's limit on the parameters of one statement.
+        foreach (var batch in Distinct(aggregateIds).Chunk(AggregateIdBatchSize))
+        {
+            events.AddRange(await QueryWindow(aggregateType, types, batch, fromUtc, throughUtc).ListAsync(cancellationToken));
+        }
+
+        return await LoadedAsync(events
+            .OrderBy(interactionEvent => interactionEvent.OccurredUtc)
+            .ThenBy(interactionEvent => interactionEvent.ItemId, StringComparer.Ordinal));
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<InteractionEvent>> GetLatestBeforeAsync(
+        string aggregateType,
+        IEnumerable<string> eventTypes,
+        IEnumerable<string> aggregateIds,
+        DateTime beforeUtc,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(aggregateType);
+
+        if (aggregateIds is null)
+        {
+            return [];
+        }
+
+        var types = Distinct(eventTypes);
+        var events = new List<InteractionEvent>();
+
+        // One seek per aggregate on the aggregate index, newest first: the cost is the number of aggregates, never
+        // the length of their history.
+        foreach (var aggregateId in Distinct(aggregateIds))
+        {
+            var query = Session.Query<InteractionEvent, InteractionEventIndex>(
+                index => index.AggregateType == aggregateType && index.AggregateId == aggregateId && index.OccurredUtc < beforeUtc,
+                collection: ContactCenterStorage.CollectionName);
+
+            if (types.Length > 0)
+            {
+                query = query.Where(index => index.EventType.IsIn(types));
+            }
+
+            var latest = await query
+                .OrderByDescending(index => index.OccurredUtc)
+                .ThenByDescending(index => index.DocumentId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (latest is not null)
+            {
+                events.Add(latest);
+            }
+        }
+
+        return await LoadedAsync(events
+            .OrderBy(interactionEvent => interactionEvent.OccurredUtc)
+            .ThenBy(interactionEvent => interactionEvent.ItemId, StringComparer.Ordinal));
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<InteractionEvent>> GetOrderedPageAsync(
         int skip,
         int take,
@@ -133,4 +214,35 @@ public sealed class InteractionEventStore : DocumentCatalog<InteractionEvent, In
 
         return await LoadedAsync(events);
     }
+
+    private IQuery<InteractionEvent, InteractionEventIndex> QueryWindow(
+        string aggregateType,
+        string[] types,
+        string[] ids,
+        DateTime fromUtc,
+        DateTime throughUtc)
+    {
+        var query = Session.Query<InteractionEvent, InteractionEventIndex>(
+            index => index.AggregateType == aggregateType && index.OccurredUtc >= fromUtc && index.OccurredUtc <= throughUtc,
+            collection: ContactCenterStorage.CollectionName);
+
+        if (ids is not null)
+        {
+            query = query.Where(index => index.AggregateId.IsIn(ids));
+        }
+
+        if (types.Length > 0)
+        {
+            query = query.Where(index => index.EventType.IsIn(types));
+        }
+
+        return query
+            .OrderBy(index => index.OccurredUtc)
+            .ThenBy(index => index.ItemId);
+    }
+
+    private static string[] Distinct(IEnumerable<string> values)
+        => values is null
+            ? []
+            : values.Where(value => !string.IsNullOrEmpty(value)).Distinct(StringComparer.Ordinal).ToArray();
 }

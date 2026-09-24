@@ -81,6 +81,25 @@ internal sealed class InteractionEventIndexMigrations : DataMigration
         return 3;
     }
 
+    /// <summary>
+    /// Adds the index a workforce or payroll report reads the log through: one aggregate's events, such as one
+    /// agent's state changes, in time order. Without it a report over one day reads the agent history of every
+    /// agent since the log began, and finding the state an agent was in when the period opened is a scan.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<InteractionEventIndex>(table => table
+            .CreateIndex(
+                "IDX_InteractionEventIndex_Aggregate",
+                "AggregateType",
+                "AggregateId",
+                "OccurredUtc",
+                "DocumentId"),
+            collection: ContactCenterStorage.CollectionName);
+
+        return 4;
+    }
 
     /// <summary>
     /// Adds the portable idempotency claim column and unique constraint to existing interaction event indexes.

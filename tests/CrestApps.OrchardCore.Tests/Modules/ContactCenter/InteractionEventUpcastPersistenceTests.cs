@@ -345,7 +345,11 @@ public sealed class InteractionEventUpcastPersistenceTests
 
         if (type == typeof(DateTime))
         {
-            return _occurredUtc.AddYears(1);
+            // A lower bound opens before the seeded event and every other bound closes after it, so a windowed
+            // read path reaches the row as surely as a cutoff does.
+            return parameter.Name.StartsWith("from", StringComparison.OrdinalIgnoreCase)
+                ? _occurredUtc.AddYears(-1)
+                : _occurredUtc.AddYears(1);
         }
 
         if (type == typeof(IEnumerable<string>))
