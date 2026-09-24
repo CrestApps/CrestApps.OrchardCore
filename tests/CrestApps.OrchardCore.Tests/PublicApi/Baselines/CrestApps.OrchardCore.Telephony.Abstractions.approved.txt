@@ -97,6 +97,11 @@ namespace CrestApps.OrchardCore.Telephony
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialAsync(CrestApps.OrchardCore.Telephony.Models.DialRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> HangupAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITelephonyCallObserver
+    {
+        System.Threading.Tasks.Task CallEndedAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task CallStartedAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITelephonyCallStateProvider
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyCallLookupResult> GetCallStateAsync(string callId, System.Threading.CancellationToken cancellationToken = default);

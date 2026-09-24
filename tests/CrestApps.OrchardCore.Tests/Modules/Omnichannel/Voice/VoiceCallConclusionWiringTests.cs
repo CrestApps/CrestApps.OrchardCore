@@ -563,6 +563,7 @@ public sealed class VoiceCallConclusionWiringTests
                 Mock.Of<IVoiceCallEndTurn>(),
                 Mock.Of<IRealtimeCallCompletionRunner>(),
                 [],
+                [],
                 deploymentManager.Object,
                 Mock.Of<IAIDeploymentCapabilityService>(),
                 contextBuilder.Object,

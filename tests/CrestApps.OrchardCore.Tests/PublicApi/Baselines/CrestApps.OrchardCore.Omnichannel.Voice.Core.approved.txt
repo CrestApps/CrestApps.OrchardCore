@@ -171,6 +171,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IVoiceCallEndTurn endCallTurn,
                     CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeCallCompletionRunner completionRunner,
                     System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IQueuedCallerAbandonmentHandler> abandonmentHandlers,
+                    System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.IAutomatedVoiceCallObserver> callObservers,
                     CrestApps.Core.AI.Deployments.IAIDeploymentManager deploymentManager,
                     CrestApps.Core.AI.Capabilities.IAIDeploymentCapabilityService capabilityService,
                     CrestApps.Core.AI.Completions.IAICompletionContextBuilder contextBuilder,

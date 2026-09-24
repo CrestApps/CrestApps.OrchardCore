@@ -16,6 +16,7 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     private readonly ISession _session;
     private readonly IStore _store;
     private readonly IProviderIdentityResolver _providerIdentityResolver;
+    private readonly IEnumerable<ITelephonyCallObserver> _callObservers;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultTelephonyInteractionStore"/> class.
@@ -23,18 +24,21 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
     /// <param name="session">The ambient YesSql session used for reads and creates.</param>
     /// <param name="store">The YesSql store used to open the short isolated sessions that concurrency retries require.</param>
     /// <param name="providerIdentityResolver">The resolver used to canonicalize provider aliases so a provider and its configuration-backed default variant correlate under a single identity.</param>
+    /// <param name="callObservers">The observers told when a saved call has started or ended.</param>
     public DefaultTelephonyInteractionStore(
         ISession session,
         IStore store,
-        IProviderIdentityResolver providerIdentityResolver)
+        IProviderIdentityResolver providerIdentityResolver,
+        IEnumerable<ITelephonyCallObserver> callObservers)
     {
         _session = session;
         _store = store;
         _providerIdentityResolver = providerIdentityResolver;
+        _callObservers = callObservers;
     }
 
     /// <inheritdoc/>
-    public Task CreateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
+    public async Task CreateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interaction);
 
@@ -45,15 +49,38 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
         // only reflect provider state after a manual refresh.
         interaction.ProviderName = _providerIdentityResolver.Canonicalize(interaction.ProviderName);
 
-        return _session.SaveAsync(interaction, cancellationToken: cancellationToken);
+        await _session.SaveAsync(interaction, cancellationToken: cancellationToken);
+
+        foreach (var observer in _callObservers)
+        {
+            await observer.CallStartedAsync(interaction, cancellationToken);
+        }
+
+        await NotifyIfEndedAsync(interaction, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public Task UpdateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
+    public async Task UpdateAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(interaction);
 
-        return _session.SaveAsync(interaction, checkConcurrency: true, cancellationToken: cancellationToken);
+        await _session.SaveAsync(interaction, checkConcurrency: true, cancellationToken: cancellationToken);
+        await NotifyIfEndedAsync(interaction, cancellationToken);
+    }
+
+    // Every writer that settles a call saves it through this store, so this is the one place its end is seen,
+    // whichever path -- the soft phone, the provider's events or reconciliation -- settled it.
+    private async Task NotifyIfEndedAsync(TelephonyInteraction interaction, CancellationToken cancellationToken)
+    {
+        if (interaction.Outcome == CallOutcome.InProgress || !interaction.EndedUtc.HasValue)
+        {
+            return;
+        }
+
+        foreach (var observer in _callObservers)
+        {
+            await observer.CallEndedAsync(interaction, cancellationToken);
+        }
     }
 
     /// <inheritdoc/>
@@ -112,6 +139,8 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
                 return null;
             }
 
+            var wasInProgress = interaction.Outcome == CallOutcome.InProgress || !interaction.EndedUtc.HasValue;
+
             if (!mutate(interaction))
             {
                 return interaction;
@@ -127,6 +156,11 @@ public sealed class DefaultTelephonyInteractionStore : ITelephonyInteractionStor
                 // Another writer committed between the read and the save. The mutation was computed from a version
                 // that no longer exists, so it must be recomputed against the winner rather than overwriting it.
                 continue;
+            }
+
+            if (wasInProgress)
+            {
+                await NotifyIfEndedAsync(interaction, cancellationToken);
             }
 
             return interaction;

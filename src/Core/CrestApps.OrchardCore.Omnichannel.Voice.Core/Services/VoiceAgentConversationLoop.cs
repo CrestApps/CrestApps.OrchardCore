@@ -9,6 +9,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Voice.Models;
@@ -55,6 +56,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
     // Optional: automated voice runs on tenants with no Contact Center, which have no queue to release.
     private readonly IEnumerable<IQueuedCallerAbandonmentHandler> _abandonmentHandlers;
+    private readonly IEnumerable<IAutomatedVoiceCallObserver> _callObservers;
     private readonly IAIDeploymentManager _deploymentManager;
     private readonly IAIDeploymentCapabilityService _capabilityService;
     private readonly IAICompletionContextBuilder _contextBuilder;
@@ -78,6 +80,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         IVoiceCallEndTurn endCallTurn,
         IRealtimeCallCompletionRunner completionRunner,
         IEnumerable<IQueuedCallerAbandonmentHandler> abandonmentHandlers,
+        IEnumerable<IAutomatedVoiceCallObserver> callObservers,
         IAIDeploymentManager deploymentManager,
         IAIDeploymentCapabilityService capabilityService,
         IAICompletionContextBuilder contextBuilder,
@@ -100,6 +103,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
         _endCallTurn = endCallTurn;
         _completionRunner = completionRunner;
         _abandonmentHandlers = abandonmentHandlers;
+        _callObservers = callObservers;
         _deploymentManager = deploymentManager;
         _capabilityService = capabilityService;
         _contextBuilder = contextBuilder;
@@ -143,6 +147,8 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             switch (voiceEvent.Kind)
             {
                 case VoiceAgentEventKind.Answered:
+                    // Reported before the conversation starts: a realtime session holds the call inside the handler.
+                    await ObserveAsync(voiceEvent, AutomatedVoiceCallObservationKind.Answered, cancellationToken: cancellationToken);
                     await OnAnsweredAsync(voiceEvent, media, cancellationToken);
                     break;
                 case VoiceAgentEventKind.SpeechEnded:
@@ -155,6 +161,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                     await OnHangupAsync(voiceEvent, cancellationToken);
                     break;
                 case VoiceAgentEventKind.AnswererDetected:
+                    await ObserveAsync(voiceEvent, AutomatedVoiceCallObservationKind.AnswererDetected, cancellationToken: cancellationToken);
                     await OnAnswererDetectedAsync(voiceEvent, cancellationToken);
                     break;
                 case VoiceAgentEventKind.MachineGreetingEnded:
@@ -579,17 +586,21 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
                 await ReleaseQueuedCallerAsync(activity.ItemId, cancellationToken);
             }
 
+            await ObserveAsync(voiceEvent, AutomatedVoiceCallObservationKind.ConversationEnded, activity?.AiEscalated == true ? HandedToAgentOutcome : NotConcludedOutcome, cancellationToken: cancellationToken);
+
             return;
         }
 
         // Conclusion analysis (summary + disposition) runs in a deferred task so the webhook returns promptly.
         var activityId = activity.ItemId;
+        var endedUtc = _clock.UtcNow;
 
         ShellScope.AddDeferredTask(async scope =>
         {
             try
             {
                 await ConcludeAsync(scope.ServiceProvider, activityId);
+                await ObserveConclusionAsync(scope.ServiceProvider, voiceEvent, endedUtc);
             }
             catch (Exception ex)
             {

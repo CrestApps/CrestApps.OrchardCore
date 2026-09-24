@@ -104,6 +104,11 @@ public sealed class VoiceStartup : StartupBase
             // here because it is the Contact Center that owns queues; the voice module resolves it optionally and
             // runs without it.
             .AddScoped<IQueuedCallerAbandonmentHandler, QueuedCallerAbandonmentHandler>()
+
+            // Lets the automated voice module report an automated call's answer, answerer and ending into the audit
+            // log, and the soft phone report an agent's extension and browser calls, neither knowing the log exists.
+            .AddScoped<IAutomatedVoiceCallObserver, ContactCenterAutomatedVoiceCallObserver>()
+            .AddScoped<ITelephonyCallObserver, ContactCenterTelephonyCallObserver>()
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()

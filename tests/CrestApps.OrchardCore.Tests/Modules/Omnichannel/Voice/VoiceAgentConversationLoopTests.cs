@@ -9,6 +9,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -535,6 +536,42 @@ public sealed class VoiceAgentConversationLoopTests
         Assert.True(harness.Activity.TryGet<VoicemailReached>(out var voicemail));
         Assert.True(voicemail.DetectedByProvider);
         Assert.False(voicemail.MessageLeft);
+    }
+
+    [Fact]
+    public async Task TheAnswerAndTheAnswerer_AreReportedToTheCallObservers()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.AnswererDetected, answerer: VoiceAgentAnswerer.Machine, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(
+            [AutomatedVoiceCallObservationKind.Answered, AutomatedVoiceCallObservationKind.AnswererDetected],
+            harness.CallObserver.Observations.Select(observation => observation.Kind));
+        Assert.All(harness.CallObserver.Observations, observation => Assert.Equal("call-1", observation.ProviderCallId));
+        Assert.All(harness.CallObserver.Observations, observation => Assert.Equal(harness.Activity.ItemId, observation.ActivityItemId));
+        Assert.Equal(nameof(VoiceAgentAnswerer.Machine), harness.CallObserver.Observations[1].Answerer);
+    }
+
+    [Fact]
+    public async Task ACallHandedToAnAgent_ReportsItsConversationEndedThatWay()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        harness.Activity.AiEscalated = true;
+        harness.Activity.Status = ActivityStatus.InProgress;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Hangup, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var ended = Assert.Single(harness.CallObserver.Observations);
+        Assert.Equal(AutomatedVoiceCallObservationKind.ConversationEnded, ended.Kind);
+        Assert.Equal("HandedToAgent", ended.Outcome);
     }
 
     [Fact]
@@ -1238,6 +1275,7 @@ public sealed class VoiceAgentConversationLoopTests
                 endCallTurn,
                 CompletionRunner,
                 [AbandonmentHandler],
+                [CallObserver],
                 deploymentManager.Object,
                 CapabilityService.Object,
                 contextBuilder.Object,
@@ -1285,6 +1323,8 @@ public sealed class VoiceAgentConversationLoopTests
         public RecordingCompletionRunner CompletionRunner { get; }
 
         public RecordingAbandonmentHandler AbandonmentHandler { get; }
+
+        public RecordingAutomatedVoiceCallObserver CallObserver { get; } = new();
 
         public Mock<IAIDeploymentManager> DeploymentManager { get; }
 
@@ -1397,6 +1437,21 @@ public sealed class VoiceAgentConversationLoopTests
     /// <summary>
     /// Stands in for the Contact Center, recording the callers it was told had gone.
     /// </summary>
+    /// <summary>
+    /// Stands in for the Contact Center's audit log, recording the moments of each automated call it was told about.
+    /// </summary>
+    internal sealed class RecordingAutomatedVoiceCallObserver : IAutomatedVoiceCallObserver
+    {
+        public List<AutomatedVoiceCallObservation> Observations { get; } = [];
+
+        public Task ObserveAsync(AutomatedVoiceCallObservation observation, CancellationToken cancellationToken = default)
+        {
+            Observations.Add(observation);
+
+            return Task.CompletedTask;
+        }
+    }
+
     internal sealed class RecordingAbandonmentHandler : IQueuedCallerAbandonmentHandler
     {
         public List<string> Released { get; } = [];

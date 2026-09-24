@@ -45,8 +45,8 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
 
             await using var sessionA = store.CreateSession();
             await using var sessionB = store.CreateSession();
-            var storeA = new DefaultTelephonyInteractionStore(sessionA, store, CreateProviderIdentityResolver());
-            var storeB = new DefaultTelephonyInteractionStore(sessionB, store, CreateProviderIdentityResolver());
+            var storeA = new DefaultTelephonyInteractionStore(sessionA, store, CreateProviderIdentityResolver(), []);
+            var storeB = new DefaultTelephonyInteractionStore(sessionB, store, CreateProviderIdentityResolver(), []);
 
             var fromA = await storeA.FindByCallIdAsync("user-1", "call-1", TestContext.Current.CancellationToken);
             var fromB = await storeB.FindByCallIdAsync("user-1", "call-1", TestContext.Current.CancellationToken);
@@ -88,7 +88,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
             await SeedAsync(store);
 
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver());
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
             var attempts = 0;
 
             // Act
@@ -128,6 +128,54 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
     }
 
     [Fact]
+    public async Task SavingACall_TellsTheObserversItStarted_AndOnceItEnded()
+    {
+        // Arrange
+        var databasePath = DatabasePath("telephony-interaction-observers");
+        var store = await CreateStoreAsync(databasePath);
+        var observer = new RecordingCallObserver();
+
+        try
+        {
+            await using var session = store.CreateSession();
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), [observer]);
+
+            // Act
+            await interactionStore.CreateAsync(new TelephonyInteraction
+            {
+                InteractionId = "interaction-2",
+                CallId = "call-2",
+                ProviderName = "ProviderA",
+                UserId = "user-1",
+                Outcome = CallOutcome.InProgress,
+                StartedUtc = _startedUtc,
+            }, TestContext.Current.CancellationToken);
+            await session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+            await interactionStore.UpdateByIdAsync(
+                "interaction-2",
+                candidate =>
+                {
+                    candidate.Outcome = CallOutcome.Completed;
+                    candidate.EndedUtc = _startedUtc.AddMinutes(2);
+
+                    return true;
+                },
+                TestContext.Current.CancellationToken);
+
+            // A later save of the settled call, such as marking its voicemail read, is not a second ending.
+            await interactionStore.UpdateByIdAsync("interaction-2", _ => true, TestContext.Current.CancellationToken);
+
+            // Assert
+            Assert.Equal(["started:call-2", "ended:call-2"], observer.Calls);
+        }
+        finally
+        {
+            TemporarySqliteDatabase.DisposeAndDelete(store, databasePath);
+        }
+    }
+
+    [Fact]
     public async Task UpdateByProviderCallIdAsync_WhenAWriterCommitsBetweenTheReadAndTheWrite_ReevaluatesTheTerminalGuard()
     {
         // Arrange
@@ -139,7 +187,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
             await SeedAsync(store);
 
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver());
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
             var attempts = 0;
             var observedOutcomes = new List<CallOutcome>();
 
@@ -197,7 +245,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
             await SeedAsync(store);
 
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver());
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
 
             // Act
             var updated = await interactionStore.UpdateByIdAsync(
@@ -234,7 +282,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
             await SeedAsync(store);
 
             await using var session = store.CreateSession();
-            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver());
+            var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
             var invoked = false;
 
             // Act
@@ -270,7 +318,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
         {
             await using (var session = store.CreateSession())
             {
-                var interactionStore = new DefaultTelephonyInteractionStore(session, store, resolver);
+                var interactionStore = new DefaultTelephonyInteractionStore(session, store, resolver, []);
                 var interaction = new TelephonyInteraction
                 {
                     InteractionId = "interaction-alias",
@@ -293,7 +341,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
 
             await using (var session = store.CreateSession())
             {
-                var interactionStore = new DefaultTelephonyInteractionStore(session, store, resolver);
+                var interactionStore = new DefaultTelephonyInteractionStore(session, store, resolver, []);
                 matched = await interactionStore.UpdateByProviderCallIdAsync(
                     "Asterisk",
                     "call-alias",
@@ -375,7 +423,7 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
     private static async Task SeedAsync(IStore store)
     {
         await using var session = store.CreateSession();
-        var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver());
+        var interactionStore = new DefaultTelephonyInteractionStore(session, store, CreateProviderIdentityResolver(), []);
         var interaction = new TelephonyInteraction
         {
             InteractionId = "interaction-1",
@@ -398,5 +446,24 @@ public sealed class TelephonyInteractionStoreConcurrencyTests
         return await session
             .Query<TelephonyInteraction, TelephonyInteractionIndex>(x => x.InteractionId == interactionId)
             .FirstOrDefaultAsync(TestContext.Current.CancellationToken);
+    }
+
+    private sealed class RecordingCallObserver : ITelephonyCallObserver
+    {
+        public List<string> Calls { get; } = [];
+
+        public Task CallStartedAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
+        {
+            Calls.Add("started:" + interaction.CallId);
+
+            return Task.CompletedTask;
+        }
+
+        public Task CallEndedAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
+        {
+            Calls.Add("ended:" + interaction.CallId);
+
+            return Task.CompletedTask;
+        }
     }
 }

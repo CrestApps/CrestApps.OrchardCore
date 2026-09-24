@@ -269,6 +269,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         public System.Threading.Tasks.Task StartAsync(System.Threading.CancellationToken cancellationToken) { }
         public System.Threading.Tasks.Task StopAsync(System.Threading.CancellationToken cancellationToken) { }
     }
+    public interface IAutomatedVoiceCallObserver
+    {
+        System.Threading.Tasks.Task ObserveAsync(CrestApps.OrchardCore.ContactCenter.Models.AutomatedVoiceCallObservation observation, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactCenterFeatureLifecycleParticipant
     {
         string FeatureId { get; }
@@ -484,6 +488,24 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Meeting = 9,
         Training = 10,
         AfterHoursUnavailable = 11,
+    }
+    public sealed class AutomatedVoiceCallObservation
+    {
+        public AutomatedVoiceCallObservation() { }
+        public string ActivityItemId { get; set; }
+        public string Answerer { get; set; }
+        public string DispositionId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AutomatedVoiceCallObservationKind Kind { get; set; }
+        public System.DateTime OccurredUtc { get; set; }
+        public string Outcome { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderName { get; set; }
+    }
+    public enum AutomatedVoiceCallObservationKind
+    {
+        Answered = 0,
+        AnswererDetected = 1,
+        ConversationEnded = 2,
     }
     public sealed class CallQualityAlertNotification
     {
