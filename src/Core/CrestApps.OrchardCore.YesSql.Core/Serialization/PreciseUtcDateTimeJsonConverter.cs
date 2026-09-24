@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace CrestApps.OrchardCore.ContactCenter.Core.Serialization;
+namespace CrestApps.OrchardCore.YesSql.Core.Serialization;
 
 /// <summary>
 /// Writes a UTC timestamp with every tick it has, for the stored documents payroll and call durations are computed

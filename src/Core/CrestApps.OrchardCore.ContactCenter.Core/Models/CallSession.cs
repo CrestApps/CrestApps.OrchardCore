@@ -2,9 +2,9 @@ using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
-using CrestApps.OrchardCore.ContactCenter.Core.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
+using CrestApps.OrchardCore.YesSql.Core.Serialization;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 
