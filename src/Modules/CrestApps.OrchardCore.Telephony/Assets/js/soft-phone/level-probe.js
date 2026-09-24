@@ -215,6 +215,32 @@
         return probeTrackId !== currentTrackId;
     }
 
+    // The audio track the soft phone is receiving: whatever the live receiver carries, else the remote element's
+    // stream. Like the sender, the receiver is the authority: the provider SDK can replace the stream on the remote
+    // element during a call, and a probe left on the first one read 0.000 for the rest of the call while the agent
+    // could hear the caller.
+    function selectReceiveTrack(receivers, remoteStream) {
+        var receiver = (receivers || []).filter(function (candidate) {
+            return candidate && candidate.track && candidate.track.kind === 'audio';
+        })[0];
+
+        if (receiver) {
+            return receiver.track;
+        }
+
+        return remoteStream && typeof remoteStream.getAudioTracks === 'function'
+            ? remoteStream.getAudioTracks()[0] || null
+            : null;
+    }
+
+    // Whether the incoming level probe has to be rebuilt to measure the track being received now: the same rule as
+    // the capture probe, applied to the receiver's track.
+    function inboundProbeNeedsRebuild(probeTrackId, receiveTrack) {
+        return captureProbeNeedsRebuild(probeTrackId,
+            receiveTrack ? receiveTrack.id : null,
+            receiveTrack ? receiveTrack.readyState : null);
+    }
+
     // The level to report for a probe window: the peak, or unknown when the window produced no frames at all.
     // A window that was measured and found silent reports 0, which is a finding; a window that could not be
     // measured reports -1, which is not.
@@ -236,4 +262,6 @@
     softPhone.probeLevel = probeLevel;
     softPhone.isTrackDeliverable = isTrackDeliverable;
     softPhone.captureProbeNeedsRebuild = captureProbeNeedsRebuild;
+    softPhone.selectReceiveTrack = selectReceiveTrack;
+    softPhone.inboundProbeNeedsRebuild = inboundProbeNeedsRebuild;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

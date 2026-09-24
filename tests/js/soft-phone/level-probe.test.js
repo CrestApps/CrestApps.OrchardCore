@@ -303,3 +303,43 @@ describe('captureProbeNeedsRebuild', () => {
         expect(softPhone.captureProbeNeedsRebuild(null, '', undefined)).toBe(false);
     });
 });
+
+// Regression: the incoming level read 0.000 on calls where the agent heard the caller clearly. The probe was built
+// once on the remote element's stream, and the provider SDK replaced that stream during the call. The live audio
+// receiver is the authority on what is being received, and the probe follows its track.
+describe('selectReceiveTrack', () => {
+    const track = (id, kind = 'audio', readyState = 'live') => ({ id, kind, readyState });
+    const stream = tracks => ({ getAudioTracks: () => tracks });
+
+    it('takes the track the live audio receiver carries over the remote element stream', () => {
+        const receivers = [{ track: track('video-1', 'video') }, { track: track('receiver-audio') }];
+
+        expect(softPhone.selectReceiveTrack(receivers, stream([track('element-audio')])).id).toBe('receiver-audio');
+    });
+
+    it('falls back to the remote element stream when no receiver carries audio', () => {
+        expect(softPhone.selectReceiveTrack([], stream([track('element-audio')])).id).toBe('element-audio');
+        expect(softPhone.selectReceiveTrack(null, stream([track('element-audio')])).id).toBe('element-audio');
+        expect(softPhone.selectReceiveTrack([{ track: null }], stream([track('element-audio')])).id).toBe('element-audio');
+    });
+
+    it('has nothing to measure without either', () => {
+        expect(softPhone.selectReceiveTrack([], null)).toBe(null);
+        expect(softPhone.selectReceiveTrack([], stream([]))).toBe(null);
+    });
+});
+
+describe('inboundProbeNeedsRebuild', () => {
+    it('rebuilds when the receiver track id changes', () => {
+        expect(softPhone.inboundProbeNeedsRebuild('first-stream-track', { id: 'replacement-track', readyState: 'live' })).toBe(true);
+    });
+
+    it('keeps the probe on the track it is already measuring', () => {
+        expect(softPhone.inboundProbeNeedsRebuild('track', { id: 'track', readyState: 'live' })).toBe(false);
+    });
+
+    it('does not rebuild onto an ended track or onto nothing', () => {
+        expect(softPhone.inboundProbeNeedsRebuild('track', { id: 'other', readyState: 'ended' })).toBe(false);
+        expect(softPhone.inboundProbeNeedsRebuild('track', null)).toBe(false);
+    });
+});

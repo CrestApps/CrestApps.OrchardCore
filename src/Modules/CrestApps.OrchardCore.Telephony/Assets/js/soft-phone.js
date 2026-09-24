@@ -77,6 +77,11 @@
     var forgetAcceptedOffer = softPhoneModules.forgetAcceptedOffer;
     var OFFER_LEG_CAPABILITY = softPhoneModules.OFFER_LEG_CAPABILITY;
 
+    var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
+    var readOfferHandledMessage = softPhoneModules.readOfferHandledMessage;
+    var OFFER_CHANNEL_NAME = softPhoneModules.OFFER_CHANNEL_NAME;
+    var OFFER_HANDLED_MESSAGE = softPhoneModules.OFFER_HANDLED_MESSAGE;
+
     var createCallLegs = softPhoneModules.createCallLegs;
     var notePlatformLeg = softPhoneModules.notePlatformLeg;
     var noteBrowserLeg = softPhoneModules.noteBrowserLeg;
@@ -87,6 +92,9 @@
 
     var resolveDialTarget = softPhoneModules.resolveDialTarget;
     var shouldOfferDial = softPhoneModules.shouldOfferDial;
+
+    var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
+    var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
 
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
@@ -718,21 +726,9 @@
         // stream on the remote element during a call, and a probe left on the first one read 0.000 for the rest of
         // the call while the agent could hear the caller.
         function currentReceiveTrack(peer) {
-            if (peer && typeof peer.getReceivers === 'function') {
-                var receiver = peer.getReceivers().filter(function (candidate) {
-                    return candidate && candidate.track && candidate.track.kind === 'audio';
-                })[0];
+            var receivers = peer && typeof peer.getReceivers === 'function' ? peer.getReceivers() : null;
 
-                if (receiver) {
-                    return receiver.track;
-                }
-            }
-
-            var remoteStream = remoteElement && remoteElement.srcObject;
-
-            return remoteStream && typeof remoteStream.getAudioTracks === 'function'
-                ? remoteStream.getAudioTracks()[0] || null
-                : null;
+            return selectReceiveTrack(receivers, remoteElement && remoteElement.srcObject);
         }
 
         function startInboundProbe(track) {
@@ -1095,9 +1091,7 @@
                 // it during the call; keep the inbound probe on the track actually being received.
                 var receiveTrack = currentReceiveTrack(call && call.peer && call.peer.instance);
 
-                if (captureProbeNeedsRebuild(inboundProbeTrackId,
-                    receiveTrack ? receiveTrack.id : null,
-                    receiveTrack ? receiveTrack.readyState : null)) {
+                if (inboundProbeNeedsRebuild(inboundProbeTrackId, receiveTrack)) {
                     startInboundProbe(receiveTrack);
                 }
 
@@ -2267,7 +2261,7 @@
         // agent did not click kept ringing in the headset until the server's own "offer taken" update reached them,
         // a second or so after the call had been answered.
         var offerChannel = typeof BroadcastChannel === 'function'
-            ? new BroadcastChannel('crestapps-soft-phone-offers')
+            ? new BroadcastChannel(OFFER_CHANNEL_NAME)
             : null;
 
         function announceOfferHandled(answered, reservationId) {
@@ -2279,7 +2273,7 @@
 
             try {
                 offerChannel.postMessage({
-                    type: 'offer-handled',
+                    type: OFFER_HANDLED_MESSAGE,
                     callId: id,
                     reservationId: reservationId || '',
                     answered: !!answered
@@ -2289,6 +2283,7 @@
 
         if (offerChannel) {
             offerChannel.onmessage = function (event) {
+                var handled = readOfferHandledMessage(event && event.data, currentCall ? currentCall.callId : null);
 
                 if (!handled) {
                     return;
@@ -6310,7 +6305,7 @@
             // ignored, times out, or the caller hangs up. Answering a Contact Center offer waits on the server
             // to accept it before the call connects, and the agent heard the ringtone carry on through that
             // round trip after clicking Answer, so a pending accept silences it too.
-            if (visible && !incomingAcceptPending) {
+            if (shouldRingForOffer(visible, incomingAcceptPending)) {
                 ringtone.start();
             } else {
                 ringtone.stop();
