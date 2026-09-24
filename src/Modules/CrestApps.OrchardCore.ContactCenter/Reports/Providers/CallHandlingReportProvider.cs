@@ -85,7 +85,7 @@ public sealed class CallHandlingReportProvider : ContactCenterReportBase
         var criteria = ContactCenterReportFilter.GetCriteria(context.Filter);
 
         var callEvents = await _eventStore.GetByAggregateWindowAsync(nameof(Interaction), CallHandlingMetrics.CallEventTypes, null, fromUtc, toUtc, cancellationToken);
-        var offerEvents = await _eventStore.GetByAggregateWindowAsync(nameof(ActivityReservation), CallHandlingMetrics.OfferEventTypes, null, fromUtc, toUtc, cancellationToken);
+        var offerEvents = await OfferEventReader.ReadAsync(_eventStore, fromUtc, toUtc, cancellationToken);
         var metrics = CallHandlingMetrics.Calculate(callEvents, offerEvents, toUtc, criteria.AgentId, criteria.QueueId);
 
         var agents = (await _agentManager.GetAllAsync(cancellationToken))

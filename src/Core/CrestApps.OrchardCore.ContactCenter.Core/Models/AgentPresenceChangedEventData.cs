@@ -8,6 +8,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
 public sealed class AgentPresenceChangedEventData
 {
     /// <summary>
+    /// Gets or sets the agent profile the change is about.
+    /// </summary>
+    /// <remarks>
+    /// The agent is the subject of the change, which is not always who made it: the event's actor says that. Events
+    /// recorded before this was carried name the agent only by their aggregate.
+    /// </remarks>
+    public string AgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the user id of the agent the change is about.
+    /// </summary>
+    public string UserId { get; set; }
+
+    /// <summary>
     /// Gets or sets the presence status before the transition.
     /// </summary>
     public AgentPresenceStatus PreviousStatus { get; set; }

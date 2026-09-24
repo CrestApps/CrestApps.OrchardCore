@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -271,6 +272,45 @@ public sealed class ActivityAssignmentServiceTests
         session.Verify(s => s.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task AssignNextAsync_RecordsTheRoutingDecision_AsTheSystemsAct_NamingTheChosenAgentAsItsSubject()
+    {
+        // Arrange
+        // The chosen agent is what the decision is about; routing is who made it.
+        var topItem = new QueueItem { ItemId = "i1", QueueId = "q1" };
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.FindNextWaitingAsync(It.IsAny<ActivityQueue>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(topItem);
+        var agent = new AgentProfile { ItemId = "a1", UserId = "u1" };
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.GetAvailableForQueueAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([agent]);
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityQueue { ItemId = "q1", Enabled = true, ReservationTimeoutSeconds = 30 });
+        var reservationService = new Mock<IActivityReservationService>();
+        reservationService
+            .Setup(s => s.ReserveAsync(topItem, agent, 30, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityReservation { ItemId = "r1" });
+        var clock = new Mock<IClock>();
+        clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc));
+        var log = new AuditedEventLog(clock.Object);
+        var service = CreateService(queueItemManager, agentManager, queueManager, reservationService, CreateDistributedLock(locked: true), publisher: log.PublisherMock);
+
+        // Act
+        await service.AssignNextAsync("q1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var decision = log.Single(ContactCenterConstants.Events.RoutingDecisionMade);
+        Assert.Equal(ContactCenterActorType.System, decision.ActorType);
+        Assert.Equal(ContactCenterConstants.SystemActor, decision.ActorId);
+        Assert.Equal("a1", decision.GetData<ActivityRoutingDecisionEventData>().SelectedAgentId);
+        log.AssertEveryEventNamesItsActor();
+    }
+
     private static ActivityAssignmentService CreateService(
         Mock<IQueueItemManager> queueItemManager,
         Mock<IAgentProfileManager> agentManager,
@@ -297,7 +337,8 @@ public sealed class ActivityAssignmentServiceTests
         Mock<IActivityReservationService> reservationService,
         Mock<IDistributedLock> distributedLock,
         Mock<ISession> session = null,
-        Mock<IAgentAvailabilityService> availabilityService = null)
+        Mock<IAgentAvailabilityService> availabilityService = null,
+        Mock<IContactCenterEventPublisher> publisher = null)
     {
         var businessHours = new Mock<IBusinessHoursService>();
         businessHours
@@ -328,7 +369,7 @@ public sealed class ActivityAssignmentServiceTests
             reservationService.Object,
             Mock.Of<IQueuedWorkWithdrawalService>(),
             businessHours.Object,
-            new Mock<IContactCenterEventPublisher>().Object,
+            (publisher ?? new Mock<IContactCenterEventPublisher>()).Object,
             distributedLock.Object,
             (session ?? new Mock<ISession>()).Object,
             clock.Object,

@@ -1,5 +1,7 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
 using OrchardCore.Workflows.Services;
 
@@ -11,6 +13,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Handlers;
 /// delivery is at-least-once, the bridge dedupes on the durable event id so a replayed event never starts
 /// a duplicate workflow.
 /// </summary>
+/// <remarks>
+/// <c>ActorId</c> and <c>ActorType</c> say who made the change: the agent, a supervisor, a workflow, the provider or
+/// the platform. <c>AgentId</c> and <c>AgentUserId</c> say which agent the change is about, whoever made it, so a
+/// workflow acting on the agent reads them rather than the actor.
+/// </remarks>
 public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandler
 {
     private readonly IWorkflowManager _workflowManager;
@@ -52,6 +59,8 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
             return;
         }
 
+        var (agentId, agentUserId) = ResolveAgent(interactionEvent);
+
         var input = new Dictionary<string, object>
         {
             ["EventType"] = interactionEvent.EventType,
@@ -59,6 +68,9 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
             ["AggregateType"] = interactionEvent.AggregateType,
             ["AggregateId"] = interactionEvent.AggregateId,
             ["ActorId"] = interactionEvent.ActorId,
+            ["ActorType"] = interactionEvent.ActorType.ToString(),
+            ["AgentId"] = agentId,
+            ["AgentUserId"] = agentUserId,
             ["SourceComponent"] = interactionEvent.SourceComponent,
         };
 
@@ -67,4 +79,55 @@ public sealed class ContactCenterWorkflowEventHandler : IContactCenterEventHandl
             input,
             correlationId: interactionEvent.InteractionId ?? interactionEvent.AggregateId);
     }
+
+    /// <summary>
+    /// Finds the agent an event is about: the agent it is recorded against, or the one its payload names.
+    /// </summary>
+    /// <remarks>
+    /// Older presence events carried the agent's user id as their actor whoever made the change, and some
+    /// workflows read it from there. The actor now says who made the change, so the agent is resolved on its own:
+    /// from the aggregate when the event is recorded against the agent, and otherwise from the payload's agent and
+    /// user ids, which every agent, offer, reservation and call payload carries. An agent acting for themselves is
+    /// the last resort for the user id.
+    /// </remarks>
+    internal static (string AgentId, string AgentUserId) ResolveAgent(InteractionEvent interactionEvent)
+    {
+        string agentId = null;
+        string userId = null;
+
+        if (!string.IsNullOrEmpty(interactionEvent.Data))
+        {
+            try
+            {
+                using var document = JsonDocument.Parse(interactionEvent.Data);
+
+                if (document.RootElement.ValueKind == JsonValueKind.Object)
+                {
+                    agentId = ReadString(document.RootElement, "AgentId") ?? ReadString(document.RootElement, "SelectedAgentId");
+                    userId = ReadString(document.RootElement, "UserId");
+                }
+            }
+            catch (JsonException)
+            {
+                // A payload that is not an object names no agent; the aggregate and the actor still may.
+            }
+        }
+
+        if (string.Equals(interactionEvent.AggregateType, nameof(AgentProfile), StringComparison.Ordinal))
+        {
+            agentId = interactionEvent.AggregateId ?? agentId;
+        }
+
+        if (userId is null && interactionEvent.ActorType == ContactCenterActorType.Agent)
+        {
+            userId = interactionEvent.ActorId;
+        }
+
+        return (agentId, userId);
+    }
+
+    private static string ReadString(JsonElement element, string propertyName)
+        => element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(value.GetString())
+            ? value.GetString()
+            : null;
 }

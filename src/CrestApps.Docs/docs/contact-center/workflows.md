@@ -18,7 +18,9 @@ The activity offers two outcomes:
 - **Matched** - the published event matches the selected type, or **Any event type** is selected.
 - **Ignored** - the published event does not match the selected type.
 
-When a workflow starts, the triggering event is available on the workflow input, including `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, and `SourceComponent`. Task activities read these values through Liquid expressions such as `{{ Workflow.Input.InteractionId }}`.
+When a workflow starts, the triggering event is available on the workflow input, including `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, `ActorType`, `AgentId`, `AgentUserId`, and `SourceComponent`. Task activities read these values through Liquid expressions such as `{{ Workflow.Input.InteractionId }}`.
+
+`ActorId` and `ActorType` say who made the change: the agent, a supervisor, a workflow, the telephony provider, or the platform (`system`). `AgentId` (the agent profile) and `AgentUserId` (the agent's user) say which agent the change is about, whoever made it. A workflow that acts on the agent, such as **Set Agent Presence**, reads `{{ Workflow.Input.AgentUserId }}`: when the platform reserves an agent or starts their wrap-up, the actor is the platform, not the agent.
 
 ## Task activities
 

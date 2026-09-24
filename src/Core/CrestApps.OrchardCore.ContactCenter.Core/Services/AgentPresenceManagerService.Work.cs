@@ -57,9 +57,11 @@ public sealed partial class AgentPresenceManagerService
 
         profile.ActiveReservationId = null;
 
-        await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.WrapUp, new AgentStateChangeContext
+        var actor = context?.Actor ?? ContactCenterActor.System;
+
+        var change = await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.WrapUp, new AgentStateChangeContext
         {
-            Actor = context?.Actor ?? ContactCenterActor.System,
+            Actor = actor,
             Source = context?.Source ?? AgentStateChangeSources.WrapUpStarted,
             InteractionId = context?.InteractionId,
             ReservationId = context?.ReservationId,
@@ -70,7 +72,7 @@ public sealed partial class AgentPresenceManagerService
         AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);
 
         return profile;
     }
@@ -129,9 +131,11 @@ public sealed partial class AgentPresenceManagerService
         profile.RequestedPresenceStatus = null;
         profile.ActiveReservationId = null;
 
-        await _stateTransitions.TransitionAsync(profile, targetStatus, new AgentStateChangeContext
+        var actor = context?.Actor ?? ContactCenterActor.System;
+
+        var change = await _stateTransitions.TransitionAsync(profile, targetStatus, new AgentStateChangeContext
         {
-            Actor = context?.Actor ?? ContactCenterActor.System,
+            Actor = actor,
             Source = source,
             ReasonCodeId = requestApplied ? profile.PresenceReasonCodeId : null,
             ReasonName = requestApplied ? profile.PresenceReason : null,
@@ -147,7 +151,7 @@ public sealed partial class AgentPresenceManagerService
         AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);
 
         return profile;
     }

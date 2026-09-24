@@ -162,9 +162,35 @@ public sealed class ProviderVoiceEventServiceAuditTests
         Assert.False(harness.Session.IsOnHold);
     }
 
+    [Fact]
+    public async Task EveryEventTheCallStreamWrites_NamesTheProvider_NotTheAgent()
+    {
+        // Arrange
+        // The agent on the call is what these events are about, and the payload names them. Putting the agent's
+        // profile id where the actor goes made a hangup read as the agent's act.
+        var harness = new Harness(newSession: true);
+
+        // Act
+        await harness.IngestAsync(VoiceCallState.Connected, _answeredUtc.AddSeconds(1), "connected");
+        await harness.IngestAsync(VoiceCallState.Ended, _answeredUtc.AddSeconds(90), "hangup", HangupCause.NormalClearing);
+
+        // Assert
+        var created = Assert.Single(harness.Published, e => e.EventType == ContactCenterConstants.Events.CallSessionCreated);
+        Assert.Equal("agent-1", created.GetData<CallLifecycleEventData>()?.AgentId);
+
+        foreach (var interactionEvent in harness.Published)
+        {
+            Assert.Equal(ContactCenterActorType.Provider, interactionEvent.ActorType);
+            Assert.Equal("ProviderA", interactionEvent.ActorId);
+        }
+
+        var ended = Assert.Single(harness.Published, e => e.EventType == ContactCenterConstants.Events.CallEnded);
+        Assert.Equal("agent-1", ended.GetData<CallLifecycleEventData>().AgentId);
+    }
+
     private sealed class Harness
     {
-        public Harness(bool outboundRinging = false)
+        public Harness(bool outboundRinging = false, bool newSession = false)
         {
             Interaction = new Interaction
             {
@@ -195,10 +221,19 @@ public sealed class ProviderVoiceEventServiceAuditTests
                 .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Interaction);
 
+            // A call the platform has not seen a provider event for yet has no session, so the first event makes one.
+            var sessionExists = !newSession;
             var callSessionManager = new Mock<ICallSessionManager>();
             callSessionManager
                 .Setup(manager => manager.FindByProviderCallIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => sessionExists ? Session : null!);
+            callSessionManager
+                .Setup(manager => manager.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Session);
+            callSessionManager
+                .Setup(manager => manager.CreateAsync(It.IsAny<CallSession>(), It.IsAny<CancellationToken>()))
+                .Callback(() => sessionExists = true)
+                .Returns(ValueTask.CompletedTask);
 
             EventStore
                 .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))

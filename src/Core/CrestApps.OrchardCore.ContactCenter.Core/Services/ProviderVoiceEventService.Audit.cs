@@ -59,7 +59,9 @@ public sealed partial class ProviderVoiceEventService
             InteractionId = interaction.ItemId,
             AggregateType = nameof(CallSession),
             AggregateId = interaction.ItemId,
-            ActorId = session.AgentId,
+
+            // The provider reported the change. The agent on the call is what it is about, named in the payload.
+            ActorId = ProviderActorId(session),
             ActorType = ContactCenterActorType.Provider,
             SourceComponent = ContactCenterConstants.Components.CallSessions,
             IdempotencyKey = idempotencyKey,
@@ -88,6 +90,31 @@ public sealed partial class ProviderVoiceEventService
                 cancellationToken);
         }
     }
+
+    /// <summary>
+    /// Records the session a provider event created, as the provider's act, with the call it tracks.
+    /// </summary>
+    private Task PublishSessionCreatedAsync(CallSession session, Interaction interaction, DateTime occurredUtc, CancellationToken cancellationToken)
+    {
+        var interactionEvent = new InteractionEvent
+        {
+            EventType = ContactCenterConstants.Events.CallSessionCreated,
+            InteractionId = interaction.ItemId,
+            AggregateType = nameof(CallSession),
+            AggregateId = interaction.ItemId,
+            ActorId = ProviderActorId(session),
+            ActorType = ContactCenterActorType.Provider,
+            SourceComponent = ContactCenterConstants.Components.CallSessions,
+            OccurredUtc = occurredUtc,
+        };
+
+        interactionEvent.SetData(ContactCenterCallAudit.ForSession(session, interaction));
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
+    }
+
+    private static string ProviderActorId(CallSession session)
+        => string.IsNullOrEmpty(session.ProviderName) ? ContactCenterConstants.SystemActor : session.ProviderName;
 
     private static CallLifecycleEventData CreateStateEventData(
         string eventType,

@@ -452,7 +452,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         session.LastProviderEventUtc = now;
         await _callSessionManager.CreateAsync(session, cancellationToken: cancellationToken);
 
-        await PublishAsync(ContactCenterConstants.Events.CallSessionCreated, interaction.ItemId, session.AgentId, idempotencyKey: null, cancellationToken);
+        await PublishSessionCreatedAsync(session, interaction, now, cancellationToken);
 
         return session;
     }
@@ -956,19 +956,5 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
 
         _scopeExecutor.ScheduleAfterCommit<IProviderCommandProcessor>(processor =>
             processor.DispatchAsync(commandId, CancellationToken.None));
-    }
-
-    private Task PublishAsync(string eventType, string interactionId, string actorId, string idempotencyKey, CancellationToken cancellationToken)
-    {
-        return _publisher.PublishAsync(new InteractionEvent
-        {
-            EventType = eventType,
-            InteractionId = interactionId,
-            AggregateType = nameof(CallSession),
-            AggregateId = interactionId,
-            ActorId = actorId,
-            SourceComponent = ContactCenterConstants.Components.CallSessions,
-            IdempotencyKey = idempotencyKey,
-        }, cancellationToken);
     }
 }

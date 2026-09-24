@@ -223,8 +223,8 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             workState.ReservationExpiresUtc = reservation.ExpiresUtc;
         }, cancellationToken);
 
-        await PublishAsync(ContactCenterConstants.Events.QueueItemReserved, reservation, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentReserved, reservation, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.QueueItemReserved, reservation, agent, ContactCenterActor.System, now, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentReserved, reservation, agent, ContactCenterActor.System, now, cancellationToken);
 
         await CommitTransitionAsync(
             queueItem.ActivityItemId,
@@ -270,6 +270,9 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         await using var acquiredAgentLock = agentLocker;
 
+        // One instant for the accept, so the Busy state, the end of the queue wait and the assignment agree.
+        var now = _clock.UtcNow;
+
         reservation.TransitionTo(ReservationStatus.Accepted);
         await _reservationManager.UpdateAsync(reservation, cancellationToken: cancellationToken);
 
@@ -290,12 +293,15 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
                 ContactCenterConstants.Events.CallDequeued,
                 queueItem,
                 await _interactionManager.FindByActivityIdAsync(reservation.ActivityItemId, cancellationToken),
-                _clock.UtcNow,
+                now,
                 CallLifecycleReasons.Assigned,
                 cancellationToken: cancellationToken);
         }
 
         var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);
+
+        // Accepting is the agent's own act, so the Busy state and the assignment both name them.
+        var acceptedBy = string.IsNullOrEmpty(agent?.UserId) ? ContactCenterActor.System : ContactCenterActor.Agent(agent.UserId);
 
         if (agent is not null)
         {
@@ -303,10 +309,11 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
             await _stateTransitions.TransitionAsync(agent, AgentPresenceStatus.Busy, new AgentStateChangeContext
             {
-                Actor = ContactCenterActor.Agent(agent.UserId),
+                Actor = acceptedBy,
                 Source = AgentStateChangeSources.Accepted,
                 ReservationId = reservation.ItemId,
                 InteractionId = await FindInteractionIdAsync(reservation.ActivityItemId, cancellationToken),
+                ChangedUtc = now,
             }, cancellationToken);
 
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
@@ -317,10 +324,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             workState.TransitionTo(ActivityAssignmentStatus.Assigned);
             workState.AssignedToId = agent?.UserId;
             workState.AssignedToUsername = agent?.UserName;
-            workState.AssignedToUtc = _clock.UtcNow;
+            workState.AssignedToUtc = now;
         }, cancellationToken);
 
-        await PublishAsync(ContactCenterConstants.Events.QueueItemAssigned, reservation, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.QueueItemAssigned, reservation, agent, acceptedBy, now, cancellationToken);
 
         await CommitTransitionAsync(
             reservation.ActivityItemId,
@@ -520,7 +527,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         if (agentReleased)
         {
-            await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
+            await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, agent, ContactCenterActor.System, now, cancellationToken);
         }
 
         // An accepted offer was already settled when the agent took it; only one still ringing is withdrawn here.
@@ -537,16 +544,42 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         return reservation;
     }
 
-    private Task PublishAsync(string eventType, ActivityReservation reservation, CancellationToken cancellationToken)
+    /// <summary>
+    /// Publishes one of the reservation's routing events.
+    /// </summary>
+    /// <remarks>
+    /// The agent is what the event is about, carried in the payload; the actor is who made the change. Routing
+    /// reserves and releases on its own, so only an accept names the agent as its actor.
+    /// </remarks>
+    private Task PublishAsync(
+        string eventType,
+        ActivityReservation reservation,
+        AgentProfile agent,
+        ContactCenterActor actor,
+        DateTime occurredUtc,
+        CancellationToken cancellationToken)
     {
-        return _publisher.PublishAsync(new InteractionEvent
+        var interactionEvent = new InteractionEvent
         {
             EventType = eventType,
             AggregateType = nameof(ActivityReservation),
             AggregateId = reservation.ItemId,
-            ActorId = reservation.AgentId,
+            ActorId = actor.Id ?? ContactCenterConstants.SystemActor,
+            ActorType = actor.Type,
             SourceComponent = ContactCenterConstants.Components.Queues,
-        }, cancellationToken);
+            OccurredUtc = occurredUtc,
+        };
+
+        interactionEvent.SetData(new OfferLifecycleEventData
+        {
+            ReservationId = reservation.ItemId,
+            ActivityItemId = reservation.ActivityItemId,
+            QueueId = reservation.QueueId,
+            AgentId = reservation.AgentId,
+            UserId = agent?.UserId,
+        });
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 
     private static string GetAgentReservationLockKey(string agentId)

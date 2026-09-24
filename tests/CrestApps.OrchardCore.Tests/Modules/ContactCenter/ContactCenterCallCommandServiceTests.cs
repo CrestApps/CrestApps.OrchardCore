@@ -479,7 +479,8 @@ public sealed class ContactCenterCallCommandServiceTests
         Assert.Equal(ContactCenterConstants.Events.OfferDeclined, declinedEvent.EventType);
         Assert.Equal(nameof(ActivityReservation), declinedEvent.AggregateType);
         Assert.Equal("r1", declinedEvent.AggregateId);
-        Assert.Equal("a1", declinedEvent.ActorId);
+        // The agent who declined, by user id, as every agent-made record names them; the profile is in the payload.
+        Assert.Equal("u1", declinedEvent.ActorId);
         Assert.Equal(ContactCenterConstants.Components.Voice, declinedEvent.SourceComponent);
         Assert.Equal("q1", declinedEvent.GetData<OfferDeclinedEventData>().QueueId);
         harness.ReservationService.Verify(
@@ -745,6 +746,72 @@ public sealed class ContactCenterCallCommandServiceTests
         // The re-offer handler reads the queue from the same payload under its own contract.
         Assert.Equal("q1", declined.GetData<OfferDeclinedEventData>().QueueId);
     }
+
+    [Fact]
+    public async Task AcceptInboundOfferAsync_NamesTheAcceptingAgentByUserId_OnEveryEventItRecords()
+    {
+        // Arrange
+        // The accept is the agent's own act. The agent's profile id is what the call is about; the actor is the
+        // person, by the user id every other agent-made record names them by.
+        var harness = new Harness();
+        ConfigureAcceptedInboundOffer(harness, []);
+        harness.SetupProvider(VoiceProviderDeliveryModel.AgentDeviceNative);
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var log = new AuditedEventLog(clock.Object);
+        ForwardTo(harness, log);
+
+        // Act
+        await harness.CreateService().AcceptInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var accepted = log.Single(ContactCenterConstants.Events.OfferAccepted);
+        Assert.Equal(ContactCenterActorType.Agent, accepted.ActorType);
+        Assert.Equal("u1", accepted.ActorId);
+
+        // Recorded like every other offer event, so the reports that read offers by reservation find it.
+        Assert.Equal(nameof(ActivityReservation), accepted.AggregateType);
+        Assert.Equal("r1", accepted.AggregateId);
+        Assert.Equal("int1", accepted.InteractionId);
+
+        var created = log.Single(ContactCenterConstants.Events.CallSessionCreated);
+        Assert.Equal(ContactCenterActorType.Agent, created.ActorType);
+        Assert.Equal("u1", created.ActorId);
+        Assert.Equal("a1", created.GetData<CallLifecycleEventData>()?.AgentId);
+
+        log.AssertEveryEventNamesItsActor();
+    }
+
+    [Fact]
+    public async Task DeclineInboundOfferAsync_NamesTheDecliningAgentByUserId()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupPendingReservation();
+        harness.SetupInteraction();
+        harness.ReservationService
+            .Setup(service => service.RejectAsync("r1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateReservation());
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var log = new AuditedEventLog(clock.Object);
+        ForwardTo(harness, log);
+
+        // Act
+        await harness.CreateService().DeclineInboundOfferAsync("r1", "u1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var declined = log.Single(ContactCenterConstants.Events.OfferDeclined);
+        Assert.Equal(ContactCenterActorType.Agent, declined.ActorType);
+        Assert.Equal("u1", declined.ActorId);
+        Assert.Equal("a1", declined.GetData<OfferLifecycleEventData>()?.AgentId);
+        log.AssertEveryEventNamesItsActor();
+    }
+
+    private static void ForwardTo(Harness harness, AuditedEventLog log)
+        => harness.Publisher
+            .Setup(publisher => publisher.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Returns((InteractionEvent interactionEvent, CancellationToken cancellationToken) => log.Publisher.PublishAsync(interactionEvent, cancellationToken));
 
     private static void ConfigureAcceptedInboundOffer(Harness harness, List<string> order)
     {

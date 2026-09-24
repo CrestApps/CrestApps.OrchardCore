@@ -69,6 +69,14 @@ Phases 2 to 4 are built against one contract, so the writers and the reports agr
   event by when the change happened, stamps the time it was recorded (`InteractionEvent.RecordedUtc`), names the
   actor (`InteractionEvent.ActorType`: agent, supervisor, system, workflow, provider, customer, AI agent), and derives
   an idempotency key from what the change is, to the tick.
+- **Actor and subject.** Every event names who caused it, and `ActorType` is never left unspecified. An agent or
+  supervisor is named by user id, the provider by its technical name, and the platform by `system`. The agent a
+  change is about is its subject, not its actor. The subject is carried by the aggregate (`AgentProfile` events)
+  or by the payload's `AgentId` and `UserId` (offer, reservation, routing and call payloads), never in `ActorId`.
+  Routing, reservation, expiry, timeout release and reconciliation are the platform. Accepting and declining an
+  offer are the agent. A call-stream event is the provider. The presence event that goes with a state change
+  names the same actor as the state change and is dated by the same instant. Workflows get the subject as
+  `AgentId` and `AgentUserId` beside `ActorId` and `ActorType`.
 - **Agent state.** `AgentStateChanged` carries `AgentStateChangedEventData`: previous, current and requested state,
   the reason code by id with its name at the time, the source (sign-in, reserved, accepted, released, wrap-up
   started, work completed, wrap-up timed out, reconciled, session expired, request applied), the interaction and

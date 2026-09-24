@@ -35,6 +35,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly IAgentPreDialCoordinator _preDialCoordinator;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private ContactCenterAuditRecorder _auditRecorder;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterCallCommandService"/> class.
@@ -96,6 +97,11 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _clock = clock;
         _logger = logger;
     }
+
+    // Built over the publisher this service already writes through, so its offer records go through the same door as
+    // every other writer's without widening the constructor.
+    private ContactCenterAuditRecorder AuditRecorder
+        => _auditRecorder ??= new ContactCenterAuditRecorder(_publisher, _clock);
 
     /// <inheritdoc/>
     public async Task<CallCommandResult> AcceptInboundOfferAsync(string reservationId, string agentUserId, CancellationToken cancellationToken = default)
@@ -217,6 +223,9 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
+        // The accept is the agent's own act, so everything it records names them, by their user id.
+        var acceptedBy = ContactCenterActor.Agent(agentUserId);
+
         var session = await EnsureSessionAsync(
             interaction,
             reservation,
@@ -227,13 +236,18 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             interaction.Status == InteractionStatus.Connected,
             commandId,
             now,
+            acceptedBy,
             cancellationToken);
 
-        await PublishOfferAcceptedAsync(reservation, interaction, agent, now, cancellationToken);
+        await AuditRecorder.RecordOfferAsync(
+            ContactCenterConstants.Events.OfferAccepted,
+            ContactCenterCallAudit.ForOffer(reservation, interaction, agent, now),
+            acceptedBy,
+            cancellationToken);
 
         if (interaction.Status == InteractionStatus.Connected)
         {
-            await PublishAsync(ContactCenterConstants.Events.CallConnected, interaction.ItemId, reservation.AgentId, cancellationToken);
+            await PublishAsync(ContactCenterConstants.Events.CallConnected, interaction.ItemId, acceptedBy, now, data: null, cancellationToken);
         }
 
         AgentPreDialLeg preDialedLeg = null;
@@ -336,7 +350,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             InteractionId = interaction?.ItemId,
             AggregateType = nameof(ActivityReservation),
             AggregateId = reservation.ItemId,
-            ActorId = reservation.AgentId,
+            ActorId = agentUserId,
             ActorType = ContactCenterActorType.Agent,
             SourceComponent = ContactCenterConstants.Components.Voice,
             OccurredUtc = declinedUtc,
@@ -444,6 +458,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         bool answered,
         string answerCommandId,
         DateTime now,
+        ContactCenterActor actor,
         CancellationToken cancellationToken)
     {
         var session = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
@@ -473,7 +488,13 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
             await _callSessionManager.CreateAsync(session, cancellationToken: cancellationToken);
 
-            await PublishAsync(ContactCenterConstants.Events.CallSessionCreated, interaction.ItemId, reservation.AgentId, cancellationToken);
+            await PublishAsync(
+                ContactCenterConstants.Events.CallSessionCreated,
+                interaction.ItemId,
+                actor,
+                now,
+                ContactCenterCallAudit.ForSession(session, interaction),
+                cancellationToken);
 
             return session;
         }
@@ -511,40 +532,31 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         }
     }
 
-    private Task PublishOfferAcceptedAsync(
-        ActivityReservation reservation,
-        Interaction interaction,
-        AgentProfile agent,
-        DateTime acceptedUtc,
+    private Task PublishAsync(
+        string eventType,
+        string interactionId,
+        ContactCenterActor actor,
+        DateTime occurredUtc,
+        CallLifecycleEventData data,
         CancellationToken cancellationToken)
     {
         var interactionEvent = new InteractionEvent
-        {
-            EventType = ContactCenterConstants.Events.OfferAccepted,
-            InteractionId = interaction.ItemId,
-            AggregateType = nameof(Interaction),
-            AggregateId = interaction.ItemId,
-            ActorId = reservation.AgentId,
-            ActorType = ContactCenterActorType.Agent,
-            SourceComponent = ContactCenterConstants.Components.Voice,
-            OccurredUtc = acceptedUtc,
-        };
-
-        interactionEvent.SetData(ContactCenterCallAudit.ForOffer(reservation, interaction, agent, acceptedUtc));
-
-        return _publisher.PublishAsync(interactionEvent, cancellationToken);
-    }
-
-    private Task PublishAsync(string eventType, string interactionId, string actorId, CancellationToken cancellationToken)
-    {
-        return _publisher.PublishAsync(new InteractionEvent
         {
             EventType = eventType,
             InteractionId = interactionId,
             AggregateType = nameof(Interaction),
             AggregateId = interactionId,
-            ActorId = actorId,
+            ActorId = actor.Id ?? ContactCenterConstants.SystemActor,
+            ActorType = actor.Type,
             SourceComponent = ContactCenterConstants.Components.Voice,
-        }, cancellationToken);
+            OccurredUtc = occurredUtc,
+        };
+
+        if (data is not null)
+        {
+            interactionEvent.SetData(data);
+        }
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 }

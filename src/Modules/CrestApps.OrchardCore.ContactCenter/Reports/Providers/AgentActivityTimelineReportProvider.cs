@@ -100,7 +100,7 @@ public sealed class AgentActivityTimelineReportProvider : ContactCenterReportBas
         var sessionEvents = agentEvents
             .Where(interactionEvent => AgentActivityTimeline.SessionEventTypes.Contains(interactionEvent.EventType, StringComparer.Ordinal))
             .ToArray();
-        var offerEvents = await _eventStore.GetByAggregateWindowAsync(nameof(ActivityReservation), CallHandlingMetrics.OfferEventTypes, null, fromUtc, toUtc, cancellationToken);
+        var offerEvents = await OfferEventReader.ReadAsync(_eventStore, fromUtc, toUtc, cancellationToken);
 
         // Calls are read by the interactions the agents' states and offers name, on the aggregate index, and calls no
         // interaction owns (such as extension calls) by the call session they were recorded against.

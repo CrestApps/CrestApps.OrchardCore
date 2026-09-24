@@ -122,9 +122,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         profile.RequestedPresenceStatus = null;
         profile.ActiveReservationId = null;
 
-        await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.Available, new AgentStateChangeContext
+        var actor = ContactCenterActor.Agent(userId);
+
+        var change = await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.Available, new AgentStateChangeContext
         {
-            Actor = ContactCenterActor.Agent(userId),
+            Actor = actor,
             Source = AgentStateChangeSources.SignIn,
             AgentSessionId = await FindAgentSessionIdAsync(userId, cancellationToken),
         }, cancellationToken);
@@ -133,7 +135,7 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
 
         await SaveAsync(profile, cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, previousStatus, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, previousStatus, actor, change, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -191,7 +193,7 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         // republished below is what routing listens to for the new queues.
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, previousStatus, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentSignedIn, profile, previousStatus, ContactCenterActor.Agent(userId), change: null, cancellationToken);
 
         return profile;
     }
@@ -290,9 +292,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         profile.QueueIds = [];
         profile.CampaignIds = [];
 
-        await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.Offline, new AgentStateChangeContext
+        var actor = context?.Actor ?? ContactCenterActor.Agent(userId);
+
+        var change = await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.Offline, new AgentStateChangeContext
         {
-            Actor = context?.Actor ?? ContactCenterActor.Agent(userId),
+            Actor = actor,
             Source = context?.Source ?? AgentStateChangeSources.SignOut,
             ReasonCodeId = context?.ReasonCodeId,
             ReasonName = context?.ReasonName,
@@ -304,7 +308,7 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
 
         await _agentManager.UpdateAsync(profile, cancellationToken: cancellationToken);
         await SyncSessionMembershipAsync(userId, profile.QueueIds, profile.CampaignIds, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentSignedOut, profile, previousStatus, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentSignedOut, profile, previousStatus, actor, change, cancellationToken);
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
@@ -377,9 +381,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
 
         // Going offline this way is the platform noticing an agent it can no longer reach, so by default it is the
         // platform's change, and it is dated by when the agent was last heard from when the caller knows that.
-        await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.Offline, new AgentStateChangeContext
+        var actor = context?.Actor ?? ContactCenterActor.System;
+
+        var change = await _stateTransitions.TransitionAsync(profile, AgentPresenceStatus.Offline, new AgentStateChangeContext
         {
-            Actor = context?.Actor ?? ContactCenterActor.System,
+            Actor = actor,
             Source = context?.Source ?? AgentStateChangeSources.SessionExpired,
             ReasonName = reason,
             AgentSessionId = context?.AgentSessionId,
@@ -389,7 +395,7 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await SaveAsync(profile, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);
 
         return profile;
     }
@@ -491,9 +497,11 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         var reasonChanged = !string.Equals(previousReasonCodeId, profile.PresenceReasonCodeId, StringComparison.Ordinal) ||
             !string.Equals(previousReason, profile.PresenceReason, StringComparison.Ordinal);
 
-        await _stateTransitions.TransitionAsync(profile, targetStatus, new AgentStateChangeContext
+        var actor = context?.Actor ?? ContactCenterActor.Agent(userId);
+
+        var change = await _stateTransitions.TransitionAsync(profile, targetStatus, new AgentStateChangeContext
         {
-            Actor = context?.Actor ?? ContactCenterActor.Agent(userId),
+            Actor = actor,
             Source = context?.Source ?? AgentStateChangeSources.SetState,
             ReasonCodeId = profile.PresenceReasonCodeId,
             ReasonName = profile.PresenceReason,
@@ -504,7 +512,7 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         AgentPresenceUtilities.ApplyIdleState(profile, _clock.UtcNow);
 
         await SaveAsync(profile, cancellationToken);
-        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, cancellationToken);
+        await PublishAsync(ContactCenterConstants.Events.AgentPresenceChanged, profile, previousStatus, actor, change, cancellationToken);
 
         return profile;
     }
@@ -603,30 +611,48 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         }
     }
 
+    /// <summary>
+    /// Publishes the presence event a change is broadcast and routed by.
+    /// </summary>
+    /// <remarks>
+    /// It names the same actor as the state change it accompanies, and is dated by the same instant: the time the
+    /// change took effect, which for a change a provider event caused is the provider's time for that event. The
+    /// agent is the subject, carried by the aggregate and in the payload, never in the actor.
+    /// </remarks>
     private Task PublishAsync(
         string eventType,
         AgentProfile profile,
         AgentPresenceStatus previousStatus,
+        ContactCenterActor actor,
+        AgentStateChangedEventData change,
         CancellationToken cancellationToken)
     {
+        var changedUtc = profile.PresenceChangedUtc ?? _clock.UtcNow;
         var interactionEvent = new InteractionEvent
         {
             EventType = eventType,
             AggregateType = nameof(AgentProfile),
             AggregateId = profile.ItemId,
-            ActorId = profile.UserId,
+            ActorId = actor.Id ?? ContactCenterConstants.SystemActor,
+            ActorType = actor.Type,
             SourceComponent = ContactCenterConstants.Components.Agents,
+
+            // A presence event that accompanies a state change happened when the change did. One that changes no
+            // state -- a request deferred behind a call, new memberships -- happened now.
+            OccurredUtc = change?.ChangedUtc ?? _clock.UtcNow,
         };
 
         interactionEvent.SetData(new AgentPresenceChangedEventData
         {
+            AgentId = profile.ItemId,
+            UserId = profile.UserId,
             PreviousStatus = previousStatus,
             CurrentStatus = profile.PresenceStatus,
             RequestedStatus = profile.RequestedPresenceStatus,
             Reason = profile.PresenceReason,
             QueueIds = profile.QueueIds.ToList(),
             CampaignIds = profile.CampaignIds.ToList(),
-            ChangedUtc = profile.PresenceChangedUtc ?? _clock.UtcNow,
+            ChangedUtc = changedUtc,
         });
 
         return _publisher.PublishAsync(interactionEvent, cancellationToken);

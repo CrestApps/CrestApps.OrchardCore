@@ -406,7 +406,10 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             EventType = ContactCenterConstants.Events.RoutingDecisionMade,
             AggregateType = nameof(QueueItem),
             AggregateId = decision.QueueItem?.ItemId,
-            ActorId = decision.Agent?.ItemId,
+
+            // Routing made the decision; the agent it chose is what the decision is about, named in the payload.
+            ActorId = ContactCenterConstants.SystemActor,
+            ActorType = ContactCenterActorType.System,
             SourceComponent = ContactCenterConstants.Components.Routing,
         };
 
