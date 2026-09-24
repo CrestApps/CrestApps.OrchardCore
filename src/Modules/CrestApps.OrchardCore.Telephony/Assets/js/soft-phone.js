@@ -103,6 +103,12 @@
     var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
     var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
 
+    var HOST_BRIDGE_PROTOCOL = softPhoneModules.HOST_BRIDGE_PROTOCOL;
+    var HOST_PAGE_MESSAGES = softPhoneModules.HOST_PAGE_MESSAGES;
+    var findHostChannel = softPhoneModules.findHostChannel;
+    var buildIncomingCallMessage = softPhoneModules.buildIncomingCallMessage;
+    var createHostDelegation = softPhoneModules.createHostDelegation;
+
     var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
     var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
 
@@ -2317,6 +2323,31 @@
                 render();
             };
         }
+
+        // A desktop app that embeds the standalone page (WebView2) shows its own incoming-call notification. The page
+        // tells it about the ringing call and hides the incoming modal only while the app confirms that notification
+        // is on screen; with no confirmation the modal shows as usual (see soft-phone/host-bridge.js).
+        var hostChannel = isEmbedded ? findHostChannel(window) : null;
+        var hostDelegation = createHostDelegation({
+            post: postToHost,
+            onChange: function () {
+                render();
+            },
+            isActionUnderWay: function () {
+                return answerInProgress();
+            }
+        });
+
+        function postToHost(message) {
+            if (!hostChannel) {
+                return;
+            }
+
+            try {
+                hostChannel.postMessage(message);
+            } catch (error) { /* an unconfirmed notification falls back to the modal */ }
+        }
+
         var incomingExpiryTimer = null;
         var requiresAuthentication = false;
         var isConnected = false;
@@ -6331,7 +6362,16 @@
         function renderIncoming() {
             var visible = isRingingInbound() && !incomingHandled;
 
-            show(dom.incoming, visible);
+            // A desktop host that confirmed its own notification for this call takes over the prompt (and, if it
+            // rings, the ringtone). Only what is shown changes: the offer state and its expiry timer below still
+            // follow the ringing call, so the modal can come back at any moment.
+            hostDelegation.sync(
+                visible && hostDelegation.isHostReady() ? buildHostIncomingMessage() : null,
+                !!(dom.incoming && !dom.incoming.hidden));
+
+            var presentation = hostDelegation.presentation(visible);
+
+            show(dom.incoming, presentation.showModal);
             rootElement.classList.toggle('telephony-soft-phone--incoming', visible);
 
             // Ring while an inbound offer is pending answer (covers both Contact Center offers and direct
@@ -6340,7 +6380,7 @@
             // ignored, times out, or the caller hangs up. Answering a Contact Center offer waits on the server
             // to accept it before the call connects, and the agent heard the ringtone carry on through that
             // round trip after clicking Answer, so a pending accept silences it too.
-            if (shouldRingForOffer(visible, answerInProgress())) {
+            if (shouldRingForOffer(visible, answerInProgress()) && presentation.ring) {
                 ringtone.start();
             } else {
                 ringtone.stop();
@@ -6380,6 +6420,72 @@
         // From the agent's first click on Answer, including the registration that click may be waiting on.
         function answerInProgress() {
             return isAnswerInProgress({ acceptPending: incomingAcceptPending, registeringForAnswer: answerRegistering });
+        }
+
+        // The ringing offer as the desktop host shows it: the same caller, queue, and matched records as the modal.
+        function buildHostIncomingMessage() {
+            var context = incomingContext || {};
+            var cards = Array.isArray(context.cards) ? context.cards : [];
+
+            return buildIncomingCallMessage({
+                callId: currentCallId(),
+                from: getPeerNumber(currentCall) || '',
+                queue: context.properties ? context.properties.queue || '' : '',
+                heading: cards.length ? context.heading || strings.matchedRecords || '' : '',
+                canVoicemail: has(CAPABILITIES.Voicemail),
+                cards: cards.map(function (card) {
+                    var labels = incomingCardActionLabels(card, strings);
+
+                    return {
+                        id: card.id,
+                        title: card.title,
+                        subtitle: card.subtitle,
+                        description: card.description,
+                        badges: card.badges,
+                        url: card.url,
+                        links: card.links,
+                        answerAndOpenText: labels.answerAndOpen,
+                        openText: labels.open
+                    };
+                })
+            }, window.location.href);
+        }
+
+        // The agent chose Answer, Decline, or Voicemail in the desktop host's notification. The action runs here,
+        // through the same paths as the modal's buttons, because the page holds the call's audio and the offer.
+        function onHostMessage(event) {
+            var choice = hostDelegation.receive(event ? event.data : null);
+
+            if (!choice) {
+                return;
+            }
+
+            var handled = false;
+
+            if (choice.matchesOffer && currentCallId() === choice.callId && isRingingInbound() && !incomingHandled) {
+                if (choice.action === 'answer') {
+                    handled = true;
+                    answerIncoming(null);
+                } else if (choice.action === 'decline') {
+                    handled = true;
+                    ignoreIncoming();
+                } else if (has(CAPABILITIES.Voicemail)) {
+                    handled = true;
+                    voicemailIncoming();
+                }
+            } else if (choice.action === 'answer') {
+                // The host rang for a call this page has not surfaced yet (the host's own connection saw it first).
+                // Answer it the moment it arrives, exactly like /softphone?answerCallId=, without reloading the page.
+                pendingAnswerCallId = choice.callId;
+                pendingAnswerDeadline = Date.now() + ANSWER_ON_LOAD_WINDOW_MS;
+            }
+
+            postToHost({
+                type: HOST_PAGE_MESSAGES.actionResult,
+                callId: choice.callId,
+                action: choice.action,
+                handled: handled
+            });
         }
 
         function setIncomingControlsBusy(busy) {
@@ -8001,6 +8107,14 @@
             attachDrag(dom.toggle, { ignoreButtons: false, suppressClick: true });
 
             window.addEventListener('message', onOAuthMessage);
+
+            // Announce the page to a desktop host. Only a host that answers with 'host-ready' takes part in the
+            // incoming-call handoff; any other page keeps its modal.
+            if (hostChannel) {
+                hostChannel.addEventListener('message', onHostMessage);
+                postToHost({ type: HOST_PAGE_MESSAGES.ready, protocol: HOST_BRIDGE_PROTOCOL });
+            }
+
             window.addEventListener('beforeunload', function (event) {
                 // Seatbelt for navigating away mid-call: a full page load tears down the WebRTC media, so the
                 // call cannot survive a reload. Warn the agent before they leave while a call is live (the
@@ -8018,6 +8132,7 @@
                 // release the provider media session.
                 pageUnloading = true;
                 ringtone.stop();
+                hostDelegation.reset();
                 releaseBrowserAudio();
             });
             window.addEventListener('resize', function () {
