@@ -457,13 +457,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public ActivityReservation() { }
         public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime CreatedUtc { get; set; }
         public string DialerProfileId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime ExpiresUtc { get; set; }
         [System.Text.Json.Serialization.JsonInclude]
         public int ExtensionCount { get; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsResolved { get; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? ModifiedUtc { get; set; }
         public string QueueId { get; set; }
         public string QueueItemId { get; set; }
@@ -613,18 +616,25 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.Collections.Generic.IList<string> AllowedCampaignIds { get; set; }
         public System.Collections.Generic.IList<string> AllowedQueueIds { get; set; }
         public System.Collections.Generic.IList<string> CampaignIds { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime CreatedUtc { get; set; }
         public string DisplayName { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? IdleSinceUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? LastAssignedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? LastWorkCompletedUtc { get; set; }
         public int MaxConcurrentInteractions { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? ModifiedUtc { get; set; }
         public string Name { get; set; }
         public string OutboundCallerId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? PresenceChangedUtc { get; set; }
         public string PresenceReason { get; set; }
         public string PresenceReasonCodeId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? PresenceRequestedUtc { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus PresenceStatus { get; set; }
         public System.Collections.Generic.IList<string> QueueIds { get; set; }
@@ -667,13 +677,19 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         public AgentSession() { }
         public System.Collections.Generic.IList<string> CampaignIds { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? ConnectedUtc { get; set; }
         public System.Collections.Generic.IList<string> ConnectionIds { get; set; }
+        public System.Collections.Generic.IDictionary<string, System.DateTime> ConnectionLastSeenUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime CreatedUtc { get; set; }
         public string DisplayName { get; set; }
         public bool IsOnline { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? LastDisconnectedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? LastHeartbeatUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? ModifiedUtc { get; set; }
         public System.Collections.Generic.IList<string> QueueIds { get; set; }
         public string UserId { get; set; }
@@ -892,11 +908,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public CallLeg() { }
         public string Address { get; set; }
         public string AgentId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? AnsweredUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? EndedUtc { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.HangupCause? HangupCause { get; set; }
         public string ProviderLegId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.CallPartyRole Role { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime StartedUtc { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.CallLegStatus Status { get; set; }
     }
@@ -1011,18 +1030,22 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
         public string AgentSessionId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? AnsweredUtc { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.Bridge Bridge { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.ConsultCall> Consults { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime CreatedUtc { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.VoiceProviderDeliveryModel DeliveryModel { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionDirection Direction { get; set; }
         public string DurableCommandId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? EndedUtc { get; set; }
         public string FromAddress { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.HangupCause? HangupCause { get; set; }
         public long? HighWaterSequence { get; set; }
         public double HoldSeconds { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? HoldStartedUtc { get; set; }
         public string InteractionId { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
@@ -1031,9 +1054,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public bool IsOnHold { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsTerminal { get; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? LastProviderEventUtc { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.CallLeg> Legs { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? ModifiedUtc { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.MonitorSession> MonitorSessions { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
@@ -1046,6 +1071,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string RecordingReference { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.RecordingState RecordingState { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.CallRelationship> Relationships { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? StartedUtc { get; set; }
         [System.Text.Json.Serialization.JsonInclude]
         public CrestApps.OrchardCore.Telephony.Models.VoiceCallState State { get; }
@@ -1535,14 +1561,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public Interaction() { }
         public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? AnsweredUtc { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionChannel Channel { get; set; }
         public string CorrelationId { get; set; }
         public string CreatedById { get; set; }
         public string CreatedByUserName { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime CreatedUtc { get; set; }
         public string CustomerAddress { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionDirection Direction { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? EndedUtc { get; set; }
         public System.Text.Json.Nodes.JsonObject EntityProperties { get; set; }
         public string HandoffAiSessionId { get; set; }
@@ -1550,6 +1579,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string HandoffSummary { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsSettled { get; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? ModifiedUtc { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionParticipant> Participants { get; set; }
         public string ProviderCorrelationId { get; set; }
@@ -1558,21 +1588,28 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string ProviderName { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionQueueHistoryEntry> QueueHistory { get; set; }
         public string QueueId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? RecordingConsentCapturedUtc { get; set; }
         public string RecordingConsentJurisdiction { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? RecordingErasedUtc { get; set; }
         public bool RecordingLegalHold { get; set; }
         public string RecordingPauseReason { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? RecordingPausedUtc { get; set; }
         public string RecordingReference { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? RecordingRetainUntilUtc { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.RecordingState RecordingState { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? StartedUtc { get; set; }
         [System.Text.Json.Serialization.JsonInclude]
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus Status { get; }
         public System.Collections.Generic.IDictionary<string, object> TechnicalMetadata { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionTransferHistoryEntry> TransferHistory { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? WrapUpCompletedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? WrapUpStartedUtc { get; set; }
         public bool CanTransitionTo(CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status) { }
         public void MirrorSessionStatus(CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status) { }
@@ -1595,7 +1632,9 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string EventType { get; set; }
         public string IdempotencyKey { get; set; }
         public string InteractionId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime OccurredUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime RecordedUtc { get; set; }
         public int SchemaVersion { get; set; }
         public string SourceComponent { get; set; }
@@ -1946,19 +1985,27 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public QueueItem() { }
         public string ActivityItemId { get; set; }
         public string AgentId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? CallbackAcceptedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? CallbackOfferedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? DequeuedUtc { get; set; }
         public string DialerProfileId { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime EnqueuedUtc { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsSettled { get; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? LastTreatmentUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? ModifiedUtc { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? OverflowDueUtc { get; set; }
         public System.Collections.Generic.IList<string> OverflowHistory { get; set; }
         public string OverflowedFromQueueId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionPriority Priority { get; set; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime QueueEnteredUtc { get; set; }
         public string QueueId { get; set; }
         public string ReservationId { get; set; }
@@ -2383,6 +2430,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports
         public string SubjectContentType { get; set; }
     }
 }
+namespace CrestApps.OrchardCore.ContactCenter.Core.Serialization
+{
+    public sealed class PreciseUtcDateTimeJsonConverter : System.Text.Json.Serialization.JsonConverterFactory
+    {
+        public PreciseUtcDateTimeJsonConverter() { }
+        public override bool CanConvert(System.Type typeToConvert) { }
+        public override System.Text.Json.Serialization.JsonConverter CreateConverter(System.Type typeToConvert, System.Text.Json.JsonSerializerOptions options) { }
+    }
+}
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services
 {
     public sealed class ActivityAssignmentService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityAssignmentService
@@ -2587,6 +2643,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> DisconnectAsync(string userId, string connectionId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> ExpireStaleAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> HeartbeatAsync(string userId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> HeartbeatAsync(string userId, string connectionId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentSessionStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession, CrestApps.OrchardCore.ContactCenter.Core.Indexes.AgentSessionIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentSessionStore
     {
@@ -3356,6 +3413,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> DisconnectAsync(string userId, string connectionId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> ExpireStaleAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> HeartbeatAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession> HeartbeatAsync(string userId, string connectionId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentSessionStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSession>
     {

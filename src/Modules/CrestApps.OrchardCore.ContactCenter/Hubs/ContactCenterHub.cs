@@ -221,7 +221,7 @@ public sealed class ContactCenterHub : Hub<IContactCenterHubClient>
 
         return _scopeExecutor.ExecuteAsync<ContactCenterHubScopeContext>(async services =>
         {
-            await services.SessionService.HeartbeatAsync(userId, HubConnectionWork.MustComplete);
+            await services.SessionService.HeartbeatAsync(userId, Context.ConnectionId, HubConnectionWork.MustComplete);
         });
     }
 

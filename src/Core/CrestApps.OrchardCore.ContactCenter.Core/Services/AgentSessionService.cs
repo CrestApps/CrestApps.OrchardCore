@@ -108,6 +108,8 @@ public sealed class AgentSessionService : IAgentSessionService
             session.ConnectionIds.Add(connectionId);
         }
 
+        session.ConnectionLastSeenUtc[connectionId] = now;
+
         session.ConnectedUtc ??= now;
         session.IsOnline = session.ConnectionIds.Count > 0;
         session.LastHeartbeatUtc = now;
@@ -186,6 +188,7 @@ public sealed class AgentSessionService : IAgentSessionService
                     }
 
                     removed = session.ConnectionIds.Remove(connectionId);
+                    session.ConnectionLastSeenUtc.Remove(connectionId);
                     session.IsOnline = session.ConnectionIds.Count > 0;
                     session.ModifiedUtc = _clock.UtcNow;
 
@@ -233,7 +236,11 @@ public sealed class AgentSessionService : IAgentSessionService
     }
 
     /// <inheritdoc/>
-    public async Task<AgentSession> HeartbeatAsync(string userId, CancellationToken cancellationToken = default)
+    public Task<AgentSession> HeartbeatAsync(string userId, CancellationToken cancellationToken = default)
+        => HeartbeatAsync(userId, connectionId: null, cancellationToken);
+
+    /// <inheritdoc/>
+    public async Task<AgentSession> HeartbeatAsync(string userId, string connectionId, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
 
@@ -271,6 +278,11 @@ public sealed class AgentSessionService : IAgentSessionService
                 current.LastHeartbeatUtc = stampedUtc;
                 current.ModifiedUtc = stampedUtc;
 
+                if (!string.IsNullOrEmpty(connectionId))
+                {
+                    PruneSilentConnections(current, connectionId, stampedUtc);
+                }
+
                 await manager.UpdateAsync(current, cancellationToken: cancellationToken);
 
                 stamped = current;
@@ -292,6 +304,38 @@ public sealed class AgentSessionService : IAgentSessionService
         return stamped is null
             ? await _sessionManager.FindByUserIdAsync(userId, cancellationToken)
             : stamped;
+    }
+
+    // Records the heartbeat's connection as alive and drops every other connection not heard from within the stale
+    // threshold. A connection with no last-seen time was recorded before connections were tracked individually, or
+    // outlived a server restart; either way it has not heartbeated since, so it goes too.
+    private static void PruneSilentConnections(AgentSession session, string connectionId, DateTime nowUtc)
+    {
+        session.ConnectionLastSeenUtc ??= new Dictionary<string, DateTime>();
+        session.ConnectionLastSeenUtc[connectionId] = nowUtc;
+
+        if (!session.ConnectionIds.Contains(connectionId))
+        {
+            session.ConnectionIds.Add(connectionId);
+        }
+
+        var cutoff = nowUtc.AddSeconds(-StaleThresholdSeconds);
+
+        foreach (var id in session.ConnectionIds.ToArray())
+        {
+            if (string.Equals(id, connectionId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (!session.ConnectionLastSeenUtc.TryGetValue(id, out var lastSeen) || lastSeen < cutoff)
+            {
+                session.ConnectionIds.Remove(id);
+                session.ConnectionLastSeenUtc.Remove(id);
+            }
+        }
+
+        session.IsOnline = session.ConnectionIds.Count > 0;
     }
 
     /// <inheritdoc/>

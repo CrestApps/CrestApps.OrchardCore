@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -115,21 +116,25 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the UTC time the item entered the queue.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime EnqueuedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the item entered its current queue.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime QueueEnteredUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the item left the queue.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? DequeuedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the item was last modified.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
@@ -141,22 +146,26 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets when the caller last heard something, which the announcement cadence is measured from.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? LastTreatmentUtc { get; set; }
 
     /// <summary>
     /// Gets or sets when the callback was offered, so it is offered once rather than every cycle.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? CallbackOfferedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets when this item's next overflow hop becomes due, so a scheduler can seek the items that are
     /// ready rather than reading every waiting item every minute.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? OverflowDueUtc { get; set; }
 
     /// <summary>
     /// Gets or sets when a queued callback was accepted for this caller, which is what stops a repeated key
     /// press or a redelivered provider event producing two calls back.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? CallbackAcceptedUtc { get; set; }
 }

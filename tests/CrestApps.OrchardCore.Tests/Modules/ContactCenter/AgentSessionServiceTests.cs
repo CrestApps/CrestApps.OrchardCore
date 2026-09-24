@@ -209,6 +209,38 @@ public sealed class AgentSessionServiceTests
     }
 
     [Fact]
+    public async Task HeartbeatAsync_FromAConnection_PrunesConnectionsThatWentSilentOrOutlivedARestart()
+    {
+        // Arrange: c-live heartbeated recently, c-silent went quiet past the stale threshold, and c-restart was left
+        // behind by a server restart with no last-seen time at all.
+        var existing = new AgentSession
+        {
+            ItemId = "s1",
+            UserId = "u1",
+            IsOnline = true,
+            ConnectionIds = ["c-live", "c-silent", "c-restart", "c-current"],
+            ConnectionLastSeenUtc = new Dictionary<string, DateTime>
+            {
+                ["c-live"] = _now.AddSeconds(-20),
+                ["c-silent"] = _now.AddSeconds(-(AgentSessionService.StaleThresholdSeconds + 5)),
+            },
+        };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+
+        var service = CreateService(sessionManager, new Mock<IAgentProfileManager>());
+
+        // Act
+        var session = await service.HeartbeatAsync("u1", "c-current", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(["c-live", "c-current"], session.ConnectionIds);
+        Assert.Equal(_now, session.ConnectionLastSeenUtc["c-current"]);
+        Assert.False(session.ConnectionLastSeenUtc.ContainsKey("c-silent"));
+        Assert.True(session.IsOnline);
+    }
+
+    [Fact]
     public async Task HeartbeatAsync_WhenNoSession_ReturnsNull()
     {
         // Arrange

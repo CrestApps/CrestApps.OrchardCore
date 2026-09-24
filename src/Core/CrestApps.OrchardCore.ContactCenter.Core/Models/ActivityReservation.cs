@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -94,11 +95,13 @@ public sealed class ActivityReservation : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the UTC time the reservation was created.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime CreatedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the reservation expires when not accepted.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime ExpiresUtc { get; set; }
 
     /// <summary>
@@ -138,5 +141,6 @@ public sealed class ActivityReservation : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the UTC time the reservation was last modified.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? ModifiedUtc { get; set; }
 }

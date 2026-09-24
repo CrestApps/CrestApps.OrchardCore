@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 
@@ -197,6 +198,7 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// Gets or sets the UTC time the current hold began, or the most recent one once the call has resumed. Each
     /// hold's length is added to <see cref="HoldSeconds"/> when it ends.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? HoldStartedUtc { get; set; }
 
     /// <summary>
@@ -217,6 +219,7 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the UTC time of the latest provider event applied to this call session.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? LastProviderEventUtc { get; set; }
 
     /// <summary>
@@ -230,21 +233,25 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the UTC time the call session was created.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime CreatedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the call started dialing or ringing.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? StartedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the call was answered or connected.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? AnsweredUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the call ended.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? EndedUtc { get; set; }
 
     /// <summary>
@@ -273,6 +280,7 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the UTC time the call session was last modified.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>

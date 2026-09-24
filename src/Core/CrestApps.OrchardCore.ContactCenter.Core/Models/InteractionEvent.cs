@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Entities;
 
@@ -76,12 +78,14 @@ public sealed class InteractionEvent : CatalogItem, IEntity
     /// <summary>
     /// Gets or sets the UTC time the event occurred.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime OccurredUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the event was written to the log. <see cref="OccurredUtc"/> is when the change
     /// happened, which reports use; this is when the platform learned of it, which audits compare it with.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime RecordedUtc { get; set; }
 
     /// <summary>

@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Entities;
@@ -116,6 +117,7 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     /// recording is not currently paused. The secure-pause auto-resume guard reads this to force-resume a pause
     /// that has outlived the tenant's maximum secure-pause window.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? RecordingPausedUtc { get; set; }
 
     /// <summary>
@@ -128,6 +130,7 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     /// Gets or sets the UTC instant at which explicit party consent to record this interaction was captured, when
     /// the tenant recording governance policy requires it.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? RecordingConsentCapturedUtc { get; set; }
 
     /// <summary>
@@ -145,12 +148,14 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     /// Gets or sets the UTC instant beyond which the captured recording becomes eligible for erasure, or
     /// <see langword="null"/> when the recording is retained indefinitely.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? RecordingRetainUntilUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC instant at which the captured recording reference was erased at the orchestration layer
     /// in response to a right-to-erasure request, or <see langword="null"/> when the recording has not been erased.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? RecordingErasedUtc { get; set; }
 
     /// <summary>
@@ -186,36 +191,43 @@ public sealed class Interaction : CatalogItem, IEntity, IModifiedUtcAwareModel
     /// <summary>
     /// Gets or sets the UTC time the interaction was created.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime CreatedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the interaction was last modified.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time work on the interaction started.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? StartedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the interaction was answered or connected.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? AnsweredUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the interaction's communication session ended.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? EndedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time after-call wrap-up started.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? WrapUpStartedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time after-call wrap-up was completed.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? WrapUpCompletedUtc { get; set; }
 
     /// <summary>

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+using CrestApps.OrchardCore.ContactCenter.Core.Serialization;
 using CrestApps.OrchardCore.Telephony.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -36,16 +38,19 @@ public sealed class CallLeg
     /// <summary>
     /// Gets or sets the UTC time the leg was created.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime StartedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the leg was answered.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? AnsweredUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the leg ended.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? EndedUtc { get; set; }
 
     /// <summary>

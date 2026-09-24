@@ -1,5 +1,7 @@
+using System.Text.Json.Serialization;
 using CrestApps.Core;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Serialization;
 using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -91,16 +93,19 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     /// while work was in flight. It is <see langword="null"/> when the pending state is only the state routing
     /// captured to return the agent to, so the audit can tell a deferred request taking effect from work ending.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? PresenceRequestedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the presence state last changed.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? PresenceChangedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the agent most recently received a routing assignment, used by round-robin routing.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? LastAssignedUtc { get; set; }
 
     /// <summary>
@@ -113,6 +118,7 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     /// including going Busy and back. An agent who has just finished a call therefore looked like the longest
     /// idle one, so the same agent kept being chosen while a genuinely idle colleague waited.
     /// </remarks>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? IdleSinceUtc { get; set; }
 
     /// <summary>
@@ -120,6 +126,7 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     /// really about: the agent who least recently finished something is next, regardless of how long an
     /// assignment they never accepted sat with them.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? LastWorkCompletedUtc { get; set; }
 
     /// <summary>
@@ -167,11 +174,13 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     /// <summary>
     /// Gets or sets the UTC time the agent profile was created.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime CreatedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the agent profile was last modified.
     /// </summary>
+    [JsonConverter(typeof(PreciseUtcDateTimeJsonConverter))]
     public DateTime? ModifiedUtc { get; set; }
 
     /// <summary>

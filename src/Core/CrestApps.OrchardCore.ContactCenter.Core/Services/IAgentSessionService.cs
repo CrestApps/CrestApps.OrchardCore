@@ -43,6 +43,16 @@ public interface IAgentSessionService
     Task<AgentSession> HeartbeatAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Records a heartbeat from one of the agent's connections, and prunes connections that have gone silent.
+    /// </summary>
+    /// <param name="userId">The agent's user identifier.</param>
+    /// <param name="connectionId">The connection the heartbeat came from.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The updated session, or <see langword="null"/> when there is none.</returns>
+    Task<AgentSession> HeartbeatAsync(string userId, string connectionId, CancellationToken cancellationToken = default)
+        => HeartbeatAsync(userId, cancellationToken);
+
+    /// <summary>
     /// Builds the reconnect snapshot the agent desktop needs to restore its state.
     /// </summary>
     /// <param name="userId">The Orchard user identifier.</param>
