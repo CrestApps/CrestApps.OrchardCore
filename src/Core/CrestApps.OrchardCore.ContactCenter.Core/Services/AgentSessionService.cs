@@ -33,6 +33,7 @@ public sealed class AgentSessionService : IAgentSessionService
     private readonly IAgentSessionManager _sessionManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentPresenceManager _presenceManager;
+    private readonly IContactCenterAuditRecorder _auditRecorder;
     private readonly IDistributedLock _distributedLock;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IClock _clock;
@@ -45,6 +46,7 @@ public sealed class AgentSessionService : IAgentSessionService
     /// <param name="sessionManager">The agent session manager.</param>
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="presenceManager">The agent presence manager used to sign out abandoned sessions.</param>
+    /// <param name="auditRecorder">The recorder connections, disconnections and lost heartbeats are written through.</param>
     /// <param name="distributedLock">The distributed lock used to serialize per-user session writes.</param>
     /// <param name="scopeExecutor">The scope executor used to commit heartbeat stamps in their own unit of work.</param>
     /// <param name="clock">The clock used to stamp session activity.</param>
@@ -54,6 +56,7 @@ public sealed class AgentSessionService : IAgentSessionService
         IAgentSessionManager sessionManager,
         IAgentProfileManager agentManager,
         IAgentPresenceManager presenceManager,
+        IContactCenterAuditRecorder auditRecorder,
         IDistributedLock distributedLock,
         IContactCenterScopeExecutor scopeExecutor,
         IClock clock,
@@ -63,6 +66,7 @@ public sealed class AgentSessionService : IAgentSessionService
         _sessionManager = sessionManager;
         _agentManager = agentManager;
         _presenceManager = presenceManager;
+        _auditRecorder = auditRecorder;
         _distributedLock = distributedLock;
         _scopeExecutor = scopeExecutor;
         _clock = clock;
@@ -97,7 +101,9 @@ public sealed class AgentSessionService : IAgentSessionService
             session.ConnectedUtc = now;
         }
 
-        if (!session.ConnectionIds.Contains(connectionId))
+        var connectionAdded = !session.ConnectionIds.Contains(connectionId);
+
+        if (connectionAdded)
         {
             session.ConnectionIds.Add(connectionId);
         }
@@ -139,6 +145,12 @@ public sealed class AgentSessionService : IAgentSessionService
             await _sessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         }
 
+        // A reconnect on a connection already in the list is the same connection, not a new one.
+        if (connectionAdded && profile is not null)
+        {
+            await RecordSessionAsync(ContactCenterConstants.Events.AgentConnected, profile, session, connectionId, reason: null, now, closesSession: false, cancellationToken);
+        }
+
         return session;
     }
 
@@ -158,6 +170,7 @@ public sealed class AgentSessionService : IAgentSessionService
         // it retries: each attempt re-reads the current session and re-applies the removal against the newest
         // committed version.
         AgentSession result = null;
+        var removed = false;
 
         for (var attempt = 1; attempt <= MaxSessionWriteAttempts; attempt++)
         {
@@ -172,7 +185,7 @@ public sealed class AgentSessionService : IAgentSessionService
                         return;
                     }
 
-                    session.ConnectionIds.Remove(connectionId);
+                    removed = session.ConnectionIds.Remove(connectionId);
                     session.IsOnline = session.ConnectionIds.Count > 0;
                     session.ModifiedUtc = _clock.UtcNow;
 
@@ -186,6 +199,16 @@ public sealed class AgentSessionService : IAgentSessionService
                     result = session;
                 });
 
+                if (removed && result is not null)
+                {
+                    var profile = await _agentManager.FindByUserIdAsync(userId, cancellationToken);
+
+                    if (profile is not null)
+                    {
+                        await RecordSessionAsync(ContactCenterConstants.Events.AgentDisconnected, profile, result, connectionId, reason: null, _clock.UtcNow, closesSession: false, cancellationToken);
+                    }
+                }
+
                 return result;
             }
             catch (ConcurrencyException)
@@ -193,6 +216,7 @@ public sealed class AgentSessionService : IAgentSessionService
                 // Another writer committed a newer session between the read and this commit. Re-read and
                 // re-apply the removal on the next attempt so the connection is not left stranded in the list.
                 result = null;
+                removed = false;
             }
         }
 
@@ -347,6 +371,15 @@ public sealed class AgentSessionService : IAgentSessionService
 
             var profile = await _agentManager.FindByUserIdAsync(session.UserId, cancellationToken);
 
+            // The agent was last heard from at the last heartbeat, not when this sweep noticed, so both the lost
+            // contact and the sign-off it causes are dated by it: the time in between is not time worked.
+            var lastHeardUtc = session.LastHeartbeatUtc ?? session.ModifiedUtc ?? _clock.UtcNow;
+
+            if (profile is not null)
+            {
+                await RecordSessionAsync(ContactCenterConstants.Events.AgentHeartbeatLost, profile, session, connectionId: null, "session-expired", lastHeardUtc, closesSession: true, cancellationToken);
+            }
+
             if (profile is not null && profile.PresenceStatus != AgentPresenceStatus.Offline)
             {
                 // Take the agent offline but leave their queue and campaign memberships intact. A lapsed
@@ -355,7 +388,13 @@ public sealed class AgentSessionService : IAgentSessionService
                 // instead stranded agents in an "Available but signed into nothing" state: the agent bar happily
                 // restores presence to Available on reconnect, but nothing restores the memberships, so routing
                 // silently skipped them with "no agents are currently available for this queue".
-                await _presenceManager.MarkOfflineAsync(session.UserId, "session-expired", cancellationToken);
+                await _presenceManager.MarkOfflineAsync(session.UserId, "session-expired", new AgentStateChangeContext
+                {
+                    Actor = ContactCenterActor.System,
+                    Source = AgentStateChangeSources.SessionExpired,
+                    AgentSessionId = session.ItemId,
+                    ChangedUtc = lastHeardUtc,
+                }, cancellationToken);
             }
 
             // A session can reach this cleanup path purely by cookie expiry, which never raises a sign-out and so
@@ -368,6 +407,37 @@ public sealed class AgentSessionService : IAgentSessionService
         }
 
         return count;
+    }
+
+    private Task RecordSessionAsync(
+        string eventType,
+        AgentProfile profile,
+        AgentSession session,
+        string connectionId,
+        string reason,
+        DateTime occurredUtc,
+        bool closesSession,
+        CancellationToken cancellationToken)
+    {
+        // A lapsed session is lost as a whole, so none of its connections are open after the event; a connect or
+        // disconnect leaves whatever the session still holds.
+        var data = new AgentSessionEventData
+        {
+            AgentId = profile.ItemId,
+            UserId = session.UserId,
+            AgentSessionId = session.ItemId,
+            ConnectionId = connectionId,
+            OpenConnectionCount = closesSession ? 0 : session.ConnectionIds.Count,
+            LastHeartbeatUtc = session.LastHeartbeatUtc,
+            Reason = reason,
+            OccurredUtc = occurredUtc,
+        };
+
+        var actor = closesSession
+            ? ContactCenterActor.System
+            : ContactCenterActor.Agent(session.UserId);
+
+        return _auditRecorder.RecordAgentSessionAsync(eventType, data, actor, cancellationToken);
     }
 
     private static string GetLockKey(string userId)

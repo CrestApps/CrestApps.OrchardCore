@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
@@ -107,16 +108,22 @@ public sealed class AgentSessionServiceTests
             .Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
             .ReturnsAsync(profile);
         var presenceManager = new Mock<IAgentPresenceManager>();
-        var service = CreateService(sessionManager, agentManager, presenceManager);
+        var recorder = new RecordingAuditRecorder();
+        var service = CreateService(sessionManager, agentManager, presenceManager, auditRecorder: recorder);
 
         // Act
         var session = await service.DisconnectAsync("u1", "c1", TestContext.Current.CancellationToken);
 
         // Assert
+        // The profile is read only to name the agent in the audit; nothing about the agent changes.
         Assert.False(session.IsOnline);
+        Assert.Equal(AgentPresenceStatus.Available, profile.PresenceStatus);
         agentManager.Verify(
-            m => m.FindByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            m => m.UpdateAsync(It.IsAny<AgentProfile>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()),
             Times.Never);
+        var disconnected = Assert.Single(recorder.SessionEvents);
+        Assert.Equal(ContactCenterConstants.Events.AgentDisconnected, disconnected.EventType);
+        Assert.Equal(0, disconnected.Data.OpenConnectionCount);
         presenceManager.Verify(
             m => m.SignOutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -343,7 +350,7 @@ public sealed class AgentSessionServiceTests
 
         // Assert
         Assert.Equal(1, count);
-        presenceManager.Verify(m => m.MarkOfflineAsync("u1", "session-expired", It.IsAny<CancellationToken>()), Times.Once);
+        presenceManager.Verify(m => m.MarkOfflineAsync("u1", "session-expired", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()), Times.Once);
         presenceManager.Verify(m => m.SignOutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         sessionManager.Verify(m => m.DeleteAsync(stale, It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -432,7 +439,7 @@ public sealed class AgentSessionServiceTests
         // Assert
         Assert.Equal(0, count);
         presenceManager.Verify(m => m.SignOutAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
-        presenceManager.Verify(m => m.MarkOfflineAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        presenceManager.Verify(m => m.MarkOfflineAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()), Times.Never);
         sessionManager.Verify(m => m.DeleteAsync(It.IsAny<AgentSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -529,13 +536,84 @@ public sealed class AgentSessionServiceTests
             Times.Never);
     }
 
+    [Fact]
+    public async Task ConnectAsync_RecordsTheNewConnection_ButNotAReconnectOnTheSameOne()
+    {
+        // Arrange
+        var existing = new AgentSession { ItemId = "s1", UserId = "u1", ConnectionIds = ["c1"], IsOnline = true };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1" });
+        var recorder = new RecordingAuditRecorder();
+        var service = CreateService(sessionManager, agentManager, auditRecorder: recorder);
+
+        // Act
+        await service.ConnectAsync("u1", "c1", "user", "User", TestContext.Current.CancellationToken);
+        await service.ConnectAsync("u1", "c2", "user", "User", TestContext.Current.CancellationToken);
+
+        // Assert
+        var connected = Assert.Single(recorder.SessionEvents);
+        Assert.Equal(ContactCenterConstants.Events.AgentConnected, connected.EventType);
+        Assert.Equal("a1", connected.Data.AgentId);
+        Assert.Equal("s1", connected.Data.AgentSessionId);
+        Assert.Equal("c2", connected.Data.ConnectionId);
+        Assert.Equal(2, connected.Data.OpenConnectionCount);
+        Assert.Equal(_now, connected.Data.OccurredUtc);
+        Assert.Equal(ContactCenterActorType.Agent, connected.Actor.Type);
+    }
+
+    [Fact]
+    public async Task ExpireStaleAsync_RecordsTheLostHeartbeat_AndDatesTheSignOffByIt()
+    {
+        // Arrange
+        var lastHeartbeatUtc = _now.AddMinutes(-3).AddMilliseconds(-420);
+        var stale = new AgentSession { ItemId = "s1", UserId = "u1", IsOnline = true, ConnectionIds = ["c1"], LastHeartbeatUtc = lastHeartbeatUtc };
+        var sessionManager = new Mock<IAgentSessionManager>();
+        sessionManager.Setup(m => m.GetStaleAsync(It.IsAny<DateTime>(), It.IsAny<CancellationToken>())).ReturnsAsync([stale]);
+        sessionManager.Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>())).ReturnsAsync(stale);
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager
+            .Setup(m => m.FindByUserIdAsync("u1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentProfile { ItemId = "a1", UserId = "u1", PresenceStatus = AgentPresenceStatus.Available });
+        var presenceManager = new Mock<IAgentPresenceManager>();
+        var recorder = new RecordingAuditRecorder();
+        var service = CreateService(sessionManager, agentManager, presenceManager, auditRecorder: recorder);
+
+        // Act
+        await service.ExpireStaleAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        var lost = Assert.Single(recorder.SessionEvents);
+        Assert.Equal(ContactCenterConstants.Events.AgentHeartbeatLost, lost.EventType);
+        Assert.Equal(lastHeartbeatUtc, lost.Data.LastHeartbeatUtc);
+        Assert.Equal(lastHeartbeatUtc, lost.Data.OccurredUtc);
+        Assert.Equal(0, lost.Data.OpenConnectionCount);
+        Assert.Equal("session-expired", lost.Data.Reason);
+        Assert.Equal(ContactCenterActorType.System, lost.Actor.Type);
+        presenceManager.Verify(
+            m => m.MarkOfflineAsync(
+                "u1",
+                "session-expired",
+                It.Is<AgentStateChangeContext>(context =>
+                    context.ChangedUtc == lastHeartbeatUtc &&
+                    context.Source == AgentStateChangeSources.SessionExpired &&
+                    context.AgentSessionId == "s1" &&
+                    context.Actor.Type == ContactCenterActorType.System),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private static AgentSessionService CreateService(
         Mock<IAgentSessionManager> sessionManager,
         Mock<IAgentProfileManager> agentManager,
         Mock<IAgentPresenceManager> presenceManager = null,
         Mock<IDistributedLock> distributedLock = null,
         IContactCenterScopeExecutor scopeExecutor = null,
-        IEnumerable<ISoftPhoneCredentialRevoker> credentialRevokers = null)
+        IEnumerable<ISoftPhoneCredentialRevoker> credentialRevokers = null,
+        IContactCenterAuditRecorder auditRecorder = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -544,6 +622,7 @@ public sealed class AgentSessionServiceTests
             sessionManager.Object,
             agentManager.Object,
             (presenceManager ?? new Mock<IAgentPresenceManager>()).Object,
+            auditRecorder ?? new RecordingAuditRecorder(),
             (distributedLock ?? CreateDistributedLock()).Object,
             scopeExecutor ?? new StubScopeExecutor(sessionManager.Object),
             clock.Object,
