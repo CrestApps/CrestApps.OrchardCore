@@ -617,6 +617,12 @@
         recoverSoftPhoneState(root, api, client);
       });
       client.connection.on('OfferRevoked', function (notification) {
+        // A copy of this offer still on its way here (an offer lookup in flight) must not reopen it.
+        if (notification && notification.reservationId && typeof api.markOfferSettled === 'function') {
+          api.markOfferSettled({
+            reservationId: notification.reservationId
+          });
+        }
         if (typeof api.clearIncomingOffer === 'function') {
           var reason = notification && notification.reason;
           var accepted = reason === 2 || reason === 'Accepted';

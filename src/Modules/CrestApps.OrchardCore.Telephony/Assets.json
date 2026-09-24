@@ -27,6 +27,8 @@
       "Assets/js/soft-phone/call-legs.js",
       "Assets/js/soft-phone/dial-target.js",
       "Assets/js/soft-phone/incoming-card.js",
+      "Assets/js/soft-phone/registration.js",
+      "Assets/js/soft-phone/answer-state.js",
       "Assets/js/soft-phone.js"
     ],
     "output": "wwwroot/scripts/soft-phone.js"

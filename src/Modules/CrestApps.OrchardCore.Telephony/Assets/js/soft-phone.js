@@ -78,6 +78,14 @@
     var OFFER_LEG_CAPABILITY = softPhoneModules.OFFER_LEG_CAPABILITY;
 
     var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
+    var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
+    var answerClickAction = softPhoneModules.answerClickAction;
+    var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
+    var answerButtonView = softPhoneModules.answerButtonView;
+    var ANSWER_REGISTRATION_TIMEOUT_MS = softPhoneModules.ANSWER_REGISTRATION_TIMEOUT_MS;
+    var withTimeout = softPhoneModules.withTimeout;
+    var rememberSettledOffer = softPhoneModules.rememberSettledOffer;
+    var isOfferSettled = softPhoneModules.isOfferSettled;
     var readOfferHandledMessage = softPhoneModules.readOfferHandledMessage;
     var OFFER_CHANNEL_NAME = softPhoneModules.OFFER_CHANNEL_NAME;
     var OFFER_HANDLED_MESSAGE = softPhoneModules.OFFER_HANDLED_MESSAGE;
@@ -2242,6 +2250,10 @@
         var incomingContext = null;
         var incomingHandled = false;
         var incomingAcceptPending = false;
+        // The agent clicked Answer on a phone that had to register first; the accept follows once it has.
+        var answerRegistering = false;
+        // Offers already over -- revoked, or their call ended -- so a late copy of one never opens the modal.
+        var settledOffers = {};
         // The leg the platform rang for the offer on screen, held unanswered until the agent accepts or declines:
         // { reservationId, legId, controller }. And the one answered for an accept that is still being confirmed, so
         // it can be hung up if the accept fails.
@@ -3710,7 +3722,14 @@
         }
 
         function renewBrowserAudioIfNeeded() {
-            if (!isBrowserAudioEnabled() || !browserAudioSession) {
+            if (!isBrowserAudioEnabled()) {
+                return;
+            }
+
+            // Nothing registered at all is the worst case of an expiring credential: register again.
+            if (!browserAudioSession) {
+                registerIfUnregistered();
+
                 return;
             }
 
@@ -3792,6 +3811,23 @@
                     console.debug('[soft-phone] Could not pre-register browser audio for inbound calls.', error);
                 }
             });
+        }
+
+        // Registers a phone that holds no registration -- an offer is ringing, or the heartbeat found it lapsed (a
+        // failed registration, a torn-down provider client) -- so the platform has a live endpoint to ring before
+        // the agent clicks anything. See soft-phone/registration.js.
+        function registerIfUnregistered() {
+            if (typeof shouldStartRegistration !== 'function' || !shouldStartRegistration({
+                browserAudioEnabled: isBrowserAudioEnabled(),
+                registered: !!browserAudioSession,
+                registering: !!browserAudioPromise,
+                microphoneBlocked: !!micPermissionState,
+                hubConnected: !!connection && connection.state === 'Connected'
+            })) {
+                return;
+            }
+
+            registerBrowserAudioForInbound();
         }
 
         function notifyBrowserAudio(call) {
@@ -5583,6 +5619,12 @@
                 ? statusTextForCall(currentCall)
                 : (pendingDial ? (strings.connecting || 'Connecting') : (strings.idle || 'Ready'));
 
+            // The agent answered -- the phone is registering, accepting, or waiting for the call to connect: say so,
+            // rather than "Ringing" on.
+            if (currentCall && isRingingInbound() && (answerInProgress() || incomingHandled)) {
+                baseStatus = strings.connecting || 'Connecting';
+            }
+
             // Degraded-state overlays (item 6). A hub or media reconnect takes precedence so the agent sees the
             // soft phone is trying to recover; a measured poor connection is surfaced while media is live. Both
             // signals are toggled only on a real state change, so the status does not flap.
@@ -6298,7 +6340,7 @@
             // ignored, times out, or the caller hangs up. Answering a Contact Center offer waits on the server
             // to accept it before the call connects, and the agent heard the ringtone carry on through that
             // round trip after clicking Answer, so a pending accept silences it too.
-            if (shouldRingForOffer(visible, incomingAcceptPending)) {
+            if (shouldRingForOffer(visible, answerInProgress())) {
                 ringtone.start();
             } else {
                 ringtone.stop();
@@ -6329,10 +6371,15 @@
 
             // While a Contact Center offer is being accepted the accept is a server round-trip; disable the
             // offer controls so the agent gets instant feedback and cannot act on the offer again mid-flight.
-            setIncomingControlsBusy(incomingAcceptPending);
+            setIncomingControlsBusy(answerInProgress());
 
             renderIncomingCards();
             scheduleIncomingExpiry();
+        }
+
+        // From the agent's first click on Answer, including the registration that click may be waiting on.
+        function answerInProgress() {
+            return isAnswerInProgress({ acceptPending: incomingAcceptPending, registeringForAnswer: answerRegistering });
         }
 
         function setIncomingControlsBusy(busy) {
@@ -6342,6 +6389,24 @@
                     button.classList.toggle('is-busy', busy);
                 }
             });
+
+            // The Answer button itself says the answer is under way: "Answering..." with a spinner. Its content is only
+            // replaced when that changes, so a render never swaps the button's insides out from under a click.
+            var answer = dom.incomingAnswer;
+
+            if (answer && !!answer.__answeringShown !== busy) {
+                if (busy) {
+                    answer.__restingHtml = answer.innerHTML;
+                }
+
+                answer.innerHTML = busy ? answerButtonHtml(answerButtonView(true, '', strings)) : answer.__restingHtml;
+                answer.__answeringShown = busy;
+            }
+        }
+
+        function answerButtonHtml(view) {
+            return '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' +
+                escapeHtml(view.label);
         }
 
         function clearIncomingExpiryTimer() {
@@ -6386,6 +6451,7 @@
 
             if (!cards.length) {
                 dom.incomingCards.innerHTML = '';
+                dom.incomingCards.__renderedHtml = '';
                 dom.incomingCards.hidden = true;
 
                 return;
@@ -6402,8 +6468,16 @@
                 html += buildIncomingCard(card);
             });
 
-            dom.incomingCards.innerHTML = html;
             dom.incomingCards.hidden = false;
+
+            // Rebuilt only when it changed: replacing the buttons on every render could swallow a click whose press
+            // and release landed on two different copies of the same button.
+            if (dom.incomingCards.__renderedHtml === html) {
+                return;
+            }
+
+            dom.incomingCards.innerHTML = html;
+            dom.incomingCards.__renderedHtml = html;
 
             Array.prototype.forEach.call(dom.incomingCards.querySelectorAll('[data-telephony-card-answer]'), function (button) {
                 button.addEventListener('click', function () {
@@ -6452,9 +6526,13 @@
 
             if (card.url) {
                 var openTarget = card.openInNewTab ? ' target="_blank" rel="noopener"' : '';
-                var answerBusy = incomingAcceptPending ? ' disabled' : '';
+                var answering = answerInProgress();
+                var answerBusy = answering ? ' disabled' : '';
                 var actionLabels = incomingCardActionLabels(card, strings);
-                actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"' + answerBusy + '><i class="fa-solid fa-phone"></i> ' + escapeHtml(actionLabels.answerAndOpen) + '</button>';
+                var answerContent = answering
+                    ? answerButtonHtml(answerButtonView(true, '', strings))
+                    : '<i class="fa-solid fa-phone"></i> ' + escapeHtml(actionLabels.answerAndOpen);
+                actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"' + answerBusy + '>' + answerContent + '</button>';
                 actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(actionLabels.open) + '</a>';
             }
 
@@ -6503,10 +6581,16 @@
 
         function answerIncoming(openUrl) {
             var id = currentCallId();
+            var action = answerClickAction({
+                browserAudioEnabled: isBrowserAudioEnabled(),
+                registered: !!browserAudioSession,
+                acceptPending: incomingAcceptPending,
+                registeringForAnswer: answerRegistering
+            });
 
-            // Accepting a Contact Center offer is a server round-trip; ignore repeat clicks while one is in
-            // flight so the reservation is never accepted twice.
-            if (incomingAcceptPending) {
+            // Accepting a Contact Center offer is a server round-trip, and it may first wait on a registration;
+            // ignore repeat clicks while either is in flight so the reservation is never accepted twice.
+            if (action === 'ignore') {
                 return;
             }
 
@@ -6518,12 +6602,8 @@
                 return;
             }
 
-            if (isBrowserAudioEnabled() && !browserAudioSession) {
-                ensureBrowserAudio().then(function () {
-                    answerIncoming(openUrl);
-                }).catch(function (error) {
-                    showError(error && error.message ? error.message : String(error));
-                });
+            if (action === 'register') {
+                answerAfterRegistering(openUrl);
 
                 return;
             }
@@ -6593,6 +6673,40 @@
                 }
             }).finally(function () {
                 incomingAcceptPending = false;
+            });
+        }
+
+        // The agent answered before the phone was registered. The click shows at once -- buttons disabled, ringtone
+        // silenced, "Connecting" -- and "Answer & open" opens the record now, inside the click, where the browser
+        // still allows a new window. The accept follows the moment the registration completes, for the offer the
+        // agent clicked only: one that was taken elsewhere or replaced meanwhile is left alone.
+        function answerAfterRegistering(openUrl) {
+            var clickedCallId = currentCallId();
+
+            answerRegistering = true;
+
+            if (openUrl) {
+                window.open(openUrl, '_blank', 'noopener');
+            }
+
+            render();
+
+            // A registration the provider never confirms must not leave the buttons disabled for good: past the limit
+            // the answer is given up on (the registration itself carries on) and the agent answers again.
+            withTimeout(ensureBrowserAudio(), ANSWER_REGISTRATION_TIMEOUT_MS).then(function () {
+                answerRegistering = false;
+
+                if (clickedCallId && currentCallId() === clickedCallId && isRingingInbound() && !incomingHandled) {
+                    answerIncoming(null);
+                } else {
+                    render();
+                }
+            }).catch(function (error) {
+                answerRegistering = false;
+                showError(error && error.timedOut
+                    ? (strings.answerTimedOut || 'Your phone could not connect in time. Try answering again.')
+                    : (error && error.message ? error.message : String(error)));
+                render();
             });
         }
 
@@ -6669,12 +6783,32 @@
                 return;
             }
 
+            // A copy of an offer that is already over (revoked, expired, or its call ended) arrived late: never open it.
+            var expiresUtc = context && context.properties ? Date.parse(context.properties.expiresUtc || '') : NaN;
+
+            if ((typeof isOfferSettled === 'function' && isOfferSettled(settledOffers,
+                { callId: call.callId, reservationId: getIncomingReservationId(context) }, Date.now())) ||
+                (isFinite(expiresUtc) && expiresUtc <= Date.now())) {
+                return;
+            }
+
+            // The same offer delivered again (pushed, then restored) while the agent's answer is under way keeps that
+            // answer going; only a different offer starts over.
+            var sameOffer = isSameIncomingOffer(call, context);
+
             upsertActiveCall(call, true);
             incomingContext = context || null;
             incomingHandled = false;
-            incomingAcceptPending = false;
+
+            if (!sameOffer) {
+                incomingAcceptPending = false;
+                answerRegistering = false;
+            }
+
             setActiveTab('keypad');
             render();
+            // An offer is ringing: be registered by the time the agent answers, not from the moment they click.
+            registerIfUnregistered();
             maybeAutoAnswerRequestedOffer(call);
         }
 
@@ -7410,6 +7544,11 @@
                     normalizeState(call.state) === 'Failed';
 
                 if (isTerminal) {
+                    // An offer for this call that is still on its way here must not open the modal once it lands.
+                    if (call && call.callId && typeof rememberSettledOffer === 'function') {
+                        rememberSettledOffer(settledOffers, { callId: call.callId }, Date.now());
+                    }
+
                     // A terminal state from the server for a call THIS browser placed is bookkeeping, not the call
                     // ending: the platform never saw the call and cannot know when it ends -- the provider SDK
                     // reports that through the media adapter, which is the only authority for these calls. The
@@ -7474,8 +7613,10 @@
                         refreshVoicemailBadge();
                     }, 2000);
 
+                    // The provider registration outlives the call: releasing it here left an Available agent with
+                    // nothing registered, so the next offer's leg was refused (SIP 480) and the agent's Answer had to
+                    // register from scratch first.
                     if (!getActiveCalls().length) {
-                        releaseBrowserAudio();
                         clearActiveCallsRefresh();
                     } else {
                         scheduleActiveCallsRefresh();
@@ -7936,6 +8077,10 @@
             settleOfferLeg: settleOfferLeg,
             setIncomingOffer: setIncomingOffer,
             clearIncomingOffer: clearIncomingOffer,
+            // Records that an offer ({ reservationId, callId }) is over, so a copy of it still in flight never opens.
+            markOfferSettled: function (offer) {
+                rememberSettledOffer(settledOffers, offer, Date.now());
+            },
             showError: showError,
             getConnection: function () { return connection; },
             registerMediaAdapter: function (name, adapter) {
