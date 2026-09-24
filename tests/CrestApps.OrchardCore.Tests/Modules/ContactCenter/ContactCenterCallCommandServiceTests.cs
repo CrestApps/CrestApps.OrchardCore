@@ -251,6 +251,10 @@ public sealed class ContactCenterCallCommandServiceTests
             order);
         Assert.NotNull(capturedRegistration);
         Assert.Equal(capturedRegistration!.CommandId, observedCommandIdDuringRegistration);
+
+        // The session names the answer command, so the connected event the bridge produces on an answered outbound
+        // call finds the agent already being joined instead of registering a second command to ring them again.
+        Assert.Equal(capturedRegistration!.CommandId, harness.CreatedCallSession!.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
         AssertAnswerRegistration(harness, capturedRegistration!);
         harness.ReservationService.Verify(
             service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
@@ -334,6 +338,10 @@ public sealed class ContactCenterCallCommandServiceTests
             order);
         Assert.NotNull(capturedRegistration);
         Assert.Equal(capturedRegistration!.CommandId, observedCommandIdDuringRegistration);
+
+        // The session names the answer command, so the connected event the bridge produces on an answered outbound
+        // call finds the agent already being joined instead of registering a second command to ring them again.
+        Assert.Equal(capturedRegistration!.CommandId, harness.CreatedCallSession!.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
         AssertAnswerRegistration(harness, capturedRegistration!);
         harness.ReservationService.Verify(
             service => service.AcceptAsync("r1", It.IsAny<CancellationToken>()),
@@ -398,6 +406,10 @@ public sealed class ContactCenterCallCommandServiceTests
         Assert.Equal("The command intent could not be committed.", exception.Message);
         Assert.NotNull(capturedRegistration);
         Assert.Equal(capturedRegistration!.CommandId, observedCommandIdDuringRegistration);
+
+        // The session names the answer command, so the connected event the bridge produces on an answered outbound
+        // call finds the agent already being joined instead of registering a second command to ring them again.
+        Assert.Equal(capturedRegistration!.CommandId, harness.CreatedCallSession!.Metadata[ContactCenterConstants.CommandMetadata.CommandId]);
         AssertAnswerRegistration(harness, capturedRegistration!);
         Assert.Equal(
             [

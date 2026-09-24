@@ -216,6 +216,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                 ? VoiceCallState.Connected
                 : VoiceCallState.Ringing,
             interaction.Status == InteractionStatus.Connected,
+            commandId,
             now,
             cancellationToken);
 
@@ -432,6 +433,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         VoiceProviderDeliveryModel deliveryModel,
         VoiceCallState state,
         bool answered,
+        string answerCommandId,
         DateTime now,
         CancellationToken cancellationToken)
     {
@@ -458,6 +460,8 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                 session.AnsweredUtc = now;
             }
 
+            StampAnswerCommand(session, answerCommandId);
+
             await _callSessionManager.CreateAsync(session, cancellationToken: cancellationToken);
 
             await PublishAsync(ContactCenterConstants.Events.CallSessionCreated, interaction.ItemId, reservation.AgentId, cancellationToken);
@@ -474,9 +478,28 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             session.AnsweredUtc ??= now;
         }
 
+        StampAnswerCommand(session, answerCommandId);
+
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
 
         return session;
+    }
+
+    /// <summary>
+    /// Records on the session the answer command this accept registered to join the agent.
+    /// </summary>
+    /// <remarks>
+    /// An answered outbound call registers an answer command of its own when the provider reports it connected,
+    /// unless the session already names one. The accept has just registered that command, so without the name a
+    /// connected event arriving after the agent was joined -- the bridge itself reports the call connected -- would
+    /// register a second one and ring the agent again on a call they are already talking on.
+    /// </remarks>
+    private static void StampAnswerCommand(CallSession session, string answerCommandId)
+    {
+        if (!string.IsNullOrEmpty(answerCommandId))
+        {
+            session.Metadata[ContactCenterConstants.CommandMetadata.CommandId] = answerCommandId;
+        }
     }
 
     private Task PublishOfferAcceptedAsync(
