@@ -6419,17 +6419,13 @@
         function scheduleIncomingExpiry() {
             clearIncomingExpiryTimer();
 
-            if (!incomingContext || !incomingContext.properties || !incomingContext.properties.expiresUtc) {
+            // The server's revocation is what stops the ring; this is only the fallback for one that never arrives,
+            // measured on the server's clock and never before its deadline (see soft-phone/offer-deadline.js).
+            var remainingMs = softPhoneModules.offerRingStopDelayMs(incomingContext && incomingContext.properties, Date.now());
+
+            if (remainingMs === null) {
                 return;
             }
-
-            var expiresAt = Date.parse(incomingContext.properties.expiresUtc);
-
-            if (!isFinite(expiresAt)) {
-                return;
-            }
-
-            var remainingMs = expiresAt - Date.now();
 
             if (remainingMs <= 0) {
                 clearIncomingOffer();
@@ -6439,7 +6435,7 @@
 
             incomingExpiryTimer = window.setTimeout(function () {
                 clearIncomingOffer();
-            }, remainingMs + 250);
+            }, remainingMs);
         }
 
         function renderIncomingCards() {

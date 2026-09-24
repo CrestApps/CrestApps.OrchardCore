@@ -24,6 +24,7 @@
       "Assets/js/soft-phone/agent-hold.js",
       "Assets/js/soft-phone/offer-leg.js",
       "Assets/js/soft-phone/offer-ring.js",
+      "Assets/js/soft-phone/offer-deadline.js",
       "Assets/js/soft-phone/call-legs.js",
       "Assets/js/soft-phone/dial-target.js",
       "Assets/js/soft-phone/incoming-card.js",

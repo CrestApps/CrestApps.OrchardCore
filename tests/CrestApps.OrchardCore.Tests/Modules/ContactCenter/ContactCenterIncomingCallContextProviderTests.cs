@@ -10,6 +10,7 @@ using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -124,6 +125,27 @@ public sealed class ContactCenterIncomingCallContextProviderTests
         Assert.Empty(card.Links);
     }
 
+    // Bug: the soft phone stopped ringing on its own clock while the server still held the offer, so the agent saw the
+    // ring end and then, long after, watched their status change as the caller went to voicemail. The offer carries the
+    // server's deadline and the server's clock, so the phone stops ringing when the server moves the caller on, however
+    // far its own clock has drifted.
+    [Fact]
+    public async Task ContributeAsync_CarriesTheOfferDeadlineAndTheServerClock()
+    {
+        // Arrange
+        var now = new DateTime(2026, 9, 24, 4, 9, 40, DateTimeKind.Utc);
+        var clock = Mock.Of<IClock>(value => value.UtcNow == now);
+        var provider = CreateProvider(httpContext: null, requestUrlPrefix: null, clock: clock);
+        var context = CreateContext();
+
+        // Act
+        await provider.ContributeAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("2026-09-24T04:10:00.0000000Z", context.Properties["expiresUtc"]);
+        Assert.Equal("2026-09-24T04:09:40.0000000Z", context.Properties["serverTimeUtc"]);
+    }
+
     private static IncomingCallContributionContext CreateContext()
         => new(new TelephonyCall
         {
@@ -135,7 +157,8 @@ public sealed class ContactCenterIncomingCallContextProviderTests
     private static ContactCenterIncomingCallContextProvider CreateProvider(
         HttpContext httpContext,
         string requestUrlPrefix,
-        OmnichannelActivity activity = null)
+        OmnichannelActivity activity = null,
+        IClock clock = null)
     {
         var agentManager = new Mock<IAgentProfileManager>();
         agentManager
@@ -197,6 +220,7 @@ public sealed class ContactCenterIncomingCallContextProviderTests
             httpContextAccessor.Object,
             new PathLinkGenerator(),
             shellSettings,
+            clock ?? Mock.Of<IClock>(),
             localizer.Object);
     }
 

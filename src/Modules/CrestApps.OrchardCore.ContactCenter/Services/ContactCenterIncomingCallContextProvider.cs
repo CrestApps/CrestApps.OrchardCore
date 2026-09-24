@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.Environment.Shell;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -29,6 +30,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
     private readonly ShellSettings _shellSettings;
+    private readonly IClock _clock;
 
     internal readonly IStringLocalizer S;
 
@@ -45,6 +47,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     /// <param name="httpContextAccessor">The HTTP context accessor used to read the path base of a live request.</param>
     /// <param name="linkGenerator">The link generator used to build the contact and offer-lifecycle URLs.</param>
     /// <param name="shellSettings">The tenant settings whose URL prefix is the path base when no request is live.</param>
+    /// <param name="clock">The clock the offer's deadline is measured against, sent so a client can correct for its own.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterIncomingCallContextProvider(
         IAgentProfileManager agentManager,
@@ -57,6 +60,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         IHttpContextAccessor httpContextAccessor,
         LinkGenerator linkGenerator,
         ShellSettings shellSettings,
+        IClock clock,
         IStringLocalizer<ContactCenterIncomingCallContextProvider> stringLocalizer)
     {
         _agentManager = agentManager;
@@ -69,6 +73,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         _httpContextAccessor = httpContextAccessor;
         _linkGenerator = linkGenerator;
         _shellSettings = shellSettings;
+        _clock = clock;
         S = stringLocalizer;
     }
 
@@ -208,6 +213,10 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
 
         context.Properties["reservationId"] = reservation.ItemId;
         context.Properties["expiresUtc"] = reservation.ExpiresUtc.ToString("O");
+
+        // The deadline is the server's, so the server's clock travels with it: a phone whose own clock has drifted
+        // still stops ringing at the moment the server moves the caller on, not before.
+        context.Properties["serverTimeUtc"] = _clock.UtcNow.ToString("O");
 
         // The leg already rung to the agent's device for this offer, when there is one. The soft phone recognizes that
         // leg by the offer id it carries; this is the provider's own id for it, for a client that sees nothing else.
