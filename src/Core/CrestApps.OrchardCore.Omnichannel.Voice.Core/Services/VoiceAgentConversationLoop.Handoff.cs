@@ -39,28 +39,78 @@ public sealed partial class VoiceAgentConversationLoop
         return (service, flowSettings);
     }
 
-    // Seats the still-connected caller in the configured queue and offers the call to an agent, reusing the inbound
-    // enqueue-and-offer pipeline. On success the call stays up while the queue rings an agent; on failure there is
-    // nowhere to route the caller, so the call is ended.
     /// <summary>
-    /// Clears the durable "a transfer is pending" flag, so the speak.ended raised by whatever we say next does
-    /// not come back around and perform the transfer again.
+    /// Whether this call has already been handed to a person, after which the assistant has no part in it.
+    /// </summary>
+    /// <remarks>
+    /// The escalation flag is the durable record of it: set by the handoff service, and by this loop once any
+    /// handoff succeeds, so it holds whichever service carried the transfer out.
+    /// </remarks>
+    /// <param name="activity">The call's activity.</param>
+    private static bool IsHandedToAgent(OmnichannelActivity activity)
+        => activity.AiEscalated;
+
+    /// <summary>
+    /// Drops a transcript that arrives once the caller is no longer the assistant's to answer.
+    /// </summary>
+    /// <remarks>
+    /// After a handoff the agent is bridged onto this same leg, so anything transcribed is the caller talking to
+    /// the agent. Answering it put the assistant into their conversation: live, it replied, asked for a transfer
+    /// again and announced "connecting you" again until the agent hung up. The same holds while the bridge line
+    /// is still being spoken ahead of the transfer. A transcript arriving at all means the provider is still
+    /// listening, so it is told to stop.
+    /// </remarks>
+    /// <returns><see langword="true"/> when the transcript was dropped.</returns>
+    private async Task<bool> IgnoreWhatIsHeardAfterHandoffAsync(
+        VoiceAgentEvent voiceEvent,
+        IVoiceAgentMediaProvider media,
+        OmnichannelActivity activity,
+        CancellationToken cancellationToken)
+    {
+        if (!IsHandedToAgent(activity) && !activity.TryGet<PendingVoiceHandoff>(out _))
+        {
+            return false;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Ignoring speech heard on AI voice activity '{ActivityId}': the call is being handed to a live agent.",
+                activity.ItemId.SanitizeLogValue());
+        }
+
+        await media.StopTranscriptionAsync(voiceEvent.ProviderCallId, cancellationToken);
+
+        return true;
+    }
+
+    /// <summary>
+    /// Records that the caller has been handed over: the durable "a transfer is pending" flag is cleared, so the
+    /// speak.ended raised by whatever we say next does not perform the transfer again, and the call is marked as
+    /// escalated, so nothing afterwards listens, answers or transfers on it again.
     /// </summary>
     /// <param name="activity">The activity being handed off.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
-    private async Task ClearPendingHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
+    private async Task RecordHandoffAsync(OmnichannelActivity activity, CancellationToken cancellationToken)
     {
         // Re-read: the handoff moved this row through another service, so the copy held here is already stale.
         var current = await _activityStore.FindByIdAsync(activity.ItemId, cancellationToken);
 
-        if (current is not null && current.Properties.Remove(nameof(PendingVoiceHandoff)))
+        if (current is not null)
         {
-            await _activityStore.UpdateAsync(current, cancellationToken);
+            var cleared = current.Properties.Remove(nameof(PendingVoiceHandoff));
+
+            if (cleared || !current.AiEscalated)
+            {
+                current.AiEscalated = true;
+                await _activityStore.UpdateAsync(current, cancellationToken);
+            }
         }
 
         // Also on the in-memory copy the caller is still holding, so a second pass inside this same scope sees
-        // the flag gone rather than re-reading it from a row it has not reloaded.
+        // the call as handed over rather than re-reading it from a row it has not reloaded.
         activity.Properties?.Remove(nameof(PendingVoiceHandoff));
+        activity.AiEscalated = true;
     }
 
     /// <summary>
@@ -186,8 +236,28 @@ public sealed partial class VoiceAgentConversationLoop
         await media.HangupAsync(completion.ProviderCallId, cancellationToken);
     }
 
+    // Seats the still-connected caller in the configured queue and offers the call to an agent, reusing the inbound
+    // enqueue-and-offer pipeline. On success the call stays up while the queue rings an agent; on failure there is
+    // nowhere to route the caller, so the call is ended.
     private async Task PerformVoiceHandoffAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, OmnichannelActivity activity, CancellationToken cancellationToken)
     {
+        // Once is all a call is handed over. A transfer recorded by a turn that was still in flight, or a
+        // finished session delivered twice, reached the queue as "already handed off" -- which reads as success,
+        // so the assistant announced "connecting you" again over the agent who already had the call.
+        if (IsHandedToAgent(activity))
+        {
+            await RecordHandoffAsync(activity, cancellationToken);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "AI voice activity '{ActivityId}' has already been handed to a live agent; the repeated transfer request was ignored.",
+                    activity.ItemId.SanitizeLogValue());
+            }
+
+            return;
+        }
+
         var (handoffService, flowSettings) = await ResolveVoiceHandoffAsync(activity, cancellationToken);
 
         if (handoffService is null)
@@ -231,14 +301,14 @@ public sealed partial class VoiceAgentConversationLoop
             return;
         }
 
-        // The handoff has now happened, so clear the durable flag before anything else is spoken.
+        // The handoff has now happened, so record it before anything else is spoken.
         //
         // Every branch below says something to the caller, and speaking raises another speak.ended, which comes
-        // straight back into the handler that re-reads this flag. Leaving it set turned one transfer into an
-        // endless loop: a caller heard "Thanks for waiting..." seven times in forty-five seconds, once every few
-        // seconds until they hung up. It used to be cleared only on the after-hours branch, which is why the
-        // ordinary routed transfer — much the commoner path — was the one that repeated.
-        await ClearPendingHandoffAsync(activity, cancellationToken);
+        // straight back into the handler that re-reads the pending flag. Leaving it set turned one transfer into
+        // an endless loop: a caller heard "Thanks for waiting..." seven times in forty-five seconds, once every
+        // few seconds until they hung up. Clearing it alone was not enough either: that speak.ended then started
+        // listening again, and the assistant carried on the conversation over the agent it had just handed to.
+        await RecordHandoffAsync(activity, cancellationToken);
 
         // After hours the destination queue is closed, so a callback was scheduled instead of routing the live
         // call. Tell the caller and end the call gracefully. The closing line is spoken and stored with the

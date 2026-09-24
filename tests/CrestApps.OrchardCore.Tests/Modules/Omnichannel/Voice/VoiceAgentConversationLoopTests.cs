@@ -32,7 +32,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
 /// decides to escalate. Until the loop was lifted out of the provider module, none of this could be covered
 /// without a Telnyx account and a live phone call.
 /// </summary>
-public sealed class VoiceAgentConversationLoopTests
+public sealed partial class VoiceAgentConversationLoopTests
 {
     [Fact]
     public async Task WhenTheCallIsAnswered_TheAssistantSpeaksFirst()
@@ -1209,6 +1209,7 @@ public sealed class VoiceAgentConversationLoopTests
                 .Callback<AIDeployment, IEnumerable<ChatMessage>, AICompletionContext, CancellationToken>((_, messages, context, _) =>
                 {
                     Transcript = [.. messages];
+                    Completions++;
 
                     // The context is what carries the tools to the model, so keeping it is how a test can ask
                     // what the model was actually offered on this turn. DuringCompletion stands in for the model
@@ -1370,6 +1371,16 @@ public sealed class VoiceAgentConversationLoopTests
         /// The messages the model was given on the last turn.
         /// </summary>
         public List<ChatMessage> Transcript { get; private set; } = [];
+
+        /// <summary>
+        /// How many times the model was asked for a turn.
+        /// </summary>
+        public int Completions { get; private set; }
+
+        /// <summary>
+        /// How many turns the transcript holds.
+        /// </summary>
+        public int PromptCount => _prompts.Count;
 
         /// <summary>
         /// The completion context the model was given on the last turn.

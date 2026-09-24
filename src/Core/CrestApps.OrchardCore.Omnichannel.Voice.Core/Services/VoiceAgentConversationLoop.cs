@@ -444,6 +444,13 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
             return;
         }
 
+        // The caller belongs to an agent now, bridged onto this same leg: listening again is how the assistant
+        // ended up answering the two of them. Only the after-hours goodbye above still has anything to do.
+        if (IsHandedToAgent(activity))
+        {
+            return;
+        }
+
         // A voicemail whose greeting ended while the assistant was talking is recording now: leave the message.
         if (await LeaveVoicemailOnceTheGreetingHasEndedAsync(voiceEvent, media, activity, cancellationToken))
         {
@@ -464,7 +471,7 @@ public sealed partial class VoiceAgentConversationLoop : IVoiceAgentConversation
 
         var activity = await _activityStore.FindByIdAsync(voiceEvent.ActivityId, cancellationToken);
 
-        if (activity is null)
+        if (activity is null || await IgnoreWhatIsHeardAfterHandoffAsync(voiceEvent, media, activity, cancellationToken))
         {
             return;
         }
