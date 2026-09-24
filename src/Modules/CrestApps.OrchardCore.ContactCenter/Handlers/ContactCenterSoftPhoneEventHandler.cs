@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.PhoneNumbers;
 using CrestApps.OrchardCore.SignalR.Core;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Hubs;
@@ -246,11 +247,16 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
             interaction.AnsweredUtc ??
             interaction.CreatedUtc;
 
+        // The customer is the interaction's customer address. The session's addresses follow whichever provider leg
+        // reported last -- for a call the platform bridged to the agent, the leg it dialed from its own number -- so
+        // taken as they are, the soft phone showed the tenant's own caller id as the party on the line.
+        var (from, to) = ResolveParties(interaction, session);
+
         return new TelephonyCall
         {
             CallId = session?.ProviderCallId ?? interaction.ProviderInteractionId,
-            From = session?.FromAddress ?? interaction.CustomerAddress,
-            To = session?.ToAddress ?? ResolveServiceAddress(interaction),
+            From = from,
+            To = to,
             State = MapCallState(session?.State, interaction.Status),
             Direction = MapDirection(interaction.Direction),
             IsMuted = session?.IsMuted ?? false,
@@ -261,6 +267,33 @@ public sealed class ContactCenterSoftPhoneEventHandler : IContactCenterEventHand
                 : new DateTimeOffset(DateTime.SpecifyKind(startedUtc, DateTimeKind.Utc)),
             Metadata = BuildMetadata(interaction, session),
         };
+    }
+
+    private static (string From, string To) ResolveParties(Interaction interaction, CallSession session)
+    {
+        var customer = interaction.CustomerAddress;
+
+        if (string.IsNullOrWhiteSpace(customer))
+        {
+            return (session?.FromAddress, session?.ToAddress ?? ResolveServiceAddress(interaction));
+        }
+
+        // The platform's side is whichever known address is not the customer's.
+        var platform = new[] { ResolveServiceAddress(interaction), session?.FromAddress, session?.ToAddress }
+            .FirstOrDefault(address => !string.IsNullOrWhiteSpace(address) && !IsSameAddress(address, customer));
+
+        return interaction.Direction == InteractionDirection.Inbound
+            ? (customer, platform)
+            : (platform, customer);
+    }
+
+    private static bool IsSameAddress(string left, string right)
+    {
+        var leftKey = PhoneNumberComparisonKey.For(default, left);
+
+        return leftKey.Length > 0
+            ? string.Equals(leftKey, PhoneNumberComparisonKey.For(default, right), StringComparison.Ordinal)
+            : string.Equals(left.Trim(), right.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static Dictionary<string, object> BuildMetadata(Interaction interaction, CallSession session)
