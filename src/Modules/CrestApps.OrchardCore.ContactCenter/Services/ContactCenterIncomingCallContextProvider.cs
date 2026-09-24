@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
+using OrchardCore.Environment.Shell;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -23,6 +24,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     private readonly IContentManager _contentManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
+    private readonly ShellSettings _shellSettings;
 
     internal readonly IStringLocalizer S;
 
@@ -35,8 +37,9 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     /// <param name="queueManager">The queue manager used to resolve the offered queue name.</param>
     /// <param name="contactLookup">The contact lookup used to match customers by phone number.</param>
     /// <param name="contentManager">The content manager used to load matched contact content items.</param>
-    /// <param name="httpContextAccessor">The HTTP context accessor used to build same-origin URLs.</param>
+    /// <param name="httpContextAccessor">The HTTP context accessor used to read the path base of a live request.</param>
     /// <param name="linkGenerator">The link generator used to build the contact and offer-lifecycle URLs.</param>
+    /// <param name="shellSettings">The tenant settings whose URL prefix is the path base when no request is live.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ContactCenterIncomingCallContextProvider(
         IAgentProfileManager agentManager,
@@ -47,6 +50,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         IContentManager contentManager,
         IHttpContextAccessor httpContextAccessor,
         LinkGenerator linkGenerator,
+        ShellSettings shellSettings,
         IStringLocalizer<ContactCenterIncomingCallContextProvider> stringLocalizer)
     {
         _agentManager = agentManager;
@@ -57,6 +61,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         _contentManager = contentManager;
         _httpContextAccessor = httpContextAccessor;
         _linkGenerator = linkGenerator;
+        _shellSettings = shellSettings;
         S = stringLocalizer;
     }
 
@@ -70,8 +75,12 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
             return;
         }
 
-        var httpContext = _httpContextAccessor.HttpContext;
-        var queueName = await ContributeOfferLifecycleAsync(context, httpContext, cancellationToken);
+        // Every URL is built from the path base alone, never from the request itself. An offer is often dispatched
+        // from work that outlives the webhook request that started it (an AI handoff runs off the request thread),
+        // and the accessor can still hand back that request after it has been disposed: link generation reads its
+        // features and throws, and the offer went out without its accept and decline actions.
+        var pathBase = ResolvePathBase();
+        var queueName = await ContributeOfferLifecycleAsync(context, pathBase, cancellationToken);
 
         if (string.IsNullOrEmpty(call.From))
         {
@@ -107,20 +116,17 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
                 card.Badges.Add(queueName);
             }
 
-            if (httpContext is not null)
-            {
-                card.Url = _linkGenerator.GetPathByAction(
-                    httpContext,
-                    action: "Edit",
-                    controller: "Admin",
-                    values: new { area = "OrchardCore.Contents", contentItemId = contact.ContentItemId });
-            }
+            card.Url = _linkGenerator.GetPathByAction(
+                action: "Edit",
+                controller: "Admin",
+                values: new { area = "OrchardCore.Contents", contentItemId = contact.ContentItemId },
+                pathBase: pathBase);
 
             context.Cards.Add(card);
         }
     }
 
-    private async Task<string> ContributeOfferLifecycleAsync(IncomingCallContributionContext context, HttpContext httpContext, CancellationToken cancellationToken)
+    private async Task<string> ContributeOfferLifecycleAsync(IncomingCallContributionContext context, PathString pathBase, CancellationToken cancellationToken)
     {
         var agent = await _agentManager.FindByUserIdAsync(context.UserId, cancellationToken);
 
@@ -139,14 +145,9 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         // The offer accept/decline actions must be present even when there is no ambient request. The queue
         // ring is dispatched from the reservation event on a background scope (no HttpContext), and that push
         // reaches the soft-phone page too; if its context omitted these actions it would downgrade the modal
-        // and the page could no longer accept the reservation. Build the same-origin paths from the request
-        // when one exists (so a hosted path base is honored) and from the tenant routes otherwise.
-        var acceptUrl = httpContext is not null
-            ? _linkGenerator.GetPathByName(httpContext, "ContactCenterVoiceAcceptOffer", new { reservationId = reservation.ItemId })
-            : _linkGenerator.GetPathByName("ContactCenterVoiceAcceptOffer", new { reservationId = reservation.ItemId });
-        var declineUrl = httpContext is not null
-            ? _linkGenerator.GetPathByName(httpContext, "ContactCenterVoiceDeclineOffer", new { reservationId = reservation.ItemId })
-            : _linkGenerator.GetPathByName("ContactCenterVoiceDeclineOffer", new { reservationId = reservation.ItemId });
+        // and the page could no longer accept the reservation.
+        var acceptUrl = _linkGenerator.GetPathByName("ContactCenterVoiceAcceptOffer", new { reservationId = reservation.ItemId }, pathBase);
+        var declineUrl = _linkGenerator.GetPathByName("ContactCenterVoiceDeclineOffer", new { reservationId = reservation.ItemId }, pathBase);
 
         if (!string.IsNullOrEmpty(acceptUrl))
         {
@@ -200,5 +201,30 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
         context.Call.Metadata["queueName"] = queue.Name;
 
         return queue.Name;
+    }
+
+    /// <summary>
+    /// The path base the same-origin URLs are built under: the live request's, which carries a hosted path base as
+    /// well as the tenant prefix, or the tenant prefix alone when no request is live.
+    /// </summary>
+    private PathString ResolvePathBase()
+    {
+        try
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+
+            if (httpContext is not null)
+            {
+                return httpContext.Request.PathBase;
+            }
+        }
+        catch (ObjectDisposedException)
+        {
+            // The request this work started on has ended; the tenant prefix below is all that is left of it.
+        }
+
+        return string.IsNullOrEmpty(_shellSettings.RequestUrlPrefix)
+            ? PathString.Empty
+            : new PathString("/" + _shellSettings.RequestUrlPrefix.Trim('/'));
     }
 }
