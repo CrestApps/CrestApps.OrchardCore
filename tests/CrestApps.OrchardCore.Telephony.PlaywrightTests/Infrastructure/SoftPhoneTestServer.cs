@@ -69,11 +69,17 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
     /// </summary>
     public static IReadOnlyList<string> ScriptUrls { get; } = SoftPhoneAssets.ResolveHarnessScriptUrls();
 
+    // Only the files the harness page loads are served, looked up by the URL the manifest gives them, so a request's
+    // path never becomes a file path.
+    private static readonly Dictionary<string, string> _moduleAssets = ScriptUrls
+        .Where(url => url.StartsWith(SoftPhoneAssets.ModuleUrlPrefix, StringComparison.Ordinal))
+        .Select(url => url[SoftPhoneAssets.ModuleUrlPrefix.Length..])
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToDictionary(relative => relative, SoftPhoneAssets.ResolveModuleFile, StringComparer.OrdinalIgnoreCase);
+
     private static IResult ServeModuleAsset(string path)
     {
-        var file = SoftPhoneAssets.ResolveModuleFile(path);
-
-        if (!File.Exists(file))
+        if (string.IsNullOrEmpty(path) || !_moduleAssets.TryGetValue(path, out var file) || !File.Exists(file))
         {
             return Results.NotFound();
         }
