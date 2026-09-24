@@ -25,6 +25,15 @@
   'use strict';
 
   var DEFAULT_HEARTBEAT_INTERVAL_MS = 30000;
+
+  // The hub carries the agent's presence, so the client never stops trying to reach it: SignalR's default schedule
+  // gives up after about 42 seconds, which a server restart outlasts, and the agent then stays offline to routing
+  // until the page is reloaded.
+  var RECONNECT_DELAYS_MS = [0, 2000, 5000, 10000, 20000, 30000];
+  function reconnectDelayMs(previousRetryCount) {
+    var index = Math.max(0, Math.min(previousRetryCount || 0, RECONNECT_DELAYS_MS.length - 1));
+    return RECONNECT_DELAYS_MS[index];
+  }
   function noop() {}
   function connect(options) {
     options = options || {};
@@ -34,7 +43,14 @@
     if (!options.hubUrl) {
       throw new Error('A "hubUrl" option is required to connect to the Contact Center hub.');
     }
-    var connection = new window.signalR.HubConnectionBuilder().withUrl(options.hubUrl).withAutomaticReconnect().build();
+    var connection = new window.signalR.HubConnectionBuilder().withUrl(options.hubUrl).withAutomaticReconnect({
+      nextRetryDelayInMilliseconds: function (retryContext) {
+        return reconnectDelayMs(retryContext.previousRetryCount);
+      }
+    }).build();
+    var stopped = false;
+    var restartAttempt = 0;
+    var restartTimer = null;
     connection.on('PresenceChanged', options.onPresenceChanged || noop);
     connection.on('OfferReceived', options.onOfferReceived || noop);
     connection.on('OfferRevoked', options.onOfferRevoked || noop);
@@ -88,19 +104,49 @@
       if (typeof options.onDisconnected === 'function') {
         options.onDisconnected(error);
       }
-    });
-    var started = connection.start().then(function () {
-      startHeartbeat();
-      if (typeof options.onConnected === 'function') {
-        options.onConnected();
+
+      // A connection the page did not stop is started again: automatic reconnect does not cover a start
+      // that never succeeded, nor a connection the server closed outright.
+      if (!stopped) {
+        scheduleRestart();
       }
-      return loadSnapshot().catch(function () {});
-    }).catch(function (error) {
-      if (typeof options.onError === 'function') {
-        options.onError(error);
-      }
-      throw error;
     });
+    var resolveStarted;
+    var started = new Promise(function (resolve) {
+      resolveStarted = resolve;
+    });
+    function scheduleRestart() {
+      if (restartTimer || stopped) {
+        return;
+      }
+      restartTimer = window.setTimeout(function () {
+        restartTimer = null;
+        restartAttempt++;
+        startConnection();
+      }, reconnectDelayMs(restartAttempt + 1));
+    }
+    function startConnection() {
+      var isRestart = restartAttempt > 0;
+      return connection.start().then(function () {
+        restartAttempt = 0;
+        startHeartbeat();
+        if (typeof options.onConnected === 'function') {
+          options.onConnected();
+        }
+        return loadSnapshot().catch(function () {}).then(function (snapshot) {
+          if (isRestart && typeof options.onReconnected === 'function') {
+            options.onReconnected(connection.connectionId, snapshot);
+          }
+          resolveStarted(snapshot);
+        });
+      }).catch(function (error) {
+        if (typeof options.onError === 'function') {
+          options.onError(error);
+        }
+        scheduleRestart();
+      });
+    }
+    startConnection();
     return {
       connection: connection,
       started: started,
@@ -112,7 +158,12 @@
         return connection.invoke('UnwatchQueue', queueId);
       },
       stop: function () {
+        stopped = true;
         stopHeartbeat();
+        if (restartTimer) {
+          window.clearTimeout(restartTimer);
+          restartTimer = null;
+        }
         return connection.stop();
       }
     };
