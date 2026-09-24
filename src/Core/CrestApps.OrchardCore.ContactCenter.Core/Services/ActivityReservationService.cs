@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <summary>
 /// Provides the default implementation of <see cref="IActivityReservationService"/>.
 /// </summary>
-public sealed partial class ActivityReservationService : IActivityReservationService, IActivityReservationReclaimer
+public sealed partial class ActivityReservationService : IActivityReservationService, IActivityReservationReclaimer, IReservationDeadlineExpirer
 {
     private readonly IActivityReservationManager _reservationManager;
     private readonly IQueueItemManager _queueItemManager;

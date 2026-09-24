@@ -37,6 +37,8 @@ public sealed partial class ActivityReservationService
         return await ExpireDueCoreAsync(maxReservations, lockWait: _coordinationOptions.ReclaimLockWait, cancellationToken);
     }
 
+    private static readonly TimeSpan _retryAfterContention = TimeSpan.FromSeconds(1);
+
     private async Task<int> ExpireDueCoreAsync(int? maxReservations, TimeSpan lockWait, CancellationToken cancellationToken)
     {
         var now = _clock.UtcNow;
@@ -78,33 +80,10 @@ public sealed partial class ActivityReservationService
                 cancellationToken.ThrowIfCancellationRequested();
                 examined++;
 
-                (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
-                    GetReservationLockKey(candidate.ItemId),
-                    lockWait,
-                    _coordinationOptions.ReservationLockExpiration);
-
-                if (!locked)
+                if ((await TryExpireAsync(candidate.ItemId, now, lockWait, cancellationToken)).Outcome == DeadlineOutcome.Expired)
                 {
-                    continue;
+                    count++;
                 }
-
-                await using var acquiredLock = locker;
-
-                var reservation = await _reservationManager.FindByIdAsync(candidate.ItemId, cancellationToken);
-
-                if (reservation is null ||
-                    reservation.Status != ReservationStatus.Pending ||
-                    reservation.ExpiresUtc > now)
-                {
-                    continue;
-                }
-
-                await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
-                await CommitTransitionAsync(
-                    reservation.ActivityItemId,
-                    reservation.AgentId,
-                    cancellationToken);
-                count++;
             }
 
             if (!page.HasMore)
@@ -122,6 +101,78 @@ public sealed partial class ActivityReservationService
         }
 
         return count;
+    }
+
+    /// <inheritdoc/>
+    public async Task<DateTime?> ExpireAtDeadlineAsync(string reservationId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(reservationId);
+
+        var now = _clock.UtcNow;
+
+        try
+        {
+            (var outcome, var expiresUtc) = await TryExpireAsync(reservationId, now, _coordinationOptions.ReservationLockTimeout, cancellationToken);
+
+            return outcome switch
+            {
+                // Extended since the deadline was armed, or the timer ran early against the tenant clock.
+                DeadlineOutcome.NotDue => expiresUtc,
+
+                // Another transition held the offer for the whole wait; whichever way it went, a second look settles it.
+                DeadlineOutcome.Locked => now.Add(_retryAfterContention),
+
+                _ => null,
+            };
+        }
+        catch (ConcurrencyException)
+        {
+            // An accept or a decline won the compare-and-set. A fresh scope reads what it did.
+            return now.Add(_retryAfterContention);
+        }
+    }
+
+    /// <summary>
+    /// Expires one reservation when it is still ringing and due, under its reservation lock: the one place the sweep
+    /// and the offer's own deadline timer both settle an unanswered offer, so they cannot disagree about when.
+    /// </summary>
+    private async Task<(DeadlineOutcome Outcome, DateTime ExpiresUtc)> TryExpireAsync(
+        string reservationId,
+        DateTime now,
+        TimeSpan lockWait,
+        CancellationToken cancellationToken)
+    {
+        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(
+            GetReservationLockKey(reservationId),
+            lockWait,
+            _coordinationOptions.ReservationLockExpiration);
+
+        if (!locked)
+        {
+            return (DeadlineOutcome.Locked, default);
+        }
+
+        await using var acquiredLock = locker;
+
+        var reservation = await _reservationManager.FindByIdAsync(reservationId, cancellationToken);
+
+        if (reservation is null || reservation.Status != ReservationStatus.Pending)
+        {
+            return (DeadlineOutcome.Settled, default);
+        }
+
+        if (reservation.ExpiresUtc > now)
+        {
+            return (DeadlineOutcome.NotDue, reservation.ExpiresUtc);
+        }
+
+        await ReleaseAsync(reservation, ReservationStatus.Expired, cancellationToken);
+        await CommitTransitionAsync(
+            reservation.ActivityItemId,
+            reservation.AgentId,
+            cancellationToken);
+
+        return (DeadlineOutcome.Expired, reservation.ExpiresUtc);
     }
 
     private async Task ReleaseAsync(ActivityReservation reservation, ReservationStatus status, CancellationToken cancellationToken)
@@ -355,6 +406,14 @@ public sealed partial class ActivityReservationService
 
             throw;
         }
+    }
+
+    private enum DeadlineOutcome
+    {
+        Expired,
+        Locked,
+        NotDue,
+        Settled,
     }
 
     private static bool IsDirectVoicemailEnabled(Interaction interaction)

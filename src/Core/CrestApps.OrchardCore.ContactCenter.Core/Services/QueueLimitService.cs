@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -113,19 +114,7 @@ public sealed class QueueLimitService : IQueueLimitService
 
         foreach (var item in waiting)
         {
-            // The wait is measured from when the caller entered this queue, which is what the queue promised
-            // to cap. A caller who overflowed in from elsewhere starts this queue's clock afresh, the same way
-            // its overflow thresholds do.
-            var enteredUtc = item.QueueEnteredUtc == default
-                ? item.EnqueuedUtc
-                : item.QueueEnteredUtc;
-
-            if ((now - enteredUtc).TotalSeconds < queue.MaxWaitSeconds)
-            {
-                continue;
-            }
-
-            if (await ApplyMaxWaitActionAsync(item, queue, cancellationToken))
+            if (HasWaitedPastMax(item, queue, now) && await ApplyMaxWaitActionAsync(item, queue, cancellationToken))
             {
                 applied++;
             }
@@ -133,6 +122,49 @@ public sealed class QueueLimitService : IQueueLimitService
 
         return applied;
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> EnforceMaxWaitAsync(QueueItem item, ActivityQueue queue, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(queue);
+
+        if (queue.MaxWaitSeconds <= 0 ||
+            queue.MaxWaitAction == QueueMaxWaitAction.None ||
+            item.Status != QueueItemStatus.Waiting ||
+            !string.Equals(item.QueueId, queue.ItemId, StringComparison.Ordinal) ||
+            !HasWaitedPastMax(item, queue, _clock.UtcNow))
+        {
+            return false;
+        }
+
+        return await ApplyMaxWaitActionAsync(item, queue, cancellationToken);
+    }
+
+    /// <summary>
+    /// When a caller's maximum wait falls due, or <see langword="null"/> when the queue sets none.
+    /// </summary>
+    /// <param name="item">The waiting caller.</param>
+    /// <param name="queue">The queue the caller is waiting in.</param>
+    public static DateTime? GetMaxWaitDueUtc(QueueItem item, ActivityQueue queue)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(queue);
+
+        return queue.MaxWaitSeconds <= 0 || queue.MaxWaitAction == QueueMaxWaitAction.None
+            ? null
+            : GetEnteredUtc(item).AddSeconds(queue.MaxWaitSeconds);
+    }
+
+    private static bool HasWaitedPastMax(QueueItem item, ActivityQueue queue, DateTime now)
+        => (now - GetEnteredUtc(item)).TotalSeconds >= queue.MaxWaitSeconds;
+
+    // The wait is measured from when the caller entered this queue, which is what the queue promised to cap. A caller
+    // who overflowed in from elsewhere starts this queue's clock afresh, the same way its overflow thresholds do.
+    private static DateTime GetEnteredUtc(QueueItem item)
+        => item.QueueEnteredUtc == default
+            ? item.EnqueuedUtc
+            : item.QueueEnteredUtc;
 
     private async Task<bool> ApplyMaxWaitActionAsync(QueueItem item, ActivityQueue queue, CancellationToken cancellationToken)
     {

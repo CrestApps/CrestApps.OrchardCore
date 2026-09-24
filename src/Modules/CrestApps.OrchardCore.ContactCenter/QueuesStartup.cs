@@ -59,6 +59,7 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<ActivityReservationService>()
             .AddScoped<IActivityReservationService>(static sp => sp.GetRequiredService<ActivityReservationService>())
             .AddScoped<IActivityReservationReclaimer>(static sp => sp.GetRequiredService<ActivityReservationService>())
+            .AddScoped<IReservationDeadlineExpirer>(static sp => sp.GetRequiredService<ActivityReservationService>())
             .AddScoped<IContactCenterRetentionPolicy, QueueItemRetentionPolicy>()
             .AddScoped<IContactCenterRetentionPolicy, ActivityReservationRetentionPolicy>()
             .AddScoped<ContactCenterAdminFormOptionsProvider>()
@@ -140,6 +141,17 @@ public sealed class QueuesStartup : StartupBase
                 ContactCenterConstants.Feature.Queues,
                 serviceProvider.GetRequiredService<IContactCenterFeatureWorkManager>(),
                 serviceProvider.GetRequiredService<IOptions<ContactCenterFeatureLifecycleOptions>>()));
+
+        // Deadlines are enforced when they fall due, not when a sweep next runs. Orchard runs a tenant's background
+        // tasks one after another, and several of ours hold that loop for most of a minute, so an offer that only a
+        // sweep expires kept its caller ringing for more than a minute past a thirty-second window. The sweeps stay
+        // as the durable backstop for restarts, other nodes, and anything the in-process deadline missed.
+        services.TryAddSingleton<IContactCenterDeadlineScheduler, ContactCenterDeadlineScheduler>();
+        services.AddScoped<IContactCenterEventHandler, OfferDeadlineEventHandler>();
+        services
+            .AddScoped<IQueueWaitDeadlineEnforcer, QueueWaitDeadlineEnforcer>()
+            .AddScoped(sp => new Lazy<IQueueWaitDeadlineEnforcer>(sp.GetRequiredService<IQueueWaitDeadlineEnforcer>))
+            .AddScoped<IContactCenterEventHandler, QueueWaitDeadlineEventHandler>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, ReservationExpiryBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, DirectRingTimeoutBackgroundTask>());

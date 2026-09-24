@@ -23,4 +23,14 @@ public interface IQueueLimitService
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The number of callers the action was applied to.</returns>
     Task<int> EnforceMaxWaitAsync(ActivityQueue queue, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Applies the queue's maximum-wait action to one caller, when that caller is still waiting in it and has waited
+    /// past it.
+    /// </summary>
+    /// <param name="item">The waiting caller.</param>
+    /// <param name="queue">The queue the caller is waiting in.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the action was applied.</returns>
+    Task<bool> EnforceMaxWaitAsync(QueueItem item, ActivityQueue queue, CancellationToken cancellationToken = default);
 }
