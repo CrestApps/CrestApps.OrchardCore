@@ -26,6 +26,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     private readonly IInteractionManager _interactionManager;
     private readonly IContactCenterWorkStateService _workStateService;
     private readonly IContactCenterActivityWriter _activityWriter;
+    private readonly IAgentStateTransitionService _stateTransitions;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
@@ -47,6 +48,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
     /// <param name="interactionManager">The interaction manager.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
     /// <param name="activityWriter">The writer used to apply CRM activity lifecycle changes outside the routing transaction.</param>
+    /// <param name="stateTransitions">The one place agent state is changed and recorded.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="providerCommandStateServices">The optional durable provider-command service used for voice-specific timeout actions.</param>
     /// <param name="scopeExecutor">The executor used to wake provider-command processing after commit.</param>
@@ -64,6 +66,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         IInteractionManager interactionManager,
         IContactCenterWorkStateService workStateService,
         IContactCenterActivityWriter activityWriter,
+        IAgentStateTransitionService stateTransitions,
         IContactCenterEventPublisher publisher,
         IEnumerable<IProviderCommandStateService> providerCommandStateServices,
         IContactCenterScopeExecutor scopeExecutor,
@@ -82,6 +85,7 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
         _interactionManager = interactionManager;
         _workStateService = workStateService;
         _activityWriter = activityWriter;
+        _stateTransitions = stateTransitions;
         _publisher = publisher;
         _providerCommandStateService = providerCommandStateServices.FirstOrDefault();
         _scopeExecutor = scopeExecutor;
@@ -187,12 +191,22 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             agent.RequestedPresenceStatus = agent.PresenceStatus == AgentPresenceStatus.RequestBreak
                 ? AgentPresenceStatus.Break
                 : agent.PresenceStatus;
+
+            // Captured, not asked for: returning here when the work ends is the work ending, not a request.
+            agent.PresenceRequestedUtc = null;
         }
 
-        agent.PresenceStatus = AgentPresenceStatus.Reserved;
         agent.ActiveReservationId = reservation.ItemId;
-        agent.PresenceChangedUtc = now;
         agent.LastAssignedUtc = now;
+
+        await _stateTransitions.TransitionAsync(agent, AgentPresenceStatus.Reserved, new AgentStateChangeContext
+        {
+            Source = AgentStateChangeSources.Reserved,
+            ReservationId = reservation.ItemId,
+            InteractionId = await FindInteractionIdAsync(queueItem.ActivityItemId, cancellationToken),
+            ChangedUtc = now,
+        }, cancellationToken);
+
         await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
 
         await _workStateService.MutateAsync(queueItem.ActivityItemId, workState =>
@@ -272,9 +286,16 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
 
         if (agent is not null)
         {
-            agent.PresenceStatus = AgentPresenceStatus.Busy;
             agent.ActiveReservationId = null;
-            agent.PresenceChangedUtc = _clock.UtcNow;
+
+            await _stateTransitions.TransitionAsync(agent, AgentPresenceStatus.Busy, new AgentStateChangeContext
+            {
+                Actor = ContactCenterActor.Agent(agent.UserId),
+                Source = AgentStateChangeSources.Accepted,
+                ReservationId = reservation.ItemId,
+                InteractionId = await FindInteractionIdAsync(reservation.ActivityItemId, cancellationToken),
+            }, cancellationToken);
+
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
         }
 
@@ -452,10 +473,14 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             !hasNewerAgentWork &&
             (ownsPendingReservation || ownsAcceptedReservation))
         {
-            agent.PresenceStatus = agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent);
-            agent.RequestedPresenceStatus = null;
-            agent.ActiveReservationId = null;
-            agent.PresenceChangedUtc = now;
+            await ReleaseAgentStateAsync(
+                agent,
+                reservation,
+                AgentReleaseReasons.Compensated,
+                await FindInteractionIdAsync(reservation.ActivityItemId, cancellationToken),
+                now,
+                cancellationToken);
+
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
             agentReleased = true;
         }

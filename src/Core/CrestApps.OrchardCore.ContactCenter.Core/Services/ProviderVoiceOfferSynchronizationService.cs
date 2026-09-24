@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -35,7 +36,8 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
     /// <param name="agentManager">The agent manager.</param>
     /// <param name="activityManager">The activity manager.</param>
     /// <param name="workStateService">The routing-owned work state service.</param>
-    /// <param name="serviceProvider">The service provider used to lazily resolve presence management without an event-publisher cycle.</param>
+    /// <param name="serviceProvider">The service provider used to lazily resolve presence management and the agent state
+    /// transition point without an event-publisher cycle.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
     public ProviderVoiceOfferSynchronizationService(
@@ -136,11 +138,11 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
                     string.IsNullOrWhiteSpace(agent.ActiveReservationId) &&
                     agent.PresenceStatus is AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp)
                 {
-                    await presenceManager.CompleteWorkAsync(answeredAgentId, cancellationToken);
+                    await presenceManager.CompleteWorkAsync(answeredAgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId }, cancellationToken);
                 }
                 else if (startsWrapUp)
                 {
-                    await presenceManager.StartWrapUpAsync(answeredAgentId, cancellationToken);
+                    await presenceManager.StartWrapUpAsync(answeredAgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId }, cancellationToken);
                 }
             }
 
@@ -171,21 +173,37 @@ public sealed class ProviderVoiceOfferSynchronizationService : IProviderVoiceOff
 
             if (agent is not null)
             {
-                if (!string.IsNullOrWhiteSpace(agent.ActiveReservationId) &&
-                    canceledReservationIds.Contains(agent.ActiveReservationId))
+                var releasedReservationId = !string.IsNullOrWhiteSpace(agent.ActiveReservationId) &&
+                    canceledReservationIds.Contains(agent.ActiveReservationId)
+                    ? agent.ActiveReservationId
+                    : null;
+
+                if (releasedReservationId is not null)
                 {
                     agent.ActiveReservationId = null;
                 }
 
-                if (agent.PresenceStatus is AgentPresenceStatus.Reserved or
+                var targetStatus = agent.PresenceStatus is AgentPresenceStatus.Reserved or
                     AgentPresenceStatus.Busy or
-                    AgentPresenceStatus.WrapUp)
-                {
-                    agent.PresenceStatus = AgentPresenceUtilities.ResolveDefaultReadyState(agent);
-                }
+                    AgentPresenceStatus.WrapUp
+                    ? AgentPresenceUtilities.ResolveDefaultReadyState(agent)
+                    : agent.PresenceStatus;
 
                 agent.RequestedPresenceStatus = null;
-                agent.PresenceChangedUtc = _clock.UtcNow;
+
+                // The provider says the call is over while routing still has the agent on it; the platform puts
+                // the agent right, and the audit records that it did rather than letting the state change silently.
+                // Resolved here rather than injected: the transition point records through the event publisher,
+                // whose handlers are what construct this service.
+                var stateTransitions = _serviceProvider.GetRequiredService<IAgentStateTransitionService>();
+
+                await stateTransitions.TransitionAsync(agent, targetStatus, new AgentStateChangeContext
+                {
+                    Source = AgentStateChangeSources.Reconciled,
+                    InteractionId = interaction.ItemId,
+                    ReservationId = releasedReservationId,
+                }, cancellationToken);
+
                 await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
             }
         }

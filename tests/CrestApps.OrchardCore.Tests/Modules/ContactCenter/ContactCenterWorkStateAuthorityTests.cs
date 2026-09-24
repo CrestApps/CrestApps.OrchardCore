@@ -708,6 +708,7 @@ public sealed class ContactCenterWorkStateAuthorityTests
         services.AddSingleton<IContactCenterWorkStateActivityProjection, ContactCenterWorkStateActivityProjection>();
         services.AddSingleton<IContactCenterWorkStateService, ContactCenterWorkStateService>();
         services.AddSingleton<IContactCenterActivityWriter, ContactCenterActivityWriter>();
+        services.AddSingleton<IAgentStateTransitionService>(AgentStateAuditTestDoubles.CreateTransitions());
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
 
         return services.BuildServiceProvider();

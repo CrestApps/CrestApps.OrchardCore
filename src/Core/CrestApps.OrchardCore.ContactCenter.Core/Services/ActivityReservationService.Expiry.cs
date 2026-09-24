@@ -152,10 +152,14 @@ public sealed partial class ActivityReservationService
             if (obsoleteAgent is not null &&
                 string.Equals(obsoleteAgent.ActiveReservationId, reservation.ItemId, StringComparison.Ordinal))
             {
-                obsoleteAgent.PresenceStatus = obsoleteAgent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(obsoleteAgent);
-                obsoleteAgent.RequestedPresenceStatus = null;
-                obsoleteAgent.ActiveReservationId = null;
-                obsoleteAgent.PresenceChangedUtc = now;
+                await ReleaseAgentStateAsync(
+                    obsoleteAgent,
+                    reservation,
+                    ResolveReleaseReason(status),
+                    await FindInteractionIdAsync(reservation.ActivityItemId, cancellationToken),
+                    now,
+                    cancellationToken);
+
                 await _agentManager.UpdateAsync(obsoleteAgent, cancellationToken: cancellationToken);
                 await PublishAsync(ContactCenterConstants.Events.AgentReleased, reservation, cancellationToken);
             }
@@ -249,10 +253,8 @@ public sealed partial class ActivityReservationService
 
         if (agent is not null)
         {
-            agent.PresenceStatus = agent.RequestedPresenceStatus ?? AgentPresenceUtilities.ResolveDefaultReadyState(agent);
-            agent.RequestedPresenceStatus = null;
-            agent.ActiveReservationId = null;
-            agent.PresenceChangedUtc = now;
+            await ReleaseAgentStateAsync(agent, reservation, ResolveReleaseReason(status), interaction?.ItemId, now, cancellationToken);
+
             await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);
         }
 

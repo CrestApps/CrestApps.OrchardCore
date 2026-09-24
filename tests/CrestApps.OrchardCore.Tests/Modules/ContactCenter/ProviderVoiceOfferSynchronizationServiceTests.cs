@@ -79,6 +79,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         clock.SetupGet(c => c.UtcNow).Returns(new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc));
 
         var logger = new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>();
+        var recorder = new RecordingAuditRecorder();
         var service = new ProviderVoiceOfferSynchronizationService(
             interactionManager.Object,
             callSessionManager.Object,
@@ -87,7 +88,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             agentManager.Object,
             activityManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
-            CreateServiceProvider(),
+            CreateServiceProvider(stateTransitions: AgentStateAuditTestDoubles.CreateTransitions(recorder, clock.Object)),
             clock.Object,
             logger.Object);
 
@@ -95,6 +96,14 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
         await service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
 
         // Assert
+        // The silent reset this used to be is now one recorded transition, made by the platform.
+        var recorded = Assert.Single(recorder.StateChanges);
+        Assert.Equal(AgentPresenceStatus.WrapUp, recorded.Change.PreviousState);
+        Assert.Equal(AgentPresenceStatus.Available, recorded.Change.CurrentState);
+        Assert.Equal(AgentStateChangeSources.Reconciled, recorded.Change.Source);
+        Assert.Equal("int1", recorded.Change.InteractionId);
+        Assert.Equal("res-1", recorded.Change.ReservationId);
+        Assert.Equal(ContactCenterActorType.System, recorded.Actor.Type);
         queueItemManager.Verify(
             m => m.UpdateAsync(
                 It.Is<QueueItem>(value => value.Status == QueueItemStatus.Removed && value.DequeuedUtc.HasValue),
@@ -266,7 +275,7 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             m => m.UpdateAsync(It.IsAny<OmnichannelActivity>(), null, It.IsAny<CancellationToken>()),
             Times.Never);
         presenceManager.Verify(
-            m => m.StartWrapUpAsync("agent-1", It.IsAny<CancellationToken>()),
+            m => m.StartWrapUpAsync("agent-1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -338,10 +347,10 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
 
         // Assert
         presenceManager.Verify(
-            manager => manager.CompleteWorkAsync("agent-1", It.IsAny<CancellationToken>()),
+            manager => manager.CompleteWorkAsync("agent-1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Once);
         presenceManager.Verify(
-            manager => manager.StartWrapUpAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            manager => manager.StartWrapUpAsync(It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -578,16 +587,21 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
         presenceManager.Verify(
-            m => m.StartWrapUpAsync("agent-1", It.IsAny<CancellationToken>()),
+            m => m.StartWrapUpAsync("agent-1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
-    private static IServiceProvider CreateServiceProvider(IAgentPresenceManager presenceManager = null)
+    private static IServiceProvider CreateServiceProvider(
+        IAgentPresenceManager presenceManager = null,
+        IAgentStateTransitionService stateTransitions = null)
     {
         var serviceProvider = new Mock<IServiceProvider>();
         serviceProvider
             .Setup(provider => provider.GetService(typeof(IAgentPresenceManager)))
             .Returns(presenceManager ?? new Mock<IAgentPresenceManager>().Object);
+        serviceProvider
+            .Setup(provider => provider.GetService(typeof(IAgentStateTransitionService)))
+            .Returns(stateTransitions ?? AgentStateAuditTestDoubles.CreateTransitions());
 
         return serviceProvider.Object;
     }

@@ -18,7 +18,7 @@ using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
-public sealed class ActivityReservationServiceTests
+public sealed partial class ActivityReservationServiceTests
 {
     private static readonly DateTime _now = new(2026, 6, 28, 12, 0, 0, DateTimeKind.Utc);
 
@@ -803,7 +803,7 @@ public sealed class ActivityReservationServiceTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
         interactionManager.Verify(
-            manager => manager.FindByActivityIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            manager => manager.UpdateAsync(It.IsAny<Interaction>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
             Times.Never);
         activityManager.Verify(
             manager => manager.FindByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
@@ -1852,7 +1852,8 @@ public sealed class ActivityReservationServiceTests
         Mock<IContactCenterScopeExecutor>? scopeExecutor,
         Mock<IDistributedLock> distributedLock = null,
         Mock<ISession> session = null,
-        Mock<IAgentAvailabilityService> availabilityService = null)
+        Mock<IAgentAvailabilityService> availabilityService = null,
+        IContactCenterAuditRecorder? auditRecorder = null)
     {
         var clock = new Mock<IClock>();
         clock.SetupGet(c => c.UtcNow).Returns(_now);
@@ -1921,6 +1922,7 @@ public sealed class ActivityReservationServiceTests
             interactionManager.Object,
             new FakeContactCenterWorkStateService(activityManager.Object),
             new FakeContactCenterActivityWriter(activityManager.Object),
+            AgentStateAuditTestDoubles.CreateTransitions(auditRecorder, clock.Object),
             publisher.Object,
             providerCommandStateService is null ? [] : [providerCommandStateService.Object],
             (scopeExecutor ?? new Mock<IContactCenterScopeExecutor>(MockBehavior.Strict)).Object,

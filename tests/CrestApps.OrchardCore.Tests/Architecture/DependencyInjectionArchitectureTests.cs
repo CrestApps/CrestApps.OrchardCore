@@ -65,7 +65,7 @@ public sealed class DependencyInjectionArchitectureTests
             "It activates a provider type chosen at run time from the provider catalog, which is what a container activator is for."),
         new DependencyInjectionException(
             "ProviderVoiceOfferSynchronizationService",
-            "It resolves the presence manager inside a scope it creates per synchronization pass, not from its own scope."),
+            "It resolves the presence manager and the agent state transition point per synchronization pass, because both record through the event publisher whose handlers construct it."),
         new DependencyInjectionException(
             "ActivityQueueHandler",
             "A queue handler that injected the queue-group manager would close a handler-to-manager-to-handler construction cycle."),
