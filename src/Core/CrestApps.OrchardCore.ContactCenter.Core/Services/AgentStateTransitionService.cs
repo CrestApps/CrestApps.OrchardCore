@@ -59,6 +59,8 @@ public sealed class AgentStateTransitionService : IAgentStateTransitionService
             profile.PresenceRequestedUtc = null;
         }
 
+        ClearStaleReasonOnReady(profile, state, context);
+
         if (previousState == state && !context.RecordWhenUnchanged)
         {
             return null;
@@ -120,6 +122,30 @@ public sealed class AgentStateTransitionService : IAgentStateTransitionService
         return reasonCode is null
             ? new AgentStateReason(null, reason)
             : new AgentStateReason(reasonCode.ItemId, reasonCode.Name);
+    }
+
+    /// <summary>
+    /// A return to a ready state carries no not-ready reason unless it was asked for with one of its own.
+    /// </summary>
+    /// <remarks>
+    /// The reason on the profile is the reason for the not-ready state it was set with. Only the agent setting a
+    /// state replaces it, so every other way back to ready -- a call ending, an offer lapsing, reconciliation -- left
+    /// the last break's reason on an agent who was ready again, and every presence broadcast and report read it as
+    /// the reason they were available. A reason kept for a not-ready state still waiting to take effect is left
+    /// alone: it belongs to that request, not to the state being entered now.
+    /// </remarks>
+    private static void ClearStaleReasonOnReady(AgentProfile profile, AgentPresenceStatus state, AgentStateChangeContext context)
+    {
+        if (state != AgentPresenceStatus.Available ||
+            !string.IsNullOrEmpty(context.ReasonName) ||
+            !string.IsNullOrEmpty(context.ReasonCodeId) ||
+            (profile.RequestedPresenceStatus.HasValue && profile.RequestedPresenceStatus != AgentPresenceStatus.Available))
+        {
+            return;
+        }
+
+        profile.PresenceReason = null;
+        profile.PresenceReasonCodeId = null;
     }
 
     private DateTime ResolveChangedUtc(DateTime? requestedUtc, DateTime? previousChangedUtc)

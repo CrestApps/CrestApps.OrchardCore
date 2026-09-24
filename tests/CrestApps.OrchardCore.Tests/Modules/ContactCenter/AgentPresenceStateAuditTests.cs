@@ -298,6 +298,110 @@ public sealed class AgentPresenceStateAuditTests
     }
 
     [Fact]
+    public async Task CompleteWorkAsync_ReturningToReady_DropsTheReasonOfABreakTheAgentTookEarlier()
+    {
+        // Arrange
+        // A break the agent set and cleared long ago left its reason on the profile; only setting a state replaces
+        // it. A call ending returned the agent to Available still carrying it, and the presence broadcast said the
+        // agent was available for a "Short break".
+        var profile = CreateProfile(AgentPresenceStatus.WrapUp);
+        profile.RequestedPresenceStatus = AgentPresenceStatus.Available;
+        profile.PresenceReason = "Short break";
+        profile.PresenceReasonCodeId = "code-short-break";
+        var fixture = new Fixture(profile);
+        AgentPresenceChangedEventData published = null;
+        fixture.Publisher
+            .Setup(p => p.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((e, _) => published = e.GetData<AgentPresenceChangedEventData>())
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await fixture.Service.CompleteWorkAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.Available, profile.PresenceStatus);
+        Assert.Null(profile.PresenceReason);
+        Assert.Null(profile.PresenceReasonCodeId);
+        Assert.NotNull(published);
+        Assert.Equal(AgentPresenceStatus.Available, published.CurrentStatus);
+        Assert.Null(published.Reason);
+    }
+
+    [Fact]
+    public async Task SetPresenceAsync_ToAvailableWithAReasonOfItsOwn_KeepsThatReason()
+    {
+        // Arrange
+        var profile = CreateProfile(AgentPresenceStatus.Break);
+        profile.PresenceReason = "Lunch";
+        profile.PresenceReasonCodeId = "code-lunch";
+        var fixture = new Fixture(profile);
+
+        // Act
+        await fixture.Service.SetPresenceAsync("u1", AgentPresenceStatus.Available, "Covering the front desk", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentPresenceStatus.Available, profile.PresenceStatus);
+        Assert.Equal("Covering the front desk", profile.PresenceReason);
+        Assert.Null(profile.PresenceReasonCodeId);
+    }
+
+    [Theory]
+    [InlineData(AgentStateChangeSources.Reconciled)]
+    [InlineData(AgentStateChangeSources.WorkCompleted)]
+    public async Task TransitionAsync_ToReadyWithoutAReason_ClearsTheReasonLeftOnTheProfile(string source)
+    {
+        // Arrange
+        var transitions = AgentStateAuditTestDoubles.CreateTransitions();
+        var profile = CreateProfile(AgentPresenceStatus.Busy);
+        profile.PresenceReason = "Short break";
+        profile.PresenceReasonCodeId = "code-short-break";
+
+        // Act
+        var change = await transitions.TransitionAsync(profile, AgentPresenceStatus.Available, new AgentStateChangeContext { Source = source }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(profile.PresenceReason);
+        Assert.Null(profile.PresenceReasonCodeId);
+        Assert.Null(change.ReasonName);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_ToReadyWhileANotReadyStateIsStillRequested_KeepsTheRequestsReason()
+    {
+        // Arrange
+        // The reason belongs to the break still waiting to take effect, not to the state being entered now.
+        var transitions = AgentStateAuditTestDoubles.CreateTransitions();
+        var profile = CreateProfile(AgentPresenceStatus.Reserved);
+        profile.RequestedPresenceStatus = AgentPresenceStatus.Break;
+        profile.PresenceReason = "Lunch";
+        profile.PresenceReasonCodeId = "code-lunch";
+
+        // Act
+        await transitions.TransitionAsync(profile, AgentPresenceStatus.Available, new AgentStateChangeContext { Source = AgentStateChangeSources.Released }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Lunch", profile.PresenceReason);
+        Assert.Equal("code-lunch", profile.PresenceReasonCodeId);
+    }
+
+    [Fact]
+    public async Task TransitionAsync_ToANotReadyState_KeepsItsReason()
+    {
+        // Arrange
+        var transitions = AgentStateAuditTestDoubles.CreateTransitions();
+        var profile = CreateProfile(AgentPresenceStatus.Busy);
+        profile.PresenceReason = "Lunch";
+        profile.PresenceReasonCodeId = "code-lunch";
+
+        // Act
+        await transitions.TransitionAsync(profile, AgentPresenceStatus.Break, new AgentStateChangeContext { Source = AgentStateChangeSources.RequestApplied }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("Lunch", profile.PresenceReason);
+        Assert.Equal("code-lunch", profile.PresenceReasonCodeId);
+    }
+
+    [Fact]
     public async Task TransitionAsync_KeepsEveryPresenceEventTheWritersAlreadyPublish()
     {
         // Arrange
