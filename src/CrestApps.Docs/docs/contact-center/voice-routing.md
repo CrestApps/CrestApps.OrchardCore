@@ -515,7 +515,7 @@ The mutation is also allowed to decline after seeing the fresh version. That is 
 
 When the AI profile driving an automated call names a realtime deployment, and the **Contact Center Voice Media** feature is enabled, the call is held as a live speech-to-speech session instead of the turn-based transcribe-complete-synthesize loop. The caller's audio reaches the model as it arrives and the model's voice goes back as it is produced, so it can answer while they are still finishing and hear them if they interrupt. Everything downstream is unchanged, because both paths write the same transcript.
 
-Four things about that session are decided here rather than by the provider's defaults.
+Five things about that session are decided here rather than by the provider's defaults.
 
 ### The line is band-limited in both directions
 
@@ -527,9 +527,19 @@ An earlier revision skipped this on the reasoning that the aliasing "sits above 
 
 ### Turn detection is tuned for a telephone, not a headset
 
-The provider's defaults assume clean, close-mic audio. On a companded 8 kHz line carrying noise and whatever leaks back from the far end's earpiece, they decide the caller has started and stopped talking when they have done neither — which shows up as the assistant answering phantom turns, transcribing one utterance twice, and restarting its own sentences. The session is told to wait longer for a pause and to require more confidence that a pause is speech. Interruption stays enabled: being talked over is the other half of sounding like a machine.
+The provider's defaults assume clean, close-mic audio. On a companded 8 kHz line carrying noise and whatever leaks back from the far end's earpiece, they decide the caller has started and stopped talking when they have done neither — which shows up as the assistant answering phantom turns, transcribing one utterance twice, and restarting its own sentences. Interruption stays enabled: being talked over is the other half of sounding like a machine.
+
+The session is also asked to wait longer for a pause (900 ms) at the default speech threshold, but those two values only take effect when the tenant's realtime transport runs `server_vad` (see [Realtime voice](../ai/realtime-voice.md)). Under the default `semantic_vad` detector the model decides when a turn is over and the silence and threshold are ignored. The threshold is deliberately *not* raised to fight phantom turns: a harder-to-trigger detector clips the soft onset of a short "yeah", which is the most common thing a caller says.
 
 The detector *type* is deliberately left as the session already has it. Valid values belong to the provider, and naming one here would be a guess that fails closed on a live call.
+
+### The assistant's own echo is held back
+
+A phone line returns some of what is played down it — the earpiece couples into the handset microphone, and the network reflects it — and the provider hears that faint, garbled return as the caller starting to talk. Its recognizer then hallucinates a stock phrase out of it. On a live call this came out as the caller apparently saying "Bye-bye." while the greeting was still playing and "you" during the next line; the model answered both, and sounded like it was talking to itself.
+
+Echo is always quieter than a person talking into the phone, so while the assistant's audio is playing, and for 600 ms after its projected end while the last of it comes back, caller audio quieter than -38 dBFS is sent to the model as silence. Audio louder than that for at least 40 ms is the caller talking over the assistant: it goes straight through, together with the 240 ms before it so the soft start of what they said is not lost, and it keeps going through pauses between words. Outside that window nothing is altered at all, however quiet, so a short answer after the assistant's question reaches the model exactly as it was said.
+
+Held audio is replaced with silence rather than dropped, so the model's view of the line stays in step with the clock. Each call logs how much caller audio was held back and how loud the loudest of it was, and — at debug — the level of every caller who talked over the assistant, so the -38 dBFS line can be checked against real calls rather than guessed at.
 
 ### A transfer ends the session
 

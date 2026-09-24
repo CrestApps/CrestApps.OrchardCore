@@ -39,8 +39,15 @@ public sealed partial class RealtimeVoiceConversationRunner
     /// utterance twice, and restarting its own question mid-sentence — which reads as the assistant talking to
     /// itself and never letting the caller speak.
     /// <para>
-    /// Waiting longer for a pause and requiring more confidence that a pause is speech both push against that.
     /// Interruption stays on: being talked over is the other half of sounding like a machine.
+    /// </para>
+    /// <para>
+    /// What this can and cannot change depends on the detector the session runs, and that is the tenant's
+    /// realtime transport setting, not ours. Under the default (<c>semantic_vad</c>, eagerness <c>auto</c>) the
+    /// Core conversation re-sends the semantic detector and <em>ignores</em> the silence and threshold passed here —
+    /// semantic detection has neither. They only take effect on a tenant configured for <c>server_vad</c>. So on a
+    /// default tenant this call keeps interruption on and nothing else; the phantom turns the comments above
+    /// describe are held back by <see cref="CallerEchoGuard"/> before the audio reaches the detector at all.
     /// </para>
     /// </remarks>
     private async Task ApplyTelephonyTurnDetectionAsync(IRealtimeConversation conversation, CancellationToken cancellationToken)
@@ -48,7 +55,8 @@ public sealed partial class RealtimeVoiceConversationRunner
         try
         {
             // The detector type is left as the session already has it: the valid values belong to the provider,
-            // and naming one here would be a guess that fails closed on a live call.
+            // and naming one here would be a guess that fails closed on a live call. Core offers no way to set
+            // semantic eagerness or input noise reduction from here, which is why neither is tuned.
             await conversation.UpdateTurnDetectionAsync(
                 allowInterruption: true,
                 silenceDurationMs: TelephonySilenceDurationMilliseconds,
@@ -67,17 +75,49 @@ public sealed partial class RealtimeVoiceConversationRunner
     private async Task PumpCallerAudioAsync(
         IContactCenterVoiceMediaSession media,
         IRealtimeConversation conversation,
+        RealtimeVoiceConversationContext context,
         CancellationToken cancellationToken)
     {
+        // The assistant's own voice comes back up the caller's line, and the provider hears it as the caller
+        // talking: live, that is how a call ended up answering "Bye-bye." and "you" that nobody said. The guard
+        // holds back what can only be that echo while the assistant is speaking, and lets a caller who talks over
+        // it straight through. See CallerEchoGuard for why it is shaped the way it is.
+        var guard = new CallerEchoGuard();
+        var released = new List<ReadOnlyMemory<byte>>(4);
+        var openingsLogged = 0;
+
         try
         {
             await foreach (var frame in media.ReadIncomingAsync(cancellationToken))
             {
                 var audio = RealtimeAudioConverter.ToRealtime(frame.Data, media.IncomingFormat);
 
-                if (!audio.IsEmpty)
+                if (audio.IsEmpty)
                 {
-                    await conversation.SendAudioAsync(audio, cancellationToken);
+                    continue;
+                }
+
+                released.Clear();
+                guard.Process(audio, DateTime.UtcNow.Ticks, Interlocked.Read(ref _assistantSpeechEndsTicks), released);
+
+                foreach (var chunk in released)
+                {
+                    await conversation.SendAudioAsync(chunk, cancellationToken);
+                }
+
+                if (guard.Openings > openingsLogged)
+                {
+                    openingsLogged = guard.Openings;
+
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        // The level, because an opening on echo rather than a voice is exactly what would show
+                        // the barge-in level is set too low for a line.
+                        _logger.LogDebug(
+                            "The caller on activity '{ActivityId}' spoke over the assistant at {LevelDbfs:F1} dBFS and was let through.",
+                            context.Activity?.ItemId.SanitizeLogValue(),
+                            guard.LastOpeningDbfs);
+                    }
                 }
             }
         }
@@ -89,6 +129,30 @@ public sealed partial class RealtimeVoiceConversationRunner
         {
             _logger.LogWarning(ex, "The caller audio stream ended unexpectedly during a realtime voice session.");
         }
+        finally
+        {
+            LogEchoGuard(guard, context);
+        }
+    }
+
+    /// <summary>
+    /// Records what the echo guard held back on this call, so its barge-in level can be checked against real
+    /// lines rather than guessed at.
+    /// </summary>
+    private void LogEchoGuard(CallerEchoGuard guard, RealtimeVoiceConversationContext context)
+    {
+        if (guard.WithheldMilliseconds == 0 || !_logger.IsEnabled(LogLevel.Information))
+        {
+            return;
+        }
+
+        _logger.LogInformation(
+            "The echo guard on activity '{ActivityId}' sent {WithheldMilliseconds} ms of caller audio heard while the assistant was speaking to the model as silence (loudest {LoudestDbfs:F1} dBFS, barge-in level {BargeInDbfs:F1} dBFS) and let the caller talk over the assistant {Openings} time(s).",
+            context.Activity?.ItemId.SanitizeLogValue(),
+            guard.WithheldMilliseconds,
+            guard.LoudestWithheldDbfs,
+            CallerEchoGuard.BargeInLevelDbfs,
+            guard.Openings);
     }
 
     private async Task PumpAssistantAudioAsync(

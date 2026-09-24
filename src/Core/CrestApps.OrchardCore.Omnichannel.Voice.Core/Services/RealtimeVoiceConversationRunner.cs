@@ -54,6 +54,16 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private long _lastAssistantAudioTicks;
 
     /// <summary>
+    /// When the assistant's speech is projected to finish playing, or zero before it has said anything.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="_lastAssistantAudioTicks"/>, which the watchdogs also stamp with "now" to restart
+    /// their silence clocks. This one moves only when speech is actually written to the line, because it is what
+    /// the echo guard reads to decide whether the caller's audio could be the assistant coming back.
+    /// </remarks>
+    private long _assistantSpeechEndsTicks;
+
+    /// <summary>
     /// When the caller was last heard to say something, so a closing call can tell "they are done" from "they
     /// had one more thing".
     /// </summary>
@@ -140,20 +150,27 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// provider default, because a person on the phone pauses mid-sentence and a call carries noise through those
     /// pauses; cutting in on them is what makes an assistant feel like it is not listening.
     /// </summary>
+    /// <remarks>
+    /// Only in effect when the session runs <c>server_vad</c>, which is a tenant setting. Under the default
+    /// semantic detector Core drops it: see <see cref="ApplyTelephonyTurnDetectionAsync"/>.
+    /// </remarks>
     private const int TelephonySilenceDurationMilliseconds = 900;
 
     /// <summary>
     /// How confident the detector must be that it is hearing speech.
     /// </summary>
     /// <remarks>
-    /// Left at roughly the provider default on purpose. Raising it to 0.62 to suppress phantom turns did suppress
-    /// them, and also clipped the onset of short quiet answers: a caller who replied "yeah" had it reach the model
-    /// as a fragment, which came back transcribed as "That's causing a fever somewhere." The assistant read that
-    /// as a brush-off and politely ended the call on somebody who had just agreed to talk.
+    /// Left at roughly the provider default on purpose. Raising it to 0.62 to suppress phantom turns seemed to
+    /// suppress them, and a caller's short quiet "yeah" on the same build reached the model as a fragment that came
+    /// back transcribed as "That's causing a fever somewhere." The assistant read that as a brush-off and politely
+    /// ended the call on somebody who had just agreed to talk.
     /// <para>
-    /// A short affirmative is the most common thing a caller says, so mis-hearing it is far worse than the
-    /// phantom turns the higher threshold was buying. Waiting longer for a pause — which is a separate setting —
-    /// is the part that stops the assistant talking over people, and it does not cost anything at the onset.
+    /// Neither observation can be pinned on this number. Like the silence above, it only applies under
+    /// <c>server_vad</c>, and the tenant these calls run on configures no detector, so it gets the default semantic
+    /// one, which ignores it. It stays at the default all the same: a short affirmative is the most common thing a caller
+    /// says, and a detector made harder to trigger is exactly what clips one. Phantom turns are dealt with before
+    /// the detector instead, by <see cref="CallerEchoGuard"/>, which leaves the caller's audio untouched whenever
+    /// the assistant is not speaking.
     /// </para>
     /// </remarks>
     private const float TelephonyVadThreshold = 0.5f;
@@ -246,6 +263,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         var startedTicks = DateTime.UtcNow.Ticks;
         Interlocked.Exchange(ref _lastAssistantAudioTicks, startedTicks);
         Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
+        Interlocked.Exchange(ref _assistantSpeechEndsTicks, 0);
         Volatile.Write(ref _goodbyeAlreadySaid, false);
 
         using var callScope = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -283,7 +301,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
 
         // Both directions run at once. That is the entire point: a turn-based loop cannot answer until the caller
         // has finished, and this one starts answering while they are still talking.
-        var toModel = PumpCallerAudioAsync(media, conversation, callScope.Token);
+        var toModel = PumpCallerAudioAsync(media, conversation, context, callScope.Token);
         var toCaller = PumpAssistantAudioAsync(media, conversation, context, ambience, callScope.Token);
         var bed = ambience is null
             ? Task.CompletedTask
@@ -530,6 +548,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             playsUntil = Math.Max(queuedUntil, now) + duration;
         }
         while (Interlocked.CompareExchange(ref _lastAssistantAudioTicks, playsUntil, queuedUntil) != queuedUntil);
+
+        // Only this pump writes speech, so a plain store of the later value is enough.
+        if (playsUntil > Interlocked.Read(ref _assistantSpeechEndsTicks))
+        {
+            Interlocked.Exchange(ref _assistantSpeechEndsTicks, playsUntil);
+        }
     }
 
     private async Task CloseWhenConversationEndsAsync(

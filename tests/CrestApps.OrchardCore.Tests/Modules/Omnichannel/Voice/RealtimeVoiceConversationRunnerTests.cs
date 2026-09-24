@@ -171,10 +171,11 @@ public sealed class RealtimeVoiceConversationRunnerTests
         Assert.True(applied.AllowInterruption, "Being talked over is the other half of sounding like a machine.");
         Assert.True(applied.SilenceDurationMs >= 800, "A caller must be allowed to pause mid-sentence.");
 
-        // Not raised above the default. A higher threshold suppressed phantom turns but clipped the onset of
-        // short quiet answers — a live "yeah" reached the model as a fragment and came back transcribed as an
-        // unrelated sentence, which the assistant read as a brush-off and ended the call on. Mis-hearing the most
-        // common thing a caller says costs more than the phantom turns it bought.
+        // Not raised above the default. A harder-to-trigger detector is what clips the onset of short quiet
+        // answers — a live "yeah" reached the model as a fragment and came back transcribed as an unrelated
+        // sentence, which the assistant read as a brush-off and ended the call on. Phantom turns are held back
+        // before the detector instead, by the echo guard, which leaves the caller alone while the assistant is
+        // quiet. (Under the default semantic detector the provider ignores this value anyway.)
         Assert.True(applied.VadThreshold <= 0.55f, "A short 'yeah' must not be clipped before the model hears it.");
 
         // The detector type belongs to the provider; naming one here would be a guess that fails closed.
@@ -966,6 +967,119 @@ public sealed class RealtimeVoiceConversationRunnerTests
     }
 
     [Fact]
+    public async Task TheAssistantsOwnVoice_ComingBackUpTheLine_IsNotHeardAsTheCaller()
+    {
+        // Arrange
+        // Heard live: the greeting leaked back up the caller's line, faint and garbled, and the model transcribed it
+        // as the caller saying "Bye-bye." — then answered it, and did the same with "you" after its next line. To
+        // the person holding the phone, the assistant was talking to itself.
+        var harness = new RealtimeHarness();
+        harness.Conversation.KeepAlive = true;
+        harness.Media.CallerAudioWaitsForTheAssistant = true;
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantAudioDelta,
+
+            // Five seconds of speech, so the whole of the caller's audio below arrives while it is still playing.
+            Audio = new byte[RealtimeAudioConverter.RealtimeSampleRate * 2 * 5],
+        });
+
+        for (var i = 0; i < 50; i++)
+        {
+            harness.Media.QueueCallerAudio(LineTone(-52d, i));
+        }
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var sent = harness.Conversation.SentAudio.SelectMany(chunk => chunk).ToArray();
+
+        Assert.NotEmpty(sent);
+        Assert.All(sent, value => Assert.Equal(0, value));
+    }
+
+    [Fact]
+    public async Task ACallerWhoTalksOverTheAssistant_ReachesTheModel_AsTheySaidIt()
+    {
+        // Arrange
+        // The other half of the echo guard, and the one that must never regress: a person talking over the
+        // assistant is heard, in full, while it is still speaking.
+        var harness = new RealtimeHarness();
+        harness.Conversation.KeepAlive = true;
+        harness.Media.CallerAudioWaitsForTheAssistant = true;
+        harness.Conversation.Queue(new RealtimeConversationEvent
+        {
+            Type = RealtimeConversationEventType.AssistantAudioDelta,
+            Audio = new byte[RealtimeAudioConverter.RealtimeSampleRate * 2 * 5],
+        });
+
+        var frames = Enumerable.Range(0, 25).Select(i => LineTone(-20d, i)).ToArray();
+
+        foreach (var frame in frames)
+        {
+            harness.Media.QueueCallerAudio(frame);
+        }
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var expected = frames
+            .SelectMany(frame => RealtimeAudioConverter.ToRealtime(frame, harness.Media.IncomingFormat).ToArray())
+            .ToArray();
+
+        Assert.Equal(expected, harness.Conversation.SentAudio.SelectMany(chunk => chunk).ToArray());
+    }
+
+    [Fact]
+    public async Task ASoftHello_BeforeTheAssistantHasSaidAnything_ReachesTheModelAsSaid()
+    {
+        // Arrange
+        // The echo guard must only ever act on audio that could be the assistant coming back. At the start of the
+        // call it has said nothing, so a quiet "hello?" from somebody picking up is theirs and goes through
+        // untouched — even though the silence clocks are stamped the moment the session opens.
+        var harness = new RealtimeHarness();
+        harness.Conversation.KeepAlive = true;
+
+        var frames = Enumerable.Range(0, 15).Select(i => LineTone(-44d, i)).ToArray();
+
+        foreach (var frame in frames)
+        {
+            harness.Media.QueueCallerAudio(frame);
+        }
+
+        // Act
+        await harness.RunAsync();
+
+        // Assert
+        var expected = frames
+            .SelectMany(frame => RealtimeAudioConverter.ToRealtime(frame, harness.Media.IncomingFormat).ToArray())
+            .ToArray();
+
+        Assert.Equal(expected, harness.Conversation.SentAudio.SelectMany(chunk => chunk).ToArray());
+    }
+
+    // One 20 ms frame of a 300 Hz tone at the given RMS level, as the line carries it: 8 kHz μ-law.
+    private static byte[] LineTone(double dbfs, int index)
+    {
+        const int sampleRate = 8_000;
+        const int count = 160;
+
+        var amplitude = 32767d * Math.Pow(10, dbfs / 20d) * Math.Sqrt(2);
+        var frame = new byte[count];
+
+        for (var n = 0; n < count; n++)
+        {
+            var t = (index * count + n) / (double)sampleRate;
+            var sample = (short)Math.Round(amplitude * Math.Sin(2 * Math.PI * 300 * t));
+            frame[n] = RealtimeAudioConverter.EncodeMuLawSample(sample);
+        }
+
+        return frame;
+    }
+
+    [Fact]
     public async Task WithNoProviderThatCanCarryLiveAudio_TheCallIsLeftToTheTurnBasedLoop()
     {
         // Arrange
@@ -1393,8 +1507,21 @@ public sealed class RealtimeVoiceConversationRunnerTests
         public void QueueCallerAudio(byte[] frame)
             => _incoming.Add(frame);
 
+        /// <summary>
+        /// When set, the caller's audio is held until the assistant's voice has been written to the line, so a test
+        /// can put the caller's audio in the window where it plays rather than racing it.
+        /// </summary>
+        public bool CallerAudioWaitsForTheAssistant { get; set; }
+
+        private readonly TaskCompletionSource _assistantSpoke = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public async IAsyncEnumerable<ContactCenterVoiceMediaFrame> ReadIncomingAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            if (CallerAudioWaitsForTheAssistant)
+            {
+                await _assistantSpoke.Task.WaitAsync(cancellationToken);
+            }
+
             foreach (var frame in _incoming)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -1413,6 +1540,7 @@ public sealed class RealtimeVoiceConversationRunnerTests
         public ValueTask WriteOutgoingAsync(ContactCenterVoiceMediaFrame frame, CancellationToken cancellationToken = default)
         {
             WrittenAudio.Add(frame.Data.ToArray());
+            _assistantSpoke.TrySetResult();
 
             return ValueTask.CompletedTask;
         }
