@@ -97,6 +97,10 @@ namespace CrestApps.OrchardCore.Telephony
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialAsync(CrestApps.OrchardCore.Telephony.Models.DialRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> HangupAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITelephonyCallHoldObserver
+    {
+        System.Threading.Tasks.Task CallHoldChangedAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyCallHoldChange change, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ITelephonyCallObserver
     {
         System.Threading.Tasks.Task CallEndedAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyInteraction interaction, System.Threading.CancellationToken cancellationToken = default);
@@ -732,6 +736,16 @@ namespace CrestApps.OrchardCore.Telephony.Models
         public System.DateTimeOffset? StartedUtc { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.CallState State { get; set; }
         public string To { get; set; }
+    }
+    public sealed class TelephonyCallHoldChange
+    {
+        public TelephonyCallHoldChange() { }
+        public string CallId { get; set; }
+        public System.DateTime ChangedUtc { get; set; }
+        public string InteractionId { get; set; }
+        public bool IsOnHold { get; set; }
+        public string ProviderName { get; set; }
+        public string UserId { get; set; }
     }
     public sealed class TelephonyCallListLookupResult
     {

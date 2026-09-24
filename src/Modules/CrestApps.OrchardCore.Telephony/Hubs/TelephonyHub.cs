@@ -115,7 +115,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to place on hold.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Hold(CallReference call)
-        => ExecuteAsync("Hold", () => DescribeCallReference(call), (service, token) => service.HoldAsync(call, token), () => GetCallIds(call));
+        => ExecuteHoldChangeAsync(call, isOnHold: true);
 
     /// <summary>
     /// Resumes a call that is on hold.
@@ -123,7 +123,7 @@ public sealed partial class TelephonyHub : Hub<ITelephonyClient>
     /// <param name="call">A reference to the call to resume.</param>
     /// <returns>A <see cref="TelephonyResult"/> describing the outcome.</returns>
     public Task<TelephonyResult> Resume(CallReference call)
-        => ExecuteAsync("Resume", () => DescribeCallReference(call), (service, token) => service.ResumeAsync(call, token), () => GetCallIds(call));
+        => ExecuteHoldChangeAsync(call, isOnHold: false);
 
     /// <summary>
     /// Mutes the local audio of an active call.
