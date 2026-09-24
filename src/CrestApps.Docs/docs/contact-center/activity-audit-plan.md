@@ -87,6 +87,11 @@ Phases 2 to 4 are built against one contract, so the writers and the reports agr
     that written time exactly as stored.
   - A timecard's states are contiguous by construction, so they sum to the signed-in time exactly, skew or
     not.
+- **Which day.** A payroll workday is a local day. The report period is chosen as local dates in the tenant's
+  time zone, so the daily agent timecard and the reconciled payroll timecard split time at the tenant's
+  midnight. They show dates and times of day in that zone and name it in the date column, for example
+  `Date (America/Los_Angeles)`. Signed-in time and state time are split at the same midnights, so every day
+  still reconciles.
 - **Actor and subject.** Every event names who caused it, and `ActorType` is never left unspecified. An agent or
   supervisor is named by user id, the provider by its technical name, and the platform by `system`. The agent a
   change is about is its subject, not its actor. The subject is carried by the aggregate (`AgentProfile` events)
@@ -172,5 +177,11 @@ paths have also been exercised on the running site, and the call paths wait on a
   - The state timeline raised each change's written time to its effective time. Two changes at the same
     provider instant then tied, and an agent could be left in wrap-up for the rest of the day, with the
     timecard flagged as missing transitions. The written time is kept as stored now.
+  - The timecards grouped by the UTC day under a `Date (UTC)` label, while the period started at local
+    midnight. The first time of the day showed as 07:00:00 in Pacific time, and an evening shift was split
+    across two dates. They use the tenant's days and times now.
+  - Telnyx refuses to hang up a call that has already ended, with `422` and code `90018`. When either leg
+    of a bridged call hung up, the other leg's hangup logged that refusal as an error. The refusal now counts
+    as success for a hangup or a reject and is logged at Debug.
 - **Answering faster.** The agent's leg is dialled while the offer rings and joined on accept. Hold music stops
   at the bridge, and every client is told at once. This waits on a live call.

@@ -24,6 +24,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
     private readonly IContactCenterReportCapabilityGuard _capabilityGuard;
     private readonly IStringLocalizer _stringLocalizer;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     public AgentWorkforceReportProvider(
         IInteractionEventStore eventStore,
@@ -32,7 +33,8 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         AgentWorkforceReportDefinition definition,
         IContactCenterReportCapabilityGuard capabilityGuard,
         IStringLocalizer stringLocalizer,
-        IClock clock)
+        IClock clock,
+        ILocalClock localClock)
     {
         _eventStore = eventStore;
         _agentManager = agentManager;
@@ -41,6 +43,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         _capabilityGuard = capabilityGuard;
         _stringLocalizer = stringLocalizer;
         _clock = clock;
+        _localClock = localClock;
     }
 
     public string Name => _definition.Name;
@@ -96,7 +99,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         return _definition.Kind switch
         {
             AgentWorkforceReportKind.TimeSummary => BuildTimeSummary(intervals, agents),
-            AgentWorkforceReportKind.DailyTimecard => BuildDailyTimecard(intervals, agents),
+            AgentWorkforceReportKind.DailyTimecard => BuildDailyTimecard(intervals, agents, await ReportTimeZone.ResolveAsync(_localClock)),
             AgentWorkforceReportKind.StatusDuration => BuildStatusDuration(intervals),
             AgentWorkforceReportKind.BreakAnalysis => BuildBreakAnalysis(intervals, agents),
             AgentWorkforceReportKind.ReadyNotReady => BuildReadyNotReady(intervals, agents),
@@ -171,14 +174,25 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
             .Add(ReportSection.ForTable(S["Agent time summary"].Value, columns, rows));
     }
 
-    private ReportDocument BuildDailyTimecard(
+    /// <summary>
+    /// Builds the daily agent timecard: each agent's day, in the tenant's time zone.
+    /// </summary>
+    /// <param name="intervals">The agents' state intervals in the period.</param>
+    /// <param name="agents">The agents, by profile id.</param>
+    /// <param name="timeZone">The zone the days and times of day are in.</param>
+    /// <returns>The report document.</returns>
+    internal ReportDocument BuildDailyTimecard(
         IReadOnlyList<AgentPresenceInterval> intervals,
-        Dictionary<string, AgentProfile> agents)
+        Dictionary<string, AgentProfile> agents,
+        ReportTimeZone timeZone)
     {
-        var daily = ContactCenterReportPeriod.SplitByUtcDay(intervals);
+        ArgumentNullException.ThrowIfNull(timeZone);
+
+        // The period was chosen as local dates, so its days are the tenant's days, split at the tenant's midnight.
+        var daily = ContactCenterReportPeriod.SplitByDay(intervals, timeZone);
         var columns = new[]
         {
-            new ReportColumn(S["Date (UTC)"].Value),
+            new ReportColumn(S["Date ({0})", timeZone.Name].Value),
             new ReportColumn(S["Agent"].Value),
             new ReportColumn(S["Signed-in time"].Value, ReportColumnAlign.End),
             new ReportColumn(S["Productive presence"].Value, ReportColumnAlign.End),
@@ -190,7 +204,7 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
         var rows = new List<ReportRow>();
 
         foreach (var dayGroup in daily
-            .GroupBy(interval => DateOnly.FromDateTime(interval.StartUtc))
+            .GroupBy(interval => timeZone.DateOf(interval.StartUtc))
             .OrderBy(group => group.Key))
         {
             foreach (var agentGroup in dayGroup
@@ -207,8 +221,8 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
                     ReportFormat.Duration(summary.ProductivePresenceSeconds),
                     ReportFormat.Duration(summary.WorkSeconds),
                     ReportFormat.Duration(summary.BreakAndAwaySeconds),
-                    agentGroup.Min(interval => interval.StartUtc).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
-                    agentGroup.Max(interval => interval.EndUtc).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                    timeZone.ToLocal(agentGroup.Min(interval => interval.StartUtc)).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                    timeZone.ToLocal(agentGroup.Max(interval => interval.EndUtc)).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
                 ]));
             }
 
@@ -221,8 +235,8 @@ internal sealed class AgentWorkforceReportProvider : IReport, IReportFilterMetad
                 ReportFormat.Duration(dayTotals.ProductivePresenceSeconds),
                 ReportFormat.Duration(dayTotals.WorkSeconds),
                 ReportFormat.Duration(dayTotals.BreakAndAwaySeconds),
-                dayGroup.Min(interval => interval.StartUtc).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
-                dayGroup.Max(interval => interval.EndUtc).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                timeZone.ToLocal(dayGroup.Min(interval => interval.StartUtc)).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
+                timeZone.ToLocal(dayGroup.Max(interval => interval.EndUtc)).ToString("HH:mm:ss", CultureInfo.InvariantCulture),
             ], ReportRowKind.Subtotal));
         }
 

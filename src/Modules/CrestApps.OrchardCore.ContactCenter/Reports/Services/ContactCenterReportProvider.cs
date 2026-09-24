@@ -30,6 +30,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
     private readonly ContactCenterReportCatalogOptions _catalogOptions;
     private readonly TimeSpan _maximumReportRange;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterReportProvider"/> class.
@@ -45,6 +46,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
     /// <param name="catalogOptions">The configured report catalog.</param>
     /// <param name="reportingOptions">The reporting options that bound the report range.</param>
     /// <param name="clock">The clock, so time that has not happened yet is never reported.</param>
+    /// <param name="localClock">The tenant's clock, whose time zone the daily reports' days are in.</param>
     public ContactCenterReportProvider(
         ISession session,
         IActivityQueueManager queueManager,
@@ -56,7 +58,8 @@ internal sealed class ContactCenterReportProvider : IReportProvider
         IStringLocalizer<AgentWorkforceReportProvider> workforceLocalizer,
         IOptions<ContactCenterReportCatalogOptions> catalogOptions,
         IOptions<ContactCenterReportingOptions> reportingOptions,
-        IClock clock)
+        IClock clock,
+        ILocalClock localClock)
     {
         _session = session;
         _queueManager = queueManager;
@@ -69,6 +72,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
         _catalogOptions = catalogOptions.Value;
         _maximumReportRange = reportingOptions.Value.MaximumReportRange;
         _clock = clock;
+        _localClock = localClock;
     }
 
     /// <inheritdoc/>
@@ -95,7 +99,8 @@ internal sealed class ContactCenterReportProvider : IReportProvider
                 definition,
                 _capabilityGuard,
                 _workforceLocalizer,
-                _clock);
+                _clock,
+                _localClock);
         }
     }
 }

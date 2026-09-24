@@ -9,8 +9,8 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 
 /// <summary>
-/// The payroll timecard that proves itself: per agent per UTC day, the time signed in beside the time in each state,
-/// to the second, with a check that says whether they add up.
+/// The payroll timecard that proves itself: per agent per day in the tenant's time zone, the time signed in beside the
+/// time in each state, to the second, with a check that says whether they add up.
 /// </summary>
 /// <remarks>
 /// Signed-in time is measured from sign-ins and sign-offs alone, and state time from every state change in between,
@@ -24,6 +24,7 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
     private readonly IInteractionEventStore _eventStore;
     private readonly IAgentProfileManager _agentManager;
     private readonly IClock _clock;
+    private readonly ILocalClock _localClock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ReconciledPayrollTimecardReportProvider"/> class.
@@ -33,6 +34,7 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
     /// <param name="eventStore">The event log.</param>
     /// <param name="agentManager">The agent directory, for agent names.</param>
     /// <param name="clock">The clock, so an agent still signed in is counted up to now and no further.</param>
+    /// <param name="localClock">The tenant's clock, whose time zone the days and times of day are in.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public ReconciledPayrollTimecardReportProvider(
         IContactCenterReportingService reportingService,
@@ -40,12 +42,14 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
         IInteractionEventStore eventStore,
         IAgentProfileManager agentManager,
         IClock clock,
+        ILocalClock localClock,
         IStringLocalizer<ReconciledPayrollTimecardReportProvider> stringLocalizer)
         : base(reportingService, capabilityGuard, stringLocalizer)
     {
         _eventStore = eventStore;
         _agentManager = agentManager;
         _clock = clock;
+        _localClock = localClock;
     }
 
     /// <inheritdoc/>
@@ -91,9 +95,11 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
             additionalEventTypes: null,
             cancellationToken);
 
-        var days = ReconciledTimecard.Build(AgentStateTimeline.Build(events), fromUtc, toUtc);
+        // The period was chosen as local dates, so its days are the tenant's days too.
+        var timeZone = await ReportTimeZone.ResolveAsync(_localClock);
+        var days = ReconciledTimecard.Build(AgentStateTimeline.Build(events), fromUtc, toUtc, timeZone);
 
-        return Build(days, agentId => ResolveAgentName(agentId, agents));
+        return Build(days, agentId => ResolveAgentName(agentId, agents), timeZone);
     }
 
     /// <summary>
@@ -101,9 +107,12 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
     /// </summary>
     /// <param name="days">The agent days.</param>
     /// <param name="agentName">Resolves an agent's display name.</param>
+    /// <param name="timeZone">The zone the days and times of day are in; UTC when none is given.</param>
     /// <returns>The report document.</returns>
-    internal ReportDocument Build(IReadOnlyList<ReconciledTimecardDay> days, Func<string, string> agentName)
+    internal ReportDocument Build(IReadOnlyList<ReconciledTimecardDay> days, Func<string, string> agentName, ReportTimeZone timeZone = null)
     {
+        timeZone ??= ReportTimeZone.Utc;
+
         var unreconciled = days.Count(day => !day.IsReconciled);
 
         var document = new ReportDocument()
@@ -120,7 +129,7 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
 
         var columns = new[]
         {
-            new ReportColumn(S["Date (UTC)"].Value),
+            new ReportColumn(S["Date ({0})", timeZone.Name].Value),
             new ReportColumn(S["Agent"].Value),
             new ReportColumn(S["First in"].Value),
             new ReportColumn(S["Last out"].Value),
@@ -159,9 +168,11 @@ public sealed class ReconciledPayrollTimecardReportProvider : ContactCenterRepor
             [
                 day.Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
                 agentName(day.AgentId),
-                day.FirstInUtc.HasValue ? AuditReportFormat.TimeOfDay(day.FirstInUtc.Value) : "—",
+                day.FirstInUtc.HasValue ? AuditReportFormat.TimeOfDay(timeZone.ToLocal(day.FirstInUtc.Value)) : "—",
                 day.LastOutUtc.HasValue
-                    ? day.EndsSignedOff ? AuditReportFormat.TimeOfDay(day.LastOutUtc.Value) : S["Signed in at {0}", AuditReportFormat.TimeOfDay(day.LastOutUtc.Value)].Value
+                    ? day.EndsSignedOff
+                        ? AuditReportFormat.TimeOfDay(timeZone.ToLocal(day.LastOutUtc.Value))
+                        : S["Signed in at {0}", AuditReportFormat.TimeOfDay(timeZone.ToLocal(day.LastOutUtc.Value))].Value
                     : "—",
                 AuditReportFormat.Clock(day.SignedInSeconds),
                 .. parts.Select(AuditReportFormat.Clock),

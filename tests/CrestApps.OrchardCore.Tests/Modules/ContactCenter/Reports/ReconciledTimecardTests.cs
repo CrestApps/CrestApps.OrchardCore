@@ -192,6 +192,7 @@ public sealed class ReconciledTimecardTests
             Mock.Of<IInteractionEventStore>(),
             Mock.Of<IAgentProfileManager>(),
             Mock.Of<IClock>(),
+            Mock.Of<ILocalClock>(),
             new PassThroughLocalizer<ReconciledPayrollTimecardReportProvider>());
 
         // Act

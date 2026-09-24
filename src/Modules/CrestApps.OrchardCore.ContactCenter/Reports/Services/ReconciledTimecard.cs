@@ -15,7 +15,7 @@ internal sealed class ReconciledTimecardDay
     public const double Tolerance = 0.001;
 
     /// <summary>
-    /// Gets the UTC day.
+    /// Gets the day, in the report's time zone.
     /// </summary>
     public DateOnly Date { get; init; }
 
@@ -87,30 +87,38 @@ internal sealed class ReconciledTimecardDay
 internal static class ReconciledTimecard
 {
     /// <summary>
-    /// Builds one row per agent per UTC day with any signed-in time or state time in the period.
+    /// Builds one row per agent per day with any signed-in time or state time in the period.
     /// </summary>
     /// <param name="timelines">The agents' state timelines.</param>
     /// <param name="fromUtc">The start of the period.</param>
     /// <param name="toUtc">The end of the period: an agent still signed in then is counted up to it.</param>
+    /// <param name="timeZone">The zone whose days the rows are: the tenant's for a payroll workday. UTC when none
+    /// is given. Signed-in time and state time are split at the same midnights, so each day still reconciles.</param>
     /// <returns>The days, in date then agent order.</returns>
-    public static IReadOnlyList<ReconciledTimecardDay> Build(IEnumerable<AgentStateTimeline> timelines, DateTime fromUtc, DateTime toUtc)
+    public static IReadOnlyList<ReconciledTimecardDay> Build(
+        IEnumerable<AgentStateTimeline> timelines,
+        DateTime fromUtc,
+        DateTime toUtc,
+        ReportTimeZone timeZone = null)
     {
         ArgumentNullException.ThrowIfNull(timelines);
+
+        timeZone ??= ReportTimeZone.Utc;
 
         var days = new List<ReconciledTimecardDay>();
 
         foreach (var timeline in timelines)
         {
             var intervals = ContactCenterReportPeriod
-                .SplitByUtcDay(AgentStateTimeline.BuildIntervals([timeline], fromUtc, toUtc))
+                .SplitByDay(AgentStateTimeline.BuildIntervals([timeline], fromUtc, toUtc), timeZone)
                 .Where(interval => interval.Status != AgentPresenceStatus.Offline)
-                .ToLookup(interval => DateOnly.FromDateTime(interval.StartUtc));
+                .ToLookup(interval => timeZone.DateOf(interval.StartUtc));
             var spans = ContactCenterReportPeriod
-                .SplitByUtcDay(timeline.BuildSignedInSpans(fromUtc, toUtc))
-                .ToLookup(span => DateOnly.FromDateTime(span.StartUtc));
+                .SplitByDay(timeline.BuildSignedInSpans(fromUtc, toUtc), timeZone)
+                .ToLookup(span => timeZone.DateOf(span.StartUtc));
             var missing = timeline.Transitions
                 .Where(transition => !transition.Superseded && transition.BreaksChain && transition.ChangedUtc >= fromUtc && transition.ChangedUtc <= toUtc)
-                .ToLookup(transition => DateOnly.FromDateTime(transition.ChangedUtc));
+                .ToLookup(transition => timeZone.DateOf(transition.ChangedUtc));
 
             foreach (var date in intervals.Select(group => group.Key)
                 .Concat(spans.Select(group => group.Key))
