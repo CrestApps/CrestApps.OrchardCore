@@ -8,6 +8,8 @@
   {
     "inputs": [
       "Assets/js/shared/agent-presence.js",
+      "Assets/js/shared/coalesced-refresh.js",
+      "Assets/js/shared/offer-actions.js",
       "Assets/js/agent-workspace.js"
     ],
     "output": "wwwroot/scripts/agent-workspace.js"
@@ -34,6 +36,8 @@
   {
     "inputs": [
       "Assets/js/shared/agent-presence.js",
+      "Assets/js/shared/coalesced-refresh.js",
+      "Assets/js/shared/offer-actions.js",
       "Assets/js/contact-center-agent-bar.js"
     ],
     "output": "wwwroot/scripts/contact-center-agent-bar.js"

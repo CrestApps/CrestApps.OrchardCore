@@ -313,7 +313,8 @@
             return Date.now() - serverOffsetMs;
         }
 
-        function refresh() {
+        // One state fetch at a time: a burst of hub events folds into it (see shared/coalesced-refresh.js).
+        var refresh = window.CrestAppsContactCenter.coalesceRefresh(function () {
             if (!config.stateUrl) {
                 return Promise.resolve();
             }
@@ -326,7 +327,7 @@
                     }
                 })
                 .catch(function () { });
-        }
+        });
 
         function completeActivityUrl(activityId) {
             if (!config.completeActivityUrlTemplate || !activityId) {
@@ -585,12 +586,54 @@
                 return;
             }
 
-            setOfferButtonsDisabled(true);
+            // "Answering..." (or "Dialing...") with a spinner from the first click, every offer button disabled, and an
+            // error on the offer if the accept fails or never answers (shared/offer-actions.js).
+            var offerActions = window.CrestAppsContactCenter;
+            var offer = inner.querySelector('[data-cc-offer]');
+            var offerState = { preview: !!(state && state.offer && state.offer.kind === 'PreviewDial') };
+            var offerLabels = {
+                accept: label('accept', 'Accept'), dial: label('dial', 'Dial'),
+                answering: label('answering', 'Answering…'), dialing: label('dialing', 'Dialing…')
+            };
 
-            post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId })
-                .then(function () { return refresh(); })
-                .catch(function () { })
-                .finally(function () { setOfferButtonsDisabled(false); });
+            showOfferError(null);
+            offerActions.showOfferAccepting(offer, { pending: true, preview: offerState.preview }, offerLabels);
+
+            offerActions.withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId }))
+                .then(function (response) {
+                    return refresh().then(function () {
+                        if (response && response.ok === false) {
+                            showOfferError(label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'));
+                        }
+                    });
+                })
+                .catch(function (error) {
+                    showOfferError(error && error.offerAcceptTimedOut
+                        ? label('acceptTimedOut', 'The call is taking too long to connect. Check your soft phone, then try again.')
+                        : label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'));
+                })
+                .finally(function () {
+                    offerActions.showOfferAccepting(inner.querySelector('[data-cc-offer]'), { pending: false, preview: offerState.preview }, offerLabels);
+                });
+        }
+
+        // An accept that failed says so on the offer itself, so the agent knows to act rather than wait.
+        function showOfferError(message) {
+            var offer = inner.querySelector('[data-cc-offer]');
+            var existing = offer ? offer.querySelector('[data-cc-offer-error]') : null;
+
+            if (existing) {
+                existing.remove();
+            }
+
+            if (offer && message) {
+                var error = document.createElement('div');
+                error.className = 'cc-bar__offer-error text-danger small';
+                error.setAttribute('role', 'alert');
+                error.setAttribute('data-cc-offer-error', '');
+                error.textContent = message;
+                offer.appendChild(error);
+            }
         }
 
         function decline(reservationId) {
@@ -666,9 +709,9 @@
             var isNew = notification.reservationId && notification.reservationId !== lastOfferReservationId;
             lastOfferReservationId = notification.reservationId;
 
-            if (notification.kind === 'InboundCall' && isNew) {
-                beep();
-            }
+            // Beep once the refreshed state still shows the offer: one revoked the moment it was made (the caller
+            // hung up as it was presented) never makes a sound.
+            var beepFor = notification.kind === 'InboundCall' && isNew ? notification.reservationId : null;
 
             var shouldPop = notification.autoOpenActivity &&
                 notification.activityItemId &&
@@ -680,7 +723,11 @@
                 popActivity(notification.activityItemId, notification.kind === 'AutoDial');
             }
 
-            refresh();
+            refresh().then(function () {
+                if (beepFor && state && state.offer && state.offer.reservationId === beepFor) {
+                    beep();
+                }
+            });
         }
 
         // The offer was taken. When the agent accepted it, pop the activity so they land on the record for the call

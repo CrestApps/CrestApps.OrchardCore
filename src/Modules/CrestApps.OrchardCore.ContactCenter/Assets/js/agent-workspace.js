@@ -149,7 +149,8 @@
             return Date.now() - serverOffsetMs;
         }
 
-        function refresh() {
+        // One state fetch at a time: a burst of hub events folds into it (see shared/coalesced-refresh.js).
+        var refresh = window.CrestAppsContactCenter.coalesceRefresh(function () {
             return fetch(config.stateUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
                 .then(function (response) { return response.ok ? response.json() : null; })
                 .then(function (data) {
@@ -158,7 +159,7 @@
                     }
                 })
                 .catch(function () { });
-        }
+        });
 
         function render(data) {
             state = data;
@@ -440,9 +441,12 @@
                 return;
             }
 
-            setOfferButtonsDisabled(true);
+            // "Answering..." with a spinner from the first click, every offer button disabled (shared/offer-actions.js).
+            var offerActions = window.CrestAppsContactCenter;
+            var answeringLabels = { accept: label('accept', 'Accept'), answering: label('answering', 'Answering…') };
+            offerActions.showOfferAccepting(refs.offer, { pending: true }, answeringLabels);
 
-            post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId })
+            offerActions.withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, { reservationId: reservationId }))
                 .then(function (response) {
                     if (!response.ok) {
                         showError(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
@@ -452,11 +456,13 @@
 
                     return refresh();
                 })
-                .catch(function () {
-                    showError(label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
+                .catch(function (error) {
+                    showError(error && error.offerAcceptTimedOut
+                        ? label('acceptTimedOut', 'The call is taking too long to connect. Check your soft phone, then try again.')
+                        : label('acceptFailed', 'The offer could not be accepted. It may have been re-offered.'));
                 })
                 .finally(function () {
-                    setOfferButtonsDisabled(false);
+                    offerActions.showOfferAccepting(refs.offer, { pending: false }, answeringLabels);
                 });
         }
 

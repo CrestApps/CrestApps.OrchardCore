@@ -112,6 +112,150 @@
   contactCenter.isOwnPresence = isOwnPresence;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * One workspace-state fetch at a time, however many real-time events ask for one.
+ *
+ * The agent workspace and the docked agent bar re-read the agent's whole state on every hub event they hear. A single
+ * change arrives as several events -- the offer, the presence change it causes, the stats for each of the agent's
+ * queues -- so one change fetched the state 3 to 6 times within a third of a second. A refresh asked for while one is
+ * in flight now folds into it, plus exactly one trailing fetch: the events that arrived mid-flight may describe a
+ * change the response in flight predates, and the trailing fetch is what picks it up.
+ *
+ * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
+ * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
+
+  // Wraps `run` (which returns a promise) so concurrent calls share work. Every call returns a promise that settles
+  // once a fetch started at or after that call has finished.
+  function coalesceRefresh(run) {
+    var inFlight = null;
+    var trailing = null;
+    function start() {
+      try {
+        inFlight = Promise.resolve(run());
+      } catch (error) {
+        inFlight = Promise.reject(error);
+      }
+      var settled = function () {
+        inFlight = null;
+      };
+      inFlight.then(settled, settled);
+      return inFlight;
+    }
+    return function refresh() {
+      if (!inFlight) {
+        return start();
+      }
+      if (!trailing) {
+        var after = function () {
+          trailing = null;
+          return start();
+        };
+        trailing = inFlight.then(after, after);
+      }
+      return trailing;
+    };
+  }
+  contactCenter.coalesceRefresh = coalesceRefresh;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * What an offer's buttons show while the agent's accept is under way, on the agent workspace and the docked agent bar.
+ *
+ * Accepting an offer gave no sign anything was happening until the round trip finished, so the agent clicked again.
+ * From the first click the accept button reads "Answering..." (or "Dialing..." for a preview dial) with a spinner, and
+ * it and its siblings (Decline, Skip) are disabled until the call is on screen. An accept that fails brings the buttons
+ * back with an error; one that never answers is given up on after a while so the buttons are never stuck.
+ *
+ * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
+ * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
+
+  // How long an accept may go unanswered before the buttons come back.
+  var OFFER_ACCEPT_TIMEOUT_MS = 20000;
+  function text(labels, key, fallback) {
+    return labels && labels[key] || fallback;
+  }
+
+  // The accept button's look for an offer: { disabled, spinner, label }.
+  function offerAcceptView(state, labels) {
+    var pending = !!(state && state.pending);
+    var preview = !!(state && state.preview);
+    if (pending) {
+      return {
+        disabled: true,
+        spinner: true,
+        label: preview ? text(labels, 'dialing', 'Dialing…') : text(labels, 'answering', 'Answering…')
+      };
+    }
+    return {
+      disabled: false,
+      spinner: false,
+      label: preview ? text(labels, 'dial', 'Dial') : text(labels, 'accept', 'Accept')
+    };
+  }
+
+  // Applies offerAcceptView to an offer's buttons: all of them disabled while pending, and the accept button
+  // ([data-cc-accept]) swapped to the spinner and label, then back to exactly what it showed before.
+  function showOfferAccepting(container, state, labels) {
+    if (!container || typeof container.querySelectorAll !== 'function') {
+      return;
+    }
+    var view = offerAcceptView(state, labels);
+    Array.prototype.forEach.call(container.querySelectorAll('button'), function (button) {
+      button.disabled = view.disabled;
+    });
+    var acceptButton = container.querySelector('[data-cc-accept]');
+    if (!acceptButton) {
+      return;
+    }
+    if (view.spinner) {
+      if (acceptButton.__restingHtml === undefined) {
+        acceptButton.__restingHtml = acceptButton.innerHTML;
+      }
+      var spinner = acceptButton.ownerDocument.createElement('span');
+      spinner.className = 'spinner-border spinner-border-sm me-1';
+      spinner.setAttribute('role', 'status');
+      spinner.setAttribute('aria-hidden', 'true');
+      acceptButton.textContent = '';
+      acceptButton.appendChild(spinner);
+      acceptButton.appendChild(acceptButton.ownerDocument.createTextNode(view.label));
+    } else if (acceptButton.__restingHtml !== undefined) {
+      acceptButton.innerHTML = acceptButton.__restingHtml;
+      acceptButton.__restingHtml = undefined;
+    }
+  }
+
+  // Settles like `promise`, or rejects with an error flagged `offerAcceptTimedOut` once the accept has gone
+  // unanswered for OFFER_ACCEPT_TIMEOUT_MS.
+  function withOfferAcceptTimeout(promise) {
+    return new Promise(function (resolve, reject) {
+      var timer = root.setTimeout(function () {
+        var error = new Error('The accept timed out.');
+        error.offerAcceptTimedOut = true;
+        reject(error);
+      }, OFFER_ACCEPT_TIMEOUT_MS);
+      Promise.resolve(promise).then(function (value) {
+        root.clearTimeout(timer);
+        resolve(value);
+      }, function (error) {
+        root.clearTimeout(timer);
+        reject(error);
+      });
+    });
+  }
+  contactCenter.OFFER_ACCEPT_TIMEOUT_MS = OFFER_ACCEPT_TIMEOUT_MS;
+  contactCenter.offerAcceptView = offerAcceptView;
+  contactCenter.showOfferAccepting = showOfferAccepting;
+  contactCenter.withOfferAcceptTimeout = withOfferAcceptTimeout;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * Contact Center persistent docked agent bar.
  *
  * The bar is injected into the admin chrome on every page for a signed-in agent. It is the CRM-side bridge to
@@ -387,7 +531,9 @@
     function serverNow() {
       return Date.now() - serverOffsetMs;
     }
-    function refresh() {
+
+    // One state fetch at a time: a burst of hub events folds into it (see shared/coalesced-refresh.js).
+    var refresh = window.CrestAppsContactCenter.coalesceRefresh(function () {
       if (!config.stateUrl) {
         return Promise.resolve();
       }
@@ -403,7 +549,7 @@
           render(data);
         }
       }).catch(function () {});
-    }
+    });
     function completeActivityUrl(activityId) {
       if (!config.completeActivityUrlTemplate || !activityId) {
         return null;
@@ -582,14 +728,58 @@
       if (!config.acceptOfferUrl || !reservationId) {
         return;
       }
-      setOfferButtonsDisabled(true);
-      post(config.acceptOfferUrl, config.antiForgeryToken, {
+
+      // "Answering..." (or "Dialing...") with a spinner from the first click, every offer button disabled, and an
+      // error on the offer if the accept fails or never answers (shared/offer-actions.js).
+      var offerActions = window.CrestAppsContactCenter;
+      var offer = inner.querySelector('[data-cc-offer]');
+      var offerState = {
+        preview: !!(state && state.offer && state.offer.kind === 'PreviewDial')
+      };
+      var offerLabels = {
+        accept: label('accept', 'Accept'),
+        dial: label('dial', 'Dial'),
+        answering: label('answering', 'Answering…'),
+        dialing: label('dialing', 'Dialing…')
+      };
+      showOfferError(null);
+      offerActions.showOfferAccepting(offer, {
+        pending: true,
+        preview: offerState.preview
+      }, offerLabels);
+      offerActions.withOfferAcceptTimeout(post(config.acceptOfferUrl, config.antiForgeryToken, {
         reservationId: reservationId
-      }).then(function () {
-        return refresh();
-      }).catch(function () {}).finally(function () {
-        setOfferButtonsDisabled(false);
+      })).then(function (response) {
+        return refresh().then(function () {
+          if (response && response.ok === false) {
+            showOfferError(label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'));
+          }
+        });
+      }).catch(function (error) {
+        showOfferError(error && error.offerAcceptTimedOut ? label('acceptTimedOut', 'The call is taking too long to connect. Check your soft phone, then try again.') : label('acceptFailed', 'The call could not be answered. It may have been taken or re-offered.'));
+      }).finally(function () {
+        offerActions.showOfferAccepting(inner.querySelector('[data-cc-offer]'), {
+          pending: false,
+          preview: offerState.preview
+        }, offerLabels);
       });
+    }
+
+    // An accept that failed says so on the offer itself, so the agent knows to act rather than wait.
+    function showOfferError(message) {
+      var offer = inner.querySelector('[data-cc-offer]');
+      var existing = offer ? offer.querySelector('[data-cc-offer-error]') : null;
+      if (existing) {
+        existing.remove();
+      }
+      if (offer && message) {
+        var error = document.createElement('div');
+        error.className = 'cc-bar__offer-error text-danger small';
+        error.setAttribute('role', 'alert');
+        error.setAttribute('data-cc-offer-error', '');
+        error.textContent = message;
+        offer.appendChild(error);
+      }
     }
     function decline(reservationId) {
       if (!config.declineOfferUrl || !reservationId) {
@@ -653,16 +843,21 @@
       }
       var isNew = notification.reservationId && notification.reservationId !== lastOfferReservationId;
       lastOfferReservationId = notification.reservationId;
-      if (notification.kind === 'InboundCall' && isNew) {
-        beep();
-      }
+
+      // Beep once the refreshed state still shows the offer: one revoked the moment it was made (the caller
+      // hung up as it was presented) never makes a sound.
+      var beepFor = notification.kind === 'InboundCall' && isNew ? notification.reservationId : null;
       var shouldPop = notification.autoOpenActivity && notification.activityItemId && notification.activityItemId !== lastPoppedActivityId;
       if (shouldPop) {
         // Auto-paced dials pop unconditionally (the call is already connected); a preview pop yields to a
         // dirty form so the agent does not lose work while reviewing.
         popActivity(notification.activityItemId, notification.kind === 'AutoDial');
       }
-      refresh();
+      refresh().then(function () {
+        if (beepFor && state && state.offer && state.offer.reservationId === beepFor) {
+          beep();
+        }
+      });
     }
 
     // The offer was taken. When the agent accepted it, pop the activity so they land on the record for the call
