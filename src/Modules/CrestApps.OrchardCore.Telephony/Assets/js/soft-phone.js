@@ -68,6 +68,8 @@
     var pruneAgentHolds = softPhoneModules.pruneAgentHolds;
     var isAgentHeld = softPhoneModules.isAgentHeld;
     var reconcileAgentHold = softPhoneModules.reconcileAgentHold;
+    var resolveReportedState = softPhoneModules.resolveReportedState;
+    var holdCommandRoute = softPhoneModules.holdCommandRoute;
 
     var readOfferLegTag = softPhoneModules.readOfferLegTag;
     var classifyOfferLeg = softPhoneModules.classifyOfferLeg;
@@ -2215,6 +2217,8 @@
         // Calls the agent put on hold and has not resumed, by call id. With browser audio the hold happens here and
         // the server keeps reporting the call connected, so this, not the server, says whether the call is held.
         var agentHolds = {};
+        // The calls as they stood before an active-call lookup replaced them, while that lookup is being applied.
+        var callsBeforeLookup = null;
         // Audible inbound-call alert, started/stopped from renderIncoming so an away agent hears a ringing call.
         var ringtone = createRingtonePlayer();
 
@@ -4920,7 +4924,21 @@
                 return;
             }
 
-            var stateName = normalizeState(call.state);
+            // A call already up cannot be ringing again: a report that says so is stale (see
+            // resolveReportedState), and is read as the call staying as it was.
+            var reportedStateName = normalizeState(call.state);
+            var previous = activeCalls[call.callId] || (callsBeforeLookup && callsBeforeLookup[call.callId]);
+            var stateName = previous
+                ? resolveReportedState(normalizeState(previous.state), reportedStateName)
+                : reportedStateName;
+
+            if (stateName !== reportedStateName) {
+                reportDiagnostic('info', 'stale-call-state-ignored',
+                    'A report that the call is ' + reportedStateName + ' was ignored; the call is already ' + stateName + '.',
+                    call.callId);
+                call.state = stateName;
+            }
+
             var outcome = reconcileAgentHold(stateName, call.isOnHold, isAgentHeld(agentHolds, call.callId), holdIsPerformedHere());
 
             rememberAgentHold(agentHolds, call.callId, outcome.agentHeld);
@@ -5679,15 +5697,22 @@
                 .map(function (id) { return activeCalls[id]; })
                 .filter(function (call) { return call && call.browserOriginated; });
 
+            // The list replaces the calls wholesale, but what the phone already knew about each call still decides how
+            // a stale report about it is read.
+            callsBeforeLookup = activeCalls;
             activeCalls = {};
 
-            calls.forEach(function (call) {
-                upsertActiveCall(call, false);
-            });
+            try {
+                calls.forEach(function (call) {
+                    upsertActiveCall(call, false);
+                });
 
-            preservedBrowserCalls.forEach(function (call) {
-                upsertActiveCall(call, false);
-            });
+                preservedBrowserCalls.forEach(function (call) {
+                    upsertActiveCall(call, false);
+                });
+            } finally {
+                callsBeforeLookup = null;
+            }
 
             // A held call the server no longer reports is over; its hold goes with it.
             pruneAgentHolds(agentHolds, Object.keys(activeCalls));
@@ -5912,27 +5937,48 @@
             });
         }
 
-        function hold() {
+        // Holds or resumes the current call. A call the server tracks always goes through the hub -- the server
+        // records the hold time, and its answer drives the hold audio on the leg carrying the call -- and a call this
+        // browser placed itself is held on its own session. Hold and resume share this path, so the two can never
+        // take different routes for the same call (see holdCommandRoute in soft-phone/agent-hold.js).
+        function setCurrentCallHold(onHold) {
             var controller = currentBrowserController();
+            var route = holdCommandRoute(currentCall, !!controller);
 
-            if (controller) {
-                Promise.resolve(controller.setHold(true)).catch(function () { });
-                currentCall.isOnHold = true;
-                currentCall.state = 'OnHold';
+            if (route === 'local') {
+                Promise.resolve(controller.setHold(onHold)).catch(function () { });
+                currentCall.isOnHold = onHold;
+                currentCall.state = onHold ? 'OnHold' : 'Connected';
                 upsertActiveCall(currentCall, true);
                 render();
 
                 return;
             }
 
-            var call = currentCallReference();
+            var call = route === 'hub' ? currentCallReference() : null;
 
-            if (call) {
+            if (!call) {
+                return;
+            }
+
+            if (onHold) {
                 // Remembered before the round trip, so a report that crosses it cannot take the caller off hold; a
                 // hold the server refused is forgotten again.
                 rememberAgentHold(agentHolds, call.callId, true);
                 settleHoldCommand(invoke('Hold', call), call.callId, false);
+
+                return;
             }
+
+            // Only the agent ends their own hold. A resume the server refused leaves the call held.
+            var wasHeld = isAgentHeld(agentHolds, call.callId);
+
+            rememberAgentHold(agentHolds, call.callId, false);
+            settleHoldCommand(invoke('Resume', call), call.callId, wasHeld);
+        }
+
+        function hold() {
+            setCurrentCallHold(true);
         }
 
         // Undoes the remembered hold change when the command did not go through.
@@ -5947,27 +5993,7 @@
         }
 
         function resume() {
-            var controller = currentBrowserController();
-
-            if (controller) {
-                Promise.resolve(controller.setHold(false)).catch(function () { });
-                currentCall.isOnHold = false;
-                currentCall.state = 'Connected';
-                upsertActiveCall(currentCall, true);
-                render();
-
-                return;
-            }
-
-            var call = currentCallReference();
-
-            if (call) {
-                // Only the agent ends their own hold. A resume the server refused leaves the call held.
-                var wasHeld = isAgentHeld(agentHolds, call.callId);
-
-                rememberAgentHold(agentHolds, call.callId, false);
-                settleHoldCommand(invoke('Resume', call), call.callId, wasHeld);
-            }
+            setCurrentCallHold(false);
         }
 
         function mute() {
