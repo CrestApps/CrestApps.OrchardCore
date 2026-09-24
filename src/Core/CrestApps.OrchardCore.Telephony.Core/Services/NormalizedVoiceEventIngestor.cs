@@ -1,3 +1,4 @@
+using System.Runtime.ExceptionServices;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
 
@@ -66,14 +67,38 @@ public sealed class NormalizedVoiceEventIngestor : INormalizedVoiceEventIngestor
             cancellationToken);
 
         var handled = false;
+        ExceptionDispatchInfo failure = null;
 
         foreach (var handler in _handlers.OrderBy(handler => handler.Order))
         {
             // Every handler observes every event. A handler that claims the event does not consume it,
             // because the telephony call history and the Contact Center call session are independent
             // projections of the same stream and suppressing either one silently desynchronizes it.
-            handled |= await handler.HandleAsync(providerEvent, cancellationToken);
+            try
+            {
+                handled |= await handler.HandleAsync(providerEvent, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                // A projection that fails must not starve the ones after it. The telephony call history failing on
+                // a busy database once kept a caller's hangup from the Contact Center, which then held the call open
+                // until a reconciliation sweep ended it half a minute late. The first failure is still raised once
+                // every projection has run, so the delivery fails and its durable inbox retries it; the projections
+                // that succeeded recognize the redelivery as one they already applied.
+                failure ??= ExceptionDispatchInfo.Capture(exception);
+
+                _logger.LogWarning(
+                    exception,
+                    "The normalized voice event projection '{Handler}' failed; the remaining projections still run and the delivery will be retried.",
+                    handler.GetType().Name);
+            }
         }
+
+        failure?.Throw();
 
         if (!handled && _logger.IsEnabled(LogLevel.Debug))
         {
