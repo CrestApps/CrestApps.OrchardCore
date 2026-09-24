@@ -77,6 +77,14 @@
     var forgetAcceptedOffer = softPhoneModules.forgetAcceptedOffer;
     var OFFER_LEG_CAPABILITY = softPhoneModules.OFFER_LEG_CAPABILITY;
 
+    var createCallLegs = softPhoneModules.createCallLegs;
+    var notePlatformLeg = softPhoneModules.notePlatformLeg;
+    var noteBrowserLeg = softPhoneModules.noteBrowserLeg;
+    var forgetLeg = softPhoneModules.forgetLeg;
+    var planPlatformReport = softPhoneModules.planPlatformReport;
+    var legAfterEnd = softPhoneModules.legAfterEnd;
+    var canConferenceCall = softPhoneModules.canConferenceCall;
+
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
         Dial: 1,
@@ -663,10 +671,13 @@
         }
 
         var currentCall = null;
-        // Whether the current call was placed by this browser rather than bridged to it by the platform. A
-        // browser-originated call has no platform interaction behind it, so platform call state that mentions no
-        // call says nothing about it and must not end it.
-        var currentCallIsBrowserOriginated = false;
+        // The provider calls this browser holds, kept apart by kind (see soft-phone/call-legs.js): the leg carrying a
+        // call the server tracks, which the server's reports drive, and a call placed from the keypad, which has no
+        // platform interaction behind it and which those reports must never touch. Which of them is currentCall only
+        // says whose events the adapter is listening to; it used to decide which call a server report acted on too,
+        // so a keypad call placed on top of a held platform call took every later hold, resume and hang-up meant for
+        // the caller's leg.
+        var legs = createCallLegs();
         // The active outbound call's state callback, set by originate() and cleared when that call ends.
         var outboundNotify = null;
         // An inbound leg that is ringing but has not been answered yet (a direct extension call). It is surfaced
@@ -1362,10 +1373,24 @@
             context.onSignalingRegion(signalingRegion, describeSignalingRegion(signalingRegion));
         }
 
+        // Forgets a call that ended. When a keypad call ends while the platform leg it was placed over is still up,
+        // the platform leg becomes current again, so its own events -- and its hang-up -- are heard, and its audio is
+        // what the speaker plays.
         function clearCall(call) {
-            if (currentCall === call) {
-                currentCall = null;
-                outboundNotify = null;
+            var next = legAfterEnd(legs, call);
+
+            if (currentCall !== call) {
+                return;
+            }
+
+            outboundNotify = null;
+            currentCall = next && next !== call && !isTelnyxTerminalState(next.state) ? next : null;
+
+            if (currentCall && remoteElement && currentCall.remoteStream) {
+                try {
+                    remoteElement.srcObject = currentCall.remoteStream;
+                    ensureRemotePlayback();
+                } catch (error) { /* best effort */ }
             }
         }
 
@@ -1452,6 +1477,8 @@
 
                     currentCall = call;
                     outboundNotify = null;
+                    // The caller's audio from here on: the server's reports about their call drive this leg.
+                    notePlatformLeg(legs, call);
                     answerInboundCall(call);
                 },
                 hangup: function () {
@@ -1526,6 +1553,7 @@
 
                 if (autoAnswer) {
                     currentCall = call;
+                    notePlatformLeg(legs, call);
                     answerInboundCall(call);
 
                     return;
@@ -1541,6 +1569,9 @@
                     // originated call (so the core sees Connected/Disconnected and can clean up).
                     answer: function (onState) {
                         currentCall = call;
+                        // A colleague's direct call: the soft phone drives it through its own session, not the
+                        // server's reports.
+                        noteBrowserLeg(legs, call);
                         inboundRingingCall = null;
                         outboundNotify = typeof onState === 'function' ? onState : null;
                         answerInboundCall(call);
@@ -1630,6 +1661,13 @@
                     stopQualitySampler(true);
                     clearCall(call);
                 }
+
+                return;
+            }
+
+            // A leg this browser holds that is not the current call -- the platform leg under a keypad call -- ended.
+            if ((call === legs.platform || call === legs.browser) && isTelnyxTerminalState(call.state)) {
+                forgetLeg(legs, call);
             }
         });
 
@@ -1845,7 +1883,7 @@
                     }
 
                     currentCall = call;
-                    currentCallIsBrowserOriginated = true;
+                    noteBrowserLeg(legs, call);
                     outboundNotify = notify;
 
                     return {
@@ -1878,57 +1916,53 @@
                         }
                     };
                 },
+                // Applies the server's state for the call it tracks to the leg carrying that call's audio -- never to a
+                // call the browser placed itself. Such a call has no platform interaction behind it, so the platform
+                // reporting no active call is silence, not an instruction to hang up (manual dials were once dropped
+                // the moment the customer answered, when a refresh came back empty), and a terminal report about a
+                // platform call is not about it either.
                 handleCallState: function (serverCall) {
-                    var stateName = normalizeState(serverCall && serverCall.state);
+                    var plan = planPlatformReport(legs, serverCall ? normalizeState(serverCall.state) : null);
+                    var leg = plan.leg;
 
-                    // A call the browser placed itself has no platform interaction behind it, so the platform
-                    // reporting no active call is silence, not an instruction to hang up. Manual dials were being
-                    // dropped the moment the customer answered: the answer refreshed the active-call list, the
-                    // list came back empty because nothing server-side had ever recorded the call, and this ran
-                    // with no call at all and tore down the live session. Only an explicit terminal state from
-                    // the platform ends a browser-originated call.
-                    if (!serverCall && currentCallIsBrowserOriginated) {
-                        return Promise.resolve();
-                    }
-
-                    if (!serverCall || stateName === 'Disconnected' || stateName === 'Failed') {
-                        if (currentCall) {
+                    if (plan.action === 'hangup') {
+                        if (leg === currentCall) {
                             stopQualitySampler(true);
-                            endHoldAudio();
+                        }
 
-                            try {
-                                currentCall.hangup();
-                            } catch (error) { /* best effort */ }
+                        endHoldAudio();
 
+                        try {
+                            leg.hangup();
+                        } catch (error) { /* best effort */ }
+
+                        forgetLeg(legs, leg);
+
+                        if (currentCall === leg) {
                             currentCall = null;
-                            currentCallIsBrowserOriginated = false;
                             outboundNotify = null;
                         }
 
                         return Promise.resolve();
                     }
 
-                    if (!currentCall) {
-                        return Promise.resolve();
-                    }
-
-                    if (stateName === 'OnHold') {
+                    if (plan.action === 'hold') {
                         try {
-                            return applyHold(currentCall, true);
+                            return applyHold(leg, true);
                         } catch (error) {
                             return Promise.resolve();
                         }
                     }
 
-                    if (stateName === 'Connected') {
+                    if (plan.action === 'resume') {
                         try {
                             if (serverCall.isMuted) {
-                                currentCall.muteAudio();
+                                leg.muteAudio();
                             } else {
-                                currentCall.unmuteAudio();
+                                leg.unmuteAudio();
                             }
 
-                            return applyHold(currentCall, false);
+                            return applyHold(leg, false);
                         } catch (error) {
                             return Promise.resolve();
                         }
@@ -1946,15 +1980,18 @@
                     stopQualitySampler(true);
                     endHoldAudio();
 
-                    if (currentCall) {
+                    // Every call this browser still holds goes with the registration, not only the current one.
+                    [currentCall, legs.platform, legs.browser].filter(function (call, index, all) {
+                        return call && all.indexOf(call) === index;
+                    }).forEach(function (call) {
                         try {
-                            currentCall.hangup();
+                            call.hangup();
                         } catch (error) { /* best effort */ }
+                    });
 
-                        currentCall = null;
-                        currentCallIsBrowserOriginated = false;
-                        outboundNotify = null;
-                    }
+                    currentCall = null;
+                    legs = createCallLegs();
+                    outboundNotify = null;
 
                     try {
                         return Promise.resolve(client.disconnect()).catch(function () { });
@@ -2249,19 +2286,18 @@
 
         if (offerChannel) {
             offerChannel.onmessage = function (event) {
-                var message = event && event.data;
 
-                if (!message || message.type !== 'offer-handled') {
+                if (!handled) {
                     return;
                 }
 
                 // The page the agent clicked in may not be the one the platform rang: whichever page holds the
                 // offer's leg answers it (or hangs it up) the moment it hears.
-                if (message.reservationId) {
-                    settleOfferLeg(message.reservationId, !!message.answered);
+                if (handled.reservationId) {
+                    settleOfferLeg(handled.reservationId, handled.answered);
                 }
 
-                if (!currentCall || currentCall.callId !== message.callId) {
+                if (!handled.marksCurrentCallHandled) {
                     return;
                 }
 
@@ -3771,10 +3807,18 @@
 
             var stateName = normalizeState(call && call.state);
             var microphoneEnabled = stateName === 'Connected' && !call.isMuted;
-
-            localAudioStream.getAudioTracks().forEach(function (track) {
-                track.enabled = microphoneEnabled;
+            var ended = !call || stateName === 'Disconnected' || stateName === 'Failed';
+            // The microphone is shared with a call placed from the keypad, which the end of a platform call says
+            // nothing about.
+            var keypadCallLive = getActiveCalls().some(function (active) {
+                return active && active.browserOriginated;
             });
+
+            if (!(ended && keypadCallLive)) {
+                localAudioStream.getAudioTracks().forEach(function (track) {
+                    track.enabled = microphoneEnabled;
+                });
+            }
 
             if (typeof browserAudioSession.handleCallState === 'function') {
                 Promise.resolve(browserAudioSession.handleCallState(call || null)).catch(function (error) {
@@ -5297,10 +5341,15 @@
                 var number = formatPhoneNumber(getPeerNumber(call)) || callId;
                 var state = statusTextForCall(call);
 
+                // Only calls the server tracks can be merged; a call this browser placed is never offered for it.
+                var conferenceCheck = canConferenceCall(call)
+                    ? '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' +
+                        escapeHtml(callId) + '"' + (selected ? ' checked' : '') + ' aria-label="' +
+                        escapeHtml(strings.conference || 'Conference selected calls') + '" />'
+                    : '';
+
                 return '<div class="telephony-soft-phone__active-call' + (current ? ' is-current' : '') + '">' +
-                    '<input type="checkbox" class="telephony-soft-phone__active-call-check" data-telephony-conference-call="' +
-                    escapeHtml(callId) + '"' + (selected ? ' checked' : '') + ' aria-label="' +
-                    escapeHtml(strings.conference || 'Conference selected calls') + '" />' +
+                    conferenceCheck +
                     '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' +
                     escapeHtml(callId) + '">' +
                     '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(number) + '</span>' +
@@ -5670,9 +5719,14 @@
             showError(null);
 
             if (result.call) {
+                var resultState = normalizeState(result.call.state);
+                var ended = resultState === 'Disconnected' || resultState === 'Failed';
+
                 upsertActiveCall(result.call, true);
                 render();
-                notifyBrowserAudio(currentCall);
+                // A call the command ended is handed to the media as ended, so the leg carrying it is hung up even when
+                // the call now current is another one -- a call placed from the keypad, which the media must not touch.
+                notifyBrowserAudio(ended ? result.call : currentCall);
                 scheduleActiveCallsRefresh();
             }
 
