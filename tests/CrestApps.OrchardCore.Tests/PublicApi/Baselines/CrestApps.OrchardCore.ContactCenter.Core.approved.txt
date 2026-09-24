@@ -2471,7 +2471,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class AgentPreDialEventHandler : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventHandler
     {
-        public AgentPreDialEventHandler(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPreDialCoordinator coordinator) { }
+        public AgentPreDialEventHandler(System.Lazy<CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPreDialCoordinator> coordinator) { }
         public string HandlerId { get; }
         public CrestApps.OrchardCore.ContactCenter.ContactCenterHandlerReplaySafety ReplaySafety { get; }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent interactionEvent, System.Threading.CancellationToken cancellationToken = default) { }
