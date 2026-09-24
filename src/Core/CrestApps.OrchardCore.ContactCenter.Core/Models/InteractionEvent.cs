@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Models;
@@ -62,6 +63,12 @@ public sealed class InteractionEvent : CatalogItem, IEntity
     public string ActorId { get; set; }
 
     /// <summary>
+    /// Gets or sets the kind of actor that made the change: the agent themselves, a supervisor, a workflow, the
+    /// platform or the provider.
+    /// </summary>
+    public ContactCenterActorType ActorType { get; set; }
+
+    /// <summary>
     /// Gets or sets the name of the component that originated the event. See <see cref="ContactCenterConstants.Components"/>.
     /// </summary>
     public string SourceComponent { get; set; }
@@ -70,6 +77,12 @@ public sealed class InteractionEvent : CatalogItem, IEntity
     /// Gets or sets the UTC time the event occurred.
     /// </summary>
     public DateTime OccurredUtc { get; set; }
+
+    /// <summary>
+    /// Gets or sets the UTC time the event was written to the log. <see cref="OccurredUtc"/> is when the change
+    /// happened, which reports use; this is when the platform learned of it, which audits compare it with.
+    /// </summary>
+    public DateTime RecordedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets an optional idempotency key used to de-duplicate provider-originated events.

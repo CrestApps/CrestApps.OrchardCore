@@ -323,5 +323,139 @@ public static partial class ContactCenterConstants
         /// Raised when a secure capture is cancelled by the agent or expires before the customer completes it.
         /// </summary>
         public const string SecureCaptureCancelled = "SecureCaptureCancelled";
+
+        // ---- Activity audit: agent state ----
+
+        /// <summary>
+        /// Raised on every agent state transition, including those routing and the platform make, with the full
+        /// transition. The record workforce and payroll reports are built from.
+        /// </summary>
+        public const string AgentStateChanged = "AgentStateChanged";
+
+        /// <summary>
+        /// Raised when an agent's real-time connection opens.
+        /// </summary>
+        public const string AgentConnected = "AgentConnected";
+
+        /// <summary>
+        /// Raised when an agent's real-time connection closes.
+        /// </summary>
+        public const string AgentDisconnected = "AgentDisconnected";
+
+        /// <summary>
+        /// Raised when an agent's session went silent long enough for the platform to sign them off.
+        /// </summary>
+        public const string AgentHeartbeatLost = "AgentHeartbeatLost";
+
+        // ---- Activity audit: offers ----
+
+        /// <summary>
+        /// Raised when an offer starts ringing for an agent.
+        /// </summary>
+        public const string OfferPresented = "OfferPresented";
+
+        /// <summary>
+        /// Raised when an offer rang out without an answer.
+        /// </summary>
+        public const string OfferExpired = "OfferExpired";
+
+        /// <summary>
+        /// Raised when an offer ended because the agent could not take it, such as an agent leg that failed to
+        /// connect.
+        /// </summary>
+        public const string OfferMissed = "OfferMissed";
+
+        /// <summary>
+        /// Raised when an offer was withdrawn before it was answered: the caller hung up, the work was given to
+        /// someone else, or the platform cancelled it.
+        /// </summary>
+        public const string OfferCancelled = "OfferCancelled";
+
+        // ---- Activity audit: calls ----
+
+        /// <summary>
+        /// Raised when a call enters a queue to wait for an agent.
+        /// </summary>
+        public const string CallQueued = "CallQueued";
+
+        /// <summary>
+        /// Raised when a call leaves a queue, with how long it waited and why it left.
+        /// </summary>
+        public const string CallDequeued = "CallDequeued";
+
+        /// <summary>
+        /// Raised when the platform starts dialling a call.
+        /// </summary>
+        public const string DialStarted = "DialStarted";
+
+        /// <summary>
+        /// Raised when a dial could not be placed or did not connect.
+        /// </summary>
+        public const string DialFailed = "DialFailed";
+
+        /// <summary>
+        /// Raised when an agent's leg of a call is answered.
+        /// </summary>
+        public const string AgentLegAnswered = "AgentLegAnswered";
+
+        /// <summary>
+        /// Raised when an agent's leg of a call failed to connect or dropped.
+        /// </summary>
+        public const string AgentLegFailed = "AgentLegFailed";
+
+        /// <summary>
+        /// Raised when a caller hangs up while waiting, before any agent answered.
+        /// </summary>
+        public const string CallAbandoned = "CallAbandoned";
+
+        /// <summary>
+        /// Raised when an agent starts a consult call during an attended transfer.
+        /// </summary>
+        public const string ConsultStarted = "ConsultStarted";
+
+        /// <summary>
+        /// Raised when the consulted party answers.
+        /// </summary>
+        public const string ConsultConnected = "ConsultConnected";
+
+        /// <summary>
+        /// Raised when an attended transfer completes and the caller is handed over.
+        /// </summary>
+        public const string ConsultCompleted = "ConsultCompleted";
+
+        /// <summary>
+        /// Raised when a consult ends without the transfer completing.
+        /// </summary>
+        public const string ConsultCancelled = "ConsultCancelled";
+
+        /// <summary>
+        /// Raised when an automated voice agent's call is answered.
+        /// </summary>
+        public const string AiCallAnswered = "AiCallAnswered";
+
+        /// <summary>
+        /// Raised when an automated voice call learns who answered: a person or a machine.
+        /// </summary>
+        public const string AiAnswererDetected = "AiAnswererDetected";
+
+        /// <summary>
+        /// Raised when an automated voice agent's conversation ends, with its outcome.
+        /// </summary>
+        public const string AiConversationEnded = "AiConversationEnded";
+
+        /// <summary>
+        /// Raised when an automated voice agent hands a caller to a live agent.
+        /// </summary>
+        public const string AiHandoffRequested = "AiHandoffRequested";
+
+        /// <summary>
+        /// Raised when an agent's extension call to or from a colleague starts ringing.
+        /// </summary>
+        public const string ExtensionCallStarted = "ExtensionCallStarted";
+
+        /// <summary>
+        /// Raised when an agent's extension call ends.
+        /// </summary>
+        public const string ExtensionCallEnded = "ExtensionCallEnded";
     }
 }

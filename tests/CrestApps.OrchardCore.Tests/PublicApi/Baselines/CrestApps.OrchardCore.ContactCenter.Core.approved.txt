@@ -654,6 +654,18 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string UserId { get; set; }
         public string UserName { get; set; }
     }
+    public sealed class AgentSessionEventData
+    {
+        public AgentSessionEventData() { }
+        public string AgentId { get; set; }
+        public string AgentSessionId { get; set; }
+        public string ConnectionId { get; set; }
+        public System.DateTime? LastHeartbeatUtc { get; set; }
+        public System.DateTime OccurredUtc { get; set; }
+        public int OpenConnectionCount { get; set; }
+        public string Reason { get; set; }
+        public string UserId { get; set; }
+    }
     public sealed class AgentSkill
     {
         public const int DefaultProficiency = 3;
@@ -662,6 +674,39 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public AgentSkill() { }
         public int Proficiency { get; set; }
         public string SkillId { get; set; }
+    }
+    public static class AgentStateChangeSources
+    {
+        public const string Accepted = "Accepted";
+        public const string Reconciled = "Reconciled";
+        public const string Released = "Released";
+        public const string RequestApplied = "RequestApplied";
+        public const string Reserved = "Reserved";
+        public const string SessionExpired = "SessionExpired";
+        public const string SetState = "SetState";
+        public const string SignIn = "SignIn";
+        public const string SignOut = "SignOut";
+        public const string WorkCompleted = "WorkCompleted";
+        public const string WrapUpStarted = "WrapUpStarted";
+        public const string WrapUpTimedOut = "WrapUpTimedOut";
+    }
+    public sealed class AgentStateChangedEventData
+    {
+        public AgentStateChangedEventData() { }
+        public string AgentId { get; set; }
+        public string AgentSessionId { get; set; }
+        public System.Collections.Generic.IList<string> CampaignIds { get; set; }
+        public System.DateTime ChangedUtc { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus CurrentState { get; set; }
+        public string InteractionId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus PreviousState { get; set; }
+        public System.Collections.Generic.IList<string> QueueIds { get; set; }
+        public string ReasonCodeId { get; set; }
+        public string ReasonName { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.AgentPresenceStatus? RequestedState { get; set; }
+        public string ReservationId { get; set; }
+        public string Source { get; set; }
+        public string UserId { get; set; }
     }
     public sealed class AgentStateReasonCode : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel, CrestApps.Core.INameAwareModel
     {
@@ -817,6 +862,32 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         OnHold = 4,
         Ended = 5,
         Failed = 6,
+    }
+    public sealed class CallLifecycleEventData
+    {
+        public CallLifecycleEventData() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public string CallSessionId { get; set; }
+        public string CampaignId { get; set; }
+        public System.Collections.Generic.IDictionary<string, string> Details { get; set; }
+        public string Direction { get; set; }
+        public double? DurationSeconds { get; set; }
+        public string HangupCause { get; set; }
+        public string HangupSource { get; set; }
+        public string InteractionId { get; set; }
+        public string LegRole { get; set; }
+        public string PreviousState { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ProviderHangupCause { get; set; }
+        public string ProviderLegId { get; set; }
+        public string ProviderName { get; set; }
+        public System.DateTime? ProviderOccurredUtc { get; set; }
+        public string QueueId { get; set; }
+        public string Reason { get; set; }
+        public string SipHangupCause { get; set; }
+        public string State { get; set; }
+        public string Target { get; set; }
     }
     public enum CallPartyRole
     {
@@ -981,6 +1052,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string TargetAddress { get; set; }
         public string TargetId { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.InteractionTransferTargetType TargetType { get; set; }
+    }
+    public sealed class ContactCenterActor : System.IEquatable<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor>
+    {
+        public ContactCenterActor(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterActorType Type, string Id = null) { }
+        public string Id { get; init; }
+        public CrestApps.OrchardCore.ContactCenter.Models.ContactCenterActorType Type { get; init; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor System { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor Agent(string userId) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor Provider(string providerName) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor Supervisor(string userId) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor Workflow(string workflowId) { }
     }
     public sealed class ContactCenterComplianceOptions
     {
@@ -1438,6 +1520,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         public InteractionEvent() { }
         public string ActorId { get; set; }
+        public CrestApps.OrchardCore.ContactCenter.Models.ContactCenterActorType ActorType { get; set; }
         public string AggregateId { get; set; }
         public string AggregateType { get; set; }
         public string CausationId { get; set; }
@@ -1448,6 +1531,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string IdempotencyKey { get; set; }
         public string InteractionId { get; set; }
         public System.DateTime OccurredUtc { get; set; }
+        public System.DateTime RecordedUtc { get; set; }
         public int SchemaVersion { get; set; }
         public string SourceComponent { get; set; }
         public T GetData<T>() { }
@@ -1616,6 +1700,22 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
     {
         public OfferDeclinedEventData() { }
         public string QueueId { get; set; }
+    }
+    public sealed class OfferLifecycleEventData
+    {
+        public OfferLifecycleEventData() { }
+        public string ActivityItemId { get; set; }
+        public string AgentId { get; set; }
+        public string CampaignId { get; set; }
+        public string Channel { get; set; }
+        public string InteractionId { get; set; }
+        public System.DateTime? PresentedUtc { get; set; }
+        public string QueueId { get; set; }
+        public string Reason { get; set; }
+        public string ReservationId { get; set; }
+        public double? RingSeconds { get; set; }
+        public System.DateTime? SettledUtc { get; set; }
+        public string UserId { get; set; }
     }
     public enum OutboxMessageStatus
     {
@@ -2572,6 +2672,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DispositionSuggestion> SuggestDispositionAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AssistContext context, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> SummarizeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AssistContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class ContactCenterAuditRecorder : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder
+    {
+        public ContactCenterAuditRecorder(CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock) { }
+        public System.Threading.Tasks.Task RecordAgentSessionAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSessionEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordAgentStateAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateChangedEventData change, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordCallAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.CallLifecycleEventData data, System.DateTime occurredUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string idempotencyKey = null, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task RecordOfferAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.OfferLifecycleEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class ContactCenterCallCommandService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterCallCommandService
     {
         public ContactCenterCallCommandService(CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerProfileReader dialerProfileReader, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IDialerAttemptService> dialerAttemptServices, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCommandStateService providerCommandStateService, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterScopeExecutor scopeExecutor, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterEventPublisher publisher, OrchardCore.Modules.IClock clock) { }
@@ -2584,6 +2692,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public static string BuildProviderCallClaim(string providerName, string providerCallId, string itemId) { }
         public static string BuildProviderDomainEventIdempotencyKey(string providerEventKey, string eventType) { }
         public static string BuildProviderEventIdempotencyKey(string providerName, string idempotencyKey) { }
+        public static string FitIdempotencyKey(string idempotencyKey) { }
     }
     public sealed class ContactCenterConfigurationCache : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterConfigurationCache
     {
@@ -3206,6 +3315,13 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         bool IsAvailable { get; }
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.DispositionSuggestion> SuggestDispositionAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AssistContext context, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> SummarizeAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AssistContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IContactCenterAuditRecorder
+    {
+        System.Threading.Tasks.Task RecordAgentSessionAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.AgentSessionEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RecordAgentStateAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.AgentStateChangedEventData change, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RecordCallAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.CallLifecycleEventData data, System.DateTime occurredUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, string idempotencyKey = null, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task RecordOfferAsync(string eventType, CrestApps.OrchardCore.ContactCenter.Core.Models.OfferLifecycleEventData data, CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterActor actor, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IContactCenterCallCommandService
     {

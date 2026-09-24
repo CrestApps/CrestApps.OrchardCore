@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
@@ -46,9 +47,16 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
     {
         ArgumentNullException.ThrowIfNull(interactionEvent);
 
+        var recordedUtc = _clock.UtcNow;
+
         if (interactionEvent.OccurredUtc == default)
         {
-            interactionEvent.OccurredUtc = _clock.UtcNow;
+            interactionEvent.OccurredUtc = recordedUtc;
+        }
+
+        if (interactionEvent.RecordedUtc == default)
+        {
+            interactionEvent.RecordedUtc = recordedUtc;
         }
 
         if (string.IsNullOrEmpty(interactionEvent.ItemId))
@@ -64,6 +72,12 @@ public sealed class DefaultContactCenterEventPublisher : IContactCenterEventPubl
         if (string.IsNullOrEmpty(interactionEvent.ActorId))
         {
             interactionEvent.ActorId = ContactCenterConstants.SystemActor;
+        }
+
+        if (interactionEvent.ActorType == ContactCenterActorType.Unspecified &&
+            string.Equals(interactionEvent.ActorId, ContactCenterConstants.SystemActor, StringComparison.Ordinal))
+        {
+            interactionEvent.ActorType = ContactCenterActorType.System;
         }
 
         if (!string.IsNullOrEmpty(interactionEvent.IdempotencyKey) &&

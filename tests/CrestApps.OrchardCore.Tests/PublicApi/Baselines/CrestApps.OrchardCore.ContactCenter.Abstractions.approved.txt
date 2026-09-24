@@ -57,18 +57,31 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string ActivityAssignmentChanged = "ActivityAssignmentChanged";
             public const string ActivityDispositionApplied = "ActivityDispositionApplied";
             public const string ActivityReserved = "ActivityReserved";
+            public const string AgentConnected = "AgentConnected";
+            public const string AgentDisconnected = "AgentDisconnected";
             public const string AgentEntitlementsChanged = "AgentEntitlementsChanged";
+            public const string AgentHeartbeatLost = "AgentHeartbeatLost";
+            public const string AgentLegAnswered = "AgentLegAnswered";
+            public const string AgentLegFailed = "AgentLegFailed";
             public const string AgentPresenceChanged = "AgentPresenceChanged";
             public const string AgentReleased = "AgentReleased";
             public const string AgentReserved = "AgentReserved";
             public const string AgentSignedIn = "AgentSignedIn";
             public const string AgentSignedOut = "AgentSignedOut";
+            public const string AgentStateChanged = "AgentStateChanged";
+            public const string AiAnswererDetected = "AiAnswererDetected";
+            public const string AiCallAnswered = "AiCallAnswered";
+            public const string AiConversationEnded = "AiConversationEnded";
+            public const string AiHandoffRequested = "AiHandoffRequested";
+            public const string CallAbandoned = "CallAbandoned";
             public const string CallConferenceChanged = "CallConferenceChanged";
             public const string CallConnected = "CallConnected";
+            public const string CallDequeued = "CallDequeued";
             public const string CallEnded = "CallEnded";
             public const string CallHeld = "CallHeld";
             public const string CallMuted = "CallMuted";
             public const string CallQualityAlertRaised = "CallQualityAlertRaised";
+            public const string CallQueued = "CallQueued";
             public const string CallResumed = "CallResumed";
             public const string CallSentToVoicemail = "CallSentToVoicemail";
             public const string CallSessionCreated = "CallSessionCreated";
@@ -77,11 +90,19 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string CallbackCompleted = "CallbackCompleted";
             public const string CallbackPromoted = "CallbackPromoted";
             public const string CallbackScheduled = "CallbackScheduled";
+            public const string ConsultCancelled = "ConsultCancelled";
+            public const string ConsultCompleted = "ConsultCompleted";
+            public const string ConsultConnected = "ConsultConnected";
+            public const string ConsultStarted = "ConsultStarted";
+            public const string DialFailed = "DialFailed";
+            public const string DialStarted = "DialStarted";
             public const string DialSuppressed = "DialSuppressed";
             public const string DialerAttemptCompleted = "DialerAttemptCompleted";
             public const string DialerAttemptScheduled = "DialerAttemptScheduled";
             public const string DialerAttemptStarted = "DialerAttemptStarted";
             public const string DialerRunStarted = "DialerRunStarted";
+            public const string ExtensionCallEnded = "ExtensionCallEnded";
+            public const string ExtensionCallStarted = "ExtensionCallStarted";
             public const string InteractionCreated = "InteractionCreated";
             public const string InteractionEnded = "InteractionEnded";
             public const string InteractionFailed = "InteractionFailed";
@@ -92,7 +113,11 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string InteractionUpdated = "InteractionUpdated";
             public const string ManualDialSuppressed = "ManualDialSuppressed";
             public const string OfferAccepted = "OfferAccepted";
+            public const string OfferCancelled = "OfferCancelled";
             public const string OfferDeclined = "OfferDeclined";
+            public const string OfferExpired = "OfferExpired";
+            public const string OfferMissed = "OfferMissed";
+            public const string OfferPresented = "OfferPresented";
             public const string OfferRequeued = "OfferRequeued";
             public const string QueueItemAdded = "QueueItemAdded";
             public const string QueueItemAssigned = "QueueItemAssigned";
@@ -479,6 +504,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Completed = 3,
         Canceled = 4,
         Failed = 5,
+    }
+    public enum ContactCenterActorType
+    {
+        Unspecified = 0,
+        Agent = 1,
+        Supervisor = 2,
+        System = 3,
+        Workflow = 4,
+        Provider = 5,
+        Customer = 6,
+        AiAgent = 7,
     }
     public sealed class ContactCenterCallAssignmentRequest
     {

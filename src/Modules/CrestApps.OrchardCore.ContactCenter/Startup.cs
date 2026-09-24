@@ -173,6 +173,7 @@ public sealed class Startup : StartupBase
             .AddScoped<IContactCenterActivityWriter, ContactCenterActivityWriter>()
             .AddScoped<ContactCenterEventDispatchContext>()
             .AddScoped<IContactCenterEventPublisher, DefaultContactCenterEventPublisher>()
+            .AddScoped<IContactCenterAuditRecorder, ContactCenterAuditRecorder>()
             .AddScoped<IContactCenterMetricStore, ContactCenterMetricStore>()
             .AddScoped<IContactCenterMetricDeltaStore, ContactCenterMetricDeltaStore>()
             .AddScoped<IContactCenterMetricRollupService, ContactCenterMetricRollupService>()

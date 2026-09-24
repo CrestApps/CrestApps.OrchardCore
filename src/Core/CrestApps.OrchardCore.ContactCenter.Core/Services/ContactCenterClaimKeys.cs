@@ -82,6 +82,25 @@ public static class ContactCenterClaimKeys
         return BuildHashedKey("provider-domain-event:v1:", $"{providerEventKey}\n{eventType}");
     }
 
+    /// <summary>
+    /// Returns an idempotency key that fits the event index's key column: the key itself when it is short enough,
+    /// otherwise a hash of it, so a key naming a long provider identifier is never truncated into a collision.
+    /// </summary>
+    /// <param name="idempotencyKey">The key.</param>
+    /// <returns>The key, or its bounded hash, or the input unchanged when it is <see langword="null"/> or empty.</returns>
+    public static string FitIdempotencyKey(string idempotencyKey)
+    {
+        if (string.IsNullOrEmpty(idempotencyKey) || idempotencyKey.Length <= MaximumIdempotencyKeyLength)
+        {
+            return idempotencyKey;
+        }
+
+        return BuildHashedKey("fit:v1:", idempotencyKey);
+    }
+
+    // The event index's idempotency key column length.
+    private const int MaximumIdempotencyKeyLength = 128;
+
     private static string BuildHashedKey(string prefix, string value)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(value));

@@ -61,6 +61,27 @@ it. The log is the right foundation. What is wrong is how much reaches it:
 5. **Alert on repeated poor calls.** When an agent's recent calls keep rating poor, publish an event supervisors are
    told about in real time and workflows can act on, naming the likely cause.
 
+## The shared contract
+
+Phases 2 to 4 are built against one contract, so the writers and the reports agree on every field:
+
+- **One door.** Every agent and call state change is recorded through `IContactCenterAuditRecorder`. It dates the
+  event by when the change happened, stamps the time it was recorded (`InteractionEvent.RecordedUtc`), names the
+  actor (`InteractionEvent.ActorType`: agent, supervisor, system, workflow, provider, customer, AI agent), and derives
+  an idempotency key from what the change is, to the tick.
+- **Agent state.** `AgentStateChanged` carries `AgentStateChangedEventData`: previous, current and requested state,
+  the reason code by id with its name at the time, the source (sign-in, reserved, accepted, released, wrap-up
+  started, work completed, wrap-up timed out, reconciled, session expired, request applied), the interaction and
+  reservation, and the time it took effect. It is separate from `AgentPresenceChanged` so recording a transition
+  never offers work or re-broadcasts presence. `AgentConnected`, `AgentDisconnected` and `AgentHeartbeatLost` carry
+  `AgentSessionEventData`.
+- **Offers.** `OfferPresented`, `OfferAccepted`, `OfferDeclined`, `OfferExpired`, `OfferMissed` and `OfferCancelled`
+  carry `OfferLifecycleEventData`, always with the interaction, and the ring time once settled.
+- **Calls.** `CallQueued`, `CallDequeued`, `DialStarted`, `DialFailed`, `AgentLegAnswered`, `AgentLegFailed`,
+  `CallAbandoned`, the consult events, the AI call events, the extension call events, and the existing call events,
+  all carry `CallLifecycleEventData`: the interaction, session, leg and role, agent, queue, the state change, the raw
+  hangup cause, how long the state that ended lasted, and the provider's own time.
+
 ## Phase 2: agent state audit
 
 1. One transition method for every presence change, publishing the full payload, with a typed actor (agent,

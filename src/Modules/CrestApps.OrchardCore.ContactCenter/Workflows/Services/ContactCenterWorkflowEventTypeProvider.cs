@@ -111,6 +111,34 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["Secure capture started"].Value, ContactCenterConstants.Events.SecureCaptureStarted) { Group = secureCapture },
             new SelectListItem(S["Secure capture completed"].Value, ContactCenterConstants.Events.SecureCaptureCompleted) { Group = secureCapture },
             new SelectListItem(S["Secure capture cancelled"].Value, ContactCenterConstants.Events.SecureCaptureCancelled) { Group = secureCapture },
+
+            new SelectListItem(S["Agent state changed"].Value, ContactCenterConstants.Events.AgentStateChanged) { Group = agents },
+            new SelectListItem(S["Agent connected"].Value, ContactCenterConstants.Events.AgentConnected) { Group = agents },
+            new SelectListItem(S["Agent disconnected"].Value, ContactCenterConstants.Events.AgentDisconnected) { Group = agents },
+            new SelectListItem(S["Agent heartbeat lost"].Value, ContactCenterConstants.Events.AgentHeartbeatLost) { Group = agents },
+
+            new SelectListItem(S["Offer presented"].Value, ContactCenterConstants.Events.OfferPresented) { Group = offers },
+            new SelectListItem(S["Offer expired"].Value, ContactCenterConstants.Events.OfferExpired) { Group = offers },
+            new SelectListItem(S["Offer missed"].Value, ContactCenterConstants.Events.OfferMissed) { Group = offers },
+            new SelectListItem(S["Offer cancelled"].Value, ContactCenterConstants.Events.OfferCancelled) { Group = offers },
+
+            new SelectListItem(S["Call queued"].Value, ContactCenterConstants.Events.CallQueued) { Group = calls },
+            new SelectListItem(S["Call dequeued"].Value, ContactCenterConstants.Events.CallDequeued) { Group = calls },
+            new SelectListItem(S["Dial started"].Value, ContactCenterConstants.Events.DialStarted) { Group = calls },
+            new SelectListItem(S["Dial failed"].Value, ContactCenterConstants.Events.DialFailed) { Group = calls },
+            new SelectListItem(S["Agent leg answered"].Value, ContactCenterConstants.Events.AgentLegAnswered) { Group = calls },
+            new SelectListItem(S["Agent leg failed"].Value, ContactCenterConstants.Events.AgentLegFailed) { Group = calls },
+            new SelectListItem(S["Call abandoned"].Value, ContactCenterConstants.Events.CallAbandoned) { Group = calls },
+            new SelectListItem(S["Consult started"].Value, ContactCenterConstants.Events.ConsultStarted) { Group = calls },
+            new SelectListItem(S["Consult connected"].Value, ContactCenterConstants.Events.ConsultConnected) { Group = calls },
+            new SelectListItem(S["Consult completed"].Value, ContactCenterConstants.Events.ConsultCompleted) { Group = calls },
+            new SelectListItem(S["Consult cancelled"].Value, ContactCenterConstants.Events.ConsultCancelled) { Group = calls },
+            new SelectListItem(S["AI call answered"].Value, ContactCenterConstants.Events.AiCallAnswered) { Group = calls },
+            new SelectListItem(S["AI answerer detected"].Value, ContactCenterConstants.Events.AiAnswererDetected) { Group = calls },
+            new SelectListItem(S["AI conversation ended"].Value, ContactCenterConstants.Events.AiConversationEnded) { Group = calls },
+            new SelectListItem(S["AI handoff requested"].Value, ContactCenterConstants.Events.AiHandoffRequested) { Group = calls },
+            new SelectListItem(S["Extension call started"].Value, ContactCenterConstants.Events.ExtensionCallStarted) { Group = calls },
+            new SelectListItem(S["Extension call ended"].Value, ContactCenterConstants.Events.ExtensionCallEnded) { Group = calls },
         ];
     }
 }
