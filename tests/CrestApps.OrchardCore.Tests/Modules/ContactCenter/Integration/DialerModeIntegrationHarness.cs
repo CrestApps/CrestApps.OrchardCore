@@ -79,6 +79,12 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
 
     public TestClock Clock => _clock;
 
+    /// <summary>
+    /// Gets every event published, in order, including the agent state audit the recorder writes.
+    /// </summary>
+    public IReadOnlyList<InteractionEvent> PublishedEvents
+        => ((RecordingContactCenterEventPublisher)_provider.GetRequiredService<IContactCenterEventPublisher>()).Events;
+
     public IReadOnlyList<string> AgentIds => _agentIds;
 
     public static async Task<DialerModeIntegrationHarness> CreateAsync()
@@ -361,6 +367,9 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         services.AddSingleton<IAgentEntitlementPolicy, PermissiveAgentEntitlementPolicy>();
         services.AddSingleton<IDialDestinationPolicy>(DialDestinationPolicyFactory.Create());
         services.AddSingleton<IAgentWorkStateHealingService>(new NoAgentWorkStateHealingService());
+        services.AddSingleton<IContactCenterAuditRecorder, ContactCenterAuditRecorder>();
+        services.AddSingleton(Mock.Of<IAgentStateReasonCodeManager>());
+        services.AddSingleton<IAgentStateTransitionService, AgentStateTransitionService>();
         services.AddSingleton<IAgentPresenceManager, AgentPresenceManagerService>();
         services.AddSingleton<IActivityReservationService, ActivityReservationService>();
         services.AddSingleton<IProviderVoiceEventService, ProviderVoiceEventService>();

@@ -126,4 +126,18 @@ Phase 1 is built. Each item is unit-tested; the live call checks are still to do
   published, at most once per agent per hour. Workflows can trigger on it, and the live dashboard shows it to
   supervisors with the likely cause.
 
-Phases 2 to 4 are next.
+Phase 2 is built and unit-tested; indexing the log by aggregate (item 5) is still to do.
+
+- One door: every writer of an agent's state goes through `IAgentStateTransitionService`, which sets the state,
+  stamps when it changed, and records `AgentStateChanged`. It never dates a change before the one it follows. The
+  presence events writers already published are unchanged.
+- Writers: sign-in, sign-out (with its reason, such as signing out of the site), a state set by the agent or a
+  workflow (recorded as a workflow actor), reserved, accepted, every release with its reason (expired, rejected,
+  canceled, compensated), wrap-up started, work completed, wrap-up timed out, a deferred request taking effect,
+  provider reconciliation, and the stale-session sign-off, which is dated by the last heartbeat.
+- Reason codes: a reason is matched to a configured code by identifier or by name, and recorded by identifier
+  with the name it had at the time. The agent screens still post the name.
+- Sessions: `AgentConnected`, `AgentDisconnected` (with the connections left open) and `AgentHeartbeatLost` (with
+  the last heartbeat) are recorded. Heartbeats themselves are not.
+
+Phases 3 and 4 are next.
