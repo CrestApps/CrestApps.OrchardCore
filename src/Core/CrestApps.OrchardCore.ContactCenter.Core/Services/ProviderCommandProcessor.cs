@@ -629,6 +629,27 @@ public sealed class ProviderCommandProcessor : IProviderCommandProcessor
     {
         ProviderCommand settled = null;
 
+        // An executor can write before it calls the provider -- sending a caller to voicemail flags the interaction
+        // and records it -- and a query flushes those writes into a transaction this scope still holds. The
+        // settlement below writes from a fresh scope on its own connection, so on a single-writer database it would
+        // wait on this one until its busy timeout gave up, and take both units of work down with it. What the
+        // dispatch wrote is committed first, as every other step of the dispatch already commits its own. Losing
+        // those writes must not also lose the settlement, which does not depend on them.
+        if (_session.CurrentTransaction is not null)
+        {
+            try
+            {
+                await _session.SaveChangesAsync(cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(
+                    "Could not commit what provider command '{ProviderCommandId}' wrote before settling it, because the commit failed with {ExceptionType}.",
+                    commandId.SanitizeLogValue(),
+                    ex.GetType().Name);
+            }
+        }
+
         try
         {
             await _scopeExecutor.ExecuteAsync<IProviderCommandProcessor>(async processor =>

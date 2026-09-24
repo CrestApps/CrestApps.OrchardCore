@@ -622,6 +622,9 @@ public sealed partial class AnswerProviderCommandTypeExecutor : IProviderCommand
             AggregateType = aggregateType,
             AggregateId = aggregateId,
             ActorId = actorId,
+
+            // A failed answer is put right by the platform, whichever agent the event is about.
+            ActorType = ContactCenterActorType.System,
             SourceComponent = ContactCenterConstants.Components.Voice,
             IdempotencyKey = ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(commandId, eventType),
         };

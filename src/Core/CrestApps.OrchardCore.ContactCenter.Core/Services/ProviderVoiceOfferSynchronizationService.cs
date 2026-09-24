@@ -174,7 +174,14 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
             return;
         }
 
-        if (_logger.IsEnabled(LogLevel.Warning))
+        var queueItemIsLive = queueItem?.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned;
+
+        // A call that routing had already let go of -- sent to voicemail, withdrawn, or reported ended a second time by
+        // a late recovery -- has nothing left to clear. Its agent was released when routing let go, and may be on
+        // another call by now, so this pass leaves them alone and does not claim to have cleared anything.
+        var routingStillHeldTheCall = queueItemIsLive || canceledReservationIds.Count > 0;
+
+        if (routingStillHeldTheCall && _logger.IsEnabled(LogLevel.Warning))
         {
             _logger.LogWarning(
                 "Provider truth ended pre-connect interaction '{InteractionId}'. Clearing stale queue and offer state for activity '{ActivityItemId}'.",
@@ -182,8 +189,7 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
                 interaction.ActivityItemId.SanitizeLogValue());
         }
 
-        if (queueItem is not null &&
-            queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved or QueueItemStatus.Assigned)
+        if (queueItemIsLive)
         {
             var wasWaiting = queueItem.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved;
             queueItem.TransitionTo(QueueItemStatus.Removed);
@@ -195,7 +201,7 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
 
         var agentId = reservationAgentId ?? session?.AgentId ?? interaction.AgentId;
 
-        if (!string.IsNullOrWhiteSpace(agentId))
+        if (routingStillHeldTheCall && !string.IsNullOrWhiteSpace(agentId))
         {
             var agent = await _agentManager.FindByIdAsync(agentId, cancellationToken);
 

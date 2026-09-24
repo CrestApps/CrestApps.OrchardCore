@@ -73,9 +73,10 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         var currentSession = await _callSessionManager.FindByInteractionIdAsync(interaction.ItemId, cancellationToken);
 
         if (currentSession is not null &&
-            TryMapTerminalInteractionStatus(currentSession.State, out var terminalStatus))
+            VoiceCallInteractionStatus.TryGetSettled(currentSession.State, out var terminalStatus))
         {
-            if (interaction.Status != terminalStatus)
+            // A settled interaction keeps the ending it recorded first; it has no way out to a different one.
+            if (!interaction.IsSettled && interaction.Status != terminalStatus)
             {
                 var previousStatus = interaction.Status;
                 interaction.TransitionTo(terminalStatus);
@@ -263,29 +264,5 @@ public sealed class ProviderCallStateSynchronizationService : IProviderCallState
         return session.State == mappedState &&
             session.IsMuted == call.IsMuted &&
             session.IsOnHold == (mappedState == VoiceCallState.OnHold);
-    }
-
-    private static bool TryMapTerminalInteractionStatus(
-        VoiceCallState? callState,
-        out InteractionStatus interactionStatus)
-    {
-        switch (callState)
-        {
-            case VoiceCallState.Ended:
-                interactionStatus = InteractionStatus.Ended;
-
-                return true;
-            case VoiceCallState.Failed:
-            case VoiceCallState.NoAnswer:
-            case VoiceCallState.Rejected:
-            case VoiceCallState.Canceled:
-                interactionStatus = InteractionStatus.Failed;
-
-                return true;
-            default:
-                interactionStatus = default;
-
-                return false;
-        }
     }
 }

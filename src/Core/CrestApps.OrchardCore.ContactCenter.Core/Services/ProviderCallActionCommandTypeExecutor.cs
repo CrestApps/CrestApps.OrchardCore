@@ -267,6 +267,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             ActorId = string.IsNullOrWhiteSpace(command.ProviderName)
                 ? ContactCenterConstants.SystemActor
                 : command.ProviderName,
+            ActorType = CommandActorType(command),
             SourceComponent = ContactCenterConstants.Components.CallSessions,
             OccurredUtc = _clock.UtcNow,
             IdempotencyKey = ContactCenterClaimKeys.BuildProviderDomainEventIdempotencyKey(
@@ -301,8 +302,12 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         var now = _clock.UtcNow;
 
         // A hangup that succeeds at the provider can land after the call had already been recorded as failed,
-        // and a settled interaction keeps whichever ending it recorded first.
-        if (!interaction.IsSettled)
+        // and a settled interaction keeps whichever ending it recorded first. Its end is already on record, too:
+        // recovery trusts a teardown the provider cannot confirm and projects it again minutes later, and a second
+        // CallEnded then would record the same call ending twice and re-run everything a call's end triggers.
+        var alreadyEnded = interaction.IsSettled;
+
+        if (!alreadyEnded)
         {
             interaction.TransitionTo(InteractionStatus.Ended);
         }
@@ -311,7 +316,10 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
         ApplyProjectionMetadata(interaction, command, request, "Succeeded", null, null, now);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-        await _publisher.PublishAsync(CreateCallEndedEvent(command, interaction, request, now), cancellationToken);
+        if (!alreadyEnded)
+        {
+            await _publisher.PublishAsync(CreateCallEndedEvent(command, interaction, request, now), cancellationToken);
+        }
     }
 
     /// <inheritdoc/>
@@ -590,6 +598,7 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
             ActorId = string.IsNullOrWhiteSpace(command.ProviderName)
                 ? ContactCenterConstants.SystemActor
                 : command.ProviderName,
+            ActorType = CommandActorType(command),
             SourceComponent = ContactCenterConstants.Components.CallSessions,
             OccurredUtc = occurredUtc,
             IdempotencyKey = command.CommandId,
@@ -605,6 +614,10 @@ public abstract class ProviderCallActionCommandTypeExecutor : IProviderCommandTy
 
         return interactionEvent;
     }
+
+    // The provider carried the command out, so it is what the event names; a command with no provider is the platform's.
+    private static ContactCenterActorType CommandActorType(ProviderCommand command)
+        => string.IsNullOrWhiteSpace(command.ProviderName) ? ContactCenterActorType.System : ContactCenterActorType.Provider;
 
     private static InteractionEvent CreateOfferRequeuedEvent(
         ProviderCommand command,

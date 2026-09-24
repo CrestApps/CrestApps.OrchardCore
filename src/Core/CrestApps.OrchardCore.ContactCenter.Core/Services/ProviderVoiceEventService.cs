@@ -536,7 +536,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         // The call session is the authority for a provider-backed call, and this projection keeps the interaction
         // reporting the same thing the session does. Ordering was already decided upstream, so re-deciding it
         // here with the interaction lifecycle table would let the two records disagree instead of agreeing.
-        interaction.MirrorSessionStatus(MapInteractionStatus(state));
+        interaction.MirrorSessionStatus(VoiceCallInteractionStatus.From(state));
 
         switch (state)
         {
@@ -704,26 +704,6 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             VoiceCallState.OnHold => CallLegStatus.OnHold,
             VoiceCallState.Ending => CallLegStatus.Answered,
             _ => CallLegStatus.Unknown,
-        };
-    }
-
-    private static InteractionStatus MapInteractionStatus(VoiceCallState state)
-    {
-        return state switch
-        {
-            VoiceCallState.Planned => InteractionStatus.Created,
-            VoiceCallState.Dialing => InteractionStatus.Ringing,
-            VoiceCallState.Ringing => InteractionStatus.Ringing,
-            VoiceCallState.Connected => InteractionStatus.Connected,
-            VoiceCallState.OnHold => InteractionStatus.Held,
-            VoiceCallState.Ending => InteractionStatus.Connected,
-            VoiceCallState.Transferred => InteractionStatus.Transferring,
-            VoiceCallState.Ended => InteractionStatus.Ended,
-            VoiceCallState.Failed => InteractionStatus.Failed,
-            VoiceCallState.NoAnswer => InteractionStatus.Failed,
-            VoiceCallState.Rejected => InteractionStatus.Failed,
-            VoiceCallState.Canceled => InteractionStatus.Failed,
-            _ => InteractionStatus.Created,
         };
     }
 

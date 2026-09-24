@@ -1681,6 +1681,81 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Contains(publishedEvents, value => value.EventType == ContactCenterConstants.Events.CallEnded);
     }
 
+    // A caller who hangs up before anybody answers cancelled the call; that is an abandon, which the reports read off
+    // an ended interaction, not a technical failure. Only a provider that could not carry the call fails it.
+    [Theory]
+    [InlineData(VoiceCallState.Canceled, InteractionStatus.Ended)]
+    [InlineData(VoiceCallState.Ended, InteractionStatus.Ended)]
+    [InlineData(VoiceCallState.Failed, InteractionStatus.Failed)]
+    public async Task IngestAsync_WhenAnUnansweredCallEnds_EndsTheInteractionUnlessTheProviderFailedIt(
+        VoiceCallState terminalState,
+        InteractionStatus expected)
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderName = "ProviderA",
+            ProviderInteractionId = "call-1",
+            AgentId = "agent-1",
+            QueueId = ContactCenterConstants.DirectRouting.QueueId,
+            Direction = InteractionDirection.Inbound,
+        }.RestorePersistedStatus(InteractionStatus.Ringing);
+
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("ProviderA", "call-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.NewAsync(It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CallSession());
+
+        var eventStore = new Mock<IInteractionEventStore>();
+        eventStore
+            .Setup(store => store.ExistsByIdempotencyKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(new DateTime(2026, 9, 24, 21, 16, 14, DateTimeKind.Utc));
+
+        var service = CreateService(
+            interactionManager.Object,
+            callSessionManager.Object,
+            new Mock<IContactCenterVoiceProviderResolver>().Object,
+            new Mock<ITelephonyProviderResolver>().Object,
+            eventStore.Object,
+            new Mock<IContactCenterEventPublisher>().Object,
+            new Mock<IAgentPresenceManager>().Object,
+            new ProviderIdentityResolver([]),
+            clock.Object,
+            NullLogger<ProviderVoiceEventService>.Instance);
+
+        // Act
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = VoiceCallState.Ringing,
+            IdempotencyKey = "ringing-1",
+            OccurredUtc = new DateTime(2026, 9, 24, 21, 16, 13, DateTimeKind.Utc),
+        }, TestContext.Current.CancellationToken);
+        await service.IngestAsync(new ProviderVoiceEvent
+        {
+            ProviderName = "ProviderA",
+            ProviderCallId = "call-1",
+            State = terminalState,
+            HangupCause = terminalState == VoiceCallState.Canceled ? HangupCause.Canceled : null,
+            IdempotencyKey = "terminal-1",
+            OccurredUtc = new DateTime(2026, 9, 24, 21, 16, 14, DateTimeKind.Utc),
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, interaction.Status);
+        Assert.Null(interaction.AnsweredUtc);
+    }
+
     [Fact]
     public async Task IngestAsync_WhenCallEnds_ClosesTheAgentLegTheProviderDidNotName()
     {

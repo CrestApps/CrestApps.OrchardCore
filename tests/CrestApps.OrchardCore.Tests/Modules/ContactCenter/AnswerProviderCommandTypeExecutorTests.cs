@@ -398,6 +398,28 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         Assert.Equal("interaction-1", harness.PublishedEvents[0].AggregateId);
     }
 
+    // A failed answer is projected by the command's compensation, which recovery also runs long after the fact. The
+    // events it writes name the agent whose answer failed, but it is the platform putting the call right that writes
+    // them, and the audit has to say so rather than leave their actor unrecorded.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ProjectFailureAsync_EveryEventItPublishes_SaysWhoCausedIt(bool reofferOnFailure)
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupActiveState();
+        harness.SetupPublisher();
+        var executor = harness.CreateExecutor();
+
+        // Act
+        await executor.ProjectFailureAsync(CreateCommand(reofferOnFailure: reofferOnFailure), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotEmpty(harness.PublishedEvents);
+        Assert.All(harness.PublishedEvents, value => Assert.Equal(ContactCenterActorType.System, value.ActorType));
+    }
+
     [Fact]
     public async Task ProjectOutcomeUnknownAsync_WhenOutcomeIsUnknown_PreservesRingingAndRecordsDiagnostics()
     {

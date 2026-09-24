@@ -716,6 +716,78 @@ public sealed class ProviderVoiceOfferSynchronizationServiceTests
             Times.Once);
     }
 
+    // A call sent to voicemail has already been taken out of its queue and its offer settled by the time the caller
+    // hangs up, and a late provider-command recovery can report the same end again minutes later. Neither pass has
+    // anything stale to clear, so it must not warn that it cleared something, and it must not move the agent, who
+    // by then may be on another call entirely.
+    [Fact]
+    public async Task ReconcileEndedOfferAsync_WhenTheCallAlreadySettledNormally_NeitherWarnsNorMovesTheAgent()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "int1",
+            ActivityItemId = "act1",
+            AgentId = "agent-1",
+            Channel = InteractionChannel.Voice,
+            Direction = InteractionDirection.Inbound,
+            EndedUtc = new DateTime(2026, 9, 24, 21, 13, 48, DateTimeKind.Utc),
+        }.RestorePersistedStatus(InteractionStatus.Ended);
+        var queueItem = new QueueItem { ItemId = "qi-1", QueueId = "queue-1", ActivityItemId = "act1" }
+            .RestorePersistedStatus(QueueItemStatus.Removed);
+        var agent = new AgentProfile
+        {
+            ItemId = "agent-1",
+            PresenceStatus = AgentPresenceStatus.Busy,
+            ActiveReservationId = "another-call-reservation",
+        };
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager.Setup(m => m.FindByIdAsync("int1", It.IsAny<CancellationToken>())).ReturnsAsync(interaction);
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager.Setup(m => m.FindByActivityIdAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync(queueItem);
+        var reservationManager = new Mock<IActivityReservationManager>();
+        reservationManager.Setup(m => m.GetActiveByActivityAsync("act1", It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        var agentManager = new Mock<IAgentProfileManager>();
+        agentManager.Setup(m => m.FindByIdAsync("agent-1", It.IsAny<CancellationToken>())).ReturnsAsync(agent);
+        var transitions = new Mock<IAgentStateTransitionService>();
+        var logger = new Mock<Microsoft.Extensions.Logging.ILogger<ProviderVoiceOfferSynchronizationService>>();
+        logger.Setup(value => value.IsEnabled(It.IsAny<Microsoft.Extensions.Logging.LogLevel>())).Returns(true);
+
+        var service = new ProviderVoiceOfferSynchronizationService(
+            interactionManager.Object,
+            new Mock<ICallSessionManager>().Object,
+            queueItemManager.Object,
+            reservationManager.Object,
+            agentManager.Object,
+            new Mock<IOmnichannelActivityManager>().Object,
+            new FakeContactCenterWorkStateService(),
+            CreateServiceProvider(stateTransitions: transitions.Object),
+            new Lazy<IContactCenterAuditRecorder>(_auditRecorder),
+            new Mock<IClock>().Object,
+            logger.Object);
+
+        // Act
+        await service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        logger.Verify(
+            value => value.Log(
+                Microsoft.Extensions.Logging.LogLevel.Warning,
+                It.IsAny<Microsoft.Extensions.Logging.EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception, string>>()),
+            Times.Never);
+        transitions.Verify(
+            value => value.TransitionAsync(It.IsAny<AgentProfile>(), It.IsAny<AgentPresenceStatus>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        agentManager.Verify(
+            value => value.UpdateAsync(It.IsAny<AgentProfile>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        Assert.Equal(AgentPresenceStatus.Busy, agent.PresenceStatus);
+        Assert.Empty(_auditRecorder.CallsOf(ContactCenterConstants.Events.CallAbandoned));
+    }
+
     private static IServiceProvider CreateServiceProvider(
         IAgentPresenceManager presenceManager = null,
         IAgentStateTransitionService stateTransitions = null)

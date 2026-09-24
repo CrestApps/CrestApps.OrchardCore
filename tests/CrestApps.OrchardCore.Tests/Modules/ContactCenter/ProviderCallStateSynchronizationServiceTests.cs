@@ -247,6 +247,77 @@ public sealed class ProviderCallStateSynchronizationServiceTests
     }
 
     [Fact]
+    public async Task RefreshInteractionAsync_WhenTheCallerCancelledBeforeAnswer_RepairsTheInteractionToEndedNotFailed()
+    {
+        // Arrange
+        var interaction = CreateInteraction();
+        interaction.RestorePersistedStatus(InteractionStatus.Ringing);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CallSession
+            {
+                ItemId = "session-1",
+                InteractionId = "interaction-1",
+                ProviderCallId = "call-1",
+                StartedUtc = _now.AddMinutes(-2),
+                EndedUtc = _now.AddMinutes(-1),
+            }.RestorePersistedState(VoiceCallState.Canceled));
+        var service = CreateService(
+            new Mock<IInteractionManager>(),
+            callSessionManager,
+            new Mock<IProviderVoiceEventService>(),
+            new Mock<IProviderVoiceOfferSynchronizationService>(),
+            new Mock<ITelephonyProviderResolver>());
+
+        // Act
+        var refreshed = await service.RefreshInteractionAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InteractionStatus.Ended, refreshed.Status);
+    }
+
+    [Fact]
+    public async Task RefreshInteractionAsync_WhenAnInteractionAlreadySettledOnAnotherEnding_KeepsItAndStillReconcilesTheOffer()
+    {
+        // Arrange
+        // Interactions stored before a caller's cancel meant "ended" settled as failed. A settled status has no way
+        // out, so repairing it towards the newer mapping would throw on every pass over that history.
+        var interaction = CreateInteraction();
+        interaction.RestorePersistedStatus(InteractionStatus.Failed);
+        var callSessionManager = new Mock<ICallSessionManager>();
+        callSessionManager
+            .Setup(manager => manager.FindByInteractionIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CallSession
+            {
+                ItemId = "session-1",
+                InteractionId = "interaction-1",
+                ProviderCallId = "call-1",
+                EndedUtc = _now.AddMinutes(-1),
+            }.RestorePersistedState(VoiceCallState.Canceled));
+        var interactionManager = new Mock<IInteractionManager>();
+        var offerSynchronizationService = new Mock<IProviderVoiceOfferSynchronizationService>();
+        var service = CreateService(
+            interactionManager,
+            callSessionManager,
+            new Mock<IProviderVoiceEventService>(),
+            offerSynchronizationService,
+            new Mock<ITelephonyProviderResolver>());
+
+        // Act
+        var refreshed = await service.RefreshInteractionAsync(interaction, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(InteractionStatus.Failed, refreshed.Status);
+        interactionManager.Verify(
+            manager => manager.UpdateAsync(It.IsAny<Interaction>(), It.IsAny<System.Text.Json.Nodes.JsonNode>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        offerSynchronizationService.Verify(
+            value => value.ReconcileEndedOfferAsync("interaction-1", It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task ReconcileProviderStateAsync_PerformsProviderReconciliation()
     {
         // Arrange

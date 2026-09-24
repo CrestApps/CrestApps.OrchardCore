@@ -408,6 +408,115 @@ public sealed class ProviderCallActionCommandTypeExecutorTests
         Assert.False(string.IsNullOrWhiteSpace(publishedEvents[0].Data));
     }
 
+    // Recovery trusts a teardown the provider cannot confirm and projects its success again, minutes later. The call it
+    // ended has long since ended on the provider's own report, so a second CallEnded would put the same call's end on
+    // record twice and re-run the reconciliation every CallEnded triggers against an agent who has moved on.
+    [Theory]
+    [InlineData(ProviderCommandType.Reject, InteractionStatus.Ended)]
+    [InlineData(ProviderCommandType.SendToVoicemail, InteractionStatus.Ended)]
+    [InlineData(ProviderCommandType.SendToVoicemail, InteractionStatus.Failed)]
+    public async Task ProjectSuccessAsync_WhenTheInteractionHasAlreadyEnded_DoesNotPublishASecondCallEnded(
+        ProviderCommandType commandType,
+        InteractionStatus settledStatus)
+    {
+        // Arrange
+        var endedUtc = _now.AddMinutes(-7);
+        var interaction = new Interaction
+        {
+            ItemId = "interaction-1",
+            ProviderInteractionId = "call-1",
+            EndedUtc = endedUtc,
+        }.RestorePersistedStatus(settledStatus);
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+
+        var publishedEvents = new List<InteractionEvent>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvents.Add(interactionEvent))
+            .Returns(Task.CompletedTask);
+
+        var executor = CreateExecutor(
+            commandType,
+            new Mock<ITelephonyService>(MockBehavior.Strict),
+            interactionManager,
+            publisher,
+            CreateClock());
+
+        // Act
+        await executor.ProjectSuccessAsync(
+            CreateCommand(commandType),
+            new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "call-1", ProviderName = "ProviderA" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.DoesNotContain(publishedEvents, value => value.EventType == ContactCenterConstants.Events.CallEnded);
+        Assert.Equal(settledStatus, interaction.Status);
+        Assert.Equal(endedUtc, interaction.EndedUtc);
+    }
+
+    [Theory]
+    [InlineData(ProviderCommandType.Reject)]
+    [InlineData(ProviderCommandType.SendToVoicemail)]
+    public async Task ProjectSuccessAsync_TheCallEndedItPublishes_NamesTheProviderAsItsActor(ProviderCommandType commandType)
+    {
+        // Arrange
+        var interaction = new Interaction { ItemId = "interaction-1", ProviderInteractionId = "call-1" }
+            .RestorePersistedStatus(InteractionStatus.Ringing);
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("interaction-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(interaction);
+        var publishedEvents = new List<InteractionEvent>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvents.Add(interactionEvent))
+            .Returns(Task.CompletedTask);
+        var executor = CreateExecutor(commandType, new Mock<ITelephonyService>(MockBehavior.Strict), interactionManager, publisher, CreateClock());
+
+        // Act
+        await executor.ProjectSuccessAsync(
+            CreateCommand(commandType),
+            new ContactCenterVoiceProviderResult { Succeeded = true, ProviderCallId = "call-1", ProviderName = "ProviderA" },
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        var callEnded = Assert.Single(publishedEvents, value => value.EventType == ContactCenterConstants.Events.CallEnded);
+        Assert.Equal("ProviderA", callEnded.ActorId);
+        Assert.Equal(ContactCenterActorType.Provider, callEnded.ActorType);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SendToVoicemail_TheSentToVoicemailEventNamesTheProviderAsItsActor()
+    {
+        // Arrange
+        var telephonyService = new Mock<ITelephonyService>(MockBehavior.Strict);
+        SetupTelephonySuccess(
+            telephonyService,
+            ProviderCommandType.SendToVoicemail,
+            _ => TelephonyResult.Success(new TelephonyCall { CallId = "provider-call-77" }));
+        var (interactionManager, _) = CreateExecuteDependencies(ProviderCommandType.SendToVoicemail);
+        var publishedEvents = new List<InteractionEvent>();
+        var publisher = new Mock<IContactCenterEventPublisher>();
+        publisher
+            .Setup(value => value.PublishAsync(It.IsAny<InteractionEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<InteractionEvent, CancellationToken>((interactionEvent, _) => publishedEvents.Add(interactionEvent))
+            .Returns(Task.CompletedTask);
+        var executor = CreateExecutor(ProviderCommandType.SendToVoicemail, telephonyService, interactionManager, publisher, CreateClock());
+        var command = CreateCommand(ProviderCommandType.SendToVoicemail);
+
+        // Act
+        await executor.ExecuteAsync(command, CreateClaim(command), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotEmpty(publishedEvents);
+        Assert.All(publishedEvents, value => Assert.NotEqual(ContactCenterActorType.Unspecified, value.ActorType));
+    }
+
     [Theory]
     [InlineData(ProviderCommandType.Reject)]
     [InlineData(ProviderCommandType.SendToVoicemail)]
