@@ -1789,6 +1789,174 @@
   softPhone.OFFER_LEG_CAPABILITY = 'held-offer-leg';
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
+ * What a server report about the call of a Contact Center offer may change on the phone.
+ *
+ * An offer's call is live before any agent takes it: the platform answers the caller's leg to play hold music, or an
+ * automated assistant talked to them first. Some providers can only say whether a call exists, and a server that
+ * read "exists" as "connected" told a phone still ringing for the offer that the call was in progress. The phone
+ * took that as the call connecting: the incoming-call prompt vanished and it showed a call in progress, with the
+ * customer's number and the in-call buttons, although nobody had accepted anything. When the offer then expired the
+ * server kept reporting the call as live, so the phone went on showing a call to nobody.
+ *
+ * So a report that an offer's call is live does not end the ringing while nobody has accepted the offer -- here, in
+ * another page, or on another device -- and once an offer was withdrawn without being accepted here, reports about
+ * its call are not this phone's until the call is offered to it again or ends.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long a call whose offer was withdrawn is kept off the phone. A caller can wait in a queue for a long time
+  // after one agent's offer expired; the call's end, or a new offer of it, forgets it sooner.
+  var UNACCEPTED_OFFER_CALL_TTL_MS = 60 * 60 * 1000;
+  function isLiveStateName(stateName) {
+    return stateName === 'Connecting' || stateName === 'Connected' || stateName === 'OnHold';
+  }
+  function isAccepted(accepted, reservationId, now) {
+    return typeof softPhone.isOfferAccepted === 'function' && softPhone.isOfferAccepted(accepted, reservationId, now);
+  }
+  function prune(unaccepted, now) {
+    Object.keys(unaccepted).forEach(function (callId) {
+      if (now - unaccepted[callId] > UNACCEPTED_OFFER_CALL_TTL_MS) {
+        delete unaccepted[callId];
+      }
+    });
+  }
+
+  // Remembers the call of an offer that was withdrawn (declined, expired, taken by someone else) without this phone
+  // accepting it.
+  function rememberUnacceptedOfferCall(unaccepted, callId, now) {
+    if (!unaccepted || !callId) {
+      return;
+    }
+    prune(unaccepted, now);
+    unaccepted[callId] = now;
+  }
+
+  // The call was offered to this phone again, or it ended: it is no longer kept off the phone.
+  function forgetUnacceptedOfferCall(unaccepted, callId) {
+    if (unaccepted && callId) {
+      delete unaccepted[callId];
+    }
+  }
+  function isUnacceptedOfferCall(unaccepted, callId, now) {
+    return !!unaccepted && !!callId && typeof unaccepted[callId] === 'number' && now - unaccepted[callId] <= UNACCEPTED_OFFER_CALL_TTL_MS;
+  }
+
+  // What to do with a server report of a call's state.
+  //   report     - { callId, stateName } (stateName normalized: 'Ringing', 'Connected', 'OnHold', ...).
+  //   offer      - the offer ringing on screen, { callId, reservationId, accepting }, or null. accepting is true
+  //                while this page's own accept is in flight or has completed.
+  //   accepted   - the offers known to have been accepted (rememberAcceptedOffer), from anywhere.
+  //   unaccepted - the calls of offers withdrawn without an accept here (rememberUnacceptedOfferCall).
+  // Returns 'apply' (the usual handling), 'keep-ringing' (the offer stays on screen as it is) or 'ignore' (the call
+  // is not on this phone).
+  function planOfferCallReport(report, offer, accepted, unaccepted, now) {
+    if (!report || !report.callId || !isLiveStateName(report.stateName)) {
+      return 'apply';
+    }
+    if (offer && offer.callId === report.callId) {
+      return offer.accepting || isAccepted(accepted, offer.reservationId, now) ? 'apply' : 'keep-ringing';
+    }
+    return isUnacceptedOfferCall(unaccepted, report.callId, now) ? 'ignore' : 'apply';
+  }
+  softPhone.UNACCEPTED_OFFER_CALL_TTL_MS = UNACCEPTED_OFFER_CALL_TTL_MS;
+  softPhone.rememberUnacceptedOfferCall = rememberUnacceptedOfferCall;
+  softPhone.forgetUnacceptedOfferCall = forgetUnacceptedOfferCall;
+  softPhone.isUnacceptedOfferCall = isUnacceptedOfferCall;
+  softPhone.planOfferCallReport = planOfferCallReport;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The one-shot expectation that the next inbound provider leg is one this browser is waiting for, so the media
+ * adapter answers it instead of ringing it as an unsolicited call.
+ *
+ * Two legs are expected that way: the browser's own leg of an extension call it just placed, and the leg the platform
+ * rings at the accept of an offer taken somewhere else (the docked agent bar, another page) when this page held no leg
+ * for it. The expectation used to be a bare deadline shared by both, so one armed for an offer outlived it: declined,
+ * expired or taken by another agent, the offer was over, yet whatever leg reached the browser next within the window
+ * -- a colleague's call, the next caller's -- was answered without the agent touching anything.
+ *
+ * An arm now names what it is for (an offer's reservation, or the extension call), is consumed by the first leg that
+ * uses it, lapses after a short window, and is dropped the moment what it was armed for is over -- an offer withdrawn
+ * without an accept here, or a different offer ringing on screen.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+
+  // How long an arm waits for its leg. The platform rings within a second or two of the accept or the dial.
+  var AUTO_ANSWER_WINDOW_MS = 20000;
+
+  // What an arm is for.
+  var EXTENSION_CALL_KEY = 'extension';
+
+  // An offer whose reservation is not known still gets a key of its own: any other offer on screen drops it.
+  function offerKey(reservationId) {
+    return 'offer:' + (reservationId || '');
+  }
+  function createAutoAnswerArm() {
+    return {
+      key: '',
+      until: 0
+    };
+  }
+
+  // Arms for `key` (an offerKey() or EXTENSION_CALL_KEY), replacing any earlier arm. An arm with no key is refused.
+  function armAutoAnswer(arm, key, now, windowMs) {
+    if (!arm || !key) {
+      return false;
+    }
+    arm.key = key;
+    arm.until = now + (typeof windowMs === 'number' && windowMs > 0 ? windowMs : AUTO_ANSWER_WINDOW_MS);
+    return true;
+  }
+
+  // Whether the leg arriving now is expected. Consumes the arm: the next leg rings unless something arms again.
+  // Returns the key the leg was expected for, or '' when it was not.
+  function consumeAutoAnswer(arm, now) {
+    if (!arm || !arm.key) {
+      return '';
+    }
+    var key = arm.key;
+    var live = now < arm.until;
+    arm.key = '';
+    arm.until = 0;
+    return live ? key : '';
+  }
+
+  // Drops the arm if it is for `key`.
+  function disarmAutoAnswer(arm, key) {
+    if (arm && arm.key && arm.key === key) {
+      arm.key = '';
+      arm.until = 0;
+    }
+  }
+
+  // A different offer is now the one on screen: an arm left for any other offer is for one that is over.
+  function disarmOtherOffers(arm, key) {
+    if (arm && arm.key && arm.key !== key && arm.key !== EXTENSION_CALL_KEY) {
+      arm.key = '';
+      arm.until = 0;
+    }
+  }
+  softPhone.AUTO_ANSWER_WINDOW_MS = AUTO_ANSWER_WINDOW_MS;
+  softPhone.EXTENSION_CALL_KEY = EXTENSION_CALL_KEY;
+  softPhone.autoAnswerOfferKey = offerKey;
+  softPhone.createAutoAnswerArm = createAutoAnswerArm;
+  softPhone.armAutoAnswer = armAutoAnswer;
+  softPhone.consumeAutoAnswer = consumeAutoAnswer;
+  softPhone.disarmAutoAnswer = disarmAutoAnswer;
+  softPhone.disarmOtherOffers = disarmOtherOffers;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * When the soft phone rings for a Contact Center offer, and when another open page silences it.
  *
  * Answering an offer waits on the server to accept it before the call connects; the ringtone carried on through that
@@ -2741,6 +2909,16 @@
   var rememberAcceptedOffer = softPhoneModules.rememberAcceptedOffer;
   var forgetAcceptedOffer = softPhoneModules.forgetAcceptedOffer;
   var OFFER_LEG_CAPABILITY = softPhoneModules.OFFER_LEG_CAPABILITY;
+  var planOfferCallReport = softPhoneModules.planOfferCallReport;
+  var rememberUnacceptedOfferCall = softPhoneModules.rememberUnacceptedOfferCall;
+  var forgetUnacceptedOfferCall = softPhoneModules.forgetUnacceptedOfferCall;
+  var EXTENSION_CALL_KEY = softPhoneModules.EXTENSION_CALL_KEY;
+  var autoAnswerOfferKey = softPhoneModules.autoAnswerOfferKey;
+  var createAutoAnswerArm = softPhoneModules.createAutoAnswerArm;
+  var armAutoAnswer = softPhoneModules.armAutoAnswer;
+  var consumeAutoAnswer = softPhoneModules.consumeAutoAnswer;
+  var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
+  var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
   var shouldRingForOffer = softPhoneModules.shouldRingForOffer;
   var shouldStartRegistration = softPhoneModules.shouldStartRegistration;
   var answerClickAction = softPhoneModules.answerClickAction;
@@ -4641,6 +4819,12 @@
     // Offers this agent is known to have accepted -- here, in another page, or on another device -- remembered
     // briefly so their leg is answered the moment it arrives rather than held.
     var acceptedOfferIds = {};
+    // Each offer's call id, by reservation. The calls of offers withdrawn without an accept here, which the server
+    // may go on reporting live (the caller waits on), are kept off the phone (see soft-phone/offer-report.js). And
+    // a live report of a ringing offer's call that is held back until somebody accepts the offer, by call id.
+    var offerCallIds = {};
+    var unacceptedOfferCalls = {};
+    var heldBackOfferReports = {};
     // Calls the agent put on hold and has not resumed, by call id. With browser audio the hold happens here and
     // the server keeps reporting the call connected, so this, not the server, says whether the call is held.
     var agentHolds = {};
@@ -4770,12 +4954,11 @@
     // and (once answered) controlling the SDK call.
     var browserInboundRing = null;
 
-    // One-shot expectation that the next inbound provider leg belongs to a call this browser initiated (an
-    // extension call it just placed), so the media adapter answers it automatically instead of ringing. It is
-    // armed when placing an extension call and consumed by the adapter for the next inbound leg; a genuine
-    // incoming call arriving without this armed still rings.
-    var INBOUND_AUTO_ANSWER_WINDOW_MS = 20000;
-    var expectInboundAutoAnswerUntil = 0;
+    // One-shot expectation that the next inbound provider leg belongs to a call this browser is waiting for (an
+    // extension call it just placed, or an offer accepted elsewhere), so the media adapter answers it instead of
+    // ringing. It names what it is for and is dropped when that is over (see soft-phone/auto-answer.js); a genuine
+    // incoming call arriving without it armed still rings.
+    var inboundAutoAnswer = createAutoAnswerArm();
 
     // One-shot auto-answer for the extension "answer from the OS notification" handoff. When the standalone
     // page is opened as /softphone?answerCallId=ID, the phone answers exactly the offer whose call id matches
@@ -6067,7 +6250,7 @@
       if (isExtension) {
         // The provider rings this browser's own leg first and then bridges it to the target; that inbound
         // leg is expected, so arm the media adapter to answer it automatically rather than ring for it.
-        armInboundAutoAnswer();
+        armAutoAnswer(inboundAutoAnswer, EXTENSION_CALL_KEY, Date.now());
         return ensureBrowserAudio().then(function () {
           return invoke('DialExtension', {
             extension: number
@@ -6535,12 +6718,11 @@
       });
     }
 
-    // Arm the one-shot expectation that the next inbound provider leg is one this browser is expecting -- its
-    // own bridged leg for an extension call it is placing, or the Contact Center leg for an offer the agent
-    // just accepted -- so the media adapter answers it automatically rather than ringing it as an
-    // unsolicited incoming call and tearing it down.
-    function armInboundAutoAnswer() {
-      expectInboundAutoAnswerUntil = Date.now() + INBOUND_AUTO_ANSWER_WINDOW_MS;
+    // Arm the one-shot expectation that the next inbound provider leg is the Contact Center leg for the offer
+    // (`reservationId`) the agent just accepted elsewhere, so the media adapter answers it automatically rather
+    // than ringing it as an unsolicited incoming call and tearing it down. The arm is for that offer alone.
+    function armInboundAutoAnswer(reservationId) {
+      armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), Date.now());
     }
 
     // Called by the media adapter for each inbound provider leg to decide whether to auto-answer. A Contact
@@ -6552,11 +6734,7 @@
       if (incomingHandled || incomingAcceptPending) {
         return true;
       }
-      if (Date.now() < expectInboundAutoAnswerUntil) {
-        expectInboundAutoAnswerUntil = 0;
-        return true;
-      }
-      return false;
+      return consumeAutoAnswer(inboundAutoAnswer, Date.now()) !== '';
     }
 
     // The offer on screen, as the offer-leg rules need it.
@@ -6607,7 +6785,7 @@
         controller: controller
       };
       // The leg an accept is waiting for has arrived; nothing else should be auto-answered on its behalf.
-      expectInboundAutoAnswerUntil = 0;
+      disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId));
       try {
         controller.answer();
       } catch (error) {
@@ -6668,13 +6846,94 @@
         if (typeof rememberAcceptedOffer === 'function') {
           rememberAcceptedOffer(acceptedOfferIds, reservationId, Date.now());
         }
-        return answerHeldOfferLeg(reservationId);
+        var answered = answerHeldOfferLeg(reservationId);
+        applyHeldBackOfferReport(offerCallIds[reservationId]);
+        return answered;
       }
       if (typeof forgetAcceptedOffer === 'function') {
         forgetAcceptedOffer(acceptedOfferIds, reservationId);
       }
-      hangupHeldOfferLeg(reservationId);
+
+      // Nobody here took the offer: the leg held for it, or answered for an accept that did not stand, is on a
+      // call this agent is not joining, and an expectation armed for its leg is for an offer that is over.
+      hangupAnsweredOfferLeg(reservationId);
+      disarmAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId));
+      releaseUnacceptedOfferCall(reservationId);
       return false;
+    }
+
+    // The offer's call is not this phone's any more. The server may go on reporting it live -- the caller is still
+    // on the line, waiting for another agent or leaving a voicemail -- and none of that is shown here. A ringing
+    // copy is left to clearIncomingOffer, so the prompt and the call leave together.
+    function releaseUnacceptedOfferCall(reservationId) {
+      var callId = offerCallIds[reservationId];
+      delete offerCallIds[reservationId];
+      if (!callId) {
+        return;
+      }
+      delete heldBackOfferReports[callId];
+      rememberUnacceptedOfferCall(unacceptedOfferCalls, callId, Date.now());
+      releaseShownCall(callId);
+    }
+
+    // Takes a server-tracked call off the phone if it is showing as live.
+    function releaseShownCall(callId) {
+      var shown = callId ? activeCalls[callId] : null;
+      if (shown && !shown.browserOriginated && normalizeState(shown.state) !== 'Ringing') {
+        removeActiveCall(callId);
+        render();
+      }
+    }
+
+    // The offer on screen, as a server report about its call is read against (see soft-phone/offer-report.js).
+    function ringingOfferForReports() {
+      var properties = incomingContext && incomingContext.properties;
+      var reservationId = properties && properties.reservationId;
+      if (!reservationId || !offerCallIds[reservationId]) {
+        return null;
+      }
+      return {
+        callId: offerCallIds[reservationId],
+        reservationId: reservationId,
+        accepting: incomingAcceptPending || incomingHandled
+      };
+    }
+
+    // 'apply', 'keep-ringing' or 'ignore' for a server report of a call's state.
+    function planServerCallReport(call) {
+      if (!call || !call.callId || typeof planOfferCallReport !== 'function') {
+        return 'apply';
+      }
+      var plan = planOfferCallReport({
+        callId: call.callId,
+        stateName: normalizeState(call.state)
+      }, ringingOfferForReports(), acceptedOfferIds, unacceptedOfferCalls, Date.now());
+      if (plan === 'keep-ringing') {
+        if (!heldBackOfferReports[call.callId]) {
+          reportDiagnostic('warning', 'offer-call-live-before-accept', 'The server reported the call of a ringing offer as ' + normalizeState(call.state) + ' before anyone accepted it; the offer keeps ringing.', call.callId);
+        }
+        heldBackOfferReports[call.callId] = call;
+      }
+      return plan;
+    }
+
+    // A report held back while the offer rang, shown once the offer is accepted -- after the Contact Center layer
+    // has cleared the ringing prompt, which it does right after settling the offer.
+    function applyHeldBackOfferReport(callId) {
+      var report = callId ? heldBackOfferReports[callId] : null;
+      if (!report) {
+        return;
+      }
+      delete heldBackOfferReports[callId];
+      Promise.resolve().then(function () {
+        if (planServerCallReport(report) !== 'apply') {
+          return;
+        }
+        upsertActiveCall(report, true);
+        render();
+        notifyBrowserAudio(report);
+        scheduleActiveCallsRefresh();
+      });
     }
 
     // The server says an offer this agent was ringing for was answered -- by this page or any other. The pages
@@ -6691,7 +6950,7 @@
       // The accept was made elsewhere. When this page is holding no leg for it, the platform may still ring this
       // browser at accept time, and that leg is expected.
       if (!answeredHeldLeg) {
-        armInboundAutoAnswer();
+        armInboundAutoAnswer(reservationId);
       }
       clearIncomingOffer();
     }
@@ -7604,7 +7863,17 @@
       activeCalls = {};
       try {
         calls.forEach(function (call) {
-          upsertActiveCall(call, false);
+          var plan = planServerCallReport(call);
+          if (plan === 'keep-ringing') {
+            // The offer's ringing copy stays as it was; the live report waits for an accept.
+            if (callsBeforeLookup && callsBeforeLookup[call.callId]) {
+              upsertActiveCall(callsBeforeLookup[call.callId], false);
+            }
+            return;
+          }
+          if (plan === 'apply') {
+            upsertActiveCall(call, false);
+          }
         });
         preservedBrowserCalls.forEach(function (call) {
           upsertActiveCall(call, false);
@@ -8185,12 +8454,21 @@
         return;
       }
       if (remainingMs <= 0) {
-        clearIncomingOffer();
+        expireIncomingOffer();
         return;
       }
-      incomingExpiryTimer = window.setTimeout(function () {
-        clearIncomingOffer();
-      }, remainingMs);
+      incomingExpiryTimer = window.setTimeout(expireIncomingOffer, remainingMs);
+    }
+
+    // The server's deadline has passed without its revocation reaching this phone. Unless the agent's answer is
+    // under way, the offer is over for this phone just as a revocation would have said: its leg is let go and its
+    // call is not shown again.
+    function expireIncomingOffer() {
+      var reservationId = getIncomingReservationId(incomingContext);
+      if (reservationId && !incomingAcceptPending && !incomingHandled) {
+        settleOfferLeg(reservationId, false);
+      }
+      clearIncomingOffer();
     }
     function renderIncomingCards() {
       if (!dom.incomingCards) {
@@ -8498,6 +8776,14 @@
       upsertActiveCall(call, true);
       incomingContext = context || null;
       incomingHandled = false;
+      var offeredReservationId = getIncomingReservationId(context);
+      if (offeredReservationId) {
+        // Offered (again): reports about this call are this phone's once more, and an expectation left armed
+        // for any other offer is for one that is over.
+        offerCallIds[offeredReservationId] = call.callId;
+        forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+        disarmOtherOffers(inboundAutoAnswer, autoAnswerOfferKey(offeredReservationId));
+      }
       if (!sameOffer) {
         incomingAcceptPending = false;
         answerRegistering = false;
@@ -9088,6 +9374,10 @@
               callId: call.callId
             }, Date.now());
           }
+          if (call && call.callId) {
+            forgetUnacceptedOfferCall(unacceptedOfferCalls, call.callId);
+            delete heldBackOfferReports[call.callId];
+          }
 
           // A terminal state from the server for a call THIS browser placed is bookkeeping, not the call
           // ending: the platform never saw the call and cannot know when it ends -- the provider SDK
@@ -9151,6 +9441,17 @@
           } else {
             scheduleActiveCallsRefresh();
           }
+          return;
+        }
+
+        // A live report of a ringing offer's call waits for somebody to accept the offer; one of a call whose
+        // offer was withdrawn without an accept here is not this phone's (see soft-phone/offer-report.js).
+        var plan = planServerCallReport(call);
+        if (plan === 'keep-ringing') {
+          return;
+        }
+        if (plan === 'ignore') {
+          releaseShownCall(call.callId);
           return;
         }
         upsertActiveCall(call, true);

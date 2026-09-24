@@ -663,10 +663,10 @@
           // phone, and in that case nothing here is pending, so the phone would treat the arriving leg
           // as an unsolicited incoming call and tear it down -- the provider reports that as a busy
           // refusal and the agent is never connected. Arming covers the accept wherever it was made;
-          // the window is one-shot, so an accept made in the phone (already covered by its own pending
-          // state) is unaffected.
+          // the arm is one-shot and for this offer alone, so an accept made in the phone (already covered
+          // by its own pending state) is unaffected and a later call is never answered on its strength.
           if (accepted && !answeredHeldLeg && typeof api.armInboundAutoAnswer === 'function') {
-            api.armInboundAutoAnswer();
+            api.armInboundAutoAnswer(notification.reservationId);
           }
           api.clearIncomingOffer({
             preserveCurrentCall: accepted && acceptPending,
