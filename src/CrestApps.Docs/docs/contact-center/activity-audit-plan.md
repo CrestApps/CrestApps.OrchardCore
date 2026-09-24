@@ -69,6 +69,24 @@ Phases 2 to 4 are built against one contract, so the writers and the reports agr
   event by when the change happened, stamps the time it was recorded (`InteractionEvent.RecordedUtc`), names the
   actor (`InteractionEvent.ActorType`: agent, supervisor, system, workflow, provider, customer, AI agent), and derives
   an idempotency key from what the change is, to the tick.
+- **Which clock.** One rule dates everything. `OccurredUtc` is when the change happened. For a change the
+  provider reports, that is the provider's own time for it. For a change that a provider event caused, such
+  as wrap-up starting or an agent being released when a call ends, it is the causing event's time, to the
+  tick. Every other change is dated by the platform's clock. `RecordedUtc` is always the platform's clock at
+  the moment the event was written. A state interval starts at its change's `OccurredUtc` and ends at the
+  next change's. The other clock stays on record: `CallLifecycleEventData.ProviderOccurredUtc` keeps the
+  provider's time, and `RecordedUtc` keeps the platform's.
+  - The two clocks disagree. Telnyx has run about 0.45 s ahead of the platform, so a provider-dated event
+    can carry an `OccurredUtc` later than its `RecordedUtc`. Audits read that gap as the skew.
+  - A change is never dated before the agent's previous change. A platform-dated change that lands inside
+    the skew window after a provider-dated one takes the earlier change's instant instead. For example, work
+    completing 3 ms after a hangup that the provider dated 0.45 s ahead takes the hangup's instant. So a
+    state can last zero seconds but never less, and it never starts before the event that caused it.
+  - A cause is written before its consequence. The call stream records a hangup before the wrap-up it
+    starts. The state timeline orders changes that share an instant by when they were written, and keeps
+    that written time exactly as stored.
+  - A timecard's states are contiguous by construction, so they sum to the signed-in time exactly, skew or
+    not.
 - **Actor and subject.** Every event names who caused it, and `ActorType` is never left unspecified. An agent or
   supervisor is named by user id, the provider by its technical name, and the platform by `system`. The agent a
   change is about is its subject, not its actor. The subject is carried by the aggregate (`AgentProfile` events)
@@ -147,5 +165,12 @@ paths have also been exercised on the running site, and the call paths wait on a
     minutes after the AI's session ended. It is dated by the end of the session now, which is also when a
     turn-based call's handoff is recorded. The hangup reports the same moment again, and the first report is
     kept.
+  - The presence event that goes with a provider-caused state change was dated by the platform's clock while
+    its payload used the provider's. Reconciliation after a call ended dated its releases by the platform's
+    clock, which could put them before the hangup. Both now use the hangup's instant, and the call stream
+    records the hangup before the wrap-up.
+  - The state timeline raised each change's written time to its effective time. Two changes at the same
+    provider instant then tied, and an agent could be left in wrap-up for the rest of the day, with the
+    timecard flagged as missing transitions. The written time is kept as stored now.
 - **Answering faster.** The agent's leg is dialled while the offer rings and joined on accept. Hold music stops
   at the bridge, and every client is told at once. This waits on a live call.

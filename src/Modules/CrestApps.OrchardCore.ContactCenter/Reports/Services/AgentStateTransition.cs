@@ -36,9 +36,15 @@ internal sealed class AgentStateTransition
     public DateTime ChangedUtc { get; init; }
 
     /// <summary>
-    /// Gets when the change was written to the log, which is later than <see cref="ChangedUtc"/> for a sign-off dated
-    /// by the agent's last heartbeat.
+    /// Gets when the change was written to the log, by the platform's clock. It is later than <see cref="ChangedUtc"/>
+    /// for a sign-off dated by the agent's last heartbeat, and can be earlier for a change dated by a provider event
+    /// whose clock runs ahead of the platform's.
     /// </summary>
+    /// <remarks>
+    /// It is kept exactly as written, never raised to <see cref="ChangedUtc"/>: two changes that take effect at the same
+    /// instant -- a wrap-up dated by the provider's hangup and the platform completing that work a moment later by its
+    /// own clock -- are told apart only by the order they were written in.
+    /// </remarks>
     public DateTime RecordedUtc { get; init; }
 
     /// <summary>

@@ -320,18 +320,6 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         await _callSessionManager.UpdateAsync(session, cancellationToken: cancellationToken);
         await _interactionManager.UpdateAsync(interaction, cancellationToken: cancellationToken);
 
-        if (startsWrapUp)
-        {
-            await _presenceManager.StartWrapUpAsync(session.AgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId, ChangedUtc = now }, cancellationToken);
-        }
-        else if (handledCallEnded)
-        {
-            // A direct or manual call leaves no after-call work, so completing the agent's work here returns them
-            // to their ready state immediately. CompleteWorkAsync is a no-op unless the agent is actually parked in
-            // an on-call state, so a call that never moved the agent into Busy is unaffected.
-            await _presenceManager.CompleteWorkAsync(session.AgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId, ChangedUtc = now }, cancellationToken);
-        }
-
         foreach (var eventType in ResolveEventTypes(
             previousState,
             session.State,
@@ -347,6 +335,18 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             var idempotencyKey = ResolveEventIdempotencyKey(providerEvent.IdempotencyKey, eventType);
 
             await PublishStateEventAsync(eventType, session, interaction, providerEvent, previousState, now, idempotencyKey, cancellationToken);
+        }
+
+        // After the call's own events, which caused it, and at their instant: a release is never on record before
+        // the hangup that made it.
+        if (startsWrapUp)
+        {
+            await _presenceManager.StartWrapUpAsync(session.AgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId, ChangedUtc = now }, cancellationToken);
+        }
+        else if (handledCallEnded)
+        {
+            // A direct or manual call leaves no after-call work: the agent is ready again (a no-op unless on a call).
+            await _presenceManager.CompleteWorkAsync(session.AgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId, ChangedUtc = now }, cancellationToken);
         }
 
         if (providerEvent.State == VoiceCallState.Connected)

@@ -112,6 +112,11 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
         var canceledReservationIds = new HashSet<string>(StringComparer.Ordinal);
         string reservationAgentId = null;
 
+        // What this does to the agent is the call ending's consequence, so it takes the end's instant: the provider's
+        // time for it, which can run ahead of this clock. Dated by this clock instead, the agent would be on record
+        // as released before the call they were released from had ended.
+        var endedUtc = interaction.EndedUtc ?? session?.EndedUtc;
+
         foreach (var reservation in reservations)
         {
             reservationAgentId ??= reservation.AgentId;
@@ -158,11 +163,11 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
                     string.IsNullOrWhiteSpace(agent.ActiveReservationId) &&
                     agent.PresenceStatus is AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp)
                 {
-                    await presenceManager.CompleteWorkAsync(answeredAgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId }, cancellationToken);
+                    await presenceManager.CompleteWorkAsync(answeredAgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId, ChangedUtc = endedUtc }, cancellationToken);
                 }
                 else if (startsWrapUp)
                 {
-                    await presenceManager.StartWrapUpAsync(answeredAgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId }, cancellationToken);
+                    await presenceManager.StartWrapUpAsync(answeredAgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId, ChangedUtc = endedUtc }, cancellationToken);
                 }
             }
 
@@ -225,6 +230,7 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
                     Source = AgentStateChangeSources.Reconciled,
                     InteractionId = interaction.ItemId,
                     ReservationId = releasedReservationId,
+                    ChangedUtc = endedUtc,
                 }, cancellationToken);
 
                 await _agentManager.UpdateAsync(agent, cancellationToken: cancellationToken);

@@ -294,7 +294,7 @@ internal sealed class AgentStateTimeline
                 EventType = interactionEvent.EventType,
                 FromAudit = true,
                 ChangedUtc = changedUtc,
-                RecordedUtc = recordedUtc < changedUtc ? changedUtc : recordedUtc,
+                RecordedUtc = recordedUtc,
                 PreviousState = change.PreviousState,
                 CurrentState = change.CurrentState,
                 RequestedState = change.RequestedState,
@@ -333,7 +333,7 @@ internal sealed class AgentStateTimeline
             EventType = interactionEvent.EventType,
             FromAudit = false,
             ChangedUtc = presenceChangedUtc,
-            RecordedUtc = recordedUtc < presenceChangedUtc ? presenceChangedUtc : recordedUtc,
+            RecordedUtc = recordedUtc,
             PreviousState = presence.PreviousStatus,
             CurrentState = string.Equals(interactionEvent.EventType, ContactCenterConstants.Events.AgentSignedOut, StringComparison.Ordinal)
                 ? AgentPresenceStatus.Offline

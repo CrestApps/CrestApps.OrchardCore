@@ -71,6 +71,67 @@ public sealed class ProviderVoiceOfferSynchronizationWrapUpTests
         Assert.False(harness.WorkStateReleased);
     }
 
+    [Fact]
+    public async Task ReconcileEndedOfferAsync_StartsWrapUpAtTheCallsEnd_EvenWhenTheProvidersClockIsAhead()
+    {
+        // Arrange
+        // The provider dates the call's end by its own clock, which runs ahead of this one: the end it reports is
+        // later than the moment this reconciliation runs. Wrap-up is the end's consequence, so it starts exactly
+        // then, never at this clock's earlier now, which would put the agent in wrap-up before the call ended.
+        var interaction = CreateInteraction(wrapUpStarted: false);
+        var session = CreateSession(agentLegAnswered: true);
+        var harness = new Harness(interaction, session, QueueItemStatus.Completed, AgentPresenceStatus.Busy, nowUtc: _endedUtc.AddMilliseconds(-445));
+        AgentStateChangeContext context = null;
+        harness.Presence
+            .Setup(manager => manager.StartWrapUpAsync("agent-1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
+            .Callback<string, AgentStateChangeContext, CancellationToken>((_, value, _) => context = value)
+            .ReturnsAsync((AgentProfile)null);
+
+        // Act
+        await harness.Service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(context);
+        Assert.Equal(_endedUtc, context.ChangedUtc);
+        Assert.Equal("int1", context.InteractionId);
+    }
+
+    [Fact]
+    public async Task ReconcileEndedOfferAsync_ReleasesAnAgentLeftOnAnUnansweredCall_AtTheCallsEnd()
+    {
+        // Arrange
+        var interaction = new Interaction
+        {
+            ItemId = "int1",
+            ActivityItemId = "act1",
+            AgentId = "agent-1",
+            QueueId = "queue-1",
+            EndedUtc = _endedUtc,
+        }.RestorePersistedStatus(InteractionStatus.Ended);
+        var session = new CallSession
+        {
+            ItemId = "session-1",
+            InteractionId = "int1",
+            ActivityItemId = "act1",
+            AgentId = "agent-1",
+            EndedUtc = _endedUtc,
+        }.RestorePersistedState(VoiceCallState.Ended);
+        var harness = new Harness(interaction, session, QueueItemStatus.Reserved, AgentPresenceStatus.Reserved, nowUtc: _endedUtc.AddMilliseconds(-445));
+        AgentStateChangeContext context = null;
+        harness.Transitions
+            .Setup(service => service.TransitionAsync(It.IsAny<AgentProfile>(), It.IsAny<AgentPresenceStatus>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
+            .Callback<AgentProfile, AgentPresenceStatus, AgentStateChangeContext, CancellationToken>((_, _, value, _) => context = value)
+            .ReturnsAsync((AgentStateChangedEventData)null);
+
+        // Act
+        await harness.Service.ReconcileEndedOfferAsync("int1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(context);
+        Assert.Equal(AgentStateChangeSources.Reconciled, context.Source);
+        Assert.Equal(_endedUtc, context.ChangedUtc);
+    }
+
     private static Interaction CreateInteraction(bool wrapUpStarted)
         => new Interaction
         {
@@ -108,7 +169,7 @@ public sealed class ProviderVoiceOfferSynchronizationWrapUpTests
 
     private sealed class Harness
     {
-        public Harness(Interaction interaction, CallSession session, QueueItemStatus? queueItemStatus, AgentPresenceStatus agentStatus)
+        public Harness(Interaction interaction, CallSession session, QueueItemStatus? queueItemStatus, AgentPresenceStatus agentStatus, DateTime? nowUtc = null)
         {
             Agent = new AgentProfile
             {
@@ -148,7 +209,7 @@ public sealed class ProviderVoiceOfferSynchronizationWrapUpTests
             serviceProvider.Setup(provider => provider.GetService(typeof(IAgentStateTransitionService))).Returns(Transitions.Object);
 
             var clock = new Mock<IClock>();
-            clock.SetupGet(value => value.UtcNow).Returns(_endedUtc.AddMilliseconds(32));
+            clock.SetupGet(value => value.UtcNow).Returns(nowUtc ?? _endedUtc.AddMilliseconds(32));
 
             Service = new ProviderVoiceOfferSynchronizationService(
                 interactionManager.Object,

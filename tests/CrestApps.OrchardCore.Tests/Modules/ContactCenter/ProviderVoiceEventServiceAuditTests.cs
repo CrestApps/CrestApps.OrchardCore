@@ -188,9 +188,31 @@ public sealed class ProviderVoiceEventServiceAuditTests
         Assert.Equal("agent-1", ended.GetData<CallLifecycleEventData>().AgentId);
     }
 
+    [Fact]
+    public async Task AHandledCallEnding_RecordsTheEndBeforeTheWrapUpItCauses_AtTheSameInstant()
+    {
+        // Arrange
+        // Live, the wrap-up was written before the hangup that caused it, both at the provider's instant, so an agent
+        // timeline that breaks ties by when each was written showed the agent in wrap-up before the call had ended.
+        var harness = new Harness(agentOnCall: true);
+        var providerEndedUtc = _answeredUtc.AddSeconds(211).AddMilliseconds(839);
+
+        // Act
+        await harness.IngestAsync(VoiceCallState.Ended, providerEndedUtc, "hangup", HangupCause.NormalClearing);
+
+        // Assert
+        Assert.NotNull(harness.WrapUpContext);
+        Assert.Equal(providerEndedUtc, harness.WrapUpContext!.ChangedUtc);
+        Assert.Contains(ContactCenterConstants.Events.CallEnded, harness.PublishedBeforeWrapUp);
+
+        var ended = Assert.Single(harness.Published, e => e.EventType == ContactCenterConstants.Events.CallEnded);
+        Assert.Equal(providerEndedUtc, ended.OccurredUtc);
+        Assert.Equal(providerEndedUtc, ended.GetData<CallLifecycleEventData>().ProviderOccurredUtc);
+    }
+
     private sealed class Harness
     {
-        public Harness(bool outboundRinging = false, bool newSession = false)
+        public Harness(bool outboundRinging = false, bool newSession = false, bool agentOnCall = false)
         {
             Interaction = new Interaction
             {
@@ -214,7 +236,17 @@ public sealed class ProviderVoiceEventServiceAuditTests
                 StartedUtc = _answeredUtc,
                 AnsweredUtc = outboundRinging ? null : _answeredUtc,
                 LastProviderEventUtc = _answeredUtc,
+                AgentId = agentOnCall ? "agent-1" : null,
             }.RestorePersistedState(outboundRinging ? VoiceCallState.Ringing : VoiceCallState.Connected);
+
+            Presence
+                .Setup(manager => manager.StartWrapUpAsync(It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
+                .Callback<string, AgentStateChangeContext, CancellationToken>((_, context, _) =>
+                {
+                    WrapUpContext = context;
+                    PublishedBeforeWrapUp = [.. Published.Select(e => e.EventType)];
+                })
+                .ReturnsAsync((AgentProfile)null!);
 
             var interactionManager = new Mock<IInteractionManager>();
             interactionManager
@@ -261,7 +293,7 @@ public sealed class ProviderVoiceEventServiceAuditTests
                 new Mock<ITelephonyProviderResolver>().Object,
                 EventStore.Object,
                 publisher.Object,
-                new Mock<IAgentPresenceManager>().Object,
+                Presence.Object,
                 new ProviderIdentityResolver([]),
                 new Mock<IProviderCommandStateService>().Object,
                 new Mock<IContactCenterScopeExecutor>().Object,
@@ -278,6 +310,12 @@ public sealed class ProviderVoiceEventServiceAuditTests
         public Mock<IInteractionEventStore> EventStore { get; } = new();
 
         public List<InteractionEvent> Published { get; } = [];
+
+        public Mock<IAgentPresenceManager> Presence { get; } = new();
+
+        public AgentStateChangeContext? WrapUpContext { get; private set; }
+
+        public List<string> PublishedBeforeWrapUp { get; private set; } = [];
 
         public ProviderVoiceEventService Service { get; }
 
