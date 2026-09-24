@@ -30,15 +30,7 @@ internal sealed class AgentProfileUserNameBackfill : ModularTenantEvents
         {
             try
             {
-                var manager = scope.ServiceProvider.GetRequiredService<IAgentProfileManager>();
-
-                foreach (var profile in await manager.GetAllAsync())
-                {
-                    if (string.IsNullOrEmpty(profile.UserName) && !string.IsNullOrEmpty(profile.UserId))
-                    {
-                        await manager.UpdateAsync(profile);
-                    }
-                }
+                await FillMissingUserNamesAsync(scope.ServiceProvider.GetRequiredService<IAgentProfileManager>());
             }
             catch (Exception ex)
             {
@@ -48,5 +40,17 @@ internal sealed class AgentProfileUserNameBackfill : ModularTenantEvents
         });
 
         return Task.CompletedTask;
+    }
+
+    // Saves every profile that has a user but no user name, so the save handler fills the name in.
+    internal static async Task FillMissingUserNamesAsync(IAgentProfileManager manager)
+    {
+        foreach (var profile in await manager.GetAllAsync())
+        {
+            if (string.IsNullOrEmpty(profile.UserName) && !string.IsNullOrEmpty(profile.UserId))
+            {
+                await manager.UpdateAsync(profile);
+            }
+        }
     }
 }
