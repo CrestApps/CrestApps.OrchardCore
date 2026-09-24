@@ -1,5 +1,6 @@
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Telephony.Core.Services;
 
@@ -18,15 +19,35 @@ public sealed class VoiceIngressGate : IVoiceIngressGate
     // the acquisition timed out.
     private static readonly AsyncLocal<HashSet<string>> _heldKeys = new();
 
+    // Long enough for one attempt against any lock implementation (a distributed lock cancels its retry loop when
+    // the timeout elapses, so a zero timeout would never try at all), short enough not to matter when it misses.
+    private static readonly TimeSpan _uncontendedAttemptTimeout = TimeSpan.FromMilliseconds(10);
+
     private readonly IDistributedLock _distributedLock;
+    private readonly ISession _session;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="VoiceIngressGate"/> class.
+    /// Initializes a new instance of the <see cref="VoiceIngressGate"/> class for a flow that has no unit of work
+    /// of its own to release while it waits.
     /// </summary>
     /// <param name="distributedLock">The tenant-scoped distributed lock used to serialize each provider call stream.</param>
     public VoiceIngressGate(IDistributedLock distributedLock)
     {
         _distributedLock = distributedLock;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VoiceIngressGate"/> class.
+    /// </summary>
+    /// <param name="distributedLock">The tenant-scoped distributed lock used to serialize each provider call stream.</param>
+    /// <param name="session">
+    /// The scope's YesSql session, whose open transaction is committed before the flow waits for a lease another
+    /// flow holds.
+    /// </param>
+    public VoiceIngressGate(IDistributedLock distributedLock, ISession session)
+        : this(distributedLock)
+    {
+        _session = session;
     }
 
     /// <inheritdoc/>
@@ -58,12 +79,44 @@ public sealed class VoiceIngressGate : IVoiceIngressGate
             return Task.FromResult<IAsyncDisposable>(ReentrantVoiceIngressLease.Instance);
         }
 
-        return AcquireCoreAsync(key, held);
+        return AcquireCoreAsync(key, held, cancellationToken);
     }
 
-    private async Task<IAsyncDisposable> AcquireCoreAsync(string key, HashSet<string> heldKeys)
+    private async Task<IAsyncDisposable> AcquireCoreAsync(string key, HashSet<string> heldKeys, CancellationToken cancellationToken)
     {
-        (var locker, var locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
+        ILocker locker;
+        bool locked;
+
+        if (_session?.CurrentTransaction is null)
+        {
+            (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
+        }
+        else
+        {
+            // This flow has already written, and its open transaction holds the database's write lock (on SQLite, the
+            // only one) until it commits. The flow holding the lease needs to write before it lets go, so waiting here
+            // with that lock held deadlocks the two until one of them times out. Both legs of a bridged call hanging up
+            // at once did exactly that: the agent's leg had recorded its call quality and waited for the call, while the
+            // caller's leg held the call and waited for the database, and the agent's wrap-up started half a minute
+            // late. What the flow has done is committed before it waits, so the holder can finish and hand over.
+            (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _uncontendedAttemptTimeout, _lockExpiration);
+
+            if (!locked)
+            {
+                try
+                {
+                    await _session.SaveChangesAsync(cancellationToken);
+                }
+                catch
+                {
+                    heldKeys.Remove(key);
+
+                    throw;
+                }
+
+                (locker, locked) = await _distributedLock.TryAcquireLockAsync(key, _lockTimeout, _lockExpiration);
+            }
+        }
 
         if (!locked)
         {
