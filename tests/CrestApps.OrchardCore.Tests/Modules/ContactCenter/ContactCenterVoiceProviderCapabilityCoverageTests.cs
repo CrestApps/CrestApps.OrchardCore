@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Asterisk.Services;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Dialpad.Services;
+using CrestApps.OrchardCore.Telnyx.Services;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
 
@@ -52,6 +53,7 @@ public sealed class ContactCenterVoiceProviderCapabilityCoverageTests
         {
             typeof(AsteriskContactCenterVoiceProvider).Assembly,
             typeof(DialpadContactCenterVoiceProvider).Assembly,
+            typeof(TelnyxContactCenterVoiceProvider).Assembly,
         };
 
         var capabilities = ContactCenterVoiceProviderCapabilities.None;

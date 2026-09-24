@@ -17,6 +17,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
 {
     private readonly IAgentProfileManager _agentManager;
     private readonly IActivityReservationManager _reservationManager;
+    private readonly IAgentPreDialLegStore _preDialLegStore;
     private readonly IActivityQueueManager _queueManager;
     private readonly IInboundContactLookup _contactLookup;
     private readonly IContentManager _contentManager;
@@ -30,6 +31,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     /// </summary>
     /// <param name="agentManager">The agent profile manager.</param>
     /// <param name="reservationManager">The reservation manager used to resolve the agent's pending offer.</param>
+    /// <param name="preDialLegStore">The store of agent legs rung while their offers were still ringing.</param>
     /// <param name="queueManager">The queue manager used to resolve the offered queue name.</param>
     /// <param name="contactLookup">The contact lookup used to match customers by phone number.</param>
     /// <param name="contentManager">The content manager used to load matched contact content items.</param>
@@ -39,6 +41,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     public ContactCenterIncomingCallContextProvider(
         IAgentProfileManager agentManager,
         IActivityReservationManager reservationManager,
+        IAgentPreDialLegStore preDialLegStore,
         IActivityQueueManager queueManager,
         IInboundContactLookup contactLookup,
         IContentManager contentManager,
@@ -48,6 +51,7 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
     {
         _agentManager = agentManager;
         _reservationManager = reservationManager;
+        _preDialLegStore = preDialLegStore;
         _queueManager = queueManager;
         _contactLookup = contactLookup;
         _contentManager = contentManager;
@@ -156,6 +160,15 @@ public sealed class ContactCenterIncomingCallContextProvider : IIncomingCallCont
 
         context.Properties["reservationId"] = reservation.ItemId;
         context.Properties["expiresUtc"] = reservation.ExpiresUtc.ToString("O");
+
+        // The leg already rung to the agent's device for this offer, when there is one. The soft phone recognizes that
+        // leg by the offer id it carries; this is the provider's own id for it, for a client that sees nothing else.
+        var preDialedLeg = await _preDialLegStore.FindAsync(reservation.ItemId, cancellationToken);
+
+        if (!string.IsNullOrEmpty(preDialedLeg?.AgentLegId) && !preDialedLeg.BridgedUtc.HasValue)
+        {
+            context.Properties["agentLegId"] = preDialedLeg.AgentLegId;
+        }
 
         context.Call.Metadata ??= new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         context.Call.Metadata["voicemailRecipientUserId"] = agent.UserId;

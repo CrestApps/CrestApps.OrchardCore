@@ -107,6 +107,7 @@ namespace CrestApps.OrchardCore.Telephony
         System.Threading.Tasks.Task CredentialsIssued(CrestApps.OrchardCore.Telephony.Models.TelephonyClientCredentials credentials);
         System.Threading.Tasks.Task DialRequested(CrestApps.OrchardCore.Telephony.Models.TelephonyDialRequest request);
         System.Threading.Tasks.Task IncomingCall(CrestApps.OrchardCore.Telephony.Models.TelephonyCall call, CrestApps.OrchardCore.Telephony.Models.IncomingCallContext context);
+        System.Threading.Tasks.Task IncomingCallAnswered(CrestApps.OrchardCore.Telephony.Models.IncomingCallAnsweredNotification notification);
         System.Threading.Tasks.Task ReceiveError(string message);
     }
     public interface ITelephonyCommandExecutor
@@ -476,6 +477,12 @@ namespace CrestApps.OrchardCore.Telephony.Models
         Failed = 6,
         Canceled = 7,
         AnsweringMachine = 8,
+    }
+    public sealed class IncomingCallAnsweredNotification
+    {
+        public IncomingCallAnsweredNotification() { }
+        public string CallId { get; set; }
+        public string OfferId { get; set; }
     }
     public sealed class IncomingCallCard
     {

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
+using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.Modules;
 
@@ -28,7 +29,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     private readonly IProviderCommandStateService _providerCommandStateService;
     private readonly IContactCenterScopeExecutor _scopeExecutor;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IQueueItemManager _queueItemManager;
+    private readonly IActivityQueueService _queueService;
+    private readonly IEnumerable<IContactCenterOfferAnsweredNotifier> _offerAnsweredNotifiers;
+    private readonly IAgentPreDialCoordinator _preDialCoordinator;
     private readonly IClock _clock;
+    private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ContactCenterCallCommandService"/> class.
@@ -45,7 +51,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
     /// <param name="providerCommandStateService">The service used to persist server-side answer intent.</param>
     /// <param name="scopeExecutor">The executor used for post-commit command processing and isolated compensation.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
+    /// <param name="queueItemManager">The queue item manager used to resolve the queue item whose hold music stops.</param>
+    /// <param name="queueService">The queue service used to stop the hold music.</param>
+    /// <param name="offerAnsweredNotifiers">The notifiers that tell the agent's other open clients the offer was answered.</param>
+    /// <param name="preDialCoordinator">The coordinator of agent legs rung while their offers were still ringing.</param>
     /// <param name="clock">The clock used to stamp times.</param>
+    /// <param name="logger">The logger.</param>
     public ContactCenterCallCommandService(
         IActivityReservationService reservationService,
         IActivityReservationManager reservationManager,
@@ -59,7 +70,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         IProviderCommandStateService providerCommandStateService,
         IContactCenterScopeExecutor scopeExecutor,
         IContactCenterEventPublisher publisher,
-        IClock clock)
+        IQueueItemManager queueItemManager,
+        IActivityQueueService queueService,
+        IEnumerable<IContactCenterOfferAnsweredNotifier> offerAnsweredNotifiers,
+        IAgentPreDialCoordinator preDialCoordinator,
+        IClock clock,
+        ILogger<ContactCenterCallCommandService> logger)
     {
         _reservationService = reservationService;
         _reservationManager = reservationManager;
@@ -73,7 +89,12 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         _providerCommandStateService = providerCommandStateService;
         _scopeExecutor = scopeExecutor;
         _publisher = publisher;
+        _queueItemManager = queueItemManager;
+        _queueService = queueService;
+        _offerAnsweredNotifiers = offerAnsweredNotifiers;
+        _preDialCoordinator = preDialCoordinator;
         _clock = clock;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -111,9 +132,14 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
 
             reservation = await _reservationService.AcceptAsync(reservationId, cancellationToken);
 
-            return reservation is null
-                ? CallCommandResult.Failure("The offer is no longer available.")
-                : CallCommandResult.Success("The work was accepted.", requiresDeviceAnswer: false);
+            if (reservation is null)
+            {
+                return CallCommandResult.Failure("The offer is no longer available.");
+            }
+
+            await NotifyOfferAnsweredAsync(reservation, agentUserId, providerCallId: null, cancellationToken);
+
+            return CallCommandResult.Success("The work was accepted.", requiresDeviceAnswer: false);
         }
 
         if (interaction.Status is InteractionStatus.Ended or InteractionStatus.Failed)
@@ -136,6 +162,22 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         if (reservation is null)
         {
             return CallCommandResult.Failure("The offer is no longer available.");
+        }
+
+        // Every other page and device the agent has open is still ringing for this call. Tell them now, from the
+        // accept itself, rather than a second later when the outbox gets to it.
+        await NotifyOfferAnsweredAsync(reservation, agentUserId, interaction.ProviderInteractionId, cancellationToken);
+
+        // The caller keeps hearing the queue until the agent is actually joined to them. A provider that joins the
+        // agent itself stops the music at that moment; for any other, the accept is the last point anything here
+        // knows about, so it stops now as it always did.
+        var holdMusicStopsOnBridge = hasProvider &&
+            deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd &&
+            provider.Capabilities.HasFlag(ContactCenterVoiceProviderCapabilities.HoldMusicStopsOnAgentBridge);
+
+        if (!holdMusicStopsOnBridge)
+        {
+            await StopHoldMusicAsync(reservation, cancellationToken);
         }
 
         var now = _clock.UtcNow;
@@ -184,8 +226,15 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             await PublishAsync(ContactCenterConstants.Events.CallConnected, interaction.ItemId, reservation.AgentId, cancellationToken);
         }
 
+        AgentPreDialLeg preDialedLeg = null;
+
         if (deliveryModel == VoiceProviderDeliveryModel.ServerSideAcd)
         {
+            // The agent's device may already be ringing with this call's leg, rung while the offer was on screen and
+            // being answered by the agent's client right now. The answer then joins that leg rather than ringing the
+            // device a second time.
+            preDialedLeg = await FindPreDialedLegAsync(reservation.ItemId, cancellationToken);
+
             try
             {
                 await _providerCommandStateService.RegisterAsync(new ProviderCommandRegistration
@@ -206,6 +255,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
                         AgentUserId = agent?.UserId,
                         QueueId = reservation.QueueId,
                         ReofferOnFailure = true,
+                        PreDialedAgentLegId = preDialedLeg?.AgentLegId,
                     }),
                 }, cancellationToken);
             }
@@ -226,6 +276,7 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             Succeeded = true,
             Reason = "The offer was accepted.",
             RequiresDeviceAnswer = requiresDeviceAnswer,
+            AgentLegPreDialed = preDialedLeg is not null,
             InteractionId = interaction.ItemId,
             CallSessionId = session.ItemId,
         };
@@ -251,6 +302,22 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
             return CallCommandResult.Failure("The offer is no longer available.");
         }
 
+        // The agent's device may be holding a leg rung for this offer. It is hung up now rather than when the outbox
+        // gets to the release, so it cannot linger in the agent's ear or be answered for an offer they turned down.
+        try
+        {
+            await _preDialCoordinator.ReleaseAsync(reservation.ItemId, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // The decline has committed; the outbox release and the leg's own ring window still end the leg.
+            _logger.LogWarning(ex, "Could not release the pre-dialed agent leg of a declined offer.");
+        }
+
         var interactionEvent = new InteractionEvent
         {
             EventType = ContactCenterConstants.Events.OfferDeclined,
@@ -268,6 +335,65 @@ public sealed class ContactCenterCallCommandService : IContactCenterCallCommandS
         await _publisher.PublishAsync(interactionEvent, cancellationToken);
 
         return CallCommandResult.Success("The offer was declined.", requiresDeviceAnswer: false);
+    }
+
+    private async Task<AgentPreDialLeg> FindPreDialedLegAsync(string reservationId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _preDialCoordinator.GetForAcceptAsync(reservationId, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Not knowing about a pre-dialed leg only costs the time it saves: the agent is connected directly. A
+            // leg that was rung is released when the offer's outbox events arrive, and ends with its ring window.
+            _logger.LogWarning(ex, "Could not read the pre-dialed agent leg of an accepted offer; connecting the agent directly.");
+
+            return null;
+        }
+    }
+
+    private async Task StopHoldMusicAsync(ActivityReservation reservation, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(reservation.QueueItemId))
+        {
+            return;
+        }
+
+        var queueItem = await _queueItemManager.FindByIdAsync(reservation.QueueItemId, cancellationToken);
+
+        if (queueItem is not null)
+        {
+            await _queueService.StopHoldMusicAsync(queueItem, cancellationToken);
+        }
+    }
+
+    private async Task NotifyOfferAnsweredAsync(
+        ActivityReservation reservation,
+        string agentUserId,
+        string providerCallId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var notifier in _offerAnsweredNotifiers)
+        {
+            try
+            {
+                await notifier.NotifyAnsweredAsync(reservation, agentUserId, providerCallId, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // The accept has already committed; a client that is not told now is told by the outbox shortly.
+                _logger.LogWarning(ex, "An offer-answered notifier failed after the offer was accepted.");
+            }
+        }
     }
 
     private async Task<ActivityReservation> FindAuthorizedPendingReservationAsync(

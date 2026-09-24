@@ -52,7 +52,8 @@ public sealed class AnswerProviderCommandTypeExecutorStateAuthorityTests
             callSessionManager.Object,
             publisher.Object,
             clock.Object,
-            Mock.Of<ICallControlAuthorizationService>());
+            Mock.Of<ICallControlAuthorizationService>(),
+            []);
         var command = CreateCommand();
         var result = new ContactCenterVoiceProviderResult
         {

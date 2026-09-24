@@ -26,6 +26,14 @@ public sealed class TelnyxOutboundBridgeState
     public const string ContactCenterAgentLegIntent = "cc-agent";
 
     /// <summary>
+    /// The intent marking a Contact Center agent leg rung to the agent's browser while the offer is still ringing,
+    /// before the agent has accepted. The browser holds it without ringing it separately and answers it when the
+    /// agent accepts; the Contact Center joins it to the caller leg in <see cref="PeerCallControlId"/> only once the
+    /// offer in <see cref="ReservationId"/> is accepted and the leg answered, and hangs it up otherwise.
+    /// </summary>
+    public const string ContactCenterPreDialedAgentLegIntent = "cc-predial";
+
+    /// <summary>
     /// The intent marking a leg dialed to an internal extension's browser endpoint to add it into an active
     /// call as a conference participant. When this leg is answered, the active call carried in
     /// <see cref="PeerCallControlId"/> is turned into (or reused as) the conference named
@@ -103,6 +111,13 @@ public sealed class TelnyxOutboundBridgeState
     [JsonPropertyName("t")]
     public int? RingTimeoutSeconds { get; set; }
 
+    /// <summary>
+    /// Gets or sets the Contact Center offer (reservation) a pre-dialed agent leg was rung for (pre-dialed agent-leg
+    /// state only). The agent's browser reads it too, to tie the incoming leg to the offer it is showing.
+    /// </summary>
+    [JsonPropertyName("r")]
+    public string ReservationId { get; set; }
+
     private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web)
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -146,6 +161,7 @@ public sealed class TelnyxOutboundBridgeState
                 (parsed.Intent != AgentLegIntent &&
                  parsed.Intent != DestinationLegIntent &&
                  parsed.Intent != ContactCenterAgentLegIntent &&
+                 parsed.Intent != ContactCenterPreDialedAgentLegIntent &&
                  parsed.Intent != ConferenceExtensionLegIntent &&
                  parsed.Intent != AiVoiceLegIntent))
             {

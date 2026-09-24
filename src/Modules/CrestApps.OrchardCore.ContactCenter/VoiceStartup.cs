@@ -79,6 +79,10 @@ public sealed class VoiceStartup : StartupBase
             .AddScoped<IContactCenterVoiceProviderResolver, ContactCenterVoiceProviderResolver>()
             .AddScoped<IContactCenterAgentLegFailureService, ContactCenterAgentLegFailureService>()
             .AddScoped<IContactCenterCallCommandService, ContactCenterCallCommandService>()
+            // Rings the agent's device while a voice offer is still ringing, and joins or hangs up that leg.
+            .AddScoped<IAgentPreDialLegStore, DistributedCacheAgentPreDialLegStore>()
+            .AddScoped<IAgentPreDialCoordinator, AgentPreDialCoordinator>()
+            .AddScoped<IContactCenterEventHandler, AgentPreDialEventHandler>()
             .AddScoped<IProviderCommandStore, ProviderCommandStore>()
             .AddScoped<IProviderCommandManager, ProviderCommandManager>()
             .AddScoped<IContactCenterRetentionPolicy, ProviderCommandRetentionPolicy>()
@@ -173,6 +177,9 @@ public sealed class VoiceSoftPhoneStartup : StartupBase
     {
         services
             .AddScoped<IContactCenterEventHandler, ContactCenterSoftPhoneEventHandler>()
+            // Tells the agent's other open soft phones an offer was answered from inside the accept, so they stop
+            // ringing at once instead of when the outbox delivers the durable event.
+            .AddScoped<IContactCenterOfferAnsweredNotifier, ContactCenterOfferAnsweredNotifier>()
             .AddDisplayDriver<SoftPhoneWidget, ContactCenterSoftPhoneWidgetDisplayDriver>();
 
         services.AddResourceConfiguration<ContactCenterSoftPhoneResourceConfiguration>();

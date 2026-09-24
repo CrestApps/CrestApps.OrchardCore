@@ -26,6 +26,13 @@ public sealed class CallCommandResult
     public bool RequiresDeviceAnswer { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the agent's device was already rung for this offer while it was
+    /// ringing. The agent's client is then holding that leg, and answering it is what connects the agent; nothing
+    /// else will ring the device.
+    /// </summary>
+    public bool AgentLegPreDialed { get; set; }
+
+    /// <summary>
     /// Gets or sets the identifier of the interaction the command applied to.
     /// </summary>
     public string InteractionId { get; set; }

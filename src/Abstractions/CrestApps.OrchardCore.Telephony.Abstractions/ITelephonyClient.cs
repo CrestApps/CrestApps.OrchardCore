@@ -24,6 +24,14 @@ public interface ITelephonyClient
     Task IncomingCall(TelephonyCall call, IncomingCallContext context);
 
     /// <summary>
+    /// Notifies the client that an incoming call it was ringing for has been answered, here or on another of the
+    /// user's soft phones, so it stops ringing.
+    /// </summary>
+    /// <param name="notification">The call and offer that were answered.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    Task IncomingCallAnswered(IncomingCallAnsweredNotification notification);
+
+    /// <summary>
     /// Notifies the client that the provider issued new connection credentials.
     /// </summary>
     /// <param name="credentials">The credentials the client uses to connect to the provider.</param>

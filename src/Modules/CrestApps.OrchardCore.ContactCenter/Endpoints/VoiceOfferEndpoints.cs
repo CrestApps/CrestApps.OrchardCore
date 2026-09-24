@@ -74,6 +74,10 @@ internal static class VoiceOfferEndpoints
         {
             result.Succeeded,
             result.RequiresDeviceAnswer,
+
+            // The soft phone is (or another of the agent's soft phones is) holding a leg rung for this offer, and
+            // answering it is what connects the agent.
+            PreDialed = result.AgentLegPreDialed,
             result.InteractionId,
             result.CallSessionId,
         });

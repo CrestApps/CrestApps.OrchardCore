@@ -56,7 +56,10 @@ public sealed class PendingIncomingCallOfferService : IPendingIncomingCallOfferS
         var reservation = await _reservationManager.FindPendingByAgentAsync(agent.ItemId, cancellationToken);
         var now = _clock.UtcNow;
 
+        // An accepted offer is not ringing any more. The query already asks for pending offers only, and this keeps a
+        // client that polls for the current offer (the browser extension) from being handed one that was answered.
         if (reservation is null ||
+            reservation.Status != ReservationStatus.Pending ||
             reservation.ExpiresUtc <= now)
         {
             return null;

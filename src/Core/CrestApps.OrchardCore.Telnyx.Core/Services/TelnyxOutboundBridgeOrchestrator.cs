@@ -14,12 +14,13 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// issues the follow-up Telnyx Call Control commands over REST. All correlation travels in the leg's
 /// <c>client_state</c>, so no server-side call registry is required.
 /// </summary>
-public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrchestrator
+public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrchestrator
 {
     private readonly TelnyxApiClient _apiClient;
     private readonly ILogger<TelnyxOutboundBridgeOrchestrator> _logger;
     private readonly IContactCenterAgentLegFailureService _agentLegFailureService;
     private readonly IEnumerable<ITelnyxAiVoiceEventHandler> _aiVoiceEventHandlers;
+    private readonly IAgentPreDialCoordinator _preDialCoordinator;
     private readonly TelnyxOptions _options;
 
     public TelnyxOutboundBridgeOrchestrator(
@@ -27,13 +28,15 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         ILogger<TelnyxOutboundBridgeOrchestrator> logger,
         IOptionsMonitor<TelnyxOptions> telnyxOptions,
         IContactCenterAgentLegFailureService agentLegFailureService,
-        IEnumerable<ITelnyxAiVoiceEventHandler> aiVoiceEventHandlers)
+        IEnumerable<ITelnyxAiVoiceEventHandler> aiVoiceEventHandlers,
+        IEnumerable<IAgentPreDialCoordinator> preDialCoordinators)
     {
         _apiClient = apiClient;
         _logger = logger;
         _options = telnyxOptions.CurrentValue;
         _agentLegFailureService = agentLegFailureService;
         _aiVoiceEventHandlers = aiVoiceEventHandlers;
+        _preDialCoordinator = preDialCoordinators?.FirstOrDefault();
     }
 
     /// <inheritdoc/>
@@ -80,9 +83,13 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
             // None) rather than treating it as an internal leg to hide.
             if (isAnswered && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
             {
-                if (_options.IsConfigured)
+                if (_options.IsConfigured &&
+                    await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken))
                 {
-                    await BridgeAsync(destinationLegCallControlId: callEvent.CallControlId, agentLegCallControlId: state.PeerCallControlId, cancellationToken);
+                    // The caller has been listening to the queue while the agent was reached. Now that they are
+                    // joined the music stops -- not before, which left the caller in dead air for the second or
+                    // more between the agent accepting and their phone answering.
+                    await StopCallerPlaybackAsync(state.PeerCallControlId, cancellationToken);
                 }
 
                 // The agent leg's own call.answered is keyed by the agent-leg call id, which belongs to no
@@ -127,6 +134,16 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
                     ResolveAgentLegFailureCause(callEvent),
                     cancellationToken);
             }
+
+            return TelnyxOutboundBridgeLeg.None;
+        }
+
+        if (state.Intent == TelnyxOutboundBridgeState.ContactCenterPreDialedAgentLegIntent)
+        {
+            // Rung while the offer was ringing. Whether it is joined to the caller is the Contact Center's decision,
+            // not this leg's: answering it only proves the agent's browser picked up. Like the accept-time agent leg
+            // it is a tracked leg of the interaction, so its events flow on to normalization.
+            await AdvancePreDialedAgentLegAsync(callEvent, state, isAnswered, cancellationToken);
 
             return TelnyxOutboundBridgeLeg.None;
         }
@@ -592,7 +609,31 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         }
     }
 
-    private async Task BridgeAsync(string destinationLegCallControlId, string agentLegCallControlId, CancellationToken cancellationToken)
+    private async Task StopCallerPlaybackAsync(string callerCallControlId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Idempotent: a caller with nothing playing is refused (422) and that is the expected answer.
+            var result = await _apiClient.StopPlaybackAsync(callerCallControlId, cancellationToken);
+
+            if (!result.Succeeded && _logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "Telnyx returned {StatusCode} stopping the caller's hold music after an agent bridge (nothing may have been playing).",
+                    result.StatusCode);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "An error occurred while stopping the caller's hold music after an agent bridge.");
+        }
+    }
+
+    private async Task<bool> BridgeAsync(string destinationLegCallControlId, string agentLegCallControlId, CancellationToken cancellationToken)
     {
         var body = new Dictionary<string, object>
         {
@@ -611,6 +652,8 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
                     result.StatusCode,
                     result.ErrorBody.SanitizeLogValue());
             }
+
+            return result.Succeeded;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -619,6 +662,8 @@ public sealed class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBridgeOrch
         catch (Exception ex)
         {
             _logger.LogError(ex, "An error occurred while bridging an outbound Telnyx soft-phone call.");
+
+            return false;
         }
     }
 }

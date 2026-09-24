@@ -381,6 +381,89 @@ public sealed class AnswerProviderCommandTypeExecutorTests
         Assert.Empty(harness.PublishedEvents);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_WhenTheAgentWasPreDialedAndHasAnswered_JoinsTheLegAndReportsItConnected()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupProviderResult(new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-1",
+            ProviderLegId = "leg-1",
+            ProviderLegState = VoiceCallState.Dialing,
+        });
+        var coordinator = new Mock<IAgentPreDialCoordinator>();
+        coordinator
+            .Setup(value => value.OnCallerReadyAsync("reservation-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        harness.PreDialCoordinators.Add(coordinator.Object);
+        var request = CreateRequest();
+        request.PreDialedAgentLegId = "leg-1";
+        var executor = harness.CreateExecutor();
+
+        // Act
+        var result = await executor.ExecuteAsync(CreateCommand(request), CreateClaim(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("leg-1", harness.LastConnectRequest!.PreDialedAgentLegId);
+        Assert.Equal(VoiceCallState.Connected, result.ProviderLegState);
+        coordinator.Verify(value => value.OnCallerReadyAsync("reservation-1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenThePreDialedLegIsNotAnsweredYet_LeavesItDialingForItsAnswerToJoin()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupProviderResult(new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-1",
+            ProviderLegId = "leg-1",
+            ProviderLegState = VoiceCallState.Dialing,
+        });
+        var coordinator = new Mock<IAgentPreDialCoordinator>();
+        coordinator
+            .Setup(value => value.OnCallerReadyAsync("reservation-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        harness.PreDialCoordinators.Add(coordinator.Object);
+        var request = CreateRequest();
+        request.PreDialedAgentLegId = "leg-1";
+        var executor = harness.CreateExecutor();
+
+        // Act
+        var result = await executor.ExecuteAsync(CreateCommand(request), CreateClaim(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(VoiceCallState.Dialing, result.ProviderLegState);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WhenTheAgentWasNotPreDialed_NeverAsksToJoinALeg()
+    {
+        // Arrange
+        var harness = new Harness();
+        harness.SetupProviderResult(new ContactCenterVoiceProviderResult
+        {
+            Succeeded = true,
+            ProviderCallId = "call-1",
+            ProviderLegId = "agent-leg-1",
+            ProviderLegState = VoiceCallState.Dialing,
+        });
+        var coordinator = new Mock<IAgentPreDialCoordinator>(MockBehavior.Strict);
+        harness.PreDialCoordinators.Add(coordinator.Object);
+        var executor = harness.CreateExecutor();
+
+        // Act
+        var result = await executor.ExecuteAsync(CreateCommand(), CreateClaim(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Null(harness.LastConnectRequest!.PreDialedAgentLegId);
+    }
+
     private static ProviderCommand CreateCommandFromPayload(string requestPayload)
     {
         return CreateCommand(null, requestPayload);
@@ -445,6 +528,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
 
         public Mock<ICallSessionManager> CallSessionManager { get; } = new(MockBehavior.Strict);
 
+        public List<IAgentPreDialCoordinator> PreDialCoordinators { get; } = [];
+
         public Mock<IContactCenterEventPublisher> Publisher { get; } = new(MockBehavior.Strict);
 
         public Mock<IContactCenterVoiceProvider> Provider { get; } = new(MockBehavior.Strict);
@@ -475,7 +560,8 @@ public sealed class AnswerProviderCommandTypeExecutorTests
                 CallSessionManager.Object,
                 Publisher.Object,
                 clock.Object,
-                CallControlAuthorization);
+                CallControlAuthorization,
+                PreDialCoordinators);
         }
 
         public void SetupActiveState()

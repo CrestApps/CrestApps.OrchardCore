@@ -29,6 +29,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     private readonly ICallSessionManager _callSessionManager;
     private readonly ICallControlAuthorizationService _callControlAuthorizationService;
     private readonly IContactCenterEventPublisher _publisher;
+    private readonly IAgentPreDialCoordinator _preDialCoordinator;
     private readonly IClock _clock;
 
     /// <summary>
@@ -41,6 +42,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="clock">The clock used to stamp UTC projections.</param>
     /// <param name="callControlAuthorizationService">The shared call-control authorization boundary.</param>
+    /// <param name="preDialCoordinators">The optional coordinator that joins an agent leg rung while the offer was ringing.</param>
     public AnswerProviderCommandTypeExecutor(
         IContactCenterVoiceProviderResolver voiceProviderResolver,
         ITelephonyService telephonyService,
@@ -48,7 +50,8 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         ICallSessionManager callSessionManager,
         IContactCenterEventPublisher publisher,
         IClock clock,
-        ICallControlAuthorizationService callControlAuthorizationService)
+        ICallControlAuthorizationService callControlAuthorizationService,
+        IEnumerable<IAgentPreDialCoordinator> preDialCoordinators)
     {
         _voiceProviderResolver = voiceProviderResolver;
         _telephonyService = telephonyService;
@@ -56,6 +59,7 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         _callSessionManager = callSessionManager;
         _callControlAuthorizationService = callControlAuthorizationService;
         _publisher = publisher;
+        _preDialCoordinator = preDialCoordinators?.FirstOrDefault();
         _clock = clock;
     }
 
@@ -173,6 +177,8 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             var providerRequest = CreateProviderConnectRequest(request, claim);
             var providerResult = await callControlProvider.ConnectToAgentAsync(providerRequest, cancellationToken);
 
+            await JoinPreDialedAgentLegAsync(command, request, providerResult, cancellationToken);
+
             return NormalizeProviderResult(
                 providerResult,
                 ResolveProviderName(command.ProviderName, provider.TechnicalName),
@@ -188,6 +194,32 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
         var telephonyResult = await _telephonyService.AnswerAsync(callReference, cancellationToken);
 
         return ConvertTelephonyResult(telephonyResult, command.ProviderName, request.ProviderCallId);
+    }
+
+    /// <summary>
+    /// The provider has readied the caller for the agent leg rung while the offer was ringing. When the agent's device
+    /// has already answered that leg -- the common case, since the agent's client answers it the moment they click --
+    /// the two are joined now, and the result says so, so the leg is recorded as answered rather than dialing.
+    /// </summary>
+    private async Task JoinPreDialedAgentLegAsync(
+        ProviderCommand command,
+        ProviderAnswerCommandRequest request,
+        ContactCenterVoiceProviderResult providerResult,
+        CancellationToken cancellationToken)
+    {
+        if (_preDialCoordinator is null ||
+            string.IsNullOrWhiteSpace(request.PreDialedAgentLegId) ||
+            string.IsNullOrWhiteSpace(command.ReservationId) ||
+            providerResult?.Succeeded != true ||
+            !string.Equals(providerResult.ProviderLegId, request.PreDialedAgentLegId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (await _preDialCoordinator.OnCallerReadyAsync(command.ReservationId, cancellationToken))
+        {
+            providerResult.ProviderLegState = VoiceCallState.Connected;
+        }
     }
 
     /// <inheritdoc/>
@@ -245,6 +277,16 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
                 // would still read as a connected party. A provider that does not report a leg state is answering
                 // the call, so its leg is taken to be answered as before.
                 var legStatus = MapCallLegStatus(result.ProviderLegState);
+
+                // A pre-dialed leg can be joined, and recorded as answered, by its own answered webhook between the
+                // provider call and this projection. What the provider reported when it returned is older than that.
+                var recordedLeg = session.Legs.FirstOrDefault(leg => string.Equals(leg.ProviderLegId, result.ProviderLegId, StringComparison.Ordinal));
+
+                if (recordedLeg?.Status is CallLegStatus.Answered or CallLegStatus.OnHold &&
+                    legStatus is CallLegStatus.Dialing or CallLegStatus.Ringing or CallLegStatus.Unknown)
+                {
+                    legStatus = recordedLeg.Status;
+                }
 
                 CallTopologyProjector.UpsertLeg(
                     session,
@@ -393,6 +435,9 @@ public sealed class AnswerProviderCommandTypeExecutor : IProviderCommandTypeExec
             AgentId = request.AgentId,
             AgentUserId = request.AgentUserId,
             QueueId = request.QueueId,
+            PreDialedAgentLegId = string.IsNullOrWhiteSpace(request.PreDialedAgentLegId)
+                ? null
+                : request.PreDialedAgentLegId,
         };
 
         StampMetadata(connectRequest.Metadata, claim);

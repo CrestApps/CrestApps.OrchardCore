@@ -92,4 +92,11 @@ public enum ContactCenterVoiceProviderCapabilities
     /// that mask entry rather than only diverting the caller.
     /// </summary>
     SecureCaptureMasking = 1 << 14,
+
+    /// <summary>
+    /// The provider stops the queue's hold music on the caller's leg itself, at the moment it joins the agent to the
+    /// caller. A provider that advertises this keeps the caller hearing the queue until the agent is actually on the
+    /// line; one that does not has the music stopped when the offer is accepted, before the agent is connected.
+    /// </summary>
+    HoldMusicStopsOnAgentBridge = 1 << 15,
 }

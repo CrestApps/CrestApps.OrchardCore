@@ -262,11 +262,10 @@ public sealed partial class ActivityReservationService : IActivityReservationSer
             queueItem.TransitionTo(QueueItemStatus.Assigned);
             await _queueItemManager.UpdateAsync(queueItem, cancellationToken: cancellationToken);
 
-            // The caller has stopped waiting, so the queue stops playing to them. An assigned item is never
-            // dequeued — that is what a completed or abandoned one is — so this is the only point at which the
-            // hold music, started on an infinite loop, is turned off for a call that went the way it should.
-            // Without it the agent introduced themselves over the music the caller had been listening to.
-            await _queueService.StopHoldMusicAsync(queueItem, cancellationToken);
+            // The hold music is deliberately left playing here. Accepting is not the moment the caller stops
+            // waiting -- the agent is still being connected -- and stopping it now gave the caller dead air for
+            // the second or more the connect takes. The accept path stops it once the agent is joined, or right
+            // away for a provider that cannot tell when that happens (IContactCenterCallCommandService).
         }
 
         var agent = await _agentManager.FindByIdAsync(reservation.AgentId, cancellationToken);

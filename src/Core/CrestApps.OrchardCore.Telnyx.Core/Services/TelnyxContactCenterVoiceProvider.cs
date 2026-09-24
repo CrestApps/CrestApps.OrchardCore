@@ -21,6 +21,7 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 public sealed partial class TelnyxContactCenterVoiceProvider :
     IContactCenterVoiceProvider,
     IContactCenterVoiceCallControlProvider,
+    IContactCenterVoiceAgentPreDialProvider,
     IContactCenterVoiceTransferProvider,
     IContactCenterVoiceRecordingProvider
 {
@@ -69,7 +70,9 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         => ContactCenterVoiceProviderCapabilities.DialerDial |
             ContactCenterVoiceProviderCapabilities.AgentConnect |
             ContactCenterVoiceProviderCapabilities.CallTransfer |
-            ContactCenterVoiceProviderCapabilities.Recording;
+            ContactCenterVoiceProviderCapabilities.Recording |
+            // The outbound-bridge orchestration stops the caller's playback once it has bridged the agent in.
+            ContactCenterVoiceProviderCapabilities.HoldMusicStopsOnAgentBridge;
 
     /// <inheritdoc/>
     public VoiceProviderDeliveryModel DeliveryModel => VoiceProviderDeliveryModel.ServerSideAcd;
@@ -146,6 +149,13 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
         if (!_options.IsConfigured)
         {
             return Failure("provider_unavailable", "The Telnyx telephony provider is not configured.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PreDialedAgentLegId))
+        {
+            // The agent's browser was rung while the offer was ringing; ringing it again would put a second leg in
+            // the agent's ear. Only the caller has to be readied here.
+            return await ConnectPreDialedAgentAsync(request, cancellationToken);
         }
 
         var agentEndpoint = await ResolveAgentEndpointAsync(request, cancellationToken);

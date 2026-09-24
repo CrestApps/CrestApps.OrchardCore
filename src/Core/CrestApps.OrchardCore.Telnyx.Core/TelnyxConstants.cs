@@ -94,6 +94,13 @@ public static class TelnyxConstants
     public const string MediaStreamPublicUrlMetadataKey = "mediaStreamPublicUrl";
 
     /// <summary>
+    /// The SIP header a pre-dialed Contact Center agent leg carries the offer (reservation) identifier in, so the
+    /// agent's browser can tie the incoming leg to the offer it is showing. The same value travels in the leg's
+    /// <c>client_state</c>; the header is what a browser SDK that does not surface client state still sees.
+    /// </summary>
+    public const string OfferIdSipHeader = "X-Offer-Id";
+
+    /// <summary>
     /// Contains constants for Telnyx bidirectional media streaming over WebSockets, the equivalent of Asterisk ARI
     /// External Media used by the Contact Center voice-media provider boundary.
     /// </summary>

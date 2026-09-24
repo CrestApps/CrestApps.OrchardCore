@@ -160,6 +160,7 @@ public sealed class TelnyxExtensionVoicemailTests
                 OutboundVoiceProfileId = outboundVoiceProfileId,
             }),
             new Mock<IContactCenterAgentLegFailureService>().Object,
+            [],
             []);
 
     private static string DecodeClientState(string clientState)

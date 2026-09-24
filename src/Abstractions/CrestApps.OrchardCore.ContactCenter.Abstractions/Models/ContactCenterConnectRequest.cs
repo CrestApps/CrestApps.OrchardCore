@@ -43,6 +43,14 @@ public sealed class ContactCenterConnectRequest
     public string QueueId { get; set; }
 
     /// <summary>
+    /// Gets or sets the agent leg the provider already rang while the offer was ringing, when it did (see
+    /// <see cref="IContactCenterVoiceAgentPreDialProvider"/>). When set, the provider must not ring the agent again:
+    /// it readies the caller's leg and reports this leg as the agent's, and the Contact Center joins the two once the
+    /// leg is answered.
+    /// </summary>
+    public string PreDialedAgentLegId { get; set; }
+
+    /// <summary>
     /// Gets or sets provider-specific metadata for the connect request.
     /// </summary>
     public IDictionary<string, string> Metadata { get; set; } = new Dictionary<string, string>();

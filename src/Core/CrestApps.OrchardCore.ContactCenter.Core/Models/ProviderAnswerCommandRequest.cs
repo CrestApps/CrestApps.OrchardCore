@@ -39,4 +39,10 @@ public sealed class ProviderAnswerCommandRequest
     /// Gets or sets whether a definitive connect failure should return the work to inbound routing.
     /// </summary>
     public bool ReofferOnFailure { get; set; }
+
+    /// <summary>
+    /// Gets or sets the agent leg the provider rang while the offer was still ringing, when it did. The answer then
+    /// readies the caller and joins this leg instead of ringing the agent again.
+    /// </summary>
+    public string PreDialedAgentLegId { get; set; }
 }

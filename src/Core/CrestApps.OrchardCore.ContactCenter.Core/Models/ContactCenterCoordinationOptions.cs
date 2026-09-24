@@ -42,6 +42,25 @@ public sealed class ContactCenterCoordinationOptions
     public TimeSpan ReservationLockExpiration { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
+    /// Gets or sets a value indicating whether a voice offer rings the agent's device while it is still ringing on
+    /// screen, so accepting only has to join the already-answered leg to the caller. A provider or client that cannot
+    /// do this is connected at accept time as before; turning this off connects every agent that way.
+    /// </summary>
+    public bool AgentPreDialEnabled { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets how much longer than the offer's remaining lifetime a pre-dialed agent leg may ring. It covers an
+    /// accept made in the offer's last moments, whose answer reaches the leg just after the offer would have expired.
+    /// </summary>
+    public TimeSpan AgentPreDialRingGrace { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
+    /// Gets or sets the least time an offer must have left for it to be worth ringing the agent's device early. An
+    /// offer about to expire is connected at accept time instead.
+    /// </summary>
+    public TimeSpan AgentPreDialMinimumOfferRemaining { get; set; } = TimeSpan.FromSeconds(2);
+
+    /// <summary>
     /// Gets or sets the short wait the latency-sensitive reclaim path uses.
     /// </summary>
     /// <remarks>

@@ -60,12 +60,12 @@ public sealed class ActivityReservationServiceTests
     }
 
     [Fact]
-    public async Task AcceptAsync_StopsTheHoldMusic_SoTheAgentIsNotTalkingUnderIt()
+    public async Task AcceptAsync_LeavesTheHoldMusicPlaying_UntilTheAgentIsJoined()
     {
         // Arrange
-        // Hold music is started on an infinite loop and an assigned item is never dequeued, so this is the only
-        // point at which a call that went the way it should stops playing to the caller. Without it the agent
-        // introduced themselves over the music.
+        // Accepting is not the moment the caller stops waiting: the agent is still being connected. Stopping the
+        // music here gave the caller dead air for the second or more the connect takes, so the accept path stops
+        // it once the agent is actually joined instead.
         var reservation = new ActivityReservation { ItemId = "r1", QueueItemId = "qi-1", AgentId = "a1", ActivityItemId = "act-1" }.RestorePersistedStatus(ReservationStatus.Pending);
         var reservationManager = new Mock<IActivityReservationManager>();
         reservationManager.Setup(m => m.FindByIdAsync("r1", It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
@@ -95,7 +95,7 @@ public sealed class ActivityReservationServiceTests
         // Assert
         Assert.NotNull(accepted);
         Assert.Equal(QueueItemStatus.Assigned, queueItem.Status);
-        queueService.Verify(s => s.StopHoldMusicAsync(queueItem, It.IsAny<CancellationToken>()), Times.Once);
+        queueService.Verify(s => s.StopHoldMusicAsync(It.IsAny<QueueItem>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
