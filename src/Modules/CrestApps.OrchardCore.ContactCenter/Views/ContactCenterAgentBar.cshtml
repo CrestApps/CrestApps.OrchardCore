@@ -18,6 +18,7 @@
         ["antiForgeryToken"] = config.AntiForgeryToken,
         ["dispositions"] = config.Dispositions.Select(d => new { id = d.Id, name = d.Name }).ToArray(),
         ["reasonCodes"] = config.ReasonCodes.Select(r => new { id = r.Id, name = r.Name }).ToArray(),
+        ["presenceLabels"] = AgentPresenceLabels.Create(T),
         ["strings"] = new Dictionary<string, string>
         {
             ["title"] = T["Contact Center"].Value,

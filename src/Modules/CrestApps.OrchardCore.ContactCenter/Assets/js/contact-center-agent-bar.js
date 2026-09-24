@@ -245,7 +245,6 @@
             }
 
             var status = presenceStatus();
-            var reason = state && state.presence && state.presence.reason;
             var dot = handle.querySelector('[data-cc-handle-dot]');
 
             if (dot) {
@@ -257,7 +256,7 @@
             var labelEl = handle.querySelector('[data-cc-handle-label]');
 
             if (labelEl) {
-                labelEl.textContent = reason || status;
+                labelEl.textContent = presenceText();
             }
         }
 
@@ -369,6 +368,17 @@
             return (state && state.presence && state.presence.status) || 'Offline';
         }
 
+        // Read the same way on every agent screen (see shared/agent-presence.js): a state's own name, a break by its
+        // reason, and never a reason kept for a break that has not started yet.
+        function presenceText() {
+            var presence = window.CrestAppsContactCenter;
+            var current = (state && state.presence) || {};
+
+            return presence
+                ? presence.presenceLabel(current, config.presenceLabels)
+                : (current.reason || presenceStatus());
+        }
+
         function renderBar() {
             if (!inner || !state) {
                 return;
@@ -398,7 +408,7 @@
             // to nothing when idle, so the bar is just the top row until work arrives.
             inner.innerHTML =
                 '<div class="cc-agent-bar__top">' +
-                    renderPresence(status, reason) +
+                    renderPresence(status) +
                     renderTail() +
                 '</div>' +
                 '<div class="cc-bar__context" data-cc-context>' + renderContext(offer, active) + '</div>';
@@ -408,11 +418,11 @@
 
         // Presence is read-only here: the soft phone is the single place an agent changes their status, so the
         // bar only reflects it (no picker) to avoid two competing status controls.
-        function renderPresence(status, reason) {
+        function renderPresence(status) {
             return '<div class="cc-bar__presence" data-cc-presence>' +
                 '<span class="cc-bar__presence-chip" title="' + escapeHtml(label('presenceReadonly', 'Change your status from the soft phone')) + '">' +
                     '<span class="cc-bar__dot is-' + escapeHtml(status.toLowerCase()) + '"></span>' +
-                    '<span class="cc-bar__presence-label">' + escapeHtml(reason || status) + '</span>' +
+                    '<span class="cc-bar__presence-label">' + escapeHtml(presenceText()) + '</span>' +
                 '</span>' +
             '</div>';
         }

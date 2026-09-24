@@ -1,67 +1,81 @@
+@using System.Text.Json
 @model ShapeViewModel<AgentSoftPhoneViewModel>
 
 @{
     var viewModel = Model.Value;
     var presenceStatus = viewModel.Profile?.PresenceStatus ?? AgentPresenceStatus.Offline;
-    var pendingBreak = viewModel.Profile?.RequestedPresenceStatus == AgentPresenceStatus.Break;
+    var presenceReason = viewModel.Profile?.PresenceReason;
     var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
 
-    var presenceText = presenceStatus switch
-    {
-        AgentPresenceStatus.Available => T["Available"],
-        AgentPresenceStatus.Reserved => T["Reserved"],
-        AgentPresenceStatus.Busy => T["Busy"],
-        AgentPresenceStatus.WrapUp => T["Wrap-up"],
-        AgentPresenceStatus.Break => T["Break"],
-        AgentPresenceStatus.RequestBreak => T["Break pending"],
-        AgentPresenceStatus.Away => T["Away"],
-        AgentPresenceStatus.DoNotDisturb => T["Do not disturb"],
-        AgentPresenceStatus.Meeting => T["Meeting"],
-        AgentPresenceStatus.Training => T["Training"],
-        AgentPresenceStatus.AfterHoursUnavailable => T["After-hours unavailable"],
-        _ => T["Offline"],
-    };
+    // The break reasons are offered under "Request break", so the break starts with the one the agent picked; every
+    // other reason code sets its own state directly.
+    var breakReasonCodes = viewModel.ReasonCodes.Where(code => code.AppliesTo == AgentPresenceStatus.Break).ToList();
+    var otherReasonCodes = viewModel.ReasonCodes.Where(code => code.AppliesTo != AgentPresenceStatus.Break).ToList();
+
+    // The same labels and rules shared/agent-presence.js relabels the header with on every presence change.
+    var labels = AgentPresenceLabels.Create(T);
+    var presenceText = AgentPresenceLabels.Describe(presenceStatus, presenceReason, labels);
+    var pendingText = AgentPresenceLabels.DescribePending(presenceStatus, viewModel.Profile?.RequestedPresenceStatus, presenceReason, labels);
 }
 
-<div class="telephony-soft-phone__header-actions dropdown" data-contact-center-presence data-break-pending-text="@T["Break pending"]">
+<div class="telephony-soft-phone__header-actions dropdown" data-contact-center-presence data-presence-labels="@JsonSerializer.Serialize(labels)">
     <button type="button" class="telephony-soft-phone__icon-btn dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-contact-center-presence-toggle aria-expanded="false" title="@T["Contact Center presence"]">
         <i class="fa-solid fa-circle-user"></i>
         <span data-contact-center-presence-text>@presenceText</span>
-        @if (pendingBreak && presenceStatus != AgentPresenceStatus.RequestBreak)
+        @if (!string.IsNullOrEmpty(pendingText))
         {
-            <span class="badge text-bg-warning" data-contact-center-pending-presence>@T["Break pending"]</span>
+            <span class="badge text-bg-warning" data-contact-center-pending-presence>@pendingText</span>
         }
     </button>
     <div class="dropdown-menu dropdown-menu-end p-2">
         <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>
             <input type="hidden" name="returnUrl" value="@returnUrl" />
-            <button type="submit" name="status" value="@AgentPresenceStatus.Available" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Available" data-presence-value="@((int)AgentPresenceStatus.Available)" data-presence-label="@T["Available"]">@T["Available"]</button>
-            <button type="submit" name="status" value="@AgentPresenceStatus.RequestBreak" class="dropdown-item" data-presence-status="@AgentPresenceStatus.RequestBreak" data-presence-value="@((int)AgentPresenceStatus.RequestBreak)" data-presence-label="@T["Break pending"]">@T["Request break"]</button>
+            <button type="submit" name="status" value="@AgentPresenceStatus.Available" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Available" data-presence-value="@((int)AgentPresenceStatus.Available)">@T["Available"]</button>
+            @if (breakReasonCodes.Count == 0)
+            {
+                <button type="submit" name="status" value="@AgentPresenceStatus.RequestBreak" class="dropdown-item" data-presence-status="@AgentPresenceStatus.RequestBreak" data-presence-value="@((int)AgentPresenceStatus.RequestBreak)">@T["Request break"]</button>
+            }
         </form>
 
-        <div class="dropdown-divider"></div>
-
-        @if (viewModel.ReasonCodes.Count > 0)
+        @if (breakReasonCodes.Count > 0)
         {
-            foreach (var reasonCode in viewModel.ReasonCodes)
+            <h6 class="dropdown-header">@T["Request break"]</h6>
+            foreach (var reasonCode in breakReasonCodes)
+            {
+                <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="status" value="@AgentPresenceStatus.RequestBreak" />
+                    <input type="hidden" name="presenceReason" value="@reasonCode.Name" />
+                    <button type="submit" class="dropdown-item" data-presence-status="@AgentPresenceStatus.RequestBreak" data-presence-value="@((int)AgentPresenceStatus.RequestBreak)" data-presence-reason="@reasonCode.Name">@reasonCode.Name</button>
+                </form>
+            }
+        }
+
+        @if (otherReasonCodes.Count > 0)
+        {
+            <div class="dropdown-divider"></div>
+
+            foreach (var reasonCode in otherReasonCodes)
             {
                 <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>
                     <input type="hidden" name="returnUrl" value="@returnUrl" />
                     <input type="hidden" name="status" value="@reasonCode.AppliesTo" />
                     <input type="hidden" name="presenceReason" value="@reasonCode.Name" />
-                    <button type="submit" class="dropdown-item" data-presence-status="@reasonCode.AppliesTo" data-presence-value="@((int)reasonCode.AppliesTo)" data-presence-label="@reasonCode.Name">@reasonCode.Name</button>
+                    <button type="submit" class="dropdown-item" data-presence-status="@reasonCode.AppliesTo" data-presence-value="@((int)reasonCode.AppliesTo)" data-presence-reason="@reasonCode.Name">@reasonCode.Name</button>
                 </form>
             }
         }
-        else
+        else if (viewModel.ReasonCodes.Count == 0)
         {
+            <div class="dropdown-divider"></div>
+
             <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
-                <button type="submit" name="status" value="@AgentPresenceStatus.Away" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Away" data-presence-value="@((int)AgentPresenceStatus.Away)" data-presence-label="@T["Away"]">@T["Away"]</button>
-                <button type="submit" name="status" value="@AgentPresenceStatus.DoNotDisturb" class="dropdown-item" data-presence-status="@AgentPresenceStatus.DoNotDisturb" data-presence-value="@((int)AgentPresenceStatus.DoNotDisturb)" data-presence-label="@T["Do not disturb"]">@T["Do not disturb"]</button>
-                <button type="submit" name="status" value="@AgentPresenceStatus.Meeting" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Meeting" data-presence-value="@((int)AgentPresenceStatus.Meeting)" data-presence-label="@T["Meeting"]">@T["Meeting"]</button>
-                <button type="submit" name="status" value="@AgentPresenceStatus.Training" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Training" data-presence-value="@((int)AgentPresenceStatus.Training)" data-presence-label="@T["Training"]">@T["Training"]</button>
-                <button type="submit" name="status" value="@AgentPresenceStatus.AfterHoursUnavailable" class="dropdown-item" data-presence-status="@AgentPresenceStatus.AfterHoursUnavailable" data-presence-value="@((int)AgentPresenceStatus.AfterHoursUnavailable)" data-presence-label="@T["After-hours unavailable"]">@T["After-hours unavailable"]</button>
+                <button type="submit" name="status" value="@AgentPresenceStatus.Away" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Away" data-presence-value="@((int)AgentPresenceStatus.Away)">@T["Away"]</button>
+                <button type="submit" name="status" value="@AgentPresenceStatus.DoNotDisturb" class="dropdown-item" data-presence-status="@AgentPresenceStatus.DoNotDisturb" data-presence-value="@((int)AgentPresenceStatus.DoNotDisturb)">@T["Do not disturb"]</button>
+                <button type="submit" name="status" value="@AgentPresenceStatus.Meeting" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Meeting" data-presence-value="@((int)AgentPresenceStatus.Meeting)">@T["Meeting"]</button>
+                <button type="submit" name="status" value="@AgentPresenceStatus.Training" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Training" data-presence-value="@((int)AgentPresenceStatus.Training)">@T["Training"]</button>
+                <button type="submit" name="status" value="@AgentPresenceStatus.AfterHoursUnavailable" class="dropdown-item" data-presence-status="@AgentPresenceStatus.AfterHoursUnavailable" data-presence-value="@((int)AgentPresenceStatus.AfterHoursUnavailable)">@T["After-hours unavailable"]</button>
             </form>
         }
 
@@ -69,7 +83,7 @@
 
         <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>
             <input type="hidden" name="returnUrl" value="@returnUrl" />
-            <button type="submit" name="status" value="@AgentPresenceStatus.Offline" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Offline" data-presence-value="@((int)AgentPresenceStatus.Offline)" data-presence-label="@T["Offline"]">@T["Offline"]</button>
+            <button type="submit" name="status" value="@AgentPresenceStatus.Offline" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Offline" data-presence-value="@((int)AgentPresenceStatus.Offline)">@T["Offline"]</button>
         </form>
     </div>
 </div>

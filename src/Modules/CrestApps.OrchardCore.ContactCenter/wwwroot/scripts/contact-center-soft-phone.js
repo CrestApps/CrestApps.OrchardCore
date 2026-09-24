@@ -4,6 +4,114 @@
 */
 
 /*
+ * How an agent's Contact Center presence reads on the agent's own screens.
+ *
+ * The soft phone header, the agent workspace and the docked agent bar each show the agent's state. They used to
+ * print the reason if there was one and otherwise look the state up among the menu's buttons, so a break taken with
+ * no reason read as the first break reason in the menu ("Short break") while the audit record said plain "Break", and
+ * a state with no button of its own (on a call, wrap-up) printed the raw enum name. These are the pure decisions:
+ * which label a state gets, when its reason is worth showing, what a pending break says, and whether a presence
+ * notification is about this agent at all -- a supervisor's connection also receives every other agent's changes.
+ *
+ * Concatenated ahead of the scripts that use it by the module asset pipeline. It attaches to a shared namespace
+ * rather than exporting, so the same file runs in the browser bundles and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var contactCenter = root.CrestAppsContactCenter = root.CrestAppsContactCenter || {};
+
+  // In AgentPresenceStatus order, for a client that ever receives the numeric form.
+  var STATUS_NAMES = ['Offline', 'Available', 'Reserved', 'Busy', 'WrapUp', 'Break', 'RequestBreak', 'Away', 'DoNotDisturb', 'Meeting', 'Training', 'AfterHoursUnavailable'];
+
+  // The label key and English fallback for each state.
+  var STATUS_LABELS = {
+    Offline: ['offline', 'Offline'],
+    Available: ['available', 'Available'],
+    Reserved: ['reserved', 'Reserved'],
+    Busy: ['busy', 'On a call'],
+    WrapUp: ['wrapUp', 'Wrap-up'],
+    Break: ['break', 'Break'],
+    RequestBreak: ['breakPending', 'Break pending'],
+    Away: ['away', 'Away'],
+    DoNotDisturb: ['doNotDisturb', 'Do not disturb'],
+    Meeting: ['meeting', 'Meeting'],
+    Training: ['training', 'Training'],
+    AfterHoursUnavailable: ['afterHoursUnavailable', 'After-hours unavailable']
+  };
+
+  // The not-ready states an agent chooses with a reason. Only these show it: a reason left on the profile while the
+  // agent is reserved, on a call or in wrap-up belongs to a break still waiting to start, not to the current state.
+  var REASONED_STATES = {
+    Break: true,
+    Away: true,
+    DoNotDisturb: true,
+    Meeting: true,
+    Training: true,
+    AfterHoursUnavailable: true
+  };
+  function normalizePresenceStatus(value) {
+    if (typeof value === 'number') {
+      return STATUS_NAMES[value] || 'Offline';
+    }
+    if (typeof value === 'string' && value) {
+      if (/^\d+$/.test(value)) {
+        return STATUS_NAMES[Number(value)] || 'Offline';
+      }
+      return value;
+    }
+    return 'Offline';
+  }
+  function text(labels, key, fallback) {
+    var value = labels && labels[key];
+    return typeof value === 'string' && value ? value : fallback;
+  }
+  function hasReason(reason) {
+    return typeof reason === 'string' && reason.trim().length > 0;
+  }
+
+  // The label for the agent's current state. presence: { status, reason, requestedStatus }.
+  function presenceLabel(presence, labels) {
+    presence = presence || {};
+    var status = normalizePresenceStatus(presence.status);
+    if (REASONED_STATES[status] && hasReason(presence.reason)) {
+      return presence.reason.trim();
+    }
+    var entry = STATUS_LABELS[status];
+    return entry ? text(labels, entry[0], entry[1]) : status;
+  }
+
+  // What a break still waiting for the current work to end says, or '' when none is waiting.
+  function pendingPresenceLabel(presence, labels) {
+    presence = presence || {};
+    var status = normalizePresenceStatus(presence.status);
+    var requested = presence.requestedStatus == null || presence.requestedStatus === '' ? '' : normalizePresenceStatus(presence.requestedStatus);
+    if (requested !== 'Break' || status === 'Break' || status === 'RequestBreak') {
+      return '';
+    }
+    if (hasReason(presence.reason)) {
+      return text(labels, 'breakPendingWithReason', 'Break pending: {0}').replace('{0}', presence.reason.trim());
+    }
+    return text(labels, 'breakPending', 'Break pending');
+  }
+
+  // Whether a presence notification is about the agent this page belongs to. A supervisor's connection also
+  // receives every other agent's changes; an unknown owner on either side is taken as this agent's own.
+  function isOwnPresence(notification, ownUserId) {
+    if (!notification) {
+      return false;
+    }
+    if (!ownUserId || !notification.userId) {
+      return true;
+    }
+    return String(notification.userId) === String(ownUserId);
+  }
+  contactCenter.normalizePresenceStatus = normalizePresenceStatus;
+  contactCenter.presenceLabel = presenceLabel;
+  contactCenter.pendingPresenceLabel = pendingPresenceLabel;
+  contactCenter.isOwnPresence = isOwnPresence;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
  * Keeps the Contact Center soft-phone tab and inbound-offer recovery on the real-time hub so queue
  * sign-in/sign-out do not reload the page and a reconnect restores only the still-valid offer.
  */
@@ -14,6 +122,13 @@
   // manage the campaign, never its queue, so it is hidden from the membership list; signing out of the campaign
   // drops it. Keep this in sync with ContactCenterConstants.CampaignQueue.Prefix on the server.
   var CAMPAIGN_QUEUE_PREFIX = '__campaign-queue__';
+
+  // How the agent's presence reads (see shared/agent-presence.js, concatenated ahead of this file).
+  var presence = window.CrestAppsContactCenter || {};
+
+  // The user this page belongs to, from the hub snapshot. A supervisor's connection also receives every other
+  // agent's presence changes, and only this agent's own may relabel the header.
+  var ownUserId = null;
   function isCampaignQueue(queueId) {
     return typeof queueId === 'string' && queueId.indexOf(CAMPAIGN_QUEUE_PREFIX) === 0;
   }
@@ -101,27 +216,44 @@
     if (!container) {
       return;
     }
-    var status = snapshot.presenceStatus || 'Offline';
-    var reason = snapshot.presenceReason;
-    var requested = snapshot.requestedPresenceStatus;
-    var option = container.querySelector('[data-presence-status="' + status + '"]');
+    if (snapshot.userId) {
+      ownUserId = snapshot.userId;
+    }
+    var current = {
+      status: snapshot.presenceStatus || 'Offline',
+      reason: snapshot.presenceReason,
+      requestedStatus: snapshot.requestedPresenceStatus
+    };
+    var labels = readPresenceLabels(container);
     var text = container.querySelector('[data-contact-center-presence-text]');
     var pending = container.querySelector('[data-contact-center-pending-presence]');
-    var label = reason || option && option.getAttribute('data-presence-label') || status;
+    var pendingText = presence.pendingPresenceLabel ? presence.pendingPresenceLabel(current, labels) : '';
     if (text) {
-      text.textContent = label;
+      text.textContent = presence.presenceLabel ? presence.presenceLabel(current, labels) : current.status;
     }
-    if (requested === 'Break') {
+    if (pendingText) {
       if (!pending) {
         pending = document.createElement('span');
         pending.className = 'badge text-bg-warning';
         pending.setAttribute('data-contact-center-pending-presence', '');
-        pending.textContent = container.getAttribute('data-break-pending-text') || 'Break pending';
         container.querySelector('[data-contact-center-presence-toggle]').appendChild(pending);
       }
+      pending.textContent = pendingText;
     } else if (pending) {
       pending.remove();
     }
+  }
+
+  // The localized state labels the header renders with, read once from its data-presence-labels attribute.
+  function readPresenceLabels(container) {
+    if (!container.__contactCenterPresenceLabels) {
+      try {
+        container.__contactCenterPresenceLabels = JSON.parse(container.getAttribute('data-presence-labels') || '{}') || {};
+      } catch (error) {
+        container.__contactCenterPresenceLabels = {};
+      }
+    }
+    return container.__contactCenterPresenceLabels;
   }
   function showMembershipError(root, api, message) {
     var error = root && root.querySelector('[data-contact-center-membership-error]');
@@ -468,7 +600,7 @@
       // Available after the activity is dispositioned) on the soft phone in real time, not just when the
       // agent changes their own status.
       client.connection.on('PresenceChanged', function (notification) {
-        if (!notification) {
+        if (!notification || presence.isOwnPresence && !presence.isOwnPresence(notification, ownUserId)) {
           return;
         }
         updatePresenceUi({

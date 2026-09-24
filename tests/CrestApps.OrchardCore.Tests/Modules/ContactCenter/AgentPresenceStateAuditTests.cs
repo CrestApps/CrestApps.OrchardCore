@@ -236,6 +236,33 @@ public sealed class AgentPresenceStateAuditTests
     }
 
     [Fact]
+    public async Task SetPresenceAsync_RequestBreakWithAReasonOnACall_KeepsTheReasonThroughWrapUp_AndTheBreakStartsWithIt()
+    {
+        // Arrange
+        // The agent picks which break they want while still talking; the request waits through the call and its
+        // wrap-up, and the break it becomes carries that reason rather than starting reason-less.
+        var profile = CreateProfile(AgentPresenceStatus.Busy);
+        var fixture = new Fixture(profile);
+
+        // Act
+        await fixture.Service.SetPresenceAsync("u1", AgentPresenceStatus.RequestBreak, "Lunch", TestContext.Current.CancellationToken);
+        await fixture.Service.StartWrapUpAsync("a1", TestContext.Current.CancellationToken);
+        var reasonDuringWrapUp = profile.PresenceReasonCodeId;
+        await fixture.Service.CompleteWorkAsync("a1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal("code-lunch", reasonDuringWrapUp);
+        var applied = fixture.Recorder.StateChanges.Last().Change;
+        Assert.Equal(AgentPresenceStatus.WrapUp, applied.PreviousState);
+        Assert.Equal(AgentPresenceStatus.Break, applied.CurrentState);
+        Assert.Equal(AgentStateChangeSources.RequestApplied, applied.Source);
+        Assert.Equal("code-lunch", applied.ReasonCodeId);
+        Assert.Equal("Lunch", applied.ReasonName);
+        Assert.Equal(AgentPresenceStatus.Break, profile.PresenceStatus);
+        Assert.Equal("Lunch", profile.PresenceReason);
+    }
+
+    [Fact]
     public async Task StartWrapUpAsync_RecordsOneWrapUpStarted_ForTheInteraction()
     {
         // Arrange

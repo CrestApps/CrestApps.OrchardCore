@@ -176,9 +176,13 @@
                 return;
             }
 
-            var status = (state.presence && state.presence.status) || 'Offline';
-            var reason = state.presence && state.presence.reason;
-            refs.presenceLabel.textContent = reason || status;
+            // Read the same way on every agent screen (see shared/agent-presence.js).
+            var presence = window.CrestAppsContactCenter;
+            var current = state.presence || {};
+            var status = (presence ? presence.normalizePresenceStatus(current.status) : current.status) || 'Offline';
+            var label = presence ? presence.presenceLabel(current, config.presenceLabels) : (current.reason || status);
+            var pending = presence ? presence.pendingPresenceLabel(current, config.presenceLabels) : '';
+            refs.presenceLabel.textContent = pending ? label + ' · ' + pending : label;
 
             if (refs.presenceDot) {
                 refs.presenceDot.className = 'cc-presence__dot is-' + status.toLowerCase();

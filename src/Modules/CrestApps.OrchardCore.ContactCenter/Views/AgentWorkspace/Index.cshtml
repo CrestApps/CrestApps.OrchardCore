@@ -7,6 +7,8 @@
 @{
     var initial = string.IsNullOrWhiteSpace(Model.DisplayName) ? "?" : Model.DisplayName.Trim().Substring(0, 1);
     var antiForgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    var breakStatus = nameof(AgentPresenceStatus.Break);
+    var breakReasons = Model.ReasonCodes.Where(code => code.Id == breakStatus).ToList();
     var workspaceUrl = Url.Action("Index", "AgentWorkspace", new { area = ContactCenterConstants.Feature.Area });
     var completeActivityUrlTemplate = Url.Action(
         "Complete",
@@ -34,6 +36,7 @@
         ["secureCaptureFields"] = Model.SecureCaptureFields,
         ["completeActivityUrlTemplate"] = completeActivityUrlTemplate,
         ["antiForgeryToken"] = antiForgeryToken,
+        ["presenceLabels"] = AgentPresenceLabels.Create(T),
         ["strings"] = new Dictionary<string, string>
         {
             ["noQueues"] = T["Not signed in to any queue"].Value,
@@ -98,15 +101,29 @@
                 <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="Available">
                     <span class="cc-presence__dot is-available" aria-hidden="true"></span> @T["Available"]
                 </button>
-                @foreach (var reason in Model.ReasonCodes)
+                @foreach (var reason in Model.ReasonCodes.Where(code => code.Id != breakStatus))
                 {
                     <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="@reason.Id" data-cc-reason="@reason.Name">
                         <span class="cc-presence__dot is-@reason.Id.ToLowerInvariant()" aria-hidden="true"></span> @reason.Name
                     </button>
                 }
-                <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="RequestBreak">
-                    <span class="cc-presence__dot is-break" aria-hidden="true"></span> @T["Request break"]
-                </button>
+                @if (breakReasons.Count == 0)
+                {
+                    <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="RequestBreak">
+                        <span class="cc-presence__dot is-break" aria-hidden="true"></span> @T["Request break"]
+                    </button>
+                }
+                else
+                {
+                    @* The agent picks which break; a request made on a call keeps that reason until the break starts. *@
+                    <div class="cc-menu__heading" role="presentation">@T["Request break"]</div>
+                    foreach (var reason in breakReasons)
+                    {
+                        <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="RequestBreak" data-cc-reason="@reason.Name">
+                            <span class="cc-presence__dot is-break" aria-hidden="true"></span> @reason.Name
+                        </button>
+                    }
+                }
             </div>
         </div>
 

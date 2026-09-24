@@ -10,6 +10,13 @@
     // drops it. Keep this in sync with ContactCenterConstants.CampaignQueue.Prefix on the server.
     var CAMPAIGN_QUEUE_PREFIX = '__campaign-queue__';
 
+    // How the agent's presence reads (see shared/agent-presence.js, concatenated ahead of this file).
+    var presence = window.CrestAppsContactCenter || {};
+
+    // The user this page belongs to, from the hub snapshot. A supervisor's connection also receives every other
+    // agent's presence changes, and only this agent's own may relabel the header.
+    var ownUserId = null;
+
     function isCampaignQueue(queueId) {
         return typeof queueId === 'string' && queueId.indexOf(CAMPAIGN_QUEUE_PREFIX) === 0;
     }
@@ -122,29 +129,49 @@
             return;
         }
 
-        var status = snapshot.presenceStatus || 'Offline';
-        var reason = snapshot.presenceReason;
-        var requested = snapshot.requestedPresenceStatus;
-        var option = container.querySelector('[data-presence-status="' + status + '"]');
-        var text = container.querySelector('[data-contact-center-presence-text]');
-        var pending = container.querySelector('[data-contact-center-pending-presence]');
-        var label = reason || (option && option.getAttribute('data-presence-label')) || status;
-
-        if (text) {
-            text.textContent = label;
+        if (snapshot.userId) {
+            ownUserId = snapshot.userId;
         }
 
-        if (requested === 'Break') {
+        var current = {
+            status: snapshot.presenceStatus || 'Offline',
+            reason: snapshot.presenceReason,
+            requestedStatus: snapshot.requestedPresenceStatus
+        };
+        var labels = readPresenceLabels(container);
+        var text = container.querySelector('[data-contact-center-presence-text]');
+        var pending = container.querySelector('[data-contact-center-pending-presence]');
+        var pendingText = presence.pendingPresenceLabel ? presence.pendingPresenceLabel(current, labels) : '';
+
+        if (text) {
+            text.textContent = presence.presenceLabel ? presence.presenceLabel(current, labels) : current.status;
+        }
+
+        if (pendingText) {
             if (!pending) {
                 pending = document.createElement('span');
                 pending.className = 'badge text-bg-warning';
                 pending.setAttribute('data-contact-center-pending-presence', '');
-                pending.textContent = container.getAttribute('data-break-pending-text') || 'Break pending';
                 container.querySelector('[data-contact-center-presence-toggle]').appendChild(pending);
             }
+
+            pending.textContent = pendingText;
         } else if (pending) {
             pending.remove();
         }
+    }
+
+    // The localized state labels the header renders with, read once from its data-presence-labels attribute.
+    function readPresenceLabels(container) {
+        if (!container.__contactCenterPresenceLabels) {
+            try {
+                container.__contactCenterPresenceLabels = JSON.parse(container.getAttribute('data-presence-labels') || '{}') || {};
+            } catch (error) {
+                container.__contactCenterPresenceLabels = {};
+            }
+        }
+
+        return container.__contactCenterPresenceLabels;
     }
 
     function showMembershipError(root, api, message) {
@@ -604,7 +631,7 @@
             // Available after the activity is dispositioned) on the soft phone in real time, not just when the
             // agent changes their own status.
             client.connection.on('PresenceChanged', function (notification) {
-                if (!notification) {
+                if (!notification || (presence.isOwnPresence && !presence.isOwnPresence(notification, ownUserId))) {
                     return;
                 }
 
