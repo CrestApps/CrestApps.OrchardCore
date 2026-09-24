@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js';
 
-const { presenceLabel, pendingPresenceLabel, isOwnPresence, normalizePresenceStatus } = globalThis.CrestAppsContactCenter;
+const { presenceLabel, pendingPresenceLabel, breakChoiceLabel, isOwnPresence, normalizePresenceStatus } = globalThis.CrestAppsContactCenter;
 
 const labels = {
     available: 'Available',
@@ -57,6 +57,35 @@ describe('pendingPresenceLabel', () => {
         expect(pendingPresenceLabel({ status: 'Break', reason: 'Lunch', requestedStatus: 'Break' }, labels)).toBe('');
         expect(pendingPresenceLabel({ status: 'WrapUp', requestedStatus: 'Available' }, labels)).toBe('');
         expect(pendingPresenceLabel({ status: 'WrapUp', requestedStatus: null }, labels)).toBe('');
+    });
+});
+
+// Bug: the presence menu headed the break reasons "Request break" even for an Available agent, for whom choosing
+// one starts the break at once. Only an agent busy with work -- reserved, on a call, in wrap-up, or holding an offer --
+// has a break that waits for the work to end, as the server decides it.
+describe('breakChoiceLabel', () => {
+    const menuLabels = { ...labels, requestBreak: 'Request break' };
+
+    it('says "Break" when a break would start now', () => {
+        expect(breakChoiceLabel({ status: 'Available' }, menuLabels)).toBe('Break');
+        expect(breakChoiceLabel({ status: 'Away', reason: 'Away from desk' }, menuLabels)).toBe('Break');
+        expect(breakChoiceLabel({ status: 'Break', reason: 'Lunch' }, menuLabels)).toBe('Break');
+        expect(breakChoiceLabel({ status: 'Offline' }, menuLabels)).toBe('Break');
+        expect(breakChoiceLabel({ status: 1 }, menuLabels)).toBe('Break');
+    });
+
+    it('says "Request break" while the agent is busy with work, when the break waits for it to end', () => {
+        expect(breakChoiceLabel({ status: 'Reserved' }, menuLabels)).toBe('Request break');
+        expect(breakChoiceLabel({ status: 'Busy' }, menuLabels)).toBe('Request break');
+        expect(breakChoiceLabel({ status: 'WrapUp', requestedStatus: 'Break' }, menuLabels)).toBe('Request break');
+        expect(breakChoiceLabel({ status: 3 }, menuLabels)).toBe('Request break');
+        expect(breakChoiceLabel({ status: 'Available', hasActiveReservation: true }, menuLabels)).toBe('Request break');
+    });
+
+    it('falls back to English when a label is not supplied', () => {
+        expect(breakChoiceLabel({ status: 'Available' }, {})).toBe('Break');
+        expect(breakChoiceLabel({ status: 'Busy' }, null)).toBe('Request break');
+        expect(breakChoiceLabel(null, null)).toBe('Break');
     });
 });
 

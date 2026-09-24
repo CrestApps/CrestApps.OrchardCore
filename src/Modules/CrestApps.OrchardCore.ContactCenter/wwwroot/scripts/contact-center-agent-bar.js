@@ -50,6 +50,14 @@
     Training: true,
     AfterHoursUnavailable: true
   };
+
+  // The states whose work a break has to wait for, as the presence manager decides it: while the agent is reserved,
+  // on a call or in wrap-up (or holds an offer), choosing a break only requests it; otherwise it starts at once.
+  var WORKING_STATES = {
+    Reserved: true,
+    Busy: true,
+    WrapUp: true
+  };
   function normalizePresenceStatus(value) {
     if (typeof value === 'number') {
       return STATUS_NAMES[value] || 'Offline';
@@ -95,6 +103,14 @@
     return text(labels, 'breakPending', 'Break pending');
   }
 
+  // What the presence menu calls its break choice: "Break" when picking one starts the break now, "Request break"
+  // while the agent's work holds it until that work ends. presence: { status, hasActiveReservation }.
+  function breakChoiceLabel(presence, labels) {
+    presence = presence || {};
+    var waitsForWork = presence.hasActiveReservation === true || WORKING_STATES[normalizePresenceStatus(presence.status)] === true;
+    return waitsForWork ? text(labels, 'requestBreak', 'Request break') : text(labels, 'break', 'Break');
+  }
+
   // Whether a presence notification is about the agent this page belongs to. A supervisor's connection also
   // receives every other agent's changes; an unknown owner on either side is taken as this agent's own.
   function isOwnPresence(notification, ownUserId) {
@@ -109,6 +125,7 @@
   contactCenter.normalizePresenceStatus = normalizePresenceStatus;
   contactCenter.presenceLabel = presenceLabel;
   contactCenter.pendingPresenceLabel = pendingPresenceLabel;
+  contactCenter.breakChoiceLabel = breakChoiceLabel;
   contactCenter.isOwnPresence = isOwnPresence;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*

@@ -28,6 +28,7 @@ public static class AgentPresenceLabels
             ["wrapUp"] = T["Wrap-up"].Value,
             ["break"] = T["Break"].Value,
             ["breakPending"] = T["Break pending"].Value,
+            ["requestBreak"] = T["Request break"].Value,
 
             // Left unformatted: the placeholder is filled with the waiting break's reason, here and by the script.
             ["breakPendingWithReason"] = T["Break pending: {0}"].Value,
@@ -100,6 +101,30 @@ public static class AgentPresenceLabels
         return string.IsNullOrWhiteSpace(reason)
             ? labels["breakPending"]
             : labels["breakPendingWithReason"].Replace(ReasonPlaceholder, reason.Trim(), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Names the presence menu's break choice: "Break" when picking one starts the break now, "Request break" while
+    /// the agent's work holds it until that work ends.
+    /// </summary>
+    /// <remarks>
+    /// The same rule the presence manager applies to a break request: a reserved, busy or wrapping-up agent, or one
+    /// holding an offer, gets the break when the work ends; anybody else gets it at once.
+    /// </remarks>
+    /// <param name="status">The current state.</param>
+    /// <param name="hasActiveReservation">Whether the agent holds an offer.</param>
+    /// <param name="labels">The labels from <see cref="Create(IHtmlLocalizer)"/>.</param>
+    public static string DescribeBreakChoice(
+        AgentPresenceStatus status,
+        bool hasActiveReservation,
+        IReadOnlyDictionary<string, string> labels)
+    {
+        ArgumentNullException.ThrowIfNull(labels);
+
+        var waitsForWork = hasActiveReservation ||
+            status is AgentPresenceStatus.Reserved or AgentPresenceStatus.Busy or AgentPresenceStatus.WrapUp;
+
+        return labels[waitsForWork ? "requestBreak" : "break"];
     }
 
     private static bool ShowsReason(AgentPresenceStatus status)

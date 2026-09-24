@@ -7,15 +7,17 @@
     var presenceReason = viewModel.Profile?.PresenceReason;
     var returnUrl = $"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
 
-    // The break reasons are offered under "Request break", so the break starts with the one the agent picked; every
+    // The break reasons are offered as a break request, so the break starts with the one the agent picked; every
     // other reason code sets its own state directly.
     var breakReasonCodes = viewModel.ReasonCodes.Where(code => code.AppliesTo == AgentPresenceStatus.Break).ToList();
     var otherReasonCodes = viewModel.ReasonCodes.Where(code => code.AppliesTo != AgentPresenceStatus.Break).ToList();
 
-    // The same labels and rules shared/agent-presence.js relabels the header with on every presence change.
+    // The same labels and rules shared/agent-presence.js relabels the header with on every presence change. The break
+    // choice reads "Break" when it starts now and "Request break" while the agent's work holds it.
     var labels = AgentPresenceLabels.Create(T);
     var presenceText = AgentPresenceLabels.Describe(presenceStatus, presenceReason, labels);
     var pendingText = AgentPresenceLabels.DescribePending(presenceStatus, viewModel.Profile?.RequestedPresenceStatus, presenceReason, labels);
+    var breakChoiceText = AgentPresenceLabels.DescribeBreakChoice(presenceStatus, !string.IsNullOrEmpty(viewModel.Profile?.ActiveReservationId), labels);
 }
 
 <div class="telephony-soft-phone__header-actions dropdown" data-contact-center-presence data-presence-labels="@JsonSerializer.Serialize(labels)">
@@ -33,13 +35,13 @@
             <button type="submit" name="status" value="@AgentPresenceStatus.Available" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Available" data-presence-value="@((int)AgentPresenceStatus.Available)">@T["Available"]</button>
             @if (breakReasonCodes.Count == 0)
             {
-                <button type="submit" name="status" value="@AgentPresenceStatus.RequestBreak" class="dropdown-item" data-presence-status="@AgentPresenceStatus.RequestBreak" data-presence-value="@((int)AgentPresenceStatus.RequestBreak)">@T["Request break"]</button>
+                <button type="submit" name="status" value="@AgentPresenceStatus.RequestBreak" class="dropdown-item" data-presence-status="@AgentPresenceStatus.RequestBreak" data-presence-value="@((int)AgentPresenceStatus.RequestBreak)" data-contact-center-break-choice>@breakChoiceText</button>
             }
         </form>
 
         @if (breakReasonCodes.Count > 0)
         {
-            <h6 class="dropdown-header">@T["Request break"]</h6>
+            <h6 class="dropdown-header" data-contact-center-break-choice>@breakChoiceText</h6>
             foreach (var reasonCode in breakReasonCodes)
             {
                 <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>

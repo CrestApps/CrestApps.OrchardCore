@@ -185,6 +185,15 @@
             var pending = presence ? presence.pendingPresenceLabel(current, config.presenceLabels) : '';
             refs.presenceLabel.textContent = pending ? label + ' · ' + pending : label;
 
+            // The break choice starts a break now, or only requests one while the agent's work holds them.
+            if (presence && refs.presenceMenu) {
+                var breakChoice = presence.breakChoiceLabel(current, config.presenceLabels);
+
+                Array.prototype.forEach.call(refs.presenceMenu.querySelectorAll('[data-cc-break-choice]'), function (element) {
+                    element.textContent = breakChoice;
+                });
+            }
+
             if (refs.presenceDot) {
                 refs.presenceDot.className = 'cc-presence__dot is-' + status.toLowerCase();
             }

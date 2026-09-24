@@ -119,6 +119,7 @@ internal static partial class AgentWorkspaceEndpoints
             Status = profile.PresenceStatus.ToString(),
             Reason = profile.PresenceReason,
             RequestedStatus = profile.RequestedPresenceStatus?.ToString(),
+            HasActiveReservation = !string.IsNullOrEmpty(profile.ActiveReservationId),
         };
 
         var queueIds = profile.QueueIds;

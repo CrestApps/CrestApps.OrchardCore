@@ -56,6 +56,29 @@ public sealed class AgentPresenceLabelsTests
         Assert.Equal(expected, label);
     }
 
+    // Bug: the presence menu headed the break reasons "Request break" even for an Available agent, whose break starts
+    // the moment they pick one. It is a request only while work holds the agent, as the presence manager decides.
+    [Theory]
+    [InlineData(AgentPresenceStatus.Available, false, "Break")]
+    [InlineData(AgentPresenceStatus.Away, false, "Break")]
+    [InlineData(AgentPresenceStatus.Break, false, "Break")]
+    [InlineData(AgentPresenceStatus.Offline, false, "Break")]
+    [InlineData(AgentPresenceStatus.Reserved, false, "Request break")]
+    [InlineData(AgentPresenceStatus.Busy, false, "Request break")]
+    [InlineData(AgentPresenceStatus.WrapUp, false, "Request break")]
+    [InlineData(AgentPresenceStatus.Available, true, "Request break")]
+    public void DescribeBreakChoice_SaysBreakWhenItStartsNow_AndRequestBreakWhenItWaitsForTheWork(
+        AgentPresenceStatus status,
+        bool hasActiveReservation,
+        string expected)
+    {
+        // Act
+        var label = AgentPresenceLabels.DescribeBreakChoice(status, hasActiveReservation, _labels);
+
+        // Assert
+        Assert.Equal(expected, label);
+    }
+
     [Fact]
     public void Create_CarriesEveryKeyTheScriptReads()
     {
@@ -64,7 +87,7 @@ public sealed class AgentPresenceLabelsTests
             new[]
             {
                 "afterHoursUnavailable", "available", "away", "break", "breakPending", "breakPendingWithReason", "busy",
-                "doNotDisturb", "meeting", "offline", "reserved", "training", "wrapUp",
+                "doNotDisturb", "meeting", "offline", "requestBreak", "reserved", "training", "wrapUp",
             },
             _labels.Keys.Order(StringComparer.Ordinal));
         Assert.Equal("Break pending: {0}", _labels["breakPendingWithReason"]);

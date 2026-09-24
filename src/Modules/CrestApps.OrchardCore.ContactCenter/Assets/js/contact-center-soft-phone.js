@@ -147,6 +147,15 @@
             text.textContent = presence.presenceLabel ? presence.presenceLabel(current, labels) : current.status;
         }
 
+        // The break choice starts a break now, or only requests one while the agent's work holds them.
+        if (presence.breakChoiceLabel) {
+            var breakChoice = presence.breakChoiceLabel(current, labels);
+
+            Array.prototype.forEach.call(container.querySelectorAll('[data-contact-center-break-choice]'), function (element) {
+                element.textContent = breakChoice;
+            });
+        }
+
         if (pendingText) {
             if (!pending) {
                 pending = document.createElement('span');

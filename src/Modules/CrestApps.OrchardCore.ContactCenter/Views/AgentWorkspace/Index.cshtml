@@ -112,13 +112,14 @@
                 @if (breakReasons.Count == 0)
                 {
                     <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="RequestBreak">
-                        <span class="cc-presence__dot is-break" aria-hidden="true"></span> @T["Request break"]
+                        <span class="cc-presence__dot is-break" aria-hidden="true"></span> <span data-cc-break-choice>@T["Break"]</span>
                     </button>
                 }
                 else
                 {
-                    @* The agent picks which break; a request made on a call keeps that reason until the break starts. *@
-                    <div class="cc-menu__heading" role="presentation">@T["Request break"]</div>
+                    @* The agent picks which break; a request made on a call keeps that reason until the break starts. The
+                       script renames the choice "Request break" while the agent's work holds it, and "Break" otherwise. *@
+                    <div class="cc-menu__heading" role="presentation" data-cc-break-choice>@T["Break"]</div>
                     foreach (var reason in breakReasons)
                     {
                         <button type="button" class="cc-menu__item" role="menuitem" data-cc-set-presence="RequestBreak" data-cc-reason="@reason.Name">

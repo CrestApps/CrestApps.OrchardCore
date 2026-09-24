@@ -19,4 +19,9 @@ public sealed class WorkspacePresenceViewModel
     /// Gets or sets the pending presence status the system grants once in-flight routing completes.
     /// </summary>
     public string RequestedStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the agent holds an offer, so a break they choose waits for it to settle.
+    /// </summary>
+    public bool HasActiveReservation { get; set; }
 }
