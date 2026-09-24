@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Core.Services;
+using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.Locking.Distributed;
@@ -183,6 +184,15 @@ public sealed class CallStateMachineHarness
 
         return _service.IngestAsync(step.ToProviderEvent(ProviderName, ProviderCallId), cancellationToken);
     }
+
+    /// <summary>
+    /// Ingests one hand-built provider event through the production ingestion pipeline.
+    /// </summary>
+    /// <param name="providerEvent">The provider event to ingest.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>A task that completes when the event has been ingested.</returns>
+    public Task IngestAsync(ProviderVoiceEvent providerEvent, CancellationToken cancellationToken)
+        => _service.IngestAsync(providerEvent, cancellationToken);
 
     /// <summary>
     /// Counts the durable events of the supplied type that the production publisher recorded.

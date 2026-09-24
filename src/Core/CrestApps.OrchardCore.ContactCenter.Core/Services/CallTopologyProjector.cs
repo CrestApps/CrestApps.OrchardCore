@@ -12,6 +12,50 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 public static class CallTopologyProjector
 {
     /// <summary>
+    /// Resolves the leg a provider event describes.
+    /// </summary>
+    /// <remarks>
+    /// Providers that publish per-leg events name the leg; per-call events (a provider that has no legs, or a
+    /// reconciliation poll reading a call back) do not, and for those the call is the only leg the platform can claim to
+    /// have observed. A provider can name the same party in two identifier spaces, though: Telnyx's own events carry the
+    /// caller's call_leg_id, while a poll knows the caller only by the call_control_id. Taking the call for a second leg
+    /// then counted the caller twice, turned a held two-party call into a conference, and recorded a conference change
+    /// with nothing about the call having changed. So a per-call event on the session's own call is the caller's leg
+    /// when exactly one caller leg is already up.
+    /// </remarks>
+    /// <param name="session">The call session.</param>
+    /// <param name="providerCallId">The provider call identifier the event was reported on.</param>
+    /// <param name="providerLegId">The provider leg identifier the event named, if any.</param>
+    /// <returns>The provider identifier of the leg the event describes.</returns>
+    public static string ResolveEventLegId(CallSession session, string providerCallId, string providerLegId)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (!string.IsNullOrEmpty(providerLegId))
+        {
+            return providerLegId;
+        }
+
+        if (string.IsNullOrEmpty(providerCallId) ||
+            !string.Equals(providerCallId, session.ProviderCallId, StringComparison.Ordinal))
+        {
+            return providerCallId;
+        }
+
+        var callerLegs = session.Legs
+            .Where(leg => leg is not null &&
+                leg.Role == CallPartyRole.Customer &&
+                !leg.EndedUtc.HasValue &&
+                !string.IsNullOrEmpty(leg.ProviderLegId))
+            .Take(2)
+            .ToArray();
+
+        return callerLegs.Length == 1
+            ? callerLegs[0].ProviderLegId
+            : providerCallId;
+    }
+
+    /// <summary>
     /// Records a leg on the session, or updates the leg already recorded under the same provider identifier.
     /// </summary>
     /// <param name="session">The call session.</param>

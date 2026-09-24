@@ -640,11 +640,8 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
             providerEvent.ParticipantCount,
             now);
 
-        // Providers that publish per-leg events name the leg; providers that publish per-call events do not,
-        // and for those the call itself is the only leg the platform can honestly claim to have observed.
-        var providerLegId = string.IsNullOrEmpty(providerEvent.ProviderLegId)
-            ? providerEvent.ProviderCallId
-            : providerEvent.ProviderLegId;
+        // A per-call event names no leg; the projector decides which observed leg it describes.
+        var providerLegId = CallTopologyProjector.ResolveEventLegId(session, providerEvent.ProviderCallId, providerEvent.ProviderLegId);
 
         if (string.IsNullOrEmpty(providerLegId))
         {
