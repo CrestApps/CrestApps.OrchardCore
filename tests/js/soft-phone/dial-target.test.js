@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js';
 
-const { resolveDialTarget, shouldOfferDial, isSameNumber, resolvePeerNumber } = globalThis.CrestAppsSoftPhone;
+const { resolveDialTarget, shouldOfferDial, isSameNumber, resolvePeerNumber, shouldShowCallNumber } = globalThis.CrestAppsSoftPhone;
 
 const ownNumber = '+15550100200';
 
@@ -91,5 +91,29 @@ describe('resolvePeerNumber', () => {
     it('keeps the old behaviour when the own numbers are unknown', () => {
         expect(resolvePeerNumber({ direction: 'Inbound', from: '+15550100300', to: '' }, [])).toBe('+15550100300');
         expect(resolvePeerNumber(null, [ownNumber])).toBe('');
+    });
+});
+
+// Bug: on hold the agent typed the number to add and the Call button never appeared, and a few seconds later the held
+// call's number was written back over what they had typed. Every render put the current call's number in the field, so
+// the entry the dial button waits for could not survive until the agent reached for it.
+describe('shouldShowCallNumber', () => {
+    it('shows the call number on a call that is not held, whatever the field holds', () => {
+        expect(shouldShowCallNumber({ stateName: 'Connected', agentEntered: false })).toBe(true);
+        expect(shouldShowCallNumber({ stateName: 'Connected', agentEntered: true })).toBe(true);
+        expect(shouldShowCallNumber({ stateName: 'Ringing', agentEntered: true })).toBe(true);
+        expect(shouldShowCallNumber({ stateName: 'Connecting', agentEntered: true })).toBe(true);
+    });
+
+    it('shows the held call number until the agent enters one of their own', () => {
+        expect(shouldShowCallNumber({ stateName: 'OnHold', agentEntered: false })).toBe(true);
+    });
+
+    it('keeps what the agent entered on hold instead of writing the held call number over it', () => {
+        expect(shouldShowCallNumber({ stateName: 'OnHold', agentEntered: true })).toBe(false);
+    });
+
+    it('treats missing options as nothing entered', () => {
+        expect(shouldShowCallNumber()).toBe(true);
     });
 });

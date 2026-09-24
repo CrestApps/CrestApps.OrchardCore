@@ -2093,6 +2093,16 @@
     return options.stateName === 'OnHold' && !options.numberIsCallDisplay;
   }
 
+  // Whether the number field should show the current call's number. On a held call the field is where the agent enters
+  // the number to add, and the dial button only appears once they have; writing the held call's number back over that
+  // entry on the next render would hide the button again and throw away what they typed.
+  //   stateName    - the current call's state (normalized: 'Connected', 'OnHold', ...).
+  //   agentEntered - whether the field holds something the agent entered since it last showed a call.
+  function shouldShowCallNumber(options) {
+    options = options || {};
+    return !(options.stateName === 'OnHold' && options.agentEntered);
+  }
+
   // The other party's number, for the number field and the active-call list. The agent's leg of a call the platform
   // bridged here is placed from the tenant's own number, so its "from" is the tenant itself; the other side is tried
   // next, and nothing is shown rather than the tenant's own number.
@@ -2122,6 +2132,7 @@
   softPhone.resolvePeerNumber = resolvePeerNumber;
   softPhone.resolveDialTarget = resolveDialTarget;
   softPhone.shouldOfferDial = shouldOfferDial;
+  softPhone.shouldShowCallNumber = shouldShowCallNumber;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * The labels of a matched-record card's actions in the incoming-call panel.
@@ -2751,6 +2762,7 @@
   var canConferenceCall = softPhoneModules.canConferenceCall;
   var resolveDialTarget = softPhoneModules.resolveDialTarget;
   var shouldOfferDial = softPhoneModules.shouldOfferDial;
+  var shouldShowCallNumber = softPhoneModules.shouldShowCallNumber;
   var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
   var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
   var HOST_BRIDGE_PROTOCOL = softPhoneModules.HOST_BRIDGE_PROTOCOL;
@@ -4610,6 +4622,9 @@
     var directoryEntries = [];
     var transferOpen = false;
     var numberIsCallDisplay = false;
+    // Whether the number field holds something the agent entered since it last showed a call's number. On hold
+    // that entry is the number to add, and a render must not write the held call's number back over it.
+    var numberEnteredByAgent = false;
     var callStateRevision = 0;
     var incomingContext = null;
     var incomingHandled = false;
@@ -4912,6 +4927,7 @@
       // is now typing -- e.g. entering "2" but dialing the previous "6183".
       clearPendingDial();
       numberIsCallDisplay = false;
+      numberEnteredByAgent = false;
       if (dom.number) {
         dom.number.value = '';
       }
@@ -7471,9 +7487,15 @@
         // would fall back into the pendingDial branch and re-show the old number over a fresh entry.
         clearPendingDial();
         var peerNumber = getPeerNumber(currentCall);
-        if (peerNumber) {
+
+        // On hold the field keeps a number the agent entered to add a call (see soft-phone/dial-target.js).
+        if (peerNumber && shouldShowCallNumber({
+          stateName: stateName,
+          agentEntered: numberEnteredByAgent
+        })) {
           setNumberDisplay(peerNumber);
           numberIsCallDisplay = true;
+          numberEnteredByAgent = false;
         }
       } else if (dom.number && pendingDial && !currentCall) {
         // Mirror the active-call look while the dial is in flight: show the number being connected
@@ -9358,11 +9380,22 @@
         dom.dialModeToggle.addEventListener('click', toggleDialMode);
       }
       if (dom.number) {
-        dom.number.addEventListener('input', function () {
+        dom.number.addEventListener('input', function (event) {
           numberIsCallDisplay = false;
           // Clear a transient error (for example "Enter a phone number to call.") as soon as the
           // user starts entering a number.
           showError(null);
+
+          // intl-tel-input reports its own setNumber -- the phone showing a call's number -- as an input
+          // too; only what the agent enters is theirs.
+          if (event && event.detail && event.detail.isSetNumber) {
+            return;
+          }
+
+          // Render now, so the dial button appears on hold as soon as there is a number to add rather than
+          // whenever something else happens to render.
+          numberEnteredByAgent = true;
+          render();
         });
         dom.number.addEventListener('focus', function () {
           if (currentCall && normalizeState(currentCall.state) === 'OnHold') {

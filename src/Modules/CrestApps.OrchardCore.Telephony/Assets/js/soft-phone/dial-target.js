@@ -66,6 +66,17 @@
         return options.stateName === 'OnHold' && !options.numberIsCallDisplay;
     }
 
+    // Whether the number field should show the current call's number. On a held call the field is where the agent enters
+    // the number to add, and the dial button only appears once they have; writing the held call's number back over that
+    // entry on the next render would hide the button again and throw away what they typed.
+    //   stateName    - the current call's state (normalized: 'Connected', 'OnHold', ...).
+    //   agentEntered - whether the field holds something the agent entered since it last showed a call.
+    function shouldShowCallNumber(options) {
+        options = options || {};
+
+        return !(options.stateName === 'OnHold' && options.agentEntered);
+    }
+
     // The other party's number, for the number field and the active-call list. The agent's leg of a call the platform
     // bridged here is placed from the tenant's own number, so its "from" is the tenant itself; the other side is tried
     // next, and nothing is shown rather than the tenant's own number.
@@ -101,4 +112,5 @@
     softPhone.resolvePeerNumber = resolvePeerNumber;
     softPhone.resolveDialTarget = resolveDialTarget;
     softPhone.shouldOfferDial = shouldOfferDial;
+    softPhone.shouldShowCallNumber = shouldShowCallNumber;
 }(typeof globalThis !== 'undefined' ? globalThis : window));
