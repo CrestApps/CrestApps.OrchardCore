@@ -111,7 +111,13 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         var connectionString = busyTimeoutSeconds.HasValue
             ? $"Data Source={databasePath};Pooling=False;Default Timeout={busyTimeoutSeconds.Value}"
             : $"Data Source={databasePath};Pooling=False";
-        var store = StoreFactory.Create(configuration => configuration.UseSqLite(connectionString));
+        // Thousands of commits: a journal deleted at every one of them is a "disk I/O error" waiting for whatever
+        // opens new files in the temp folder, so the journal is kept and emptied instead.
+        var store = StoreFactory.Create(configuration =>
+        {
+            configuration.UseSqLite(connectionString);
+            configuration.ConnectionFactory = new KeptJournalConnectionFactory(configuration.ConnectionFactory);
+        });
         store.RegisterIndexes(
         [
             new QueueItemIndexProvider(),
