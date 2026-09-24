@@ -59,6 +59,7 @@ public sealed class ContactCenterWorkflowEventTypeProvider : IContactCenterWorkf
             new SelectListItem(S["Queue item assigned"].Value, ContactCenterConstants.Events.QueueItemAssigned) { Group = routingAndQueues },
             new SelectListItem(S["Queue item dequeued"].Value, ContactCenterConstants.Events.QueueItemDequeued) { Group = routingAndQueues },
             new SelectListItem(S["Queue item overflowed"].Value, ContactCenterConstants.Events.QueueItemOverflowed) { Group = routingAndQueues },
+            new SelectListItem(S["Queue item withdrawn"].Value, ContactCenterConstants.Events.QueueItemWithdrawn) { Group = routingAndQueues },
 
             new SelectListItem(S["Agent signed in"].Value, ContactCenterConstants.Events.AgentSignedIn) { Group = agents },
             new SelectListItem(S["Agent signed out"].Value, ContactCenterConstants.Events.AgentSignedOut) { Group = agents },

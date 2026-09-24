@@ -6,6 +6,8 @@ using System.Text;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.Environment.Shell;
@@ -389,10 +391,17 @@ public sealed class ContactCenterSearchEngineIndependenceTests
             queue.ReservationTimeoutSeconds = 30;
             await queueManager.CreateAsync(queue, cancellationToken: cancellationToken);
 
+            // Routing withdraws queued work whose activity no longer exists, so the queued work needs a real one.
+            var activityManager = serviceProvider.GetRequiredService<IOmnichannelActivityManager>();
+            var activity = await activityManager.NewAsync(cancellationToken: cancellationToken);
+            activity.ItemId = "activity-search-independence";
+            activity.Status = ActivityStatus.Pending;
+            await activityManager.CreateAsync(activity, cancellationToken: cancellationToken);
+
             var queueItemManager = serviceProvider.GetRequiredService<IQueueItemManager>();
             var queueItem = await queueItemManager.NewAsync(cancellationToken: cancellationToken);
             queueItem.QueueId = queue.ItemId;
-            queueItem.ActivityItemId = "activity-search-independence";
+            queueItem.ActivityItemId = activity.ItemId;
             queueItem.RestorePersistedStatus(QueueItemStatus.Waiting);
             queueItem.Priority = InteractionPriority.Normal;
             queueItem.EnqueuedUtc = now;

@@ -50,6 +50,19 @@ public sealed class RecordingContactCenterAuditRecorder : IContactCenterAuditRec
     }
 
     /// <summary>
+    /// Gets the queue withdrawal records, in the order they were made.
+    /// </summary>
+    public List<(QueueItemWithdrawnEventData Data, ContactCenterActor Actor)> Withdrawals { get; } = [];
+
+    /// <inheritdoc/>
+    public Task RecordQueueItemWithdrawnAsync(QueueItemWithdrawnEventData data, ContactCenterActor actor, CancellationToken cancellationToken = default)
+    {
+        Withdrawals.Add((data, actor));
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Gets the call records of one event type.
     /// </summary>
     /// <param name="eventType">The event type.</param>

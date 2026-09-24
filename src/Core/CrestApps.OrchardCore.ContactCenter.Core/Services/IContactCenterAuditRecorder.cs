@@ -57,4 +57,13 @@ public interface IContactCenterAuditRecorder
         ContactCenterActor actor,
         string idempotencyKey = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records queued work leaving its queue because its activity stopped being routable, as
+    /// <see cref="ContactCenterConstants.Events.QueueItemWithdrawn"/>. A queue item is withdrawn once.
+    /// </summary>
+    /// <param name="data">The withdrawal. <see cref="QueueItemWithdrawnEventData.WithdrawnUtc"/> dates it.</param>
+    /// <param name="actor">Who changed the activity: the user who purged or closed it, or the platform.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    Task RecordQueueItemWithdrawnAsync(QueueItemWithdrawnEventData data, ContactCenterActor actor, CancellationToken cancellationToken = default);
 }

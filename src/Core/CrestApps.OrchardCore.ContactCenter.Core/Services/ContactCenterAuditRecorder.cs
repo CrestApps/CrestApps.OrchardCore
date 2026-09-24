@@ -129,6 +129,31 @@ public sealed class ContactCenterAuditRecorder : IContactCenterAuditRecorder
         return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public Task RecordQueueItemWithdrawnAsync(QueueItemWithdrawnEventData data, ContactCenterActor actor, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        ArgumentException.ThrowIfNullOrEmpty(data.QueueItemId);
+
+        var occurredUtc = Resolve(data.WithdrawnUtc);
+        data.WithdrawnUtc = occurredUtc;
+
+        // A settled queue item never re-enters its queue, so it is withdrawn at most once.
+        var interactionEvent = Create(
+            ContactCenterConstants.Events.QueueItemWithdrawn,
+            nameof(QueueItem),
+            data.QueueItemId,
+            data.InteractionId,
+            occurredUtc,
+            actor,
+            ContactCenterConstants.Components.Queues,
+            $"queue-withdrawn:{data.QueueItemId}");
+
+        interactionEvent.SetData(data);
+
+        return _publisher.PublishAsync(interactionEvent, cancellationToken);
+    }
+
     private static InteractionEvent Create(
         string eventType,
         string aggregateType,

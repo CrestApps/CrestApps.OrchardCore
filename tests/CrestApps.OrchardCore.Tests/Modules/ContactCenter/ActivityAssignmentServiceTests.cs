@@ -326,6 +326,7 @@ public sealed class ActivityAssignmentServiceTests
             queueManager.Object,
             CreateRoutingService(),
             reservationService.Object,
+            Mock.Of<IQueuedWorkWithdrawalService>(),
             businessHours.Object,
             new Mock<IContactCenterEventPublisher>().Object,
             distributedLock.Object,

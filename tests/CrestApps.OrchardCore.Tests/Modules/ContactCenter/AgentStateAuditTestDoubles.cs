@@ -66,6 +66,9 @@ internal sealed class RecordingAuditRecorder : IContactCenterAuditRecorder
         string idempotencyKey = null,
         CancellationToken cancellationToken = default)
         => Task.CompletedTask;
+
+    public Task RecordQueueItemWithdrawnAsync(QueueItemWithdrawnEventData data, ContactCenterActor actor, CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 
 internal sealed record RecordedAgentStateChange(AgentStateChangedEventData Change, ContactCenterActor Actor);

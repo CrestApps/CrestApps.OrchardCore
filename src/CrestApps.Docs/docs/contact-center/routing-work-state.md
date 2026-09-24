@@ -55,6 +55,18 @@ await _activityWriter.ScheduleUpdateAsync(activityItemId, activity =>
 
 The activity is therefore written twice for a terminal transition — once to reconcile the read model and once to apply the CRM-owned status — and both writes happen after the routing transaction has committed rather than inside it.
 
+## When the CRM ends an activity
+
+An activity can also leave the routable set from the CRM side: purged or bulk-purged from the admin, cancelled, completed or failed by hand, or deleted. The CRM never references the contact center, so `ContactCenterActivityRoutabilityHandler` listens on the Omnichannel activity manager's catalog handlers and, after the change commits, asks `IQueuedWorkWithdrawalService` to withdraw the activity's queued work. "Routable" is the opposite of `ActivityStatus.IsTerminal()` (Completed, Cancelled, Failed, Purged), plus the activity still existing.
+
+- **Waiting** work is removed from its queue (`QueueItemStatus.Removed`) and its work state released.
+- **Ringing** work, an offer that has not been answered yet, has the offer revoked through `IActivityReservationService.CompensateAsync`, which releases the agent back to Available and removes the item in the same step a suppressed dial uses.
+- **Accepted** work is left with the agent. They may be on the call, and pulling the work out from under them would drop a live customer. Their own completion settles the queue item, and the CRM refuses a disposition on an activity that has already finished.
+
+Every withdrawal is recorded once as `QueueItemWithdrawn` through `IContactCenterAuditRecorder`, naming the actor: the agent when the activity's assigned agent closed it, a supervisor when anyone else did (for a purge, the user in `PurgedById`), and the system when no user was involved.
+
+Routing also withdraws work itself, as a safety net for items stranded before this existed or by a writer that bypassed the activity manager. Before offering the item at the head of a queue, `ActivityAssignmentService` asks the withdrawal service whether that item's activity is still routable. When it is not, the item is withdrawn as the system and the next item is considered, so dead work heals on the next sweep instead of being offered on every pass.
+
 ## Upgrading
 
 No backfill job is required. Work that was already in flight when the feature was upgraded has no work state document yet, so the first read or mutation adopts the projected fields the activity already carries. Reporting that work as unassigned with no attempts would re-offer work an agent already holds and reset the dialer's attempt cap, so adoption is the default rather than an option.

@@ -12,6 +12,7 @@ using CrestApps.OrchardCore.ContactCenter.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Migrations;
 using CrestApps.OrchardCore.ContactCenter.Recipes;
 using CrestApps.OrchardCore.ContactCenter.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Drivers;
 using CrestApps.OrchardCore.ContactCenter.Workflows.Models;
@@ -127,7 +128,12 @@ public sealed class QueuesStartup : StartupBase
             .AddScoped<IActivityRoutingStrategy, RoundRobinRoutingStrategy>()
             .AddScoped<IActivityRoutingStrategy, LeastBusyRoutingStrategy>()
             .AddScoped<IActivityAssignmentService, ActivityAssignmentService>()
+            .AddScoped<IQueuedWorkWithdrawalService, QueuedWorkWithdrawalService>()
             .AddScoped<IOrphanedActivityRecoveryService, OrphanedActivityRecoveryService>();
+
+        // An activity that leaves the routable set through the CRM (purged, cancelled, completed, deleted) takes its
+        // queued work out of the queue, so routing never offers an agent an activity that is already finished.
+        services.AddScoped<ICatalogEntryHandler<OmnichannelActivity>, ContactCenterActivityRoutabilityHandler>();
 
         services.AddScoped<IContactCenterFeatureLifecycleParticipant>(serviceProvider =>
             new ContactCenterFeatureWorkLifecycleParticipant(

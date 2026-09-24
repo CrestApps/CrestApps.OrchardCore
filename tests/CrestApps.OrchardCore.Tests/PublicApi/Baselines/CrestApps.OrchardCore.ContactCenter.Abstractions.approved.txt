@@ -124,6 +124,7 @@ namespace CrestApps.OrchardCore.ContactCenter
             public const string QueueItemDequeued = "QueueItemDequeued";
             public const string QueueItemOverflowed = "QueueItemOverflowed";
             public const string QueueItemReserved = "QueueItemReserved";
+            public const string QueueItemWithdrawn = "QueueItemWithdrawn";
             public const string RecordingAccessed = "RecordingAccessed";
             public const string RecordingAutoResumed = "RecordingAutoResumed";
             public const string RecordingDenied = "RecordingDenied";

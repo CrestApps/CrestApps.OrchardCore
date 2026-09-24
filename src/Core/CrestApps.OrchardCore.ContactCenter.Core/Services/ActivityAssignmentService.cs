@@ -18,11 +18,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// </summary>
 public sealed class ActivityAssignmentService : IActivityAssignmentService
 {
+    private const int MaxWithdrawalsPerPass = 50;
+
     private readonly IQueueItemManager _queueItemManager;
     private readonly IAgentAvailabilityService _availabilityService;
     private readonly IActivityQueueManager _queueManager;
     private readonly IActivityRoutingService _routingService;
     private readonly IActivityReservationService _reservationService;
+    private readonly IQueuedWorkWithdrawalService _withdrawalService;
     private readonly IBusinessHoursService _businessHours;
     private readonly IContactCenterEventPublisher _publisher;
     private readonly IDistributedLock _distributedLock;
@@ -39,6 +42,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="routingService">The routing service.</param>
     /// <param name="reservationService">The reservation service.</param>
+    /// <param name="withdrawalService">The service that withdraws a picked item whose activity is no longer routable.</param>
     /// <param name="businessHours">The business-hours service used to pause assignment while the queue is closed.</param>
     /// <param name="publisher">The Contact Center event publisher.</param>
     /// <param name="distributedLock">The distributed lock used to serialize assignment per queue.</param>
@@ -51,6 +55,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         IActivityQueueManager queueManager,
         IActivityRoutingService routingService,
         IActivityReservationService reservationService,
+        IQueuedWorkWithdrawalService withdrawalService,
         IBusinessHoursService businessHours,
         IContactCenterEventPublisher publisher,
         IDistributedLock distributedLock,
@@ -64,6 +69,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         _queueManager = queueManager;
         _routingService = routingService;
         _reservationService = reservationService;
+        _withdrawalService = withdrawalService;
         _businessHours = businessHours;
         _publisher = publisher;
         _distributedLock = distributedLock;
@@ -266,7 +272,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
-        var topItem = await _queueItemManager.FindNextWaitingAsync(queue, now, cancellationToken);
+        var topItem = await NextRoutableItemAsync(queue, now, cancellationToken);
 
         if (topItem is null)
         {
@@ -353,6 +359,26 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         return reservation;
     }
 
+    /// <summary>
+    /// Finds the next waiting item whose activity is still routable, withdrawing any ahead of it whose activity was
+    /// purged, closed or deleted outside routing, so they heal here rather than being offered on every pass.
+    /// </summary>
+    private async Task<QueueItem> NextRoutableItemAsync(ActivityQueue queue, DateTime now, CancellationToken cancellationToken)
+    {
+        for (var withdrawn = 0; withdrawn < MaxWithdrawalsPerPass; withdrawn++)
+        {
+            var item = await _queueItemManager.FindNextWaitingAsync(queue, now, cancellationToken);
+
+            if (item is null || !await _withdrawalService.TryWithdrawUnroutableAsync(item, cancellationToken))
+            {
+                return item;
+            }
+        }
+
+        // A backlog of dead items longer than one pass is withdrawn over the following passes.
+        return null;
+    }
+
     private Task PublishRoutingDecisionAsync(ActivityRoutingDecision decision, CancellationToken cancellationToken)
     {
         var data = new ActivityRoutingDecisionEventData
@@ -389,7 +415,7 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
         return _publisher.PublishAsync(interactionEvent, cancellationToken);
     }
 
-    private static string GetQueueLockKey(string queueId)
+    internal static string GetQueueLockKey(string queueId)
     {
         return $"ContactCenterQueueAssignment:{queueId}";
     }

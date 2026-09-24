@@ -80,6 +80,16 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     public TestClock Clock => _clock;
 
     /// <summary>
+    /// Gets the harness container, so a test can compose a real service over the same store and doubles.
+    /// </summary>
+    public IServiceProvider Services => _provider;
+
+    /// <summary>
+    /// Gets the session every harness service shares.
+    /// </summary>
+    public ISession Session => _session;
+
+    /// <summary>
     /// Gets every event published, in order, including the agent state audit the recorder writes.
     /// </summary>
     public IReadOnlyList<InteractionEvent> PublishedEvents
@@ -167,19 +177,27 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
     /// <summary>
     /// Seeds a queued campaign activity (a waiting queue item plus its CRM activity) that a pacing cycle can dial.
     /// </summary>
-    public async Task SeedQueuedActivityAsync(string activityId, string destination)
+    public Task SeedQueuedActivityAsync(string activityId, string destination)
+        => SeedQueuedActivityAsync(new OmnichannelActivity { ItemId = activityId, PreferredDestination = destination }, QueueId);
+
+    /// <summary>
+    /// Seeds a waiting queue item in <paramref name="queueId"/> for <paramref name="activity"/>, which is stored as
+    /// the CRM activity unless it is only an id: pass an activity with no status to model one that was deleted.
+    /// </summary>
+    public async Task<QueueItem> SeedQueuedActivityAsync(OmnichannelActivity activity, string queueId, bool storeActivity = true)
     {
-        _provider.GetRequiredService<InMemoryOmnichannelActivities>().Add(new OmnichannelActivity
+        var activityId = activity.ItemId;
+
+        if (storeActivity)
         {
-            ItemId = activityId,
-            PreferredDestination = destination,
-        });
+            _provider.GetRequiredService<InMemoryOmnichannelActivities>().Add(activity);
+        }
 
         var queueItemManager = _provider.GetRequiredService<IQueueItemManager>();
         var workStateService = _provider.GetRequiredService<IContactCenterWorkStateService>();
 
         var queueItem = await queueItemManager.NewAsync(cancellationToken: TestContext.Current.CancellationToken);
-        queueItem.QueueId = QueueId;
+        queueItem.QueueId = queueId;
         queueItem.ActivityItemId = activityId;
         queueItem.TransitionTo(QueueItemStatus.Waiting);
         queueItem.EnqueuedUtc = _clock.UtcNow;
@@ -189,6 +207,8 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
             workState.TransitionTo(ActivityAssignmentStatus.Available), TestContext.Current.CancellationToken);
 
         await _session.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        return queueItem;
     }
 
     public static DialerProfile CreateProfile(DialerMode mode, int callsPerAgent = 1)
@@ -281,6 +301,11 @@ internal sealed class DialerModeIntegrationHarness : IAsyncDisposable
         return await _provider.GetRequiredService<IInteractionManager>()
             .FindByActivityIdAsync(activityId, TestContext.Current.CancellationToken);
     }
+
+    /// <summary>
+    /// Commits the shared session and runs the work deferred until after commit, as a shell scope would.
+    /// </summary>
+    public Task CommitAsync() => DrainAsync();
 
     private async Task DrainAsync()
     {

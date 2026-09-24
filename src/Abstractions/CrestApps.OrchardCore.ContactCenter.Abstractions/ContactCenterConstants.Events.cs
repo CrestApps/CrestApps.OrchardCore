@@ -94,6 +94,12 @@ public static partial class ContactCenterConstants
         public const string QueueItemOverflowed = "QueueItemOverflowed";
 
         /// <summary>
+        /// Raised when queued work is taken out of its queue because its activity stopped being routable outside
+        /// routing: purged, cancelled, completed, failed or deleted. It names who made the change.
+        /// </summary>
+        public const string QueueItemWithdrawn = "QueueItemWithdrawn";
+
+        /// <summary>
         /// Raised when an agent signs in.
         /// </summary>
         public const string AgentSignedIn = "AgentSignedIn";
