@@ -291,6 +291,12 @@ namespace CrestApps.OrchardCore.ContactCenter
         System.Threading.Tasks.Task NotifyQueueStatsChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.QueueStatsNotification notification, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task NotifyRecordingStateChangedAsync(CrestApps.OrchardCore.ContactCenter.Models.RecordingStateNotification notification, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactCenterVoiceAgentPreDialProvider
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> BridgePreDialedAgentAsync(string providerCallId, string agentLegId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task HangupPreDialedAgentAsync(string agentLegId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> PreDialAgentAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterAgentPreDialRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactCenterVoiceAttendedTransferProvider
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> BeginConsultAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceAttendedTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
@@ -516,6 +522,16 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         Customer = 6,
         AiAgent = 7,
     }
+    public sealed class ContactCenterAgentPreDialRequest
+    {
+        public ContactCenterAgentPreDialRequest() { }
+        public string AgentId { get; set; }
+        public string AgentUserId { get; set; }
+        public string InteractionId { get; set; }
+        public string ProviderCallId { get; set; }
+        public string ReservationId { get; set; }
+        public int TimeoutSeconds { get; set; }
+    }
     public sealed class ContactCenterCallAssignmentRequest
     {
         public ContactCenterCallAssignmentRequest() { }
@@ -535,6 +551,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         public string AgentUserId { get; set; }
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
+        public string PreDialedAgentLegId { get; set; }
         public string ProviderCallId { get; set; }
         public string QueueId { get; set; }
     }
@@ -647,6 +664,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
         RecordingPause = 4096,
         SecureCapture = 8192,
         SecureCaptureMasking = 16384,
+        HoldMusicStopsOnAgentBridge = 32768,
     }
     public sealed class ContactCenterVoiceProviderResult
     {
