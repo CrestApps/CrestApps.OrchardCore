@@ -27,7 +27,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         // Assert
         Assert.Equal(0, recovered);
         presenceManager.Verify(
-            manager => manager.CompleteWorkAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            manager => manager.CompleteWorkAsync(It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -39,7 +39,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         var interaction = CreateInteraction(_now.AddMinutes(-16));
         var presenceManager = new Mock<IAgentPresenceManager>();
         presenceManager
-            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AgentProfile { ItemId = "a1", PresenceStatus = AgentPresenceStatus.Available });
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -56,8 +56,16 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         interactionManager.Verify(
             manager => manager.UpdateAsync(interaction, null, It.IsAny<CancellationToken>()),
             Times.Once);
+
+        // The platform ended wrap-up that ran past its limit, which the audit must tell apart from the agent
+        // finishing their work.
         presenceManager.Verify(
-            manager => manager.CompleteWorkAsync("a1", It.IsAny<CancellationToken>()),
+            manager => manager.CompleteWorkAsync(
+                "a1",
+                It.Is<AgentStateChangeContext>(context =>
+                    context.Source == AgentStateChangeSources.WrapUpTimedOut &&
+                    context.InteractionId == "i1"),
+                It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -68,7 +76,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         var agent = CreateAgent();
         var presenceManager = new Mock<IAgentPresenceManager>();
         presenceManager
-            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AgentProfile { ItemId = "a1", PresenceStatus = AgentPresenceStatus.Available });
         var service = CreateService(agent, null, presenceManager);
 
@@ -78,7 +86,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         // Assert
         Assert.Equal(1, recovered);
         presenceManager.Verify(
-            manager => manager.CompleteWorkAsync("a1", It.IsAny<CancellationToken>()),
+            manager => manager.CompleteWorkAsync("a1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -92,7 +100,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         second.ItemId = "i2";
         var presenceManager = new Mock<IAgentPresenceManager>();
         presenceManager
-            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AgentProfile { ItemId = "a1", PresenceStatus = AgentPresenceStatus.Available });
         var interactionManager = new Mock<IInteractionManager>();
         interactionManager
@@ -128,7 +136,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
             .ReturnsAsync(() => interaction.WrapUpCompletedUtc.HasValue ? [] : [interaction]);
         var presenceManager = new Mock<IAgentPresenceManager>();
         presenceManager
-            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(() =>
             {
                 agent.PresenceStatus = AgentPresenceStatus.Available;
@@ -156,7 +164,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
             manager => manager.UpdateAsync(interaction, null, It.IsAny<CancellationToken>()),
             Times.Once);
         presenceManager.Verify(
-            manager => manager.CompleteWorkAsync("a1", It.IsAny<CancellationToken>()),
+            manager => manager.CompleteWorkAsync("a1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -180,10 +188,10 @@ public sealed class AgentAvailabilityRecoveryServiceTests
             .ReturnsAsync([]);
         var presenceManager = new Mock<IAgentPresenceManager>();
         presenceManager
-            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.CompleteWorkAsync("a1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("The profile is locked."));
         presenceManager
-            .Setup(manager => manager.CompleteWorkAsync("a2", It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.CompleteWorkAsync("a2", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AgentProfile { ItemId = "a2", PresenceStatus = AgentPresenceStatus.Available });
         var clock = new Mock<IClock>();
         clock.SetupGet(value => value.UtcNow).Returns(_now);
@@ -201,7 +209,7 @@ public sealed class AgentAvailabilityRecoveryServiceTests
         // Assert
         Assert.Equal(1, recovered);
         presenceManager.Verify(
-            manager => manager.CompleteWorkAsync("a2", It.IsAny<CancellationToken>()),
+            manager => manager.CompleteWorkAsync("a2", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

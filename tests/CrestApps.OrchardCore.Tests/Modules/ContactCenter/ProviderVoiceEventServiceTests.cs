@@ -310,7 +310,7 @@ public sealed class ProviderVoiceEventServiceTests
         Assert.Equal(VoiceCallState.Ended, session.State);
         Assert.Equal(new DateTime(2026, 7, 10, 15, 0, 0, DateTimeKind.Utc), interaction.WrapUpStartedUtc);
         presenceManager.Verify(
-            manager => manager.StartWrapUpAsync("agent-1", It.IsAny<CancellationToken>()),
+            manager => manager.StartWrapUpAsync("agent-1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -383,10 +383,10 @@ public sealed class ProviderVoiceEventServiceTests
         // Assert
         Assert.Null(interaction.WrapUpStartedUtc);
         presenceManager.Verify(
-            manager => manager.StartWrapUpAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            manager => manager.StartWrapUpAsync(It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Never);
         presenceManager.Verify(
-            manager => manager.CompleteWorkAsync("agent-1", It.IsAny<CancellationToken>()),
+            manager => manager.CompleteWorkAsync("agent-1", It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

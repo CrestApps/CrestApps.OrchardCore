@@ -39,7 +39,7 @@ public sealed class ContactCenterWorkflowTaskGuardTests
         // Assert
         Assert.Contains("Failed", result.Outcomes);
         presenceManager.Verify(
-            manager => manager.SetPresenceAsync(It.IsAny<string>(), It.IsAny<AgentPresenceStatus>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            manager => manager.SetPresenceAsync(It.IsAny<string>(), It.IsAny<AgentPresenceStatus>(), It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -49,7 +49,7 @@ public sealed class ContactCenterWorkflowTaskGuardTests
         // Arrange
         var presenceManager = new Mock<IAgentPresenceManager>();
         presenceManager
-            .Setup(manager => manager.SetPresenceAsync("user-1", AgentPresenceStatus.Break, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(manager => manager.SetPresenceAsync("user-1", AgentPresenceStatus.Break, It.IsAny<string>(), It.IsAny<AgentStateChangeContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AgentProfile());
         var evaluator = CreateEchoEvaluator();
         var task = new SetAgentPresenceTask(
@@ -68,7 +68,7 @@ public sealed class ContactCenterWorkflowTaskGuardTests
         // Assert
         Assert.Contains("Done", result.Outcomes);
         presenceManager.Verify(
-            manager => manager.SetPresenceAsync("user-1", AgentPresenceStatus.Break, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            manager => manager.SetPresenceAsync("user-1", AgentPresenceStatus.Break, It.IsAny<string>(), It.Is<AgentStateChangeContext>(context => context.Actor.Type == ContactCenterActorType.Workflow), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

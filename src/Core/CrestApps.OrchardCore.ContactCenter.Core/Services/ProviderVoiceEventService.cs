@@ -322,14 +322,14 @@ public sealed class ProviderVoiceEventService : IProviderVoiceEventService
 
         if (startsWrapUp)
         {
-            await _presenceManager.StartWrapUpAsync(session.AgentId, cancellationToken);
+            await _presenceManager.StartWrapUpAsync(session.AgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId, ChangedUtc = now }, cancellationToken);
         }
         else if (handledCallEnded)
         {
             // A direct or manual call leaves no after-call work, so completing the agent's work here returns them
             // to their ready state immediately. CompleteWorkAsync is a no-op unless the agent is actually parked in
             // an on-call state, so a call that never moved the agent into Busy is unaffected.
-            await _presenceManager.CompleteWorkAsync(session.AgentId, cancellationToken);
+            await _presenceManager.CompleteWorkAsync(session.AgentId, new AgentStateChangeContext { InteractionId = interaction.ItemId, ChangedUtc = now }, cancellationToken);
         }
 
         foreach (var eventType in ResolveEventTypes(

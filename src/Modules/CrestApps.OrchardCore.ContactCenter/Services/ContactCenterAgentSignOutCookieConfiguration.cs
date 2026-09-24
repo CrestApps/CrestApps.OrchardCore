@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Telephony;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -101,7 +102,9 @@ internal sealed class ContactCenterAgentSignOutCookieConfiguration
             }
 
             var presenceManager = services.GetRequiredService<IAgentPresenceManager>();
-            await presenceManager.SignOutAsync(userId, timeout.Token);
+            // Leaving the site signs the agent out of the contact center too; the reason tells that apart from
+            // choosing to sign out of the queues.
+            await presenceManager.SignOutAsync(userId, new AgentStateChangeContext { ReasonName = "site-sign-out" }, timeout.Token);
 
             var revokers = services.GetServices<ISoftPhoneCredentialRevoker>();
             await SoftPhoneCredentialRevocation.RevokeForUserAsync(revokers, userId, "signed-out", logger, timeout.Token);

@@ -73,7 +73,15 @@ public sealed class AgentAvailabilityRecoveryService : IAgentAvailabilityRecover
 
             try
             {
-                updated = await _presenceManager.CompleteWorkAsync(agent.ItemId, cancellationToken);
+                // Wrap-up that ran past its limit is ended by the platform, which the audit keeps apart from an agent
+                // finishing their work; wrap-up with no interaction left to finish is simply put right.
+                updated = await _presenceManager.CompleteWorkAsync(agent.ItemId, new AgentStateChangeContext
+                {
+                    Source = interactions.Count > 0
+                        ? AgentStateChangeSources.WrapUpTimedOut
+                        : AgentStateChangeSources.Reconciled,
+                    InteractionId = interactions.FirstOrDefault()?.ItemId,
+                }, cancellationToken);
             }
             catch (InvalidOperationException ex)
             {

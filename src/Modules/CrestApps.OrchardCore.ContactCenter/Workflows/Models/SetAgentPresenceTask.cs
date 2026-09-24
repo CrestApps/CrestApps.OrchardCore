@@ -1,4 +1,5 @@
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using Microsoft.Extensions.Localization;
@@ -107,7 +108,11 @@ public sealed class SetAgentPresenceTask : TaskActivity<SetAgentPresenceTask>
 
         try
         {
-            var profile = await _presenceManager.SetPresenceAsync(userId, Status, reason);
+            // The workflow, not the agent, made this change, and the audit says so.
+            var profile = await _presenceManager.SetPresenceAsync(userId, Status, reason, new AgentStateChangeContext
+            {
+                Actor = ContactCenterActor.Workflow(workflowContext?.WorkflowId),
+            });
 
             return profile is null
                 ? WorkflowOutcomeResults.From("Failed")
