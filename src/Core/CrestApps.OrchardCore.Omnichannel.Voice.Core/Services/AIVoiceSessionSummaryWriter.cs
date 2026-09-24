@@ -159,11 +159,11 @@ internal sealed class AIVoiceSessionSummaryWriter
 
         if (_logger.IsEnabled(LogLevel.Debug))
         {
+            // The outcome is left to the stored summary: it can name a voicemail, which is not written to the log.
             _logger.LogDebug(
-                "Recorded the {Engine} AI voice session of activity '{ActivityId}' ({Outcome}, {DurationMs} ms).",
+                "Recorded the {Engine} AI voice session of activity '{ActivityId}' ({DurationMs} ms).",
                 summary.Engine,
                 summary.ActivityId.SanitizeLogValue(),
-                summary.Outcome,
                 summary.SessionDurationMs);
         }
 
