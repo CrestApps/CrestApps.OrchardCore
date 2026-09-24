@@ -1,0 +1,61 @@
+using System.Net;
+using System.Text.Json;
+
+namespace CrestApps.OrchardCore.Telnyx.Services;
+
+/// <summary>
+/// Reads what a Telnyx refusal means, for the refusals that are an expected answer rather than a failure.
+/// </summary>
+internal static class TelnyxApiErrors
+{
+    /// <summary>
+    /// The code Telnyx refuses a command with when the call it names is no longer active.
+    /// </summary>
+    public const string CallAlreadyEndedCode = "90018";
+
+    /// <summary>
+    /// Gets whether Telnyx refused the command because the call has already ended.
+    /// </summary>
+    /// <param name="result">The refused command's result.</param>
+    /// <returns><see langword="true"/> when the refusal says the call is over.</returns>
+    /// <remarks>
+    /// Telnyx answers 422 with error code 90018 ("Call has already ended") to any command on a call that is gone.
+    /// Only the error code is trusted, not the status alone: a 422 also means an invalid command on a live call.
+    /// </remarks>
+    public static bool IsCallAlreadyEnded(TelnyxApiResult result)
+    {
+        if (result is null ||
+            result.Succeeded ||
+            result.StatusCode != HttpStatusCode.UnprocessableEntity ||
+            string.IsNullOrWhiteSpace(result.ErrorBody))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(result.ErrorBody);
+
+            if (!document.RootElement.TryGetProperty("errors", out var errors) || errors.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            foreach (var error in errors.EnumerateArray())
+            {
+                if (error.ValueKind == JsonValueKind.Object &&
+                    error.TryGetProperty("code", out var code) &&
+                    string.Equals(code.ToString(), CallAlreadyEndedCode, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Not the error document Telnyx sends, so nothing in it can be read as the call having ended.
+        }
+
+        return false;
+    }
+}

@@ -368,7 +368,7 @@ public sealed partial class TelnyxTelephonyProvider :
 
     /// <inheritdoc/>
     public Task<TelephonyResult> HangupAsync(CallReference call, CancellationToken cancellationToken = default)
-        => ExecuteActionAsync(call?.CallId, "hangup", body: null, () => BuildCall(call?.CallId, CallState.Disconnected, call?.Metadata), cancellationToken, succeedWhenMissing: true);
+        => ExecuteActionAsync(call?.CallId, "hangup", body: null, () => BuildCall(call?.CallId, CallState.Disconnected, call?.Metadata), cancellationToken, succeedWhenMissing: true, succeedWhenEnded: true);
 
     /// <inheritdoc/>
     public Task<TelephonyResult> AnswerAsync(CallReference call, CancellationToken cancellationToken = default)
@@ -382,7 +382,8 @@ public sealed partial class TelnyxTelephonyProvider :
             new Dictionary<string, object> { ["cause"] = "CALL_REJECTED" },
             () => BuildCall(call?.CallId, CallState.Disconnected, call?.Metadata, CallDirection.Inbound),
             cancellationToken,
-            succeedWhenMissing: true);
+            succeedWhenMissing: true,
+            succeedWhenEnded: true);
 
     private static string TryGetMetadataString(IDictionary<string, object> metadata, string key)
         => metadata is not null &&
@@ -617,7 +618,8 @@ public sealed partial class TelnyxTelephonyProvider :
         IDictionary<string, object> body,
         Func<TelephonyCall> onSuccess,
         CancellationToken cancellationToken,
-        bool succeedWhenMissing = false)
+        bool succeedWhenMissing = false,
+        bool succeedWhenEnded = false)
     {
         if (string.IsNullOrWhiteSpace(callId))
         {
@@ -637,6 +639,18 @@ public sealed partial class TelnyxTelephonyProvider :
             {
                 if (succeedWhenMissing && response.StatusCode == HttpStatusCode.NotFound)
                 {
+                    return TelephonyResult.Success(onSuccess?.Invoke());
+                }
+
+                // Ending a call that is already over has done what it was asked. A bridged call is ended when either
+                // leg hangs up, so this is the ordinary answer for the leg the other party's hangup took down.
+                if (succeedWhenEnded && TelnyxApiErrors.IsCallAlreadyEnded(response))
+                {
+                    if (_logger.IsEnabled(LogLevel.Debug))
+                    {
+                        _logger.LogDebug("Telnyx call {CallId} had already ended, so the '{Action}' request had nothing left to do.", callId.SanitizeLogValue(), action);
+                    }
+
                     return TelephonyResult.Success(onSuccess?.Invoke());
                 }
 
