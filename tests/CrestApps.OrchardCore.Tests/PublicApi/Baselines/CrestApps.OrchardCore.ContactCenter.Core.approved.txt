@@ -1044,6 +1044,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string FromAddress { get; set; }
         public CrestApps.OrchardCore.Telephony.Models.HangupCause? HangupCause { get; set; }
         public long? HighWaterSequence { get; set; }
+        public bool HoldPlacedByAgent { get; set; }
         public double HoldSeconds { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.ContactCenter.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? HoldStartedUtc { get; set; }
@@ -2544,6 +2545,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability> GetForDirectAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability>> GetForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class AgentCallHoldRecorder : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentCallHoldRecorder
+    {
+        public AgentCallHoldRecorder(CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterAuditRecorder auditRecorder, CrestApps.OrchardCore.Telephony.Core.Services.IVoiceIngressGate ingressGate, YesSql.ISession session, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.AgentCallHoldRecorder> logger) { }
+        public System.Threading.Tasks.Task<bool> RecordAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyCallHoldChange change, System.Threading.CancellationToken cancellationToken = default) { }
+    }
     public sealed class AgentEntitlementDeniedException : System.Exception
     {
         public AgentEntitlementDeniedException(string userId) { }
@@ -3333,6 +3339,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability> GetAsync(string agentId, string queueId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability> GetForDirectAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability>> GetForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface IAgentCallHoldRecorder
+    {
+        System.Threading.Tasks.Task<bool> RecordAsync(CrestApps.OrchardCore.Telephony.Models.TelephonyCallHoldChange change, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IAgentEntitlementPolicy
     {

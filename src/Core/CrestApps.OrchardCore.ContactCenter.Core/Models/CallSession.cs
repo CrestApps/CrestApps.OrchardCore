@@ -202,6 +202,13 @@ public sealed class CallSession : CatalogItem, IModifiedUtcAwareModel
     public DateTime? HoldStartedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the current hold was placed by the agent from the soft phone. Such a
+    /// hold ends only when the agent resumes the call or the call ends: a provider that performs hold in the agent's
+    /// own media never sees it, and goes on reporting the call as connected throughout.
+    /// </summary>
+    public bool HoldPlacedByAgent { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the provider reports the call as muted.
     /// </summary>
     public bool IsMuted { get; set; }

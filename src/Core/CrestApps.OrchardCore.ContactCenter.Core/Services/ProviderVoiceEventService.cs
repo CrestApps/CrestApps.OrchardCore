@@ -283,7 +283,7 @@ public sealed partial class ProviderVoiceEventService : IProviderVoiceEventServi
         var previousIsConference = session.IsConference;
         var previousParticipantCount = session.ParticipantCount;
 
-        ApplyState(session, interaction, providerEvent.State, now);
+        ApplyState(session, interaction, ReportedState(session, providerEvent), now);
         ApplyProviderDetails(session, interaction, providerEvent, now);
         ApplyHangupCause(session, providerEvent);
 

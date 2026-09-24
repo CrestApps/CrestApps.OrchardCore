@@ -109,6 +109,9 @@ public sealed class VoiceStartup : StartupBase
             // log, and the soft phone report an agent's extension and browser calls, neither knowing the log exists.
             .AddScoped<IAutomatedVoiceCallObserver, ContactCenterAutomatedVoiceCallObserver>()
             .AddScoped<ITelephonyCallObserver, ContactCenterTelephonyCallObserver>()
+            // Holds the agent places from the soft phone, which a provider holding in the browser never reports.
+            .AddScoped<IAgentCallHoldRecorder, AgentCallHoldRecorder>()
+            .AddScoped<ITelephonyCallHoldObserver, ContactCenterTelephonyCallHoldObserver>()
             .AddSingleton<IProviderWebhookIngressLimiter, ProviderWebhookIngressLimiter>()
             .AddScoped<IContactCenterTransferService, ContactCenterTransferService>()
             .AddScoped<IContactCenterMonitoringService, ContactCenterMonitoringService>()

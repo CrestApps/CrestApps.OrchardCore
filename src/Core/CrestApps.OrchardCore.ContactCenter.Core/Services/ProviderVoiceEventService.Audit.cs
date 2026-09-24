@@ -23,28 +23,21 @@ public sealed partial class ProviderVoiceEventService
     /// provider repeating the state does not shorten it.
     /// </summary>
     private static void StartHold(CallSession session, DateTime now)
-    {
-        if (!session.IsOnHold || !session.HoldStartedUtc.HasValue)
-        {
-            session.HoldStartedUtc = now;
-        }
-
-        session.IsOnHold = true;
-    }
+        => CallSessionHolds.Start(session, now);
 
     /// <summary>
     /// Takes the call off hold, adding the hold that just ended to the call's hold time. The hold's start is kept,
     /// so the resume can say how long the hold lasted.
     /// </summary>
     private static void EndHold(CallSession session, DateTime now)
-    {
-        if (session.IsOnHold && session.HoldStartedUtc.HasValue && now > session.HoldStartedUtc.Value)
-        {
-            session.HoldSeconds += (now - session.HoldStartedUtc.Value).TotalSeconds;
-        }
+        => CallSessionHolds.End(session, now);
 
-        session.IsOnHold = false;
-    }
+    /// <summary>
+    /// The state to apply for the one the provider reported: a hold the agent placed from the soft phone outlasts the
+    /// provider reporting the call connected, because a provider that holds in the agent's media never sees it.
+    /// </summary>
+    private static VoiceCallState ReportedState(CallSession session, ProviderVoiceEvent providerEvent)
+        => CallSessionHolds.KeepAgentHold(session, providerEvent.State);
 
     private async Task PublishStateEventAsync(
         string eventType,
