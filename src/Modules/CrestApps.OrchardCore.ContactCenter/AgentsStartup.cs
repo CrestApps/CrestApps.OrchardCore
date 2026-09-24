@@ -56,6 +56,12 @@ public sealed class AgentsStartup : StartupBase
             .AddScoped<IAgentStateReasonCodeStore, AgentStateReasonCodeStore>()
             .AddScoped<IAgentStateReasonCodeManager, AgentStateReasonCodeManager>();
 
+        // Agents are named in reports by their profile's user name, which a profile made on first sign-in did not
+        // carry. This feature depends on Users, so it is where the name can be read from the account.
+        services
+            .AddScoped<ICatalogEntryHandler<AgentProfile>, AgentProfileUserNameHandler>()
+            .AddScoped<IModularTenantEvents, AgentProfileUserNameBackfill>();
+
         services
             .AddIndexProvider<AgentQueueMembershipIndexProvider>()
             .AddDataMigration<AgentQueueMembershipIndexMigrations>()
