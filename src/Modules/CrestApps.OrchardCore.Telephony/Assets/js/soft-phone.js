@@ -85,6 +85,9 @@
     var legAfterEnd = softPhoneModules.legAfterEnd;
     var canConferenceCall = softPhoneModules.canConferenceCall;
 
+    var resolveDialTarget = softPhoneModules.resolveDialTarget;
+    var shouldOfferDial = softPhoneModules.shouldOfferDial;
+
     // Must match the CrestApps.OrchardCore.Telephony.Models.TelephonyCapabilities flags enum.
     var CAPABILITIES = {
         Dial: 1,
@@ -5639,7 +5642,13 @@
                 numberIsCallDisplay = false;
             }
 
-            show(dom.dial, canDial && has(CAPABILITIES.Dial));
+            // On hold the dial button would sit first in the row, where Hold was a moment ago, over the held call's
+            // own number; it waits until the agent enters a number to add (see soft-phone/dial-target.js).
+            show(dom.dial, shouldOfferDial({
+                callActive: active,
+                stateName: stateName,
+                numberIsCallDisplay: numberIsCallDisplay
+            }) && has(CAPABILITIES.Dial));
             // Allow hanging up (cancelling) while the call is still connecting or ringing, not only once media
             // is live, so an outbound call that has not been answered yet can still be ended. A ringing inbound
             // offer is the exception: it is answered or declined through the incoming panel, so the hangup control
@@ -5872,8 +5881,31 @@
             };
         }
 
+        // The tenant's own outbound caller ids: a call added from the keypad to one of them only rings the tenant back.
+        function ownOutboundNumbers() {
+            return [browserAudioSession && browserAudioSession.outboundCallerId].filter(Boolean);
+        }
+
         function dial() {
-            var number = getDialNumber();
+            // Only a number the agent entered. While a call is held the field keeps showing that call's number, and
+            // for a call the platform bridged here that is the tenant's own caller id (see soft-phone/dial-target.js).
+            var target = resolveDialTarget({
+                number: getDialNumber(),
+                isCallDisplay: numberIsCallDisplay,
+                liveCall: hasLiveCall(),
+                ownNumbers: extensionMode ? [] : ownOutboundNumbers()
+            });
+
+            if (target.refused) {
+                reportDiagnostic('info', 'dial-refused', 'A dial was refused: ' + target.refused + '.', '');
+                showError(target.refused === 'own-number'
+                    ? (strings.dialOwnNumber || 'That is this phone system\'s own number. Enter the number you want to add to the call.')
+                    : (strings.dialNumberRequired || 'Enter the number you want to add to the call.'));
+
+                return;
+            }
+
+            var number = target.number;
 
             if (extensionMode) {
                 // An internal extension call requires an extension to be entered.
