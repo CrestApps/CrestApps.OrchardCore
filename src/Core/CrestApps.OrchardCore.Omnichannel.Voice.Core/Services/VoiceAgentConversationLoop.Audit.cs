@@ -26,10 +26,11 @@ public sealed partial class VoiceAgentConversationLoop
         AutomatedVoiceCallObservationKind kind,
         string outcome = null,
         string dispositionId = null,
+        DateTime? occurredUtc = null,
         CancellationToken cancellationToken = default)
         => NotifyAsync(
             _callObservers,
-            CreateObservation(voiceEvent, kind, _clock.UtcNow, outcome, dispositionId),
+            CreateObservation(voiceEvent, kind, occurredUtc ?? _clock.UtcNow, outcome, dispositionId),
             _logger,
             cancellationToken);
 

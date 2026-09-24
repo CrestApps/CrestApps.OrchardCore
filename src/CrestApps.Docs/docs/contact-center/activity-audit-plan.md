@@ -139,5 +139,13 @@ paths have also been exercised on the running site, and the call paths wait on a
   - Agent profiles made on first sign-in had no user name, so reports named agents as unknown.
   - Two connections opening together lost the session version check, so one was aborted.
   - Connection ids outlived server restarts.
+  - Routing, reservation and presence events left their actor unspecified and put the agent's id where the
+    actor goes. They now name the platform, the agent or the provider, and carry the agent as the subject.
+  - Accepted offers were recorded against the interaction, so the offer reports never saw an offer accepted.
+    They are recorded against the reservation now, and the reports read the older ones too.
+  - A conversation the AI handed to an agent was recorded as ending when the caller hung up on the agent,
+    minutes after the AI's session ended. It is dated by the end of the session now, which is also when a
+    turn-based call's handoff is recorded. The hangup reports the same moment again, and the first report is
+    kept.
 - **Answering faster.** The agent's leg is dialled while the offer rings and joined on accept. Hold music stops
   at the bridge, and every client is told at once. This waits on a live call.

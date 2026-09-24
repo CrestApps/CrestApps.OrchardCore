@@ -40,4 +40,13 @@ public sealed class RealtimeCallCompletion
     /// Gets or sets the reason the model gave for ending the call.
     /// </summary>
     public string EndCallReason { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the live session ended, which is when the assistant's part of the conversation ended.
+    /// </summary>
+    /// <remarks>
+    /// Carried because the work is done later, somewhere else: a handoff's conversation ended with the session, not
+    /// when the handoff was carried out and not when the caller finally hung up on the agent.
+    /// </remarks>
+    public DateTime? SessionEndedUtc { get; set; }
 }

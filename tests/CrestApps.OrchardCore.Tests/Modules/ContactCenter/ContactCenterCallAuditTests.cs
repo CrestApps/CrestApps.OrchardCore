@@ -158,6 +158,44 @@ public sealed class ContactCenterCallAuditTests
     }
 
     [Fact]
+    public async Task AutomatedVoiceCallObserver_AConversationHandedToAnAgent_IsRecordedEndedAtTheHandoff_NotAtTheHangup()
+    {
+        // Arrange
+        // The voice loop reports a handed-off conversation's end when the AI's session ends, and again when the
+        // caller finally hangs up on the agent. The first is when it happened; the second is the same moment
+        // reported late, and must not replace it.
+        var clock = new Mock<IClock>();
+        clock.SetupGet(value => value.UtcNow).Returns(_now);
+        var log = new AuditedEventLog(clock.Object);
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "i1", ActivityItemId = "act-1", AgentId = "a1" });
+        var observer = new ContactCenterAutomatedVoiceCallObserver(interactionManager.Object, log.Recorder);
+        var sessionEndedUtc = _now.AddMinutes(-3.5);
+
+        // Act
+        foreach (var occurredUtc in new[] { sessionEndedUtc, _now })
+        {
+            await observer.ObserveAsync(new AutomatedVoiceCallObservation
+            {
+                Kind = AutomatedVoiceCallObservationKind.ConversationEnded,
+                ActivityItemId = "act-1",
+                ProviderName = "Telnyx",
+                ProviderCallId = "call-1",
+                OccurredUtc = occurredUtc,
+                Outcome = "HandedToAgent",
+            }, TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        var ended = log.Single(ContactCenterConstants.Events.AiConversationEnded);
+        Assert.Equal(sessionEndedUtc, ended.OccurredUtc);
+        Assert.Equal("HandedToAgent", ended.GetData<CallLifecycleEventData>().Reason);
+        log.AssertEveryEventNamesItsActor();
+    }
+
+    [Fact]
     public async Task TelephonyCallObserver_RecordsAnExtensionCall_WithTheAgentOnIt()
     {
         // Arrange

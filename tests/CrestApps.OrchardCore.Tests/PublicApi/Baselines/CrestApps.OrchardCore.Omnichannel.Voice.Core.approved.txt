@@ -16,6 +16,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public bool HandoffRequested { get; set; }
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
+        public System.DateTime? SessionEndedUtc { get; set; }
     }
     public sealed class TurnBasedSilence
     {

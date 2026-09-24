@@ -575,6 +575,67 @@ public sealed partial class VoiceAgentConversationLoopTests
     }
 
     [Fact]
+    public async Task ARealtimeCallHandedToAnAgent_ReportsItsConversationEnded_WhenTheSessionEnded_NotWhenTheCallDid()
+    {
+        // Arrange
+        // Live: the realtime session ended at the handoff, and the caller talked to the agent for three and a half
+        // minutes more. The conversation's end was reported at the hangup, so the audit said the AI held the call
+        // for all of it.
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.UseRealtime();
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
+        harness.Realtime.OnRun = () => harness.Clock.Advance(TimeSpan.FromSeconds(27));
+        var sessionEndedUtc = harness.Clock.UtcNow.AddSeconds(27);
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+
+        // The handoff is carried out a moment later, on a scope of its own.
+        harness.Clock.Advance(TimeSpan.FromMilliseconds(700));
+        await harness.FinishAsync();
+
+        // The caller and the agent talk, and then the caller hangs up.
+        harness.Activity.AiEscalated = true;
+        harness.Activity.Status = ActivityStatus.InProgress;
+        harness.Clock.Advance(TimeSpan.FromMinutes(3.5));
+        await harness.HandleAsync(VoiceAgentEventKind.Hangup, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var ended = harness.CallObserver.Observations
+            .Where(observation => observation.Kind == AutomatedVoiceCallObservationKind.ConversationEnded)
+            .ToArray();
+        Assert.NotEmpty(ended);
+
+        // The first report is the one that counts: an observer keeps the first report of each moment.
+        Assert.Equal("HandedToAgent", ended[0].Outcome);
+        Assert.Equal(sessionEndedUtc, ended[0].OccurredUtc);
+        Assert.Equal("call-1", ended[0].ProviderCallId);
+    }
+
+    [Fact]
+    public async Task ATurnBasedCallHandedToAnAgent_ReportsItsConversationEnded_AtTheHandoff()
+    {
+        // Arrange
+        var harness = new LoopHarness();
+        harness.EnableHandoff();
+        harness.Reply = "Let me put you through.";
+        harness.HandoffTurn.Setup(x => x.HandoffRequested).Returns(true);
+        await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
+        await harness.HandleAsync(VoiceAgentEventKind.Transcription, "Can I speak to a person?", cancellationToken: TestContext.Current.CancellationToken);
+        harness.Clock.Advance(TimeSpan.FromSeconds(4));
+        var handoffUtc = harness.Clock.UtcNow;
+
+        // Act
+        await harness.HandleAsync(VoiceAgentEventKind.SpeechEnded, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        var ended = Assert.Single(harness.CallObserver.Observations, observation => observation.Kind == AutomatedVoiceCallObservationKind.ConversationEnded);
+        Assert.Equal("HandedToAgent", ended.Outcome);
+        Assert.Equal(handoffUtc, ended.OccurredUtc);
+    }
+
+    [Fact]
     public async Task APersonTheProviderDetected_IsConversedWith()
     {
         // Arrange
@@ -1289,9 +1350,14 @@ public sealed partial class VoiceAgentConversationLoopTests
                 SilenceWatchdog,
                 Mock.Of<ILiquidTemplateManager>(),
                 Mock.Of<IContentManager>(),
-                Mock.Of<IClock>(),
+                Clock,
                 NullLogger<VoiceAgentConversationLoop>.Instance);
         }
+
+        /// <summary>
+        /// The loop's clock, which a test moves forward to put time between the moments of a call.
+        /// </summary>
+        public CrestApps.OrchardCore.Tests.Modules.ContactCenter.AdvanceableClock Clock { get; } = new(new DateTime(2026, 9, 24, 15, 42, 50, DateTimeKind.Utc));
 
         public OmnichannelActivity Activity { get; }
 

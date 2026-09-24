@@ -1,6 +1,7 @@
 ﻿using CrestApps.Core;
 using CrestApps.Core.AI.Chat;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -137,6 +138,9 @@ public sealed partial class VoiceAgentConversationLoop
         var handoffRequested = _handoffTurn.HandoffRequested;
         var endCallRequested = _endCallTurn.EndCallRequested;
 
+        // This runs the moment the session is over, so now is when the assistant stopped talking to the caller.
+        var sessionEndedUtc = _clock.UtcNow;
+
         // The caller hung up, or the session never got far enough to decide anything. There is nothing to finish.
         if (!handoffRequested && !endCallRequested)
         {
@@ -153,6 +157,7 @@ public sealed partial class VoiceAgentConversationLoop
                 HandoffRequested = handoffRequested,
                 EndCallRequested = endCallRequested,
                 EndCallReason = _endCallTurn.Reason,
+                SessionEndedUtc = sessionEndedUtc,
             });
         }
         catch (Exception ex)
@@ -218,7 +223,7 @@ public sealed partial class VoiceAgentConversationLoop
         // turn-based loop uses, so a handoff means the same thing on both.
         if (completion.HandoffRequested)
         {
-            await PerformVoiceHandoffAsync(voiceEvent, media, activity, cancellationToken);
+            await PerformVoiceHandoffAsync(voiceEvent, media, activity, completion.SessionEndedUtc ?? _clock.UtcNow, cancellationToken);
 
             return;
         }
@@ -236,10 +241,21 @@ public sealed partial class VoiceAgentConversationLoop
         await media.HangupAsync(completion.ProviderCallId, cancellationToken);
     }
 
-    // Seats the still-connected caller in the configured queue and offers the call to an agent, reusing the inbound
-    // enqueue-and-offer pipeline. On success the call stays up while the queue rings an agent; on failure there is
-    // nowhere to route the caller, so the call is ended.
-    private async Task PerformVoiceHandoffAsync(VoiceAgentEvent voiceEvent, IVoiceAgentMediaProvider media, OmnichannelActivity activity, CancellationToken cancellationToken)
+    /// <summary>
+    /// Seats the caller in the queue and offers them to an agent, ending the call when there is nowhere to go.
+    /// </summary>
+    /// <param name="voiceEvent">The call.</param>
+    /// <param name="media">The media provider carrying it.</param>
+    /// <param name="activity">The activity being handed off.</param>
+    /// <param name="conversationEndedUtc">When the assistant's conversation ended: the end of a live session, or the
+    /// end of the closing line on a turn-based call. A handed-off conversation is reported ended then.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    private async Task PerformVoiceHandoffAsync(
+        VoiceAgentEvent voiceEvent,
+        IVoiceAgentMediaProvider media,
+        OmnichannelActivity activity,
+        DateTime conversationEndedUtc,
+        CancellationToken cancellationToken)
     {
         // Once is all a call is handed over. A transfer recorded by a turn that was still in flight, or a
         // finished session delivered twice, reached the queue as "already handed off" -- which reads as success,
@@ -337,6 +353,16 @@ public sealed partial class VoiceAgentConversationLoop
 
             return;
         }
+
+        // The caller is the agent's now, so the assistant's conversation is over, and it ended when the assistant
+        // stopped talking -- not minutes later when the caller hangs up on the agent. The hangup reports the same
+        // moment again, and the first report is the one kept.
+        await ObserveAsync(
+            voiceEvent,
+            AutomatedVoiceCallObservationKind.ConversationEnded,
+            HandedToAgentOutcome,
+            occurredUtc: conversationEndedUtc,
+            cancellationToken: cancellationToken);
 
         // "Connecting you now" and "you are in a queue" are different promises. Saying the first to a caller
         // nobody is free to take leaves them listening to silence, waiting for a person who was never offered
