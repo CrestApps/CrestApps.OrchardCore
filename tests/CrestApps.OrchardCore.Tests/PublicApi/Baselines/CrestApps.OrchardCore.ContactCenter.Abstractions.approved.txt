@@ -344,6 +344,7 @@ namespace CrestApps.OrchardCore.ContactCenter
         CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFormat OutgoingFormat { get; }
         string ProviderCallId { get; }
         string SessionId { get; }
+        System.Threading.Tasks.ValueTask ClearOutgoingAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Collections.Generic.IAsyncEnumerable<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFrame> ReadIncomingAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task StopAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.ValueTask WriteOutgoingAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMediaFrame frame, System.Threading.CancellationToken cancellationToken = default);

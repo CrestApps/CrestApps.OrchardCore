@@ -239,6 +239,67 @@ public sealed class CallerEchoGuardTests
         Assert.Equal(0, guard.Openings);
     }
 
+    [Fact]
+    public void ACallerTalkingOverTheAssistant_IsReportedAsTalkingOverIt()
+    {
+        // Arrange
+        // What stops the assistant when it is interrupted. The provider hears the caller start and stops the model,
+        // but seconds of its speech are already queued on the line; only something that knows a real voice is on
+        // the line, rather than the assistant's own echo, can safely take that queued speech back.
+        var guard = new CallerEchoGuard();
+
+        // Act
+        Feed(guard, [.. Frames(Echo, 10), .. Frames(Speech, 5)], startTicks: _start, assistantPlaysUntilTicks: _start + Ms(5_000));
+
+        // Assert
+        Assert.True(guard.IsLettingCallerThrough);
+    }
+
+    [Fact]
+    public void TheAssistantsOwnEcho_IsNeverReportedAsTheCallerTalkingOverIt()
+    {
+        // Arrange
+        // Echo that trips the provider's speech detector must not cut the assistant off mid-sentence: that would be
+        // the assistant interrupting itself, which is worse than the phantom turn the guard exists to stop.
+        var guard = new CallerEchoGuard();
+
+        // Act
+        Feed(guard, Frames(Echo, 50), startTicks: _start, assistantPlaysUntilTicks: _start + Ms(5_000));
+
+        // Assert
+        Assert.False(guard.IsLettingCallerThrough);
+    }
+
+    [Fact]
+    public void OnceTheCallerHasStoppedTalkingOverTheAssistant_ItIsNoLongerReported()
+    {
+        // Arrange
+        var guard = new CallerEchoGuard();
+
+        // Act
+        // They said a word and stopped; the assistant carried on, and what follows is its echo again.
+        Feed(guard, [.. Frames(Speech, 5), .. Frames(Echo, 60)], startTicks: _start, assistantPlaysUntilTicks: _start + Ms(5_000));
+
+        // Assert
+        Assert.False(guard.IsLettingCallerThrough);
+    }
+
+    [Fact]
+    public void ACallerSpeakingOnceTheAssistantHasFinished_IsNotTalkingOverIt()
+    {
+        // Arrange
+        // With nothing playing there is nothing to interrupt, so a loud answer after the assistant's question is
+        // just an answer.
+        var guard = new CallerEchoGuard();
+        var afterTheTail = _start + Ms(CallerEchoGuard.EchoTailMilliseconds + 100);
+
+        // Act
+        Feed(guard, Frames(Speech, 10), startTicks: afterTheTail, assistantPlaysUntilTicks: _start);
+
+        // Assert
+        Assert.False(guard.IsLettingCallerThrough);
+    }
+
     private static List<ReadOnlyMemory<byte>> Feed(
         CallerEchoGuard guard,
         byte[][] frames,

@@ -76,6 +76,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         IContactCenterVoiceMediaSession media,
         IRealtimeConversation conversation,
         RealtimeVoiceConversationContext context,
+        AssistantBargeIn bargeIn,
         CancellationToken cancellationToken)
     {
         // The assistant's own voice comes back up the caller's line, and the provider hears it as the caller
@@ -98,7 +99,15 @@ public sealed partial class RealtimeVoiceConversationRunner
                 }
 
                 released.Clear();
-                guard.Process(audio, DateTime.UtcNow.Ticks, Interlocked.Read(ref _assistantSpeechEndsTicks), released);
+                var now = DateTime.UtcNow.Ticks;
+                guard.Process(audio, now, Interlocked.Read(ref _assistantSpeechEndsTicks), released);
+
+                // Recorded before the audio goes to the model, so that by the time the provider reports the caller
+                // starting, the other pump already knows it was a voice over the assistant and not its echo.
+                if (guard.IsLettingCallerThrough)
+                {
+                    bargeIn.CallerTalkingOver(now);
+                }
 
                 foreach (var chunk in released)
                 {
@@ -160,6 +169,7 @@ public sealed partial class RealtimeVoiceConversationRunner
         IRealtimeConversation conversation,
         RealtimeVoiceConversationContext context,
         CallAmbience ambience,
+        AssistantBargeIn bargeIn,
         CancellationToken cancellationToken)
     {
         var assistantText = new System.Text.StringBuilder();
@@ -254,6 +264,14 @@ public sealed partial class RealtimeVoiceConversationRunner
                             break;
                         }
 
+                        // The rest of a line the caller talked over. The model had produced more of it than was
+                        // queued when they started, and playing it now would restart the assistant mid-sentence
+                        // on a line that had just been cleared for them.
+                        if (!bargeIn.ShouldPlay(conversationEvent.ResponseId, conversationEvent.ItemId))
+                        {
+                            break;
+                        }
+
                         utteranceInFlight = true;
 
                         if (!speech.IsEmpty)
@@ -261,7 +279,9 @@ public sealed partial class RealtimeVoiceConversationRunner
                             // Stamped for two readers: the bed pump, which must stay quiet while the assistant is
                             // talking or the room doubles, and the closing watchdog, which waits for the goodbye
                             // to actually finish before it hangs up. Both mean "finished playing", not "arrived".
-                            ExtendAssistantPlayback(speech.Length);
+                            // Where it plays is kept too, so a caller who talks over it can have it taken back.
+                            var startsTicks = ExtendAssistantPlayback(speech.Length);
+                            bargeIn.Queued(conversationEvent.ResponseId, conversationEvent.ItemId, startsTicks, speech.Length, DateTime.UtcNow.Ticks);
                         }
 
                         if (ambience is not null && !speech.IsEmpty)
@@ -283,6 +303,17 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.UserSpeechStarted:
+                        // First, while it is still known whether the line being talked over is the closing one:
+                        // a caller talking over the assistant has to stop hearing it, and the provider stopping
+                        // the model does not do that on its own.
+                        await StopSpeakingWhenTalkedOverAsync(
+                            media,
+                            conversation,
+                            bargeIn,
+                            closing: closingRequested || goodbyeSaid || context.HandoffRequested.IsCancellationRequested,
+                            activityId,
+                            cancellationToken);
+
                         // They are talking, so the call is not over after all and the assistant may answer.
                         goodbyeSaid = false;
                         closingRequested = false;
@@ -294,6 +325,13 @@ public sealed partial class RealtimeVoiceConversationRunner
                         // long enough that a call closing down would already have been cut. This is the moment
                         // the caller decides the conversation is not over, so it is the moment that has to count.
                         Interlocked.Exchange(ref _lastCallerSpeechTicks, DateTime.UtcNow.Ticks);
+
+                        break;
+
+                    case RealtimeConversationEventType.ResponseStarted:
+                    case RealtimeConversationEventType.UserTurnCommitted:
+                        // A new turn, so speech from here is not the rest of a line the caller talked over.
+                        bargeIn.NextTurn();
 
                         break;
 

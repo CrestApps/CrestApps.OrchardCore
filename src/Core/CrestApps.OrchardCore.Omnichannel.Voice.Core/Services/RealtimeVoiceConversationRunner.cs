@@ -301,8 +301,12 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
 
         // Both directions run at once. That is the entire point: a turn-based loop cannot answer until the caller
         // has finished, and this one starts answering while they are still talking.
-        var toModel = PumpCallerAudioAsync(media, conversation, context, callScope.Token);
-        var toCaller = PumpAssistantAudioAsync(media, conversation, context, ambience, callScope.Token);
+        // Shared by the two, because an interruption is only known for certain when both sides agree: the caller's
+        // side heard a voice over the assistant, and the model's side heard the caller start.
+        var bargeIn = new AssistantBargeIn();
+
+        var toModel = PumpCallerAudioAsync(media, conversation, context, bargeIn, callScope.Token);
+        var toCaller = PumpAssistantAudioAsync(media, conversation, context, ambience, bargeIn, callScope.Token);
         var bed = ambience is null
             ? Task.CompletedTask
             : PumpAmbienceAsync(media, ambience, callScope.Token);
@@ -535,9 +539,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// now, or the end of what is already queued.
     /// </remarks>
     /// <param name="pcmByteCount">The length of the audio, in bytes of 16-bit PCM at the realtime rate.</param>
-    private void ExtendAssistantPlayback(int pcmByteCount)
+    /// <returns>When the audio starts playing to the caller, in UTC ticks.</returns>
+    private long ExtendAssistantPlayback(int pcmByteCount)
     {
-        var duration = pcmByteCount * TimeSpan.TicksPerSecond / (RealtimeAudioConverter.RealtimeSampleRate * 2L);
+        var duration = AssistantBargeIn.DurationTicks(pcmByteCount);
         var now = DateTime.UtcNow.Ticks;
         long queuedUntil;
         long playsUntil;
@@ -554,6 +559,8 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         {
             Interlocked.Exchange(ref _assistantSpeechEndsTicks, playsUntil);
         }
+
+        return playsUntil - duration;
     }
 
     private async Task CloseWhenConversationEndsAsync(

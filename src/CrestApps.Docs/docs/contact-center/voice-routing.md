@@ -515,7 +515,7 @@ The mutation is also allowed to decline after seeing the fresh version. That is 
 
 When the AI profile driving an automated call names a realtime deployment, and the **Contact Center Voice Media** feature is enabled, the call is held as a live speech-to-speech session instead of the turn-based transcribe-complete-synthesize loop. The caller's audio reaches the model as it arrives and the model's voice goes back as it is produced, so it can answer while they are still finishing and hear them if they interrupt. Everything downstream is unchanged, because both paths write the same transcript.
 
-Five things about that session are decided here rather than by the provider's defaults.
+Six things about that session are decided here rather than by the provider's defaults.
 
 ### The line is band-limited in both directions
 
@@ -540,6 +540,22 @@ A phone line returns some of what is played down it — the earpiece couples int
 Echo is always quieter than a person talking into the phone, so while the assistant's audio is playing, and for 600 ms after its projected end while the last of it comes back, caller audio quieter than -38 dBFS is sent to the model as silence. Audio louder than that for at least 40 ms is the caller talking over the assistant: it goes straight through, together with the 240 ms before it so the soft start of what they said is not lost, and it keeps going through pauses between words. Outside that window nothing is altered at all, however quiet, so a short answer after the assistant's question reaches the model exactly as it was said.
 
 Held audio is replaced with silence rather than dropped, so the model's view of the line stays in step with the clock. Each call logs how much caller audio was held back and how loud the loudest of it was, and — at debug — the level of every caller who talked over the assistant, so the -38 dBFS line can be checked against real calls rather than guessed at.
+
+### A caller who talks over the assistant stops hearing it
+
+Letting the caller's voice through is only half of barge-in. The provider then stops the model, but the model produces speech faster than it plays — a seven-second line can arrive in under three — so when a caller talks over a sentence, most of it is already queued at the carrier. On a live call the caller talked over the assistant three times, the guard let every one through, and each time they heard it finish its sentence anyway.
+
+So when the provider reports that the caller has started speaking while the assistant's audio is still playing, the session:
+
+1. Tells the carrier to discard the audio it has queued. On Telnyx this is the media stream's `clear` event, sent under the same lock as the audio frames. Asterisk external media plays RTP as it arrives and has no equivalent, so there it does nothing.
+2. Cuts the model's spoken item back to what was actually played (`conversation.item.truncate`), measured along that item's own audio, so the model's context matches what the caller heard rather than the whole line it generated.
+3. Drops any later audio that belongs to the interrupted response, so a piece of it arriving after the clear does not restart the assistant mid-sentence. Audio from the model's next response plays as usual.
+
+It only does this for a real interruption: the provider's report *and* the echo guard having let a voice through over the assistant within the last 1.5 seconds. The provider's detector can also fire on the assistant's own echo, and stopping on that would be the assistant interrupting itself, so a speech start the guard heard no voice behind leaves the assistant talking. A cough loud enough to open the guard is not enough on its own either, because the provider never reports it and so never stops the model; clearing the line on it would leave the assistant silent mid-sentence.
+
+The closing line is deliberately left to finish — the goodbye, or the line announcing a transfer. Goodbyes overlap on a phone, and clipping the closing line is exactly what the closing watchdog exists to prevent. The caller still takes the call back: speaking abandons the hangup, and the model answers once the line has played.
+
+Each interruption is logged at information level with how much of the assistant's audio was still to play and how much of the line the caller had heard; a speech start treated as echo, or one over the closing line, is logged at debug.
 
 ### A transfer ends the session
 

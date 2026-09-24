@@ -31,6 +31,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services;
 /// The only thing ever outstanding is the onset buffer, and it is released as soon as the gate opens or the guard
 /// window ends.
 /// </para>
+/// <para>
+/// The open gate is also what lets an interruption actually stop the assistant. Letting the caller's voice through
+/// is only half of barge-in: the provider then stops the model, but the model speaks faster than the line plays,
+/// so the rest of its sentence is already queued at the carrier. <see cref="IsLettingCallerThrough"/> is what the
+/// session reads, when the provider reports the caller has started, to decide that it was a person and not this
+/// echo — and only then is the queued speech discarded. See <see cref="AssistantBargeIn"/>.
+/// </para>
 /// </remarks>
 internal sealed class CallerEchoGuard
 {
@@ -120,6 +127,18 @@ internal sealed class CallerEchoGuard
     /// How loud the caller was, in dBFS, the last time they were let through while the assistant was speaking.
     /// </summary>
     public double LastOpeningDbfs { get; private set; } = double.NegativeInfinity;
+
+    /// <summary>
+    /// Whether the caller is talking over the assistant right now: the gate is open on a voice, while the
+    /// assistant's audio is still playing or its echo could still be coming back.
+    /// </summary>
+    /// <remarks>
+    /// This is what tells a real interruption from a phantom one. The provider's speech detector fires on the
+    /// caller, but it can also fire on the assistant's own echo — the held-back onset is released as heard, and a
+    /// semantic detector is not level-based at all — so its word alone must not stop the assistant. Only when this
+    /// guard has let a voice through is there somebody on the line talking over it.
+    /// </remarks>
+    public bool IsLettingCallerThrough => _open;
 
     /// <summary>
     /// Takes one frame of caller audio and releases what should go to the model, in order.

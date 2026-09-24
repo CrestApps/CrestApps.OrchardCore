@@ -44,6 +44,20 @@ public interface IContactCenterVoiceMediaSession : IAsyncDisposable
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Discards application audio already written to the call that the caller has not heard yet.
+    /// </summary>
+    /// <remarks>
+    /// A speech model produces its voice faster than it plays, so several seconds of it can be waiting at the
+    /// provider when the caller starts talking over it. Stopping the model does not take back what is already
+    /// queued there, and the caller hears the rest of the sentence they tried to interrupt. A provider that buffers
+    /// outgoing audio and can discard it overrides this; one that plays audio as it arrives keeps the default, which
+    /// does nothing. Audio written after this call plays as usual.
+    /// </remarks>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    ValueTask ClearOutgoingAsync(CancellationToken cancellationToken = default)
+        => ValueTask.CompletedTask;
+
+    /// <summary>
     /// Stops the media session without ending the underlying provider call.
     /// </summary>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>

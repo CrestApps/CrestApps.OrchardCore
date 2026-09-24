@@ -18,6 +18,7 @@ internal sealed class FakeWebSocket : WebSocket
     private byte[] _current;
     private int _currentOffset;
     private WebSocketState _state = WebSocketState.Open;
+    private int _sendsInFlight;
 
     public List<string> SentTextMessages { get; } = [];
 
@@ -88,15 +89,44 @@ internal sealed class FakeWebSocket : WebSocket
         return new ValueWebSocketReceiveResult(count, WebSocketMessageType.Text, endOfMessage);
     }
 
-    public override ValueTask SendAsync(
+    /// <summary>
+    /// When set, every send waits on it before completing, so a test can hold a send in flight and see what else
+    /// tries to use the socket meanwhile.
+    /// </summary>
+    public Func<Task> SendGate { get; set; }
+
+    /// <summary>
+    /// The most sends that were ever in flight at once. A WebSocket allows one.
+    /// </summary>
+    public int MostConcurrentSends { get; private set; }
+
+    public override async ValueTask SendAsync(
         ReadOnlyMemory<byte> buffer,
         WebSocketMessageType messageType,
         bool endOfMessage,
         CancellationToken cancellationToken)
     {
-        SentTextMessages.Add(Encoding.UTF8.GetString(buffer.Span));
+        var inFlight = Interlocked.Increment(ref _sendsInFlight);
+        MostConcurrentSends = Math.Max(MostConcurrentSends, inFlight);
 
-        return ValueTask.CompletedTask;
+        try
+        {
+            var text = Encoding.UTF8.GetString(buffer.Span);
+
+            if (SendGate is not null)
+            {
+                await SendGate();
+            }
+
+            lock (SentTextMessages)
+            {
+                SentTextMessages.Add(text);
+            }
+        }
+        finally
+        {
+            Interlocked.Decrement(ref _sendsInFlight);
+        }
     }
 
     public override Task<WebSocketReceiveResult> ReceiveAsync(ArraySegment<byte> buffer, CancellationToken cancellationToken)

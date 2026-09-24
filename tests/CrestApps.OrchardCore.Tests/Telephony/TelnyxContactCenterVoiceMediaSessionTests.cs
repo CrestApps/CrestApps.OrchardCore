@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telnyx.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
@@ -184,6 +185,78 @@ public sealed class TelnyxContactCenterVoiceMediaSessionTests
 
         // Assert
         Assert.Single(stopCalls);
+    }
+
+    [Fact]
+    public async Task ClearOutgoingAsync_TellsTelnyxToDiscardTheAudioItHasQueued()
+    {
+        // Arrange
+        // The model speaks faster than the line plays, so seconds of it wait at Telnyx. A caller who talks over the
+        // assistant hears all of it unless Telnyx is told to drop it.
+        using var socket = new FakeWebSocket();
+        var (session, _, _) = CreateSession(socket);
+        await session.WriteOutgoingAsync(
+            new ContactCenterVoiceMediaFrame { Data = new byte[] { 0xAA } },
+            TestContext.Current.CancellationToken);
+
+        // Act
+        await ((IContactCenterVoiceMediaSession)session).ClearOutgoingAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, socket.SentTextMessages.Count);
+        using var document = JsonDocument.Parse(socket.SentTextMessages[^1]);
+        Assert.Equal("clear", document.RootElement.GetProperty("event").GetString());
+    }
+
+    [Fact]
+    public async Task ClearOutgoingAsync_WaitsForASendAlreadyInFlight()
+    {
+        // Arrange
+        // A WebSocket takes one send at a time, and the clear is issued while the assistant's audio and the room
+        // bed are both being written. Overlapping them faults the socket and ends the call.
+        using var socket = new FakeWebSocket();
+        var (session, _, _) = CreateSession(socket);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        socket.SendGate = () =>
+        {
+            entered.TrySetResult();
+
+            return release.Task;
+        };
+
+        var write = session.WriteOutgoingAsync(
+            new ContactCenterVoiceMediaFrame { Data = new byte[] { 0xAA } },
+            TestContext.Current.CancellationToken).AsTask();
+        await entered.Task.WaitAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        var clear = ((IContactCenterVoiceMediaSession)session).ClearOutgoingAsync(TestContext.Current.CancellationToken).AsTask();
+        await Task.Delay(50, TestContext.Current.CancellationToken);
+        var clearedWhileWriting = clear.IsCompleted;
+        release.SetResult();
+        await Task.WhenAll(write, clear);
+
+        // Assert
+        Assert.False(clearedWhileWriting);
+        Assert.Equal(1, socket.MostConcurrentSends);
+        Assert.Contains("clear", socket.SentTextMessages[^1], StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ClearOutgoingAsync_AfterStop_DoesNothing()
+    {
+        // Arrange
+        // A caller talking over the assistant as the call ends is not a fault; there is simply nothing left to clear.
+        using var socket = new FakeWebSocket();
+        var (session, _, _) = CreateSession(socket);
+        await session.StopAsync(TestContext.Current.CancellationToken);
+
+        // Act
+        await ((IContactCenterVoiceMediaSession)session).ClearOutgoingAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(socket.SentTextMessages);
     }
 
     private static string MediaEvent(byte[] payload)

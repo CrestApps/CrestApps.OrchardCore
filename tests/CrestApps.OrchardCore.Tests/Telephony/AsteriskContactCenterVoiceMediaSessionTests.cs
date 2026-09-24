@@ -82,6 +82,28 @@ public sealed class AsteriskContactCenterVoiceMediaSessionTests
     }
 
     [Fact]
+    public async Task ClearOutgoingAsync_SendsNothing_AndTheStreamCarriesOnUnbroken()
+    {
+        // Arrange
+        // External media plays RTP as it arrives and has no command to discard any, so there is nothing to send. The
+        // assistant's next line must still follow on as the next packet in the stream.
+        using var sessionSocket = BindLoopback();
+        using var asteriskSocket = BindLoopback();
+        await using var session = CreateSession(sessionSocket, asteriskSocket);
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        // Act
+        await ((IContactCenterVoiceMediaSession)session).ClearOutgoingAsync(cancellation.Token);
+        await session.WriteOutgoingAsync(new ContactCenterVoiceMediaFrame { Data = new byte[] { 7, 8 } }, cancellation.Token);
+        var first = await asteriskSocket.ReceiveAsync(cancellation.Token);
+
+        // Assert
+        Assert.Equal(0, BinaryPrimitives.ReadUInt16BigEndian(first.Buffer.AsSpan(2, 2)));
+        Assert.True(AsteriskRtpPacketCodec.TryReadPayload(first.Buffer, out _, out var payload));
+        Assert.Equal(new byte[] { 7, 8 }, payload.ToArray());
+    }
+
+    [Fact]
     public async Task WriteOutgoingAsync_SendsSequentialRtpPacketsWithContinuousTimestamps()
     {
         // Arrange

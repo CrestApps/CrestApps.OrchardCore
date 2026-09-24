@@ -27,6 +27,10 @@ internal static class TelnyxMediaStreamMessages
     /// <summary>
     /// The static <c>{"event":"clear"}</c> message that clears any audio Telnyx has buffered for playback.
     /// </summary>
+    /// <remarks>
+    /// Sent when the caller talks over the assistant, whose speech is written faster than it plays and so is
+    /// mostly still queued at Telnyx when they start.
+    /// </remarks>
     public static ReadOnlyMemory<byte> ClearMessage { get; } =
         Encoding.UTF8.GetBytes("{\"event\":\"clear\"}");
 

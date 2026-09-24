@@ -183,6 +183,38 @@ internal sealed class TelnyxContactCenterVoiceMediaSession : IContactCenterVoice
         }
     }
 
+    /// <summary>
+    /// Tells Telnyx to drop the audio it has queued for playback and not yet played.
+    /// </summary>
+    /// <remarks>
+    /// Telnyx plays what it is sent in order and at the line's rate, so audio written faster than that waits on its
+    /// side. A caller who talks over the assistant would otherwise hear the rest of what was queued. Sent under the
+    /// same lock as the audio, because a WebSocket takes one send at a time and the clear arrives while speech and
+    /// the room bed are both being written. A stopped session has nothing left to clear, so that is not an error.
+    /// </remarks>
+    public async ValueTask ClearOutgoingAsync(CancellationToken cancellationToken = default)
+    {
+        if (Volatile.Read(ref _stopped) != 0)
+        {
+            return;
+        }
+
+        await _writeLock.WaitAsync(cancellationToken);
+
+        try
+        {
+            await _webSocket.SendAsync(
+                TelnyxMediaStreamMessages.ClearMessage,
+                WebSocketMessageType.Text,
+                endOfMessage: true,
+                cancellationToken);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         Interlocked.Exchange(ref _stopped, 1);

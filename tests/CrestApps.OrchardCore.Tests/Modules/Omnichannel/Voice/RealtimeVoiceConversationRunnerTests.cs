@@ -24,7 +24,7 @@ namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Voice;
 /// reaching the caller as it is produced, and the transcript of both landing where everything downstream expects
 /// to read it.
 /// </summary>
-public sealed class RealtimeVoiceConversationRunnerTests
+public sealed partial class RealtimeVoiceConversationRunnerTests
 {
     [Fact]
     public async Task CallerAudio_ReachesTheModel()
@@ -1451,8 +1451,17 @@ public sealed class RealtimeVoiceConversationRunnerTests
             }
         }
 
+        /// <summary>
+        /// What the session was told the caller actually heard of each line they talked over, in order.
+        /// </summary>
+        public System.Collections.Concurrent.ConcurrentQueue<(string ItemId, int AudioEndMs)> Truncations { get; } = new();
+
         public Task TruncateAssistantAudioAsync(string itemId, int audioEndMs, CancellationToken cancellationToken = default)
-            => Task.CompletedTask;
+        {
+            Truncations.Enqueue((itemId, audioEndMs));
+
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         /// What the session was told about how to decide whose turn it is.
@@ -1541,6 +1550,26 @@ public sealed class RealtimeVoiceConversationRunnerTests
         {
             WrittenAudio.Add(frame.Data.ToArray());
             _assistantSpoke.TrySetResult();
+
+            return ValueTask.CompletedTask;
+        }
+
+        private int _clears;
+
+        /// <summary>
+        /// How many times the audio queued on the line was discarded.
+        /// </summary>
+        public int Clears => Volatile.Read(ref _clears);
+
+        /// <summary>
+        /// How many frames had been written when the line was last cleared.
+        /// </summary>
+        public int WrittenWhenCleared { get; private set; } = -1;
+
+        public ValueTask ClearOutgoingAsync(CancellationToken cancellationToken = default)
+        {
+            WrittenWhenCleared = WrittenAudio.Count;
+            Interlocked.Increment(ref _clears);
 
             return ValueTask.CompletedTask;
         }
