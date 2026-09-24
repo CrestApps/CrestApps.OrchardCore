@@ -37,6 +37,15 @@ public interface IAgentPresenceManager
     Task<AgentProfile> SignOutAsync(string userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Signs the agent out and takes them offline, recording who signed them out and why.
+    /// </summary>
+    /// <param name="userId">The Orchard user identifier.</param>
+    /// <param name="context">Who signed the agent out and why. <see langword="null"/> means the agent did.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent profile after sign-out, or <see langword="null"/> when none exists.</returns>
+    Task<AgentProfile> SignOutAsync(string userId, AgentStateChangeContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Takes the agent offline without giving up their queue and campaign memberships. This is the durable
     /// cleanup path for an agent who simply stopped being reachable (a dropped connection or an expired cookie)
     /// rather than one who chose to stop working: routing already refuses an agent who is not
@@ -50,6 +59,18 @@ public interface IAgentPresenceManager
     Task<AgentProfile> MarkOfflineAsync(string userId, string reason, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Takes the agent offline without giving up their queue and campaign memberships, recording who did it and
+    /// when it really happened.
+    /// </summary>
+    /// <param name="userId">The Orchard user identifier.</param>
+    /// <param name="reason">The optional reason code recorded against the presence change.</param>
+    /// <param name="context">Who took the agent offline and when it took effect: for a lapsed session, the last
+    /// heartbeat. <see langword="null"/> means the platform, now.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent profile after going offline, or <see langword="null"/> when none exists.</returns>
+    Task<AgentProfile> MarkOfflineAsync(string userId, string reason, AgentStateChangeContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Sets the agent presence state and optional reason code.
     /// </summary>
     /// <param name="userId">The Orchard user identifier.</param>
@@ -58,6 +79,18 @@ public interface IAgentPresenceManager
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The agent profile after the change, or <see langword="null"/> when none exists.</returns>
     Task<AgentProfile> SetPresenceAsync(string userId, AgentPresenceStatus status, string reason, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sets the agent presence state and optional reason code on behalf of a named actor, such as a workflow or a
+    /// supervisor.
+    /// </summary>
+    /// <param name="userId">The Orchard user identifier.</param>
+    /// <param name="status">The presence state to apply.</param>
+    /// <param name="reason">The optional reason: a reason code identifier, a reason code name, or free text.</param>
+    /// <param name="context">Who made the change. <see langword="null"/> means the agent did.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent profile after the change, or <see langword="null"/> when none exists.</returns>
+    Task<AgentProfile> SetPresenceAsync(string userId, AgentPresenceStatus status, string reason, AgentStateChangeContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Moves the agent into wrap-up after a handled communication session ends, while preserving any
@@ -69,12 +102,32 @@ public interface IAgentPresenceManager
     Task<AgentProfile> StartWrapUpAsync(string agentId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Moves the agent into wrap-up after a handled communication session ends, recording the interaction it is for.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="context">What the wrap-up is for and who started it. <see langword="null"/> means the platform.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent profile after the change, or <see langword="null"/> when none exists.</returns>
+    Task<AgentProfile> StartWrapUpAsync(string agentId, AgentStateChangeContext context, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Releases the agent after wrap-up completion, applying any pending requested presence state.
     /// </summary>
     /// <param name="agentId">The agent profile identifier.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The agent profile after the change, or <see langword="null"/> when none exists.</returns>
     Task<AgentProfile> CompleteWorkAsync(string agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Releases the agent after wrap-up completion, applying any pending requested presence state, and records why
+    /// the work ended: completed, timed out, or reconciled.
+    /// </summary>
+    /// <param name="agentId">The agent profile identifier.</param>
+    /// <param name="context">Why the work ended and who ended it. <see langword="null"/> means the platform
+    /// completed it normally.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The agent profile after the change, or <see langword="null"/> when none exists.</returns>
+    Task<AgentProfile> CompleteWorkAsync(string agentId, AgentStateChangeContext context, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Applies manager-owned queue and campaign entitlements to the agent profile, pruning any live queue

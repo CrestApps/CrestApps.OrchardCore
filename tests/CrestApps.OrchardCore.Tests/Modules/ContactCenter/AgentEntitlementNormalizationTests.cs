@@ -194,6 +194,7 @@ public sealed class AgentEntitlementNormalizationTests
             [],
             new NoAgentWorkStateHealingService(),
             new EnforcingAgentEntitlementPolicy(),
+            AgentStateAuditTestDoubles.CreateTransitions(clock: clock.Object),
             new Mock<IContactCenterEventPublisher>().Object,
             distributedLock.Object,
             clock.Object,

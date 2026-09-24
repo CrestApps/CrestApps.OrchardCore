@@ -80,6 +80,7 @@ public sealed class AgentsStartup : StartupBase
             .ValidateOnStart();
 
         services
+            .AddScoped<IAgentStateTransitionService, AgentStateTransitionService>()
             .AddScoped<IAgentPresenceManager, AgentPresenceManagerService>()
             .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
             .AddScoped<IAgentSessionStore, AgentSessionStore>()

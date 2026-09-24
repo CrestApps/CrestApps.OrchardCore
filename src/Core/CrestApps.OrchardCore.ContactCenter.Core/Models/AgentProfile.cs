@@ -75,9 +75,23 @@ public sealed class AgentProfile : CatalogItem, INameAwareModel, IModifiedUtcAwa
     public string PresenceReason { get; set; }
 
     /// <summary>
+    /// Gets or sets the identifier of the configured reason code <see cref="PresenceReason"/> was chosen from, or
+    /// <see langword="null"/> when the reason is free text. The audit records the reason by this identifier so
+    /// renaming a reason code does not rewrite history.
+    /// </summary>
+    public string PresenceReasonCodeId { get; set; }
+
+    /// <summary>
     /// Gets or sets the pending presence state that the system grants after in-flight routing completes.
     /// </summary>
     public AgentPresenceStatus? RequestedPresenceStatus { get; set; }
+
+    /// <summary>
+    /// Gets or sets when the agent, or a workflow acting for them, asked for <see cref="RequestedPresenceStatus"/>
+    /// while work was in flight. It is <see langword="null"/> when the pending state is only the state routing
+    /// captured to return the agent to, so the audit can tell a deferred request taking effect from work ending.
+    /// </summary>
+    public DateTime? PresenceRequestedUtc { get; set; }
 
     /// <summary>
     /// Gets or sets the UTC time the presence state last changed.

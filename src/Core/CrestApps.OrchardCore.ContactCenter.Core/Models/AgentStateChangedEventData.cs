@@ -68,6 +68,16 @@ public sealed class AgentStateChangedEventData
     public string ReservationId { get; set; }
 
     /// <summary>
+    /// Gets or sets why a reservation ended without the work being taken, for a
+    /// <see cref="AgentStateChangeSources.Released"/> transition: one of <see cref="AgentReleaseReasons"/>.
+    /// </summary>
+    /// <remarks>
+    /// Kept apart from <see cref="ReasonName"/>, which is the reason for the state the agent entered, so a
+    /// release that returns an agent to a break they asked for still reports that break's reason.
+    /// </remarks>
+    public string ReleaseReason { get; set; }
+
+    /// <summary>
     /// Gets or sets the agent session the transition belongs to.
     /// </summary>
     public string AgentSessionId { get; set; }
@@ -129,4 +139,23 @@ public static class AgentStateChangeSources
 
     /// <summary>A pending requested state took effect after work ended.</summary>
     public const string RequestApplied = "RequestApplied";
+}
+
+/// <summary>
+/// Why a reservation ended without its work being taken, recorded on a
+/// <see cref="AgentStateChangeSources.Released"/> transition.
+/// </summary>
+public static class AgentReleaseReasons
+{
+    /// <summary>The offer rang past its deadline unanswered.</summary>
+    public const string Expired = "Expired";
+
+    /// <summary>The agent declined the offer.</summary>
+    public const string Rejected = "Rejected";
+
+    /// <summary>The offer was withdrawn, for example because the caller hung up while it rang.</summary>
+    public const string Canceled = "Canceled";
+
+    /// <summary>Routing undid a reservation it could not complete, such as a dial that failed.</summary>
+    public const string Compensated = "Compensated";
 }
