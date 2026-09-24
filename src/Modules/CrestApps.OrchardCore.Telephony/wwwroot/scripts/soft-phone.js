@@ -2013,9 +2013,65 @@
     }
     return options.stateName === 'OnHold' && !options.numberIsCallDisplay;
   }
+
+  // The other party's number, for the number field and the active-call list. The agent's leg of a call the platform
+  // bridged here is placed from the tenant's own number, so its "from" is the tenant itself; the other side is tried
+  // next, and nothing is shown rather than the tenant's own number.
+  //   call       - the call ({ direction, from, to }).
+  //   ownNumbers - the tenant's own outbound caller ids.
+  function resolvePeerNumber(call, ownNumbers) {
+    if (!call) {
+      return '';
+    }
+    var inbound = call.direction === 1 || call.direction === 'Inbound';
+    var candidates = inbound ? [call.from, call.to] : [call.to, call.from];
+    var own = ownNumbers || [];
+    for (var i = 0; i < candidates.length; i++) {
+      var candidate = candidates[i] ? String(candidates[i]) : '';
+      if (candidate && !own.some(isOwn(candidate))) {
+        return candidate;
+      }
+    }
+    return '';
+  }
+  function isOwn(candidate) {
+    return function (number) {
+      return isSameNumber(candidate, number);
+    };
+  }
   softPhone.isSameNumber = isSameNumber;
+  softPhone.resolvePeerNumber = resolvePeerNumber;
   softPhone.resolveDialTarget = resolveDialTarget;
   softPhone.shouldOfferDial = shouldOfferDial;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+/*
+ * The labels of a matched-record card's actions in the incoming-call panel.
+ *
+ * A card's actions used to always read "Answer & open" and "Open", whatever the card opened. The Contact Center now
+ * points the card for the offered activity's customer at that activity -- the notes and disposition for the call --
+ * and a generic "open" no longer tells the agent where it goes, so a card may name its own actions.
+ *
+ * Part of the soft phone, concatenated ahead of soft-phone.js by the module asset pipeline. It attaches to a shared
+ * namespace rather than exporting, so the same file runs in the browser bundle and under the unit tests.
+ */
+(function (root) {
+  'use strict';
+
+  var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
+  function pick(value, fallback) {
+    return typeof value === 'string' && value.trim() ? value : fallback;
+  }
+
+  // { answerAndOpen, open }: the card's own labels, else the phone's generic ones.
+  function incomingCardActionLabels(card, strings) {
+    card = card || {};
+    strings = strings || {};
+    return {
+      answerAndOpen: pick(card.answerAndOpenText, pick(strings.answerAndOpen, 'Answer & open')),
+      open: pick(card.openText, pick(strings.open, 'Open'))
+    };
+  }
+  softPhone.incomingCardActionLabels = incomingCardActionLabels;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
 /*
  * Provider-agnostic soft phone client.
@@ -2101,6 +2157,8 @@
   var canConferenceCall = softPhoneModules.canConferenceCall;
   var resolveDialTarget = softPhoneModules.resolveDialTarget;
   var shouldOfferDial = softPhoneModules.shouldOfferDial;
+  var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
+  var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
   var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
   var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
 
@@ -6194,15 +6252,10 @@
       }
       return statusTextForState(normalizeState(call && call.state));
     }
+
+    // Never the tenant's own number: the agent's leg of a bridged call is placed from it (see soft-phone/dial-target.js).
     function getPeerNumber(call) {
-      if (!call) {
-        return '';
-      }
-      var inbound = call.direction === 1 || call.direction === 'Inbound';
-      if (inbound) {
-        return call.from || call.to || '';
-      }
-      return call.to || call.from || '';
+      return resolvePeerNumber(call, ownOutboundNumbers());
     }
     function metadataBoolean(call, key) {
       if (!call || !call.metadata || !Object.prototype.hasOwnProperty.call(call.metadata, key)) {
@@ -7434,8 +7487,9 @@
       if (card.url) {
         var openTarget = card.openInNewTab ? ' target="_blank" rel="noopener"' : '';
         var answerBusy = incomingAcceptPending ? ' disabled' : '';
-        actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"' + answerBusy + '><i class="fa-solid fa-phone"></i> ' + escapeHtml(strings.answerAndOpen || 'Answer & open') + '</button>';
-        actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(strings.open || 'Open') + '</a>';
+        var actionLabels = incomingCardActionLabels(card, strings);
+        actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"' + answerBusy + '><i class="fa-solid fa-phone"></i> ' + escapeHtml(actionLabels.answerAndOpen) + '</button>';
+        actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(actionLabels.open) + '</a>';
       }
       return '<div class="telephony-incoming__card">' + icon + '<div class="telephony-incoming__card-body">' + body + '</div>' + (actions ? '<div class="telephony-incoming__card-actions">' + actions + '</div>' : '') + '</div>';
     }

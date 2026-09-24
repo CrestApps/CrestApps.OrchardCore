@@ -66,7 +66,39 @@
         return options.stateName === 'OnHold' && !options.numberIsCallDisplay;
     }
 
+    // The other party's number, for the number field and the active-call list. The agent's leg of a call the platform
+    // bridged here is placed from the tenant's own number, so its "from" is the tenant itself; the other side is tried
+    // next, and nothing is shown rather than the tenant's own number.
+    //   call       - the call ({ direction, from, to }).
+    //   ownNumbers - the tenant's own outbound caller ids.
+    function resolvePeerNumber(call, ownNumbers) {
+        if (!call) {
+            return '';
+        }
+
+        var inbound = call.direction === 1 || call.direction === 'Inbound';
+        var candidates = inbound ? [call.from, call.to] : [call.to, call.from];
+        var own = ownNumbers || [];
+
+        for (var i = 0; i < candidates.length; i++) {
+            var candidate = candidates[i] ? String(candidates[i]) : '';
+
+            if (candidate && !own.some(isOwn(candidate))) {
+                return candidate;
+            }
+        }
+
+        return '';
+    }
+
+    function isOwn(candidate) {
+        return function (number) {
+            return isSameNumber(candidate, number);
+        };
+    }
+
     softPhone.isSameNumber = isSameNumber;
+    softPhone.resolvePeerNumber = resolvePeerNumber;
     softPhone.resolveDialTarget = resolveDialTarget;
     softPhone.shouldOfferDial = shouldOfferDial;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

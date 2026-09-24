@@ -92,6 +92,8 @@
 
     var resolveDialTarget = softPhoneModules.resolveDialTarget;
     var shouldOfferDial = softPhoneModules.shouldOfferDial;
+    var resolvePeerNumber = softPhoneModules.resolvePeerNumber;
+    var incomingCardActionLabels = softPhoneModules.incomingCardActionLabels;
 
     var selectReceiveTrack = softPhoneModules.selectReceiveTrack;
     var inboundProbeNeedsRebuild = softPhoneModules.inboundProbeNeedsRebuild;
@@ -4893,18 +4895,9 @@
             return statusTextForState(normalizeState(call && call.state));
         }
 
+        // Never the tenant's own number: the agent's leg of a bridged call is placed from it (see soft-phone/dial-target.js).
         function getPeerNumber(call) {
-            if (!call) {
-                return '';
-            }
-
-            var inbound = call.direction === 1 || call.direction === 'Inbound';
-
-            if (inbound) {
-                return call.from || call.to || '';
-            }
-
-            return call.to || call.from || '';
+            return resolvePeerNumber(call, ownOutboundNumbers());
         }
 
         function metadataBoolean(call, key) {
@@ -6460,8 +6453,9 @@
             if (card.url) {
                 var openTarget = card.openInNewTab ? ' target="_blank" rel="noopener"' : '';
                 var answerBusy = incomingAcceptPending ? ' disabled' : '';
-                actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"' + answerBusy + '><i class="fa-solid fa-phone"></i> ' + escapeHtml(strings.answerAndOpen || 'Answer & open') + '</button>';
-                actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(strings.open || 'Open') + '</a>';
+                var actionLabels = incomingCardActionLabels(card, strings);
+                actions += '<button type="button" class="btn btn-sm btn-success" data-telephony-card-answer data-url="' + escapeHtml(card.url) + '"' + answerBusy + '><i class="fa-solid fa-phone"></i> ' + escapeHtml(actionLabels.answerAndOpen) + '</button>';
+                actions += '<a class="btn btn-sm btn-outline-secondary" href="' + escapeHtml(card.url) + '"' + openTarget + '><i class="fa-solid fa-up-right-from-square"></i> ' + escapeHtml(actionLabels.open) + '</a>';
             }
 
             return '<div class="telephony-incoming__card">' + icon +

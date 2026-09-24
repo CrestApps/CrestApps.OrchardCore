@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js';
 
-const { resolveDialTarget, shouldOfferDial, isSameNumber } = globalThis.CrestAppsSoftPhone;
+const { resolveDialTarget, shouldOfferDial, isSameNumber, resolvePeerNumber } = globalThis.CrestAppsSoftPhone;
 
 const ownNumber = '+15550100200';
 
@@ -67,5 +67,29 @@ describe('shouldOfferDial', () => {
     it('never offers it on a call that is not held', () => {
         expect(shouldOfferDial({ callActive: true, stateName: 'Connected', numberIsCallDisplay: false })).toBe(false);
         expect(shouldOfferDial({ callActive: true, stateName: 'Ringing', numberIsCallDisplay: false })).toBe(false);
+    });
+});
+
+// Bug: on a call the platform bridged to the agent, the number field showed the tenant's own caller id as the party on
+// the line. The agent's leg is placed from the platform number, so the leg's "from" is the tenant itself; the field is
+// meant to show the other party, and never the tenant's own number.
+describe('resolvePeerNumber', () => {
+    it('shows the caller of an inbound call and the callee of an outbound one', () => {
+        expect(resolvePeerNumber({ direction: 'Inbound', from: '+15550100300', to: ownNumber }, [ownNumber])).toBe('+15550100300');
+        expect(resolvePeerNumber({ direction: 1, from: '+15550100300', to: ownNumber }, [ownNumber])).toBe('+15550100300');
+        expect(resolvePeerNumber({ direction: 'Outbound', from: ownNumber, to: '+15550100300' }, [ownNumber])).toBe('+15550100300');
+    });
+
+    it('never shows the tenant own number, however it is written, and falls back to the other side', () => {
+        expect(resolvePeerNumber({ direction: 'Inbound', from: '+1 (555) 010-0200', to: '+15550100300' }, [ownNumber])).toBe('+15550100300');
+    });
+
+    it('shows nothing rather than the tenant own number when that is all the leg knows', () => {
+        expect(resolvePeerNumber({ direction: 'Inbound', from: ownNumber, to: '' }, [ownNumber])).toBe('');
+    });
+
+    it('keeps the old behaviour when the own numbers are unknown', () => {
+        expect(resolvePeerNumber({ direction: 'Inbound', from: '+15550100300', to: '' }, [])).toBe('+15550100300');
+        expect(resolvePeerNumber(null, [ownNumber])).toBe('');
     });
 });
