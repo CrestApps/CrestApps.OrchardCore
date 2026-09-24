@@ -45,6 +45,7 @@ public sealed class AnalyticsStartup : StartupBase
         services
             .AddScoped<IReport, CallInsightsReportProvider>()
             .AddScoped<IReport, CallQualityReportProvider>()
+            .AddScoped<IReport, ReconciledPayrollTimecardReportProvider>()
             .AddScoped<IReport, AgentProductivityReportProvider>()
             .AddScoped<IReport, QueueUsageReportProvider>()
             .AddScoped<IReport, CampaignSummaryReportProvider>()
