@@ -71,6 +71,7 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
             new ReportMetric(S["Outbound"].Value, ReportFormat.Number(report.Outbound)),
             new ReportMetric(S["Answered"].Value, ReportFormat.Number(report.Answered), ReportFormat.Percent(report.AnswerRate)),
             new ReportMetric(S["Abandoned"].Value, ReportFormat.Number(report.Abandoned), ReportFormat.Percent(report.AbandonmentRate)),
+            new ReportMetric(S["Voicemail"].Value, ReportFormat.Number(report.Voicemail)),
             new ReportMetric(S["Failed"].Value, ReportFormat.Number(report.Failed)),
             new ReportMetric(S["Avg handle time"].Value, ReportFormat.Duration(report.AverageHandleTimeSeconds)),
             new ReportMetric(S["Avg speed of answer"].Value, ReportFormat.Duration(report.AverageSpeedOfAnswerSeconds)),
@@ -86,12 +87,14 @@ public sealed class CallInsightsReportProvider : ContactCenterReportBase
                 report.ByChannel.Select(entry => new ReportBar(entry.Label, ReportFormat.Number(entry.Count), max > 0 ? (double)entry.Count / max : 0))));
         }
 
-        if (report.ByStatus.Count > 0)
+        // How each call turned out, rather than where its session stopped: a caller who hung up and one sent to
+        // voicemail both end a session the same way.
+        if (report.ByOutcome.Count > 0)
         {
-            var max = report.ByStatus.Max(entry => entry.Count);
+            var max = report.ByOutcome.Max(entry => entry.Count);
 
-            document.Add(ReportSection.ForBars(S["By status"].Value,
-                report.ByStatus.Select(entry => new ReportBar(entry.Label, ReportFormat.Number(entry.Count), max > 0 ? (double)entry.Count / max : 0))));
+            document.Add(ReportSection.ForBars(S["By outcome"].Value,
+                report.ByOutcome.Select(entry => new ReportBar(entry.Label, ReportFormat.Number(entry.Count), max > 0 ? (double)entry.Count / max : 0))));
         }
 
         if (report.Daily.Count > 0)

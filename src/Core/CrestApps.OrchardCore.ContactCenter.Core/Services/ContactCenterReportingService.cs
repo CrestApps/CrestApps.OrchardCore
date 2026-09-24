@@ -24,6 +24,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     private readonly IAgentProfileManager _agentManager;
     private readonly ICatalogManager<OmnichannelCampaign> _campaignManager;
     private readonly ICatalogManager<OmnichannelCampaignGroup> _campaignGroupManager;
+    private readonly IInteractionEventStore _eventStore;
     private readonly TimeSpan _maximumReportRange;
 
     /// <summary>
@@ -37,6 +38,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     /// <param name="campaignManager">The campaign manager used to resolve campaign names.</param>
     /// <param name="campaignGroupManager">The campaign group manager used to aggregate campaign reports.</param>
     /// <param name="reportingOptions">The reporting options that bound the requested range.</param>
+    /// <param name="eventStore">The event log whose abandons and voicemails decide each interaction's outcome.</param>
     public ContactCenterReportingService(
         ISession session,
         IActivityQueueGroupManager queueGroupManager,
@@ -45,7 +47,8 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         IAgentProfileManager agentManager,
         ICatalogManager<OmnichannelCampaign> campaignManager,
         ICatalogManager<OmnichannelCampaignGroup> campaignGroupManager,
-        IOptions<ContactCenterReportingOptions> reportingOptions)
+        IOptions<ContactCenterReportingOptions> reportingOptions,
+        IInteractionEventStore eventStore)
     {
         _session = session;
         _queueGroupManager = queueGroupManager;
@@ -54,6 +57,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         _agentManager = agentManager;
         _campaignManager = campaignManager;
         _campaignGroupManager = campaignGroupManager;
+        _eventStore = eventStore;
         _maximumReportRange = reportingOptions.Value.MaximumReportRange;
     }
 
@@ -75,8 +79,9 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
     {
         var interactions = await QueryInteractionsAsync(fromUtc, toUtc, cancellationToken);
         await ApplyCurrentQueueGroupCriteriaAsync(criteria, cancellationToken);
+        var filtered = FilterInteractions(interactions, criteria);
 
-        return BuildCallInsights(fromUtc, toUtc, FilterInteractions(interactions, criteria));
+        return BuildCallInsights(fromUtc, toUtc, filtered, await InteractionOutcomeClassifier.LoadAsync(_eventStore, filtered, cancellationToken));
     }
 
     /// <inheritdoc/>
@@ -140,13 +145,16 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             waitingByQueue[queue.ItemId] = await _queueItemManager.CountWaitingAsync(queue.ItemId, cancellationToken);
         }
 
+        var filtered = FilterInteractions(interactions, criteria);
+
         return BuildQueueUsage(
             fromUtc,
             toUtc,
-            FilterInteractions(interactions, criteria),
+            filtered,
             filteredQueues,
             queueGroups,
-            waitingByQueue);
+            waitingByQueue,
+            await InteractionOutcomeClassifier.LoadAsync(_eventStore, filtered, cancellationToken));
     }
 
     /// <inheritdoc/>
@@ -327,107 +335,12 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
             .ToArray();
     }
 
-    internal static CallInsightsReport BuildCallInsights(DateTime fromUtc, DateTime toUtc, IReadOnlyList<Interaction> interactions)
-    {
-        var report = new CallInsightsReport
-        {
-            FromUtc = fromUtc,
-            ToUtc = toUtc,
-            Total = interactions.Count,
-        };
-
-        var talkTimeTotal = 0d;
-        var wrapUpTimeTotal = 0d;
-        var answerSpeedTotal = 0d;
-        var answeredWithHandleTime = 0L;
-
-        var channelCounts = new Dictionary<InteractionChannel, long>();
-        var statusCounts = new Dictionary<InteractionStatus, long>();
-        var dailyPoints = new Dictionary<DateOnly, CallInsightsDailyPoint>();
-
-        foreach (var interaction in interactions)
-        {
-            if (interaction.Direction == InteractionDirection.Inbound)
-            {
-                report.Inbound++;
-            }
-            else
-            {
-                report.Outbound++;
-            }
-
-            var answered = interaction.AnsweredUtc.HasValue;
-            var abandoned = !answered && interaction.Direction == InteractionDirection.Inbound && interaction.Status == InteractionStatus.Ended;
-
-            if (answered)
-            {
-                report.Answered++;
-                answerSpeedTotal += Math.Max(0d, (interaction.AnsweredUtc.Value - interaction.CreatedUtc).TotalSeconds);
-
-                if (interaction.EndedUtc.HasValue && interaction.EndedUtc.Value >= interaction.AnsweredUtc.Value)
-                {
-                    talkTimeTotal += (interaction.EndedUtc.Value - interaction.AnsweredUtc.Value).TotalSeconds;
-                    answeredWithHandleTime++;
-                }
-
-                wrapUpTimeTotal += GetWrapUpSeconds(interaction);
-            }
-
-            if (abandoned)
-            {
-                report.Abandoned++;
-            }
-
-            if (interaction.Status == InteractionStatus.Failed)
-            {
-                report.Failed++;
-            }
-
-            channelCounts[interaction.Channel] = channelCounts.GetValueOrDefault(interaction.Channel) + 1;
-            statusCounts[interaction.Status] = statusCounts.GetValueOrDefault(interaction.Status) + 1;
-
-            var day = DateOnly.FromDateTime(interaction.CreatedUtc);
-
-            if (!dailyPoints.TryGetValue(day, out var point))
-            {
-                point = new CallInsightsDailyPoint { Date = day };
-                dailyPoints[day] = point;
-            }
-
-            point.Total++;
-
-            if (answered)
-            {
-                point.Answered++;
-            }
-
-            if (abandoned)
-            {
-                point.Abandoned++;
-            }
-        }
-
-        report.TotalTalkTimeSeconds = talkTimeTotal;
-        report.TotalWrapUpTimeSeconds = wrapUpTimeTotal;
-        report.AverageHandleTimeSeconds = answeredWithHandleTime > 0 ? (talkTimeTotal + wrapUpTimeTotal) / answeredWithHandleTime : 0d;
-        report.AverageSpeedOfAnswerSeconds = report.Answered > 0 ? answerSpeedTotal / report.Answered : 0d;
-
-        report.ByChannel = channelCounts
-            .OrderByDescending(entry => entry.Value)
-            .Select(entry => new ContactCenterReportCount { Label = entry.Key.ToString(), Count = entry.Value })
-            .ToList();
-
-        report.ByStatus = statusCounts
-            .OrderByDescending(entry => entry.Value)
-            .Select(entry => new ContactCenterReportCount { Label = entry.Key.ToString(), Count = entry.Value })
-            .ToList();
-
-        report.Daily = dailyPoints.Values
-            .OrderBy(point => point.Date)
-            .ToList();
-
-        return report;
-    }
+    internal static CallInsightsReport BuildCallInsights(
+        DateTime fromUtc,
+        DateTime toUtc,
+        IReadOnlyList<Interaction> interactions,
+        InteractionOutcomeClassifier outcomes = null)
+        => CallInsightsBuilder.Build(fromUtc, toUtc, interactions, outcomes ?? InteractionOutcomeClassifier.WithoutEvents);
 
     internal static AgentProductivityReport BuildAgentProductivity(
         DateTime fromUtc,
@@ -467,7 +380,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                 row.TotalTalkTimeSeconds += (interaction.EndedUtc.Value - interaction.AnsweredUtc.Value).TotalSeconds;
             }
 
-            row.TotalWrapUpTimeSeconds += GetWrapUpSeconds(interaction);
+            row.TotalWrapUpTimeSeconds += CallInsightsBuilder.GetWrapUpSeconds(interaction);
         }
 
         foreach (var agent in agents)
@@ -521,8 +434,10 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         IReadOnlyList<Interaction> interactions,
         IReadOnlyList<ActivityQueue> queues,
         IReadOnlyList<ActivityQueueGroup> queueGroups,
-        IReadOnlyDictionary<string, int> waitingByQueue)
+        IReadOnlyDictionary<string, int> waitingByQueue,
+        InteractionOutcomeClassifier outcomes = null)
     {
+        outcomes ??= InteractionOutcomeClassifier.WithoutEvents;
         var byQueue = new Dictionary<string, QueueUsageAccumulator>(StringComparer.Ordinal);
         var byGroup = new Dictionary<string, QueueUsageAccumulator>(StringComparer.Ordinal);
         var queuesById = queues.ToDictionary(queue => queue.ItemId, StringComparer.Ordinal);
@@ -556,9 +471,10 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                 byGroup[queueGroupId] = groupAccumulator;
             }
 
-            AccumulateInteraction(queueAccumulator, interaction);
-            AccumulateInteraction(groupAccumulator, interaction);
-            AccumulateInteraction(totals, interaction);
+            var outcome = outcomes.Classify(interaction);
+            AccumulateInteraction(queueAccumulator, interaction, outcome);
+            AccumulateInteraction(groupAccumulator, interaction, outcome);
+            AccumulateInteraction(totals, interaction, outcome);
         }
 
         var report = new QueueUsageReport
@@ -899,11 +815,11 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         };
     }
 
-    private static void AccumulateInteraction(QueueUsageAccumulator accumulator, Interaction interaction)
+    private static void AccumulateInteraction(QueueUsageAccumulator accumulator, Interaction interaction, InteractionOutcome outcome)
     {
         accumulator.Handled++;
 
-        if (interaction.AnsweredUtc.HasValue)
+        if (outcome == InteractionOutcome.Answered)
         {
             accumulator.Answered++;
             accumulator.AnswerSpeedTotal += Math.Max(0d, (interaction.AnsweredUtc.Value - interaction.CreatedUtc).TotalSeconds);
@@ -914,7 +830,7 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
                 accumulator.AnsweredWithHandleTime++;
             }
         }
-        else if (interaction.Direction == InteractionDirection.Inbound && interaction.Status == InteractionStatus.Ended)
+        else if (outcome == InteractionOutcome.Abandoned && interaction.Direction == InteractionDirection.Inbound)
         {
             accumulator.Abandoned++;
         }
@@ -986,18 +902,6 @@ public sealed class ContactCenterReportingService : IContactCenterReportingServi
         }
 
         return agent.ItemId;
-    }
-
-    private static double GetWrapUpSeconds(Interaction interaction)
-    {
-        if (!interaction.WrapUpStartedUtc.HasValue ||
-            !interaction.WrapUpCompletedUtc.HasValue ||
-            interaction.WrapUpCompletedUtc.Value < interaction.WrapUpStartedUtc.Value)
-        {
-            return 0d;
-        }
-
-        return (interaction.WrapUpCompletedUtc.Value - interaction.WrapUpStartedUtc.Value).TotalSeconds;
     }
 
     private sealed class QueueUsageAccumulator

@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Reports.Models;
 
@@ -7,7 +8,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Services;
 /// <summary>
 /// Computes interaction volume, handling, and service-level metrics from raw interaction history.
 /// The calculations are pure functions of the interactions they receive, so they carry no tenant or
-/// report-rendering state and can be reused and unit-tested independently of a report provider.
+/// report-rendering state and can be reused and unit-tested independently of a report provider. Whether an
+/// interaction was answered, abandoned, sent to voicemail or failed is decided by an
+/// <see cref="InteractionOutcomeClassifier"/>, the same one every other Contact Center report uses; without one, the
+/// interactions alone decide.
 /// </summary>
 internal static class InteractionMetricsCalculator
 {
@@ -15,9 +19,11 @@ internal static class InteractionMetricsCalculator
     /// Aggregates volume, answer, handling, transfer, and recording metrics across a set of interactions.
     /// </summary>
     /// <param name="interactions">The interactions to aggregate.</param>
+    /// <param name="outcomes">The classifier that decides each interaction's outcome.</param>
     /// <returns>The aggregated interaction metrics.</returns>
-    public static InteractionMetrics Aggregate(IEnumerable<Interaction> interactions)
+    public static InteractionMetrics Aggregate(IEnumerable<Interaction> interactions, InteractionOutcomeClassifier outcomes = null)
     {
+        outcomes ??= InteractionOutcomeClassifier.WithoutEvents;
         var metrics = new InteractionMetrics();
 
         foreach (var interaction in interactions)
@@ -29,7 +35,9 @@ internal static class InteractionMetricsCalculator
                 metrics.InboundOffered++;
             }
 
-            if (interaction.AnsweredUtc.HasValue)
+            var outcome = outcomes.Classify(interaction);
+
+            if (outcome == InteractionOutcome.Answered)
             {
                 metrics.Answered++;
 
@@ -62,12 +70,16 @@ internal static class InteractionMetricsCalculator
                 }
             }
 
-            if (IsAbandoned(interaction))
+            // Abandonment is measured against inbound volume, so only an inbound caller's abandon counts toward it.
+            if (outcome == InteractionOutcome.Abandoned && IsInboundOffered(interaction))
             {
                 metrics.Abandoned++;
             }
-
-            if (interaction.Status == InteractionStatus.Failed)
+            else if (outcome == InteractionOutcome.Voicemail)
+            {
+                metrics.Voicemail++;
+            }
+            else if (outcome == InteractionOutcome.Failed)
             {
                 metrics.Failed++;
             }
@@ -81,9 +93,11 @@ internal static class InteractionMetricsCalculator
     /// </summary>
     /// <param name="interactions">The interactions to evaluate.</param>
     /// <param name="thresholdSeconds">The answer-time threshold in seconds; a non-positive value disables service-level tracking.</param>
+    /// <param name="outcomes">The classifier that decides each interaction's outcome.</param>
     /// <returns>The queue service-level metrics.</returns>
-    public static QueueServiceLevelMetrics CalculateQueueServiceLevel(IEnumerable<Interaction> interactions, int thresholdSeconds)
+    public static QueueServiceLevelMetrics CalculateQueueServiceLevel(IEnumerable<Interaction> interactions, int thresholdSeconds, InteractionOutcomeClassifier outcomes = null)
     {
+        outcomes ??= InteractionOutcomeClassifier.WithoutEvents;
         var metrics = new QueueServiceLevelMetrics();
 
         foreach (var interaction in interactions)
@@ -93,7 +107,10 @@ internal static class InteractionMetricsCalculator
                 continue;
             }
 
-            if (interaction.AnsweredUtc.HasValue)
+            // A call sent to voicemail was neither answered nor abandoned, so it is not in the service level.
+            var outcome = outcomes.Classify(interaction);
+
+            if (outcome == InteractionOutcome.Answered)
             {
                 metrics.EligibleOffered++;
                 metrics.Answered++;
@@ -109,7 +126,7 @@ internal static class InteractionMetricsCalculator
                     }
                 }
             }
-            else if (IsAbandoned(interaction))
+            else if (outcome == InteractionOutcome.Abandoned)
             {
                 metrics.EligibleOffered++;
 
@@ -130,11 +147,14 @@ internal static class InteractionMetricsCalculator
     /// </summary>
     /// <param name="interactions">The interactions to evaluate.</param>
     /// <param name="queues">The queues keyed by identifier, used to resolve each interaction's answer-time threshold.</param>
+    /// <param name="outcomes">The classifier that decides each interaction's outcome.</param>
     /// <returns>The combined queue service-level metrics.</returns>
     public static QueueServiceLevelMetrics CalculateCombinedQueueServiceLevel(
         IEnumerable<Interaction> interactions,
-        IReadOnlyDictionary<string, ActivityQueue> queues)
+        IReadOnlyDictionary<string, ActivityQueue> queues,
+        InteractionOutcomeClassifier outcomes = null)
     {
+        outcomes ??= InteractionOutcomeClassifier.WithoutEvents;
         var metrics = new QueueServiceLevelMetrics();
 
         foreach (var interaction in interactions)
@@ -147,7 +167,10 @@ internal static class InteractionMetricsCalculator
             queues.TryGetValue(interaction.QueueId ?? string.Empty, out var queue);
             var thresholdSeconds = queue?.SlaThresholdSeconds ?? 0;
 
-            if (interaction.AnsweredUtc.HasValue)
+            // A call sent to voicemail was neither answered nor abandoned, so it is not in the service level.
+            var outcome = outcomes.Classify(interaction);
+
+            if (outcome == InteractionOutcome.Answered)
             {
                 metrics.EligibleOffered++;
                 metrics.Answered++;
@@ -163,7 +186,7 @@ internal static class InteractionMetricsCalculator
                     }
                 }
             }
-            else if (IsAbandoned(interaction))
+            else if (outcome == InteractionOutcome.Abandoned)
             {
                 metrics.EligibleOffered++;
 
@@ -190,18 +213,6 @@ internal static class InteractionMetricsCalculator
     }
 
     /// <summary>
-    /// Determines whether an inbound interaction ended without being answered and therefore counts as abandoned.
-    /// </summary>
-    /// <param name="interaction">The interaction to inspect.</param>
-    /// <returns><see langword="true"/> when the interaction was abandoned; otherwise <see langword="false"/>.</returns>
-    public static bool IsAbandoned(Interaction interaction)
-    {
-        return interaction.Direction == InteractionDirection.Inbound &&
-            !interaction.AnsweredUtc.HasValue &&
-            interaction.Status == InteractionStatus.Ended;
-    }
-
-    /// <summary>
     /// Gets the seconds an interaction waited before being answered.
     /// </summary>
     /// <param name="interaction">The interaction to measure.</param>
@@ -210,18 +221,6 @@ internal static class InteractionMetricsCalculator
     {
         return interaction.AnsweredUtc.HasValue
             ? Math.Max(0d, (interaction.AnsweredUtc.Value - interaction.CreatedUtc).TotalSeconds)
-            : 0d;
-    }
-
-    /// <summary>
-    /// Gets the seconds an interaction waited from creation until it ended.
-    /// </summary>
-    /// <param name="interaction">The interaction to measure.</param>
-    /// <returns>The wait-until-end time in seconds, or zero when the interaction never ended.</returns>
-    public static double GetWaitUntilEndSeconds(Interaction interaction)
-    {
-        return interaction.EndedUtc.HasValue
-            ? Math.Max(0d, (interaction.EndedUtc.Value - interaction.CreatedUtc).TotalSeconds)
             : 0d;
     }
 

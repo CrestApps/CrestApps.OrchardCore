@@ -158,6 +158,14 @@ public sealed class EnterpriseInteractionReportConcurrencyTests
 
         return new EnterpriseInteractionReportProvider(
             session,
+            // These interactions have no call events, so each one's outcome is decided from the interaction alone.
+            Mock.Of<IInteractionEventStore>(store => store.GetByAggregateWindowAsync(
+                It.IsAny<string>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<CancellationToken>()) == Task.FromResult<IReadOnlyList<InteractionEvent>>(Array.Empty<InteractionEvent>())),
             queueManager.Object,
             agentManager,
             definition,

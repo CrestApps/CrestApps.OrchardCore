@@ -83,7 +83,8 @@ internal static class AuditEvents
         string agentId = null,
         string queueId = null,
         double? durationSeconds = null,
-        ContactCenterActorType actorType = ContactCenterActorType.Provider)
+        ContactCenterActorType actorType = ContactCenterActorType.Provider,
+        string state = null)
     {
         var interactionEvent = new InteractionEvent
         {
@@ -103,6 +104,7 @@ internal static class AuditEvents
             AgentId = agentId,
             QueueId = queueId,
             DurationSeconds = durationSeconds,
+            State = state,
         });
 
         return interactionEvent;

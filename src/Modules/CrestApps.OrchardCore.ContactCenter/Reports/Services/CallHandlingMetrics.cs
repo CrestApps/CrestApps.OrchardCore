@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
+using CrestApps.OrchardCore.ContactCenter.Models;
 
 namespace CrestApps.OrchardCore.ContactCenter.Reports.Services;
 
@@ -204,7 +205,7 @@ internal sealed class CallHandlingMetrics
                     queue(entryQueueId).Queued++;
                 }
             }
-            else if (entry.Is(ContactCenterConstants.Events.CallDequeued) && abandon is null)
+            else if (entry.Is(ContactCenterConstants.Events.CallDequeued) && abandon is null && !entry.IsRemoval)
             {
                 // The wait the queue itself measured, falling back to the time since the call joined it.
                 var wait = entry.Data.DurationSeconds ??
@@ -334,6 +335,11 @@ internal sealed class CallHandlingMetrics
 
         public bool IsAnswer
             => Is(ContactCenterConstants.Events.AgentLegAnswered) || Is(ContactCenterConstants.Events.CallConnected);
+
+        // A call routing took out of the queue -- to send it to voicemail, or because its work was withdrawn -- left
+        // without an agent taking it. Only an assignment is an answer from the queue.
+        public bool IsRemoval
+            => string.Equals(Data.State, nameof(QueueItemStatus.Removed), StringComparison.Ordinal);
 
         public bool Is(string eventType)
             => string.Equals(Event.EventType, eventType, StringComparison.Ordinal);

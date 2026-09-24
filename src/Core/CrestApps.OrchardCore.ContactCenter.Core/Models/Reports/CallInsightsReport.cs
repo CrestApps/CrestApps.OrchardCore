@@ -42,9 +42,15 @@ public sealed class CallInsightsReport
     public long Abandoned { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of interactions that failed.
+    /// Gets or sets the number of interactions that failed for a technical reason.
     /// </summary>
     public long Failed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of inbound calls the platform sent to voicemail instead of connecting. They are
+    /// neither answered nor abandoned.
+    /// </summary>
+    public long Voicemail { get; set; }
 
     /// <summary>
     /// Gets or sets the total talk time, in seconds, across all answered interactions.
@@ -107,6 +113,12 @@ public sealed class CallInsightsReport
     /// Gets or sets the interaction volume grouped by communication-session status.
     /// </summary>
     public IList<ContactCenterReportCount> ByStatus { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the interaction volume grouped by outcome: answered, abandoned, sent to voicemail, failed, not
+    /// connected, or still in progress.
+    /// </summary>
+    public IList<ContactCenterReportCount> ByOutcome { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the daily interaction trend for the period.

@@ -150,6 +150,28 @@ public sealed class CallHandlingMetricsTests
     }
 
     [Fact]
+    public void Calculate_ACallTakenOutOfTheQueueForVoicemail_IsNotAnsweredFromTheQueue()
+    {
+        // Arrange: the offer went unanswered and routing removed the call from the queue to send it to voicemail.
+        var events = new[]
+        {
+            Call(ContactCenterConstants.Events.CallQueued, "call-1", _start, queueId: "queue-1"),
+            Call(ContactCenterConstants.Events.CallDequeued, "call-1", _start.AddSeconds(73), queueId: "queue-1", durationSeconds: 73, state: nameof(QueueItemStatus.Removed)),
+            Call(ContactCenterConstants.Events.CallQueued, "call-2", _start, queueId: "queue-1"),
+            Call(ContactCenterConstants.Events.CallDequeued, "call-2", _start.AddSeconds(10), queueId: "queue-1", durationSeconds: 10, state: nameof(QueueItemStatus.Assigned)),
+        };
+
+        // Act
+        var queue = Assert.Single(CallHandlingMetrics.Calculate(events, [], _end).Queues);
+
+        // Assert
+        Assert.Equal(2, queue.Queued);
+        Assert.Equal(1, queue.AnsweredFromQueue);
+        Assert.Equal(10, queue.AnsweredWaitSeconds, 6);
+        Assert.Equal(0, queue.Abandoned);
+    }
+
+    [Fact]
     public void Calculate_WhenFilteredToAnAgent_CountsOnlyTheirCallsAndOffers()
     {
         // Arrange

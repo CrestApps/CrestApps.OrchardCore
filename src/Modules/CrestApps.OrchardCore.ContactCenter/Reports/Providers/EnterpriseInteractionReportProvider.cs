@@ -18,6 +18,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Reports.Providers;
 internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilterMetadata, IContactCenterCapabilityDependentReport
 {
     private readonly ISession _session;
+    private readonly IInteractionEventStore _eventStore;
     private readonly IActivityQueueManager _queueManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly EnterpriseInteractionReportDefinition _definition;
@@ -27,9 +28,10 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
     private Dictionary<string, string> _agentUserNames = [];
     private Dictionary<string, ActivityQueue> _queues = [];
     private HashSet<string> _absentFeatureIds = [];
+    private InteractionOutcomeClassifier _outcomes = InteractionOutcomeClassifier.WithoutEvents;
 
     private static readonly string[] _executiveMetricRequirements =
-        [null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording];
+        [null, null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, ContactCenterConstants.Feature.Recording];
 
     private static readonly string[] _interactionDetailRequirements =
         [null, null, null, null, null, null, null, ContactCenterConstants.Feature.Voice, null, null, null, ContactCenterConstants.Feature.Voice];
@@ -60,6 +62,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
     public EnterpriseInteractionReportProvider(
         ISession session,
+        IInteractionEventStore eventStore,
         IActivityQueueManager queueManager,
         IAgentProfileManager agentManager,
         EnterpriseInteractionReportDefinition definition,
@@ -68,6 +71,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         TimeSpan maximumReportRange)
     {
         _session = session;
+        _eventStore = eventStore;
         _queueManager = queueManager;
         _agentManager = agentManager;
         _definition = definition;
@@ -123,6 +127,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
         ContactCenterReportingService.ApplyCurrentQueueGroupCriteria(criteria, queues.Values.ToArray());
         var filteredInteractions = ContactCenterReportingService.FilterInteractions(interactions, criteria);
+        _outcomes = await InteractionOutcomeClassifier.LoadAsync(_eventStore, filteredInteractions, cancellationToken);
 
         // Queue reports describe inbound routing only. Outbound campaign work is carried under a virtual campaign
         // queue (never a real, stored queue), so it is excluded from queue reports and reported at the campaign
@@ -142,12 +147,12 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             EnterpriseInteractionReportKind.ChannelPerformance => BuildDimensionPerformance(filteredInteractions, S["Channel"].Value, interaction => interaction.Channel.ToString()),
             EnterpriseInteractionReportKind.DirectionPerformance => BuildDimensionPerformance(filteredInteractions, S["Direction"].Value, interaction => interaction.Direction.ToString()),
             EnterpriseInteractionReportKind.ProviderPerformance => BuildDimensionPerformance(filteredInteractions, S["Provider"].Value, interaction => DisplayOrUnknown(interaction.ProviderName)),
-            EnterpriseInteractionReportKind.OutcomePerformance => BuildDimensionPerformance(filteredInteractions, S["Outcome"].Value, interaction => interaction.Status.ToString()),
+            EnterpriseInteractionReportKind.OutcomePerformance => BuildDimensionPerformance(filteredInteractions, S["Outcome"].Value, interaction => _outcomes.Classify(interaction).ToString()),
             EnterpriseInteractionReportKind.InteractionDetail => BuildInteractionDetail(filteredInteractions),
             EnterpriseInteractionReportKind.TransferAnalysis => BuildTransferAnalysis(filteredInteractions),
             EnterpriseInteractionReportKind.RecordingCoverage => BuildRecordingCoverage(filteredInteractions),
             EnterpriseInteractionReportKind.QueueServiceLevel => BuildQueueServiceLevel(inboundQueueInteractions, queues),
-            EnterpriseInteractionReportKind.QueueAbandonment => BuildQueueAbandonment(inboundQueueInteractions, queues),
+            EnterpriseInteractionReportKind.QueueAbandonment => QueueAbandonmentReport.Build(inboundQueueInteractions, _outcomes, queueId => ResolveQueueName(queueId, queues), S),
             EnterpriseInteractionReportKind.AgentHandleTime => BuildAgentHandleTime(filteredInteractions),
             EnterpriseInteractionReportKind.WrapUpPerformance => BuildWrapUpPerformance(filteredInteractions),
             EnterpriseInteractionReportKind.HourOfDayPerformance => BuildTimeDimensionPerformance(filteredInteractions, S["Hour (UTC)"].Value, interaction => interaction.CreatedUtc.Hour.ToString("00", CultureInfo.InvariantCulture)),
@@ -168,8 +173,8 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             EnterpriseInteractionReportKind.ChannelUsageBilling => BuildUsageReport(filteredInteractions, S["Channel"].Value, interaction => interaction.Channel.ToString()),
             EnterpriseInteractionReportKind.DailyUsageBilling => BuildUsageReport(filteredInteractions, S["Date (UTC)"].Value, interaction => interaction.CreatedUtc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)),
             EnterpriseInteractionReportKind.LongInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => GetTalkSeconds(interaction) >= 900d), S["Long interactions (15+ minutes)"].Value),
-            EnterpriseInteractionReportKind.FailedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => interaction.Status == InteractionStatus.Failed), S["Failed interactions"].Value),
-            EnterpriseInteractionReportKind.AbandonedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(IsAbandoned), S["Abandoned interactions"].Value),
+            EnterpriseInteractionReportKind.FailedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(_outcomes.IsFailed), S["Failed interactions"].Value),
+            EnterpriseInteractionReportKind.AbandonedInteractionDetail => BuildExceptionDetail(filteredInteractions.Where(_outcomes.IsAbandoned), S["Abandoned interactions"].Value),
             EnterpriseInteractionReportKind.HighWaitDetail => BuildExceptionDetail(filteredInteractions.Where(interaction => GetWaitSeconds(interaction) >= 60d), S["High-wait interactions (60+ seconds)"].Value),
             EnterpriseInteractionReportKind.LifecycleDuration => BuildLifecycleDuration(filteredInteractions),
             EnterpriseInteractionReportKind.CallLegPerformance => await BuildCallLegPerformanceAsync(filteredInteractions, context, cancellationToken),
@@ -213,7 +218,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
         IReadOnlyList<Interaction> interactions,
         Dictionary<string, ActivityQueue> queues)
     {
-        var totals = Aggregate(interactions);
+        var totals = Aggregate(interactions, _outcomes);
 
         ReportMetric[] metrics =
         [
@@ -221,6 +226,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             new ReportMetric(S["Inbound offered"].Value, ReportFormat.Number(totals.InboundOffered)),
             new ReportMetric(S["Inbound answered"].Value, ReportFormat.Number(totals.InboundAnswered), ReportFormat.Percent(totals.InboundAnswerRate)),
             new ReportMetric(S["Abandoned"].Value, ReportFormat.Number(totals.Abandoned), ReportFormat.Percent(totals.AbandonmentRate)),
+            new ReportMetric(S["Voicemail"].Value, ReportFormat.Number(totals.Voicemail)),
             new ReportMetric(S["Failed"].Value, ReportFormat.Number(totals.Failed)),
             new ReportMetric(S["Avg speed of answer"].Value, ReportFormat.Duration(totals.AverageSpeedOfAnswerSeconds)),
             new ReportMetric(S["Avg handle time"].Value, ReportFormat.Duration(totals.AverageHandleTimeSeconds)),
@@ -248,7 +254,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .Select(group => new
             {
                 Date = group.Key,
-                Metrics = Aggregate(group),
+                Metrics = Aggregate(group, _outcomes),
             })
             .ToArray();
 
@@ -304,7 +310,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .Select(group =>
             {
                 queues.TryGetValue(group.Key, out var queue);
-                var metrics = CalculateQueueServiceLevel(group, queue?.SlaThresholdSeconds ?? 0);
+                var metrics = CalculateQueueServiceLevel(group, queue?.SlaThresholdSeconds ?? 0, _outcomes);
 
                 return new
                 {
@@ -391,7 +397,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .GroupBy(interaction => DateOnly.FromDateTime(interaction.CreatedUtc))
             .OrderBy(group => group.Key))
         {
-            var metrics = Aggregate(group);
+            var metrics = Aggregate(group, _outcomes);
             var cells = new List<string>
             {
                 group.Key.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
@@ -415,7 +421,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             rows.Add(new ReportRow(cells));
         }
 
-        var totals = Aggregate(interactions);
+        var totals = Aggregate(interactions, _outcomes);
         var totalCells = new List<string>
         {
             S["All dates"].Value,
@@ -474,14 +480,14 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
         var grouped = groups.ToArray();
         var rows = grouped
-            .Select(group => new { Label = group.Key, Metrics = Aggregate(group) })
+            .Select(group => new { Label = group.Key, Metrics = Aggregate(group, _outcomes) })
             .OrderByDescending(entry => entry.Metrics.Total)
             .Select(entry => CreatePerformanceRow(entry.Label, entry.Metrics, ReportRowKind.Detail))
             .ToList();
 
         rows.Add(CreatePerformanceRow(
             S["Grand total"].Value,
-            Aggregate(grouped.SelectMany(group => group)),
+            Aggregate(grouped.SelectMany(group => group), _outcomes),
             ReportRowKind.GrandTotal));
 
         return ReportSection.ForTable(title, columns, rows);
@@ -681,7 +687,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             {
                 queues.TryGetValue(group.Key, out var queue);
                 var threshold = queue?.SlaThresholdSeconds ?? 0;
-                var metrics = CalculateQueueServiceLevel(group, threshold);
+                var metrics = CalculateQueueServiceLevel(group, threshold, _outcomes);
 
                 return new
                 {
@@ -703,7 +709,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .Select(entry => entry.Row)
             .ToList();
 
-        var totals = CalculateCombinedQueueServiceLevel(interactions, queues);
+        var totals = CalculateCombinedQueueServiceLevel(interactions, queues, _outcomes);
         rows.Add(new ReportRow(
         [
             S["Grand total"].Value,
@@ -716,68 +722,6 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
 
         return new ReportDocument()
             .Add(ReportSection.ForTable(S["Queue service level"].Value, columns, rows));
-    }
-
-    private ReportDocument BuildQueueAbandonment(
-        IReadOnlyList<Interaction> interactions,
-        Dictionary<string, ActivityQueue> queues)
-    {
-        var columns = new[]
-        {
-            new ReportColumn(S["Queue"].Value),
-            new ReportColumn(S["Offered"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Answered"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Abandoned"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Abandonment rate"].Value, ReportColumnAlign.End),
-            new ReportColumn(S["Avg wait before abandon"].Value, ReportColumnAlign.End),
-        };
-
-        var offeredInteractions = interactions.Where(IsInboundOffered).ToArray();
-        var rows = offeredInteractions
-            .GroupBy(interaction => interaction.QueueId ?? string.Empty, StringComparer.Ordinal)
-            .Select(group =>
-            {
-                queues.TryGetValue(group.Key, out var queue);
-                var offered = group.LongCount();
-                var answered = group.LongCount(interaction => interaction.AnsweredUtc.HasValue);
-                var abandoned = group.Where(IsAbandoned).ToArray();
-
-                var abandonmentRate = offered > 0 ? (double)abandoned.LongLength / offered : 0d;
-
-                return new
-                {
-                    AbandonmentRate = abandonmentRate,
-                    Row = new ReportRow(
-                    [
-                        ResolveQueueName(group.Key, queues),
-                        ReportFormat.Number(offered),
-                        ReportFormat.Number(answered),
-                        ReportFormat.Number(abandoned.LongLength),
-                        ReportFormat.Percent(abandonmentRate),
-                        ReportFormat.Duration(abandoned.Length > 0 ? abandoned.Average(GetWaitUntilEndSeconds) : 0d),
-                    ]),
-                };
-            })
-            .OrderByDescending(entry => entry.AbandonmentRate)
-            .Select(entry => entry.Row)
-            .ToList();
-
-        var answeredTotal = offeredInteractions.LongCount(interaction => interaction.AnsweredUtc.HasValue);
-        var abandonedTotal = offeredInteractions.Where(IsAbandoned).ToArray();
-        rows.Add(new ReportRow(
-        [
-            S["Grand total"].Value,
-            ReportFormat.Number(offeredInteractions.LongLength),
-            ReportFormat.Number(answeredTotal),
-            ReportFormat.Number(abandonedTotal.LongLength),
-            ReportFormat.Percent(offeredInteractions.Length > 0
-                ? (double)abandonedTotal.LongLength / offeredInteractions.LongLength
-                : 0d),
-            ReportFormat.Duration(abandonedTotal.Length > 0 ? abandonedTotal.Average(GetWaitUntilEndSeconds) : 0d),
-        ], ReportRowKind.GrandTotal));
-
-        return new ReportDocument()
-            .Add(ReportSection.ForTable(S["Queue abandonment"].Value, columns, rows));
     }
 
     private ReportDocument BuildAgentHandleTime(IReadOnlyList<Interaction> interactions)
@@ -1051,7 +995,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .GroupBy(interaction => interaction.AgentId, StringComparer.Ordinal)
             .Select(group =>
             {
-                var metrics = Aggregate(group);
+                var metrics = Aggregate(group, _outcomes);
                 var transfers = group.Sum(interaction => interaction.TransferHistory.Count);
                 var answeredVoice = group.LongCount(interaction => interaction.Channel == InteractionChannel.Voice && interaction.AnsweredUtc.HasValue);
                 var recorded = group.LongCount(interaction =>
@@ -1086,7 +1030,7 @@ internal sealed class EnterpriseInteractionReportProvider : IReport, IReportFilt
             .Select(entry => entry.Row)
             .ToList();
 
-        var totals = Aggregate(population);
+        var totals = Aggregate(population, _outcomes);
         var totalTransfers = population.Sum(interaction => interaction.TransferHistory.Count);
         var totalAnsweredVoice = population.LongCount(interaction =>
             interaction.Channel == InteractionChannel.Voice &&

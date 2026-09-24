@@ -14,6 +14,8 @@ internal sealed class InteractionMetrics
 
     public long Failed { get; set; }
 
+    public long Voicemail { get; set; }
+
     public long Handled { get; set; }
 
     public long Transferred { get; set; }

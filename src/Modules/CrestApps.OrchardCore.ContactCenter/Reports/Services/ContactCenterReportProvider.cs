@@ -82,6 +82,7 @@ internal sealed class ContactCenterReportProvider : IReportProvider
         {
             yield return new EnterpriseInteractionReportProvider(
                 _session,
+                _eventStore,
                 _queueManager,
                 _agentManager,
                 definition,

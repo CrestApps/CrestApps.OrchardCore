@@ -1649,6 +1649,15 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public static bool CanTransition(CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus from, CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus to) { }
         public static bool IsSettled(CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status) { }
     }
+    public enum InteractionOutcome
+    {
+        InProgress = 0,
+        Answered = 1,
+        Abandoned = 2,
+        Voicemail = 3,
+        Failed = 4,
+        NotConnected = 5,
+    }
     public sealed class InteractionParticipant
     {
         public InteractionParticipant() { }
@@ -2344,6 +2353,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports
         public double AverageHandleTimeSeconds { get; set; }
         public double AverageSpeedOfAnswerSeconds { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCount> ByChannel { get; set; }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCount> ByOutcome { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCount> ByStatus { get; set; }
         public System.Collections.Generic.IList<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.CallInsightsDailyPoint> Daily { get; set; }
         public long Failed { get; set; }
@@ -2354,6 +2364,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models.Reports
         public long Total { get; set; }
         public double TotalTalkTimeSeconds { get; set; }
         public double TotalWrapUpTimeSeconds { get; set; }
+        public long Voicemail { get; set; }
     }
     public sealed class CampaignGroupSummaryRow
     {
@@ -3046,7 +3057,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ContactCenterReportingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterReportingService
     {
-        public ContactCenterReportingService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueGroupManager queueGroupManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterReportingOptions> reportingOptions) { }
+        public ContactCenterReportingService(YesSql.ISession session, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueGroupManager queueGroupManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager queueManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaign> campaignManager, CrestApps.Core.Services.ICatalogManager<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelCampaignGroup> campaignGroupManager, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.ContactCenter.Core.Models.ContactCenterReportingOptions> reportingOptions, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.AgentProductivityReport> GetAgentProductivityAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.AgentProductivityReport> GetAgentProductivityAsync(System.DateTime fromUtc, System.DateTime toUtc, CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.ContactCenterReportCriteria criteria, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.Reports.CallInsightsReport> GetCallInsightsAsync(System.DateTime fromUtc, System.DateTime toUtc, System.Threading.CancellationToken cancellationToken = default) { }
@@ -4161,6 +4172,20 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetPendingWrapUpsByAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> GetRecentByAgentAsync(string agentId, int take, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.Core.Models.PageResult<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction>> PageByStatusAsync(int page, int pageSize, CrestApps.OrchardCore.ContactCenter.Models.InteractionStatus status, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class InteractionOutcomeClassifier
+    {
+        public static System.Collections.Generic.IReadOnlyList<string> EvidenceEventTypes { get; }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.InteractionOutcomeClassifier WithoutEvents { get; }
+        public CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionOutcome Classify(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public double GetWaitBeforeAbandonSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public double GetWaitBeforeVoicemailSeconds(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public bool IsAbandoned(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public bool IsAnswered(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public bool IsFailed(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public bool IsVoicemail(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction) { }
+        public static CrestApps.OrchardCore.ContactCenter.Core.Services.InteractionOutcomeClassifier FromEvents(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.InteractionEvent> events) { }
+        public static System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Services.InteractionOutcomeClassifier> LoadAsync(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionEventStore eventStore, System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction> interactions, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public static class InteractionQueries
     {
