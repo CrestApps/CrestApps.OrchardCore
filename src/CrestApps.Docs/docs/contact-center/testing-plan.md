@@ -83,6 +83,17 @@ defect crossed a seam, the test has to cross it too.
 | Repeated poor calls raise an alert | Verified | three poor summaries sent through the soft phone's reporting path were each stored against the agent; the third published one `CallQualityAlertRaised`, and a supervisor connection received it live, naming packet loss as the likely cause |
 | A live session's stream ends cleanly | Verified | after both fixes the stream ended with `streaming.stopped` and no `streaming.failed`, on a handoff and on a voicemail. Before them, every session ended in `streaming.failed` with reason `disconnected`, because cancelling a pending WebSocket receive aborted the socket before `streaming_stop` was sent |
 | Voicemail on a live session, waiting for the greeting | Verified | the provider reported the greeting's end and the session's stream opened 0.07 seconds later; one short message was left after the greeting, the call hung up, and it was concluded as No Answer |
+| The assistant leaving the call at a handoff | Verified | on the realtime path the session closed at the handoff and nothing more was spoken or heard; on the turn-based path, before the fix, the assistant kept transcribing and speaking over the bridged agent and asked to transfer a second time |
+| Talking over the assistant | Verified | the caller cut in five times; each time the speech still queued at the provider was cleared (up to 4.6 seconds of it), the model's line was cut back to what had been heard, and the assistant answered the caller instead of finishing the old sentence |
+| The assistant's own echo | Verified | 41.6 seconds of line echo were held back while the assistant spoke, the loudest far below the barge-in level, and the assistant never cut itself off |
+| The agent hanging up first | Verified | the soft phone hung up the call, the customer's leg was released, and wrap-up started at the same instant |
+| Hanging up while on hold | Verified | the hold closed at the hangup, and talk plus hold added up to the connected time |
+| Wrap-up after a hangup | Verified | recorded 0.33 seconds after the hangup; before the fix the two legs' hangups deadlocked and it took 30.5 seconds |
+| The agent's header and number field | Verified | the header read Reserved, On a call, Wrap-up and Break pending with the reason; the number field showed the customer, never the tenant's own number |
+| A break asked for during wrap-up | Verified | the break started with its chosen reason the moment the activity was completed |
+| Opening the offered activity | Verified | Answer and open activity went straight to that activity's notes and disposition |
+| One record per call | Verified | a handed-off call is stored as one interaction; the 50 pairs saved twice before the fix were merged on upgrade |
+| Presence after a server restart | Verified | the agent's workspace reconnected by itself and routing saw the agent again without a reload |
 
 ## Still to be proven on a live call
 
