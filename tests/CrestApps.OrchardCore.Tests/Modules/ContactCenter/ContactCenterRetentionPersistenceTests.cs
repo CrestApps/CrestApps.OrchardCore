@@ -605,7 +605,7 @@ public sealed class ContactCenterRetentionPersistenceTests
             SchemaBuilder = schemaBuilder,
         };
 
-        var interactionMigration = new InteractionIndexMigrations
+        var interactionMigration = new InteractionIndexMigrations(store)
         {
             SchemaBuilder = schemaBuilder,
         };

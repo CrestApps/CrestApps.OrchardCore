@@ -22,26 +22,34 @@ public sealed class InteractionIndexProvider : IndexProvider<Interaction>
     {
         context
             .For<InteractionIndex>()
-            .Map(interaction => new InteractionIndex
-            {
-                ItemId = interaction.ItemId,
-                Channel = interaction.Channel,
-                Direction = interaction.Direction,
-                Status = interaction.Status,
-                ActivityItemId = interaction.ActivityItemId,
-                ProviderName = interaction.ProviderName,
-                ProviderInteractionId = interaction.ProviderInteractionId,
-                ProviderLegId = interaction.ProviderLegId,
-                QueueId = interaction.QueueId,
-                AgentId = interaction.AgentId,
-                CorrelationId = interaction.CorrelationId,
-                CreatedUtc = interaction.CreatedUtc,
-                EndedUtc = interaction.EndedUtc,
-                WrapUpStartedUtc = interaction.WrapUpStartedUtc,
-                WrapUpCompletedUtc = interaction.WrapUpCompletedUtc,
-                RecordingLegalHold = interaction.RecordingLegalHold,
-                RecordingState = interaction.RecordingState,
-                RecordingPausedUtc = interaction.RecordingPausedUtc,
-            });
+            .Map(ToIndex);
     }
+
+    /// <summary>
+    /// Builds the index row an interaction is stored under.
+    /// </summary>
+    /// <param name="interaction">The interaction.</param>
+    /// <returns>The index row.</returns>
+    internal static InteractionIndex ToIndex(Interaction interaction)
+        => new()
+        {
+            ItemId = interaction.ItemId,
+            Channel = interaction.Channel,
+            Direction = interaction.Direction,
+            Status = interaction.Status,
+            ActivityItemId = interaction.ActivityItemId,
+            ProviderName = interaction.ProviderName,
+            ProviderInteractionId = interaction.ProviderInteractionId,
+            ProviderLegId = interaction.ProviderLegId,
+            QueueId = interaction.QueueId,
+            AgentId = interaction.AgentId,
+            CorrelationId = interaction.CorrelationId,
+            CreatedUtc = interaction.CreatedUtc,
+            EndedUtc = interaction.EndedUtc,
+            WrapUpStartedUtc = interaction.WrapUpStartedUtc,
+            WrapUpCompletedUtc = interaction.WrapUpCompletedUtc,
+            RecordingLegalHold = interaction.RecordingLegalHold,
+            RecordingState = interaction.RecordingState,
+            RecordingPausedUtc = interaction.RecordingPausedUtc,
+        };
 }

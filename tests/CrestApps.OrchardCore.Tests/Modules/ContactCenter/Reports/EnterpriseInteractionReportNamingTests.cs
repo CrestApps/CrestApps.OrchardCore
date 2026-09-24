@@ -164,7 +164,7 @@ public sealed class EnterpriseInteractionReportNamingTests
         await using (var migrationSession = store.CreateSession())
         {
             var transaction = await migrationSession.BeginTransactionAsync(cancellationToken);
-            await InteractionQueryPlanFixture.MigrateAsync(store.Configuration, transaction);
+            await InteractionQueryPlanFixture.MigrateAsync(store, transaction);
             await transaction.CommitAsync(cancellationToken);
         }
 

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Indexes;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony.Models;
 using OrchardCore.Data.Migration;
+using YesSql;
 using YesSql.Sql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Migrations;
@@ -11,6 +12,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Migrations;
 /// </summary>
 internal sealed class InteractionIndexMigrations : DataMigration
 {
+    private readonly IStore _store;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InteractionIndexMigrations"/> class.
+    /// </summary>
+    /// <param name="store">The store, for its table naming and content serializer.</param>
+    public InteractionIndexMigrations(IStore store)
+    {
+        _store = store;
+    }
+
     /// <summary>
     /// Creates the interaction index table and its supporting indexes.
     /// </summary>
@@ -152,5 +164,31 @@ internal sealed class InteractionIndexMigrations : DataMigration
             collection: ContactCenterStorage.CollectionName);
 
         return 6;
+    }
+
+    /// <summary>
+    /// Merges the interactions an earlier defect stored twice, then makes a second document with the same id
+    /// impossible.
+    /// </summary>
+    /// <remarks>
+    /// Accepting an offer used to commit the unit of work part-way through and store the interaction again as a new
+    /// document, so most accepted calls exist as two documents that each hold part of the call. They are merged
+    /// first, on this step's own transaction, because the unique index cannot be created while they exist. A tenant
+    /// without copies, including a new one, only runs the probe and creates the index. If anything fails the step
+    /// rolls back as a whole and runs again on the next start.
+    /// </remarks>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom6Async()
+    {
+        await InteractionDuplicateRepair.MergeDuplicatesAsync(SchemaBuilder, _store);
+
+        await ContactCenterMigrationSql.CreateUniqueIndexAsync(
+            SchemaBuilder,
+            _store,
+            typeof(InteractionIndex),
+            "UQ_InteractionIndex_ItemId",
+            "ItemId");
+
+        return 7;
     }
 }

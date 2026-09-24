@@ -256,7 +256,7 @@ public sealed class RecordingErasurePersistenceTests
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
         var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
 
-        var interactionMigration = new InteractionIndexMigrations
+        var interactionMigration = new InteractionIndexMigrations(store)
         {
             SchemaBuilder = schemaBuilder,
         };

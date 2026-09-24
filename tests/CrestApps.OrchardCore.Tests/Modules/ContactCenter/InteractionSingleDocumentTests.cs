@@ -435,7 +435,8 @@ public sealed class InteractionSingleDocumentTests
         await using (var migrationSession = store.CreateSession())
         {
             var transaction = await migrationSession.BeginTransactionAsync(cancellationToken);
-            await InteractionQueryPlanFixture.MigrateAsync(store.Configuration, transaction);
+            // The schema stops before the item id is made unique, so the copies an earlier defect left can be seeded.
+            await InteractionQueryPlanFixture.MigrateAsync(store, transaction, throughItemIdUniqueness: false);
             await transaction.CommitAsync(cancellationToken);
         }
 

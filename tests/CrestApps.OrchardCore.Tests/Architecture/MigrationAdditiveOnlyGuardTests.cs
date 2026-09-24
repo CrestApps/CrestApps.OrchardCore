@@ -514,6 +514,26 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "2.0.0",
             null,
             "Timestamp of the chat opt-out, shipped in stable 2.0.0 and dropped in 3.0.0 alongside the column it dates. It records when a preference no channel can act on was taken, and no released version read it, so a customer upgrading from 2.0.0 loses nothing; the original timestamp survives in the contact's own document because only the projection is dropped."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/InteractionDuplicateRepair.cs",
+            "InteractionDuplicateRepair",
+            "DeleteIndexRowAsync",
+            "raw SQL",
+            "delete",
+            MigrationContractJustification.ReviewedAdditive,
+            "3.0.0",
+            null,
+            "A row-level repair, not a schema change: it removes the index row of an interaction document that an earlier defect stored a second time, and only after that copy's content has been merged into the document kept for the same interaction in this same step. No table, column or index is removed, and every interaction keeps exactly one document and one index row."),
+        new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/InteractionDuplicateRepair.cs",
+            "InteractionDuplicateRepair",
+            "DeleteDocumentAsync",
+            "raw SQL",
+            "delete",
+            MigrationContractJustification.ReviewedAdditive,
+            "3.0.0",
+            null,
+            "A row-level repair, not a schema change: it removes an interaction document that an earlier defect stored a second time, and only after its content has been merged into the document kept for the same interaction in this same step. No table, column or index is removed, and every interaction keeps exactly one document holding what both copies recorded."),
     ];
 
     private static readonly ReviewedDynamicSqlEntry[] _reviewedDynamicSqlSites =
@@ -536,6 +556,12 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "CreateUniqueIndexAsync",
             "4179923c87cc7344",
             "Builds a CREATE UNIQUE INDEX statement from the dialect, table prefix, index name, and column names. The statement is additive by construction: it only ever creates an index and never drops or alters an existing object."),
+        new ReviewedDynamicSqlEntry(
+            "src/Modules/CrestApps.OrchardCore.ContactCenter/Migrations/InteractionDuplicateRepair.cs",
+            "InteractionDuplicateRepair",
+            "CreateCommand",
+            "ac3e01a635593982",
+            "Command factory for the duplicate-interaction repair whose statement arrives as a parameter. It adds nothing to the text it is given, and every caller in the same type passes a literal SELECT, UPDATE or DELETE of rows; the two deletes are authorized in the contract register, and none of the statements creates, alters or drops a schema object."),
         new ReviewedDynamicSqlEntry(
             "src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Migrations/OmnichannelIndexMigration.cs",
             "OmnichannelIndexMigration",

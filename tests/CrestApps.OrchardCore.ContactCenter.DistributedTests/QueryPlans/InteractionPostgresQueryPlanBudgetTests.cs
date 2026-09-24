@@ -44,7 +44,7 @@ public sealed class InteractionPostgresQueryPlanBudgetTests
             await using (var seedSession = store.CreateSession())
             {
                 var seedTransaction = await seedSession.BeginTransactionAsync(cancellationToken);
-                await MigrateAsync(store.Configuration, seedTransaction);
+                await MigrateAsync(store, seedTransaction);
                 await SeedAsync(store.Configuration, seedTransaction, cancellationToken);
                 await seedTransaction.CommitAsync(cancellationToken);
             }
@@ -103,7 +103,7 @@ public sealed class InteractionPostgresQueryPlanBudgetTests
             await using (var schemaSession = store.CreateSession())
             {
                 var schemaTransaction = await schemaSession.BeginTransactionAsync(cancellationToken);
-                await MigrateAsync(store.Configuration, schemaTransaction);
+                await MigrateAsync(store, schemaTransaction);
                 await schemaTransaction.CommitAsync(cancellationToken);
             }
 
@@ -178,13 +178,13 @@ public sealed class InteractionPostgresQueryPlanBudgetTests
     private static string TableName(IConfiguration configuration)
         => configuration.TableNameConvention.GetIndexTable(typeof(InteractionIndex), ContactCenterStorage.CollectionName);
 
-    private static async Task MigrateAsync(IConfiguration configuration, DbTransaction transaction)
+    private static async Task MigrateAsync(IStore store, DbTransaction transaction)
     {
         // The real migrations are what production runs, so the plan is measured against the schema the product
         // ships rather than a hand-written copy carrying indexes nobody deploys.
-        var migration = new InteractionIndexMigrations
+        var migration = new InteractionIndexMigrations(store)
         {
-            SchemaBuilder = new SchemaBuilder(configuration, transaction),
+            SchemaBuilder = new SchemaBuilder(store.Configuration, transaction),
         };
 
         await migration.CreateAsync();

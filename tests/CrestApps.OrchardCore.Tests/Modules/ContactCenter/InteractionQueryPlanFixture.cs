@@ -37,16 +37,18 @@ internal static class InteractionQueryPlanFixture
     /// against the schema the product ships: a hand-written copy of the table would prove a plan for indexes
     /// nobody deploys.
     /// </summary>
-    /// <param name="configuration">The YesSql configuration the schema builder writes through.</param>
+    /// <param name="store">The store the schema builder writes through.</param>
     /// <param name="transaction">The open transaction the migrations run on.</param>
-    public static async Task MigrateAsync(IConfiguration configuration, DbTransaction transaction)
+    /// <param name="throughItemIdUniqueness">Whether to run the step that merges duplicate interactions and makes
+    /// the item id unique. A test that has to seed the duplicates an earlier defect left behind stops before it.</param>
+    public static async Task MigrateAsync(IStore store, DbTransaction transaction, bool throughItemIdUniqueness = true)
     {
-        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(transaction);
 
-        var migration = new InteractionIndexMigrations
+        var migration = new InteractionIndexMigrations(store)
         {
-            SchemaBuilder = new SchemaBuilder(configuration, transaction),
+            SchemaBuilder = new SchemaBuilder(store.Configuration, transaction),
         };
 
         await migration.CreateAsync();
@@ -55,6 +57,11 @@ internal static class InteractionQueryPlanFixture
         await migration.UpdateFrom3Async();
         await migration.UpdateFrom4Async();
         await migration.UpdateFrom5Async();
+
+        if (throughItemIdUniqueness)
+        {
+            await migration.UpdateFrom6Async();
+        }
     }
 
     /// <summary>

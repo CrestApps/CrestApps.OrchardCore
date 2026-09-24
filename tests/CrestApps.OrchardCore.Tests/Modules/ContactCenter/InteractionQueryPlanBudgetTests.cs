@@ -43,7 +43,7 @@ public sealed class InteractionQueryPlanBudgetTests
             await using (var seedSession = store.CreateSession())
             {
                 var seedTransaction = await seedSession.BeginTransactionAsync(cancellationToken);
-                await InteractionQueryPlanFixture.MigrateAsync(store.Configuration, seedTransaction);
+                await InteractionQueryPlanFixture.MigrateAsync(store, seedTransaction);
                 await InteractionQueryPlanFixture.SeedAsync(store.Configuration, seedTransaction, cancellationToken);
 
                 await using (var analyze = seedTransaction.Connection.CreateCommand())
@@ -122,7 +122,7 @@ public sealed class InteractionQueryPlanBudgetTests
             await using (var seedSession = store.CreateSession())
             {
                 var seedTransaction = await seedSession.BeginTransactionAsync(cancellationToken);
-                await InteractionQueryPlanFixture.MigrateAsync(store.Configuration, seedTransaction);
+                await InteractionQueryPlanFixture.MigrateAsync(store, seedTransaction);
                 await InteractionQueryPlanFixture.SeedAsync(store.Configuration, seedTransaction, cancellationToken);
 
                 await using (var analyze = seedTransaction.Connection.CreateCommand())
