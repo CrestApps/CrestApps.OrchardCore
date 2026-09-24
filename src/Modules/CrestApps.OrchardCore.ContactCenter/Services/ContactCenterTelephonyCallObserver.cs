@@ -15,8 +15,10 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// phone is accounted for even when no queue was involved.
 /// </summary>
 /// <remarks>
-/// A call the Contact Center routed also appears in the agent's telephony history, keyed by its interaction, and
-/// is already recorded by its own call events; it is skipped here so it is not counted twice.
+/// A call the Contact Center routed also appears in the agent's telephony history and is already recorded by its own
+/// call events; it is skipped here so it is not counted twice. It reaches the history two ways: under the Contact
+/// Center interaction's own identifier, or -- when the offer rang the soft phone -- under a history identifier of its
+/// own with the provider's call id, which is the id the Contact Center tracks the caller by.
 /// </remarks>
 public sealed class ContactCenterTelephonyCallObserver : ITelephonyCallObserver
 {
@@ -63,8 +65,7 @@ public sealed class ContactCenterTelephonyCallObserver : ITelephonyCallObserver
 
         try
         {
-            if (!string.IsNullOrEmpty(interaction.InteractionId) &&
-                await _interactionManager.FindByIdAsync(interaction.InteractionId, cancellationToken) is not null)
+            if (await IsContactCenterCallAsync(interaction, cancellationToken))
             {
                 return;
             }
@@ -115,5 +116,24 @@ public sealed class ContactCenterTelephonyCallObserver : ITelephonyCallObserver
                 "The soft-phone call '{CallId}' could not be written to the Contact Center audit log.",
                 interaction.CallId.SanitizeLogValue());
         }
+    }
+
+    private async Task<bool> IsContactCenterCallAsync(TelephonyInteraction interaction, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(interaction.InteractionId) &&
+            await _interactionManager.FindByIdAsync(interaction.InteractionId, cancellationToken) is not null)
+        {
+            return true;
+        }
+
+        // The ring pushed to the soft phone for an offer records the call under a fresh history identifier, so the
+        // check above never matches it: an offered queue call, or one handed over by an AI agent, would be counted a
+        // second time as an extension call. Its call id is the caller's provider call id, which the Contact Center
+        // interaction carries. An extension call is placed on a leg of its own and never matches.
+        var providerCallInteraction = string.IsNullOrEmpty(interaction.ProviderName)
+            ? await _interactionManager.FindByProviderInteractionIdAsync(interaction.CallId, cancellationToken)
+            : await _interactionManager.FindByProviderInteractionIdAsync(interaction.ProviderName, interaction.CallId, cancellationToken);
+
+        return providerCallInteraction is not null;
     }
 }

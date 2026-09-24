@@ -229,4 +229,80 @@ public sealed class ContactCenterCallAuditTests
         // Assert
         Assert.Empty(recorder.Calls);
     }
+
+    [Fact]
+    public async Task TelephonyCallObserver_SkipsTheRingOfAnOfferedCall_WhichTheHistoryRecordsUnderItsOwnIdentifier()
+    {
+        // Arrange
+        // Ringing an offer on the soft phone records the call in the agent's history under a fresh identifier,
+        // keyed by the caller's provider call id. An AI handoff answered on a pre-dialed leg was written to the
+        // audit log a second time, as an extension call running for the whole conversation.
+        var recorder = new RecordingContactCenterAuditRecorder();
+        var interactionManager = new Mock<IInteractionManager>();
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Telnyx", "caller-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Interaction { ItemId = "i1", ProviderName = "Telnyx", ProviderInteractionId = "caller-1" });
+        var observer = new ContactCenterTelephonyCallObserver(
+            interactionManager.Object,
+            new Mock<IAgentProfileManager>().Object,
+            new Lazy<IContactCenterAuditRecorder>(recorder),
+            NullLogger<ContactCenterTelephonyCallObserver>.Instance);
+        var call = new TelephonyInteraction
+        {
+            InteractionId = "telephony-9",
+            CallId = "caller-1",
+            ProviderName = "Telnyx",
+            UserId = "user-1",
+            Direction = CallDirection.Inbound,
+            Outcome = CallOutcome.InProgress,
+            StartedUtc = _now,
+        };
+
+        // Act
+        await observer.CallStartedAsync(call, TestContext.Current.CancellationToken);
+        call.Outcome = CallOutcome.Completed;
+        call.EndedUtc = _now.AddSeconds(55);
+        call.DurationSeconds = 55;
+        await observer.CallEndedAsync(call, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(recorder.Calls);
+    }
+
+    [Fact]
+    public async Task TelephonyCallObserver_StillRecordsAnExtensionCall_WhoseCallTheContactCenterDoesNotTrack()
+    {
+        // Arrange
+        var recorder = new RecordingContactCenterAuditRecorder();
+        var interactionManager = new Mock<IInteractionManager>(MockBehavior.Strict);
+        interactionManager
+            .Setup(manager => manager.FindByIdAsync("telephony-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+        interactionManager
+            .Setup(manager => manager.FindByProviderInteractionIdAsync("Telnyx", "extension-leg-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Interaction)null);
+        var observer = new ContactCenterTelephonyCallObserver(
+            interactionManager.Object,
+            new Mock<IAgentProfileManager>().Object,
+            new Lazy<IContactCenterAuditRecorder>(recorder),
+            NullLogger<ContactCenterTelephonyCallObserver>.Instance);
+
+        // Act
+        await observer.CallStartedAsync(new TelephonyInteraction
+        {
+            InteractionId = "telephony-2",
+            CallId = "extension-leg-1",
+            ProviderName = "Telnyx",
+            UserId = "user-1",
+            Direction = CallDirection.Outbound,
+            IsExtension = true,
+            ExtensionNumber = "204",
+            StartedUtc = _now,
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        var recorded = Assert.Single(recorder.Calls);
+        Assert.Equal(ContactCenterConstants.Events.ExtensionCallStarted, recorded.EventType);
+        Assert.Equal("extension-leg-1", recorded.Data.ProviderCallId);
+    }
 }
