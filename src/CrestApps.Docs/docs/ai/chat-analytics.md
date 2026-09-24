@@ -301,6 +301,9 @@ Token usage data is captured from AI completion responses when available. The am
 - **OpenAI**: Reports token usage for non-streaming completions
 - **Ollama**: Token reporting may vary by model
 
+Provider usage across every completion, and the talk time of automated voice calls, is reported on the
+[AI Usage Analytics](./usage-analytics.md) page.
+
 ---
 
 ## Extending Analytics

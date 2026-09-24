@@ -234,5 +234,6 @@ Realtime turns are dispatched through `IRealtimeOrchestrator` rather than the st
 
 ## Related
 
+- [AI Usage Analytics](usage-analytics.md) — talk time, silence, barge-ins and outcomes of automated voice calls held by a realtime session.
 - [Model Capabilities](model-capabilities.md) — declaring the `realtime` feature on a deployment.
 - [AI Chat](chat.md) and [AI Chat Interactions](chat-interactions.md) — the two chat surfaces that support realtime.

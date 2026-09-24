@@ -19,6 +19,7 @@ const sidebars = {
                 'ai/overview',
                 'ai/chat',
                 'ai/chat-analytics',
+                'ai/usage-analytics',
                 'ai/chat-interactions',
                 'ai/chat-notifications',
                 'ai/copilot',
