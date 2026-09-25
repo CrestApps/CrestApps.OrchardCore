@@ -86,6 +86,56 @@ public sealed class TransferAgentReleaseService : ITransferAgentReleaseService
     }
 
     /// <inheritdoc />
+    public async Task<bool> DetachCallerAsync(
+        Interaction interaction,
+        CallSession session,
+        string agentId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        // Only a leg the agent has of their own can take the caller with it when it is hung up.
+        if (session is null ||
+            !session.Legs.Any(leg => IsAgentsLiveLeg(session, leg, agentId)) ||
+            _voiceProviderResolver.Get(interaction.ProviderName) is not IContactCenterVoiceCallerParkProvider provider)
+        {
+            return true;
+        }
+
+        var callerId = !string.IsNullOrWhiteSpace(session.ProviderCallId)
+            ? session.ProviderCallId
+            : interaction.ProviderInteractionId;
+
+        if (string.IsNullOrWhiteSpace(callerId))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (await provider.ParkCallerAsync(callerId, cancellationToken))
+            {
+                return true;
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not take caller '{ProviderCallId}' out of the transferring agent's bridge.", callerId.SanitizeLogValue());
+        }
+
+        _logger.LogWarning(
+            "The caller on '{ProviderCallId}' is still joined to the transferring agent's leg, so the transfer is not made: hanging that leg up would drop them.",
+            callerId.SanitizeLogValue());
+
+        return false;
+    }
+
+    /// <inheritdoc />
     public async Task HangUpAsync(string providerName, IEnumerable<string> agentLegIds, CancellationToken cancellationToken = default)
     {
         if (agentLegIds is null ||

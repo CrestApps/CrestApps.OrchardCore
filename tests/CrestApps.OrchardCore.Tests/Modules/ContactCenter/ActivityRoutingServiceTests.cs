@@ -87,6 +87,56 @@ public sealed class ActivityRoutingServiceTests
         Assert.False(decision.Candidates.Single(candidate => candidate.Agent == longestIdleButBusyAgent).IsEligible);
     }
 
+    [Fact]
+    public async Task SelectAgentAsync_NeverPicksAnAgentTheItemExcludes_EvenWhenTheyAreTheStickyAgent()
+    {
+        // Arrange
+        // The agent who just transferred the call away is also the one the customer last worked with, and the one who
+        // has been idle longest: every preference points back at them.
+        var service = new ActivityRoutingService(
+        [
+            new StickyAgentRoutingStrategy(),
+            new LongestIdleRoutingStrategy(),
+        ]);
+        var queue = new ActivityQueue { ItemId = "q1", PreferStickyAgent = true };
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1", StickyAgentUserId = "u1", ExcludedAgentIds = ["a1"] };
+        var transferringAgent = new AgentProfile { ItemId = "a1", UserId = "u1", PresenceChangedUtc = new DateTime(2026, 1, 1) };
+        var otherAgent = new AgentProfile { ItemId = "a2", UserId = "u2", PresenceChangedUtc = new DateTime(2026, 1, 2) };
+
+        // Act
+        var decision = await service.SelectAgentAsync(
+            queue,
+            item,
+            [Availability(transferringAgent), Availability(otherAgent)],
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(decision.Succeeded);
+        Assert.Same(otherAgent, decision.Agent);
+        Assert.False(decision.Candidates.Single(candidate => candidate.Agent == transferringAgent).IsEligible);
+    }
+
+    [Fact]
+    public async Task SelectAgentAsync_WhenTheOnlyAvailableAgentIsExcluded_AssignsNobody()
+    {
+        // Arrange
+        var service = CreateService();
+        var queue = new ActivityQueue { ItemId = "q1" };
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1", ExcludedAgentIds = ["a1"] };
+        var transferringAgent = new AgentProfile { ItemId = "a1", UserId = "u1" };
+
+        // Act
+        var decision = await service.SelectAgentAsync(
+            queue,
+            item,
+            [Availability(transferringAgent)],
+            TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(decision.Succeeded);
+        Assert.Null(decision.Agent);
+    }
+
     private static ActivityRoutingService CreateService()
     {
         return new ActivityRoutingService(

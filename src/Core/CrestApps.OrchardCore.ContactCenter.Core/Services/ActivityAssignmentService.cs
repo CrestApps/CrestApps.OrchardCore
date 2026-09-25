@@ -212,6 +212,20 @@ public sealed class ActivityAssignmentService : IActivityAssignmentService
             return null;
         }
 
+        // The same rule routing applies: the agent who transferred the call into this queue is not offered it back.
+        if (ActivityRoutingService.IsExcluded(queueItem, agentId))
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Skipped a direct offer of Contact Center queue item '{QueueItemId}' to agent '{AgentId}', who transferred it away.",
+                    queueItem.ItemId.SanitizeLogValue(),
+                    agentId.SanitizeLogValue());
+            }
+
+            return null;
+        }
+
         // The availability service returns null when the named agent cannot take the call. For a direct offer
         // that means not present/Available, no live session, or at capacity; for a queue offer it additionally
         // means not entitled to or signed into the queue.

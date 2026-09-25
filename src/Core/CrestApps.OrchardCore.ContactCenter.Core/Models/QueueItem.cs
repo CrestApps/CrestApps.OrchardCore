@@ -99,6 +99,12 @@ public sealed class QueueItem : CatalogItem, IModifiedUtcAwareModel
     public string StickyAgentUserId { get; set; }
 
     /// <summary>
+    /// Gets or sets the agents this item is never offered to, such as the agent who transferred the call into this
+    /// queue. Routing and direct offers both skip them; the item waits for somebody else rather than going back.
+    /// </summary>
+    public IList<string> ExcludedAgentIds { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the identifier of the queue this item overflowed from, when it was moved by overflow handling.
     /// </summary>
     public string OverflowedFromQueueId { get; set; }

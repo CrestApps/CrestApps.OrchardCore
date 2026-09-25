@@ -2,6 +2,7 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Handlers;
 using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -37,9 +38,12 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
     public const string SupportQueueId = "queue-support";
     public const string OwnNumber = "+15550001111";
 
-    private TransferIntegrationFixture(DialerModeIntegrationHarness harness)
+    private readonly IContactCenterVoiceProvider _providerOverride;
+
+    private TransferIntegrationFixture(DialerModeIntegrationHarness harness, IContactCenterVoiceProvider providerOverride)
     {
         Harness = harness;
+        _providerOverride = providerOverride;
     }
 
     public DialerModeIntegrationHarness Harness { get; }
@@ -60,6 +64,8 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
 
     public IContactCenterEventHandler CallEndedHandler { get; private set; }
 
+    public IContactCenterEventHandler OfferReconciliationHandler { get; private set; }
+
     public IContactCenterCallCommandService CallCommands { get; private set; }
 
     public IActivityReservationManager Reservations => Harness.Services.GetRequiredService<IActivityReservationManager>();
@@ -74,10 +80,11 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
     /// Creates the fixture: agent A on an answered, queue-routed call with their leg joined, and agent B signed in
     /// and Available.
     /// </summary>
-    public static async Task<TransferIntegrationFixture> CreateAsync()
+    /// <param name="provider">A real provider to run the transfer against instead of the recording fake.</param>
+    public static async Task<TransferIntegrationFixture> CreateAsync(IContactCenterVoiceProvider provider = null)
     {
         var harness = await DialerModeIntegrationHarness.CreateAsync();
-        var fixture = new TransferIntegrationFixture(harness);
+        var fixture = new TransferIntegrationFixture(harness, provider);
 
         await harness.SignInAgentAsync(AgentA, UserA);
         await harness.SeedQueuedActivityAsync(ActivityId, "+15557000001");
@@ -127,7 +134,7 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
 
     /// <summary>
     /// Feeds the customer's leg ending through provider truth, then delivers the resulting call-ended event to the
-    /// transfer handler the way the outbox would.
+    /// transfer handler and to the offer reconciliation the way the outbox would.
     /// </summary>
     public async Task CallerHangsUpAsync()
     {
@@ -136,6 +143,7 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
         foreach (var ended in Events.Where(e => e.EventType == ContactCenterConstants.Events.CallEnded).ToArray())
         {
             await CallEndedHandler.HandleAsync(ended, TestContext.Current.CancellationToken);
+            await OfferReconciliationHandler.HandleAsync(ended, TestContext.Current.CancellationToken);
         }
 
         await Harness.CommitAsync();
@@ -180,8 +188,9 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
             .ReturnsAsync(true);
 
         var providerResolver = new Mock<IContactCenterVoiceProviderResolver>();
-        providerResolver.Setup(resolver => resolver.Get(It.IsAny<string>())).Returns(Provider);
-        providerResolver.Setup(resolver => resolver.Get()).Returns(Provider);
+        var provider = _providerOverride ?? Provider;
+        providerResolver.Setup(resolver => resolver.Get(It.IsAny<string>())).Returns(provider);
+        providerResolver.Setup(resolver => resolver.Get()).Returns(provider);
 
         var availability = new HarnessAvailabilityService(Harness.AgentManager);
         var treatment = new QueueTreatmentService(
@@ -299,6 +308,11 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
             new Lazy<IAgentPresenceManager>(services.GetRequiredService<IAgentPresenceManager>),
             clock);
 
+        OfferReconciliationHandler = new ContactCenterVoiceOfferReconciliationHandler(
+            ActivatorUtilities.CreateInstance<ProviderVoiceOfferSynchronizationService>(
+                services,
+                new Lazy<IContactCenterAuditRecorder>(services.GetRequiredService<IContactCenterAuditRecorder>)));
+
         var preDial = new Mock<IAgentPreDialCoordinator>();
 
         CallCommands = ActivatorUtilities.CreateInstance<ContactCenterCallCommandService>(
@@ -361,14 +375,15 @@ internal sealed class TransferIntegrationFixture : IAsyncDisposable
 }
 
 /// <summary>
-/// The provider seam: a Contact Center voice provider that can transfer, consult and release agent legs, recording
-/// each command it was given.
+/// The provider seam: a Contact Center voice provider that can transfer, consult, park the caller and release agent
+/// legs, recording each command it was given.
 /// </summary>
 internal sealed class FakeTransferVoiceProvider :
     IContactCenterVoiceProvider,
     IContactCenterVoiceTransferProvider,
     IContactCenterVoiceAttendedTransferProvider,
-    IContactCenterVoiceAgentLegReleaseProvider
+    IContactCenterVoiceAgentLegReleaseProvider,
+    IContactCenterVoiceCallerParkProvider
 {
     public string TechnicalName => DialerModeIntegrationHarness.ProviderName;
 
@@ -388,7 +403,24 @@ internal sealed class FakeTransferVoiceProvider :
 
     public List<string> ReleasedAgentLegs { get; } = [];
 
+    public List<string> ParkedCallers { get; } = [];
+
+    /// <summary>
+    /// Gets every leg command in the order it was given: <c>park:{caller}</c> and <c>release:{agent leg}</c>.
+    /// </summary>
+    public List<string> LegCommands { get; } = [];
+
+    public bool ParkSucceeds { get; set; } = true;
+
     public string ConsultLegId { get; set; } = "consult-leg-1";
+
+    public Task<bool> ParkCallerAsync(string providerCallId, CancellationToken cancellationToken = default)
+    {
+        ParkedCallers.Add(providerCallId);
+        LegCommands.Add($"park:{providerCallId}");
+
+        return Task.FromResult(ParkSucceeds);
+    }
 
     public Task<ContactCenterVoiceProviderResult> TransferAsync(ContactCenterVoiceTransferRequest request, CancellationToken cancellationToken = default)
     {
@@ -421,6 +453,7 @@ internal sealed class FakeTransferVoiceProvider :
     public Task ReleaseAgentLegAsync(string agentLegId, CancellationToken cancellationToken = default)
     {
         ReleasedAgentLegs.Add(agentLegId);
+        LegCommands.Add($"release:{agentLegId}");
 
         return Task.CompletedTask;
     }

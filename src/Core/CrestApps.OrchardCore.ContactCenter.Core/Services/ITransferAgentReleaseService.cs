@@ -31,6 +31,25 @@ public interface ITransferAgentReleaseService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Takes the caller out of the agent's bridge before the agent is released, on a provider whose bridge would end
+    /// the caller along with the agent's leg. Nothing is saved or hung up here.
+    /// </summary>
+    /// <param name="interaction">The interaction being transferred.</param>
+    /// <param name="session">The call session, when there is one.</param>
+    /// <param name="agentId">The transferring agent's profile identifier.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>
+    /// <see langword="true"/> when the agent's legs can be hung up without the caller: the caller was parked, the
+    /// agent has no leg of their own, or the provider does not tie the caller to it. <see langword="false"/> when the
+    /// caller is still joined to the agent's leg, so the transfer must not go ahead.
+    /// </returns>
+    Task<bool> DetachCallerAsync(
+        Interaction interaction,
+        CallSession session,
+        string agentId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Hangs up the legs <see cref="ReleaseAsync"/> took off the call. A leg that is already gone is not an error.
     /// </summary>
     /// <param name="providerName">The provider that owns the legs.</param>

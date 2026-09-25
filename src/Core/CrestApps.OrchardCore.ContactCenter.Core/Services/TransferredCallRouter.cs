@@ -10,6 +10,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 /// <inheritdoc />
 public sealed class TransferredCallRouter : ITransferredCallRouter
 {
+    private const string CallerStillJoinedReason = "The caller could not be put on hold for the transfer, so the call stays with you.";
+
     private readonly IInteractionManager _interactionManager;
     private readonly IAgentProfileManager _agentManager;
     private readonly IAgentAvailabilityService _availabilityService;
@@ -87,6 +89,11 @@ public sealed class TransferredCallRouter : ITransferredCallRouter
             return TransferResult.Failure($"{DisplayName(target)} is not available to take the call.");
         }
 
+        if (!await _agentRelease.DetachCallerAsync(context.Interaction, context.Session, context.TransferringAgentId, cancellationToken))
+        {
+            return TransferResult.Failure(CallerStillJoinedReason);
+        }
+
         var interaction = context.Interaction;
         var originalQueueId = interaction.QueueId;
         var now = _clock.UtcNow;
@@ -137,6 +144,13 @@ public sealed class TransferredCallRouter : ITransferredCallRouter
             return TransferResult.Failure("The queue is not available.");
         }
 
+        // Before anything changes: a caller who cannot be taken out of the agent's bridge stays where they are, still
+        // talking to the agent, rather than being hung up with the agent's leg.
+        if (!await _agentRelease.DetachCallerAsync(context.Interaction, context.Session, context.TransferringAgentId, cancellationToken))
+        {
+            return TransferResult.Failure(CallerStillJoinedReason);
+        }
+
         var interaction = context.Interaction;
         var now = _clock.UtcNow;
 
@@ -149,6 +163,7 @@ public sealed class TransferredCallRouter : ITransferredCallRouter
         var priority = await ResolvePriorityAsync(interaction.ActivityItemId, queue, cancellationToken);
 
         await RequeueAsync(interaction.ActivityItemId, queue.ItemId, priority, cancellationToken);
+        await ExcludeTransferringAgentAsync(interaction.ActivityItemId, context.TransferringAgentId, cancellationToken);
         await SetQueueAsync(interaction.ItemId, queue.ItemId, cancellationToken);
 
         var offeredUserId = await _offerService.OfferNextAsync(queue.ItemId, cancellationToken);
@@ -206,6 +221,33 @@ public sealed class TransferredCallRouter : ITransferredCallRouter
         }
 
         await _queueService.EnqueueAsync(activityItemId, queueId, priority, cancellationToken);
+    }
+
+    // The agent who sent the call here is not offered it back. A direct call leaves them no after-call work, so
+    // they are Available again before the offer that follows, and routing would pick them: the caller was rung
+    // straight back to the phone that had just transferred them. The item waits for somebody else instead.
+    private async Task ExcludeTransferringAgentAsync(string activityItemId, string agentId, CancellationToken cancellationToken)
+    {
+        // Enqueueing committed, so the item is read again rather than saved from a copy taken before.
+        var item = await _queueItemManager.FindByActivityIdAsync(activityItemId, cancellationToken);
+
+        if (item is null || item.Status != QueueItemStatus.Waiting)
+        {
+            return;
+        }
+
+        item.ExcludedAgentIds ??= [];
+
+        if (item.ExcludedAgentIds.Contains(agentId, StringComparer.Ordinal))
+        {
+            return;
+        }
+
+        item.ExcludedAgentIds.Add(agentId);
+        await _queueItemManager.UpdateAsync(item, cancellationToken: cancellationToken);
+
+        // Committed before the offer, which reads the waiting item from the store.
+        await _session.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<InteractionPriority?> ResolvePriorityAsync(string activityItemId, ActivityQueue queue, CancellationToken cancellationToken)

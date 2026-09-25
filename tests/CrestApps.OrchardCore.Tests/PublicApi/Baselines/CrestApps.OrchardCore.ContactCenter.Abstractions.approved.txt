@@ -331,6 +331,10 @@ namespace CrestApps.OrchardCore.ContactCenter
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> ConnectToAgentAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterConnectRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> DialAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterDialRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactCenterVoiceCallerParkProvider
+    {
+        System.Threading.Tasks.Task<bool> ParkCallerAsync(string providerCallId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactCenterVoiceCommandReconciler
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceCommandReconciliationResult> ReconcileCommandAsync(string commandId, System.Threading.CancellationToken cancellationToken = default);

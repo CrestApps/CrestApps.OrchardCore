@@ -2016,6 +2016,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string DialerProfileId { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime EnqueuedUtc { get; set; }
+        public System.Collections.Generic.IList<string> ExcludedAgentIds { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsSettled { get; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
@@ -4194,6 +4195,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface ITransferAgentReleaseService
     {
+        System.Threading.Tasks.Task<bool> DetachCallerAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task HangUpAsync(string providerName, System.Collections.Generic.IEnumerable<string> agentLegIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ReleaseAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string agentId, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -4850,6 +4852,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class TransferAgentReleaseService : CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferAgentReleaseService
     {
         public TransferAgentReleaseService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.TransferAgentReleaseService> logger) { }
+        public System.Threading.Tasks.Task<bool> DetachCallerAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task HangUpAsync(string providerName, System.Collections.Generic.IEnumerable<string> agentLegIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ReleaseAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string agentId, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default) { }
     }

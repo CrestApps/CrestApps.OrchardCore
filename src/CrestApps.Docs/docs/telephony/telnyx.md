@@ -212,10 +212,14 @@ A Contact Center call on Telnyx is transferred by the Contact Center, not by Tel
 because an agent or a queue is not something Telnyx can dial. The soft phone's transfer panel calls the
 Contact Center's transfer endpoints (see [How to transfer a call](../contact-center/user-manual.md)).
 
-- **Blind to an agent or a queue** — the caller's leg stays on the platform with the queue's hold music
-  (`playback_start`), the transferring agent's leg is taken off the call topology and then hung up, and the
-  call is offered through the normal reservation pipeline. When the new agent accepts, their leg is joined to
-  the caller exactly as for a new call, and the music stops.
+- **Blind to an agent or a queue** — the caller is first taken out of the agent's bridge and parked: a conference
+  of their own is created from the caller's leg (`POST /v2/conferences`, name `cc-park-…`), which parks the agent's
+  leg, and the caller leaves it again (`conferences/{id}/actions/leave`), which parks the caller. Only then is the
+  transferring agent's leg taken off the call topology and hung up, while the caller hears the queue's hold music
+  (`playback_start`). If Telnyx refuses to park the caller, the transfer is refused and the call stays with the
+  agent. The call is offered through the normal reservation pipeline, never back to the agent who transferred it:
+  with nobody else free it waits in the queue. When the new agent accepts, their leg is joined to the caller
+  exactly as for a new call, and the music stops.
 - **Blind to an outside number** — `POST /v2/calls/{caller}/actions/transfer` from the platform's default
   caller id, then the call settles as *Transferred* and the agent is released.
 - **Warm (consult)** — the caller is moved into a conference named `cc-consult-{consultId}`
@@ -227,8 +231,10 @@ Contact Center's transfer endpoints (see [How to transfer a call](../contact-cen
   caller. The agent's own leg is hung up by the Contact Center only after it has recorded that the leg no
   longer carries the call, so its hangup is not mistaken for the agent ending the call.
 - Agent legs are bridged with `park_after_unbridge: self`, so moving the caller into the consult conference
-  parks the agent's leg instead of hanging it up. When a call ends, the Contact Center releases any agent leg
-  still up.
+  parks the agent's leg instead of hanging it up. That setting protects only the leg the bridge was issued on:
+  the caller's leg keeps Telnyx's default and is hung up when the bridge ends, so hanging up the agent's leg while
+  the caller is still bridged to it ends the caller too. That is why a blind transfer parks the caller first.
+  When a call ends, the Contact Center releases any agent leg still up.
 - **To an extension** — an extension typed in the panel's extension mode is sent to the Contact Center as an
   `extension` target and resolved to the agent it rings, then transferred (or consulted) exactly as that agent.
 

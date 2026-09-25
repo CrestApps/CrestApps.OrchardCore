@@ -150,6 +150,49 @@ public sealed class ActivityAssignmentServiceTests
     }
 
     [Fact]
+    public async Task AssignSpecificAsync_ToAnAgentTheItemExcludes_ReservesNothing()
+    {
+        // Arrange
+        // The named agent is the one who transferred the call into this queue; a direct offer must not hand it back.
+        var item = new QueueItem { ItemId = "i1", QueueId = "q1", ActivityItemId = "act-1", ExcludedAgentIds = ["a1"] };
+        item.TransitionTo(QueueItemStatus.Waiting);
+
+        var queueItemManager = new Mock<IQueueItemManager>();
+        queueItemManager
+            .Setup(m => m.FindByActivityIdAsync("act-1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+
+        var queueManager = new Mock<IActivityQueueManager>();
+        queueManager
+            .Setup(m => m.FindByIdAsync("q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ActivityQueue { ItemId = "q1", Enabled = true });
+
+        var agent = new AgentProfile { ItemId = "a1" };
+        var availability = new Mock<IAgentAvailabilityService>();
+        availability
+            .Setup(service => service.GetAsync("a1", "q1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AgentAvailability { Agent = agent });
+
+        var reservationService = new Mock<IActivityReservationService>();
+        var service = CreateService(
+            queueItemManager,
+            new Mock<IAgentProfileManager>(),
+            queueManager,
+            reservationService,
+            CreateDistributedLock(locked: true),
+            availabilityService: availability);
+
+        // Act
+        var reservation = await service.AssignSpecificAsync("act-1", "q1", "a1", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(reservation);
+        reservationService.Verify(
+            s => s.ReserveAsync(It.IsAny<QueueItem>(), It.IsAny<AgentProfile>(), It.IsAny<int>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task AssignNextAsync_WhenQueueRequiresSkill_SelectsSkilledAgent()
     {
         // Arrange
