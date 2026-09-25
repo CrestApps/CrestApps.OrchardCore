@@ -80,7 +80,7 @@ internal sealed class QueuedWorkWithdrawalFixture : IAsyncDisposable
         [
             new RequiredSkillsRoutingStrategy(services.GetRequiredService<IClock>()),
             new LongestIdleRoutingStrategy(),
-        ]);
+        ], services.GetRequiredService<IClock>());
 
         IActivityAssignmentService assignmentService = ActivatorUtilities.CreateInstance<ActivityAssignmentService>(
             services,

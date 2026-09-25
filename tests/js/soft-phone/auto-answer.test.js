@@ -14,7 +14,22 @@ const {
     disarmOtherOffers,
     shouldAutoAnswerInboundLeg,
     isDestinationLeg,
+    canArmForOffer,
 } = globalThis.CrestAppsSoftPhone;
+
+// The arm for an offer accepted elsewhere is only for an offer this phone was showing: an offer it never had is
+// another agent's, and arming for it answers whatever leg comes next.
+describe('canArmForOffer', () => {
+    it('arms for an offer this phone was offered', () => {
+        expect(canArmForOffer('res-1', { 'res-1': 'call-1' })).toBe(true);
+    });
+
+    it('refuses an offer this phone never had, and one without a reservation', () => {
+        expect(canArmForOffer('res-2', { 'res-1': 'call-1' })).toBe(false);
+        expect(canArmForOffer('', { '': 'call-1' })).toBe(false);
+        expect(canArmForOffer('res-1', null)).toBe(false);
+    });
+});
 
 const now = 5_000_000;
 
@@ -136,6 +151,19 @@ describe('shouldAutoAnswerInboundLeg', () => {
 
         expect(shouldAutoAnswerInboundLeg(arm, now + 100, { transferLeg: true })).toBe(false);
         expect(arm.key).toBe(EXTENSION_CALL_KEY);
+    });
+
+    // Live, the SDK handed over no client state on the colleague's leg, so only the SIP header the platform adds to it
+    // says what it is.
+    it('reads the destination SIP header when the provider hands over no client state', () => {
+        expect(isDestinationLeg({ customHeaders: [{ name: 'X-Destination-Leg', value: '1' }] })).toBe(true);
+        expect(isDestinationLeg({ custom_headers: [{ name: 'x-destination-leg', value: '1' }] })).toBe(true);
+        expect(isDestinationLeg({ customHeaders: [{ name: 'X-Offer-Id', value: 'r1' }] })).toBe(false);
+
+        const arm = createAutoAnswerArm();
+        armAutoAnswer(arm, autoAnswerOfferKey('res-1'), now);
+        expect(shouldAutoAnswerInboundLeg(arm, now + 100, { customHeaders: [{ name: 'X-Destination-Leg', value: '1' }] })).toBe(false);
+        expect(arm.key).toBe('offer:res-1');
     });
 
     it('reads the destination tag however the provider hands client state over', () => {

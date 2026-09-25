@@ -248,6 +248,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public System.DateTime? NextAttemptUtc { get; set; }
         public static int MaxAttempts { get; }
         public static bool CanRetry(int attempts) { }
+        public static bool CanRetry(int attempts, string errorCode) { }
         public static System.TimeSpan GetDelay(int attempts) { }
     }
     public readonly struct QuietHoursDecision : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.QuietHoursDecision>
@@ -315,6 +316,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public interface IMessagingConversationStore : CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>
     {
+        System.Threading.Tasks.Task<bool> ContainsMessageAsync(string conversationId, string providerMessageId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> CountAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingInboxQuery query, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> CountOpenAssignedAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> CountOpenAssignedAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
@@ -324,6 +326,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> GetForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> GetForCustomerAsync(string customerKey, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> GetForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage>> GetMessagesAsync(string conversationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.DateTime?> GetNextFirstResponseDueUtcAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> GetRoutedAwaitingPickupAsync(System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> QueryAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingInboxQuery query, System.Threading.CancellationToken cancellationToken = default);
@@ -446,6 +449,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     public sealed class MessagingConversationStore : CrestApps.OrchardCore.YesSql.Core.Services.DocumentCatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes.MessagingConversationIndex>, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>, CrestApps.Core.Services.IReadCatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore
     {
         public MessagingConversationStore(YesSql.ISession session) { }
+        public System.Threading.Tasks.Task<bool> ContainsMessageAsync(string conversationId, string providerMessageId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> CountAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingInboxQuery query, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyDictionary<string, int>> CountOpenAssignedAsync(System.Collections.Generic.IReadOnlyCollection<string> agentIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> CountOpenAssignedAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -455,6 +459,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> GetForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> GetForCustomerAsync(string customerKey, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> GetForQueueAsync(string queueId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage>> GetMessagesAsync(string conversationId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTime?> GetNextFirstResponseDueUtcAsync(System.DateTime nowUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> GetRoutedAwaitingPickupAsync(System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingConversation>> QueryAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingInboxQuery query, System.Threading.CancellationToken cancellationToken = default) { }

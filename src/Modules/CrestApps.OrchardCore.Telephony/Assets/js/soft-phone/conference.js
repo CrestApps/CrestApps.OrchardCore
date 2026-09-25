@@ -153,20 +153,29 @@
                 (item.selectable ? '' : ' disabled') + (reason ? ' title="' + escapeHtml(reason) + '"' : '') + ' aria-label="' +
                 escapeHtml(format(strings.selectCall || 'Select {0}', item.number)) + '" />'
             : '';
+        // Only the phone's own Hang up is red: dropping one participant is a quiet control beside their row.
         var hangup = inConference && item.canHangup
             ? '<button type="button" class="telephony-soft-phone__participant-hangup" data-telephony-participant-hangup="' +
                 escapeHtml(item.callId) + '" title="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) +
                 '" aria-label="' + escapeHtml(format(strings.hangupParticipant || 'Hang up {0}', item.number)) + '">' +
-                '<i class="fa-solid fa-phone-slash" aria-hidden="true"></i></button>'
+                '<i class="fa-solid fa-user-minus" aria-hidden="true"></i></button>'
+            : '';
+        // The line's state as a chip -- Active, On hold, Ringing -- and how long it has been up.
+        var stateKind = item.stateKind ? ' telephony-soft-phone__line-state--' + escapeHtml(item.stateKind) : '';
+        var timer = item.elapsed
+            ? '<span class="telephony-soft-phone__line-timer" data-telephony-line-timer="' + escapeHtml(item.callId) + '">' +
+                escapeHtml(item.elapsed) + '</span>'
             : '';
 
         return '<div class="telephony-soft-phone__active-call' + (item.current ? ' is-current' : '') +
             (inConference ? ' is-participant' : '') + '"' + (inConference ? ' data-telephony-conference-participant="' + escapeHtml(item.callId) + '"' : '') + '>' +
             check +
             '<button type="button" class="telephony-soft-phone__active-call-select" data-telephony-call-select="' +
-            escapeHtml(item.callId) + '">' +
+            escapeHtml(item.callId) + '"' + (item.current ? ' aria-current="true"' : '') + '>' +
             '<span class="telephony-soft-phone__active-call-number">' + escapeHtml(item.number) + '</span>' +
-            '<span class="telephony-soft-phone__active-call-state">' + escapeHtml(item.state) + '</span>' +
+            '<span class="telephony-soft-phone__active-call-meta">' +
+            '<span class="telephony-soft-phone__active-call-state telephony-soft-phone__line-state' + stateKind + '">' + escapeHtml(item.state) + '</span>' +
+            timer + '</span>' +
             '</button>' + hangup + '</div>';
     }
 
@@ -377,6 +386,87 @@
         }, []);
     }
 
+    // ---- Leaving a conference, and ending it for everyone ----
+    //
+    // Live, the agent merged a dialed number with an extension call and pressed Hang up, and everybody was cut off: the
+    // phone hung up every one of the agent's calls in the conference, and each took its party with it. A phone system's
+    // Hang up leaves a conference and the others stay connected; ending it for everyone is its own, confirmed action.
+
+    // The remembered calls of this call's conference that are still up.
+    function liveMembers(memory, calls, callId) {
+        var up = (calls || []).map(function (call) { return call && call.callId; }).filter(Boolean);
+
+        return conferenceMembers(memory, callId).filter(function (id) { return up.indexOf(id) !== -1; });
+    }
+
+    // What the agent's Hang up does to the conference `callId` is in.
+    //   calls   - the calls still up.
+    //   options - { isContactCenterCall(call) -> bool }.
+    // Returns { action, leaveCallIds, keepCallIds, endCallIds }:
+    //   'none'  - the call is in no conference; it is hung up as any other.
+    //   'leave' - two or more other parties are still in it: each of the agent's calls in it is taken out of it
+    //             (leaveCallIds), including the agent's own way in whose party already left, and the others carry on. A
+    //             Contact Center caller's call is never the agent's to hang up by leaving (keepCallIds).
+    //   'end'   - only one other party is left, who would be alone in it: every call is hung up (endCallIds).
+    function planConferenceHangup(memory, calls, callId, options) {
+        options = options || {};
+
+        var members = liveMembers(memory, calls, callId);
+        var plan = { action: 'none', leaveCallIds: [], keepCallIds: [], endCallIds: [] };
+
+        if (!members.length) {
+            return plan;
+        }
+
+        var parties = members.filter(function (id) { return !memory.members[id].left; });
+
+        if (parties.length <= 1) {
+            plan.action = 'end';
+            plan.endCallIds = members;
+
+            return plan;
+        }
+
+        var isContactCenterCall = options.isContactCenterCall || function () { return false; };
+        var byId = {};
+
+        (calls || []).forEach(function (call) {
+            if (call && call.callId) {
+                byId[call.callId] = call;
+            }
+        });
+
+        plan.action = 'leave';
+        members.forEach(function (id) {
+            (isContactCenterCall(byId[id]) ? plan.keepCallIds : plan.leaveCallIds).push(id);
+        });
+
+        return plan;
+    }
+
+    // Ending the conference `callId` is in for everyone: { primaryCallId, conferenceName, callIds, partyCount } -- the
+    // call it was made from, whose hang-up names the conference to end, every call of it still up, and how many parties
+    // are still in it (for the confirmation) -- or null for a call in no conference.
+    function planConferenceEnd(memory, calls, callId) {
+        var members = liveMembers(memory, calls, callId);
+
+        if (!members.length) {
+            return null;
+        }
+
+        var member = memory.members[members[0]];
+        var primaryCallId = members.indexOf(member.primaryCallId) !== -1 ? member.primaryCallId : members[0];
+
+        return {
+            primaryCallId: primaryCallId,
+            conferenceName: member.conferenceName || '',
+            callIds: [primaryCallId].concat(members.filter(function (id) { return id !== primaryCallId; })),
+            partyCount: members.filter(function (id) { return !memory.members[id].left; }).length
+        };
+    }
+
+    softPhone.planConferenceHangup = planConferenceHangup;
+    softPhone.planConferenceEnd = planConferenceEnd;
     softPhone.createConferenceMemory = createConferenceMemory;
     softPhone.rememberConference = rememberConference;
     softPhone.applyConferenceMemory = applyConferenceMemory;

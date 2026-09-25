@@ -403,3 +403,116 @@ describe('the conference memory', () => {
         expect(conferenceMembers(memory, 'ext-leg')).toEqual([]);
     });
 });
+
+// Live: the agent merged a dialed number and extension 2 into a conference and pressed Hang up; everybody was cut off,
+// because the phone hung up every one of the agent's calls in it. A phone system's Hang up leaves a conference and the
+// others stay connected; ending it for everyone is its own action.
+describe('planConferenceHangup', () => {
+    const { planConferenceHangup, planConferenceEnd } = globalThis.CrestAppsSoftPhone;
+    const threeWay = { callIds: ['cell-leg', 'ext-leg'], primaryCallId: 'cell-leg', conferenceName: 'conf-cell-leg' };
+    const call = (callId, metadata) => ({ callId, state: 'Connected', metadata: metadata || {} });
+
+    it('is nothing to plan for a call in no conference', () => {
+        const memory = createConferenceMemory();
+
+        expect(planConferenceHangup(memory, [call('solo')], 'solo')).toMatchObject({ action: 'none' });
+    });
+
+    it('leaves a conference two or more others are still in, taking every one of the agent\'s calls out of it', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, threeWay);
+
+        expect(planConferenceHangup(memory, [call('cell-leg'), call('ext-leg')], 'ext-leg')).toEqual({
+            action: 'leave',
+            leaveCallIds: ['cell-leg', 'ext-leg'],
+            keepCallIds: [],
+            endCallIds: []
+        });
+    });
+
+    it('also takes out the agent\'s own way into the conference whose party already left', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, { callIds: ['cell-leg', 'ext-leg', 'third'], primaryCallId: 'cell-leg', conferenceName: 'conf-cell-leg' });
+        markParticipantLeft(memory, 'cell-leg');
+
+        expect(planConferenceHangup(memory, [call('cell-leg'), call('ext-leg'), call('third')], 'ext-leg')).toMatchObject({
+            action: 'leave',
+            leaveCallIds: ['cell-leg', 'ext-leg', 'third']
+        });
+    });
+
+    it('ends the conference when only one other party is left in it, who would otherwise be alone', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, threeWay);
+        markParticipantLeft(memory, 'cell-leg');
+
+        expect(planConferenceHangup(memory, [call('cell-leg'), call('ext-leg')], 'ext-leg')).toEqual({
+            action: 'end',
+            leaveCallIds: [],
+            keepCallIds: [],
+            endCallIds: ['cell-leg', 'ext-leg']
+        });
+    });
+
+    it('never takes a Contact Center caller\'s call down when the agent leaves', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, { callIds: ['cell-leg', 'caller-leg'], primaryCallId: 'cell-leg', conferenceName: 'conf-cell-leg' });
+        const calls = [call('cell-leg'), call('caller-leg', { interactionId: 'interaction-1' })];
+
+        expect(planConferenceHangup(memory, calls, 'cell-leg', {
+            isContactCenterCall: value => !!(value.metadata && value.metadata.interactionId)
+        })).toEqual({
+            action: 'leave',
+            leaveCallIds: ['cell-leg'],
+            keepCallIds: ['caller-leg'],
+            endCallIds: []
+        });
+    });
+
+    it('ignores a remembered call that is no longer up', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, { callIds: ['a', 'b', 'c'], primaryCallId: 'a', conferenceName: 'conf-a' });
+
+        expect(planConferenceHangup(memory, [call('a'), call('b')], 'a')).toMatchObject({ action: 'leave', leaveCallIds: ['a', 'b'] });
+    });
+
+    it('ends a conference for everyone from the call it was made from, naming the conference', () => {
+        const memory = createConferenceMemory();
+        rememberConference(memory, threeWay);
+
+        expect(planConferenceEnd(memory, [call('ext-leg'), call('cell-leg')], 'ext-leg')).toEqual({
+            primaryCallId: 'cell-leg',
+            conferenceName: 'conf-cell-leg',
+            callIds: ['cell-leg', 'ext-leg'],
+            partyCount: 2
+        });
+        expect(planConferenceEnd(memory, [call('solo')], 'solo')).toBeNull();
+    });
+});
+
+describe('buildActiveCallsHtml line details', () => {
+    const strings = { hangupParticipant: 'Hang up {0}', conferenceParticipants: 'Conference · {0} participants' };
+
+    it('shows each line\'s state as a chip and its running time', () => {
+        const html = buildActiveCallsHtml({
+            calls: [
+                { callId: 'a', number: '(555) 123-4567', state: 'On hold', stateKind: 'held', elapsed: '1:05' },
+                { callId: 'b', number: '(555) 765-4321', state: 'Active', stateKind: 'active', elapsed: '0:12', current: true }
+            ]
+        }, strings, escapeHtml);
+
+        expect(html).toMatch(/telephony-soft-phone__line-state--held[^>]*>On hold</);
+        expect(html).toMatch(/telephony-soft-phone__line-state--active[^>]*>Active</);
+        expect(html).toContain('data-telephony-line-timer="a">1:05</span>');
+        expect(html).toContain('aria-current="true"');
+    });
+
+    it('draws the participant hang-up as a quiet control rather than a second red button', () => {
+        const html = buildActiveCallsHtml({
+            calls: [{ callId: 'a', number: '1', state: 'In conference', inConference: true, canHangup: true }]
+        }, strings, escapeHtml);
+
+        expect(html).toMatch(/<button[^>]*class="telephony-soft-phone__participant-hangup"[^>]*data-telephony-participant-hangup="a"/);
+        expect(html).toContain('fa-user-minus');
+    });
+});

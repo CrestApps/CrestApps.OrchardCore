@@ -25,4 +25,24 @@ public interface ITelnyxAgentEndpointResolver
     /// did not report the capability.
     /// </returns>
     Task<string> ResolveAsync(string userId, string requiredClientCapability, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that a leg to <paramref name="unreachableEndpoint"/> was refused as unavailable, and resolves where the
+    /// user's phone can be rung instead.
+    /// </summary>
+    /// <param name="userId">The Orchard user identifier.</param>
+    /// <param name="unreachableEndpoint">The SIP address the refused leg rang.</param>
+    /// <param name="requiredClientCapability">
+    /// The capability the client registered on the new credential must have reported, or <see langword="null"/>.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// Another of the user's credentials to ring, or <see langword="null"/> when there is none other than the one that
+    /// was refused.
+    /// </returns>
+    Task<TelnyxAgentEndpointRedelivery> ResolveRedeliveryAsync(
+        string userId,
+        string unreachableEndpoint,
+        string requiredClientCapability,
+        CancellationToken cancellationToken = default);
 }

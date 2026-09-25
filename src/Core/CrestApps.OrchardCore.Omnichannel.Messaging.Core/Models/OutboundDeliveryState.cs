@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using CrestApps.OrchardCore.Omnichannel.Core;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 
@@ -42,6 +43,16 @@ public sealed class OutboundDeliveryState
     /// <param name="attempts">The number of attempts already made.</param>
     /// <returns><see langword="true"/> when the schedule has an attempt left.</returns>
     public static bool CanRetry(int attempts) => attempts < MaxAttempts;
+
+    /// <summary>
+    /// Determines whether another attempt is allowed after a refusal, given why the provider refused.
+    /// </summary>
+    /// <param name="attempts">The number of attempts already made.</param>
+    /// <param name="errorCode">The provider-neutral refusal reason, when the provider gave one.</param>
+    /// <returns><see langword="true"/> when the schedule has an attempt left and a retry could succeed.</returns>
+    public static bool CanRetry(int attempts, string errorCode)
+        => CanRetry(attempts) &&
+            !string.Equals(errorCode, OmnichannelConstants.SmsErrorCodes.RecipientOptedOut, StringComparison.Ordinal);
 
     /// <summary>
     /// Gets the delay before the attempt that follows the given number of attempts.

@@ -174,6 +174,17 @@ public sealed class InMemoryTelephonyProvider :
     public ConcurrentQueue<string> HangupCommands { get; } = new();
 
     /// <summary>
+    /// Gets the calls whose party the agent left connected in a conference ("callId:leave" hang-ups), until the
+    /// conference is ended for everyone ("callId:end").
+    /// </summary>
+    public ConcurrentDictionary<string, byte> PartiesStillConnected { get; } = new();
+
+    private static bool HasFlag(CallReference call, string key)
+        => call?.Metadata is not null &&
+            call.Metadata.TryGetValue(key, out var flag) &&
+            string.Equals(flag?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Gets how many extension calls the phone asked for.
     /// </summary>
     public int GetExtensionDialCount()
@@ -275,11 +286,23 @@ public sealed class InMemoryTelephonyProvider :
     {
         Interlocked.Increment(ref _hangupRequestCount);
 
-        var participant = call?.Metadata is not null &&
-            call.Metadata.TryGetValue(TelephonyConstants.RequestMetadata.ConferenceParticipant, out var flag) &&
-            string.Equals(flag?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        var participant = HasFlag(call, TelephonyConstants.RequestMetadata.ConferenceParticipant);
+        var leave = HasFlag(call, TelephonyConstants.RequestMetadata.ConferenceLeave);
+        var end = HasFlag(call, TelephonyConstants.RequestMetadata.ConferenceEnd);
 
-        HangupCommands.Enqueue(participant ? $"{call.CallId}:participant" : call?.CallId);
+        HangupCommands.Enqueue(participant ? $"{call.CallId}:participant" : leave ? $"{call.CallId}:leave" : end ? $"{call.CallId}:end" : call?.CallId);
+
+        // The agent leaves the conference: their leg goes, and the party it carried stays connected to the others.
+        if (leave && call?.CallId is not null)
+        {
+            PartiesStillConnected[call.CallId] = 0;
+        }
+
+        // Ending the conference for everyone disconnects every party still in it.
+        if (end)
+        {
+            PartiesStillConnected.Clear();
+        }
 
         // The participant of the call the conference was made from leaves; the call stays up, carrying the agent.
         if (participant && _conferenceAnchors.ContainsKey(call.CallId) && _calls.TryGetValue(call.CallId, out var anchor))

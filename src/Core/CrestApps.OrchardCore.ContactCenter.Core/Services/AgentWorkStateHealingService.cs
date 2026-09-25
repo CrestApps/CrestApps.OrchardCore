@@ -106,6 +106,14 @@ public sealed class AgentWorkStateHealingService : IAgentWorkStateHealingService
             cancellationToken);
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> HasPendingOfferAsync(string agentId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(agentId);
+
+        return await _reservationManager.FindPendingByAgentAsync(agentId, cancellationToken) is not null;
+    }
+
     private async Task<int> HealAsync(
         AgentProfile agent,
         bool forceCancelReservation,

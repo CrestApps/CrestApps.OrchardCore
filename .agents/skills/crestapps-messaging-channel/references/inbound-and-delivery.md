@@ -61,6 +61,11 @@ new OmnichannelMessage
 The processor returns `null` (and stores nothing) when no enabled channel has that name or no endpoint matches the
 service address, and yields to an active automated (AI) activity for that contact on that endpoint.
 
+**Always set `ProviderMessageId`.** A thread records each provider message once: the processor skips a message whose
+provider id the conversation already holds (a webhook redelivery, or the message that asked for a person, which
+reaches the processor after an AI hand-off already copied it). Without the id, those arrive twice.
+
+
 ## Channel-only rules: `IMessagingInboundHandler`
 
 Use an inbound handler for rules that belong to your channel alone; return early for other channels

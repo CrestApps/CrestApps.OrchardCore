@@ -2011,13 +2011,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public System.DateTime? CallbackAcceptedUtc { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? CallbackOfferedUtc { get; set; }
+        public System.Collections.Generic.IList<string> DeclinedAgentIds { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? DequeuedUtc { get; set; }
         public string DialerProfileId { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime EnqueuedUtc { get; set; }
+        public System.Collections.Generic.IList<string> ExcludedAgentIds { get; set; }
         [System.Text.Json.Serialization.JsonIgnore]
         public bool IsSettled { get; }
+        [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
+        public System.DateTime? LastDeclinedUtc { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
         public System.DateTime? LastTreatmentUtc { get; set; }
         [System.Text.Json.Serialization.JsonConverter(typeof(CrestApps.OrchardCore.YesSql.Core.Serialization.PreciseUtcDateTimeJsonConverter))]
@@ -2036,6 +2040,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Models
         public string StickyAgentUserId { get; set; }
         public int TreatmentStepsPlayed { get; set; }
         public bool CanTransitionTo(CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus status) { }
+        public void RecordDecline(string agentId, System.DateTime declinedUtc) { }
         public CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem RestorePersistedStatus(CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus status) { }
         public void TransitionTo(CrestApps.OrchardCore.ContactCenter.Models.QueueItemStatus status) { }
     }
@@ -2613,7 +2618,8 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public sealed class ActivityRoutingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingService
     {
-        public ActivityRoutingService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy> strategies) { }
+        public static readonly System.TimeSpan DeclinedOfferRetryDelay;
+        public ActivityRoutingService(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityRoutingStrategy> strategies, OrchardCore.Modules.IClock clock) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityRoutingDecision> SelectAgentAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.ActivityQueue queue, CrestApps.OrchardCore.ContactCenter.Core.Models.QueueItem queueItem, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Models.AgentAvailability> availability, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class AgentAvailabilityRecoveryService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentAvailabilityRecoveryService
@@ -2657,6 +2663,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task OnAgentLegEndedAsync(string providerName, string reservationId, string agentLegId, CrestApps.OrchardCore.Telephony.Models.HangupCause? cause, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> OnCallerReadyAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> PreDialAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> RedialAgentLegAsync(string providerName, string reservationId, string failedAgentLegId, string agentEndpoint, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ReleaseAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ReleaseForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ReleaseForInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -2770,6 +2777,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class AgentWorkStateHealingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService
     {
         public AgentWorkStateHealingService(CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationManager reservationManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityReservationService reservationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IQueueItemManager queueItemManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelActivityManager activityManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IContactCenterWorkStateService workStateService, System.Lazy<CrestApps.OrchardCore.ContactCenter.Core.Services.IProviderCallStateSynchronizationService> synchronizationService, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.AgentWorkStateHealingService> logger) { }
+        public System.Threading.Tasks.Task<bool> HasPendingOfferAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> HealForAvailabilityAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> HealForResetAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -3500,6 +3508,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task OnAgentLegEndedAsync(string providerName, string reservationId, string agentLegId, CrestApps.OrchardCore.Telephony.Models.HangupCause? cause, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> OnCallerReadyAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> PreDialAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RedialAgentLegAsync(string providerName, string reservationId, string failedAgentLegId, string agentEndpoint, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ReleaseAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ReleaseForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ReleaseForInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);
@@ -3591,6 +3600,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface IAgentWorkStateHealingService
     {
+        System.Threading.Tasks.Task<bool> HasPendingOfferAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> HealForAvailabilityAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> HealForResetAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -4194,6 +4204,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     }
     public interface ITransferAgentReleaseService
     {
+        System.Threading.Tasks.Task<bool> DetachCallerAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task HangUpAsync(string providerName, System.Collections.Generic.IEnumerable<string> agentLegIds, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ReleaseAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string agentId, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -4387,6 +4398,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class NoAgentWorkStateHealingService : CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentWorkStateHealingService
     {
         public NoAgentWorkStateHealingService() { }
+        public System.Threading.Tasks.Task<bool> HasPendingOfferAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> HealForAvailabilityAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> HealForResetAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -4850,6 +4862,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     public sealed class TransferAgentReleaseService : CrestApps.OrchardCore.ContactCenter.Core.Services.ITransferAgentReleaseService
     {
         public TransferAgentReleaseService(CrestApps.OrchardCore.ContactCenter.Core.Services.IInteractionManager interactionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.ICallSessionManager callSessionManager, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentPresenceManager presenceManager, CrestApps.OrchardCore.ContactCenter.IContactCenterVoiceProviderResolver voiceProviderResolver, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.ContactCenter.Core.Services.TransferAgentReleaseService> logger) { }
+        public System.Threading.Tasks.Task<bool> DetachCallerAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task HangUpAsync(string providerName, System.Collections.Generic.IEnumerable<string> agentLegIds, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.Collections.Generic.IReadOnlyList<string>> ReleaseAsync(CrestApps.OrchardCore.ContactCenter.Core.Models.Interaction interaction, CrestApps.OrchardCore.ContactCenter.Core.Models.CallSession session, string agentId, System.DateTime utcNow, System.Threading.CancellationToken cancellationToken = default) { }
     }

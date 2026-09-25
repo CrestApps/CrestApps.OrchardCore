@@ -402,6 +402,8 @@ The inventory load runs in the background and loads activities incrementally. Ea
 
 When an automated AI conversation completes, the activity stores the AI session identifier, appends the generated call summary as disposition notes, and applies the AI-selected disposition through the same subject-action lifecycle used by agents. Authorized administrators can open **Review AI conversation** from the activity actions to inspect the full transcript.
 
+An automated voice call whose live (speech-to-speech) session is lost partway through is not concluded as the model reads the cut-off transcript. The platform first opens a new session that is given the conversation so far, up to two times. When that does not work, the caller is handed to a live agent if the subject allows handoff. Otherwise the caller hears a short apology and the call ends. The activity then takes the disposition the subject's **Try again** action is wired to, so the contact is called again, and its notes say the conversation was cut short. A subject with no **Try again** action keeps the reviewed disposition. The activity's terminal reason is `ai_session_lost`.
+
 ### Extending inventory load sources
 
 Inventory loading is extensible. Each inventory load has a **source**, and the source controls how it resolves and loads activities. There are two layers of extensibility:

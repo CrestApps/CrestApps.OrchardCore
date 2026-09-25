@@ -1,5 +1,7 @@
 using System.Text.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Sms.Services;
@@ -15,6 +17,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Sms.Services;
 /// </remarks>
 internal sealed class TwilioErrorLoggingHandler : DelegatingHandler
 {
+    /// <summary>
+    /// Twilio's "Attempt to send to unsubscribed recipient": the recipient opted out of the sending number.
+    /// </summary>
+    internal const string UnsubscribedRecipientErrorCode = "21610";
+
     private readonly ILogger _logger;
 
     /// <summary>
@@ -31,7 +38,7 @@ internal sealed class TwilioErrorLoggingHandler : DelegatingHandler
     {
         var response = await base.SendAsync(request, cancellationToken);
 
-        if (response.IsSuccessStatusCode || response.Content is null || !_logger.IsEnabled(LogLevel.Warning))
+        if (response.IsSuccessStatusCode || response.Content is null)
         {
             return response;
         }
@@ -41,11 +48,31 @@ internal sealed class TwilioErrorLoggingHandler : DelegatingHandler
 
         var (code, message) = ReadError(await response.Content.ReadAsStringAsync(cancellationToken));
 
-        _logger.LogWarning(
-            "Twilio refused the request with HTTP {StatusCode}: error {TwilioErrorCode}, {TwilioErrorMessage}.",
-            (int)response.StatusCode,
-            code?.SanitizeLogValue() ?? "(none)",
-            message?.SanitizeLogValue() ?? "(no message)");
+        if (string.Equals(code, UnsubscribedRecipientErrorCode, StringComparison.Ordinal))
+        {
+            // The recipient texted STOP and Twilio's opt-out management unsubscribed them: Twilio has already
+            // confirmed the opt-out to them and refuses anything more from this number. Expected, not a fault —
+            // the sender is told why so it records the opt-out instead of retrying.
+            SmsProviderRefusalScope.Report(OmnichannelConstants.SmsErrorCodes.RecipientOptedOut);
+
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "Twilio refused the message with error {TwilioErrorCode} because the recipient has opted out; Twilio already confirmed the opt-out to them.",
+                    code);
+            }
+
+            return response;
+        }
+
+        if (_logger.IsEnabled(LogLevel.Warning))
+        {
+            _logger.LogWarning(
+                "Twilio refused the request with HTTP {StatusCode}: error {TwilioErrorCode}, {TwilioErrorMessage}.",
+                (int)response.StatusCode,
+                code?.SanitizeLogValue() ?? "(none)",
+                message?.SanitizeLogValue() ?? "(no message)");
+        }
 
         return response;
     }

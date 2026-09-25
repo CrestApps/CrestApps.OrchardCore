@@ -243,6 +243,9 @@ public sealed class TelnyxTelephonyCredentialIssuerTests
         public Task<int> MarkConnectionClosedAsync(string userId, string connectionId, DateTime closedUtc, CancellationToken cancellationToken = default)
             => Task.FromResult(0);
 
+        public Task<TelnyxAgentCredential> MarkUnreachableAsync(string userId, string sipUsername, DateTime unreachableUtc, CancellationToken cancellationToken = default)
+            => Task.FromResult<TelnyxAgentCredential>(null);
+
         public Task<bool> SetClientCapabilitiesAsync(string userId, string credentialId, IReadOnlyCollection<string> capabilities, CancellationToken cancellationToken = default)
             => Task.FromResult(true);
     }

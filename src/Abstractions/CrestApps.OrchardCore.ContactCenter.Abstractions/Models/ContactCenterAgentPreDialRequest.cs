@@ -37,4 +37,16 @@ public sealed class ContactCenterAgentPreDialRequest
     /// lifetime, so a leg nobody answers ends with the offer.
     /// </summary>
     public int TimeoutSeconds { get; set; }
+
+    /// <summary>
+    /// Gets or sets the provider address to ring, when the caller already resolved it. Left empty, the provider
+    /// resolves the agent's device itself.
+    /// </summary>
+    public string AgentEndpoint { get; set; }
+
+    /// <summary>
+    /// Gets or sets the pre-dialed leg this one replaces, when the agent's device refused that one as unavailable and is
+    /// being rung again where it registered since.
+    /// </summary>
+    public string ReplacesAgentLegId { get; set; }
 }

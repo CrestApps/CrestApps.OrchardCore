@@ -104,11 +104,14 @@ public sealed partial class ProviderVoiceOfferSynchronizationService : IProvider
         // still open, the call's own ending already started the agent's wrap-up, or the topology has an agent leg
         // that was joined to the caller. The last two matter once the queue item and reservation have settled, which
         // otherwise read as a pre-connect offer and moved an agent in wrap-up straight back to Available.
+        // The last two describe the call's past, not its present: a caller transferred back into a queue -- waiting, or
+        // ringing for the next agent -- was answered and wrapped up by the agent who sent them there, yet nobody has
+        // them now. Read as answered, the ringing agent's offer was cancelled but the agent was left Reserved on it.
+        var isBackInQueue = queueItem?.Status is QueueItemStatus.Waiting or QueueItemStatus.Reserved;
         var wasAnsweredByAgent = providerReportedAnswered &&
             (queueItem?.Status == QueueItemStatus.Assigned ||
                 reservations.Any(reservation => reservation.Status == ReservationStatus.Accepted) ||
-                interaction.WrapUpStartedUtc.HasValue ||
-                HadJoinedAgentLeg(session));
+                (!isBackInQueue && (interaction.WrapUpStartedUtc.HasValue || HadJoinedAgentLeg(session))));
         var canceledReservationIds = new HashSet<string>(StringComparer.Ordinal);
         string reservationAgentId = null;
 

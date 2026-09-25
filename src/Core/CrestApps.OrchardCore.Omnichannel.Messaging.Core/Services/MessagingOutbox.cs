@@ -142,7 +142,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
             {
                 state.LastError = dispatch.GetErrorText();
 
-                if (OutboundDeliveryState.CanRetry(state.Attempts))
+                if (OutboundDeliveryState.CanRetry(state.Attempts, dispatch.ErrorCode))
                 {
                     state.NextAttemptUtc = now.Add(OutboundDeliveryState.GetDelay(state.Attempts));
                 }

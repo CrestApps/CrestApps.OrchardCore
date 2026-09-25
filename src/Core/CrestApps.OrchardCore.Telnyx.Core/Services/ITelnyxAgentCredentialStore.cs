@@ -16,7 +16,8 @@ public interface ITelnyxAgentCredentialStore
     /// <summary>
     /// Lists the live (not revoked, not expired) credentials owned by a user, best delivery target first: the
     /// credential a client whose connection is still open most recently reported registering on, then those whose
-    /// connection has closed, then any credential that has never been reported as registered, newest issued first.
+    /// connection has closed, then any credential that has never been reported as registered, newest issued first. A
+    /// credential found unreachable (<see cref="TelnyxAgentCredential.UnreachableUtc"/>) comes after all of them.
     /// </summary>
     Task<IReadOnlyList<TelnyxAgentCredential>> ListLiveByUserAsync(string userId, DateTime nowUtc, CancellationToken cancellationToken = default);
 
@@ -41,6 +42,13 @@ public interface ITelnyxAgentCredentialStore
     /// </summary>
     /// <returns>How many credentials the connection had registered on.</returns>
     Task<int> MarkConnectionClosedAsync(string userId, string connectionId, DateTime closedUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Records that a leg to the user's live credential with the given SIP username was refused as unavailable, so it
+    /// ranks after every other credential until it registers again.
+    /// </summary>
+    /// <returns>The credential that was marked, or <see langword="null"/> when the user has no live credential by that name.</returns>
+    Task<TelnyxAgentCredential> MarkUnreachableAsync(string userId, string sipUsername, DateTime unreachableUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records what the client registered on a user's credential reported it can do, replacing what it reported

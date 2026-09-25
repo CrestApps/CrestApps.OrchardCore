@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -48,6 +51,35 @@ public sealed class MessagingConversationStore : DocumentCatalog<MessagingConver
                 collection: MessagingStorage.CollectionName)
             .OrderByDescending(index => index.LastMessageUtc)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ContainsMessageAsync(string conversationId, string providerMessageId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(conversationId) || string.IsNullOrEmpty(providerMessageId))
+        {
+            return false;
+        }
+
+        // Scoped to the conversation: the webhook's own audit row carries the same provider id but no thread.
+        return await Session.QueryIndex<OmnichannelMessageIndex>(
+                index => index.ConversationId == conversationId && index.ProviderMessageId == providerMessageId,
+                collection: OmnichannelConstants.CollectionName)
+            .CountAsync(cancellationToken) > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<OmnichannelMessage>> GetMessagesAsync(string conversationId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(conversationId);
+
+        return (await Session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.ConversationId == conversationId,
+                collection: OmnichannelConstants.CollectionName)
+            .OrderBy(index => index.CreatedUtc)
+            .ThenBy(index => index.Id)
+            .ListAsync(cancellationToken))
+            .ToArray();
     }
 
     /// <inheritdoc/>

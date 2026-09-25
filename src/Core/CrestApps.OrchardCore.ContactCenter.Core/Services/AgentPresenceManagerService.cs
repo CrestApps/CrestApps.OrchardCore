@@ -459,18 +459,19 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         var previousReasonCodeId = profile.PresenceReasonCodeId;
         var previousReason = profile.PresenceReason;
         var targetStatus = previousStatus;
+        var canApplyNow = CanApplyPresenceNow(profile) || await IsStrandedInReservedAsync(profile, cancellationToken);
 
         if (status == AgentPresenceStatus.RequestBreak)
         {
             profile.RequestedPresenceStatus = AgentPresenceStatus.Break;
 
-            if (CanApplyPresenceNow(profile))
+            if (canApplyNow)
             {
                 targetStatus = AgentPresenceStatus.Break;
                 profile.RequestedPresenceStatus = null;
             }
         }
-        else if (CanApplyPresenceNow(profile))
+        else if (canApplyNow)
         {
             targetStatus = status;
             profile.RequestedPresenceStatus = null;
@@ -528,6 +529,27 @@ public sealed partial class AgentPresenceManagerService : IAgentPresenceManager
         }
 
         return await _stateTransitions.ResolveReasonAsync(reason, cancellationToken);
+    }
+
+    // Reserved says an offer is ringing for the agent, and it is the offer settling that moves them on. An offer
+    // settled without releasing them -- cancelled when its caller hung up -- leaves nothing that ever will, and every
+    // request they make was deferred behind it for good. With no offer left, the request applies now. Busy and
+    // wrap-up are left alone: a consult or after-call work keeps an agent in them with no offer behind it.
+    private async Task<bool> IsStrandedInReservedAsync(AgentProfile profile, CancellationToken cancellationToken)
+    {
+        if (profile.PresenceStatus != AgentPresenceStatus.Reserved ||
+            !string.IsNullOrEmpty(profile.ActiveReservationId) ||
+            string.IsNullOrEmpty(profile.ItemId) ||
+            await _agentWorkStateHealingService.HasPendingOfferAsync(profile.ItemId, cancellationToken))
+        {
+            return false;
+        }
+
+        _logger.LogWarning(
+            "Agent '{AgentId}' was Reserved with no offer left ringing for them; applying their requested state now.",
+            profile.ItemId.SanitizeLogValue());
+
+        return true;
     }
 
     private static bool CanApplyPresenceNow(AgentProfile profile)

@@ -85,6 +85,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     private AIVoiceSessionMeter _meter;
 
     /// <summary>
+    /// The call's line, as one continuous stream the voice and the room bed are both written through.
+    /// </summary>
+    private OutgoingCallAudio _outgoing;
+
+    /// <summary>
     /// How long the session is given to finish its closing line after the model asks to transfer, before it is
     /// closed and the caller is handed to the queue. Long enough for "connecting you now", short enough that a
     /// caller is never left with the assistant after being promised a person.
@@ -251,23 +256,32 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             InteractionId = context.InteractionId,
         }, cancellationToken);
 
-        await using var conversation = await StartConversationAsync(context, cancellationToken);
+        _outgoing = new OutgoingCallAudio(media.OutgoingFormat);
 
-        if (conversation is null)
+        var first = await StartConversationAsync(context, conversationSoFar: null, cancellationToken);
+
+        if (first is null)
         {
             return false;
         }
 
+        using var callScope = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        // Holds whichever session is carrying the call. Usually that is this first one for the whole call; when a
+        // session is lost with the caller still there it is replaced, and everything that talks to the model reads
+        // it from here rather than keeping the one it started with.
+        await using var live = new LiveConversation(first, callScope.Token);
+
         // Only now: a session that never opened held nothing, and the turn-based loop takes the call instead.
         _meter?.Start(answeredTicks);
 
-        await ApplyTelephonyTurnDetectionAsync(conversation, cancellationToken);
+        await ApplyTelephonyTurnDetectionAsync(first, cancellationToken);
 
         // We placed this call, so the silence after the customer picks up is ours to fill. Left to itself the
         // session waits to be spoken to -- voice detection is how a turn begins -- and every live transcript
         // opened with the customer saying "Hello?" into dead air before the assistant introduced itself. A
         // session that creates its own responses ignores this, so it is safe to ask either way.
-        await conversation.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
+        await first.RequestUnpromptedResponseAsync(cancellationToken: cancellationToken);
 
         // Both silence clocks start now rather than at zero. Left unset, "quiet since the beginning of time" is a
         // very long silence indeed, and the watchdog below would speak up a second into the call -- over the top
@@ -277,8 +291,6 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         Interlocked.Exchange(ref _lastCallerSpeechTicks, startedTicks);
         Interlocked.Exchange(ref _assistantSpeechEndsTicks, 0);
         Volatile.Write(ref _goodbyeAlreadySaid, false);
-
-        using var callScope = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
         // The moment the model asks to transfer, the caller stops being the assistant's to talk to. Without this
         // the session ran until the caller hung up — the transfer was recorded, the caller was told someone was
@@ -303,7 +315,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // turn that went missing -- a short "yes" the provider returned no transcript for -- which leaves the
         // assistant waiting for a turn it never saw while the caller waits for an answer they think they already
         // gave. Neither side will break that on its own.
-        var idle = SpeakUpWhenNobodyHasAsync(conversation, context, callScope.Token);
+        var idle = SpeakUpWhenNobodyHasAsync(live, context, callScope.Token);
 
         // One generator drives both paths, at the rate the model speaks: the bed is mixed under the assistant's
         // own audio while it talks, and written on its own while it does not, so the room never cuts in and out.
@@ -317,17 +329,17 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
         // side heard a voice over the assistant, and the model's side heard the caller start.
         var bargeIn = new AssistantBargeIn();
 
-        var toModel = PumpCallerAudioAsync(media, conversation, context, bargeIn, callScope.Token);
-        var toCaller = PumpAssistantAudioAsync(media, conversation, context, ambience, bargeIn, callScope.Token);
+        var toModel = PumpCallerAudioAsync(media, live, context, bargeIn, callScope.Token);
         var bed = ambience is null
             ? Task.CompletedTask
             : PumpAmbienceAsync(media, ambience, callScope.Token);
 
         try
         {
-            // Whichever side ends first ends the call: the caller hung up, or the session closed. The bed is not
-            // one of them — it never ends on its own, and a call must not be held open by it.
-            await Task.WhenAny(toModel, toCaller);
+            // The caller hanging up ends the call. The session closing does not, on its own: a session lost with
+            // the caller still there is replaced (see HoldTheConversationAsync). The bed never ends by itself, and
+            // a call must not be held open by it.
+            await HoldTheConversationAsync(media, live, context, ambience, bargeIn, toModel, callScope);
         }
         finally
         {
@@ -335,122 +347,11 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
             await callScope.CancelAsync();
 
             // All of them are awaited so none is left writing to a disposed session.
-            await Task.WhenAll(Settle(toModel), Settle(toCaller), Settle(bed), Settle(closing));
+            await Task.WhenAll(Settle(toModel), Settle(bed), Settle(closing), Settle(idle));
             await media.StopAsync(CancellationToken.None);
         }
 
         return true;
-    }
-
-    /// <summary>
-    /// Gives the live session the tools a phone call needs, and tells it when to use them.
-    /// </summary>
-    /// <remarks>
-    /// A realtime session is configured once, at the start, from this context — there is no per-turn completion
-    /// to hang a tool on the way the turn-based path does. The end-call tool is registered as a scoped system
-    /// entry and named in <c>MustIncludeTools</c> so the profile's own tool selection cannot leave it out: every
-    /// call has to be endable, whatever else the profile is configured to do.
-    /// </remarks>
-    /// <param name="context">The orchestration context the session is built from.</param>
-    private static void ConfigureCallTools(OrchestrationContext orchestration, RealtimeVoiceConversationContext call)
-    {
-        if (orchestration?.CompletionContext is null)
-        {
-            return;
-        }
-
-        AttachTool(orchestration, EndCallTool.ToolName, "Ends the phone call once the conversation is over.");
-
-        // Escalation, when this call has somewhere to escalate to. The tool and the guidance travel together:
-        // a tool the model is never told about is not used, and guidance without a tool has the model promising
-        // a transfer that nothing performs.
-        if (!string.IsNullOrWhiteSpace(call?.HandoffInstructions))
-        {
-            AttachTool(
-                orchestration,
-                OmnichannelHandoffHelper.TransferToAgentToolName,
-                "Transfers the current conversation to a live human agent.");
-
-            orchestration.SystemMessageBuilder.AppendLine();
-            orchestration.SystemMessageBuilder.AppendLine(call.HandoffInstructions);
-        }
-
-        // Somebody trying to end contact must never be handed to a person instead. This is written for the way it
-        // actually arrives: speech recognition on a phone line drops small words, and "don't call me" reaches the
-        // model as "call me" — which reads as a request to be connected and was, on a live call, acted on as one.
-        // The safe reading of an ambiguous fragment near a refusal is the one that stops calling.
-        orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine("## When somebody asks you to stop calling");
-        orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine(
-            "If the customer asks not to be called, to be taken off the list, or to stop calling, that is an " +
-            "opt-out and it ends the call. Acknowledge it plainly, say they will not be contacted again, and end " +
-            "the call. Never transfer somebody who is trying to end contact, and never treat it as interest. " +
-            "Phone audio drops small words, so a short or garbled phrase around a refusal — including one that " +
-            "sounds like an invitation to call — is an opt-out unless the customer clearly says otherwise; if you " +
-            "genuinely cannot tell, ask them to confirm rather than assuming the answer that keeps them on the list.");
-
-        // Who picked up. A model opening a sales call with no name does not decline to use one — it invents a
-        // plausible one, and the person who answers knows immediately that nobody actually knows them. Observed
-        // live: "is this Marcus?" to a contact named Amani, who asked who it was looking for, which the assistant
-        // then read as a request for a human and transferred the call.
-        orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine("## Who you are calling");
-        orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine(
-            string.IsNullOrWhiteSpace(call?.ContactName)
-                ? "You do not know the name of the person you are calling. Do not use a name, and never guess or " +
-                  "invent one; ask who you are speaking with if you need it."
-                : $"You are calling {call.ContactName}. That is the only name you may use for them. Never use any " +
-                  "other name, and never guess or invent one — if the person says they are somebody else, believe " +
-                  "them and adjust.");
-
-        // Said plainly, because the model is speaking rather than writing and cannot see the call state: on a
-        // phone call somebody has to hang up, and if it does not, the customer is left holding a dead line.
-        orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine("## Ending the call");
-        orchestration.SystemMessageBuilder.AppendLine();
-        orchestration.SystemMessageBuilder.AppendLine(VoiceCallGuidance.EndingTheCall);
-    }
-
-    /// <summary>
-    /// Puts one system tool in front of a realtime session.
-    /// </summary>
-    /// <remarks>
-    /// Registered as a scoped entry (the profile's own tool list skips system tools) and named in
-    /// <c>MustIncludeTools</c> so the profile's selection cannot leave it out. Both are idempotent, because this
-    /// runs once per call and a duplicate would be offered to the model twice.
-    /// </remarks>
-    /// <param name="orchestration">The orchestration context the session is built from.</param>
-    /// <param name="toolName">The tool's registered name.</param>
-    /// <param name="description">What the tool does, for the registry entry.</param>
-    private static void AttachTool(OrchestrationContext orchestration, string toolName, string description)
-    {
-        var scoped = orchestration.CompletionContext.AdditionalProperties
-            .TryGetValue(FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey, out var existing) &&
-            existing is List<ToolRegistryEntry> entries
-                ? entries
-                : [];
-
-        if (!scoped.Exists(entry => entry.Id == toolName))
-        {
-            scoped.Add(new ToolRegistryEntry
-            {
-                Id = toolName,
-                Name = toolName,
-                Description = description,
-                Source = ToolRegistryEntrySource.System,
-                CreateAsync = serviceProvider => ValueTask.FromResult(
-                    serviceProvider.GetKeyedService<AITool>(toolName)),
-            });
-        }
-
-        orchestration.CompletionContext.AdditionalProperties[FunctionInvocationAICompletionServiceHandler.ScopedEntriesKey] = scoped;
-
-        if (!orchestration.MustIncludeTools.Contains(toolName))
-        {
-            orchestration.MustIncludeTools.Add(toolName);
-        }
     }
 
     /// <summary>
@@ -476,7 +377,7 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
     /// ending handles the rest.
     /// </remarks>
     private async Task SpeakUpWhenNobodyHasAsync(
-        IRealtimeConversation conversation,
+        LiveConversation live,
         RealtimeVoiceConversationContext context,
         CancellationToken callToken)
     {
@@ -499,7 +400,10 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
                     Interlocked.Read(ref _lastAssistantAudioTicks),
                     Interlocked.Read(ref _lastCallerSpeechTicks));
 
-                if (quietFor < IdleBeforeSpeakingUp.Ticks)
+                // No session to ask while one that was lost is being replaced; the replacement speaks first anyway.
+                var conversation = live.Current;
+
+                if (quietFor < IdleBeforeSpeakingUp.Ticks || conversation is null)
                 {
                     continue;
                 }
@@ -696,77 +600,4 @@ public sealed partial class RealtimeVoiceConversationRunner : IRealtimeVoiceConv
 
         return true;
     }
-
-    private async Task<IRealtimeConversation> StartConversationAsync(
-        RealtimeVoiceConversationContext context,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _orchestrator.StartAsync(new RealtimeOrchestrationRequest
-            {
-                Resource = context.Profile,
-                RealtimeDeploymentName = context.RealtimeDeploymentName,
-                ChatSession = context.Session,
-
-                // The voice the activity was loaded with, so a realtime call sounds like the campaign it belongs
-                // to rather than like the model's default.
-                // The campaign's voice when the inventory load chose one, otherwise the voice configured on the
-                // profile itself. Only the activity was read before, and a batch does not set a voice unless
-                // somebody picks one — so the voice an operator selected on the profile was silently ignored and
-                // every realtime call used the model's default, whatever the profile said.
-                Voice = ResolveVoice(context),
-
-                // A caller who talks over the assistant is interrupting a person as far as they are concerned,
-                // and being talked through is the single most common complaint about automated calls.
-                AllowInterruption = true,
-
-                // A realtime session is built from this context rather than from a per-turn completion, so the
-                // tools a live call needs — and the instruction to use them — have to be put here. Without it the
-                // model has no way to end a call it knows is over.
-                ConfigureContext = orchestration => ConfigureCallTools(orchestration, context),
-            }, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "A realtime voice session could not be started for activity '{ActivityId}'.", context.Activity?.ItemId.SanitizeLogValue());
-
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// The voice this call should be spoken in: the one the activity was loaded with, falling back to the one
-    /// configured on the profile.
-    /// </summary>
-    /// <remarks>
-    /// The activity only carries a voice when the inventory load explicitly chose one, which is the exception
-    /// rather than the rule. Reading only the activity therefore threw away the profile's own setting, so an
-    /// operator who picked a voice there heard the model's default on every call and had no way to tell why.
-    /// </remarks>
-    /// <param name="context">The call being held.</param>
-    private static string ResolveVoice(RealtimeVoiceConversationContext context)
-    {
-        var activityVoice = context.Activity?.TextToSpeechVoiceId;
-
-        if (!string.IsNullOrWhiteSpace(activityVoice))
-        {
-            return activityVoice.Trim();
-        }
-
-        if (context.Profile is not null &&
-            context.Profile.TryGetSettings<ChatModeProfileSettings>(out var settings) &&
-            !string.IsNullOrWhiteSpace(settings.VoiceName))
-        {
-            return settings.VoiceName.Trim();
-        }
-
-        // Nothing chosen anywhere: let the deployment use whatever it defaults to.
-        return null;
-    }
-
 }

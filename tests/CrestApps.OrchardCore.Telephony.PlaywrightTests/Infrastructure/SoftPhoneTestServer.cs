@@ -88,7 +88,10 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     mediaAdapter: context.Request.Query[MediaAdapterQueryKey],
                     browserMediaAdapterName: context.RequestServices.GetRequiredService<InMemoryTelephonyProvider>().BrowserMediaAdapterName,
                     transferService: context.Request.Query.ContainsKey("transferService"),
-                    intlTelInput: context.Request.Query.ContainsKey(IntlTelInputQueryKey)),
+                    intlTelInput: context.Request.Query.ContainsKey(IntlTelInputQueryKey),
+                    widget: context.Request.Query.ContainsKey("widget"),
+                    dark: context.Request.Query.ContainsKey("dark"),
+                    host: context.Request.Query.ContainsKey("host")),
                 "text/html; charset=utf-8");
         });
 
@@ -201,7 +204,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory", bool transferService = false, bool intlTelInput = false)
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null, string browserMediaAdapterName = "in-memory", bool transferService = false, bool intlTelInput = false, bool widget = false, bool dark = false, bool host = false)
     {
         var adapterName = !string.IsNullOrEmpty(mediaAdapter)
             ? mediaAdapter
@@ -277,6 +280,12 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         var embeddedClose = embedded ? "</div>" : string.Empty;
         var scriptUrls = intlTelInput ? ScriptUrls.Prepend(IntlTelInputScriptUrl) : ScriptUrls;
         var scripts = string.Join(Environment.NewLine + "    ", scriptUrls.Select(url => $"<script src=\"{url}\"></script>"));
+
+        // The real widget's markup, floating or wrapped as the standalone page wraps it (see SoftPhoneWidgetPage).
+        if (widget)
+        {
+            return SoftPhoneWidgetPage.Build(configJson, scripts, StylesheetUrl, standalone: embedded, dark, host);
+        }
         // A styled page gives the root the widget's class, so the stylesheet's variables apply, but keeps it in the page
         // flow rather than floating in a corner, so a test can measure what it draws.
         var stylesheet = styled
@@ -331,6 +340,9 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                                 <i data-telephony-transfer-icon></i>
                                 <span data-telephony-transfer-label>Transfer</span>
                             </button>
+                            <button type="button" data-telephony-keypad-toggle aria-pressed="false" hidden>Keypad</button>
+                            <button type="button" data-telephony-add-call hidden>Add call</button>
+                            <button type="button" data-telephony-add-call-cancel hidden>Back to call</button>
                             <button type="button" data-telephony-hangup hidden>Hangup</button>
                             <button type="button" data-telephony-hangup-all hidden>Disconnect all</button>
                         </div>

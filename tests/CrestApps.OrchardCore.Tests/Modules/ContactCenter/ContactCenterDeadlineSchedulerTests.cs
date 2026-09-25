@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Tests.Modules.ContactCenter.Integration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Modules.ContactCenter;
@@ -174,6 +175,60 @@ public sealed class ContactCenterDeadlineSchedulerTests : IDisposable
     }
 
     [Fact]
+    public async Task Work_ThatLosesAWriteRace_IsRunAgainShortly_AndIsNotLoggedAsAnError()
+    {
+        // Arrange
+        // Live: a queue's treatment pass saved a waiting caller's row just as a decline and the next offer updated it,
+        // and the lost compare-and-set was logged as an ERROR every time, for work that only needed a second look.
+        var logger = new RecordingLogger();
+        using var scheduler = new ContactCenterDeadlineScheduler(_clock, _time, work => work(null), logger);
+        var attempts = 0;
+        var due = _clock.UtcNow.AddSeconds(5);
+
+        scheduler.Schedule("queue-treatment:1", due, (_, _) =>
+        {
+            attempts++;
+            _runs.Add(_clock.UtcNow);
+
+            return attempts == 1
+                ? throw new global::YesSql.ConcurrencyException(new global::YesSql.Document())
+                : Task.FromResult<DateTime?>(null);
+        });
+
+        // Act
+        await _time.AdvanceAsync(TimeSpan.FromSeconds(10), scheduler.WhenIdleAsync);
+
+        // Assert
+        Assert.Equal(2, _runs.Count);
+        Assert.InRange(_runs[1] - _runs[0], ContactCenterDeadlineScheduler.MinimumRescheduleDelay, TimeSpan.FromSeconds(2));
+        Assert.DoesNotContain(logger.Levels, level => level >= LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task Work_ThatKeepsLosingWriteRaces_IsLeftToTheSweep()
+    {
+        // Arrange
+        var logger = new RecordingLogger();
+        using var scheduler = new ContactCenterDeadlineScheduler(_clock, _time, work => work(null), logger);
+
+        scheduler.Schedule("queue-treatment:1", _clock.UtcNow.AddSeconds(5), (_, _) =>
+        {
+            _runs.Add(_clock.UtcNow);
+
+            throw new global::YesSql.ConcurrencyException(new global::YesSql.Document());
+        });
+
+        // Act
+        await _time.AdvanceAsync(TimeSpan.FromMinutes(2), scheduler.WhenIdleAsync);
+
+        // Assert
+        Assert.Equal(ContactCenterDeadlineScheduler.MaximumConflictRetries + 1, _runs.Count);
+        Assert.Equal(0, scheduler.Count);
+        Assert.Contains(LogLevel.Warning, logger.Levels);
+        Assert.DoesNotContain(LogLevel.Error, logger.Levels);
+    }
+
+    [Fact]
     public void Schedule_FarBeyondTheLeadTime_LeavesItToTheSweep()
     {
         // Act
@@ -209,4 +264,18 @@ public sealed class ContactCenterDeadlineSchedulerTests : IDisposable
 
             return Task.FromResult(next);
         };
+
+    private sealed class RecordingLogger : ILogger
+    {
+        public List<LogLevel> Levels { get; } = [];
+
+        public IDisposable BeginScope<TState>(TState state)
+            where TState : notnull
+            => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+            => Levels.Add(logLevel);
+    }
 }

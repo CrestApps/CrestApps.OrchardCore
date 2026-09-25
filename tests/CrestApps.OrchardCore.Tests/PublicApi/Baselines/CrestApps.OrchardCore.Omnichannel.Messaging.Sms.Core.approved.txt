@@ -34,7 +34,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services
     }
     public sealed class SmsDispatcher : CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.ISmsDispatcher
     {
-        public SmsDispatcher(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, OrchardCore.Sms.ISmsProviderResolver providerResolver, OrchardCore.Settings.ISiteService siteService, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsDispatcher> logger) { }
+        public SmsDispatcher(CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, OrchardCore.Sms.ISmsProviderResolver providerResolver, OrchardCore.Settings.ISiteService siteService, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingContactResolver contactResolver, OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Compliance.Redaction.IRedactorProvider redactorProvider, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services.SmsDispatcher> logger) { }
         public System.Threading.Tasks.ValueTask<string> ResolveProviderNameAsync(string fromNumber, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessageDispatchResult> SendAsync(OrchardCore.Sms.SmsMessage message, System.Threading.CancellationToken cancellationToken = default) { }
     }

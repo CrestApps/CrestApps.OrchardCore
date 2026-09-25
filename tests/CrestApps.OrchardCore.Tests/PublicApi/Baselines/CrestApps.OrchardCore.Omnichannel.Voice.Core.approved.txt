@@ -15,6 +15,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public string ProviderName { get; set; }
         public bool WasAnswered { get; set; }
     }
+    public sealed class AIVoiceSessionLost
+    {
+        public AIVoiceSessionLost() { }
+        public System.DateTime? LostUtc { get; set; }
+    }
     public sealed class AIVoiceSessionMeasurements
     {
         public AIVoiceSessionMeasurements() { }
@@ -44,6 +49,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Models
         public string ProviderCallId { get; set; }
         public string ProviderName { get; set; }
         public System.DateTime? SessionEndedUtc { get; set; }
+        public bool SessionLost { get; set; }
     }
     public sealed class TurnBasedSilence
     {
@@ -184,6 +190,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
         public System.Func<bool> ReachedVoicemail { get; set; }
         public string RealtimeDeploymentName { get; set; }
         public CrestApps.Core.AI.Models.AIChatSession Session { get; set; }
+        public bool SessionLost { get; set; }
         public bool UseCallAmbience { get; set; }
     }
     public sealed class RealtimeVoiceConversationRunner : CrestApps.OrchardCore.Omnichannel.Voice.Services.IRealtimeVoiceConversationRunner
@@ -222,7 +229,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
                     OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager,
                     OrchardCore.ContentManagement.IContentManager contentManager,
                     OrchardCore.Modules.IClock clock,
-                    Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> logger) { }
+                    Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> logger,
+                    Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Voice.Services.VoiceAgentConversationLoop> stringLocalizer) { }
         public System.Threading.Tasks.Task HandleAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.VoiceAgentEvent voiceEvent, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task OnListeningTimedOutAsync(CrestApps.OrchardCore.Omnichannel.Voice.Models.TurnBasedSilence silence, System.Threading.CancellationToken cancellationToken) { }
     }
@@ -230,12 +238,17 @@ namespace CrestApps.OrchardCore.Omnichannel.Voice.Services
     {
         public const string CompletedWithoutSummaryNote = "Automated AI voice call completed.";
         public const string NoConversationNote = "The automated call produced no conversation: nothing was said by either side.";
+        public const string SessionLostNote = "The automated assistant lost its connection partway through the call, so the conv" +
+            "ersation did not finish.";
+        public const string SessionLostReasonCode = "ai_session_lost";
         public const string VoicemailNote = "The automated call reached voicemail and left a message; nobody spoke with the cu" +
             "stomer.";
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, string modelChoiceId) { }
+        public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseSessionLostDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType, string modelChoiceId) { }
         public static CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition ChooseUnansweredDisposition(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelDisposition> choices, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
         public static bool HasConversation(System.Collections.Generic.IEnumerable<CrestApps.Core.AI.Models.AIChatSessionPrompt> prompts) { }
         public static string ResolveNotes(bool hasConversation, string modelSummary) { }
+        public static string ResolveSessionLostNotes(bool hasConversation, string modelSummary) { }
         public static System.Collections.Generic.IReadOnlyList<string> ResolveSubjectDispositionIds(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.SubjectAction> subjectActions, string subjectContentType) { }
         public static bool ShouldConclude(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelActivity activity) { }
     }

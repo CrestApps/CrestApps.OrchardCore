@@ -64,6 +64,28 @@ public sealed class CallerEchoGuardTests
         Assert.Equal(0, guard.WithheldMilliseconds);
     }
 
+    [Theory]
+    [InlineData(-32.3d)]
+    [InlineData(-27.3d)]
+    [InlineData(-30.8d)]
+    public void TheQuietestHelloHeardLive_OverTheAssistant_ReachesTheModelAsSaid(double dbfs)
+    {
+        // Arrange
+        // The levels the guard logged for a caller's "hello?" over the opening line, which was then re-read from the
+        // top. The guard was not what hid them from the model: every one of them is let through intact, and the
+        // several seconds it sent as silence on that call peaked at -70 dBFS, which is an empty line.
+        var guard = new CallerEchoGuard();
+        var frames = Frames(dbfs, 25);
+
+        // Act
+        var released = Feed(guard, frames, startTicks: _start, assistantPlaysUntilTicks: _start + Ms(5_000));
+
+        // Assert
+        Assert.Equal(Concat(frames), Concat(released));
+        Assert.Equal(0, guard.WithheldMilliseconds);
+        Assert.Equal(1, guard.Openings);
+    }
+
     [Fact]
     public void EchoOfTheAssistant_WhileItIsSpeaking_ReachesTheModelOnlyAsSilence()
     {

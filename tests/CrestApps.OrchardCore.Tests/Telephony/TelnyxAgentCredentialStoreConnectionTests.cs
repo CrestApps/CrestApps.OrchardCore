@@ -60,6 +60,66 @@ public sealed class TelnyxAgentCredentialStoreConnectionTests
         Assert.Equal("connection-c", credential.RegisteredConnectionId);
     }
 
+    [Fact]
+    public async Task MarkUnreachable_MarksTheUsersCredentialBySipUsername_AndItIsResolvedLast()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(Credential("window-a"), Credential("window-b"));
+        await harness.WithStoreAsync(store => store.MarkRegisteredAsync("user-1", "window-a", "connection-a", _now.AddSeconds(5)));
+
+        // Act
+        var marked = await harness.WithStoreAsync(store => store.MarkUnreachableAsync("user-1", "sip-window-a", _now.AddSeconds(30)));
+        var otherUsers = await harness.WithStoreAsync(store => store.MarkUnreachableAsync("user-2", "sip-window-b", _now.AddSeconds(30)));
+
+        // Assert
+        Assert.Equal("window-a", marked?.CredentialId);
+        Assert.Null(otherUsers);
+
+        var live = await harness.WithStoreAsync(store => store.ListLiveByUserAsync("user-1", _now.AddSeconds(31)));
+        Assert.Equal(["window-b", "window-a"], live.Select(credential => credential.CredentialId));
+        Assert.Equal(_now.AddSeconds(30), live[1].UnreachableUtc);
+        Assert.Null(live[0].UnreachableUtc);
+    }
+
+    [Fact]
+    public async Task RegisteringOnANewCredential_FromTheSameConnection_MarksTheCredentialItLeftUnreachable()
+    {
+        // Arrange
+        // The phone in one window moved to a fresh credential; the one it left no longer receives anything, although
+        // it still reads as registered by a connection that is open.
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(Credential("left-behind"), Credential("moved-to"), Credential("other-window"));
+        await harness.WithStoreAsync(store => store.MarkRegisteredAsync("user-1", "left-behind", "connection-a", _now.AddSeconds(5)));
+        await harness.WithStoreAsync(store => store.MarkRegisteredAsync("user-1", "other-window", "connection-b", _now.AddSeconds(6)));
+
+        // Act
+        await harness.WithStoreAsync(store => store.MarkRegisteredAsync("user-1", "moved-to", "connection-a", _now.AddSeconds(40)));
+
+        // Assert
+        var live = await harness.WithStoreAsync(store => store.ListLiveByUserAsync("user-1", _now.AddSeconds(41)));
+        Assert.Equal(_now.AddSeconds(40), live.Single(credential => credential.CredentialId == "left-behind").UnreachableUtc);
+        Assert.Null(live.Single(credential => credential.CredentialId == "other-window").UnreachableUtc);
+        Assert.Equal("left-behind", live[^1].CredentialId);
+    }
+
+    [Fact]
+    public async Task RegisteringAgain_OnACredentialFoundUnreachable_MakesItReachableAgain()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+        await harness.SeedAsync(Credential("window-a"));
+        await harness.WithStoreAsync(store => store.MarkRegisteredAsync("user-1", "window-a", "connection-a", _now.AddSeconds(5)));
+        await harness.WithStoreAsync(store => store.MarkUnreachableAsync("user-1", "sip-window-a", _now.AddSeconds(30)));
+
+        // Act
+        await harness.WithStoreAsync(store => store.MarkRegisteredAsync("user-1", "window-a", "connection-c", _now.AddSeconds(40)));
+
+        // Assert
+        var credential = Assert.Single(await harness.WithStoreAsync(store => store.ListLiveByUserAsync("user-1", _now.AddSeconds(41))));
+        Assert.Null(credential.UnreachableUtc);
+    }
+
     private static TelnyxAgentCredential Credential(string credentialId, string userId = "user-1")
         => new()
         {

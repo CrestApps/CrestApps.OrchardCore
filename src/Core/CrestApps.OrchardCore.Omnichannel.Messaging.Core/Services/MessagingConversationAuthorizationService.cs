@@ -121,7 +121,10 @@ public sealed class MessagingConversationAuthorizationService : IMessagingConver
             return false;
         }
 
-        return operation is ConversationOperation.View or ConversationOperation.Claim;
+        // Nobody holds the thread yet, so any member may read it, claim it, or reply on it (a reply claims it).
+        return operation is ConversationOperation.View
+            or ConversationOperation.Claim
+            or ConversationOperation.Send;
     }
 
     private bool IsQueueMember(AgentProfile agent, string queueId)

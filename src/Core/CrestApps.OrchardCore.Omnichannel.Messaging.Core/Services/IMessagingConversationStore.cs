@@ -1,4 +1,5 @@
 using CrestApps.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -38,6 +39,25 @@ public interface IMessagingConversationStore : ICatalog<MessagingConversation>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>The customer's conversations.</returns>
     Task<IReadOnlyList<MessagingConversation>> GetForCustomerAsync(string customerKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Determines whether the conversation already holds the message the provider identifies by
+    /// <paramref name="providerMessageId"/>. A thread records each provider message once, however many times the
+    /// provider delivers it and whichever path (the inbound pipeline or an AI handoff) got to it first.
+    /// </summary>
+    /// <param name="conversationId">The conversation identifier.</param>
+    /// <param name="providerMessageId">The provider's identifier for the message.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns><see langword="true"/> when the conversation already holds the message.</returns>
+    Task<bool> ContainsMessageAsync(string conversationId, string providerMessageId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lists every message in the conversation, oldest first.
+    /// </summary>
+    /// <param name="conversationId">The conversation identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The conversation's messages.</returns>
+    Task<IReadOnlyList<OmnichannelMessage>> GetMessagesAsync(string conversationId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the conversations assigned to (or owned personally by) the specified agent, most-recent first.

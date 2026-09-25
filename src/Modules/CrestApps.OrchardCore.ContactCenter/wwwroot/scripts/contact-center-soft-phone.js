@@ -122,6 +122,15 @@
     }
     return String(notification.userId) === String(ownUserId);
   }
+
+  // Whether an offer notification (an offer revoked, accepted or expired) is about this agent's own offer. The server
+  // also sends every offer's to its queue and to supervisors, for their views; acting on another agent's -- arming the
+  // phone to answer the accepted offer's leg -- had the next call to reach this phone answered by itself. An unknown
+  // owner on either side is taken as this agent's own, as before.
+  function isOwnOfferNotification(notification, ownUserId) {
+    return isOwnPresence(notification, ownUserId);
+  }
+  contactCenter.isOwnOfferNotification = isOwnOfferNotification;
   contactCenter.normalizePresenceStatus = normalizePresenceStatus;
   contactCenter.presenceLabel = presenceLabel;
   contactCenter.pendingPresenceLabel = pendingPresenceLabel;
@@ -642,6 +651,13 @@
         recoverSoftPhoneState(root, api, client);
       });
       client.connection.on('OfferRevoked', function (notification) {
+        // Another agent's offer, sent here for the queue's or a supervisor's view: nothing on this phone is about
+        // it. Acting on it armed this phone to answer the accepted offer's leg, and the next call to reach it --
+        // that agent calling this one's extension -- was answered by itself.
+        if (presence.isOwnOfferNotification && !presence.isOwnOfferNotification(notification, ownUserId)) {
+          return;
+        }
+
         // A copy of this offer still on its way here (an offer lookup in flight) must not reopen it.
         if (notification && notification.reservationId && typeof api.markOfferSettled === 'function') {
           api.markOfferSettled({

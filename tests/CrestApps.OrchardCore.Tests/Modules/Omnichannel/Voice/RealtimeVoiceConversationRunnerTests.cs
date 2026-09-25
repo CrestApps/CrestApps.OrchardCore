@@ -717,7 +717,8 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         harness.Conversation.Queue(
             new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
-            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." });
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseCompleted });
 
         var ended = await Task.WhenAny(run, Task.Delay(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken)) == run;
 
@@ -760,7 +761,8 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
         harness.Conversation.Queue(
             new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantAudioDelta, Audio = new byte[320] },
-            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." });
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.AssistantTranscriptDone, Text = "Bye, take care." },
+            new RealtimeConversationEvent { Type = RealtimeConversationEventType.ResponseCompleted });
 
         await Task.Delay(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
 
@@ -1028,8 +1030,10 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         await harness.RunAsync();
 
         // Assert
+        // Converted as the one stream the call is, the way the runner converts it.
+        var line = new IncomingCallAudio(harness.Media.IncomingFormat);
         var expected = frames
-            .SelectMany(frame => RealtimeAudioConverter.ToRealtime(frame, harness.Media.IncomingFormat).ToArray())
+            .SelectMany(frame => line.Decode(frame).ToArray())
             .ToArray();
 
         Assert.Equal(expected, harness.Conversation.SentAudio.SelectMany(chunk => chunk).ToArray());
@@ -1056,8 +1060,10 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         await harness.RunAsync();
 
         // Assert
+        // Converted as the one stream the call is, the way the runner converts it.
+        var line = new IncomingCallAudio(harness.Media.IncomingFormat);
         var expected = frames
-            .SelectMany(frame => RealtimeAudioConverter.ToRealtime(frame, harness.Media.IncomingFormat).ToArray())
+            .SelectMany(frame => line.Decode(frame).ToArray())
             .ToArray();
 
         Assert.Equal(expected, harness.Conversation.SentAudio.SelectMany(chunk => chunk).ToArray());
@@ -1179,6 +1185,8 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
             var promptStore = new Mock<IAIChatSessionPromptStore>();
             promptStore.Setup(x => x.CreateAsync(It.IsAny<AIChatSessionPrompt>(), It.IsAny<CancellationToken>()))
                 .Callback<AIChatSessionPrompt, CancellationToken>((prompt, _) => _prompts.Add(prompt));
+            promptStore.Setup(x => x.GetPromptsAsync(It.IsAny<string>()))
+                .ReturnsAsync(() => [.. _prompts]);
 
             var sessionManager = new Mock<IAIChatSessionManager>();
 
@@ -1260,8 +1268,13 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         /// </summary>
         public AIVoiceSessionMeter Meter { get; } = new(measuresCallerSpeech: true);
 
+        /// <summary>
+        /// The context the last run was given, so a test can read what the runner reported back on it.
+        /// </summary>
+        public RealtimeVoiceConversationContext LastContext { get; private set; }
+
         public Task<bool> RunAsync()
-            => Runner.RunAsync(new RealtimeVoiceConversationContext
+            => Runner.RunAsync(LastContext = new RealtimeVoiceConversationContext
             {
                 Activity = Activity,
                 Profile = Profile,
@@ -1318,6 +1331,22 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public bool Fail { get; set; }
 
         /// <summary>
+        /// When set, only the first session opens: every later attempt fails, the way a provider that is down
+        /// refuses the reconnect after dropping the call's session.
+        /// </summary>
+        public bool FailAfterFirst { get; set; }
+
+        /// <summary>
+        /// The sessions handed out after the first, in order, so a test can script what a reconnect gets.
+        /// </summary>
+        public Queue<IRealtimeConversation> Later { get; } = new();
+
+        /// <summary>
+        /// How many sessions were asked for, including ones that failed to open.
+        /// </summary>
+        public int Starts { get; private set; }
+
+        /// <summary>
         /// The invocation context that was current when the session was started, which the real orchestrator
         /// refuses to start a tool-carrying session without.
         /// </summary>
@@ -1326,8 +1355,9 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public Task<IRealtimeConversation> StartAsync(RealtimeOrchestrationRequest request, CancellationToken cancellationToken = default)
         {
             InvocationScopeAtStart = AIInvocationScope.Current;
+            Starts++;
 
-            if (Fail)
+            if (Fail || (FailAfterFirst && Starts > 1))
             {
                 throw new InvalidOperationException("The realtime session could not be opened.");
             }
@@ -1345,7 +1375,7 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
 
             Contexts.Add(context);
 
-            return Task.FromResult(_conversation);
+            return Task.FromResult(Starts > 1 && Later.Count > 0 ? Later.Dequeue() : _conversation);
         }
     }
 
@@ -1430,8 +1460,18 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public Task RequestAcknowledgementAsync(string instructions, CancellationToken cancellationToken = default)
             => Task.CompletedTask;
 
+        /// <summary>
+        /// When set, sending the caller's audio fails the way it does on a session whose socket has gone.
+        /// </summary>
+        public bool FailSends { get; set; }
+
         public Task SendAudioAsync(ReadOnlyMemory<byte> audio, CancellationToken cancellationToken = default)
         {
+            if (FailSends)
+            {
+                throw new System.Net.WebSockets.WebSocketException("The remote party closed the WebSocket connection.");
+            }
+
             SentAudio.Add(audio.ToArray());
 
             return Task.CompletedTask;
@@ -1484,8 +1524,17 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
             return Task.CompletedTask;
         }
 
+        /// <summary>
+        /// Whether the runner let go of this session.
+        /// </summary>
+        public bool Disposed { get; private set; }
+
         public ValueTask DisposeAsync()
-            => ValueTask.CompletedTask;
+        {
+            Disposed = true;
+
+            return ValueTask.CompletedTask;
+        }
     }
 
     /// <summary>
@@ -1523,7 +1572,12 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
         public bool KeepAlive { get; set; }
 
         public void QueueCallerAudio(byte[] frame)
-            => _incoming.Add(frame);
+        {
+            lock (_incoming)
+            {
+                _incoming.Add(frame);
+            }
+        }
 
         /// <summary>
         /// When set, the caller's audio is held until the assistant's voice has been written to the line, so a test
@@ -1540,19 +1594,37 @@ public sealed partial class RealtimeVoiceConversationRunnerTests
                 await _assistantSpoke.Task.WaitAsync(cancellationToken);
             }
 
-            foreach (var frame in _incoming)
+            // Frames queued while the call is already up are read too, the way a live line keeps delivering.
+            var next = 0;
+
+            while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                yield return new ContactCenterVoiceMediaFrame { Data = frame };
-            }
+                byte[] frame = null;
 
-            while (KeepAlive)
-            {
+                lock (_incoming)
+                {
+                    if (next < _incoming.Count)
+                    {
+                        frame = _incoming[next++];
+                    }
+                }
+
+                if (frame is not null)
+                {
+                    yield return new ContactCenterVoiceMediaFrame { Data = frame };
+
+                    continue;
+                }
+
+                if (!KeepAlive)
+                {
+                    yield break;
+                }
+
                 await Task.Delay(10, cancellationToken);
             }
-
-            await Task.CompletedTask;
         }
 
         public ValueTask WriteOutgoingAsync(ContactCenterVoiceMediaFrame frame, CancellationToken cancellationToken = default)

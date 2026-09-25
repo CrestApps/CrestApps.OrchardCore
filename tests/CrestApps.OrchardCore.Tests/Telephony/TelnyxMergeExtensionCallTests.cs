@@ -29,42 +29,6 @@ public sealed class TelnyxMergeExtensionCallTests
     private const string RemoteLeg = "remote-b";
 
     [Fact]
-    public async Task MergingAnExtensionCallFirst_JoinsTheOthersToItsOwnConference_WithoutMovingTheAgentsLeg()
-    {
-        // Arrange
-        var handler = new RecordingHttpMessageHandler()
-            .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(ExtensionAgentState(peer: ColleagueLeg)))
-            .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxBridgedDialTests.AgentLeg(peer: RemoteLeg)))
-            .RespondWith(HttpStatusCode.OK, $$$"""{"data":[{"id":"conference-ext","name":"ext-{{{ExtensionAgentLeg}}}"}]}""")
-            .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
-        var provider = CreateProvider(handler);
-
-        // Act
-        var result = await provider.MergeAsync(new MergeRequest { CallIds = [ExtensionAgentLeg, KeypadAgentLeg] }, TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.True(result.Succeeded);
-        Assert.Equal(
-            [
-                $"GET /v2/calls/{ExtensionAgentLeg}",
-                $"GET /v2/calls/{KeypadAgentLeg}",
-                $"GET /v2/conferences?filter[name]=ext-{ExtensionAgentLeg}",
-                $"PUT /v2/calls/{ColleagueLeg}/actions/client_state_update",
-                "POST /v2/conferences/conference-ext/actions/join",
-            ],
-            handler.Requests.Select(Describe));
-
-        // The colleague is now one participant among several: hanging up must not end the agent's leg (and with it the
-        // conference) for everybody else.
-        Assert.True(TelnyxOutboundBridgeState.TryParseEncoded(ReadString(handler.Requests[3].Body, "client_state"), out var colleague));
-        Assert.True(colleague.Detached);
-        Assert.Null(colleague.VoicemailRecipientUserId);
-
-        Assert.Equal(RemoteLeg, ReadString(handler.Requests[4].Body, "call_control_id"));
-        Assert.Equal($"ext-{ExtensionAgentLeg}", result.Call.Metadata["conferenceName"]);
-    }
-
-    [Fact]
     public async Task MergingAnExtensionCallSecond_JoinsTheColleague_AndLeavesTheAgentsExtensionLegAlone()
     {
         // Arrange
@@ -119,22 +83,24 @@ public sealed class TelnyxMergeExtensionCallTests
     }
 
     [Fact]
-    public async Task MergingAnExtensionCallWhoseConferenceHasEnded_IsRefused_WithoutMakingAnother()
+    public async Task WhenTheColleagueCannotBeMoved_AndTheExtensionCallsConferenceHasEnded_TheMergeIsRefused_WithoutJoiningAnybody()
     {
-        // Arrange
+        // Arrange - two extension calls: Telnyx refuses a new conference from the first colleague, and the extension
+        // call's own conference is gone.
         var handler = new RecordingHttpMessageHandler()
             .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(ExtensionAgentState(peer: ColleagueLeg)))
-            .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(TelnyxBridgedDialTests.AgentLeg(peer: RemoteLeg)))
+            .RespondWith(HttpStatusCode.OK, TelnyxBridgedDialTests.CallStatus(ExtensionAgentState(peer: "colleague-2")))
+            .RespondWith(HttpStatusCode.UnprocessableEntity, """{"errors":[{"code":"90040","title":"Conference create not allowed"}]}""")
             .RespondWith(HttpStatusCode.OK, """{"data":[]}""")
             .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
         var provider = CreateProvider(handler);
 
         // Act
-        var result = await provider.MergeAsync(new MergeRequest { CallIds = [ExtensionAgentLeg, KeypadAgentLeg] }, TestContext.Current.CancellationToken);
+        var result = await provider.MergeAsync(new MergeRequest { CallIds = [ExtensionAgentLeg, "ext-agent-2"] }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.Succeeded);
-        Assert.All(handler.Requests, request => Assert.Equal(HttpMethod.Get, request.Method));
+        Assert.DoesNotContain(handler.Requests, request => request.Path.EndsWith("/actions/join", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -155,6 +121,26 @@ public sealed class TelnyxMergeExtensionCallTests
         Assert.Equal(ColleagueLeg, recorded.PeerCallControlId);
         Assert.Equal("user-2", recorded.VoicemailRecipientUserId);
         Assert.False(recorded.IsBridgedDialAgentLeg);
+    }
+
+    // Live, the soft phone was handed no client state on the colleague's leg, so it could not tell that leg (which must
+    // ring) from its own agent leg (which it answers). The leg now says so in a SIP header too.
+    [Fact]
+    public async Task ExtensionAgentLegAnswered_TagsTheColleaguesLegAsTheDestination_InASipHeader()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler()
+            .RespondWith(HttpStatusCode.OK, $$$"""{"data":{"call_control_id":"{{{ColleagueLeg}}}"}}""")
+            .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+        var orchestrator = CreateOrchestrator(handler);
+
+        // Act
+        await orchestrator.AdvanceAsync(Event("call.answered", ExtensionAgentLeg, ExtensionAgentState(peer: null)), TestContext.Current.CancellationToken);
+
+        // Assert
+        using var body = JsonDocument.Parse(handler.Requests[0].Body);
+        var headers = body.RootElement.GetProperty("custom_headers").EnumerateArray().ToArray();
+        Assert.Contains(headers, header => header.GetProperty("name").GetString() == "X-Destination-Leg" && header.GetProperty("value").GetString() == "1");
     }
 
     // A merged extension call's colleague is in the merge conference, not in the agent leg's own conference, so the

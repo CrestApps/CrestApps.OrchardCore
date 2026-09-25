@@ -96,10 +96,40 @@ public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
         // Registered again is live again, whichever connection says so.
         credential.RegisteredConnectionId = string.IsNullOrWhiteSpace(connectionId) ? null : connectionId;
         credential.ConnectionClosedUtc = null;
+        credential.UnreachableUtc = null;
 
         await _session.SaveAsync(credential, cancellationToken: cancellationToken);
 
+        if (!string.IsNullOrWhiteSpace(connectionId))
+        {
+            await MarkSupersededAsync(normalizedUserId, credential, connectionId, registeredUtc, cancellationToken);
+        }
+
         return true;
+    }
+
+    // One connection's phone is registered on one credential at a time. When it registers on another, the credential it
+    // left still reads as registered by an open connection, and would keep being rung until it expired.
+    private async Task MarkSupersededAsync(
+        string userId,
+        TelnyxAgentCredential registered,
+        string connectionId,
+        DateTime registeredUtc,
+        CancellationToken cancellationToken)
+    {
+        foreach (var credential in await ListLiveByUserAsync(userId, registeredUtc, cancellationToken))
+        {
+            if (credential.Id == registered.Id ||
+                string.Equals(credential.CredentialId, registered.CredentialId, StringComparison.Ordinal) ||
+                credential.UnreachableUtc.HasValue ||
+                !string.Equals(credential.RegisteredConnectionId, connectionId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            credential.UnreachableUtc = registeredUtc;
+            await _session.SaveAsync(credential, cancellationToken: cancellationToken);
+        }
     }
 
     /// <inheritdoc/>
@@ -127,6 +157,31 @@ public sealed class TelnyxAgentCredentialStore : ITelnyxAgentCredentialStore
         }
 
         return marked;
+    }
+
+    /// <inheritdoc/>
+    public async Task<TelnyxAgentCredential> MarkUnreachableAsync(string userId, string sipUsername, DateTime unreachableUtc, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(sipUsername))
+        {
+            return null;
+        }
+
+        var normalizedSipUsername = sipUsername.Trim();
+
+        // Only the user's own live credentials: a leg to someone else's address says nothing about this user's phone.
+        var credential = (await ListLiveByUserAsync(userId, unreachableUtc, cancellationToken))
+            .FirstOrDefault(candidate => string.Equals(candidate.SipUsername, normalizedSipUsername, StringComparison.Ordinal));
+
+        if (credential is null)
+        {
+            return null;
+        }
+
+        credential.UnreachableUtc ??= unreachableUtc;
+        await _session.SaveAsync(credential, cancellationToken: cancellationToken);
+
+        return credential;
     }
 
     /// <inheritdoc/>

@@ -25,6 +25,12 @@ public sealed class MessageDispatchResult
     public IList<LocalizedString> Errors { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the provider-neutral reason the provider refused the message, when it gave one the sender
+    /// can act on (for example that the recipient has opted out). <see langword="null"/> otherwise.
+    /// </summary>
+    public string ErrorCode { get; set; }
+
+    /// <summary>
     /// Creates a successful result.
     /// </summary>
     /// <param name="providerMessageId">The provider's identifier for the message, when known.</param>

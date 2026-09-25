@@ -2,7 +2,36 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.Telephony/Assets/js/soft-phone/dial-target.js';
 
-const { resolveDialTarget, shouldOfferDial, isSameNumber, resolvePeerNumber, shouldShowCallNumber, planNumberField } = globalThis.CrestAppsSoftPhone;
+const { resolveDialTarget, shouldOfferDial, isSameNumber, resolvePeerNumber, shouldShowCallNumber, planNumberField, planEntryStart, planEntryEnd } = globalThis.CrestAppsSoftPhone;
+
+// The held call's number in the field is a display: reaching for the field to add a call had the agent delete it by
+// hand first. Starting an entry -- focusing the field, the first key, switching Number / Extension -- clears it, and
+// the field is the agent's until they leave it empty.
+describe('planEntryStart / planEntryEnd', () => {
+    it('clears a call\'s label or number when the agent starts an entry', () => {
+        expect(planEntryStart({ isCallDisplay: true })).toBe('clear');
+    });
+
+    it('never clears what the agent is typing', () => {
+        expect(planEntryStart({ isCallDisplay: false })).toBe('keep');
+        expect(planEntryStart()).toBe('keep');
+    });
+
+    it('gives the field back to the held call when the agent leaves it empty', () => {
+        expect(planEntryEnd({ value: '', agentEntered: true })).toBe('release');
+        expect(planEntryEnd({ value: '  ', agentEntered: true })).toBe('release');
+    });
+
+    it('keeps an entry the agent made, and a field the agent never took', () => {
+        expect(planEntryEnd({ value: '702', agentEntered: true })).toBe('keep');
+        expect(planEntryEnd({ value: '', agentEntered: false })).toBe('keep');
+    });
+
+    it('keeps the cleared field empty on hold while the agent is entering', () => {
+        expect(planNumberField({ callId: 'held', stateName: 'OnHold', peerNumber: '+17024993350', agentEntered: true, isCallDisplay: false }))
+            .toEqual({ action: 'keep', value: '', callId: '' });
+    });
+});
 
 const ownNumber = '+15550100200';
 

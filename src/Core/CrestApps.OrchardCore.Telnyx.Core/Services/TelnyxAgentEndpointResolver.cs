@@ -96,10 +96,74 @@ public sealed class TelnyxAgentEndpointResolver : ITelnyxAgentEndpointResolver
             return null;
         }
 
-        var sipDomain = string.IsNullOrWhiteSpace(_options.SipDomain)
-            ? TelnyxConstants.DefaultSipDomain
-            : _options.SipDomain;
+        return $"sip:{credential.SipUsername}@{SipDomain}";
+    }
 
-        return $"sip:{credential.SipUsername}@{sipDomain}";
+    /// <inheritdoc/>
+    public async Task<TelnyxAgentEndpointRedelivery> ResolveRedeliveryAsync(
+        string userId,
+        string unreachableEndpoint,
+        string requiredClientCapability,
+        CancellationToken cancellationToken = default)
+    {
+        var refusedSipUsername = SipUsernameOf(unreachableEndpoint);
+
+        if (string.IsNullOrWhiteSpace(userId) || refusedSipUsername is null)
+        {
+            return null;
+        }
+
+        var normalizedUserId = userId.Trim();
+        var now = _clock.UtcNow;
+
+        // Recorded first, so every later call -- not only this retry -- stops choosing it until it registers again.
+        var refused = await _credentialStore.MarkUnreachableAsync(normalizedUserId, refusedSipUsername, now, cancellationToken);
+        var live = await _credentialStore.ListLiveByUserAsync(normalizedUserId, now, cancellationToken);
+
+        var credential = TelnyxAgentCredentialSelection.OrderForRedelivery(live)
+            .FirstOrDefault(candidate =>
+                !string.IsNullOrWhiteSpace(candidate.SipUsername) &&
+                !string.Equals(candidate.SipUsername, refusedSipUsername, StringComparison.Ordinal));
+
+        if (credential is null ||
+            (!string.IsNullOrEmpty(requiredClientCapability) &&
+             credential.ClientCapabilities?.Contains(requiredClientCapability, StringComparer.Ordinal) != true))
+        {
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug(
+                    "User '{UserId}' has no credential to ring again in place of '{CredentialId}', which was refused as unavailable.",
+                    normalizedUserId.SanitizeLogValue(),
+                    refused?.CredentialId.SanitizeLogValue());
+            }
+
+            return null;
+        }
+
+        return new TelnyxAgentEndpointRedelivery($"sip:{credential.SipUsername}@{SipDomain}", credential.CredentialId, refused?.CredentialId);
+    }
+
+    private string SipDomain
+        => string.IsNullOrWhiteSpace(_options.SipDomain) ? TelnyxConstants.DefaultSipDomain : _options.SipDomain;
+
+    // "sip:{username}@{domain}", as every agent leg is addressed.
+    private static string SipUsernameOf(string endpoint)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint))
+        {
+            return null;
+        }
+
+        var value = endpoint.Trim();
+
+        if (value.StartsWith("sip:", StringComparison.OrdinalIgnoreCase))
+        {
+            value = value[4..];
+        }
+
+        var at = value.IndexOf('@');
+        var username = at >= 0 ? value[..at] : value;
+
+        return string.IsNullOrWhiteSpace(username) ? null : username;
     }
 }

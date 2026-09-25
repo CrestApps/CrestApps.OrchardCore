@@ -112,7 +112,13 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
 
-        // Sending marks the thread read and, on an unassigned personal claim, assigns it to the acting agent.
+        // Answering a thread nobody holds is taking it, exactly as Claim would: under the same authorization, with
+        // the same assignment and the same announcement. A thread someone already holds keeps its holder, even when
+        // the sender may reply on it.
+        var claims = IsClaimableBy(conversation, request.ActingAgentId) &&
+            await IsPrincipalAuthorizedAsync(request.Principal, conversation, ConversationOperation.Claim, cancellationToken);
+
+        // Sending marks the thread read.
         conversation.LastMessageUtc = message.CreatedUtc;
         conversation.LastMessagePreview = MessagingConversationRollup.BuildPreview(request.Body);
         conversation.IsRead = true;
@@ -124,16 +130,17 @@ public sealed class MessagingConversationService : IMessagingConversationService
         conversation.ModifiedUtc = _clock.UtcNow;
         _slaService.MarkResponded(conversation);
 
-        if (!string.IsNullOrEmpty(request.ActingAgentId) &&
-            conversation.OwnerType == ConversationOwnerType.Personal &&
-            conversation.AssignmentStatus == ConversationAssignmentStatus.Unassigned)
+        if (claims)
         {
-            conversation.OwnerId = request.ActingAgentId;
-            conversation.AssignedAgentId = request.ActingAgentId;
-            conversation.AssignmentStatus = ConversationAssignmentStatus.Assigned;
+            ApplyAssignment(conversation, request.ActingAgentId);
         }
 
         await _conversationStore.UpdateAsync(conversation, cancellationToken);
+
+        if (claims)
+        {
+            await NotifyAssignedAsync(conversation, cancellationToken);
+        }
 
         return new MessagingSendResult
         {
@@ -421,6 +428,17 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
     private async Task<MessagingSendResult> AssignInternalAsync(MessagingConversation conversation, string agentId, CancellationToken cancellationToken)
     {
+        ApplyAssignment(conversation, agentId);
+
+        await _conversationStore.UpdateAsync(conversation, cancellationToken);
+
+        await NotifyAssignedAsync(conversation, cancellationToken);
+
+        return new MessagingSendResult { Succeeded = true };
+    }
+
+    private void ApplyAssignment(MessagingConversation conversation, string agentId)
+    {
         conversation.AssignedAgentId = agentId;
         conversation.AssignmentStatus = ConversationAssignmentStatus.Assigned;
 
@@ -432,17 +450,33 @@ public sealed class MessagingConversationService : IMessagingConversationService
         }
 
         conversation.ModifiedUtc = _clock.UtcNow;
+    }
 
-        await _conversationStore.UpdateAsync(conversation, cancellationToken);
-
-        await _notifier.ConversationAssignedAsync(new MessagingAssignmentNotification
+    private Task NotifyAssignedAsync(MessagingConversation conversation, CancellationToken cancellationToken)
+        => _notifier.ConversationAssignedAsync(new MessagingAssignmentNotification
         {
             ConversationId = conversation.ItemId,
             AssignedAgentId = conversation.AssignedAgentId,
             OwnerQueueId = conversation.OwnerType == ConversationOwnerType.Queue ? conversation.OwnerId : null,
         }, cancellationToken);
 
-        return new MessagingSendResult { Succeeded = true };
+    // A reply claims the thread only when nobody holds it: no agent is assigned, and a personal thread has no
+    // other owner. Claiming it from whoever holds it is a transfer, which is a separate, supervisor-only action.
+    private static bool IsClaimableBy(MessagingConversation conversation, string agentId)
+    {
+        if (string.IsNullOrEmpty(agentId))
+        {
+            return false;
+        }
+
+        if (conversation.AssignmentStatus == ConversationAssignmentStatus.Assigned && !string.IsNullOrEmpty(conversation.AssignedAgentId))
+        {
+            return false;
+        }
+
+        return conversation.OwnerType != ConversationOwnerType.Personal ||
+            string.IsNullOrEmpty(conversation.OwnerId) ||
+            string.Equals(conversation.OwnerId, agentId, StringComparison.OrdinalIgnoreCase);
     }
 
     // The last line of defence behind the controller and hub checks: when the caller is a user (not a system
@@ -498,7 +532,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
 
         state.LastError = dispatch.GetErrorText();
 
-        if (OutboundDeliveryState.CanRetry(state.Attempts))
+        if (OutboundDeliveryState.CanRetry(state.Attempts, dispatch.ErrorCode))
         {
             state.NextAttemptUtc = _clock.UtcNow.Add(OutboundDeliveryState.GetDelay(state.Attempts));
 

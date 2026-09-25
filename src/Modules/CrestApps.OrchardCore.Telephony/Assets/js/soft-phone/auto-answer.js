@@ -82,8 +82,12 @@
     // The intent the platform stamps on a leg it rings at a call's destination: this phone is the one being called.
     var DESTINATION_LEG_INTENT = 'ob-dest';
 
+    // The SIP header the platform adds to that leg, for an SDK that hands over no client state (live, Telnyx's did not).
+    var DESTINATION_LEG_HEADER = 'x-destination-leg';
+
     // Whether the leg is one the platform rang at this phone as somebody's destination -- a colleague calling this
-    // agent's extension -- rather than this phone's own leg of a call it placed. Read from the leg's client state.
+    // agent's extension -- rather than this phone's own leg of a call it placed. Read from the leg's client state, or
+    // from its SIP header.
     function isDestinationLeg(options) {
         if (!options) {
             return false;
@@ -92,7 +96,22 @@
         var read = softPhone.readProviderClientState;
         var state = typeof read === 'function' ? read(options.clientState || options.client_state) : null;
 
-        return !!(state && state.i === DESTINATION_LEG_INTENT);
+        if (state && state.i === DESTINATION_LEG_INTENT) {
+            return true;
+        }
+
+        var readHeader = softPhone.readProviderHeader;
+
+        return typeof readHeader === 'function' &&
+            !!readHeader(options.customHeaders || options.custom_headers, DESTINATION_LEG_HEADER);
+    }
+
+    // Whether an accept made elsewhere may arm this phone for its offer's leg: only for an offer this phone was offered
+    // ({ reservationId: callId }). An offer it never had is another agent's -- the server tells the offer's queue and
+    // every supervisor of each accept -- and arming for it answered the next leg to arrive, whoever's it was.
+    function canArmForOffer(reservationId, offeredReservations) {
+        return !!reservationId && !!offeredReservations &&
+            Object.prototype.hasOwnProperty.call(offeredReservations, reservationId);
     }
 
     // Whether an inbound leg arriving now is answered without ringing. Only an arm decides, and only once: nothing the
@@ -109,6 +128,7 @@
 
     softPhone.AUTO_ANSWER_WINDOW_MS = AUTO_ANSWER_WINDOW_MS;
     softPhone.isDestinationLeg = isDestinationLeg;
+    softPhone.canArmForOffer = canArmForOffer;
     softPhone.shouldAutoAnswerInboundLeg = shouldAutoAnswerInboundLeg;
     softPhone.EXTENSION_CALL_KEY = EXTENSION_CALL_KEY;
     softPhone.autoAnswerOfferKey = offerKey;

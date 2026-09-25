@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
 using Microsoft.Extensions.Localization;
@@ -19,6 +20,11 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// </summary>
 public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
 {
+    /// <summary>
+    /// Telnyx's "Blocked due to STOP message": the recipient opted out of the sending number.
+    /// </summary>
+    private const string StopBlockedErrorCode = "40300";
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IOptionsMonitor<TelnyxSmsOptions> _options;
     private readonly ILogger _logger;
@@ -108,6 +114,21 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
+                // A recipient who texted STOP is blocked by Telnyx, which confirms the opt-out to them itself. That is
+                // expected, and the sender records the opt-out rather than retrying.
+                if (HasErrorCode(errorBody, StopBlockedErrorCode))
+                {
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation("Telnyx refused the SMS with error {TelnyxErrorCode} because the recipient has opted out; Telnyx already confirmed the opt-out to them.", StopBlockedErrorCode);
+                    }
+
+                    var optedOut = Failed("The recipient has opted out of messages from this number.");
+                    optedOut.ErrorCode = OmnichannelConstants.SmsErrorCodes.RecipientOptedOut;
+
+                    return optedOut;
+                }
+
                 _logger.LogWarning("Telnyx SMS send failed with status {StatusCode}. Response: {Response}", (int)response.StatusCode, Truncate(errorBody));
 
                 return Failed($"The Telnyx messaging API returned {(int)response.StatusCode}: {Truncate(errorBody)}");
@@ -145,6 +166,33 @@ public sealed class TelnyxSmsProvider : ISmsProvider, ISmsDispatchProvider
         catch (JsonException)
         {
             return null;
+        }
+    }
+
+    // Telnyx's errors are a list of { code, title, detail } objects.
+    private static bool HasErrorCode(string body, string code)
+    {
+        if (string.IsNullOrWhiteSpace(body))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(body);
+
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Array &&
+                errors.EnumerateArray().Any(error =>
+                    error.ValueKind == JsonValueKind.Object &&
+                    error.TryGetProperty("code", out var value) &&
+                    value.ValueKind is JsonValueKind.String or JsonValueKind.Number &&
+                    string.Equals(value.ToString(), code, StringComparison.Ordinal));
+        }
+        catch (JsonException)
+        {
+            return false;
         }
     }
 

@@ -159,7 +159,7 @@ public sealed class MessagingAgentHandoffService : IOmnichannelHandoffService
         }
 
         // Hydrate the human thread with the prior automated transcript so the agent sees the actual conversation.
-        var importedCount = await ImportTranscriptAsync(conversation, request.Transcript, serviceAddress, contactAddress, cancellationToken);
+        var importedCount = await ImportTranscriptAsync(conversation, isNew, request.Transcript, serviceAddress, contactAddress, cancellationToken);
 
         var lastContent = request.Transcript is { Count: > 0 }
             ? request.Transcript[^1].Content
@@ -206,6 +206,7 @@ public sealed class MessagingAgentHandoffService : IOmnichannelHandoffService
 
     private async Task<int> ImportTranscriptAsync(
         MessagingConversation conversation,
+        bool isNew,
         IReadOnlyList<OmnichannelHandoffMessage> transcript,
         string serviceAddress,
         string contactAddress,
@@ -216,18 +217,38 @@ public sealed class MessagingAgentHandoffService : IOmnichannelHandoffService
             return 0;
         }
 
+        // Each message appears in the thread once. The copy is keyed by the transcript entry it came from, and a
+        // customer text also by the provider's id, so an entry the thread already holds — recorded live before the
+        // automated conversation began, redelivered, or imported by an earlier attempt at this handoff — is
+        // skipped by identity rather than guessed at from its words or its time.
+        IReadOnlyList<OmnichannelMessage> existing = isNew
+            ? []
+            : await _conversationStore.GetMessagesAsync(conversation.ItemId, cancellationToken) ?? [];
+
+        var knownIds = existing
+            .Select(message => message.Id)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var knownProviderMessageIds = existing
+            .Select(message => message.ProviderMessageId)
+            .Where(id => !string.IsNullOrEmpty(id))
+            .ToHashSet(StringComparer.Ordinal);
+
         var count = 0;
 
         foreach (var entry in transcript)
         {
-            if (string.IsNullOrWhiteSpace(entry.Content))
+            if (string.IsNullOrWhiteSpace(entry.Content) ||
+                (!string.IsNullOrEmpty(entry.Id) && !knownIds.Add(entry.Id)) ||
+                (!string.IsNullOrEmpty(entry.ProviderMessageId) && !knownProviderMessageIds.Add(entry.ProviderMessageId)))
             {
                 continue;
             }
 
             var message = new OmnichannelMessage
             {
-                Id = UniqueId.GenerateId(),
+                Id = string.IsNullOrEmpty(entry.Id) ? UniqueId.GenerateId() : entry.Id,
                 Channel = conversation.Channel,
                 CustomerAddress = contactAddress,
                 ServiceAddress = serviceAddress,
@@ -235,6 +256,7 @@ public sealed class MessagingAgentHandoffService : IOmnichannelHandoffService
                 IsInbound = entry.IsInbound,
                 CreatedUtc = entry.CreatedUtc == default ? _clock.UtcNow : entry.CreatedUtc,
                 ConversationId = conversation.ItemId,
+                ProviderMessageId = string.IsNullOrEmpty(entry.ProviderMessageId) ? null : entry.ProviderMessageId,
             };
 
             await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);

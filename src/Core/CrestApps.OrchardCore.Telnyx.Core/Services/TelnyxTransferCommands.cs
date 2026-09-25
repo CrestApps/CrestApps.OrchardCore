@@ -40,6 +40,13 @@ public sealed class TelnyxTransferCommands
     /// </summary>
     public const string TransferLegSipHeader = "X-Transfer-Leg";
 
+    /// <summary>
+    /// The SIP header that marks a leg rung at a colleague's browser as the destination of an extension call -- a call
+    /// the colleague answers, never one their phone answers by itself -- for a browser SDK that does not expose the leg's
+    /// client state.
+    /// </summary>
+    public const string DestinationLegSipHeader = "X-Destination-Leg";
+
     private readonly TelnyxApiClient _apiClient;
     private readonly TelnyxOptions _options;
     private readonly ITelephonyInteractionStore _interactionStore;

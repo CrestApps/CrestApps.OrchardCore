@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
+using YesSql;
 
 namespace CrestApps.OrchardCore.ContactCenter.Core.Services;
 
@@ -37,6 +38,12 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
     /// timer for its whole length.
     /// </summary>
     internal static readonly TimeSpan MaximumLeadTime = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// How many times in a row work that lost a write race to another transition is run again before it is left to
+    /// the sweep.
+    /// </summary>
+    internal const int MaximumConflictRetries = 3;
 
     private readonly Lock _gate = new();
     private readonly Dictionary<string, Entry> _entries = new(StringComparer.Ordinal);
@@ -99,7 +106,7 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentNullException.ThrowIfNull(work);
 
-        TrySchedule(key, dueUtc, work, replaceExisting: true, minimumDelay: TimeSpan.Zero);
+        TrySchedule(key, dueUtc, work, replaceExisting: true, minimumDelay: TimeSpan.Zero, conflictRetries: 0);
     }
 
     /// <inheritdoc/>
@@ -162,7 +169,8 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
         DateTime dueUtc,
         Func<IServiceProvider, CancellationToken, Task<DateTime?>> work,
         bool replaceExisting,
-        TimeSpan minimumDelay)
+        TimeSpan minimumDelay,
+        int conflictRetries)
     {
         if (_disposed.IsCancellationRequested)
         {
@@ -189,7 +197,7 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
             delay = TimeSpan.Zero;
         }
 
-        var entry = new Entry(work);
+        var entry = new Entry(work, conflictRetries);
         Entry replaced = null;
 
         lock (_gate)
@@ -239,7 +247,7 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
             return;
         }
 
-        var run = RunAsync(state.Key, state.Entry.Work);
+        var run = RunAsync(state.Key, state.Entry);
         _running.TryAdd(run, 0);
         _ = run.ContinueWith(
             static (completed, running) => ((ConcurrentDictionary<Task, byte>)running).TryRemove(completed, out _),
@@ -249,8 +257,10 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
             TaskScheduler.Default);
     }
 
-    private async Task RunAsync(string key, Func<IServiceProvider, CancellationToken, Task<DateTime?>> work)
+    private async Task RunAsync(string key, Entry entry)
     {
+        var work = entry.Work;
+
         // Off the timer thread before anything else, so the timer queue is never held by a database round trip.
         await Task.Yield();
 
@@ -270,6 +280,27 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
         {
             return;
         }
+        catch (ConcurrencyException ex)
+        {
+            // Another transition saved one of the rows this work read -- a decline, an offer, a treatment pass on
+            // another node -- between the read and the write. That is the compare-and-set doing its job, not a
+            // failure: the work runs again on a fresh scope, which reads what the other transition did.
+            if (entry.ConflictRetries >= MaximumConflictRetries)
+            {
+                _logger.LogWarning(ex, "The Contact Center deadline '{DeadlineKey}' kept losing write races to other transitions; the background sweep will pick it up.", key.SanitizeLogValue());
+
+                return;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Debug))
+            {
+                _logger.LogDebug("The Contact Center deadline '{DeadlineKey}' lost a write race to another transition and will run again shortly.", key.SanitizeLogValue());
+            }
+
+            TrySchedule(key, _clock.UtcNow, work, replaceExisting: false, minimumDelay: MinimumRescheduleDelay, conflictRetries: entry.ConflictRetries + 1);
+
+            return;
+        }
         catch (Exception ex)
         {
             // The sweep is still the backstop for this deadline, so a failure here costs precision, not the work.
@@ -280,7 +311,7 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
 
         if (next is DateTime nextDueUtc)
         {
-            TrySchedule(key, nextDueUtc, work, replaceExisting: false, minimumDelay: MinimumRescheduleDelay);
+            TrySchedule(key, nextDueUtc, work, replaceExisting: false, minimumDelay: MinimumRescheduleDelay, conflictRetries: 0);
         }
     }
 
@@ -293,12 +324,18 @@ public sealed class ContactCenterDeadlineScheduler : IContactCenterDeadlineSched
 
     private sealed class Entry
     {
-        public Entry(Func<IServiceProvider, CancellationToken, Task<DateTime?>> work)
+        public Entry(Func<IServiceProvider, CancellationToken, Task<DateTime?>> work, int conflictRetries)
         {
             Work = work;
+            ConflictRetries = conflictRetries;
         }
 
         public Func<IServiceProvider, CancellationToken, Task<DateTime?>> Work { get; }
+
+        /// <summary>
+        /// Gets how many write races in a row this work has lost before this run.
+        /// </summary>
+        public int ConflictRetries { get; }
 
         public ITimer Timer { get; set; }
     }

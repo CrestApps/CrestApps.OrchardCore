@@ -319,16 +319,16 @@ public sealed class MessagingWorkspaceBuilder
     {
         var conversationId = conversation.ItemId;
 
-        var messages = (await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+        var messages = MessagingThreadDeduplicator.Collapse((await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
                 index => index.ConversationId == conversationId && index.CreatedUtc > afterUtc,
                 collection: OmnichannelConstants.CollectionName)
             .OrderBy(index => index.CreatedUtc)
             .ThenBy(index => index.Id)
             .Take(ThreadPageSize)
             .ListAsync(cancellationToken))
-            .ToArray();
+            .ToArray());
 
-        if (messages.Length == 0)
+        if (messages.Count == 0)
         {
             return [];
         }
@@ -452,9 +452,10 @@ public sealed class MessagingWorkspaceBuilder
             .Take(ThreadPageSize)
             .ListAsync(cancellationToken);
 
-        return messages
+        // Threads written before each message was recorded once may still hold a message twice; show it once.
+        return MessagingThreadDeduplicator.Collapse(messages
             .Reverse()
-            .ToArray();
+            .ToArray());
     }
 
     // Resolves the display name of each distinct human agent that sent a message in the thread, keyed by agent id.

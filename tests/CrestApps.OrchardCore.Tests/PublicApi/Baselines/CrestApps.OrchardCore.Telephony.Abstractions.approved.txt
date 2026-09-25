@@ -314,6 +314,8 @@ namespace CrestApps.OrchardCore.Telephony
         }
         public static class RequestMetadata
         {
+            public const string ConferenceEnd = "conferenceEnd";
+            public const string ConferenceLeave = "conferenceLeave";
             public const string ConferenceParticipant = "conferenceParticipant";
             public const string FenceToken = "commandFenceToken";
             public const string IdempotencyKey = "idempotencyKey";

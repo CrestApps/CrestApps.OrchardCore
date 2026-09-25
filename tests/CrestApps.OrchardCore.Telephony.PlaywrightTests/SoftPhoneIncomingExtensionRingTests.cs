@@ -102,6 +102,63 @@ public sealed class SoftPhoneIncomingExtensionRingTests : SoftPhoneBrowserTest
         Assert.Equal(0, await AnswersAsync(page, "ext-in-1"));
     }
 
+    [Fact]
+    public async Task AfterARingIsDeclined_TheNextExtensionCallRings()
+    {
+        // Arrange
+        var page = await OpenTelnyxPhoneAsync();
+        await RingAsync(page, "ringColleagueLeg", "ext-in-1");
+        await page.Locator("[data-telephony-incoming]").WaitForAsync();
+        await page.ClickAsync("[data-telephony-incoming-ignore]");
+        await page.WaitForFunctionAsync("() => window.fakeTelnyx.byLeg('ext-in-1').state === 'destroy'");
+
+        // Act
+        await RingAsync(page, "ringLeg", "ext-in-2");
+
+        // Assert
+        await page.Locator("[data-telephony-incoming]").WaitForAsync();
+        await page.WaitForTimeoutAsync(300);
+        Assert.Equal(0, await AnswersAsync(page, "ext-in-2"));
+    }
+
+    [Fact]
+    public async Task AfterTheCallerGivesUpWhileItRings_TheNextExtensionCallRings()
+    {
+        // Arrange - the colleague hangs up while this phone is still ringing.
+        var page = await OpenTelnyxPhoneAsync();
+        await RingAsync(page, "ringColleagueLeg", "ext-in-1");
+        await page.Locator("[data-telephony-incoming]").WaitForAsync();
+        await page.EvaluateAsync("() => window.fakeTelnyx.byLeg('ext-in-1').hangup()");
+        await page.Locator("[data-telephony-incoming]").WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Hidden });
+
+        // Act
+        await RingAsync(page, "ringLeg", "ext-in-2");
+
+        // Assert
+        await page.Locator("[data-telephony-incoming]").WaitForAsync();
+        await page.WaitForTimeoutAsync(300);
+        Assert.Equal(0, await AnswersAsync(page, "ext-in-2"));
+    }
+
+    // Live: the callee's phone heard that ANOTHER agent -- the caller -- had accepted a Contact Center offer (the server
+    // tells the offer's queue and every supervisor too), and armed its auto-answer for it. The caller then dialed the
+    // callee's extension from that call, and the callee's phone answered it within the window, silently.
+    [Fact]
+    public async Task AColleaguesCallFromTheirAcceptedContactCenterCall_Rings_EvenAfterThisPhoneHeardOfThatAccept()
+    {
+        // Arrange - the Contact Center layer passes on the other agent's accept, as it does for any it hears of.
+        var page = await OpenTelnyxPhoneAsync();
+        await page.EvaluateAsync("() => window.telephonySoftPhone.getInstance().armInboundAutoAnswer('someone-elses-offer')");
+
+        // Act - the colleague's extension call reaches this phone a few seconds later, on a leg with no client state.
+        await RingAsync(page, "ringLeg", "ext-in-1");
+
+        // Assert
+        await page.Locator("[data-telephony-incoming]").WaitForAsync();
+        await page.WaitForTimeoutAsync(300);
+        Assert.Equal(0, await AnswersAsync(page, "ext-in-1"));
+    }
+
     private static async Task RingAsync(IPage page, string ring, string leg)
         => await page.EvaluateAsync("([ring, leg]) => window.fakeTelnyx[ring](leg)", new[] { ring, leg });
 

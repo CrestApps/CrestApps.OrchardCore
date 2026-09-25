@@ -201,6 +201,27 @@
             ["conferenceParticipants"] = T["Conference · {0} participants"].Value,
             ["hangupParticipant"] = T["Hang up {0}"].Value,
             ["disconnectAll"] = T["Disconnect all calls"].Value,
+            ["mute"] = T["Mute"].Value,
+            ["unmute"] = T["Unmute"].Value,
+            ["hold"] = T["Hold"].Value,
+            ["resume"] = T["Resume"].Value,
+            ["hangup"] = T["Hang up"].Value,
+            ["leaveConference"] = T["Leave"].Value,
+            ["leaveConferenceTitle"] = T["Leave the conference. The others stay connected."].Value,
+            ["showKeypad"] = T["Show the keypad to send digits"].Value,
+            ["hideKeypad"] = T["Hide the keypad"].Value,
+            ["addCall"] = T["Add call"].Value,
+            ["addCallTitle"] = T["Put this call on hold and dial another number"].Value,
+            ["addCallNeedsHold"] = T["This phone cannot hold the call, so another call cannot be added."].Value,
+            ["backToCall"] = T["Back to call"].Value,
+            ["endAllCalls"] = T["End all"].Value,
+            ["endAllCallsTitle"] = T["Hang up every call"].Value,
+            ["endAllCallsConfirm"] = T["Hang up all {0} calls?"].Value,
+            ["endForAll"] = T["End for all"].Value,
+            ["endForAllTitle"] = T["End the conference for everyone in it"].Value,
+            ["endForAllConfirm"] = T["End the call for everyone? All {0} participants will be disconnected."].Value,
+            ["keepTalking"] = T["Keep talking"].Value,
+            ["lineActive"] = T["Active"].Value,
             ["connectPrompt"] = T["Connect your account to the telephony provider to start making calls."].Value,
             ["connectUnavailable"] = T["The connection could not be started. Refresh the page and try again."].Value,
             ["connectPopupBlocked"] = T["Your browser blocked the connection window. Allow pop-ups for this site and try again."].Value,
@@ -490,32 +511,60 @@
                     }
                 </div>
 
+                @* The agent's own call controls in one labelled row, and the actions that bring someone else in or hand the
+                   call over in a second, quieter one (see Assets/js/soft-phone/in-call-controls.js). *@
                 <div class="telephony-soft-phone__actions">
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--call" data-telephony-dial title="@T["Call"]">
-                        <i class="fa-solid fa-phone"></i>
-                    </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hold" data-telephony-hold title="@T["Hold"]" hidden>
-                        <i class="fa-solid fa-pause"></i>
-                    </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--resume" data-telephony-resume title="@T["Resume"]" hidden>
-                        <i class="fa-solid fa-play"></i>
-                    </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--mute" data-telephony-mute title="@T["Mute"]" hidden>
-                        <i class="fa-solid fa-microphone-slash"></i>
-                    </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--unmute" data-telephony-unmute title="@T["Unmute"]" hidden>
-                        <i class="fa-solid fa-microphone"></i>
-                    </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--transfer" data-telephony-transfer title="@T["Transfer"]" hidden>
-                        <i class="fa-solid fa-arrow-right-arrow-left" data-telephony-transfer-icon></i>
-                        <span class="visually-hidden" data-telephony-transfer-label>@T["Transfer"]</span>
-                    </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hangup-all" data-telephony-hangup-all title="@T["Disconnect all calls"]" hidden>
-                        <i class="fa-solid fa-phone-volume"></i>
-                    </button>
-                    <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--hangup" data-telephony-hangup title="@T["Hang up"]" hidden>
-                        <i class="fa-solid fa-phone-slash"></i>
-                    </button>
+                    <div class="telephony-soft-phone__call-controls" data-telephony-call-controls role="group" aria-label="@T["Call controls"]" hidden>
+                        <button type="button" class="telephony-soft-phone__control" data-telephony-mute title="@T["Mute your microphone"]" hidden>
+                            <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-microphone-slash" aria-hidden="true"></i></span>
+                            <span class="telephony-soft-phone__control-label">@T["Mute"]</span>
+                        </button>
+                        <button type="button" class="telephony-soft-phone__control is-on" data-telephony-unmute title="@T["You are muted. Unmute your microphone"]" hidden>
+                            <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-microphone-slash" aria-hidden="true"></i></span>
+                            <span class="telephony-soft-phone__control-label">@T["Unmute"]</span>
+                        </button>
+                        <button type="button" class="telephony-soft-phone__control" data-telephony-hold title="@T["Put the call on hold"]" hidden>
+                            <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-pause" aria-hidden="true"></i></span>
+                            <span class="telephony-soft-phone__control-label">@T["Hold"]</span>
+                        </button>
+                        <button type="button" class="telephony-soft-phone__control is-on" data-telephony-resume title="@T["The call is on hold. Resume it"]" hidden>
+                            <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-play" aria-hidden="true"></i></span>
+                            <span class="telephony-soft-phone__control-label">@T["Resume"]</span>
+                        </button>
+                        <button type="button" class="telephony-soft-phone__control" data-telephony-keypad-toggle aria-pressed="false" title="@T["Show the keypad to send digits"]" hidden>
+                            <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-grip" aria-hidden="true"></i></span>
+                            <span class="telephony-soft-phone__control-label">@T["Keypad"]</span>
+                        </button>
+                        <button type="button" class="telephony-soft-phone__control telephony-soft-phone__control--hangup" data-telephony-hangup title="@T["Hang up"]" aria-label="@T["Hang up"]" hidden>
+                            <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-phone-slash" aria-hidden="true"></i></span>
+                            <span class="telephony-soft-phone__control-label" data-telephony-hangup-label>@T["Hang up"]</span>
+                        </button>
+                    </div>
+
+                    <div class="telephony-soft-phone__call-options" data-telephony-call-options role="group" aria-label="@T["Call options"]" hidden>
+                        <button type="button" class="telephony-soft-phone__option" data-telephony-transfer title="@T["Transfer"]" hidden>
+                            <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true" data-telephony-transfer-icon></i>
+                            <span data-telephony-transfer-label>@T["Transfer"]</span>
+                        </button>
+                        <button type="button" class="telephony-soft-phone__option" data-telephony-add-call title="@T["Put this call on hold and dial another number"]" hidden>
+                            <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
+                            <span>@T["Add call"]</span>
+                        </button>
+                        <button type="button" class="telephony-soft-phone__option telephony-soft-phone__option--danger" data-telephony-hangup-all title="@T["Hang up every call"]" hidden>
+                            <i class="fa-solid fa-phone-slash" aria-hidden="true"></i>
+                            <span data-telephony-hangup-all-label>@T["End all"]</span>
+                        </button>
+                    </div>
+
+                    <div class="telephony-soft-phone__dial-row">
+                        <button type="button" class="telephony-soft-phone__btn telephony-soft-phone__btn--call" data-telephony-dial title="@T["Call"]" aria-label="@T["Call"]">
+                            <i class="fa-solid fa-phone" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="telephony-soft-phone__option" data-telephony-add-call-cancel title="@T["Take the held call off hold and go back to it"]" hidden>
+                            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                            <span>@T["Back to call"]</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 

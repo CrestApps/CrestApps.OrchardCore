@@ -74,7 +74,7 @@ public sealed partial class RealtimeVoiceConversationRunner
 
     private async Task PumpCallerAudioAsync(
         IContactCenterVoiceMediaSession media,
-        IRealtimeConversation conversation,
+        LiveConversation live,
         RealtimeVoiceConversationContext context,
         AssistantBargeIn bargeIn,
         CancellationToken cancellationToken)
@@ -87,11 +87,15 @@ public sealed partial class RealtimeVoiceConversationRunner
         var released = new List<ReadOnlyMemory<byte>>(4);
         var openingsLogged = 0;
 
+        // One stream for the whole call, so the filter and resampler carry across packets rather than restarting
+        // fifty times a second under the caller's voice.
+        var incoming = new IncomingCallAudio(media.IncomingFormat);
+
         try
         {
             await foreach (var frame in media.ReadIncomingAsync(cancellationToken))
             {
-                var audio = RealtimeAudioConverter.ToRealtime(frame.Data, media.IncomingFormat);
+                var audio = incoming.Decode(frame.Data);
 
                 if (audio.IsEmpty)
                 {
@@ -109,10 +113,7 @@ public sealed partial class RealtimeVoiceConversationRunner
                     bargeIn.CallerTalkingOver(now);
                 }
 
-                foreach (var chunk in released)
-                {
-                    await conversation.SendAudioAsync(chunk, cancellationToken);
-                }
+                await SendToModelAsync(live, released, context, cancellationToken);
 
                 if (guard.Openings > openingsLogged)
                 {
@@ -146,6 +147,41 @@ public sealed partial class RealtimeVoiceConversationRunner
     }
 
     /// <summary>
+    /// Sends the caller's audio to whichever session is carrying the call.
+    /// </summary>
+    /// <remarks>
+    /// A send that fails means the session's socket has gone, not the caller: the line is still delivering their
+    /// voice. It used to end this pump, and with it the call. Now the session is marked dead so it can be replaced,
+    /// and the caller's audio keeps being read. While a replacement opens there is nowhere to send it, so it is not.
+    /// </remarks>
+    private async Task SendToModelAsync(
+        LiveConversation live,
+        List<ReadOnlyMemory<byte>> released,
+        RealtimeVoiceConversationContext context,
+        CancellationToken cancellationToken)
+    {
+        var conversation = live.Current;
+
+        if (conversation is null || live.Faulted)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var chunk in released)
+            {
+                await conversation.SendAudioAsync(chunk, cancellationToken);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "The caller's audio could not be sent to the realtime session on activity '{ActivityId}'; the session is treated as lost.", context.Activity?.ItemId.SanitizeLogValue());
+            live.Fault(conversation);
+        }
+    }
+
+    /// <summary>
     /// Records what the echo guard held back on this call, so its barge-in level can be checked against real
     /// lines rather than guessed at.
     /// </summary>
@@ -165,7 +201,9 @@ public sealed partial class RealtimeVoiceConversationRunner
             guard.Openings);
     }
 
-    private async Task PumpAssistantAudioAsync(
+    // Returns whether the session was lost: its stream ended, failed, or reported an error it cannot continue from,
+    // while nothing had asked it to stop. False when it stopped because the call is ending.
+    private async Task<bool> PumpAssistantAudioAsync(
         IContactCenterVoiceMediaSession media,
         IRealtimeConversation conversation,
         RealtimeVoiceConversationContext context,
@@ -174,6 +212,9 @@ public sealed partial class RealtimeVoiceConversationRunner
         CancellationToken cancellationToken)
     {
         var assistantText = new System.Text.StringBuilder();
+
+        // Errors in a row with nothing else between them. One is a refusal; a run of them is a session that is gone.
+        var consecutiveErrors = 0;
 
         // Set once the assistant is finished talking for good, and cleared the moment the customer speaks again.
         var goodbyeSaid = false;
@@ -236,6 +277,8 @@ public sealed partial class RealtimeVoiceConversationRunner
                     OnClosingRequested();
                 }
 
+                consecutiveErrors = conversationEvent.Type == RealtimeConversationEventType.Error ? consecutiveErrors + 1 : 0;
+
                 if (conversationEvent.Type is not RealtimeConversationEventType.AssistantAudioDelta
                                             and not RealtimeConversationEventType.AssistantTranscriptDelta &&
                     _logger.IsEnabled(LogLevel.Debug))
@@ -295,12 +338,16 @@ public sealed partial class RealtimeVoiceConversationRunner
                             speech = mixed;
                         }
 
-                        var audio = RealtimeAudioConverter.FromRealtime(speech, media.OutgoingFormat);
+                        // Through the call's one stream, so this delta joins the last one seamlessly and only whole
+                        // packets reach the line. Converted delta by delta, every boundary was a faint click.
+                        await WriteToLineAsync(media, _outgoing.Encode(speech), cancellationToken);
 
-                        if (!audio.IsEmpty)
-                        {
-                            await media.WriteOutgoingAsync(new ContactCenterVoiceMediaFrame { Data = audio }, cancellationToken);
-                        }
+                        break;
+
+                    case RealtimeConversationEventType.ResponseCompleted:
+                        // The line is over: fade it out and send its last, padded packet, rather than stopping dead
+                        // on whatever sample it ended on -- which was heard as a click as the assistant finished.
+                        await WriteToLineAsync(media, _outgoing.Finish(), cancellationToken);
 
                         break;
 
@@ -412,23 +459,30 @@ public sealed partial class RealtimeVoiceConversationRunner
                         break;
 
                     case RealtimeConversationEventType.Error:
-                        _meter?.Failed();
-                        _logger.LogError(
-                            "A realtime voice session reported an error on activity '{ActivityId}': {Error}",
-                            context.Activity?.ItemId.SanitizeLogValue(),
-                            conversationEvent.ErrorMessage.SanitizeLogValue());
+                        // Most provider errors are a refusal of one request and leave the session as it was. Live,
+                        // treating every one as the end of the call turned a refused truncation into dead air.
+                        if (!await RideOutErrorAsync(conversation, bargeIn, conversationEvent.ErrorMessage, consecutiveErrors, activityId, cancellationToken))
+                        {
+                            return true;
+                        }
 
-                        return;
+                        break;
                 }
             }
+
+            // The stream ended with nothing having asked it to: the provider closed the session.
+            return !cancellationToken.IsCancellationRequested;
         }
         catch (OperationCanceledException)
         {
-            // The call ended. Nothing to report.
+            // The call ended, or the session was found dead elsewhere. The caller decides which.
+            return false;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "The realtime voice session ended unexpectedly.");
+            _logger.LogWarning(ex, "The realtime voice session on activity '{ActivityId}' ended unexpectedly.", activityId);
+
+            return !cancellationToken.IsCancellationRequested;
         }
     }
 
@@ -464,12 +518,9 @@ public sealed partial class RealtimeVoiceConversationRunner
                     continue;
                 }
 
-                var bed = RealtimeAudioConverter.FromRealtime(ambience.NextPcmBytes(samplesPerFrame), media.OutgoingFormat);
-
-                if (!bed.IsEmpty)
-                {
-                    await media.WriteOutgoingAsync(new ContactCenterVoiceMediaFrame { Data = bed }, cancellationToken);
-                }
+                // Through the same stream as the voice: converted frame by frame on its own, the bed carried a
+                // click every 20 ms.
+                await WriteToLineAsync(media, _outgoing.Encode(ambience.NextPcmBytes(samplesPerFrame)), cancellationToken);
             }
         }
         catch (OperationCanceledException)
@@ -520,6 +571,11 @@ public sealed partial class RealtimeVoiceConversationRunner
         // keeps each write short, and also means a transcript survives a call that ends abruptly.
         await _session.SaveChangesAsync(cancellationToken);
     }
+
+    private static ValueTask WriteToLineAsync(IContactCenterVoiceMediaSession media, ReadOnlyMemory<byte> audio, CancellationToken cancellationToken)
+        => audio.IsEmpty
+            ? ValueTask.CompletedTask
+            : media.WriteOutgoingAsync(new ContactCenterVoiceMediaFrame { Data = audio }, cancellationToken);
 
     private static Task Settle(Task task)
         => task.ContinueWith(static _ => { }, TaskScheduler.Default);

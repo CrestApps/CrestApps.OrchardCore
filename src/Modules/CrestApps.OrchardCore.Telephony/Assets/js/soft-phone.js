@@ -39,6 +39,7 @@
     var findAudioSender = softPhoneModules.findAudioSender;
     var formatCallStatus = softPhoneModules.formatCallStatus;
     var connectedAtFor = softPhoneModules.connectedAtFor;
+    var formatElapsed = softPhoneModules.formatElapsed;
     var isVirtualAudioDevice = softPhoneModules.isVirtualAudioDevice;
     var resolveDeviceLabel = softPhoneModules.resolveDeviceLabel;
     var durationMeta = softPhoneModules.durationMeta;
@@ -100,6 +101,9 @@
     var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
     var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
     var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
+    var canArmForOffer = softPhoneModules.canArmForOffer;
+    var planEntryStart = softPhoneModules.planEntryStart;
+    var planEntryEnd = softPhoneModules.planEntryEnd;
 
     var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
     var planKeypadDial = softPhoneModules.planKeypadDial;
@@ -112,6 +116,8 @@
     var answerClickAction = softPhoneModules.answerClickAction;
     var isAnswerInProgress = softPhoneModules.isAnswerInProgress;
     var answerButtonView = softPhoneModules.answerButtonView;
+    var offerActionClick = softPhoneModules.offerActionClick;
+    var isOfferActionPending = softPhoneModules.isOfferActionPending;
     var ANSWER_REGISTRATION_TIMEOUT_MS = softPhoneModules.ANSWER_REGISTRATION_TIMEOUT_MS;
     var withTimeout = softPhoneModules.withTimeout;
     var rememberSettledOffer = softPhoneModules.rememberSettledOffer;
@@ -140,6 +146,9 @@
     var visibleConferenceCalls = softPhoneModules.visibleConferenceCalls;
     var isOneConference = softPhoneModules.isOneConference;
     var conferenceLegsWithoutParticipants = softPhoneModules.conferenceLegsWithoutParticipants;
+    var planConferenceHangup = softPhoneModules.planConferenceHangup;
+    var planConferenceEnd = softPhoneModules.planConferenceEnd;
+    var planInCallControls = softPhoneModules.planInCallControls;
     var planNumberField = softPhoneModules.planNumberField;
     var keypadExtensionMatches = softPhoneModules.keypadExtensionMatches;
     var resolveKeypadExtension = softPhoneModules.resolveKeypadExtension;
@@ -2590,7 +2599,15 @@
             transferPanel: rootElement.querySelector('[data-telephony-transfer-panel]'),
             keypadPanel: rootElement.querySelector('[data-telephony-keypad-panel]'),
             hangup: rootElement.querySelector('[data-telephony-hangup]'),
+            hangupLabel: rootElement.querySelector('[data-telephony-hangup-label]'),
             hangupAll: rootElement.querySelector('[data-telephony-hangup-all]'),
+            hangupAllLabel: rootElement.querySelector('[data-telephony-hangup-all-label]'),
+            callControls: rootElement.querySelector('[data-telephony-call-controls]'),
+            callOptions: rootElement.querySelector('[data-telephony-call-options]'),
+            keypadToggle: rootElement.querySelector('[data-telephony-keypad-toggle]'),
+            addCall: rootElement.querySelector('[data-telephony-add-call]'),
+            addCallCancel: rootElement.querySelector('[data-telephony-add-call-cancel]'),
+            dialRow: rootElement.querySelector('.telephony-soft-phone__dial-row'),
             body: rootElement.querySelector('[data-telephony-body]'),
             connectPanel: rootElement.querySelector('[data-telephony-connect-panel]'),
             connect: rootElement.querySelector('[data-telephony-connect]'),
@@ -2764,6 +2781,10 @@
         var incomingContext = null;
         var incomingHandled = false;
         var incomingAcceptPending = false;
+        // The offer an Ignore or Voicemail click is being posted for, and when: { reservationId, at } (see
+        // soft-phone/answer-state.js). Its buttons stay disabled until the post fails, and a click landing on the next
+        // offer within a double-click of it is not taken as the agent's.
+        var offerAction = null;
         // The agent clicked Answer on a phone that had to register first; the accept follows once it has.
         var answerRegistering = false;
         // Offers already over -- revoked, or their call ended -- so a late copy of one never opens the modal.
@@ -2881,6 +2902,10 @@
         var authActionPending = false;
         var activeTab = 'keypad';
         var activeCommand = null;
+        // The keypad is closed on a connected call until the agent opens it for digits, and Add call holds the current
+        // call while the agent enters the number to add: { heldCallId } (see soft-phone/in-call-controls.js).
+        var keypadOpen = false;
+        var addingCall = null;
         var activeCallsRefreshTimer = null;
         var suppressToggleClick = false;
         // Indefinite SignalR reconnect state. SignalR's automatic reconnect gives up after its default
@@ -3183,6 +3208,25 @@
 
         function toggleDialMode() {
             setDialMode(!extensionMode);
+
+            // Switching mode is starting an entry: a held call's number does not come back over the empty field.
+            if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
+                numberEnteredByAgent = true;
+            }
+
+            render();
+        }
+
+        // The agent starts an entry over a call's label or number -- a display, never part of what is dialed -- so it
+        // is cleared, and the field stays theirs until they leave it empty (see soft-phone/dial-target.js).
+        function startNumberEntry() {
+            if (planEntryStart({ isCallDisplay: numberIsCallDisplay }) !== 'clear') {
+                return;
+            }
+
+            clearNumberInput();
+            numberEnteredByAgent = true;
+            render();
         }
 
         function has(capability) {
@@ -4542,6 +4586,9 @@
             // call state (browser-originated below, or the server's first CallStateChanged) takes over as soon
             // as it arrives, and a failure clears it right away.
             beginPendingDial(number);
+            // The number to add has been dialed: the phone is back to its calls.
+            addingCall = null;
+            keypadOpen = false;
             render();
 
             // A hub command that fails resolves with { succeeded: false } rather than rejecting, so the
@@ -5302,6 +5349,14 @@
         // (`reservationId`) the agent just accepted elsewhere, so the media adapter answers it automatically rather
         // than ringing it as an unsolicited incoming call and tearing it down. The arm is for that offer alone.
         function armInboundAutoAnswer(reservationId) {
+            // Only for an offer this phone was offered: the Contact Center layer hears of other agents' accepts too.
+            if (!canArmForOffer(reservationId, offerCallIds)) {
+                reportDiagnostic('info', 'auto-answer-arm-refused',
+                    'An accept of an offer this phone was never offered did not arm it to answer the next leg.', reservationId || '');
+
+                return;
+            }
+
             armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), Date.now());
         }
 
@@ -5823,6 +5878,8 @@
                     if (!hubReconnecting && !mediaReconnecting && !(connectionQualityPoor && tickLive)) {
                         setStatus(formatCallStatus(statusTextForCall(currentCall), elapsed));
                     }
+
+                    tickLineTimers();
                 }, 1000);
             } else if (!running && callTimerInterval) {
                 window.clearInterval(callTimerInterval);
@@ -5847,6 +5904,42 @@
             }
 
             return statusTextForState(normalizeState(call && call.state));
+        }
+
+        // A line's state in the active-call list: Active, On hold, or what the header would say.
+        function lineStateText(call) {
+            if (!metadataBoolean(call, 'isConference') && normalizeState(call && call.state) === 'Connected') {
+                return strings.lineActive || 'Active';
+            }
+
+            return statusTextForCall(call);
+        }
+
+        function lineStateKind(call) {
+            var stateName = normalizeState(call && call.state);
+
+            return stateName === 'OnHold' ? 'held' : stateName === 'Connected' ? 'active' : 'pending';
+        }
+
+        function lineElapsedText(callId) {
+            var connectedAt = callConnectedAt[callId];
+
+            return typeof connectedAt === 'number' ? formatElapsed((Date.now() - connectedAt) / 1000) : '';
+        }
+
+        // Ticks each line's clock in place; the list itself is only redrawn when something about it changes.
+        function tickLineTimers() {
+            if (!dom.activeCallsList) {
+                return;
+            }
+
+            Array.prototype.forEach.call(dom.activeCallsList.querySelectorAll('[data-telephony-line-timer]'), function (timer) {
+                var text = lineElapsedText(timer.getAttribute('data-telephony-line-timer'));
+
+                if (text) {
+                    timer.textContent = text;
+                }
+            });
         }
 
         // Never the tenant's own number: the agent's leg of a bridged call is placed from it (see soft-phone/dial-target.js).
@@ -6484,7 +6577,8 @@
 
             // A participant who left while their leg carries the agent in the conference is not listed.
             var calls = visibleConferenceCalls(conferenceMemory, getActiveCalls());
-            show(dom.activeCalls, calls.length > 1 || calls.some(function (call) { return metadataBoolean(call, 'isConference'); }));
+            // While a call is being added the held call stays in sight, so the agent knows who is waiting.
+            show(dom.activeCalls, calls.length > 1 || !!addingCall || calls.some(function (call) { return metadataBoolean(call, 'isConference'); }));
 
             var plan = currentMergePlan();
             var canMergeCalls = has(CAPABILITIES.Merge);
@@ -6494,11 +6588,20 @@
             dom.activeCallsList.innerHTML = buildActiveCallsHtml({
                 calls: calls.map(function (call) {
                     var callId = call.callId || '';
+                    var lineState = normalizeState(call.state);
+
+                    // Each line keeps its own clock from the first moment it was seen connected, current or not.
+                    callConnectedAt[callId] = connectedAtFor(
+                        lineState === 'Connected' || lineState === 'OnHold',
+                        callConnectedAt[callId],
+                        Date.now());
 
                     return {
                         callId: callId,
                         number: callDisplayLabel(call) || callId,
-                        state: statusTextForCall(call),
+                        state: lineStateText(call),
+                        stateKind: lineStateKind(call),
+                        elapsed: lineElapsedText(callId),
                         current: !!(currentCall && currentCall.callId === callId),
                         selectable: canMergeCalls && canConferenceCall(call),
                         unselectableReason: canConferenceCall(call) ? '' : 'browser-call',
@@ -6583,6 +6686,11 @@
                 clearPendingDial();
             }
 
+            // Add call gave the agent an empty field for the number to add: the held call's label never comes back over it.
+            if (addingCall) {
+                return;
+            }
+
             var field = planNumberField({
                 callId: currentCall ? currentCall.callId : '',
                 stateName: stateName,
@@ -6617,6 +6725,91 @@
 
             if (field.action !== 'pending') {
                 numberEnteredByAgent = false;
+            }
+        }
+
+        // Which in-call controls to show for the current call (see soft-phone/in-call-controls.js).
+        function inCallControlsFor(stateName, active, transferOpen, selectedConferenceCallIds) {
+            var visibleCalls = visibleConferenceCalls(conferenceMemory, getActiveCalls());
+            var isConference = metadataBoolean(currentCall, 'isConference');
+
+            return planInCallControls({
+                active: active,
+                stateName: stateName,
+                muted: !!(currentCall && currentCall.isMuted),
+                // A ringing inbound offer is answered or declined through the incoming panel, so the call controls wait
+                // until that call actually connects rather than sitting beside the answer and decline actions.
+                ringingOffer: isRingingInbound() && !incomingHandled,
+                lineCount: getActiveCalls().length,
+                isConference: isConference,
+                conferenceParties: isConference && currentCall
+                    ? conferenceCallsOf(currentCall.callId).filter(function (call) { return visibleCalls.indexOf(call) !== -1; }).length
+                    : 0,
+                keypadOpen: keypadOpen,
+                addingCall: !!addingCall,
+                transferOpen: transferOpen,
+                numberIsCallDisplay: numberIsCallDisplay,
+                canHold: has(CAPABILITIES.Hold),
+                canResume: has(CAPABILITIES.Resume),
+                canMute: has(CAPABILITIES.Mute),
+                canHangup: has(CAPABILITIES.Hangup),
+                canDial: has(CAPABILITIES.Dial),
+                canTransfer: transferModes(capabilities).length > 0 &&
+                    (!isConference || (selectedConferenceCallIds || []).length === 1)
+            });
+        }
+
+        function applyInCallControls(controls) {
+            var inConference = controls.endAll.kind === 'conference';
+
+            show(dom.callControls, controls.callControls);
+            show(dom.callOptions, controls.options);
+            show(dom.dialRow, controls.dial || controls.cancelAdd);
+            show(dom.dial, controls.dial);
+            show(dom.addCallCancel, controls.cancelAdd);
+            show(dom.mute, controls.mute.visible && !controls.mute.pressed);
+            show(dom.unmute, controls.mute.visible && controls.mute.pressed);
+            show(dom.hold, controls.hold.visible && !controls.hold.pressed);
+            show(dom.resume, controls.hold.visible && controls.hold.pressed);
+            show(dom.keypadToggle, controls.keypad.visible);
+            show(dom.hangup, controls.hangup.visible);
+            show(dom.transfer, controls.transfer);
+            show(dom.addCall, controls.addCall.visible);
+            show(dom.hangupAll, controls.endAll.visible);
+
+            if (dom.keypadToggle) {
+                dom.keypadToggle.setAttribute('aria-pressed', controls.keypad.pressed ? 'true' : 'false');
+                dom.keypadToggle.title = controls.keypad.pressed
+                    ? (strings.hideKeypad || 'Hide the keypad')
+                    : (strings.showKeypad || 'Show the keypad to send digits');
+            }
+
+            // In a conference the others stay in, Hang up is the agent leaving it.
+            var leave = controls.hangup.kind === 'leave';
+            var hangupText = leave ? (strings.leaveConference || 'Leave') : (strings.hangup || 'Hang up');
+
+            if (dom.hangup) {
+                dom.hangup.setAttribute('aria-label', hangupText);
+                dom.hangup.title = leave
+                    ? (strings.leaveConferenceTitle || 'Leave the conference. The others stay connected.')
+                    : hangupText;
+            }
+
+            if (dom.hangupLabel) {
+                dom.hangupLabel.textContent = hangupText;
+            }
+
+            var endAllText = inConference ? (strings.endForAll || 'End for all') : (strings.endAllCalls || 'End all');
+
+            if (dom.hangupAll) {
+                dom.hangupAll.setAttribute('aria-label', endAllText);
+                dom.hangupAll.title = inConference
+                    ? (strings.endForAllTitle || 'End the conference for everyone in it')
+                    : (strings.endAllCallsTitle || 'Hang up every call');
+            }
+
+            if (dom.hangupAllLabel) {
+                dom.hangupAllLabel.textContent = endAllText;
             }
         }
 
@@ -6685,9 +6878,20 @@
 
             var transferOpen = transferPanel.isOpen();
 
+            // A call being added is over once the held call it was added to is gone, and the keypad closes with the call.
+            if (addingCall && !activeCalls[addingCall.heldCallId]) {
+                addingCall = null;
+            }
+
+            if (!active) {
+                keypadOpen = false;
+            }
+
+            var controls = inCallControlsFor(stateName, active, transferOpen, selectedConferenceCallIds);
+
             renderActiveCalls();
             show(dom.transferPanel, transferOpen && (liveMedia || transferBusy));
-            show(dom.keypadPanel, !transferOpen);
+            show(dom.keypadPanel, controls.showKeypad);
 
             if (dom.transfer) {
                 var transferButtonText = transferOpen
@@ -6836,36 +7040,13 @@
                 renderNumberField(stateName, active);
             }
 
-            // On hold the dial button would sit first in the row, where Hold was a moment ago, over the held call's
-            // own number; it waits until the agent enters a number to add (see soft-phone/dial-target.js).
-            show(dom.dial, shouldOfferDial({
-                callActive: active,
-                stateName: stateName,
-                numberIsCallDisplay: numberIsCallDisplay
-            }) && has(CAPABILITIES.Dial));
-            // Allow hanging up (cancelling) while the call is still connecting or ringing, not only once media
-            // is live, so an outbound call that has not been answered yet can still be ended. A ringing inbound
-            // offer is the exception: it is answered or declined through the incoming panel, so the hangup control
-            // stays hidden until that call actually connects rather than sitting beside the answer and decline
-            // actions.
-            var incomingOfferRinging = isRingingInbound() && !incomingHandled;
-            show(dom.hangup, active && !incomingOfferRinging && has(CAPABILITIES.Hangup));
-            show(dom.hangupAll, calls.length > 1 && has(CAPABILITIES.Hangup));
-            show(dom.hold, active && stateName === 'Connected' && has(CAPABILITIES.Hold));
-            show(dom.resume, active && stateName === 'OnHold' && has(CAPABILITIES.Resume));
-
-            var muted = currentCall && currentCall.isMuted;
-            show(dom.mute, connected && !muted && has(CAPABILITIES.Mute));
-            show(dom.unmute, connected && muted && has(CAPABILITIES.Mute));
-
-            show(
-                dom.transfer,
-                liveMedia &&
-                transferModes(capabilities).length > 0 &&
-                (!currentIsConference || selectedConferenceCallIds.length === 1));
+            // The number field may have just stopped showing the call, which is what offers the dial button on hold.
+            controls = inCallControlsFor(stateName, active, transferOpen, selectedConferenceCallIds);
+            applyInCallControls(controls);
 
             if (dom.number) {
-                var numberDisabled = !canDial || !!activeCommand || (pendingDial && !currentCall);
+                // While a call is being added the field is the agent's from the start, even before the hold lands.
+                var numberDisabled = (!canDial && !addingCall) || !!activeCommand || (pendingDial && !currentCall);
 
                 if (telInput && typeof telInput.setDisabled === 'function') {
                     telInput.setDisabled(numberDisabled);
@@ -6886,16 +7067,33 @@
                 dom.mute,
                 dom.unmute,
                 dom.transfer,
-                dom.hangupAll
+                dom.hangupAll,
+                dom.keypadToggle,
+                dom.addCallCancel
             ].forEach(function (button) {
                 if (button) {
                     button.disabled = !!activeCommand;
                 }
             });
 
+            if (dom.addCall) {
+                // Left focusable while it cannot be used, so its title says why; a press says so too.
+                dom.addCall.disabled = !!activeCommand;
+                dom.addCall.setAttribute('aria-disabled', controls.addCall.disabledReason ? 'true' : 'false');
+                dom.addCall.title = controls.addCall.disabledReason
+                    ? (strings.addCallNeedsHold || 'This phone cannot hold the call, so another call cannot be added.')
+                    : (strings.addCallTitle || 'Put this call on hold and dial another number');
+            }
+
             dom.keys.forEach(function (button) {
                 button.disabled = (active && stateName !== 'Connected' && stateName !== 'OnHold') || !!activeCommand;
             });
+
+            // Add call puts the cursor in the empty field as soon as it takes input (the hold's round trip disables it).
+            if (addingCall && addingCall.focus && dom.number && !dom.number.disabled && !dom.number.hidden) {
+                addingCall.focus = false;
+                dom.number.focus();
+            }
 
             syncViewHeight();
         }
@@ -7188,6 +7386,58 @@
             placeCall(isExtension ? number : normalizeDialNumber(number), !!isExtension);
         }
 
+        // Add call: the current call goes on hold and the agent gets an empty field for the number to add, with Back to
+        // call to return to it (see soft-phone/in-call-controls.js).
+        function startAddCall() {
+            var call = currentCall;
+            var stateName = call ? normalizeState(call.state) : 'Idle';
+
+            if (!call || activeCommand || (stateName !== 'Connected' && stateName !== 'OnHold')) {
+                return;
+            }
+
+            if (stateName === 'Connected' && !has(CAPABILITIES.Hold)) {
+                showError(strings.addCallNeedsHold || 'This phone cannot hold the call, so another call cannot be added.');
+
+                return;
+            }
+
+            if (transferPanel.isOpen()) {
+                transferPanel.close();
+            }
+
+            keypadOpen = false;
+            addingCall = { heldCallId: call.callId, focus: true };
+            clearNumberInput();
+            numberEnteredByAgent = true;
+            showError(null);
+
+            if (stateName === 'Connected') {
+                setCurrentCallHold(true);
+            }
+
+            render();
+        }
+
+        // Back to call: the entry goes and the held call is taken off hold.
+        function cancelAddCall() {
+            var held = addingCall ? activeCalls[addingCall.heldCallId] : null;
+
+            addingCall = null;
+            clearNumberInput();
+            showError(null);
+
+            if (held) {
+                selectCurrentCall(held);
+
+                if (normalizeState(held.state) === 'OnHold') {
+                    setCurrentCallHold(false);
+                }
+            }
+
+            render();
+        }
+
         function hangup() {
             var controller = currentBrowserController();
 
@@ -7203,11 +7453,10 @@
                 return;
             }
 
-            // The agent hanging up a conference ends it: every call in it, not the one row that happens to be current.
-            var conference = conferenceCallsOf(call.callId);
-
-            if (conference.length > 1) {
-                hangupAll(conference);
+            // The agent hanging up a conference leaves it, and the others stay connected; with only one other party left,
+            // it ends (see soft-phone/conference.js).
+            if (conferenceCallsOf(call.callId).length > 1) {
+                leaveConference(call.callId);
 
                 return;
             }
@@ -7229,8 +7478,74 @@
         }
 
 
+        // A Contact Center call names its interaction; its caller is never hung up by the agent leaving a conference.
+        function isContactCenterCall(call) {
+            var interactionId = call && call.metadata ? call.metadata.interactionId : null;
+
+            return interactionId != null && String(interactionId) !== '';
+        }
+
+        // Takes the agent out of the conference `callId` is in: each of the agent's calls in it is hung up flagged as
+        // leaving, so the provider hangs up the agent's own leg alone and the others stay connected. A Contact Center
+        // caller's call stays on the phone as a line of its own.
+        function leaveConference(callId) {
+            var plan = planConferenceHangup(conferenceMemory, getActiveCalls(), callId, { isContactCenterCall: isContactCenterCall });
+            var callsOf = function (ids) {
+                return ids.map(function (id) { return activeCalls[id]; }).filter(Boolean);
+            };
+
+            if (plan.action === 'end') {
+                return hangupAll(callsOf(plan.endCallIds));
+            }
+
+            if (plan.action !== 'leave') {
+                return Promise.resolve(null);
+            }
+
+            plan.keepCallIds.forEach(function (id) {
+                forgetConferenceCall(conferenceMemory, id);
+            });
+
+            return hangupAll(callsOf(plan.leaveCallIds), { leave: true });
+        }
+
+        // Disconnect all: ends every call, and a conference for everyone in it, once the agent confirms -- the others lose
+        // the call too, so it is asked inside the phone first, starting on the answer that keeps them talking.
+        function endAllCalls() {
+            var calls = getActiveCalls();
+
+            if (!calls.length || activeCommand) {
+                return Promise.resolve(false);
+            }
+
+            var conference = currentCall ? planConferenceEnd(conferenceMemory, calls, currentCall.callId) : null;
+            var message = conference
+                ? String(strings.endForAllConfirm || 'End the call for everyone? All {0} participants will be disconnected.').replace('{0}', conference.partyCount)
+                : String(strings.endAllCallsConfirm || 'Hang up all {0} calls?').replace('{0}', calls.length);
+
+            return showInAppConfirm(dom.panel, {
+                message: message,
+                confirmLabel: conference ? (strings.endForAll || 'End for all') : (strings.endAllCalls || 'End all'),
+                cancelLabel: strings.keepTalking || 'Keep talking',
+                before: dom.body,
+                focusCancel: true
+            }).then(function (confirmed) {
+                if (!confirmed) {
+                    return false;
+                }
+
+                return hangupAll(getActiveCalls(), conference ? { endConference: conference } : null).then(function () {
+                    return true;
+                });
+            });
+        }
+
         // Hangs up every call, or only the calls given (a conference's).
-        function hangupAll(only) {
+        //   flags - { leave } to take the agent out of a conference, leaving its parties connected; { endConference } to
+        //           end that conference for everyone first (see planConferenceEnd).
+        function hangupAll(only, flags) {
+            flags = flags || {};
+
             var calls = Array.isArray(only) ? only : getActiveCalls();
 
             // End browser-originated calls directly on their SIP sessions; they have no server-side call.
@@ -7256,9 +7571,22 @@
             render();
 
             return Promise.all(serverCalls.map(function (call) {
+                var metadata = call.metadata || null;
+
+                if (flags.leave || (flags.endConference && flags.endConference.primaryCallId === call.callId)) {
+                    metadata = Object.assign({}, call.metadata || {});
+
+                    if (flags.leave) {
+                        metadata.conferenceLeave = true;
+                    } else {
+                        metadata.conferenceEnd = true;
+                        metadata.conferenceName = flags.endConference.conferenceName || metadata.conferenceName || '';
+                    }
+                }
+
                 return connection.invoke('Hangup', {
                     callId: call.callId,
-                    metadata: call.metadata || null
+                    metadata: metadata
                 });
             })).then(function (results) {
                 results.forEach(applyCommandResult);
@@ -7596,9 +7924,10 @@
         function pressKey(value) {
             var stateName = currentCall ? normalizeState(currentCall.state) : 'Idle';
 
-            if (stateName === 'Connected' && has(CAPABILITIES.SendDigits)) {
+            // While a call is being added the keypad enters the number to add, never digits for the call being held.
+            if (stateName === 'Connected' && !addingCall && has(CAPABILITIES.SendDigits)) {
                 invoke('SendDigits', { callId: currentCallId(), digits: value });
-            } else if ((!isActive(stateName) || stateName === 'OnHold') && dom.number) {
+            } else if ((!isActive(stateName) || stateName === 'OnHold' || addingCall) && dom.number) {
                 // If the field is currently showing a call/pending number (not something the user typed),
                 // start a fresh entry so the keypad digit is not appended to -- or immediately overwritten by
                 // a background render with -- the previous number. clearNumberInput also drops that state.
@@ -7720,10 +8049,64 @@
 
             // While a Contact Center offer is being accepted the accept is a server round-trip; disable the
             // offer controls so the agent gets instant feedback and cannot act on the offer again mid-flight.
-            setIncomingControlsBusy(answerInProgress());
+            setIncomingControlsBusy(answerInProgress() || isOfferActionPending(offerAction, currentOfferKey()));
 
             renderIncomingCards();
             scheduleIncomingExpiry();
+        }
+
+        // The offer on screen, as the offer-action rules name it.
+        function currentOfferKey() {
+            var properties = incomingContext && incomingContext.properties;
+
+            return { reservationId: properties && properties.reservationId ? String(properties.reservationId) : '' };
+        }
+
+        // Takes a click on an offer's button as the agent's, once: false for a repeat, or a click that landed on the next
+        // offer a moment after acting on the last. Taken, the offer's buttons disable until the request fails.
+        function beginOfferAction() {
+            var offer = currentOfferKey();
+            var now = Date.now();
+
+            if (offerActionClick(offerAction, offer, now) === 'ignore') {
+                return false;
+            }
+
+            offerAction = { reservationId: offer.reservationId, at: now };
+            render();
+
+            return true;
+        }
+
+        // The Contact Center answered a decline or a send-to-voicemail for `reservationId`. It closes that offer only:
+        // the next offer may already be on screen, and must not be cleared -- or told it failed -- by the last one's
+        // answer. A failure gives the buttons back so the agent can try again.
+        function finishOfferAction(reservationId, callId, result) {
+            var stillShown = currentOfferKey().reservationId === String(reservationId || '');
+
+            if (!result || result.succeeded === false) {
+                if (stillShown) {
+                    showError(strings.offerUnavailable || 'This call is no longer available.');
+                    offerAction = null;
+                    render();
+                }
+
+                return;
+            }
+
+            if (stillShown) {
+                clearIncomingOffer();
+
+                return;
+            }
+
+            // Replaced meanwhile: only the declined offer's own ringing call goes.
+            var declined = callId ? activeCalls[callId] : null;
+
+            if (declined && normalizeState(declined.state) === 'Ringing' && (!currentCall || currentCall.callId !== callId)) {
+                removeActiveCall(callId);
+                render();
+            }
         }
 
         // From the agent's first click on Answer, including the registration that click may be waiting on.
@@ -8011,8 +8394,10 @@
             });
 
             // Accepting a Contact Center offer is a server round-trip, and it may first wait on a registration;
-            // ignore repeat clicks while either is in flight so the reservation is never accepted twice.
-            if (action === 'ignore') {
+            // ignore repeat clicks while either is in flight so the reservation is never accepted twice. An offer being
+            // declined or sent to voicemail is not answered either, nor is the next offer a moment after either.
+            if (action === 'ignore' ||
+                (incomingContext && incomingContext.properties && offerActionClick(offerAction, currentOfferKey(), Date.now()) === 'ignore')) {
                 return;
             }
 
@@ -8150,7 +8535,13 @@
                 return;
             }
 
+            // Sent once: a second click -- or one landing on the next offer -- never posts again.
+            if (decision.route === VOICEMAIL_ROUTES.contactCenter && !beginOfferAction()) {
+                return;
+            }
+
             var declinedReservationId = offer ? offer.reservationId || '' : '';
+            var declinedCallId = currentCallId();
 
             settleOfferLeg(declinedReservationId, false);
             announceOfferHandled(false, declinedReservationId);
@@ -8159,13 +8550,7 @@
             // well answered the caller twice and played the greeting twice.
             if (decision.route === VOICEMAIL_ROUTES.contactCenter) {
                 postLifecycle(decision.lifecycleKey).then(function (result) {
-                    if (!result || result.succeeded === false) {
-                        showError(strings.offerUnavailable || 'This call is no longer available.');
-
-                        return;
-                    }
-
-                    clearIncomingOffer();
+                    finishOfferAction(declinedReservationId, declinedCallId, result);
                 });
 
                 return;
@@ -8188,18 +8573,18 @@
             var hasOffer = incomingContext && incomingContext.properties && incomingContext.properties.declineUrl;
 
             if (hasOffer) {
+                // Declined once: a second click -- or one landing on the next offer -- never posts another decline.
+                if (!beginOfferAction()) {
+                    return;
+                }
+
                 var ignoredReservationId = incomingContext.properties.reservationId || '';
+                var ignoredCallId = currentCallId();
 
                 settleOfferLeg(ignoredReservationId, false);
                 announceOfferHandled(false, ignoredReservationId);
                 postLifecycle('declineUrl').then(function (result) {
-                    if (!result || result.succeeded === false) {
-                        showError(strings.offerUnavailable || 'This call is no longer available.');
-
-                        return;
-                    }
-
-                    clearIncomingOffer();
+                    finishOfferAction(ignoredReservationId, ignoredCallId, result);
                 });
 
                 return;
@@ -9455,9 +9840,14 @@
                     numberEnteredByAgent = true;
                     render();
                 });
-                dom.number.addEventListener('focus', function () {
-                    if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
-                        dom.number.select();
+                // Reaching for the field over a held call's number is starting an entry: the number goes, and the field
+                // is the agent's until they leave it empty (see soft-phone/dial-target.js).
+                dom.number.addEventListener('focus', startNumberEntry);
+                dom.number.addEventListener('blur', function () {
+                    // A field Add call emptied stays empty: reaching for a keypad key must not bring the held call back.
+                    if (!addingCall && planEntryEnd({ value: dom.number.value, agentEntered: numberEnteredByAgent }) === 'release') {
+                        numberEnteredByAgent = false;
+                        render();
                     }
                 });
                 // Typing over a call's label or number starts a fresh entry, as a keypad press does: the label is never
@@ -9468,6 +9858,14 @@
                     }
                 });
                 dom.number.addEventListener('keydown', function (event) {
+                    // Escape backs out of Add call to the held call.
+                    if (event.key === 'Escape' && addingCall && !event.isComposing) {
+                        event.preventDefault();
+                        cancelAddCall();
+
+                        return;
+                    }
+
                     if (event.key !== 'Enter' || event.isComposing) {
                         return;
                     }
@@ -9495,7 +9893,32 @@
             }
 
             if (dom.hangupAll) {
-                dom.hangupAll.addEventListener('click', hangupAll);
+                dom.hangupAll.addEventListener('click', endAllCalls);
+            }
+
+            if (dom.keypadToggle) {
+                dom.keypadToggle.addEventListener('click', function () {
+                    keypadOpen = !keypadOpen;
+                    render();
+                });
+            }
+
+            if (dom.addCall) {
+                dom.addCall.addEventListener('click', startAddCall);
+            }
+
+            if (dom.addCallCancel) {
+                dom.addCallCancel.addEventListener('click', cancelAddCall);
+            }
+
+            // Escape anywhere in the keypad view backs out of Add call, as it does in the number field.
+            if (dom.keypadView) {
+                dom.keypadView.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape' && addingCall && !event.defaultPrevented) {
+                        event.preventDefault();
+                        cancelAddCall();
+                    }
+                });
             }
 
             if (dom.hold) {
@@ -9615,6 +10038,10 @@
             dialNumber: dialNumber,
             hangup: hangup,
             hangupAll: hangupAll,
+            endAllCalls: endAllCalls,
+            leaveConference: leaveConference,
+            addCall: startAddCall,
+            cancelAddCall: cancelAddCall,
             hold: hold,
             resume: resume,
             mute: mute,

@@ -13,16 +13,19 @@ namespace CrestApps.OrchardCore.Telnyx.Services;
 /// For a number dialed from the soft phone the call the phone names is the agent's own leg, bridged to the dialed
 /// party's leg with <c>park_after_unbridge=self</c>. Conferencing the agent's legs would join the agent to themselves
 /// once per call. So the conference is made from the first call's dialed party (which parks the agent's first leg), the
-/// agent's first leg joins it with <c>end_conference_on_exit</c> -- the agent leaving ends the conference -- and every
-/// other call's dialed party joins it. The agent's other legs stay parked, one per participant: hanging one up ends that
-/// participant (the orchestrator releases a leg's dialed party with it), and a participant hanging up releases its leg.
+/// agent's first leg joins it -- without <c>end_conference_on_exit</c>, so the agent leaving leaves the others connected
+/// (see TelnyxTelephonyProvider.ConferenceLeave.cs) -- and every other call's dialed party joins it. The agent's other
+/// legs stay parked, one per participant: hanging one up ends that participant (the orchestrator releases a leg's dialed
+/// party with it), and a participant hanging up releases its leg.
 /// </para>
 /// <para>
 /// An internal extension call is already a conference, <c>ext-{agent leg}</c>, which the agent's leg joined with
-/// <c>end_conference_on_exit</c>. Taking the agent's leg out of it ends it and hangs the colleague up -- and the
-/// colleague hanging up then hangs up the agent's leg. So an extension call is merged by its colleague: first in the
-/// merge, its conference is the merge's and the others join it; later in the merge, the colleague joins the merge's
-/// conference and the agent's leg stays behind in its own, the way a dialed number's agent leg stays parked.
+/// <c>end_conference_on_exit</c>, and Telnyx cannot change that once joined. So an extension call is merged by its
+/// colleague. A dialed number leads a merge whenever there is one, and the colleague joins its conference while the
+/// agent's leg stays behind in its own, the way a dialed number's agent leg stays parked. With no dialed number, the
+/// colleague is moved into a new conference and the agent's leg joins it without <c>end_conference_on_exit</c>, leaving
+/// the extension call's own conference empty. Only when Telnyx refuses that is the extension call's own conference the
+/// merge's, and then the agent leaving it still ends it.
 /// </para>
 /// <para>
 /// Every call is read before anything moves, so a call that cannot be merged refuses the merge with nothing changed.
@@ -63,12 +66,17 @@ public sealed partial class TelnyxTelephonyProvider
                 legs.Add(leg);
             }
 
-            // A new conference is led by a call that carries the agent into it -- a dialed number's or an extension
-            // call's agent leg -- rather than by another call's own leg: a conference made from a Contact Center
+            // A new conference is led by a call that carries the agent into it -- a dialed number's agent leg, else an
+            // extension call's -- rather than by another call's own leg: a conference made from a Contact Center
             // caller's leg would take it off the agent's leg it is bridged to, and leave the agent outside.
             if (string.IsNullOrWhiteSpace(request.ConferenceName))
             {
-                legs = [.. legs.Where(leg => leg.Kind != MergeLegKind.Call), .. legs.Where(leg => leg.Kind == MergeLegKind.Call)];
+                legs =
+                [
+                    .. legs.Where(leg => leg.Kind == MergeLegKind.DialedNumber),
+                    .. legs.Where(leg => leg.Kind == MergeLegKind.Extension),
+                    .. legs.Where(leg => leg.Kind == MergeLegKind.Call),
+                ];
             }
 
             var primary = legs[0];
@@ -144,16 +152,16 @@ public sealed partial class TelnyxTelephonyProvider
         }
     }
 
-    // Whether the soft phone sent this hang-up from one participant's row of a conference.
-    private static bool IsConferenceParticipantHangup(CallReference call)
+    // Whether the soft phone flagged this hang-up with a request metadata key (see TelephonyConstants.RequestMetadata).
+    private static bool HasRequestFlag(CallReference call, string key)
         => call?.Metadata is not null &&
-            call.Metadata.TryGetValue(TelephonyConstants.RequestMetadata.ConferenceParticipant, out var value) &&
+            call.Metadata.TryGetValue(key, out var value) &&
             string.Equals(value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
 
     // Hangs up one participant of a conference. The call the conference was made from is also the agent's own way into
-    // it (joined with end_conference_on_exit), and its party was detached from it by the merge: hanging up the call would
-    // end the conference for everybody, so only the party's leg is hung up and the call is reported still up, its
-    // participant gone. Any other call is hung up as it is -- a parked agent leg releases its party with it.
+    // it, and its party was detached from it by the merge: hanging up the call would take the agent out of the
+    // conference, so only the party's leg is hung up and the call is reported still up, its participant gone. Any other
+    // call is hung up as it is -- a parked agent leg releases its party with it.
     private async Task<TelephonyResult> HangupConferenceParticipantAsync(CallReference call, CancellationToken cancellationToken)
     {
         if (_options.IsConfigured && !string.IsNullOrWhiteSpace(call.CallId))
@@ -229,24 +237,31 @@ public sealed partial class TelnyxTelephonyProvider
         return new MergeLeg(callId, callId, MergeLegKind.Call, state);
     }
 
-    // Makes (or, for an extension call, adopts) the conference the primary call leads, and returns it with its name, or
-    // (null, name) when Telnyx refused.
+    // Makes the conference the primary call leads -- or, for an extension call whose colleague Telnyx will not move,
+    // adopts the extension call's own -- and returns it with its name, or (null, name) when Telnyx refused.
     private async Task<(string ConferenceId, string ConferenceName)> CreateConferenceFromAsync(
         string conferenceName,
         MergeLeg primary,
         CancellationToken cancellationToken)
     {
-        if (primary.Kind == MergeLegKind.Extension)
-        {
-            return (await AdoptExtensionConferenceAsync(primary, cancellationToken), ExtensionConferenceName(primary.CallId));
-        }
-
-        var created = primary.Kind == MergeLegKind.DialedNumber
-            ? await _apiClient.CreateConferenceWithStateAsync(conferenceName, primary.PartyLegId, DetachedPartyState(primary.CallId).ToClientStateJson(), cancellationToken)
-            : await _apiClient.CreateConferenceAsync(conferenceName, primary.CallId, cancellationToken: cancellationToken);
+        // A dialed number's party, or an extension call's colleague, moves into the new conference detached from the
+        // agent's leg, so its leaving does not reach back for the agent; any other call joins it as it is.
+        var created = primary.Kind == MergeLegKind.Call
+            ? await _apiClient.CreateConferenceAsync(conferenceName, primary.CallId, cancellationToken: cancellationToken)
+            : await _apiClient.CreateConferenceWithStateAsync(conferenceName, primary.PartyLegId, DetachedPartyState(primary.CallId).ToClientStateJson(), cancellationToken);
 
         if (!created.Succeeded || string.IsNullOrWhiteSpace(created.ConferenceId))
         {
+            if (primary.Kind == MergeLegKind.Extension)
+            {
+                _logger.LogWarning(
+                    "Telnyx refused to move the colleague's leg {CallId} into a new conference ({StatusCode}); the extension call's own conference is used, and the agent leaving it will end it.",
+                    primary.PartyLegId.SanitizeLogValue(),
+                    created.StatusCode);
+
+                return (await AdoptExtensionConferenceAsync(primary, cancellationToken), ExtensionConferenceName(primary.CallId));
+            }
+
             _logger.LogError(
                 "Telnyx rejected a conference creation request with status code {StatusCode}. Response: {Response}",
                 created.StatusCode,
@@ -255,16 +270,18 @@ public sealed partial class TelnyxTelephonyProvider
             return (null, conferenceName);
         }
 
-        if (primary.Kind != MergeLegKind.DialedNumber)
+        if (primary.Kind == MergeLegKind.Call)
         {
             return (created.ConferenceId, conferenceName);
         }
 
-        // The agent joins the conference on the leg the bridge parked when the dialed party moved into it.
+        // The agent joins the conference on the leg its party left: the leg the bridge parked, or an extension call's
+        // leg, which leaves its own conference empty behind it. Without end_conference_on_exit, the agent leaving leaves
+        // the others connected.
         var joined = await _apiClient.JoinConferenceWithStateAsync(
             created.ConferenceId,
             primary.CallId,
-            endConferenceOnExit: true,
+            endConferenceOnExit: false,
             clientStateJson: null,
             cancellationToken);
 

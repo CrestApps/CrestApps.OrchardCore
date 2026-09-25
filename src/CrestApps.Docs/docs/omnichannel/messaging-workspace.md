@@ -37,7 +37,7 @@ It is the human counterpart to [SMS Automation](sms), which lets an **AI agent**
   - a channel where the customer cannot be reached is greyed out.
 - **Conversation.** The thread, the composer (canned-response templates, Enter to send), and the customer card with every contact record that matches the address.
 - **New message.** The compose button opens a mail-style composer in the conversation pane, beside the customer list: pick the address to send **From** (which decides the channel), search contacts reachable on that channel for **To**, add other addresses, and write the message. One recipient starts a conversation; several get a private conversation each.
-- **Claim, assign, transfer, close, spam, reopen.** The same on every channel.
+- **Claim, assign, transfer, close, spam, reopen.** The same on every channel. Replying to a conversation nobody holds claims it for you, under the same rules as **Claim**; replying never takes a conversation from the agent who already holds it.
 - **Broadcasts.** One message to many recipients as individual 1:1 threads (not a group chat), on any channel that supports them.
 - **Real time.** New messages, delivery receipts and assignment changes are pushed over the workspace's own SignalR hub. A new message for the open conversation is appended, one for the same customer on another channel badges that channel's tab, and any new message moves its customer to the top of the list with its unread count. If a push is missed (a dropped connection), the open conversation catches up within seconds and the customer list within half a minute on its own.
 
@@ -83,6 +83,12 @@ The SMS channel applies the carrier keywords, whatever the workspace is doing:
 - **HELP** says who is texting.
 
 A keyword silences the endpoint's auto-reply for that message. Replies can be customised under the `CrestApps:Omnichannel:Messaging:Sms:KeywordReplies` configuration section (`StopMessage`, `HelpMessage`, `StartMessage`). SMS also observes **quiet hours**: outside the destination queue's business hours, in the contact's local time, the composer warns before sending.
+
+Some providers manage opt-outs themselves (Twilio's opt-out management on toll-free numbers and Messaging Services, Telnyx's STOP handling): they confirm the opt-out to the customer and refuse any further message to them, including the workspace's own STOP confirmation. That refusal is expected and is logged as information, not as a warning. Whenever a provider refuses a message because the recipient opted out, the contact is marked **Do not SMS** and the message is marked failed at once rather than retried.
+
+## Hand-off from an automated conversation
+
+While an automated (AI) activity is handling a contact on an endpoint, the workspace leaves that contact's messages to the automated agent, even when a workspace conversation for them already exists. When the automated agent hands off, the whole automated transcript is copied into the conversation, so the agent inherits every message, in order, each exactly once. Customer messages keep the provider's message id, which is how a message the thread already holds, or a provider's redelivery of one, is recognised and not recorded again. Threads written before this behaviour are shown with such duplicates collapsed. This works the same on every messaging channel.
 
 ## Permissions
 

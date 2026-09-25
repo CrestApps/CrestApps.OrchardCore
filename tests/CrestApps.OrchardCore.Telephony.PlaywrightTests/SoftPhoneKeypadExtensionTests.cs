@@ -114,6 +114,56 @@ public sealed class SoftPhoneKeypadExtensionTests : SoftPhoneBrowserTest
         await WaitForAsync(() => Server.Provider.GetLastExtensionDial()?.Extension == "4");
     }
 
+    // The held call's number in the field is a display; the agent adding a call had to delete it by hand first.
+    [Fact]
+    public async Task OnHold_ClickingTheField_ClearsTheHeldCallsNumber_AndDialsOnlyWhatIsTypedThen()
+    {
+        // Arrange
+        var page = await OpenKeypadAsync();
+        await DialAndConnectAsync(page, "+15551234567");
+        await HoldAsync(page);
+        var field = page.Locator("[data-telephony-number]");
+        await page.WaitForFunctionAsync("() => /555/.test(document.querySelector('[data-telephony-number]').value)");
+
+        // Act
+        await field.ClickAsync();
+
+        // Assert - empty, and it stays empty while the agent is in it.
+        Assert.Equal(string.Empty, await field.InputValueAsync());
+        await page.WaitForTimeoutAsync(300);
+        Assert.Equal(string.Empty, await field.InputValueAsync());
+        await CaptureAsync(page, "keypad-field-cleared-on-hold");
+
+        var dials = Server.Provider.GetDialRequestCount();
+        await field.PressSequentiallyAsync("+15557654321");
+        await page.ClickAsync("[data-telephony-dial]");
+        await WaitForAsync(() => Server.Provider.GetDialRequestCount() == dials + 1);
+        Assert.Equal("+15557654321", Server.Provider.GetLastDial().To);
+    }
+
+    [Fact]
+    public async Task OnHold_SwitchingToExtension_LeavesTheFieldEmptyForTheExtension()
+    {
+        // Arrange
+        var page = await OpenKeypadAsync();
+        await DialAndConnectAsync(page, "+15551234567");
+        await HoldAsync(page);
+        await page.WaitForFunctionAsync("() => /555/.test(document.querySelector('[data-telephony-number]').value)");
+
+        // Act - and the provider reports the held call again, which redraws the phone.
+        await page.ClickAsync("[data-telephony-dial-mode-toggle]");
+        await PublishLatestCallStateAsync(page);
+        await page.WaitForTimeoutAsync(300);
+
+        // Assert
+        Assert.Equal(string.Empty, await page.Locator("[data-telephony-number]").InputValueAsync());
+
+        // Typing an extension then dials that extension alone.
+        await page.Locator("[data-telephony-number]").PressSequentiallyAsync("3");
+        await page.ClickAsync("[data-telephony-dial]");
+        await WaitForAsync(() => Server.Provider.GetLastExtensionDial()?.Extension == "3");
+    }
+
     private async Task<IPage> OpenKeypadAsync()
     {
         var page = await OpenAsync("?styled", DesktopAppViewport);

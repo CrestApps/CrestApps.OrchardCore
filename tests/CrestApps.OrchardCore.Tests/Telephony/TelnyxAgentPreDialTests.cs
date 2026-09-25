@@ -65,6 +65,40 @@ public sealed class TelnyxAgentPreDialTests
     }
 
     [Fact]
+    public async Task PreDialAgentAsync_ReplacingARefusedLeg_RingsTheGivenEndpoint_AndMarksTheLegARetry()
+    {
+        // Arrange
+        // The endpoint was already resolved, capability and all, when the refused leg was reported.
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, "{\"data\":{\"call_control_id\":\"leg-2\"}}");
+        var resolver = new Mock<ITelnyxAgentEndpointResolver>(MockBehavior.Strict);
+        var provider = CreateProvider(handler, resolver.Object);
+
+        // Act
+        var result = await provider.PreDialAgentAsync(new ContactCenterAgentPreDialRequest
+        {
+            ReservationId = "r1",
+            ProviderCallId = "caller-1",
+            AgentUserId = "u1",
+            TimeoutSeconds = 20,
+            AgentEndpoint = "sip:new@sip.telnyx.com",
+            ReplacesAgentLegId = "leg-1",
+        }, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Equal("leg-2", result.ProviderLegId);
+
+        using var body = JsonDocument.Parse(handler.LastRequestBody);
+        Assert.Equal("sip:new@sip.telnyx.com", body.RootElement.GetProperty("to").GetString());
+
+        var state = Encoding.UTF8.GetString(Convert.FromBase64String(body.RootElement.GetProperty("client_state").GetString()));
+        Assert.True(TelnyxOutboundBridgeState.TryParse(state, out var parsed));
+        Assert.Equal("r1", parsed.ReservationId);
+        Assert.Equal("u1", parsed.RingUserId);
+        Assert.True(parsed.Redelivered);
+    }
+
+    [Fact]
     public async Task PreDialAgentAsync_WhenNoClientThatCanHoldTheLegIsRegistered_PlacesNoCall()
     {
         // Arrange

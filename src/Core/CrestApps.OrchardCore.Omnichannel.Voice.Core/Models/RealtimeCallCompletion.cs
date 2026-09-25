@@ -42,6 +42,12 @@ public sealed class RealtimeCallCompletion
     public string EndCallReason { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the live session was lost with the caller still on the line, so
+    /// somebody has to take the call over rather than leave it silent.
+    /// </summary>
+    public bool SessionLost { get; set; }
+
+    /// <summary>
     /// Gets or sets when the live session ended, which is when the assistant's part of the conversation ended.
     /// </summary>
     /// <remarks>

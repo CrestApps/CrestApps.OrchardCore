@@ -193,6 +193,9 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
                     {
                         Intent = TelnyxOutboundBridgeState.ContactCenterAgentLegIntent,
                         PeerCallControlId = callerCallControlId,
+
+                        // Named so a leg refused as unavailable can ring the agent again where their phone moved to.
+                        RingUserId = string.IsNullOrWhiteSpace(request.AgentUserId) ? null : request.AgentUserId.Trim(),
                     }.ToClientStateJson(),
                 },
                 cancellationToken);
