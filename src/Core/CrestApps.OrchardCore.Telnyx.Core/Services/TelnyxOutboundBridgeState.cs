@@ -207,6 +207,20 @@ public sealed class TelnyxOutboundBridgeState
     public bool? Detached { get; set; }
 
     /// <summary>
+    /// Gets or sets, on a leg that rings a user's browser for the platform (a Contact Center agent leg), the user whose
+    /// phone it rings, so a leg refused as unavailable can be rung again on the credential that phone moved to.
+    /// </summary>
+    [JsonPropertyName("b")]
+    public string RingUserId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this leg already replaces one that was refused as unavailable. A leg is
+    /// rung again at most once, so a phone that is really gone ends the call instead of being rung in a loop.
+    /// </summary>
+    [JsonPropertyName("e")]
+    public bool? Redelivered { get; set; }
+
+    /// <summary>
     /// Gets a value indicating whether this is the agent leg of a number dialed from the soft phone and connected on
     /// the server, once the number's leg exists: <see cref="PeerCallControlId"/> is then the remote party.
     /// </summary>
@@ -242,6 +256,17 @@ public sealed class TelnyxOutboundBridgeState
         var copy = (TelnyxOutboundBridgeState)MemberwiseClone();
         copy.Detached = true;
         copy.PendingTransferCallControlId = null;
+
+        return copy;
+    }
+
+    /// <summary>
+    /// Returns a copy of this state marked <see cref="Redelivered"/>, for the leg that replaces one refused as unavailable.
+    /// </summary>
+    public TelnyxOutboundBridgeState AsRedelivered()
+    {
+        var copy = (TelnyxOutboundBridgeState)MemberwiseClone();
+        copy.Redelivered = true;
 
         return copy;
     }

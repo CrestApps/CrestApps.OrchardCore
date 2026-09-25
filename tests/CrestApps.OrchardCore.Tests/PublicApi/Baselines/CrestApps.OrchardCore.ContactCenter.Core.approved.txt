@@ -2658,6 +2658,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         public System.Threading.Tasks.Task OnAgentLegEndedAsync(string providerName, string reservationId, string agentLegId, CrestApps.OrchardCore.Telephony.Models.HangupCause? cause, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> OnCallerReadyAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> PreDialAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> RedialAgentLegAsync(string providerName, string reservationId, string failedAgentLegId, string agentEndpoint, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ReleaseAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ReleaseForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task ReleaseForInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -3502,6 +3503,7 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
         System.Threading.Tasks.Task OnAgentLegEndedAsync(string providerName, string reservationId, string agentLegId, CrestApps.OrchardCore.Telephony.Models.HangupCause? cause, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> OnCallerReadyAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> PreDialAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> RedialAgentLegAsync(string providerName, string reservationId, string failedAgentLegId, string agentEndpoint, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ReleaseAsync(string reservationId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ReleaseForAgentAsync(string agentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task ReleaseForInteractionAsync(string interactionId, System.Threading.CancellationToken cancellationToken = default);

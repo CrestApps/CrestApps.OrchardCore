@@ -572,10 +572,12 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     public sealed class ContactCenterAgentPreDialRequest
     {
         public ContactCenterAgentPreDialRequest() { }
+        public string AgentEndpoint { get; set; }
         public string AgentId { get; set; }
         public string AgentUserId { get; set; }
         public string InteractionId { get; set; }
         public string ProviderCallId { get; set; }
+        public string ReplacesAgentLegId { get; set; }
         public string ReservationId { get; set; }
         public int TimeoutSeconds { get; set; }
     }

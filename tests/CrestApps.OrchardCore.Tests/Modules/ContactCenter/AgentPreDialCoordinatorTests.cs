@@ -428,6 +428,69 @@ public sealed class AgentPreDialCoordinatorTests
         coordinator.Verify(value => value.ReleaseForAgentAsync("a1", It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task RedialAgentLegAsync_RingsTheNewEndpointForTheRestOfTheRingWindow_AndTracksTheNewLegInstead()
+    {
+        // Arrange
+        // The agent's phone had reopened on a fresh credential, so the leg to its old one was refused as unavailable.
+        var harness = await Harness.WithPreDialedLegAsync();
+        ContactCenterAgentPreDialRequest? request = null;
+        harness.PreDialProvider
+            .Setup(provider => provider.PreDialAgentAsync(It.IsAny<ContactCenterAgentPreDialRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ContactCenterAgentPreDialRequest, CancellationToken>((value, _) => request = value)
+            .ReturnsAsync(Dialed("leg-2"));
+
+        // Act
+        var redialed = await harness.Coordinator.RedialAgentLegAsync("Telnyx", "r1", "leg-1", "sip:new@example", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(redialed);
+        Assert.NotNull(request);
+        Assert.Equal("sip:new@example", request!.AgentEndpoint);
+        Assert.Equal("leg-1", request.ReplacesAgentLegId);
+        Assert.Equal("u1", request.AgentUserId);
+        Assert.Equal(25, request.TimeoutSeconds);
+
+        var leg = await harness.Store.FindAsync("r1", TestContext.Current.CancellationToken);
+        Assert.Equal("leg-2", leg!.AgentLegId);
+
+        // The new leg is the offer's now: answering it is not mistaken for a stray leg and hung up.
+        await harness.Coordinator.OnAgentLegAnsweredAsync("Telnyx", "r1", "leg-2", TestContext.Current.CancellationToken);
+        harness.PreDialProvider.Verify(provider => provider.HangupPreDialedAgentAsync("leg-2", It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RedialAgentLegAsync_WhenTheOfferIsNoLongerTheAgents_RingsNothing()
+    {
+        // Arrange
+        var harness = await Harness.WithPreDialedLegAsync();
+        harness.Reservation.RestorePersistedStatus(ReservationStatus.Expired);
+
+        // Act
+        var redialed = await harness.Coordinator.RedialAgentLegAsync("Telnyx", "r1", "leg-1", "sip:new@example", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(redialed);
+        harness.PreDialProvider.Verify(
+            provider => provider.PreDialAgentAsync(It.Is<ContactCenterAgentPreDialRequest>(value => value.ReplacesAgentLegId != null), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task RedialAgentLegAsync_ForALegTheOfferNoLongerTracks_RingsNothing()
+    {
+        // Arrange
+        // A late or repeated webhook for a leg already replaced.
+        var harness = await Harness.WithPreDialedLegAsync();
+
+        // Act
+        var redialed = await harness.Coordinator.RedialAgentLegAsync("Telnyx", "r1", "leg-0", "sip:new@example", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(redialed);
+        Assert.Equal("leg-1", (await harness.Store.FindAsync("r1", TestContext.Current.CancellationToken))!.AgentLegId);
+    }
+
     private static ContactCenterVoiceProviderResult Dialed(string legId)
         => new()
         {

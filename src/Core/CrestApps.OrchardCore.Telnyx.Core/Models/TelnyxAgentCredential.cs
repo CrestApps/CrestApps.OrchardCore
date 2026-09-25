@@ -77,6 +77,19 @@ public sealed class TelnyxAgentCredential
     public DateTime? ConnectionClosedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets the UTC time this credential was found not to receive calls, and nothing has registered on it since:
+    /// a leg to it was refused as unavailable (SIP 480 or 404), or the connection that registered on it went on to
+    /// register on another credential.
+    /// </summary>
+    /// <remarks>
+    /// A phone that reopens, or reconnects after the server restarted, registers on a fresh credential, and the one it
+    /// left behind still reads as registered: nothing tells the server it is gone. Calls kept going to it and failed
+    /// with 480 while the phone sat ready on the new one. A credential known to be unreachable ranks after every other
+    /// one until it registers again.
+    /// </remarks>
+    public DateTime? UnreachableUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets what the client registered on this credential reported it can do (see
     /// <c>TelephonyConstants.SoftPhoneClientCapabilities</c>). Empty for a client that reported nothing, which is
     /// treated as able to do none of them.

@@ -28,6 +28,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     private readonly IConsultLegEventSink _consultLegEventSink;
     private readonly TelnyxOptions _options;
     private readonly TelnyxTransferCommands _transfers;
+    private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
 
     public TelnyxOutboundBridgeOrchestrator(
         TelnyxApiClient apiClient,
@@ -39,7 +40,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         IEnumerable<IInboundVoiceInteractionProbe> interactionProbes,
         IEnumerable<IConsultLegEventSink> consultLegEventSinks = null,
         ITelephonyInteractionStore interactionStore = null,
-        IClock clock = null)
+        IClock clock = null,
+        ITelnyxAgentEndpointResolver agentEndpointResolver = null)
     {
         _apiClient = apiClient;
         _logger = logger;
@@ -50,6 +52,7 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         _interactionProbe = interactionProbes?.FirstOrDefault();
         _consultLegEventSink = consultLegEventSinks?.FirstOrDefault();
         _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger);
+        _agentEndpointResolver = agentEndpointResolver;
     }
 
     /// <inheritdoc/>
@@ -139,6 +142,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                     IsAgentLegConnectFailure(callEvent));
             }
 
+            if (!isAnswered && await TryRingContactCenterAgentAgainAsync(callEvent, state, cancellationToken))
+            {
+                // The agent's phone moved to another credential; the caller waits for the leg rung there instead.
+                return TelnyxOutboundBridgeLeg.None;
+            }
+
             if (!isAnswered && IsAgentLegConnectFailure(callEvent) && !string.IsNullOrWhiteSpace(state.PeerCallControlId))
             {
                 // The agent leg died before it was ever answered -- rejected by the endpoint, unanswered, or
@@ -220,7 +229,13 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         {
             var isInternalExtensionCall = !string.IsNullOrWhiteSpace(state.VoicemailRecipientUserId);
 
-            if (IsNoAnswerHangup(callEvent) && isInternalExtensionCall)
+            if (isInternalExtensionCall && await TryRingExtensionTargetAgainAsync(callEvent, state, cancellationToken))
+            {
+                return TelnyxOutboundBridgeLeg.DestinationLeg;
+            }
+
+            // A colleague whose phone is not there is an unavailable extension, which goes to voicemail like one that rang out.
+            if ((IsNoAnswerHangup(callEvent) || IsRefusedAsUnavailable(callEvent)) && isInternalExtensionCall)
             {
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
@@ -489,7 +504,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     }
 
 
-    private async Task<string> DialDestinationAsync(string agentLegCallControlId, TelnyxOutboundBridgeState agentState, CancellationToken cancellationToken)
+    private async Task<string> DialDestinationAsync(
+        string agentLegCallControlId,
+        TelnyxOutboundBridgeState agentState,
+        CancellationToken cancellationToken,
+        bool redelivered = false)
     {
         var body = new Dictionary<string, object>
         {
@@ -505,10 +524,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
                 // A consult's number names the call being consulted about, so its answer and its hang-up are read as
                 // the consult's.
                 TransferOfCallControlId = agentState.ConsultOfCallControlId,
+                Redelivered = redelivered ? true : null,
             }.ToClientState(),
             // Telnyx de-duplicates by command_id, so a redelivered agent-answered webhook cannot place a
-            // second destination call.
-            ["command_id"] = $"ob-dest-{agentLegCallControlId}",
+            // second destination call. The one leg rung again after a refusal has an id of its own.
+            ["command_id"] = redelivered ? $"ob-dest-again-{agentLegCallControlId}" : $"ob-dest-{agentLegCallControlId}",
         };
 
         if (!string.IsNullOrWhiteSpace(agentState.CallerId))

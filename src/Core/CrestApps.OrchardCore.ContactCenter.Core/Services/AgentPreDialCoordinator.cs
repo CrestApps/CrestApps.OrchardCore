@@ -415,6 +415,76 @@ public sealed class AgentPreDialCoordinator : IAgentPreDialCoordinator
     }
 
     /// <inheritdoc/>
+    public async Task<bool> RedialAgentLegAsync(
+        string providerName,
+        string reservationId,
+        string failedAgentLegId,
+        string agentEndpoint,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(reservationId) || string.IsNullOrEmpty(failedAgentLegId) || string.IsNullOrWhiteSpace(agentEndpoint))
+        {
+            return false;
+        }
+
+        (var locker, var locked) = await AcquireAsync(reservationId);
+
+        if (!locked)
+        {
+            return false;
+        }
+
+        await using var acquiredLock = locker;
+
+        // Placed under the offer's lock, so the new leg's answer waits here and finds the leg it belongs to.
+        var leg = await _store.FindAsync(reservationId, cancellationToken);
+
+        if (leg is null ||
+            leg.BridgedUtc.HasValue ||
+            !string.Equals(leg.AgentLegId, failedAgentLegId, StringComparison.Ordinal) ||
+            (!string.IsNullOrEmpty(providerName) && !string.Equals(leg.ProviderName, providerName, StringComparison.Ordinal)) ||
+            _voiceProviderResolver.Get(leg.ProviderName) is not IContactCenterVoiceAgentPreDialProvider provider)
+        {
+            return false;
+        }
+
+        var reservation = await ReadReservationAsync(reservationId);
+        var remaining = leg.RingsUntilUtc - _clock.UtcNow;
+
+        // Telnyx rings a leg for five seconds at the least; an offer with less left than that is not worth a second leg.
+        if (reservation is null ||
+            reservation.Status is not ReservationStatus.Pending and not ReservationStatus.Accepted ||
+            !string.Equals(reservation.AgentId, leg.AgentId, StringComparison.Ordinal) ||
+            remaining < TimeSpan.FromSeconds(5))
+        {
+            return false;
+        }
+
+        var result = await provider.PreDialAgentAsync(new ContactCenterAgentPreDialRequest
+        {
+            ReservationId = leg.ReservationId,
+            InteractionId = leg.InteractionId,
+            ProviderCallId = leg.ProviderCallId,
+            AgentId = leg.AgentId,
+            AgentUserId = leg.AgentUserId,
+            TimeoutSeconds = (int)Math.Ceiling(remaining.TotalSeconds),
+            AgentEndpoint = agentEndpoint,
+            ReplacesAgentLegId = failedAgentLegId,
+        }, cancellationToken);
+
+        if (result is null || !result.Succeeded || string.IsNullOrWhiteSpace(result.ProviderLegId))
+        {
+            return false;
+        }
+
+        leg.AgentLegId = result.ProviderLegId.Trim();
+        leg.AgentAnsweredUtc = null;
+        await SaveAsync(leg, cancellationToken);
+
+        return true;
+    }
+
+    /// <inheritdoc/>
     public async Task ReleaseAsync(string reservationId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(reservationId))

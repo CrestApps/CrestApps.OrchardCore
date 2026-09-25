@@ -116,6 +116,104 @@ public sealed class TelnyxAgentCredentialSelectionTests
     }
 
     [Fact]
+    public void OrderByDeliveryPreference_ACredentialFoundUnreachable_RanksAfterEveryOther()
+    {
+        // Arrange
+        // A phone that reopened left its old credential reading as registered, and a leg to it came back SIP 480. Until
+        // something registers on it again, even a credential nothing has registered on yet is the better guess.
+        var refused = new TelnyxAgentCredential
+        {
+            CredentialId = "refused",
+            IssuedUtc = _now,
+            RegisteredUtc = _now.AddSeconds(5),
+            RegisteredConnectionId = "connection-a",
+            UnreachableUtc = _now.AddMinutes(30),
+            ExpiresUtc = _now.AddHours(1),
+        };
+
+        var fresh = new TelnyxAgentCredential
+        {
+            CredentialId = "fresh",
+            IssuedUtc = _now.AddMinutes(30),
+            ExpiresUtc = _now.AddHours(1),
+        };
+
+        // Act
+        var ordered = TelnyxAgentCredentialSelection.OrderByDeliveryPreference([refused, fresh]);
+
+        // Assert
+        Assert.Equal("fresh", ordered[0].CredentialId);
+        Assert.Equal(2, ordered.Count);
+    }
+
+    [Fact]
+    public void OrderForRedelivery_LeavesOutUnreachableCredentials_AndPrefersTheOneMintedAfterTheOthersWereLastSeen()
+    {
+        // Arrange
+        // The live shape: the phone reopened and minted a credential it is registering on right now, while the window it
+        // had before closed half an hour earlier. The retry must go to the new credential, not back to the closed one.
+        var closedEarlier = new TelnyxAgentCredential
+        {
+            CredentialId = "closed-earlier",
+            IssuedUtc = _now,
+            RegisteredUtc = _now.AddSeconds(5),
+            RegisteredConnectionId = "connection-a",
+            ConnectionClosedUtc = _now.AddMinutes(1),
+            ExpiresUtc = _now.AddHours(1),
+        };
+
+        var refused = new TelnyxAgentCredential
+        {
+            CredentialId = "refused",
+            IssuedUtc = _now.AddMinutes(2),
+            RegisteredUtc = _now.AddMinutes(2),
+            RegisteredConnectionId = "connection-b",
+            UnreachableUtc = _now.AddMinutes(31),
+            ExpiresUtc = _now.AddHours(1),
+        };
+
+        var justMinted = new TelnyxAgentCredential
+        {
+            CredentialId = "just-minted",
+            IssuedUtc = _now.AddMinutes(30),
+            ExpiresUtc = _now.AddHours(1),
+        };
+
+        // Act
+        var ordered = TelnyxAgentCredentialSelection.OrderForRedelivery([closedEarlier, refused, justMinted]);
+
+        // Assert
+        Assert.Equal(["just-minted", "closed-earlier"], ordered.Select(credential => credential.CredentialId));
+    }
+
+    [Fact]
+    public void OrderForRedelivery_StillPrefersACredentialRegisteredByAnOpenWindow()
+    {
+        // Arrange
+        var open = new TelnyxAgentCredential
+        {
+            CredentialId = "open",
+            IssuedUtc = _now,
+            RegisteredUtc = _now.AddSeconds(5),
+            RegisteredConnectionId = "connection-a",
+            ExpiresUtc = _now.AddHours(1),
+        };
+
+        var newerUnregistered = new TelnyxAgentCredential
+        {
+            CredentialId = "newer-unregistered",
+            IssuedUtc = _now.AddMinutes(10),
+            ExpiresUtc = _now.AddHours(1),
+        };
+
+        // Act
+        var ordered = TelnyxAgentCredentialSelection.OrderForRedelivery([newerUnregistered, open]);
+
+        // Assert
+        Assert.Equal("open", ordered[0].CredentialId);
+    }
+
+    [Fact]
     public void OrderByDeliveryPreference_OfNothing_IsEmptyRatherThanNull()
     {
         // Assert

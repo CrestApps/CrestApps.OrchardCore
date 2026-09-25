@@ -109,6 +109,84 @@ public sealed class TelnyxAgentEndpointResolverTests
         Assert.Null(endpoint);
     }
 
+    [Fact]
+    public async Task ResolveRedelivery_MarksTheRefusedCredentialUnreachable_AndResolvesTheCredentialThePhoneMovedTo()
+    {
+        // Arrange
+        var stale = Credential("stale", issuedUtc: _now.AddMinutes(-30), registeredUtc: _now.AddMinutes(-29));
+        var fresh = Credential("fresh", issuedUtc: _now.AddSeconds(-2), registeredUtc: null);
+        var store = Store(stale, fresh);
+        var resolver = Resolver(store);
+
+        // Act
+        var redelivery = await resolver.ResolveRedeliveryAsync("u1", "sip:stale@sip.example.com", null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotNull(redelivery);
+        Assert.Equal("sip:fresh@sip.example.com", redelivery.Endpoint);
+        Assert.Equal("fresh", redelivery.CredentialId);
+        Assert.Equal("stale", redelivery.UnreachableCredentialId);
+        store.Verify(value => value.MarkUnreachableAsync("u1", "stale", _now, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ResolveRedelivery_WhenTheRefusedCredentialIsTheOnlyOne_ResolvesNothing()
+    {
+        // Arrange
+        var resolver = Resolver(Store(Credential("stale", issuedUtc: _now.AddMinutes(-30), registeredUtc: _now.AddMinutes(-29))));
+
+        // Act
+        var redelivery = await resolver.ResolveRedeliveryAsync("u1", "sip:stale@sip.example.com", null, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(redelivery);
+    }
+
+    [Fact]
+    public async Task ResolveRedelivery_WhenTheOtherCredentialsClientLacksTheCapability_ResolvesNothing()
+    {
+        // Arrange
+        var resolver = Resolver(Store(
+            Credential("stale", issuedUtc: _now.AddMinutes(-30), registeredUtc: _now.AddMinutes(-29)),
+            Credential("fresh", issuedUtc: _now.AddSeconds(-2), registeredUtc: _now.AddSeconds(-1))));
+
+        // Act
+        var redelivery = await resolver.ResolveRedeliveryAsync("u1", "sip:stale@sip.example.com", "held-offer-leg", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Null(redelivery);
+    }
+
+    private static Mock<ITelnyxAgentCredentialStore> Store(params TelnyxAgentCredential[] credentials)
+    {
+        var store = new Mock<ITelnyxAgentCredentialStore>();
+        store
+            .Setup(value => value.ListLiveByUserAsync(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(credentials);
+        store
+            .Setup(value => value.MarkUnreachableAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, string sipUsername, DateTime unreachableUtc, CancellationToken _) =>
+            {
+                var credential = credentials.FirstOrDefault(candidate => candidate.SipUsername == sipUsername);
+
+                if (credential is not null)
+                {
+                    credential.UnreachableUtc = unreachableUtc;
+                }
+
+                return credential;
+            });
+
+        return store;
+    }
+
+    private static TelnyxAgentEndpointResolver Resolver(Mock<ITelnyxAgentCredentialStore> store)
+        => new(
+            store.Object,
+            new OptionsWrapper<TelnyxOptions>(new TelnyxOptions { SipDomain = "sip.example.com" }),
+            new StubClock(_now),
+            NullLogger<TelnyxAgentEndpointResolver>.Instance);
+
     private static TelnyxAgentCredential Credential(string sipUsername, DateTime issuedUtc, DateTime? registeredUtc)
         => new()
         {

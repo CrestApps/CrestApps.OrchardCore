@@ -54,6 +54,12 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
                 state.ReservationId.SanitizeLogValue());
         }
 
+        if (await TryRingPreDialedAgentAgainAsync(callEvent, state, cancellationToken))
+        {
+            // The agent's phone moved to another credential, and the offer now tracks the leg rung there.
+            return;
+        }
+
         if (_preDialCoordinator is not null)
         {
             // Unlike the accept-time agent leg, a pre-dialed leg ending is not by itself a failed connect: the offer

@@ -90,6 +90,15 @@ extension dialing, and the outbound browser bridge; it applies `OrderByDeliveryP
 **Tests first.** Resolver tests: registered beats newer unregistered; expired excluded; none → null with a
 structured log.
 
+**Stale registrations.** A phone that reopens, or reconnects after a server restart, registers on a new credential,
+and the one it left still reads as registered. A leg rung to it in that moment is refused with SIP 480. Such a
+refusal (480 or 404, never 486 or 603) now marks the credential `UnreachableUtc`, which ranks it last until it
+registers again. The leg is rung once more on the user's current credential: an extension call's colleague leg, a
+Contact Center agent leg, and a pre-dialed offer leg, which is re-placed through `IAgentPreDialCoordinator`. An
+extension with no other credential falls to voicemail. A connection that registers on a new credential also marks
+the credential it left unreachable. The soft phone's own leg of a keypad or extension dial is not retried, because
+the phone names its credential and tracks that leg by its id.
+
 ## D5. Telnyx HTTP client consolidation (Medium)
 
 **Evidence.** `CreateClient`, `SafeReadContentAsync`, `ReadDataStringAsync` are duplicated across

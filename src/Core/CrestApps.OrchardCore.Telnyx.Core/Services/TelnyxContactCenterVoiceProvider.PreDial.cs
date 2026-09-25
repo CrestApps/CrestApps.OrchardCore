@@ -38,11 +38,14 @@ public sealed partial class TelnyxContactCenterVoiceProvider
         }
 
         // Only a browser that said it can hold an offer's leg is rung early. One that cannot would ring it as a second
-        // incoming call on top of the offer, or answer it on arrival and put the agent on a silent line.
-        var agentEndpoint = await _agentEndpointResolver.ResolveAsync(
-            request.AgentUserId,
-            TelephonyConstants.SoftPhoneClientCapabilities.HeldOfferLeg,
-            cancellationToken);
+        // incoming call on top of the offer, or answer it on arrival and put the agent on a silent line. A leg rung again
+        // after the first was refused names the endpoint it resolved the same way.
+        var agentEndpoint = string.IsNullOrWhiteSpace(request.AgentEndpoint)
+            ? await _agentEndpointResolver.ResolveAsync(
+                request.AgentUserId,
+                TelephonyConstants.SoftPhoneClientCapabilities.HeldOfferLeg,
+                cancellationToken)
+            : request.AgentEndpoint.Trim();
 
         if (string.IsNullOrWhiteSpace(agentEndpoint))
         {
@@ -60,6 +63,8 @@ public sealed partial class TelnyxContactCenterVoiceProvider
                 Intent = TelnyxOutboundBridgeState.ContactCenterPreDialedAgentLegIntent,
                 PeerCallControlId = request.ProviderCallId.Trim(),
                 ReservationId = reservationId,
+                RingUserId = request.AgentUserId,
+                Redelivered = string.IsNullOrWhiteSpace(request.ReplacesAgentLegId) ? null : true,
             }.ToClientStateJson(),
 
             // The leg rings for as long as its offer does, so one nobody answers ends with the offer on its own.
