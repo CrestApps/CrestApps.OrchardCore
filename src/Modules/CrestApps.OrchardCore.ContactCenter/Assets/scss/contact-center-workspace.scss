@@ -445,13 +445,21 @@
     background: var(--cc-surface-muted);
 }
 
+/* A section label naming the items below it (the break reasons). It must never read as one of them: an item-sized
+   grey line between items looked like a disabled "Break" choice, so it is small caps with spacing instead. */
 .cc-menu__heading {
-    padding: 0.45rem 0.6rem 0.2rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--bs-secondary-color, #6c757d);
+    margin: 0.35rem 0 0.1rem;
+    padding: 0.5rem 0.6rem 0.15rem;
     border-top: 1px solid var(--cc-border);
-    margin-top: 0.25rem;
+    color: var(--bs-secondary-color, #6c757d);
+    font-size: 0.66rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    cursor: default;
+    pointer-events: none;
+    user-select: none;
 }
 
 /* Supervisor dashboard. */

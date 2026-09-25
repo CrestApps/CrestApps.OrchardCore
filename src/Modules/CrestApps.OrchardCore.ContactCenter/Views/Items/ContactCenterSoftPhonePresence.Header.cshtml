@@ -41,16 +41,20 @@
 
         @if (breakReasonCodes.Count > 0)
         {
-            <h6 class="dropdown-header" data-contact-center-break-choice>@breakChoiceText</h6>
-            foreach (var reasonCode in breakReasonCodes)
-            {
-                <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>
-                    <input type="hidden" name="returnUrl" value="@returnUrl" />
-                    <input type="hidden" name="status" value="@AgentPresenceStatus.RequestBreak" />
-                    <input type="hidden" name="presenceReason" value="@reasonCode.Name" />
-                    <button type="submit" class="dropdown-item" data-presence-status="@AgentPresenceStatus.RequestBreak" data-presence-value="@((int)AgentPresenceStatus.RequestBreak)" data-presence-reason="@reasonCode.Name">@reasonCode.Name</button>
-                </form>
-            }
+            @* A section label naming the break reasons below it, not a choice of its own: styled as a small-caps label so it
+               never reads as a greyed-out (disabled) item, and tied to its reasons as their group's accessible name. *@
+            <div role="group" aria-labelledby="contactCenterBreakChoiceHeading">
+                <div class="telephony-soft-phone__menu-heading" id="contactCenterBreakChoiceHeading" role="presentation" data-contact-center-break-choice>@breakChoiceText</div>
+                @foreach (var reasonCode in breakReasonCodes)
+                {
+                    <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                        <input type="hidden" name="status" value="@AgentPresenceStatus.RequestBreak" />
+                        <input type="hidden" name="presenceReason" value="@reasonCode.Name" />
+                        <button type="submit" class="dropdown-item" data-presence-status="@AgentPresenceStatus.RequestBreak" data-presence-value="@((int)AgentPresenceStatus.RequestBreak)" data-presence-reason="@reasonCode.Name">@reasonCode.Name</button>
+                    </form>
+                }
+            </div>
         }
 
         @if (otherReasonCodes.Count > 0)
