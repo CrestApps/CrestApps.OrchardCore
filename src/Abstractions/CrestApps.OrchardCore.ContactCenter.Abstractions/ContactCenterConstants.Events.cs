@@ -390,7 +390,7 @@ public static partial class ContactCenterConstants
         public const string CallDequeued = "CallDequeued";
 
         /// <summary>
-        /// Raised when the platform starts dialling a call.
+        /// Raised when the platform starts dialling a call, or an agent dials a number from the soft phone.
         /// </summary>
         public const string DialStarted = "DialStarted";
 

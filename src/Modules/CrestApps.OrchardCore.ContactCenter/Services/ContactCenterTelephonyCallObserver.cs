@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
 
 namespace CrestApps.OrchardCore.ContactCenter.Services;
 
@@ -15,10 +16,17 @@ namespace CrestApps.OrchardCore.ContactCenter.Services;
 /// phone is accounted for even when no queue was involved.
 /// </summary>
 /// <remarks>
+/// <para>
 /// A call the Contact Center routed also appears in the agent's telephony history and is already recorded by its own
 /// call events; it is skipped here so it is not counted twice. It reaches the history two ways: under the Contact
 /// Center interaction's own identifier, or -- when the offer rang the soft phone -- under a history identifier of its
 /// own with the provider's call id, which is the id the Contact Center tracks the caller by.
+/// </para>
+/// <para>
+/// A call the agent dials by number is a dial: <see cref="ContactCenterConstants.Events.DialStarted"/> and
+/// <see cref="ContactCenterConstants.Events.CallEnded"/>. Only a call to or from a colleague is an extension call --
+/// one dialed by extension, or one rung to the agent that the Contact Center did not route.
+/// </para>
 /// </remarks>
 public sealed class ContactCenterTelephonyCallObserver : ITelephonyCallObserver
 {
@@ -50,13 +58,33 @@ public sealed class ContactCenterTelephonyCallObserver : ITelephonyCallObserver
 
     /// <inheritdoc/>
     public Task CallStartedAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
-        => RecordAsync(ContactCenterConstants.Events.ExtensionCallStarted, interaction, cancellationToken);
+        => RecordAsync(ended: false, interaction, cancellationToken);
 
     /// <inheritdoc/>
     public Task CallEndedAsync(TelephonyInteraction interaction, CancellationToken cancellationToken = default)
-        => RecordAsync(ContactCenterConstants.Events.ExtensionCallEnded, interaction, cancellationToken);
+        => RecordAsync(ended: true, interaction, cancellationToken);
 
-    private async Task RecordAsync(string eventType, TelephonyInteraction interaction, CancellationToken cancellationToken)
+    /// <summary>
+    /// The event a soft-phone call the Contact Center did not route is recorded as. A call placed by number -- from the
+    /// keypad, or a phone field's call button -- is a dial and a call end; it used to be written as an extension call,
+    /// with details that said it was not one.
+    /// </summary>
+    /// <param name="interaction">The call.</param>
+    /// <param name="ended">Whether the call's end is being recorded, rather than its start.</param>
+    /// <returns>The event type.</returns>
+    internal static string ResolveEventType(TelephonyInteraction interaction, bool ended)
+    {
+        ArgumentNullException.ThrowIfNull(interaction);
+
+        if (interaction.Direction == CallDirection.Outbound && !interaction.IsExtension)
+        {
+            return ended ? ContactCenterConstants.Events.CallEnded : ContactCenterConstants.Events.DialStarted;
+        }
+
+        return ended ? ContactCenterConstants.Events.ExtensionCallEnded : ContactCenterConstants.Events.ExtensionCallStarted;
+    }
+
+    private async Task RecordAsync(bool ended, TelephonyInteraction interaction, CancellationToken cancellationToken)
     {
         if (interaction is null || string.IsNullOrEmpty(interaction.CallId))
         {
@@ -74,7 +102,13 @@ public sealed class ContactCenterTelephonyCallObserver : ITelephonyCallObserver
                 ? null
                 : await _agentManager.FindByUserIdAsync(interaction.UserId, cancellationToken);
 
-            var ended = eventType == ContactCenterConstants.Events.ExtensionCallEnded;
+            var eventType = ResolveEventType(interaction, ended);
+            var isExtensionEvent = eventType is ContactCenterConstants.Events.ExtensionCallStarted or ContactCenterConstants.Events.ExtensionCallEnded;
+
+            // A call the soft phone stopped reporting was settled by the platform, not ended by the agent.
+            var endedUnreported = ended &&
+                interaction.TryGet<ClientRecordedCallActivity>(out var activity) &&
+                activity.EndedUnreported;
             var data = new CallLifecycleEventData
             {
                 ProviderName = interaction.ProviderName,
@@ -84,6 +118,7 @@ public sealed class ContactCenterTelephonyCallObserver : ITelephonyCallObserver
                 State = interaction.Outcome.ToString(),
                 Target = interaction.Direction == CallDirection.Inbound ? interaction.From : interaction.To,
                 DurationSeconds = ended ? interaction.DurationSeconds : null,
+                Reason = endedUnreported ? "The soft phone stopped reporting the call; it was settled as of its last report." : null,
             };
 
             data.Details["telephonyInteractionId"] = interaction.InteractionId ?? string.Empty;
@@ -101,8 +136,8 @@ public sealed class ContactCenterTelephonyCallObserver : ITelephonyCallObserver
                 eventType,
                 data,
                 ended ? interaction.EndedUtc ?? interaction.StartedUtc : interaction.StartedUtc,
-                ContactCenterActor.Agent(interaction.UserId),
-                $"extension-call:{eventType}:{interaction.InteractionId ?? interaction.CallId}",
+                endedUnreported ? ContactCenterActor.System : ContactCenterActor.Agent(interaction.UserId),
+                $"{(isExtensionEvent ? "extension-call" : "manual-call")}:{eventType}:{interaction.InteractionId ?? interaction.CallId}",
                 cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
