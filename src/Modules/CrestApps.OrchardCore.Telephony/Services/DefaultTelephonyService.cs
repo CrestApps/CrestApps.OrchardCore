@@ -1,6 +1,8 @@
+using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.Models;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Telephony.Services;
 
@@ -14,6 +16,8 @@ public sealed class DefaultTelephonyService : ITelephonyService
     private readonly IOutboundCallScreeningService _screeningService;
     private readonly ITelephonyExtensionResolver _extensionResolver;
     private readonly IDialDestinationPolicy _destinationPolicy;
+    private readonly ITelephonyVoicemailSendGuard _voicemailSendGuard;
+    private readonly ILogger _logger;
 
     internal readonly IStringLocalizer S;
 
@@ -37,6 +41,31 @@ public sealed class DefaultTelephonyService : ITelephonyService
         _extensionResolver = extensionResolver;
         _destinationPolicy = destinationPolicy;
         S = stringLocalizer;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DefaultTelephonyService"/> class that sends each call to voicemail
+    /// once, however many requests ask for it.
+    /// </summary>
+    /// <param name="resolver">The provider resolver.</param>
+    /// <param name="screeningService">The outbound origination screening gate.</param>
+    /// <param name="extensionResolver">The internal extension resolver.</param>
+    /// <param name="destinationPolicy">The safety policy deciding which destinations may be reached.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="voicemailSendGuard">The guard that lets a call be sent to voicemail once.</param>
+    /// <param name="logger">The logger.</param>
+    public DefaultTelephonyService(
+        ITelephonyProviderResolver resolver,
+        IOutboundCallScreeningService screeningService,
+        ITelephonyExtensionResolver extensionResolver,
+        IDialDestinationPolicy destinationPolicy,
+        IStringLocalizer<DefaultTelephonyService> stringLocalizer,
+        ITelephonyVoicemailSendGuard voicemailSendGuard,
+        ILogger<DefaultTelephonyService> logger)
+        : this(resolver, screeningService, extensionResolver, destinationPolicy, stringLocalizer)
+    {
+        _voicemailSendGuard = voicemailSendGuard;
+        _logger = logger;
     }
 
     /// <inheritdoc/>
@@ -179,7 +208,54 @@ public sealed class DefaultTelephonyService : ITelephonyService
             cancellationToken);
 
     /// <inheritdoc/>
-    public Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+    public async Task<TelephonyResult> SendToVoicemailAsync(CallReference call, CancellationToken cancellationToken = default)
+    {
+        var callId = call?.CallId;
+
+        if (_voicemailSendGuard is null || string.IsNullOrWhiteSpace(callId))
+        {
+            return await SendToVoicemailCoreAsync(call, cancellationToken);
+        }
+
+        // Sending a caller to voicemail answers their leg and plays the greeting. A second request for a call already
+        // on its way to voicemail would answer and greet them again, so it is told the call is there instead.
+        if (!await _voicemailSendGuard.TryClaimAsync(callId, cancellationToken))
+        {
+            if (_logger?.IsEnabled(LogLevel.Information) == true)
+            {
+                _logger.LogInformation(
+                    "Call {CallId} is already being sent to voicemail; the repeated request was not sent to the provider.",
+                    callId.SanitizeLogValue());
+            }
+
+            return TelephonyResult.Success(new TelephonyCall
+            {
+                CallId = callId,
+                State = CallState.Connected,
+                Direction = CallDirection.Inbound,
+                Metadata = call.Metadata ?? new Dictionary<string, object>(),
+            });
+        }
+
+        TelephonyResult result = null;
+
+        try
+        {
+            result = await SendToVoicemailCoreAsync(call, cancellationToken);
+        }
+        finally
+        {
+            // Only a call that reached voicemail is held against a later request; a failed attempt may be retried.
+            if (result?.Succeeded != true)
+            {
+                await _voicemailSendGuard.ReleaseAsync(callId, CancellationToken.None);
+            }
+        }
+
+        return result;
+    }
+
+    private Task<TelephonyResult> SendToVoicemailCoreAsync(CallReference call, CancellationToken cancellationToken)
         => InvokeAsync<ITelephonyVoicemailProvider>(
             TelephonyCapabilities.Voicemail,
             (provider, token) => provider.SendToVoicemailAsync(call, token),

@@ -94,6 +94,11 @@ namespace CrestApps.OrchardCore.Telephony.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension> FindByNumberAsync(string number, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Core.Models.TelephonyExtension> FindByUserIdAsync(string userId, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ITelephonyVoicemailSendGuard
+    {
+        System.Threading.Tasks.Task ReleaseAsync(string callId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> TryClaimAsync(string callId, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IVoiceIngressGate
     {
         System.Threading.Tasks.Task<System.IAsyncDisposable> AcquireAsync(string providerName, string providerCallId, System.Threading.CancellationToken cancellationToken = default);

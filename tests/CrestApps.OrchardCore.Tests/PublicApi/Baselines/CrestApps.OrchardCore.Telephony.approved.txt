@@ -343,6 +343,7 @@ namespace CrestApps.OrchardCore.Telephony.Services
     public sealed class DefaultTelephonyService : CrestApps.OrchardCore.Telephony.ITelephonyService
     {
         public DefaultTelephonyService(CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver resolver, CrestApps.OrchardCore.Telephony.IOutboundCallScreeningService screeningService, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionResolver extensionResolver, CrestApps.OrchardCore.Telephony.Services.IDialDestinationPolicy destinationPolicy, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyService> stringLocalizer) { }
+        public DefaultTelephonyService(CrestApps.OrchardCore.Telephony.ITelephonyProviderResolver resolver, CrestApps.OrchardCore.Telephony.IOutboundCallScreeningService screeningService, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyExtensionResolver extensionResolver, CrestApps.OrchardCore.Telephony.Services.IDialDestinationPolicy destinationPolicy, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyService> stringLocalizer, CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyVoicemailSendGuard voicemailSendGuard, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.DefaultTelephonyService> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AddExtensionToConferenceAsync(CrestApps.OrchardCore.Telephony.Models.ExtensionConferenceRequest request, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> AnswerAsync(CrestApps.OrchardCore.Telephony.Models.CallReference call, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Telephony.Models.TelephonyResult> DialAsync(CrestApps.OrchardCore.Telephony.Models.DialRequest request, System.Threading.CancellationToken cancellationToken = default) { }
@@ -434,6 +435,13 @@ namespace CrestApps.OrchardCore.Telephony.Services
     {
         public TelephonySettingsConfiguration(OrchardCore.Settings.ISiteService siteService) { }
         public void PostConfigure(string name, CrestApps.OrchardCore.Telephony.TelephonySettings options) { }
+    }
+    public sealed class TelephonyVoicemailSendGuard : CrestApps.OrchardCore.Telephony.Core.Services.ITelephonyVoicemailSendGuard
+    {
+        public static readonly System.TimeSpan ClaimLifetime;
+        public TelephonyVoicemailSendGuard(OrchardCore.Locking.Distributed.IDistributedLock distributedLock, Microsoft.Extensions.Caching.Distributed.IDistributedCache cache, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Telephony.Services.TelephonyVoicemailSendGuard> logger) { }
+        public System.Threading.Tasks.Task ReleaseAsync(string callId, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<bool> TryClaimAsync(string callId, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }
 namespace CrestApps.OrchardCore.Telephony.ViewModels

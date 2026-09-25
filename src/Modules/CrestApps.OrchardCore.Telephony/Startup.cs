@@ -105,6 +105,8 @@ public sealed class Startup : StartupBase
         // curated destinations, so the soft phone transfer field stops accepting a raw number there.
         services.TryAddScoped<ITransferTargetPolicy, DefaultTransferTargetPolicy>();
 
+        // Sends each call to voicemail once, however many requests ask for it, so a caller is never greeted twice.
+        services.AddScoped<ITelephonyVoicemailSendGuard, TelephonyVoicemailSendGuard>();
         services.AddScoped<ITelephonyService, DefaultTelephonyService>();
         services.AddScoped<ITelephonyCommandExecutor, DefaultTelephonyCommandExecutor>();
         services.AddScoped<IIncomingCallDispatcher, DefaultIncomingCallDispatcher>();
