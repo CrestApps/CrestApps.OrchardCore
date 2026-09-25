@@ -101,6 +101,13 @@ public static class TelnyxConstants
     public const string OfferIdSipHeader = "X-Offer-Id";
 
     /// <summary>
+    /// The SIP header on the leg a supervisor's own soft phone is rung on to listen to a call. Its value is the one-off
+    /// token the phone was told to expect, so the phone answers that leg by itself and never another; the same token
+    /// travels in the leg's <c>client_state</c> for an SDK that surfaces it.
+    /// </summary>
+    public const string MonitorLegSipHeader = "X-Monitor-Leg";
+
+    /// <summary>
     /// Contains constants for Telnyx bidirectional media streaming over WebSockets, the equivalent of Asterisk ARI
     /// External Media used by the Contact Center voice-media provider boundary.
     /// </summary>

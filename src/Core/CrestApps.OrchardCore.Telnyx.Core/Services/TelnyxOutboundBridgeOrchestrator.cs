@@ -29,6 +29,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
     private readonly TelnyxOptions _options;
     private readonly TelnyxTransferCommands _transfers;
     private readonly ITelnyxAgentEndpointResolver _agentEndpointResolver;
+    private readonly ISupervisorLegEventSink _supervisorLegEventSink;
+    private readonly TelnyxSupervisedConference _supervisedConference;
 
     public TelnyxOutboundBridgeOrchestrator(
         TelnyxApiClient apiClient,
@@ -41,7 +43,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         IEnumerable<IConsultLegEventSink> consultLegEventSinks = null,
         ITelephonyInteractionStore interactionStore = null,
         IClock clock = null,
-        ITelnyxAgentEndpointResolver agentEndpointResolver = null)
+        ITelnyxAgentEndpointResolver agentEndpointResolver = null,
+        IEnumerable<ISupervisorLegEventSink> supervisorLegEventSinks = null)
     {
         _apiClient = apiClient;
         _logger = logger;
@@ -53,6 +56,8 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         _consultLegEventSink = consultLegEventSinks?.FirstOrDefault();
         _transfers = new TelnyxTransferCommands(apiClient, _options, interactionStore, clock, logger);
         _agentEndpointResolver = agentEndpointResolver;
+        _supervisorLegEventSink = supervisorLegEventSinks?.FirstOrDefault();
+        _supervisedConference = new TelnyxSupervisedConference(apiClient, logger);
     }
 
     /// <inheritdoc/>
@@ -75,6 +80,11 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
         if (state.Intent == TelnyxOutboundBridgeState.ContactCenterConsultLegIntent)
         {
             return await AdvanceConsultLegAsync(callEvent, state, isAnswered, cancellationToken);
+        }
+
+        if (state.Intent == TelnyxOutboundBridgeState.ContactCenterSupervisorLegIntent)
+        {
+            return await AdvanceSupervisorLegAsync(callEvent, state, isAnswered, cancellationToken);
         }
 
         if (state.Intent == TelnyxOutboundBridgeState.TransferLegIntent)

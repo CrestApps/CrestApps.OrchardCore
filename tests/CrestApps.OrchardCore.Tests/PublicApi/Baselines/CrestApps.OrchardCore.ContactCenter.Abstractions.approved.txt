@@ -395,6 +395,12 @@ namespace CrestApps.OrchardCore.ContactCenter
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> SetRecordingStateAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceRecordingRequest request, System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface IContactCenterVoiceSupervisorInterventionProvider
+    {
+        System.Threading.Tasks.Task ReleaseSupervisorLegAsync(string supervisorLegId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> SwitchModeAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMonitoringRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> TakeOverAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceMonitoringRequest request, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface IContactCenterVoiceTransferProvider
     {
         System.Threading.Tasks.Task<CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceProviderResult> TransferAsync(CrestApps.OrchardCore.ContactCenter.Models.ContactCenterVoiceTransferRequest request, System.Threading.CancellationToken cancellationToken = default);
@@ -693,11 +699,14 @@ namespace CrestApps.OrchardCore.ContactCenter.Models
     public sealed class ContactCenterVoiceMonitoringRequest
     {
         public ContactCenterVoiceMonitoringRequest() { }
+        public string AgentLegId { get; set; }
         public string InteractionId { get; set; }
         public System.Collections.Generic.IDictionary<string, string> Metadata { get; set; }
         public CrestApps.OrchardCore.ContactCenter.Models.MonitorMode Mode { get; set; }
+        public string MonitorToken { get; set; }
         public string ProviderCallId { get; set; }
         public string SupervisorId { get; set; }
+        public string SupervisorLegId { get; set; }
     }
     [System.Flags]
     public enum ContactCenterVoiceProviderCapabilities

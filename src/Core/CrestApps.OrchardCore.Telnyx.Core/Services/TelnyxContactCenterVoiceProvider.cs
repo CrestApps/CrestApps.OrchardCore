@@ -71,6 +71,10 @@ public sealed partial class TelnyxContactCenterVoiceProvider :
             ContactCenterVoiceProviderCapabilities.AgentConnect |
             ContactCenterVoiceProviderCapabilities.CallTransfer |
             ContactCenterVoiceProviderCapabilities.Recording |
+            // A supervisor listens, coaches or joins through a conference the call is moved into (see .Monitoring.cs).
+            ContactCenterVoiceProviderCapabilities.Monitor |
+            ContactCenterVoiceProviderCapabilities.Whisper |
+            ContactCenterVoiceProviderCapabilities.Barge |
             // The outbound-bridge orchestration stops the caller's playback once it has bridged the agent in.
             ContactCenterVoiceProviderCapabilities.HoldMusicStopsOnAgentBridge;
 

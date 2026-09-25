@@ -4223,6 +4223,11 @@ namespace CrestApps.OrchardCore.ContactCenter.Core.Services
     {
         System.Threading.Tasks.Task<int> ResumeExpiredAsync(System.Threading.CancellationToken cancellationToken = default);
     }
+    public interface ISupervisorLegEventSink
+    {
+        System.Threading.Tasks.Task<bool> OnAnsweredAsync(string providerName, string providerCallId, string supervisorLegId, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<bool> OnEndedAsync(string providerName, string providerCallId, string supervisorLegId, System.DateTime? endedUtc, CrestApps.OrchardCore.Telephony.Models.HangupCause? hangupCause, System.Threading.CancellationToken cancellationToken = default);
+    }
     public interface ISupervisorQueueAuthorizationService
     {
         System.Threading.Tasks.Task<bool> IsAuthorizedAsync(System.Security.Claims.ClaimsPrincipal principal, string userId, string queueId, System.Threading.CancellationToken cancellationToken = default);

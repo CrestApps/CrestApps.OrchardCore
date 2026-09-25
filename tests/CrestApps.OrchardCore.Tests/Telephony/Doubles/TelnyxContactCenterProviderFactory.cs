@@ -15,7 +15,7 @@ namespace CrestApps.OrchardCore.Tests.Telephony.Doubles;
 /// </summary>
 internal static class TelnyxContactCenterProviderFactory
 {
-    public static TelnyxContactCenterVoiceProvider Create(StubHttpMessageHandler handler, ITelnyxAgentEndpointResolver resolver = null)
+    public static TelnyxContactCenterVoiceProvider Create(HttpMessageHandler handler, ITelnyxAgentEndpointResolver resolver = null)
     {
         var options = new TelnyxOptions
         {

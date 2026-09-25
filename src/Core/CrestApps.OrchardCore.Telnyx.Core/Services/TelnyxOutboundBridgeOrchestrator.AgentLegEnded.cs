@@ -28,6 +28,13 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             return;
         }
 
+        // A leg the platform released on purpose -- a supervisor took the call over -- no longer carries the call, and
+        // its end must not end it for the customer still on the line.
+        if (state.Detached == true)
+        {
+            return;
+        }
+
         await _agentLegFailureService.RecordEndedAsync(
             TelnyxConstants.ProviderTechnicalName,
             state.PeerCallControlId,

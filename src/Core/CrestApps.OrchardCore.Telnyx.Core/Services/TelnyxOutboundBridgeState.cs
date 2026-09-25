@@ -69,6 +69,30 @@ public sealed class TelnyxOutboundBridgeState
     public const string TransferLegIntent = "ob-xfer";
 
     /// <summary>
+    /// The intent marking the leg a supervisor's own soft phone is rung on to listen to, coach or join a Contact Center
+    /// call. When it answers it joins the conference <see cref="ConferenceName"/> the customer in
+    /// <see cref="PeerCallControlId"/> and the agent in <see cref="PartyCallControlId"/> are moved into, with the Telnyx
+    /// supervisor role in <see cref="SupervisorRole"/>. It is never bridged to anyone, and its events are never
+    /// normalized as a call of its own. <see cref="RingUserId"/> names the supervisor, and <see cref="MonitorToken"/>
+    /// is what the supervisor's phone matches it to the engagement it asked for.
+    /// </summary>
+    public const string ContactCenterSupervisorLegIntent = "cc-sv";
+
+    /// <summary>
+    /// Gets or sets, on a supervisor leg, the Telnyx conference supervisor role it joins with: <c>monitor</c>,
+    /// <c>whisper</c> or <c>barge</c>.
+    /// </summary>
+    [JsonPropertyName("g")]
+    public string SupervisorRole { get; set; }
+
+    /// <summary>
+    /// Gets or sets, on a supervisor leg, the one-off token the supervisor's phone was told to expect, so it answers this
+    /// leg by itself and no other.
+    /// </summary>
+    [JsonPropertyName("l")]
+    public string MonitorToken { get; set; }
+
+    /// <summary>
     /// Gets or sets, on a transfer leg (and on the legs it hands a call over to), the transferring agent's leg the
     /// transfer was made from.
     /// </summary>
@@ -368,7 +392,8 @@ public sealed class TelnyxOutboundBridgeState
                  parsed.Intent != ConferenceExtensionLegIntent &&
                  parsed.Intent != AiVoiceLegIntent &&
                  parsed.Intent != ContactCenterConsultLegIntent &&
-                 parsed.Intent != TransferLegIntent))
+                 parsed.Intent != TransferLegIntent &&
+                 parsed.Intent != ContactCenterSupervisorLegIntent))
             {
                 return false;
             }

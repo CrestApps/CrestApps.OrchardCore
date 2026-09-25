@@ -39,7 +39,9 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator
             return;
         }
 
-        if (!IsHangup(callEvent))
+        // A leg the platform released on purpose (a supervisor took the call over) is neither a failed connect nor
+        // the end of the call.
+        if (!IsHangup(callEvent) || state.Detached == true)
         {
             return;
         }
