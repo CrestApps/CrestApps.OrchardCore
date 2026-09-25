@@ -232,6 +232,32 @@ public sealed class SmsInboxQueryTests
         Assert.Empty(counts);
     }
 
+    [Fact]
+    public async Task GetNextFirstResponseDueUtcAsync_ReturnsTheSoonestOpenTargetStillAhead()
+    {
+        // Arrange
+        await using var harness = await Harness.CreateAsync();
+
+        var overdue = Queue("overdue", "queue-1", assignedAgentId: null);
+        overdue.FirstResponseDueUtc = _now.AddSeconds(-10);
+        var later = Queue("later", "queue-1", assignedAgentId: null);
+        later.FirstResponseDueUtc = _now.AddSeconds(40);
+        var soonest = Queue("soonest", "queue-1", assignedAgentId: null);
+        soonest.FirstResponseDueUtc = _now.AddSeconds(20);
+        var closed = Queue("closed", "queue-1", assignedAgentId: null);
+        closed.FirstResponseDueUtc = _now.AddSeconds(5);
+        closed.Status = SmsConversationStatus.Closed;
+        var replied = Queue("replied", "queue-1", assignedAgentId: null);
+
+        await harness.SeedAsync(overdue, later, soonest, closed, replied);
+
+        // Act
+        var next = await harness.Store.GetNextFirstResponseDueUtcAsync(_now, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(_now.AddSeconds(20), next);
+    }
+
     private static SmsConversation Personal(string itemId, string ownerId)
         => new()
         {

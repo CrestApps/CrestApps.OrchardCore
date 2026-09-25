@@ -87,6 +87,14 @@ public interface ISmsConversationStore : ICatalog<SmsConversation>
     Task<IReadOnlyCollection<SmsConversation>> GetFirstResponseOverdueAsync(DateTime nowUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets the soonest first-response deadline still ahead of <paramref name="nowUtc"/> among open conversations.
+    /// </summary>
+    /// <param name="nowUtc">The instant the deadline must fall after.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The deadline, or <see langword="null"/> when no open conversation has one still ahead.</returns>
+    Task<DateTime?> GetNextFirstResponseDueUtcAsync(DateTime nowUtc, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Reads one page of the inbox. Visibility, the active tab, the ordering and the page bound are all applied
     /// by the database, so the inbox costs the same on a tenant with a million threads as on one with a hundred.
     /// </summary>

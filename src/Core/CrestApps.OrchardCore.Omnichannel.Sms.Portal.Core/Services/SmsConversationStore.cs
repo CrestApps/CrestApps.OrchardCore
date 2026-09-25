@@ -144,6 +144,20 @@ public sealed class SmsConversationStore : DocumentCatalog<SmsConversation, SmsC
     }
 
     /// <inheritdoc/>
+    public async Task<DateTime?> GetNextFirstResponseDueUtcAsync(DateTime nowUtc, CancellationToken cancellationToken = default)
+    {
+        var open = SmsConversationStatus.Open.ToString();
+
+        var conversation = await Session.Query<SmsConversation, SmsConversationIndex>(
+            index => index.Status == open && index.FirstResponseDueUtc != null && index.FirstResponseDueUtc > nowUtc,
+            collection: SmsPortalStorage.CollectionName)
+            .OrderBy(index => index.FirstResponseDueUtc)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return conversation?.FirstResponseDueUtc;
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyCollection<SmsConversation>> GetRoutedAwaitingPickupAsync(CancellationToken cancellationToken = default)
     {
         var queue = SmsConversationOwnerType.Queue.ToString();

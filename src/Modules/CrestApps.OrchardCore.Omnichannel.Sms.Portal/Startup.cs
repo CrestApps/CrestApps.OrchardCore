@@ -1,5 +1,6 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.ContactCenter;
+using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
@@ -119,6 +120,11 @@ public sealed class Startup : StartupBase
         services.AddScoped<ISmsContactTimeZoneResolver, SmsContactTimeZoneResolver>();
         services.AddScoped<SmsQuietHoursGuard>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, SmsFirstResponseSlaBackgroundTask>());
+
+        // The background run makes one pass and holds an in-process deadline for the next, instead of looping inside
+        // its minute. The scheduler is the Contact Center one, shared with the queues feature when both are on.
+        services.AddScoped<SmsFirstResponseSlaSweep>();
+        services.TryAddSingleton<IContactCenterDeadlineScheduler, ContactCenterDeadlineScheduler>();
 
         // Per-agent SMS availability is independent of voice presence, so it stays in the base feature: the
         // inbox toggle works whether or not push distribution is enabled.
