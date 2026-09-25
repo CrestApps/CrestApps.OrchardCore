@@ -17,6 +17,13 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
 {
     private const string SignalRResourceName = "OrchardCore.SignalR.wwwroot>Scripts>signalr.js";
 
+    /// <summary>
+    /// The query string key that runs the page on one of the phone's own media adapters (for example
+    /// <c>telnyx-webrtc</c>, against a stand-in provider SDK the test installs) instead of the in-memory one. It is
+    /// carried onto the hub URL too, so the hub's credentials name the same adapter.
+    /// </summary>
+    public const string MediaAdapterQueryKey = "mediaAdapter";
+
     private WebApplication _app;
 
     public string BaseUrl { get; private set; }
@@ -33,6 +40,7 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
 
         builder.Services.AddSingleton<InMemoryTelephonyProvider>();
         builder.Services.AddSingleton<TestVoicemailInbox>();
+        builder.Services.AddSingleton<BrowserCallLog>();
         builder.Services
             .AddSignalR()
             .AddJsonProtocol(options =>
@@ -60,7 +68,8 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
                     context.Request.Query["answerCallId"],
                     voicemail: context.Request.Query.ContainsKey("voicemail"),
                     styled: context.Request.Query.ContainsKey("styled"),
-                    attendedTransfer: attendedTransfer),
+                    attendedTransfer: attendedTransfer,
+                    mediaAdapter: context.Request.Query[MediaAdapterQueryKey]),
                 "text/html; charset=utf-8");
         });
 
@@ -151,15 +160,18 @@ public sealed class SoftPhoneTestServer : IAsyncDisposable
         return Results.Stream(stream, "application/javascript");
     }
 
-    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false)
+    private static string BuildHtml(bool browserAudio, bool embedded = false, string answerCallId = null, bool voicemail = false, bool styled = false, bool attendedTransfer = false, string mediaAdapter = null)
     {
+        var adapterName = string.IsNullOrEmpty(mediaAdapter) ? "in-memory" : mediaAdapter;
         var config = new Dictionary<string, object>
         {
-            ["hubUrl"] = "/telephony",
+            ["hubUrl"] = string.IsNullOrEmpty(mediaAdapter)
+                ? "/telephony"
+                : $"/telephony?{MediaAdapterQueryKey}={Uri.EscapeDataString(mediaAdapter)}",
             ["capabilities"] = attendedTransfer ? 2047 | 2048 : 2047,
             ["audioCapabilities"] = browserAudio ? 1 : 2,
             ["audioMode"] = browserAudio ? 1 : 2,
-            ["browserMediaAdapterName"] = browserAudio ? "in-memory" : null,
+            ["browserMediaAdapterName"] = browserAudio ? adapterName : null,
             ["strings"] = new Dictionary<string, string>
             {
                 ["idle"] = "Ready",

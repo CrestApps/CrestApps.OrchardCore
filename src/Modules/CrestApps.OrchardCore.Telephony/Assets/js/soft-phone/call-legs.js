@@ -21,9 +21,12 @@
 
     var softPhone = root.CrestAppsSoftPhone = root.CrestAppsSoftPhone || {};
 
-    // { platform, browser }: the leg carrying a server-tracked call, and a call placed from this browser's keypad.
+    // { platform, browser, browserLegs }: the leg carrying a server-tracked call, the latest call placed from this
+    // browser's keypad, and every keypad call still up. The agent can place a second call while the first is on hold,
+    // and the first is no less this browser's for it: with only the latest remembered, the held call was forgotten the
+    // moment the second one ended, and its own hang-up was never heard.
     function createCallLegs() {
-        return { platform: null, browser: null };
+        return { platform: null, browser: null, browserLegs: [] };
     }
 
     function notePlatformLeg(legs, leg) {
@@ -34,6 +37,12 @@
 
     function noteBrowserLeg(legs, leg) {
         if (legs && leg) {
+            legs.browserLegs = legs.browserLegs || [];
+
+            if (legs.browserLegs.indexOf(leg) < 0) {
+                legs.browserLegs.push(leg);
+            }
+
             legs.browser = leg;
         }
     }
@@ -47,8 +56,16 @@
             legs.platform = null;
         }
 
+        var index = legs.browserLegs ? legs.browserLegs.indexOf(leg) : -1;
+
+        if (index >= 0) {
+            legs.browserLegs.splice(index, 1);
+        }
+
         if (legs.browser === leg) {
-            legs.browser = null;
+            legs.browser = legs.browserLegs && legs.browserLegs.length
+                ? legs.browserLegs[legs.browserLegs.length - 1]
+                : null;
         }
     }
 
@@ -80,11 +97,29 @@
     }
 
     // Forgets a leg that ended and returns the one that should now be the adapter's current call: the platform leg,
-    // when a keypad call placed on top of it has ended, so the platform leg's own events and hang-up are heard again.
+    // when a keypad call placed on top of it has ended, so the platform leg's own events and hang-up are heard again;
+    // else the latest keypad call still up, such as the one the agent held to place the call that just ended.
     function legAfterEnd(legs, endedLeg) {
         forgetLeg(legs, endedLeg);
 
-        return (legs && legs.platform) || null;
+        return (legs && (legs.platform || legs.browser)) || null;
+    }
+
+    // Every call this browser holds: the platform leg and each keypad call, once each.
+    function allLegs(legs) {
+        var all = [];
+
+        if (!legs) {
+            return all;
+        }
+
+        [legs.platform, legs.browser].concat(legs.browserLegs || []).forEach(function (leg) {
+            if (leg && all.indexOf(leg) < 0) {
+                all.push(leg);
+            }
+        });
+
+        return all;
     }
 
     // Whether a call may be offered for a conference. Merging is a server command over calls the server tracks; a
@@ -99,5 +134,6 @@
     softPhone.forgetLeg = forgetLeg;
     softPhone.planPlatformReport = planPlatformReport;
     softPhone.legAfterEnd = legAfterEnd;
+    softPhone.allLegs = allLegs;
     softPhone.canConferenceCall = canConferenceCall;
 }(typeof globalThis !== 'undefined' ? globalThis : window));

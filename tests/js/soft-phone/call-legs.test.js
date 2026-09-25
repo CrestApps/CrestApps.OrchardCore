@@ -9,6 +9,7 @@ const {
     forgetLeg,
     planPlatformReport,
     legAfterEnd,
+    allLegs,
     canConferenceCall,
 } = globalThis.CrestAppsSoftPhone;
 
@@ -93,6 +94,29 @@ describe('legAfterEnd', () => {
         expect(legs.browser).toBe(null);
     });
 
+    // Bug: the agent held a keypad call and dialed a second number. Only the latest keypad call was remembered, so when
+    // the second call ended nothing was current, and the held call's own hang-up was never heard.
+    it('hands the adapter back to the keypad call held under the one that ended', () => {
+        const legs = createCallLegs();
+        const heldCall = { name: 'keypad call on hold' };
+        noteBrowserLeg(legs, heldCall);
+        noteBrowserLeg(legs, browserCall);
+
+        expect(legAfterEnd(legs, browserCall)).toBe(heldCall);
+        expect(legs.browser).toBe(heldCall);
+        expect(legAfterEnd(legs, heldCall)).toBe(null);
+    });
+
+    it('prefers the platform leg over a held keypad call', () => {
+        const legs = createCallLegs();
+        const heldCall = { name: 'keypad call on hold' };
+        notePlatformLeg(legs, predialedLeg);
+        noteBrowserLeg(legs, heldCall);
+        noteBrowserLeg(legs, browserCall);
+
+        expect(legAfterEnd(legs, browserCall)).toBe(predialedLeg);
+    });
+
     it('leaves nothing current when the platform leg itself ends', () => {
         const legs = createCallLegs();
         notePlatformLeg(legs, predialedLeg);
@@ -112,5 +136,20 @@ describe('canConferenceCall', () => {
     it('never offers a call this browser placed', () => {
         expect(canConferenceCall({ callId: 'browser-1', browserOriginated: true })).toBe(false);
         expect(canConferenceCall(null)).toBe(false);
+    });
+});
+
+describe('allLegs', () => {
+    // Tearing the registration down hangs up every call this browser holds; a held keypad call is one of them.
+    it('lists the platform leg and every keypad call once', () => {
+        const legs = createCallLegs();
+        const heldCall = { name: 'keypad call on hold' };
+        notePlatformLeg(legs, predialedLeg);
+        noteBrowserLeg(legs, heldCall);
+        noteBrowserLeg(legs, browserCall);
+        noteBrowserLeg(legs, browserCall);
+
+        expect(allLegs(legs)).toEqual([predialedLeg, browserCall, heldCall]);
+        expect(allLegs(null)).toEqual([]);
     });
 });

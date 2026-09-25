@@ -11,11 +11,45 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
 {
     private readonly InMemoryTelephonyProvider _provider;
     private readonly TestVoicemailInbox _voicemailInbox;
+    private readonly BrowserCallLog _browserCalls;
 
-    public TestTelephonyHub(InMemoryTelephonyProvider provider, TestVoicemailInbox voicemailInbox)
+    public TestTelephonyHub(InMemoryTelephonyProvider provider, TestVoicemailInbox voicemailInbox, BrowserCallLog browserCalls)
     {
         _provider = provider;
         _voicemailInbox = voicemailInbox;
+        _browserCalls = browserCalls;
+    }
+    public Task RecordBrowserCall(string callId, string to, string from)
+    {
+        _browserCalls.Started(callId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task RecordBrowserCallEnded(string callId, bool connected)
+    {
+        _browserCalls.Ended(callId);
+
+        return Task.CompletedTask;
+    }
+
+    public Task ReportBrowserCallsAlive(string[] callIds, string[] connectedCallIds)
+    {
+        _browserCalls.Alive(callIds);
+
+        return Task.CompletedTask;
+    }
+
+    public Task ReportClientDiagnostic(string level, string code, string message, string context)
+    {
+        _browserCalls.Diagnostic(code, context);
+
+        return Task.CompletedTask;
+    }
+
+    public Task<BrowserCallLogSnapshot> GetBrowserCallLog()
+    {
+        return Task.FromResult(_browserCalls.Snapshot());
     }
 
     public Task<TelephonyResult> Dial(DialRequest request)
@@ -73,9 +107,20 @@ public sealed class TestTelephonyHub : Hub<ITelephonyClient>
         return _provider.RejectAsync(call);
     }
 
-    public Task<TelephonyClientCredentials> GetCredentials()
+    public async Task<TelephonyClientCredentials> GetCredentials()
     {
-        return _provider.GetClientCredentialsAsync();
+        var credentials = await _provider.GetClientCredentialsAsync();
+
+        // A page opened with ?mediaAdapter= runs one of the phone's own media adapters (against a stand-in provider
+        // SDK) instead of the in-memory one; the credentials have to name the adapter the page was configured with.
+        var mediaAdapter = Context.GetHttpContext()?.Request.Query[SoftPhoneTestServer.MediaAdapterQueryKey].ToString();
+
+        if (!string.IsNullOrEmpty(mediaAdapter))
+        {
+            credentials.BrowserMediaAdapterName = mediaAdapter;
+        }
+
+        return credentials;
     }
 
     public Task<TelephonyConnectionStatus> GetConnectionStatus()

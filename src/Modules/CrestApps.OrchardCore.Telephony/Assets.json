@@ -29,6 +29,8 @@
       "Assets/js/soft-phone/offer-deadline.js",
       "Assets/js/soft-phone/call-legs.js",
       "Assets/js/soft-phone/conference.js",
+      "Assets/js/soft-phone/browser-calls.js",
+      "Assets/js/soft-phone/remote-elements.js",
       "Assets/js/soft-phone/dial-target.js",
       "Assets/js/soft-phone/transfer-target.js",
       "Assets/js/soft-phone/transfer-panel.js",
