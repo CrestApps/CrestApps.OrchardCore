@@ -536,6 +536,20 @@ public sealed partial class TelnyxOutboundBridgeOrchestrator : ITelnyxOutboundBr
             body["outbound_voice_profile_id"] = _options.OutboundVoiceProfileId;
         }
 
+        // A colleague's soft phone is rung on this leg, and must ring it rather than answer it as a leg of its own. The
+        // SDK may hand the phone no client state, so the leg says what it is in a SIP header too.
+        if (destinationIsInternalSip)
+        {
+            body["custom_headers"] = new[]
+            {
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["name"] = TelnyxTransferCommands.DestinationLegSipHeader,
+                    ["value"] = "1",
+                },
+            };
+        }
+
         // Bound the ring so an unanswered internal extension call is released and can fall to voicemail rather
         // than ringing indefinitely.
         if (agentState.RingTimeoutSeconds is > 0)

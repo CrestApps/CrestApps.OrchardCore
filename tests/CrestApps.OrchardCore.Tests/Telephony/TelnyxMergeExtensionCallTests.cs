@@ -157,6 +157,26 @@ public sealed class TelnyxMergeExtensionCallTests
         Assert.False(recorded.IsBridgedDialAgentLeg);
     }
 
+    // Live, the soft phone was handed no client state on the colleague's leg, so it could not tell that leg (which must
+    // ring) from its own agent leg (which it answers). The leg now says so in a SIP header too.
+    [Fact]
+    public async Task ExtensionAgentLegAnswered_TagsTheColleaguesLegAsTheDestination_InASipHeader()
+    {
+        // Arrange
+        var handler = new RecordingHttpMessageHandler()
+            .RespondWith(HttpStatusCode.OK, $$$"""{"data":{"call_control_id":"{{{ColleagueLeg}}}"}}""")
+            .AlwaysRespondWith(HttpStatusCode.OK, """{"data":{"result":"ok"}}""");
+        var orchestrator = CreateOrchestrator(handler);
+
+        // Act
+        await orchestrator.AdvanceAsync(Event("call.answered", ExtensionAgentLeg, ExtensionAgentState(peer: null)), TestContext.Current.CancellationToken);
+
+        // Assert
+        using var body = JsonDocument.Parse(handler.Requests[0].Body);
+        var headers = body.RootElement.GetProperty("custom_headers").EnumerateArray().ToArray();
+        Assert.Contains(headers, header => header.GetProperty("name").GetString() == "X-Destination-Leg" && header.GetProperty("value").GetString() == "1");
+    }
+
     // A merged extension call's colleague is in the merge conference, not in the agent leg's own conference, so the
     // agent hanging up that row would otherwise leave them on the line.
     [Fact]

@@ -2304,15 +2304,30 @@
   // The intent the platform stamps on a leg it rings at a call's destination: this phone is the one being called.
   var DESTINATION_LEG_INTENT = 'ob-dest';
 
+  // The SIP header the platform adds to that leg, for an SDK that hands over no client state (live, Telnyx's did not).
+  var DESTINATION_LEG_HEADER = 'x-destination-leg';
+
   // Whether the leg is one the platform rang at this phone as somebody's destination -- a colleague calling this
-  // agent's extension -- rather than this phone's own leg of a call it placed. Read from the leg's client state.
+  // agent's extension -- rather than this phone's own leg of a call it placed. Read from the leg's client state, or
+  // from its SIP header.
   function isDestinationLeg(options) {
     if (!options) {
       return false;
     }
     var read = softPhone.readProviderClientState;
     var state = typeof read === 'function' ? read(options.clientState || options.client_state) : null;
-    return !!(state && state.i === DESTINATION_LEG_INTENT);
+    if (state && state.i === DESTINATION_LEG_INTENT) {
+      return true;
+    }
+    var readHeader = softPhone.readProviderHeader;
+    return typeof readHeader === 'function' && !!readHeader(options.customHeaders || options.custom_headers, DESTINATION_LEG_HEADER);
+  }
+
+  // Whether an accept made elsewhere may arm this phone for its offer's leg: only for an offer this phone was offered
+  // ({ reservationId: callId }). An offer it never had is another agent's -- the server tells the offer's queue and
+  // every supervisor of each accept -- and arming for it answered the next leg to arrive, whoever's it was.
+  function canArmForOffer(reservationId, offeredReservations) {
+    return !!reservationId && !!offeredReservations && Object.prototype.hasOwnProperty.call(offeredReservations, reservationId);
   }
 
   // Whether an inbound leg arriving now is answered without ringing. Only an arm decides, and only once: nothing the
@@ -2327,6 +2342,7 @@
   }
   softPhone.AUTO_ANSWER_WINDOW_MS = AUTO_ANSWER_WINDOW_MS;
   softPhone.isDestinationLeg = isDestinationLeg;
+  softPhone.canArmForOffer = canArmForOffer;
   softPhone.shouldAutoAnswerInboundLeg = shouldAutoAnswerInboundLeg;
   softPhone.EXTENSION_CALL_KEY = EXTENSION_CALL_KEY;
   softPhone.autoAnswerOfferKey = offerKey;
@@ -3606,6 +3622,22 @@
     }
     return options.isCallDisplay ? clear : keep;
   }
+
+  // What starting an entry does to the field -- focusing it, the first key, switching Number / Extension: 'clear' when
+  // the field only shows a call's label or number, which is never part of what is dialed; 'keep' for the agent's own.
+  function planEntryStart(options) {
+    return options && options.isCallDisplay ? 'clear' : 'keep';
+  }
+
+  // What leaving the field does: 'release' gives an entry the agent left empty back to the held call's display;
+  // 'keep' leaves anything else.
+  function planEntryEnd(options) {
+    options = options || {};
+    var value = options.value == null ? '' : String(options.value).trim();
+    return options.agentEntered && !value ? 'release' : 'keep';
+  }
+  softPhone.planEntryStart = planEntryStart;
+  softPhone.planEntryEnd = planEntryEnd;
   softPhone.planNumberField = planNumberField;
   softPhone.isSameNumber = isSameNumber;
   softPhone.resolvePeerNumber = resolvePeerNumber;
@@ -6301,6 +6333,9 @@
   var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
   var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
   var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
+  var canArmForOffer = softPhoneModules.canArmForOffer;
+  var planEntryStart = softPhoneModules.planEntryStart;
+  var planEntryEnd = softPhoneModules.planEntryEnd;
   var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
   var planKeypadDial = softPhoneModules.planKeypadDial;
   var bridgedDialRequest = softPhoneModules.bridgedDialRequest;
@@ -8976,6 +9011,25 @@
     }
     function toggleDialMode() {
       setDialMode(!extensionMode);
+
+      // Switching mode is starting an entry: a held call's number does not come back over the empty field.
+      if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
+        numberEnteredByAgent = true;
+      }
+      render();
+    }
+
+    // The agent starts an entry over a call's label or number -- a display, never part of what is dialed -- so it
+    // is cleared, and the field stays theirs until they leave it empty (see soft-phone/dial-target.js).
+    function startNumberEntry() {
+      if (planEntryStart({
+        isCallDisplay: numberIsCallDisplay
+      }) !== 'clear') {
+        return;
+      }
+      clearNumberInput();
+      numberEnteredByAgent = true;
+      render();
     }
     function has(capability) {
       return (capabilities & capability) === capability;
@@ -10766,6 +10820,11 @@
     // (`reservationId`) the agent just accepted elsewhere, so the media adapter answers it automatically rather
     // than ringing it as an unsolicited incoming call and tearing it down. The arm is for that offer alone.
     function armInboundAutoAnswer(reservationId) {
+      // Only for an offer this phone was offered: the Contact Center layer hears of other agents' accepts too.
+      if (!canArmForOffer(reservationId, offerCallIds)) {
+        reportDiagnostic('info', 'auto-answer-arm-refused', 'An accept of an offer this phone was never offered did not arm it to answer the next leg.', reservationId || '');
+        return;
+      }
       armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), Date.now());
     }
 
@@ -14215,9 +14274,16 @@
           numberEnteredByAgent = true;
           render();
         });
-        dom.number.addEventListener('focus', function () {
-          if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
-            dom.number.select();
+        // Reaching for the field over a held call's number is starting an entry: the number goes, and the field
+        // is the agent's until they leave it empty (see soft-phone/dial-target.js).
+        dom.number.addEventListener('focus', startNumberEntry);
+        dom.number.addEventListener('blur', function () {
+          if (planEntryEnd({
+            value: dom.number.value,
+            agentEntered: numberEnteredByAgent
+          }) === 'release') {
+            numberEnteredByAgent = false;
+            render();
           }
         });
         // Typing over a call's label or number starts a fresh entry, as a keypad press does: the label is never

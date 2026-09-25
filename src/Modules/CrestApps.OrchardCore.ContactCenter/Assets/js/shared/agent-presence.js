@@ -155,6 +155,15 @@
         return String(notification.userId) === String(ownUserId);
     }
 
+    // Whether an offer notification (an offer revoked, accepted or expired) is about this agent's own offer. The server
+    // also sends every offer's to its queue and to supervisors, for their views; acting on another agent's -- arming the
+    // phone to answer the accepted offer's leg -- had the next call to reach this phone answered by itself. An unknown
+    // owner on either side is taken as this agent's own, as before.
+    function isOwnOfferNotification(notification, ownUserId) {
+        return isOwnPresence(notification, ownUserId);
+    }
+
+    contactCenter.isOwnOfferNotification = isOwnOfferNotification;
     contactCenter.normalizePresenceStatus = normalizePresenceStatus;
     contactCenter.presenceLabel = presenceLabel;
     contactCenter.pendingPresenceLabel = pendingPresenceLabel;

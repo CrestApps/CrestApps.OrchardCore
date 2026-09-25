@@ -99,8 +99,9 @@ public sealed class SoftPhoneBrowserAudioTests : SoftPhoneBrowserTest
             }
             """);
         await page.ClickAsync("[data-telephony-toggle]");
-        await page.FillAsync("[data-telephony-number]", "+15551234567");
-        await page.ClickAsync("[data-telephony-dial]");
+
+        // The offer rings on the phone too (which registers it), and is accepted from the agent bar.
+        await SetIncomingOfferAsync(page, "cc-call-bar", "+15551234567", "res-bar");
         await page.WaitForFunctionAsync("() => typeof window.browserAudioState.shouldAutoAnswerInbound === 'function'");
 
         // Act
@@ -115,8 +116,12 @@ public sealed class SoftPhoneBrowserAudioTests : SoftPhoneBrowserTest
                 state.shouldAutoAnswerInbound();
 
                 state.decisions.push(state.shouldAutoAnswerInbound());
-                api.armInboundAutoAnswer();
+                api.armInboundAutoAnswer('res-bar');
                 state.decisions.push(state.shouldAutoAnswerInbound());
+                state.decisions.push(state.shouldAutoAnswerInbound());
+
+                // Another agent's accept, which the Contact Center also tells queues and supervisors about.
+                api.armInboundAutoAnswer('someone-elses-offer');
                 state.decisions.push(state.shouldAutoAnswerInbound());
             }
             """);
@@ -124,10 +129,11 @@ public sealed class SoftPhoneBrowserAudioTests : SoftPhoneBrowserTest
         // Assert
         var decisions = await page.EvaluateAsync<JsonElement>("() => window.browserAudioState.decisions");
 
-        Assert.Equal(3, decisions.GetArrayLength());
+        Assert.Equal(4, decisions.GetArrayLength());
         Assert.False(decisions[0].GetBoolean(), "An unsolicited inbound leg must ring, not be answered.");
         Assert.True(decisions[1].GetBoolean(), "The leg for an offer accepted outside the phone must be answered.");
         Assert.False(decisions[2].GetBoolean(), "Arming must be one-shot so a later genuine call still rings.");
+        Assert.False(decisions[3].GetBoolean(), "An offer this phone was never offered must not arm it.");
     }
 
     [Fact]

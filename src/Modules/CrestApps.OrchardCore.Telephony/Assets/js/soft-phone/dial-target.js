@@ -155,6 +155,24 @@
         return options.isCallDisplay ? clear : keep;
     }
 
+    // What starting an entry does to the field -- focusing it, the first key, switching Number / Extension: 'clear' when
+    // the field only shows a call's label or number, which is never part of what is dialed; 'keep' for the agent's own.
+    function planEntryStart(options) {
+        return options && options.isCallDisplay ? 'clear' : 'keep';
+    }
+
+    // What leaving the field does: 'release' gives an entry the agent left empty back to the held call's display;
+    // 'keep' leaves anything else.
+    function planEntryEnd(options) {
+        options = options || {};
+
+        var value = options.value == null ? '' : String(options.value).trim();
+
+        return options.agentEntered && !value ? 'release' : 'keep';
+    }
+
+    softPhone.planEntryStart = planEntryStart;
+    softPhone.planEntryEnd = planEntryEnd;
     softPhone.planNumberField = planNumberField;
     softPhone.isSameNumber = isSameNumber;
     softPhone.resolvePeerNumber = resolvePeerNumber;

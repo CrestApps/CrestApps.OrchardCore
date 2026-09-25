@@ -100,6 +100,9 @@
     var disarmAutoAnswer = softPhoneModules.disarmAutoAnswer;
     var disarmOtherOffers = softPhoneModules.disarmOtherOffers;
     var shouldAutoAnswerInboundLeg = softPhoneModules.shouldAutoAnswerInboundLeg;
+    var canArmForOffer = softPhoneModules.canArmForOffer;
+    var planEntryStart = softPhoneModules.planEntryStart;
+    var planEntryEnd = softPhoneModules.planEntryEnd;
 
     var BRIDGED_DIAL_LEG_CAPABILITY = softPhoneModules.BRIDGED_DIAL_LEG_CAPABILITY;
     var planKeypadDial = softPhoneModules.planKeypadDial;
@@ -3183,6 +3186,25 @@
 
         function toggleDialMode() {
             setDialMode(!extensionMode);
+
+            // Switching mode is starting an entry: a held call's number does not come back over the empty field.
+            if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
+                numberEnteredByAgent = true;
+            }
+
+            render();
+        }
+
+        // The agent starts an entry over a call's label or number -- a display, never part of what is dialed -- so it
+        // is cleared, and the field stays theirs until they leave it empty (see soft-phone/dial-target.js).
+        function startNumberEntry() {
+            if (planEntryStart({ isCallDisplay: numberIsCallDisplay }) !== 'clear') {
+                return;
+            }
+
+            clearNumberInput();
+            numberEnteredByAgent = true;
+            render();
         }
 
         function has(capability) {
@@ -5302,6 +5324,14 @@
         // (`reservationId`) the agent just accepted elsewhere, so the media adapter answers it automatically rather
         // than ringing it as an unsolicited incoming call and tearing it down. The arm is for that offer alone.
         function armInboundAutoAnswer(reservationId) {
+            // Only for an offer this phone was offered: the Contact Center layer hears of other agents' accepts too.
+            if (!canArmForOffer(reservationId, offerCallIds)) {
+                reportDiagnostic('info', 'auto-answer-arm-refused',
+                    'An accept of an offer this phone was never offered did not arm it to answer the next leg.', reservationId || '');
+
+                return;
+            }
+
             armAutoAnswer(inboundAutoAnswer, autoAnswerOfferKey(reservationId), Date.now());
         }
 
@@ -9455,9 +9485,13 @@
                     numberEnteredByAgent = true;
                     render();
                 });
-                dom.number.addEventListener('focus', function () {
-                    if (currentCall && normalizeState(currentCall.state) === 'OnHold') {
-                        dom.number.select();
+                // Reaching for the field over a held call's number is starting an entry: the number goes, and the field
+                // is the agent's until they leave it empty (see soft-phone/dial-target.js).
+                dom.number.addEventListener('focus', startNumberEntry);
+                dom.number.addEventListener('blur', function () {
+                    if (planEntryEnd({ value: dom.number.value, agentEntered: numberEnteredByAgent }) === 'release') {
+                        numberEnteredByAgent = false;
+                        render();
                     }
                 });
                 // Typing over a call's label or number starts a fresh entry, as a keypad press does: the label is never

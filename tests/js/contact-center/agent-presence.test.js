@@ -2,7 +2,27 @@ import { describe, expect, it } from 'vitest';
 
 import '../../../src/Modules/CrestApps.OrchardCore.ContactCenter/Assets/js/shared/agent-presence.js';
 
-const { presenceLabel, pendingPresenceLabel, breakChoiceLabel, isOwnPresence, normalizePresenceStatus } = globalThis.CrestAppsContactCenter;
+const { presenceLabel, pendingPresenceLabel, breakChoiceLabel, isOwnPresence, isOwnOfferNotification, normalizePresenceStatus } = globalThis.CrestAppsContactCenter;
+
+// Live: a colleague's extension call was answered by itself, silently, ~20 s after this user's phone heard that
+// ANOTHER agent had accepted a Contact Center offer. The server sends "offer revoked" to the agent, to the offer's queue
+// and to every supervisor, and the phone armed its one-shot auto-answer for whichever offer it heard of; the next leg to
+// reach it within the window was the colleague's call.
+describe('isOwnOfferNotification', () => {
+    it('is this agent\'s own offer only when it names this agent', () => {
+        expect(isOwnOfferNotification({ userId: 'u1', reservationId: 'r1' }, 'u1')).toBe(true);
+        expect(isOwnOfferNotification({ userId: 'u2', reservationId: 'r1' }, 'u1')).toBe(false);
+    });
+
+    it('takes an offer naming nobody, or a page that does not know its user yet, as this agent\'s own', () => {
+        expect(isOwnOfferNotification({ reservationId: 'r1' }, 'u1')).toBe(true);
+        expect(isOwnOfferNotification({ userId: 'u2' }, null)).toBe(true);
+    });
+
+    it('is nothing without a notification', () => {
+        expect(isOwnOfferNotification(null, 'u1')).toBe(false);
+    });
+});
 
 const labels = {
     available: 'Available',

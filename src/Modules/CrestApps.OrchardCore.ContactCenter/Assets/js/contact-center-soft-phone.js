@@ -660,6 +660,13 @@
             });
 
             client.connection.on('OfferRevoked', function (notification) {
+                // Another agent's offer, sent here for the queue's or a supervisor's view: nothing on this phone is about
+                // it. Acting on it armed this phone to answer the accepted offer's leg, and the next call to reach it --
+                // that agent calling this one's extension -- was answered by itself.
+                if (presence.isOwnOfferNotification && !presence.isOwnOfferNotification(notification, ownUserId)) {
+                    return;
+                }
+
                 // A copy of this offer still on its way here (an offer lookup in flight) must not reopen it.
                 if (notification && notification.reservationId && typeof api.markOfferSettled === 'function') {
                     api.markOfferSettled({ reservationId: notification.reservationId });
